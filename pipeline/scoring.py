@@ -1,6 +1,11 @@
 """
 Deterministic scoring. No model may enter this file.
 Implements SPEC.md sections 7-9.
+
+2026-08-05 audit fixes (pending Claude review — see REVIEW.md):
+- Band assignment uses inclusive SPEC ranges; -70 is strong-against, not "does not work".
+- Benefit with magnitude None/"unstated" scores as trivial (0.3), not meaningful.
+- pop_match defaults to "different" (pessimistic), matching form's unspecified policy.
 """
 from __future__ import annotations
 import math
@@ -8,7 +13,6 @@ from dataclasses import dataclass, field
 
 DESIGN_W = {4:1.00, 5:0.55, 6:0.30, 7:0.18, 8:0.12, 9:0.07,
             10:0.03, 11:0.015, 12:0.004, 13:0.0015, 14:0.00}
-SYNTHESIS_RANKS = {1, 2, 3}
 
 ROB_FACTOR = {"low":1.00, "some_concerns":0.60, "high":0.25}
 FUNDING_FACTOR = {"independent":1.00, "industry_other":0.90,
@@ -26,10 +30,16 @@ LAMBDA = 0.3            # synthesis multiplier ceiling
 H_PENALTY = 0.4
 GATE_MIN_HUMAN_WD = 0.5
 
-BANDS = [(70,101,"strong support"), (30,70,"moderate support"),
-         (10,30,"weak support"), (-9,10,"inconclusive"),
-         (-40,-9,"weak evidence against"), (-70,-40,"does not work"),
-         (-101,-70,"strong evidence against / harm")]
+
+def band_for(score: int) -> str:
+    """SPEC §9 bands, inclusive on both ends of each range."""
+    if score >= 70:  return "strong support"
+    if score >= 30:  return "moderate support"
+    if score >= 10:  return "weak support"
+    if score >= -9:  return "inconclusive"
+    if score >= -39: return "weak evidence against"
+    if score >= -69: return "does not work"
+    return "strong evidence against / harm"
 
 
 def rob_band(items: dict) -> tuple[str, int, int]:
@@ -58,7 +68,8 @@ class Study:
     rob_inherited: bool = False
     form_match: str = "unspecified"
     dose_match: str = "in_band"
-    pop_match: str = "exact"
+    # Default pessimistic: missing population match is not a free pass.
+    pop_match: str = "different"
     direction: str = "null_effect"
     magnitude: str | None = None
 
@@ -66,8 +77,11 @@ class Study:
         if self.direction == "harm": return S_VALUE["harm"]
         if self.direction == "null_effect": return S_VALUE["null_effect"]
         if self.direction == "benefit":
-            return S_VALUE["benefit_trivial"] if self.magnitude == "trivial" \
-                   else S_VALUE["benefit_meaningful"]
+            # Only explicit "meaningful" gets +1.0. "trivial", "unstated", None
+            # all score as trivial — conservative; avoids over-crediting vague benefits.
+            if self.magnitude == "meaningful":
+                return S_VALUE["benefit_meaningful"]
+            return S_VALUE["benefit_trivial"]
         return 0.0
 
     def weight(self) -> float:
@@ -90,6 +104,9 @@ def score_ecu(primaries: list[Study], syntheses: list[dict] | None = None,
     """
     primaries: UNIQUE primary studies only. Dedup happens before this is called.
     syntheses: [{"included_ids": set, "q_s": float, "resolved": bool}, ...]
+
+    Unresolved syntheses are intentionally ignored here (under-count).
+    See dedup.synthesis_contribution_cap — not yet applied to E / E'.
     """
     syntheses = syntheses or []
     human = [s for s in primaries if s.design_rank <= 11]
@@ -122,7 +139,7 @@ def score_ecu(primaries: list[Study], syntheses: list[dict] | None = None,
 
     raw = 100 * d * c_conf * (1 - H_PENALTY * H)
     score = max(-100, min(100, round(raw)))
-    band = next(b for lo, hi, b in BANDS if lo <= score < hi)
+    band = band_for(score)
 
     return {"score": score, "band": band, "gate_fired": False,
             "d": round(d, 3), "c": round(c_conf, 3), "H": round(H, 3),

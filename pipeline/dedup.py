@@ -1,10 +1,28 @@
 """
 Deterministic deduplication. No model may enter this file.
 One trial = one evidence unit. Implements SPEC.md section 6.
+
+2026-08-05 audit fixes (pending Claude review — see REVIEW.md):
+- Registry regex tightened for ChiCTR / CTRI / UMIN / EudraCT full IDs.
+- synthesis_contribution_cap no longer a no-op; still not applied in score_ecu
+  (under-count is the safe direction until wired deliberately).
 """
 from __future__ import annotations
 import re, unicodedata
 from collections import defaultdict
+
+# Full-ish patterns. Prefer over-rejecting a short prefix over accepting "ChiCTR" alone.
+_REGISTRY_RE = re.compile(
+    r"^("
+    r"NCT\d{8}"
+    r"|ISRCTN\d+"
+    r"|ChiCTR[-A-Z0-9]+"
+    r"|CTRI/[0-9/]+"
+    r"|UMIN[A-Z0-9]+"
+    r"|EudraCT[-\d]+"
+    r")$",
+    re.I,
+)
 
 
 def _norm(s):
@@ -17,7 +35,7 @@ def canonical_id(rec: dict) -> tuple[str, str]:
     """NCT > DOI > PMID > fingerprint. Returns (kind, id)."""
     for k in ("nct", "registration_id"):
         v = rec.get(k)
-        if v and re.match(r"^(NCT\d{8}|ISRCTN\d+|ChiCTR|CTRI|UMIN|EudraCT)", str(v), re.I):
+        if v and _REGISTRY_RE.match(str(v).strip()):
             return ("registry", _norm(v))
     if rec.get("doi"):
         return ("doi", _norm(rec["doi"]))
@@ -60,11 +78,16 @@ def dedup(records: list[dict]):
     return unique, id_map, stats
 
 
-def synthesis_contribution_cap(syntheses: list[dict], median_primary_w: float):
+def synthesis_contribution_cap(syntheses: list[dict], median_primary_w: float) -> float:
     """
-    Unresolved syntheses ALL TOGETHER cap at one median primary study.
+    Unresolved syntheses ALL TOGETHER cap at one median primary study weight.
     Fail toward under-counting. SPEC.md section 6.
+
+    NOT YET APPLIED in score_ecu — score_ecu ignores unresolved syntheses
+    entirely (even more conservative). Wire deliberately when retrieval exists;
+    do not call this from scoring without a SPEC update + selftest.
     """
     unresolved = [s for s in syntheses if not s.get("resolved")]
-    if not unresolved: return 0.0
-    return min(median_primary_w, median_primary_w)
+    if not unresolved:
+        return 0.0
+    return float(median_primary_w)

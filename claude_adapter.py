@@ -22,6 +22,10 @@ is taking multiple turns, something is wrong with the prompt, not the budget.
 CLI FLAGS DRIFT. This was written against Claude Code ~2.1.220 (Aug 2026).
 Run `claude --help` and fix THIS FILE if invocation breaks. That is the entire
 point of putting it in one place.
+
+OPEN VERIFICATION (see REVIEW.md): confirm whether --json-schema and
+--append-system-prompt expect file paths or raw content. Current code passes
+raw content. Smoke-test before production extraction runs.
 """
 
 from __future__ import annotations
@@ -33,10 +37,11 @@ ROOT = Path(__file__).parent
 SCHEMAS = ROOT / "schemas"
 PROMPTS = ROOT / "prompts"
 CACHE_DB = ROOT / "out" / "llm_cache.sqlite"
+SHARED_PROMPT = PROMPTS / "_shared.md"
 
-# Bump when you edit ANY prompt. This is in the cache key.
+# Bump when you edit ANY prompt (including _shared.md). This is in the cache key.
 # Forget to bump it and you will silently serve stale extractions forever.
-PROMPT_VERSION = "v1"
+PROMPT_VERSION = "v1.1"  # bumped 2026-08-05: _shared.md now prepended to every call
 
 # Tier -> model alias. Change these after you A/B on the 28 anchors,
 # not before. See SPEC.md section 15.
@@ -47,6 +52,7 @@ TIER_MODEL = {
 }
 
 # S-id -> (tier, schema file, prompt file)
+# S7 raised to B: form + elemental-dose extraction is high-stakes (5x dose errors).
 AGENTS = {
     "S1": ("A", "s1_design.json",     "s1_design.md"),
     "S2": ("B", "s2_synthesis.json",  "s2_synthesis.md"),
@@ -54,7 +60,7 @@ AGENTS = {
     "S4": ("B", "s4_rob.json",        "s4_rob.md"),
     "S5": ("B", "s5_conclusion.json", "s5_conclusion.md"),
     "S6": ("C", "s6_outcome.json",    "s6_outcome.md"),
-    "S7": ("A", "s7_form.json",       "s7_form.md"),
+    "S7": ("B", "s7_form.json",       "s7_form.md"),
     "S8": ("A", "s8_funding.json",    "s8_funding.md"),
 }
 
@@ -109,6 +115,15 @@ def _key(agent: str, model: str, payload: str) -> str:
     return h.hexdigest()
 
 
+def _system_prompt(prompt_f: str) -> str:
+    """Universal rules first, then the agent-specific prompt."""
+    shared = SHARED_PROMPT.read_text() if SHARED_PROMPT.exists() else ""
+    specific = (PROMPTS / prompt_f).read_text()
+    if shared:
+        return shared.rstrip() + "\n\n---\n\n" + specific
+    return specific
+
+
 def _extract_payload(raw: str):
     """
     Claude Code's JSON envelope shape has moved around between versions.
@@ -160,7 +175,7 @@ def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
     model = TIER_MODEL[tier]
 
     schema = (SCHEMAS / schema_f).read_text()
-    system = (PROMPTS / prompt_f).read_text()
+    system = _system_prompt(prompt_f)
     body = json.dumps(payload, ensure_ascii=False, sort_keys=True)
 
     k = _key(agent, model, body)
@@ -225,10 +240,13 @@ def preflight() -> bool:
 
     missing = [f for _, (_, s, pr) in AGENTS.items()
                for f in ((SCHEMAS / s), (PROMPTS / pr)) if not f.exists()]
+    if SHARED_PROMPT.exists() is False:
+        print("warning: prompts/_shared.md missing — universal rules will not be injected")
     if missing:
         print("missing files:", *missing, sep="\n  "); return False
     print(f"8 subagents wired. models: A={TIER_MODEL['A']} "
           f"B={TIER_MODEL['B']} C={TIER_MODEL['C']}")
+    print(f"PROMPT_VERSION={PROMPT_VERSION}  shared_rules={'yes' if SHARED_PROMPT.exists() else 'NO'}")
     return True
 
 

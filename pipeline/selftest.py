@@ -1,7 +1,7 @@
 """Zero-model regression test for the deterministic layer. python -m pipeline.selftest"""
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from pipeline.scoring import Study, score_ecu
+from pipeline.scoring import Study, score_ecu, band_for
 from pipeline.dedup import dedup
 
 ROB_CLEAN = {f"i{i}": 1 for i in range(1, 7)}
@@ -40,10 +40,20 @@ def main():
     check("clean positive RCTs -> strong support", a["score"] >= 70, f"score {a['score']}")
     n = score_ecu([Study(id=f"n{i}", design_rank=4, n=200, rob_items=ROB_CLEAN,
                          funding="independent", oa="full_text", form_match="exact",
-                         direction="null_effect") for i in range(12)], [])
+                         pop_match="exact", direction="null_effect") for i in range(12)], [])
     check("12 null RCTs -> negative", n["score"] < -40, f"score {n['score']}")
     h = score_ecu(rcts(6, direction="harm", magnitude=None), [])
     check("harm -> strong negative", h["score"] <= -70, f"score {h['score']}")
+
+    print("\nBAND BOUNDARIES (SPEC-aligned)")
+    check("-70 is strong against", band_for(-70) == "strong evidence against / harm")
+    check("-69 is does not work", band_for(-69) == "does not work")
+    check("-40 is does not work", band_for(-40) == "does not work")
+    check("-39 is weak against", band_for(-39) == "weak evidence against")
+    check("-9 is inconclusive", band_for(-9) == "inconclusive")
+    check("+9 is inconclusive", band_for(9) == "inconclusive")
+    check("+10 is weak support", band_for(10) == "weak support")
+    check("+70 is strong support", band_for(70) == "strong support")
 
     print("\nTRANSFER FACTOR (the moat)")
     wrong = score_ecu(rcts(9, form_match="different", dose_match="below_50"), [])
@@ -67,6 +77,13 @@ def main():
     check("high RoB lowers score", hr["score"] < a["score"], f"{a['score']} -> {hr['score']}")
     rt = score_ecu(rcts(9, retracted=True), [])
     check("retracted -> zero weight -> gate", rt["score"] is None)
+
+    print("\nMAGNITUDE DEFAULT")
+    meaningful = score_ecu(rcts(9, magnitude="meaningful"), [])
+    unstated = score_ecu(rcts(9, magnitude=None), [])
+    check("unstated benefit < meaningful benefit",
+          unstated["score"] < meaningful["score"],
+          f"{unstated['score']} < {meaningful['score']}")
 
     print(f"\n{'ALL PASSED' if not fails else 'FAILURES: ' + ', '.join(fails)}\n")
     return 1 if fails else 0
