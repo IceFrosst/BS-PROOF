@@ -1,0 +1,10 @@
+out/*
+!out/.gitkeep
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+*.sqlite
+.DS_Store
+.claude/settings.local.json
