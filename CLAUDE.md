@@ -42,7 +42,8 @@ auto-memory. A scientific extraction must not vary with ambient project state.
 
 It's in the cache key (`hash(content, PROMPT_VERSION, model)`). Forget, and the
 system silently serves stale extractions with no error and no way to notice.
-This is the most likely quiet bug in the codebase.
+This is the most likely quiet bug in the codebase. Editing `prompts/_shared.md`
+also requires a bump — it is prepended to every subagent call.
 
 ### 4. Never invent a constant
 
@@ -76,7 +77,7 @@ not absence of evidence. `s_i = −0.7`. This is what frees `0` to mean
 
 ```
 claude_adapter.py          the ONE model boundary. All CLI coupling lives here.
-prompts/*.md               subagent instructions S1-S8. The real IP.
+prompts/*.md               subagent instructions S1-S8 + _shared.md. The real IP.
 schemas/*.json             output contracts, enforced via --json-schema
 pipeline/scoring.py        w_study, E, E', d, c, H, signed score   [NO MODEL]
 pipeline/dedup.py          canonical ID resolution                 [NO MODEL]
@@ -87,6 +88,7 @@ docs/SPEC.md               full design, living document
 docs/ANCHORS.md            28-anchor calibration set
 pipeline_v1.excalidraw     pipeline diagram (root)
 AGENTS.md                  routes every agent to this file
+REVIEW.md                  pending audit fixes awaiting Claude sign-off
 ```
 
 ## Commands
@@ -99,7 +101,7 @@ python run_coverage.py magnesium creatine ashwagandha   # zero model calls
 
 **Run `pipeline.selftest` after any change to `pipeline/`.** It costs nothing and
 it catches the failures that matter: the dedup trap, sign of nulls, the transfer
-factor collapsing, the sufficiency gate.
+factor collapsing, the sufficiency gate, band boundaries.
 
 ---
 
@@ -113,14 +115,15 @@ factor collapsing, the sufficiency gate.
 | S4 | RoB scorer — 6-item proxy | B |
 | S5 | conclusion extractor — direction, effect size, CI | B |
 | S6 | outcome mapper — raw endpoint → vocabulary | C |
-| S7 | form normalizer — form, salt family, elemental dose | A/B |
+| S7 | form normalizer — form, salt family, elemental dose | B |
 | S8 | funding classifier | A |
 
 **S2 is highest-value** (one SR yields data for ~15 unreadable primaries).
 **S6 is highest-risk** (a wrong outcome mapping is silent and unrecoverable).
+**S7 is high-stakes** (elemental-dose trap) — tier B, not A.
 
 Tiers are a prior, not a measurement. A/B them on the 28 anchors before
-committing.
+committing further.
 
 ---
 
@@ -180,18 +183,23 @@ controlled vocabularies (`outcome`, `form`, `population`). S3, S6 and S7 extract
 **Open constants awaiting Tier-3 calibration:** `k`, all transfer factors, OA
 penalty, RoB thresholds. See `docs/SPEC.md` §13.
 
-**Multi-agent workflow:** documented (same pattern as Personal-Hub). Architecture
-diagram path corrected to `pipeline_v1.excalidraw` at root.
+**2026-08-05 audit fixes (Grok) — pending Claude review:** see `REVIEW.md`.
+Band boundaries, magnitude default, pop_match default, shared prompt injection,
+S7→B, registry regex, synthesis_contribution_cap. PROMPT_VERSION=v1.1.
+CLI flag shape (content vs path) still needs a live smoke test.
 
 ## Next
 
-1. `run_coverage.py` on 3 ingredients — settles the largest unknown, costs nothing
-2. ClinicalTrials.gov integration — RoB items 3+4 and the unpublished flag, one API
-3. Calibration harness — EFSA one-sided constraint + the 28 anchors
-4. **ECU schema + three vocabularies** — blocks S3/S6/S7
-5. Retrieval + dedup wiring
-6. Per-study workers
-7. Scoring + storage
+**Handoff:** Claude — review `REVIEW.md`, run `python -m pipeline.selftest`, smoke-test Claude CLI schema/prompt flags, then confirm or amend. Do not treat audit fixes as settled until you sign off.
+
+1. Confirm or amend the audit fixes in `REVIEW.md`
+2. `run_coverage.py` on 3 ingredients — settles the largest unknown, costs nothing
+3. ClinicalTrials.gov integration — RoB items 3+4 and the unpublished flag, one API
+4. Calibration harness — EFSA one-sided constraint + the 28 anchors
+5. **ECU schema + three vocabularies** — blocks S3/S6/S7
+6. Retrieval + dedup wiring
+7. Per-study workers
+8. Scoring + storage
 
 ---
 
