@@ -187,12 +187,13 @@ penalty, RoB thresholds. See `docs/SPEC.md` §13.
 Band boundaries, magnitude default, pop_match default, shared prompt injection,
 S7→B, registry regex, synthesis_contribution_cap. PROMPT_VERSION=v1.1.
 CLI flag shape (content vs path) still needs a live smoke test.
+Manual demo-setup checklist added — Claude must critique it.
 
 ## Next
 
-**Handoff:** Claude — review `REVIEW.md`, run `python -m pipeline.selftest`, smoke-test Claude CLI schema/prompt flags, then confirm or amend. Do not treat audit fixes as settled until you sign off.
+**Handoff:** Claude — (1) review audit fixes in `REVIEW.md`, run `python -m pipeline.selftest`, smoke-test Claude CLI schema/prompt flags; (2) **critique the Manual setup for demo list** in `REVIEW.md` (wrong / missing / premature / env names); fill the response template at the bottom of REVIEW.md. Do not treat audit fixes or the setup list as settled until you sign off.
 
-1. Confirm or amend the audit fixes in `REVIEW.md`
+1. Confirm or amend the audit fixes + setup list in `REVIEW.md`
 2. `run_coverage.py` on 3 ingredients — settles the largest unknown, costs nothing
 3. ClinicalTrials.gov integration — RoB items 3+4 and the unpublished flag, one API
 4. Calibration harness — EFSA one-sided constraint + the 28 anchors
