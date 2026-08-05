@@ -1,0 +1,12 @@
+{"type":"object","required":["n_randomised","arms","duration_days","population_text","registration_id","evidence_spans"],"additionalProperties":false,
+"properties":{
+"n_randomised":{"type":["integer","null"]},
+"n_analysed":{"type":["integer","null"]},
+"arms":{"type":"array","items":{"type":"object","required":["label"],"additionalProperties":false,
+  "properties":{"label":{"type":"string"},"n":{"type":["integer","null"]},
+  "intervention_text":{"type":["string","null"]},"is_control":{"type":["boolean","null"]}}}},
+"duration_days":{"type":["integer","null"]},
+"population_text":{"type":["string","null"]},
+"deficiency_status":{"type":["string","null"]},
+"registration_id":{"type":["string","null"]},
+"evidence_spans":{"type":"array","items":{"type":"string"}}}}

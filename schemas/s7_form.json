@@ -1,0 +1,11 @@
+{"type":"object","required":["form_vocab_id","salt_family","elemental_dose_mg","dose_basis","confidence"],"additionalProperties":false,
+"properties":{
+"form_vocab_id":{"type":["string","null"]},
+"form_raw":{"type":["string","null"]},
+"salt_family":{"type":["string","null"]},
+"elemental_dose_mg":{"type":["number","null"]},
+"compound_dose_mg":{"type":["number","null"]},
+"dose_basis":{"type":"string","enum":["elemental_stated","converted","compound_only","unstated"]},
+"dose_frequency_per_day":{"type":["number","null"]},
+"confidence":{"type":"number","minimum":0,"maximum":1},
+"evidence_span":{"type":["string","null"]}}}
