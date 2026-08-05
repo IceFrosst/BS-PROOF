@@ -75,17 +75,18 @@ not absence of evidence. `s_i = −0.7`. This is what frees `0` to mean
 ## Layout
 
 ```
-claude_adapter.py     the ONE model boundary. All CLI coupling lives here.
-prompts/*.md          subagent instructions S1-S8. The real IP.
-schemas/*.json        output contracts, enforced via --json-schema
-pipeline/scoring.py   w_study, E, E', d, c, H, signed score   [NO MODEL]
-pipeline/dedup.py     canonical ID resolution                 [NO MODEL]
-pipeline/selftest.py  zero-cost regression test
-sources/ratelimit.py  per-domain token bucket
-run_coverage.py       week-1 measurement script
-docs/SPEC.md          full design, living document
-docs/ANCHORS.md       28-anchor calibration set
-docs/architecture/    excalidraw diagrams
+claude_adapter.py          the ONE model boundary. All CLI coupling lives here.
+prompts/*.md               subagent instructions S1-S8. The real IP.
+schemas/*.json             output contracts, enforced via --json-schema
+pipeline/scoring.py        w_study, E, E', d, c, H, signed score   [NO MODEL]
+pipeline/dedup.py          canonical ID resolution                 [NO MODEL]
+pipeline/selftest.py       zero-cost regression test
+sources/ratelimit.py       per-domain token bucket
+run_coverage.py            week-1 measurement script
+docs/SPEC.md               full design, living document
+docs/ANCHORS.md            28-anchor calibration set
+pipeline_v1.excalidraw     pipeline diagram (root)
+AGENTS.md                  routes every agent to this file
 ```
 
 ## Commands
@@ -123,6 +124,48 @@ committing.
 
 ---
 
+## Multi-agent workflow (Claude Code + Grok + Codex)
+
+Three agents share this repo and must be able to **take over from each other
+mid-task with no lost context**. The living docs ARE the handoff — no separate
+handoff files.
+
+This pattern is the same one used in Personal-Hub, adapted for a scientific
+pipeline where reproducibility is the product.
+
+- **Claude Code** — coding sessions; auto-loads this `CLAUDE.md`.
+- **Grok** — full GitHub read/write; must read this entire file before starting.
+- **Codex** — reads root `AGENTS.md`, which routes it here; must also read this
+  entire file before changing anything.
+
+### Rules for every agent
+
+1. **Enter every task as a continuation.** Inspect the current branch, working
+   tree, recent commits, and this file's `Current state` / `Next` before editing.
+   Preserve another agent's in-flight work.
+2. **The state of play lives here → `Current state` / `Next`.** Keep them live —
+   update them in the **same commit** as the code change, not only at session end.
+3. **Handing off:** put a one-line **`Handoff:`** note at the top of `Next`
+   (what's in flight · what's next · any risk). The successor deletes it once
+   picked up.
+4. **Anything pushed is a valid resume point.** Commit + push frequently to a
+   feature branch so the last push is a clean handoff. Never push straight to
+   `main` without confirmation.
+5. **After any change to `pipeline/`**, run `python -m pipeline.selftest` and
+   keep the result green. This is non-negotiable.
+6. **Never invent a constant or raise `--max-turns`.** If a subagent seems to need
+   a second turn, the prompt is wrong — fix the prompt.
+7. When a design decision changes, update `docs/SPEC.md` **and** its changelog,
+   then regenerate the diagram (`pipeline_v1.excalidraw`).
+
+### Why this is stricter here than in Personal-Hub
+
+A personal app can ship a slightly wrong UI. This system will make public claims
+about named brands. The same bottle must produce the same score tomorrow. That
+is why the hard invariants above exist and why agents must not quietly bypass them.
+
+---
+
 ## Current state
 
 **Built and tested:** scoring, dedup, adapter, prompts, schemas, selftest.
@@ -137,7 +180,10 @@ controlled vocabularies (`outcome`, `form`, `population`). S3, S6 and S7 extract
 **Open constants awaiting Tier-3 calibration:** `k`, all transfer factors, OA
 penalty, RoB thresholds. See `docs/SPEC.md` §13.
 
-## Build order
+**Multi-agent workflow:** documented (same pattern as Personal-Hub). Architecture
+diagram path corrected to `pipeline_v1.excalidraw` at root.
+
+## Next
 
 1. `run_coverage.py` on 3 ingredients — settles the largest unknown, costs nothing
 2. ClinicalTrials.gov integration — RoB items 3+4 and the unpublished flag, one API
