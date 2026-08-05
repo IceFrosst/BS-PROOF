@@ -1,31 +1,34 @@
-"""Per-domain token bucket. The bottleneck is never the model."""
-from __future__ import annotations
-import time
-from collections import defaultdict
+"""Per-domain token bucket. The bottleneck is fetch, not tokens (Amdahl)."""
+import time, threading
+from urllib.parse import urlparse
 
-class TokenBucket:
-    def __init__(self, rate: float, capacity: float):
-        self.rate = rate
-        self.capacity = capacity
-        self.tokens = capacity
-        self.updated = time.monotonic()
+# requests per second, per domain. v1 = UNAUTHENTICATED settings.
+# Add an NCBI API key later and raise eutils to 9.0 -- 3x for one env var.
+LIMITS = {"eutils.ncbi.nlm.nih.gov": 2.5, "www.ebi.ac.uk": 5.0,
+          "clinicaltrials.gov": 5.0, "api.epistemonikos.org": 1.0,
+          "api.openalex.org": 5.0, "api.unpaywall.org": 5.0,
+          "api.crossref.org": 5.0, "_default": 2.0}
 
-    def take(self, n: float = 1.0) -> float:
-        now = time.monotonic()
-        self.tokens = min(self.capacity, self.tokens + (now - self.updated) * self.rate)
-        self.updated = now
-        if self.tokens >= n:
-            self.tokens -= n
-            return 0.0
-        wait = (n - self.tokens) / self.rate
-        self.tokens = 0.0
-        return wait
+class Bucket:
+    def __init__(self, rate):
+        self.rate, self.tokens = rate, rate
+        self.ts, self.lock = time.monotonic(), threading.Lock()
+    def take(self):
+        with self.lock:
+            now = time.monotonic()
+            self.tokens = min(self.rate, self.tokens + (now - self.ts) * self.rate)
+            self.ts = now
+            if self.tokens < 1:
+                wait = (1 - self.tokens) / self.rate
+                time.sleep(wait); self.tokens = 0; self.ts = time.monotonic()
+            else:
+                self.tokens -= 1
 
-_buckets: dict[str, TokenBucket] = {}
+_buckets, _lock = {}, threading.Lock()
 
-def wait_for(domain: str, rate: float = 3.0, capacity: float = 5.0) -> None:
-    if domain not in _buckets:
-        _buckets[domain] = TokenBucket(rate, capacity)
-    delay = _buckets[domain].take()
-    if delay > 0:
-        time.sleep(delay)
+def throttle(url: str):
+    host = urlparse(url).netloc
+    rate = LIMITS.get(host, LIMITS["_default"])
+    with _lock:
+        b = _buckets.setdefault(host, Bucket(rate))
+    b.take()

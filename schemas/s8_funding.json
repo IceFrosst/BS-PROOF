@@ -1,0 +1,7 @@
+{"type":"object","required":["funding_class","evidence_span"],"additionalProperties":false,
+"properties":{
+"funding_class":{"type":"string","enum":["independent","undisclosed","brand_funded","industry_other"]},
+"funder_names":{"type":"array","items":{"type":"string"}},
+"author_coi":{"type":["string","null"]},
+"supplies_donated_by_industry":{"type":["boolean","null"]},
+"evidence_span":{"type":["string","null"]}}}
