@@ -88,10 +88,10 @@ changes).
 
 ## Docs
 
-- **[`CLAUDE.md`](CLAUDE.md)** — architectural invariants. Read before changing code.
+- **[`CLAUDE.md`](CLAUDE.md)** — architectural invariants + multi-agent workflow. Read before changing code.
 - **[`docs/SPEC.md`](docs/SPEC.md)** — full design, living document with changelog
 - **[`docs/ANCHORS.md`](docs/ANCHORS.md)** — 28-anchor calibration set
-- **[`docs/architecture/`](docs/architecture/)** — excalidraw diagrams
+- **[`pipeline_v1.excalidraw`](pipeline_v1.excalidraw)** — pipeline diagram
 
 ## Status
 
