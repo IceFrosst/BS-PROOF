@@ -1,0 +1,36 @@
+id,ingredient,form,dose,outcome,population,expected_min,expected_max,band,tests,confidence
+1,creatine,monohydrate,3-5 g/d,muscle strength power output,healthy trained adults,80,95,strong_positive,range,A
+2,folic acid,folic acid,400 ug/d,neural tube defect prevention,preconception pregnant,85,100,strong_positive,range,A
+3,vitamin D,cholecalciferol D3,800-2000 IU/d,serum 25OHD increase,deficient adults,85,100,strong_positive,range;population_flip,A
+4,iron,ferrous sulfate,60-120 mg elemental,haemoglobin increase,iron deficiency anaemia,85,100,strong_positive,range,A
+5,caffeine,anhydrous,3-6 mg/kg,endurance performance,healthy adults,75,95,strong_positive,range,A
+6,omega-3,EPA/DHA ethyl ester,~4 g/d,triglyceride reduction,hypertriglyceridaemic adults,60,85,moderate_positive,range;dose_sensitivity;outcome_decomposition,A
+7,melatonin,melatonin,0.5-5 mg,sleep onset latency,adults with insomnia,35,60,moderate_positive,range,B
+8,probiotics,S boulardii / L rhamnosus GG,strain specific,antibiotic associated diarrhoea prevention,adults on antibiotics,40,65,moderate_positive,range;form_sensitivity,B
+9,zinc,acetate or gluconate lozenge,>=75 mg/d within 24h,common cold duration,healthy adults,25,55,moderate_positive,range;outcome_decomposition,C
+10,magnesium,glycinate or citrate,200-400 mg elemental,sleep quality,general adults,5,30,weak_positive,range;form_sensitivity,C
+11,ashwagandha,KSM-66 root extract,300-600 mg/d,perceived stress,chronically stressed adults,10,35,weak_positive,range;funding_penalty,C
+12,glucosamine,sulfate or HCl,1500 mg/d,knee osteoarthritis pain,adults with knee OA,-25,10,inconclusive,range;funding_penalty,B
+13,collagen,hydrolysed peptides,2.5-10 g/d,skin elasticity,adult women,-10,25,inconclusive,range;funding_penalty,C
+14,vitamin D,cholecalciferol D3,2000 IU/d,fracture prevention,community dwelling replete adults,-70,-40,moderate_negative,range;population_flip;dedup_stress,A
+15,omega-3,EPA/DHA,~1 g/d,major cardiovascular event prevention,general adults,-60,-30,moderate_negative,range;dose_sensitivity;outcome_decomposition;dedup_stress,A
+16,multivitamin,multi RDA blend,standard,all cause mortality reduction,well nourished general adults,-75,-45,moderate_negative,range,A
+17,vitamin C,ascorbic acid,>=200 mg/d ongoing,common cold incidence prevention,general adults,-95,-70,strong_negative,range;outcome_decomposition,A
+18,ginkgo biloba,EGb 761 extract,120-240 mg/d,dementia cognitive decline prevention,older adults,-95,-70,strong_negative,range,A
+19,vitamin E,alpha-tocopherol,>=400 IU/d,cardiovascular event prevention,general adults,-95,-70,strong_negative,range,A
+20,selenium,selenomethionine,200 ug/d,prostate cancer prevention,healthy men,-95,-70,strong_negative,range,A
+21,beta-carotene,synthetic beta-carotene,20-30 mg/d,lung cancer prevention,smokers,-100,-85,harm,range;harm_tier,A
+22a,vitamin D,ergocalciferol D2,equivalent IU,serum 25OHD increase,general adults,,,form_pair,form_sensitivity,A
+22b,vitamin D,cholecalciferol D3,equivalent IU,serum 25OHD increase,general adults,,,form_pair,form_sensitivity,A
+23a,magnesium,oxide,200-400 mg elemental,absorption dependent outcome,general adults,,,form_pair,form_sensitivity,A
+23b,magnesium,glycinate or citrate,200-400 mg elemental,absorption dependent outcome,general adults,,,form_pair,form_sensitivity,A
+24a,curcumin,plain curcuminoid,500-1000 mg/d,systemic inflammatory outcome,general adults,,,form_pair,form_sensitivity,B
+24b,curcumin,piperine enhanced or phytosome,500-1000 mg/d,systemic inflammatory outcome,general adults,,,form_pair,form_sensitivity,B
+25a,omega-3,EPA/DHA,~1 g/d,triglyceride reduction,hypertriglyceridaemic adults,,,dose_pair,dose_sensitivity,A
+25b,omega-3,EPA/DHA,~4 g/d,triglyceride reduction,hypertriglyceridaemic adults,,,dose_pair,dose_sensitivity,A
+26a,creatine,monohydrate,3 g/d maintenance,muscle strength,healthy trained adults,,,dose_pair_null,dose_sensitivity_false_positive,A
+26b,creatine,monohydrate,20 g/d loading,muscle strength,healthy trained adults,,,dose_pair_null,dose_sensitivity_false_positive,A
+27a,vitamin D,cholecalciferol D3,800-2000 IU/d,fracture prevention,institutionalised elderly deficient,,,population_pair,population_flip,A
+27b,vitamin D,cholecalciferol D3,800-2000 IU/d,fracture prevention,community dwelling replete adults,,,population_pair,population_flip,A
+28a,iron,ferrous sulfate or bisglycinate,60-120 mg elemental,fatigue reduction,iron deficient adults,,,population_pair,population_flip,A
+28b,iron,ferrous sulfate or bisglycinate,60-120 mg elemental,fatigue reduction,iron replete adults,,,population_pair,population_flip,A
