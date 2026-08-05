@@ -1,0 +1,38 @@
+name: selftest
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  deterministic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate schemas parse
+        run: python -c "import json,glob,sys; [json.load(open(f)) for f in glob.glob('schemas/*.json')]; print('8 schemas ok')"
+      - name: Assert no model in deterministic layer
+        run: |
+          if grep -rn "claude_adapter" pipeline/ sources/; then
+            echo "::error::a model boundary leaked into the deterministic layer"
+            exit 1
+          fi
+          echo "deterministic layer clean"
+      - name: Assert every prompt has a schema
+        run: |
+          python - <<'PY'
+          import re, pathlib, sys
+          src = pathlib.Path("claude_adapter.py").read_text()
+          agents = re.findall(r'"(S\d)":\s*\("([ABC/]+)",\s*"([^"]+)",\s*"([^"]+)"', src)
+          missing = [f for _,_,s,p in agents
+                     for f in (pathlib.Path("schemas")/s, pathlib.Path("prompts")/p)
+                     if not f.exists()]
+          if missing:
+              print("missing:", *missing, sep="\n  "); sys.exit(1)
+          print(f"{len(agents)} subagents wired")
+          PY
+      - name: Deterministic regression
+        run: python -m pipeline.selftest
