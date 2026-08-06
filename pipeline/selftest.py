@@ -211,6 +211,41 @@ def main():
     check("meta-analysis classified as synthesis", syn["is_synthesis"] is True)
     check("PMC id -> full_text", syn["oa"] == "full_text")
 
+    print("\nDESIGN CLASSIFICATION (deterministic; S1 is the fallback)")
+    from pipeline.classify import classify, classify_all
+    def rec(types=(), mesh=(), title=""):
+        return {"pub_types": list(types), "mesh_terms": list(mesh), "title": title}
+
+    check("RCT tag -> rank 4",
+          classify(rec(["Randomized Controlled Trial"], ["Humans"]))["design_rank"] == 4)
+    check("meta-analysis -> rank 2",
+          classify(rec(["Meta-Analysis", "Systematic Review"], ["Humans"]))["design_rank"] == 2)
+    check("SR without MA -> rank 3",
+          classify(rec(["Systematic Review"], ["Humans"]))["design_rank"] == 3)
+    check("umbrella review from title -> rank 1",
+          classify(rec(["Systematic Review"], ["Humans"], "An umbrella review of..."))["design_rank"] == 1)
+    # The rule that saves the most weight: a rigorous animal study is still 12.
+    animal = classify(rec(["Randomized Controlled Trial"], ["Animals", "Rats"]))
+    check("randomised RAT trial -> rank 12, not 4", animal["design_rank"] == 12,
+          "design weight 0.004 vs 1.00 — a 250x error if missed")
+    check("animal tag with Humans present stays a trial",
+          classify(rec(["Randomized Controlled Trial"], ["Animals", "Humans"]))["design_rank"] == 4,
+          "co-tagged translational papers are not animal studies")
+    check("editorial -> rank 14", classify(rec(["Editorial"], ["Humans"]))["design_rank"] == 14)
+    check("case-control from MeSH -> rank 8",
+          classify(rec(["Journal Article"], ["Humans", "Case-Control Studies"]))["design_rank"] == 8)
+
+    amb = classify(rec(["Clinical Trial"], ["Humans"]))
+    check("bare 'Clinical Trial' -> needs S1, not a guess",
+          amb["needs_model"] and amb["design_rank"] is None,
+          "randomised vs not is 1.00 vs 0.55")
+    bare = classify(rec())
+    check("untagged record -> needs S1", bare["needs_model"] and bare["design_rank"] is None)
+    _, cstats = classify_all([rec(["Randomized Controlled Trial"], ["Humans"]), rec()])
+    check("classify_all reports S1 call volume",
+          cstats["needs_model"] == 1 and cstats["deterministic_pct"] == 50.0,
+          f"{cstats['deterministic_pct']}% settled without a model")
+
     print("\nCLINICALTRIALS.GOV (RoB items 3+4, unpublished flag)")
     from sources import clinicaltrials as ct
     from datetime import date as _date

@@ -70,6 +70,17 @@ def oa_status(rec: dict) -> str:
     return "abstract_only"
 
 
+def mesh_terms(rec: dict) -> list[str]:
+    """
+    MeSH descriptors. These are curated by human indexers, which is why
+    pipeline/classify.py trusts them over anything a model could re-derive.
+    Empty for records PubMed has not finished indexing -- an empty list means
+    "not indexed yet", never "no such terms apply".
+    """
+    heads = (rec.get("meshHeadingList", {}) or {}).get("meshHeading", [])
+    return [h.get("descriptorName") for h in heads if h.get("descriptorName")]
+
+
 def registry_ids(rec: dict) -> list[str]:
     """
     Trial registry IDs mentioned anywhere in the record. Europe PMC exposes
@@ -115,6 +126,7 @@ def normalise(rec: dict) -> dict:
         "is_synthesis": is_synthesis(rec),
         "oa": oa_status(rec),
         "pub_types": (rec.get("pubTypeList", {}) or {}).get("pubType", []),
+        "mesh_terms": mesh_terms(rec),
         "n": None,          # only S3 knows this
         "country": None,    # not exposed by the search endpoint
         "dose_text": None,  # only S7 knows this
