@@ -48,6 +48,14 @@ def _query(ingredient: str, *, syntheses: bool, scope: str = "broad") -> str:
       + supplement terms         2022 hits, 12% clinical
       + supplement NOT clinical  1420 hits,  1% clinical
 
+    MEASURED YIELD, 2026-08-06: switching to 'supplement' did NOT improve the
+    number of scorable ECU rows -- 1 row from 8 studies under BOTH scopes. It
+    trades clinical noise for WRONG-INGREDIENT noise, because Europe PMC matches
+    "magnesium" anywhere in the record: an Astragalus, whey-protein or Griffonia
+    trial that merely mentions magnesium is retrieved. Neither scope is right
+    yet; the ingredient needs to be constrained to the INTERVENTION, not the
+    document.
+
     'broad' remains the DEFAULT on purpose. Switching it silently would change
     the corpus behind every coverage number already recorded, and the RECALL
     cost of the NOT clause is not yet measured -- a supplement trial that merely
