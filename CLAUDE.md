@@ -348,16 +348,18 @@ Everything below the line needs credentials the founder has to create.
    `population_text`; nothing maps it to the four axes, so `pop_match` currently
    compares defaults. Recommended fix in `docs/SPEC.md` §5: pass the population
    vocab into S3. Needs a `PROMPT_VERSION` bump.
-6. **Calibration harness — BUILT** (`pipeline/calibration.py`). But only
-   **7 of 35 anchors are runnable**: the other 28 need 17 ingredients added to
-   `vocab/form.json`. Run `python3 -m pipeline.calibration` for the list. This
-   is vocabulary work, needs no credentials, and is the largest single
-   unblocked task in the repo. EFSA (Tier 1) still needs a manual download.
-7. **Raise the fetch caps and re-measure coverage — highest-value unblocked
-   item.** magnesium matches 10 555 records and creatine 9 457; the run sees
-   1500 each, in relevance order, so 88.9% is optimistic by an unknown margin.
-   Set `MAX_PRIMARIES` high in `run_coverage.py` and rerun. Costs only time and
-   politeness; the HTTP cache makes reruns free.
+6. **Calibration harness — BUILT and vocabulary-ready.** 34/34 in-scope
+   anchors have vocabulary entries; running them needs extraction (API key).
+   EFSA (Tier 1) still needs a manual download. New ingredient blocks in
+   `vocab/form.json` are marked **needs chemistry review** — molar masses were
+   set only for single well-defined compounds.
+7. **Close the 2.5-point coverage gap — now the highest-value work.**
+   77.5% measured against a ≥80% target. Two unbuilt rungs: **Unpaywall**
+   (needs only the contact email) and **SR-table inheritance**, which is
+   entirely unbuilt and where the leverage is — synthesis:primary is 0.52 and
+   one OA review carries methods facts for ~15 unreadable primaries.
+   `pipeline/synthesis.py` already resolves included studies; what is missing is
+   fetching SR full text and running S2 over it.
 8. **Venue factor.** `Study.venue_ok` is a boolean; SJR quartiles have nowhere
    to go until a real venue factor exists (new constant -> SPEC §13 first).
 
