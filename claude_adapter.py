@@ -48,13 +48,33 @@ SHARED_PROMPT = PROMPTS / "_shared.md"
 # Forget to bump it and you will silently serve stale extractions forever.
 PROMPT_VERSION = "v1.1"  # bumped 2026-08-05: _shared.md now prepended to every call
 
-# Tier -> model alias. Change these after you A/B on the 28 anchors,
-# not before. See SPEC.md section 15.
+# Tier -> model. FULL IDs, NOT ALIASES.
+#
+# An alias like "sonnet" resolves to "the latest model" and the alias STRING is
+# what _key() hashes. When the alias moves to a new model, cached extractions
+# keep hashing to the same key -- so the cache serves output from a model that
+# is no longer in use, while fresh calls come from a different model under the
+# same key. That is the PROMPT_VERSION failure mode (invariant 3) with no
+# version to bump, and it silently breaks "the same bottle scores the same
+# tomorrow". Pinning is not an optimisation here; it is the invariant.
+#
+# Change these after you A/B on the 28 anchors, not before. SPEC.md section 15.
 TIER_MODEL = {
-    "A": os.environ.get("SP_MODEL_A", "haiku"),
-    "B": os.environ.get("SP_MODEL_B", "sonnet"),
-    "C": os.environ.get("SP_MODEL_C", "opus"),
+    "A": os.environ.get("SP_MODEL_A", "claude-haiku-4-5-20251001"),
+    "B": os.environ.get("SP_MODEL_B", "claude-sonnet-5"),
+    "C": os.environ.get("SP_MODEL_C", "claude-opus-5"),
 }
+
+# Hard ceiling per subagent call, in USD. The CLI enforces it, so a runaway
+# retry loop or a pathologically long full text cannot silently spend a fortune
+# across a multi-ingredient run. Raise deliberately, never to make a call pass.
+MAX_BUDGET_USD = float(os.environ.get("SP_MAX_BUDGET_USD", "0.50"))
+
+# Concurrency is a fetch-side property (Amdahl -- the bottleneck is retrieval,
+# not tokens), but the model boundary needs its own ceiling so a wide fan-out
+# cannot open 200 CLI subprocesses at once.
+MAX_CONCURRENCY = int(os.environ.get("SP_MAX_CONCURRENCY", "6"))
+_slots = threading.Semaphore(MAX_CONCURRENCY)
 
 # S-id -> (tier, schema file, prompt file)
 # S7 raised to B: form + elemental-dose extraction is high-stakes (5x dose errors).
@@ -220,15 +240,26 @@ def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
         "--append-system-prompt", system,
         "--model", model,
         "--max-turns", "1",
+        "--max-budget-usd", str(MAX_BUDGET_USD),
     ]
 
-    last_err = None
+    last_err, timeouts = None, 0
     for attempt in range(retries + 1):
         try:
-            proc = subprocess.run(cmd, input=body, capture_output=True,
-                                  text=True, timeout=timeout)
+            with _slots:
+                proc = subprocess.run(cmd, input=body, capture_output=True,
+                                      text=True, timeout=timeout)
         except subprocess.TimeoutExpired:
-            last_err = "timeout"; time.sleep(2 ** attempt); continue
+            timeouts += 1
+            last_err = f"timeout after {timeout}s (attempt {attempt + 1})"
+            # A MALFORMED api key makes the CLI hang rather than error, so
+            # _is_fatal never sees a message and the call burns retries x
+            # timeout -- 9 minutes per study at the defaults. Two hangs in a row
+            # is a configuration problem, not a slow model.
+            if timeouts >= 2:
+                last_err += " -- hung twice; check ANTHROPIC_API_KEY is well-formed"
+                break
+            time.sleep(2 ** attempt); continue
 
         if proc.returncode != 0:
             # The CLI reports the actual reason ("Not logged in", auth errors,
@@ -290,9 +321,14 @@ def preflight() -> bool:
         print("warning: prompts/_shared.md missing — universal rules will not be injected")
     if missing:
         print("missing files:", *missing, sep="\n  "); return False
-    print(f"8 subagents wired. models: A={TIER_MODEL['A']} "
-          f"B={TIER_MODEL['B']} C={TIER_MODEL['C']}")
+    print("8 subagents wired. models (PINNED, not aliases):")
+    for tier in ("A", "B", "C"):
+        print(f"  {tier}: {TIER_MODEL[tier]}")
+    if any("-" not in m for m in TIER_MODEL.values()):
+        print("  WARNING: a tier looks like an ALIAS. Aliases float to the latest")
+        print("  model while the cache key does not change -- see TIER_MODEL.")
     print(f"PROMPT_VERSION={PROMPT_VERSION}  shared_rules={'yes' if SHARED_PROMPT.exists() else 'NO'}")
+    print(f"budget/call=${MAX_BUDGET_USD}  max_concurrency={MAX_CONCURRENCY}")
     return True
 
 
