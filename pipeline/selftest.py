@@ -286,6 +286,33 @@ def main():
     check("no posted results -> attrition all null",
           ct.attrition({})["dropout_rate"] is None)
 
+    print("\nGREEN OA RESOLUTION")
+    from sources import oa as oamod
+    oa_work = {"best_oa_location": {"is_oa": True, "pdf_url": "http://x/y.pdf",
+                                    "version": "publishedVersion", "license": "cc-by",
+                                    "source": {"type": "repository"}},
+               "referenced_works": ["W1", "W2", "W3"]}
+    closed = {"best_oa_location": {"is_oa": False}}
+    check("OA location normalised",
+          oamod.oa_location(oa_work)["url"] == "http://x/y.pdf")
+    check("closed access -> None, a real answer",
+          oamod.oa_location(closed) is None)
+    check("reference list available for SR resolution",
+          len(oamod.referenced_dois(oa_work)) == 3,
+          "narrows S2's search space; never decides membership")
+    check("europepmc full_text short-circuits the lookup",
+          oamod.resolve({"oa": "full_text", "doi": "10.1/x"})["checked"] == ["europepmc"],
+          "free answer wins")
+    check("no DOI -> nothing to resolve against",
+          oamod.resolve({"oa": "abstract_only", "doi": None})["checked"] == [])
+    try:
+        oamod.unpaywall("10.1/x")
+        gated = False
+    except oamod.ContactEmailMissing:
+        gated = True
+    check("Unpaywall RAISES without an email, never returns 'no OA'", gated,
+          "a silent miss is indistinguishable from a paywalled paper")
+
     print("\nSTORAGE (SQLite on a Postgres-shaped schema)")
     import tempfile
     from pipeline.storage import Store, now_iso
