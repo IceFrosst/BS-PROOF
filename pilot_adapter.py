@@ -62,6 +62,13 @@ PILOT_MARKER = "pilot-subscription-not-production"
 # Deliberately lower than claude_adapter.MAX_CONCURRENCY (6) because each pilot
 # subprocess costs more.
 MAX_CONCURRENCY = int(os.environ.get("SP_PILOT_CONCURRENCY", "3"))
+
+# 10 minutes. A non-bare call reloads plugins, settings and auto-memory every
+# invocation, and S2 over a long included-studies table is genuinely slow. The
+# cost of a timeout here is not a slow run -- it is a None that reads as "this
+# study reported nothing" -- so the budget must be generous enough that a
+# timeout means BROKEN, not merely busy.
+CALL_TIMEOUT_S = int(os.environ.get("SP_PILOT_TIMEOUT_S", "600"))
 _slots = threading.Semaphore(MAX_CONCURRENCY)
 
 
@@ -149,7 +156,7 @@ def hermeticity_probe(model: str | None = None, timeout: int = 150) -> dict:
     return {"hermetic": True, "detail": f"canary absent (got {result.strip()[:40]!r})"}
 
 
-def call(agent: str, payload: dict, *, timeout: int = 300, retries: int = 1,
+def call(agent: str, payload: dict, *, timeout: int | None = None, retries: int = 1,
          verified: bool = False) -> tuple[dict | None, dict]:
     """
     One pilot subagent call. Same prompts, same schemas, same PROMPT_VERSION as
@@ -169,6 +176,7 @@ def call(agent: str, payload: dict, *, timeout: int = 300, retries: int = 1,
             "not proven ambient state is excluded is just a chat transcript.")
     if agent not in AGENTS:
         raise KeyError(f"unknown subagent {agent}")
+    timeout = CALL_TIMEOUT_S if timeout is None else timeout
 
     tier, schema_f, prompt_f = AGENTS[agent]
     model = TIER_MODEL[tier]
