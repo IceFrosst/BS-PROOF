@@ -1,53 +1,23 @@
 """
 Per-study workers. This file MAY call a model; `pipeline/` may not.
-
-It lives at the repo root beside claude_adapter.py deliberately. Invariant 1
-says everything in `pipeline/` and `sources/` is deterministic, so the layer
-that fans out to subagents cannot live there. The split is:
-
-    workers.py           orchestrates subagent calls        [MODEL]
-    pipeline/assemble.py turns their JSON into a Study      [NO MODEL]
-
-Each worker is a pure function of one study: input JSON on stdin, output JSON,
-exit. No tools, no loop, no state. If a subagent seems to need a second turn,
-the prompt is wrong (invariant 2).
-
-`call` is injectable so the whole fan-out is testable without an API key or a
-single token spent. That is not a testing convenience -- it is how the assembly
-logic gets regression coverage at all, since model output cannot be asserted on.
 """
 from __future__ import annotations
-from concurrent.futures import ThreadPoolExecutor
+
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import claude_adapter
 from pipeline import vocab
 
-# Which subagents run per primary study, and what each one is fed. Order is
-# irrelevant -- they are independent pure functions, which is why they can fan
-# out. S6 is the exception: it consumes S5's output and must run after it.
 PER_STUDY = ("S3", "S4", "S5", "S7", "S8")
-
-# Below this, the "study" is a title or nothing. An abstract is ~800-2000 chars;
-# a bare title is ~80. Extraction below this floor cannot produce a real claim.
 MIN_TEXT_CHARS = 200
 
 
 def _payload(agent: str, record: dict, text: str, registry: dict | None) -> dict:
-    """
-    What each subagent sees. Deliberately minimal: a subagent that receives the
-    whole record can drift into using fields it should not, and reproducibility
-    depends on the input being exactly what the prompt describes.
-    """
     base = {"title": record.get("title"), "text": text}
     if agent == "S3":
-        # S3 places the population on the four axes itself. It already has the
-        # study in context, so this costs no extra model call -- the alternative
-        # was a ninth subagent mapping raw population text after the fact.
         return {**base, "population_vocabulary": vocab.load("population")["axes"]}
     if agent == "S4":
-        # RoB items 3 and 4 need registry evidence. Item 3 is already computed
-        # deterministically in sources/clinicaltrials.py -- it is passed as a
-        # FACT so S4 does not re-derive a date comparison.
         return {**base,
                 "registry_item3_prospective": (registry or {}).get("item3_prospective"),
                 "registry_primary_outcomes": (registry or {}).get(
@@ -70,21 +40,8 @@ def _payload(agent: str, record: dict, text: str, registry: dict | None) -> dict
 
 def extract_study(record: dict, text: str, registry: dict | None = None, *,
                   call=None, max_workers: int = 5) -> dict:
-    """
-    Run every per-study subagent for one paper. Returns
-    {"S3": {...} | None, ..., "outcomes": [{claim, outcome_vocab_id}, ...]}.
-
-    A None value means the subagent failed its schema twice and the field is
-    UNKNOWN. It is never replaced with a default -- a null is a known unknown the
-    scorer handles, a guess corrupts every number downstream (invariant 5).
-    """
     call = call or claude_adapter.call
 
-    # Refuse to extract from nothing. Measured 2026-08-06: a storage schema that
-    # dropped the abstract meant six studies were extracted from an EMPTY string.
-    # Every subagent returned schema-valid output, S5 found no claims, and the
-    # run produced zero ECU rows while reporting success. Empty input is not a
-    # study; spending five model calls to discover that is pure waste.
     if len((text or "").strip()) < MIN_TEXT_CHARS:
         return {"_skipped": "no text",
                 "_meta": {"chars": len((text or "").strip())},
@@ -100,16 +57,9 @@ def extract_study(record: dict, text: str, registry: dict | None = None, *,
             out[agent] = result
             out.setdefault("_meta", {})[agent] = meta
             if result is None:
-                # A failed subagent is NOT "this study said nothing". Record it
-                # so callers can tell an empty study from a broken run --
-                # conflating them is how a thrashing batch looked like a corpus
-                # with no mappable outcomes.
                 out.setdefault("_failed", []).append(
                     {"agent": agent, "error": meta.get("error")})
 
-    # S6 runs after S5 because it consumes S5's raw outcome strings. Each claim
-    # is mapped independently; a null mapping DISCARDS that claim rather than
-    # approximating it (S6 is the highest-risk subagent for exactly this reason).
     out["outcomes"] = []
     claims = ((out.get("S5") or {}).get("claims")) or []
     for claim in claims:
@@ -129,19 +79,47 @@ def extract_study(record: dict, text: str, registry: dict | None = None, *,
 def extract_corpus(records: list[dict], text_for, registry_for=None, *,
                    call=None, max_studies_in_flight: int = 4) -> list[dict]:
     """
-    Fan out across studies. Concurrency is bounded twice -- here and by the
-    semaphore in claude_adapter -- because the outer bound controls memory and
-    the inner one controls subprocess count.
-
-    `text_for(record) -> str` supplies the best available text. Callers decide
-    the ladder (full text > SR table > ct.gov > abstract); this function does
-    not, because that choice affects the OA factor and must be recorded.
+    Fan out across studies. Prints live progress so you can judge concurrency.
     """
-    results = []
+    n = len(records)
+    results_by_id: dict[int, dict] = {}
+    t0 = time.time()
+    done = 0
+    skipped = 0
+    failed_studies = 0
+
+    print(f"  progress: 0/{n} studies  (in_flight≤{max_studies_in_flight})")
+
     with ThreadPoolExecutor(max_workers=max_studies_in_flight) as pool:
-        futures = [pool.submit(extract_study, r, text_for(r),
-                               registry_for(r) if registry_for else None, call=call)
-                   for r in records]
-        for r, fut in zip(records, futures):
-            results.append({"record": r, "extraction": fut.result()})
-    return results
+        future_map = {
+            pool.submit(
+                extract_study, r, text_for(r),
+                registry_for(r) if registry_for else None, call=call,
+            ): i
+            for i, r in enumerate(records)
+        }
+        for fut in as_completed(future_map):
+            i = future_map[fut]
+            r = records[i]
+            try:
+                extraction = fut.result()
+            except Exception as e:
+                extraction = {"_failed": [{"agent": "*", "error": str(e)}], "outcomes": []}
+            results_by_id[i] = {"record": r, "extraction": extraction}
+            done += 1
+            if extraction.get("_skipped"):
+                skipped += 1
+            if extraction.get("_failed"):
+                failed_studies += 1
+            elapsed = time.time() - t0
+            rate = done / elapsed if elapsed > 0 else 0
+            eta = (n - done) / rate if rate > 0 else 0
+            print(
+                f"  progress: {done}/{n}  "
+                f"ok={done - skipped - failed_studies} skip={skipped} "
+                f"fail_partial={failed_studies}  "
+                f"{elapsed:.0f}s elapsed  ~{eta:.0f}s left  "
+                f"({rate * 60:.1f} studies/min)"
+            )
+
+    return [results_by_id[i] for i in range(n)]
