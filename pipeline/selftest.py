@@ -286,6 +286,71 @@ def main():
     check("no posted results -> attrition all null",
           ct.attrition({})["dropout_rate"] is None)
 
+    print("\nASSEMBLY (worker JSON -> scored ECU rows)")
+    from pipeline.assemble import build_ecus, to_studies, _rob_items
+    pv0 = vocab.population_variants()[0]
+    axes = {a: pv0[a] for a in vocab.AXES}
+    product = {"ingredient": "magnesium", "form_vocab_id": "magnesium_glycinate",
+               "population": {"id": pv0["id"], **axes}}
+
+    def ext(cid, form="magnesium_glycinate", direction="benefit", mag="meaningful"):
+        return {"record": {"_canonical": cid, "ingredient": "magnesium",
+                           "design_rank": 4, "oa": "full_text"},
+                "registry": {"item3_prospective": 1, "dropout_rate": 0.05,
+                             "n_enrolled": 120},
+                "extraction": {
+                    "S3": {"n_randomised": 120, "population_axes": axes},
+                    "S4": {"item1_randomisation_method": 1,
+                           "item2_double_blind_placebo": 1,
+                           "item3_prospective_registration": None,
+                           "item4_outcome_matches_registry": 1,
+                           "item5_attrition_ok": None, "item6_itt": 1},
+                    "S7": {"form_vocab_id": form},
+                    "S8": {"funding_class": "independent"},
+                    "outcomes": [
+                        {"claim": {"direction": direction, "magnitude": mag},
+                         "outcome_vocab_id": "sleep_onset", "discarded": False},
+                        {"claim": {"direction": "null_effect", "magnitude": None},
+                         "outcome_vocab_id": "anxiety", "discarded": False},
+                        {"claim": {"direction": "benefit", "magnitude": "meaningful"},
+                         "outcome_vocab_id": None, "discarded": True}]}}
+
+    corpus = [ext(f"registry:nct{i:08d}") for i in range(6)]
+    rows = build_ecus(corpus, product, prompt_version="v1.1")
+    by_outcome = {r["outcome_vocab_id"]: r for r in rows}
+    check("one ECU row per surviving outcome", set(by_outcome) == {"sleep_onset", "anxiety"},
+          "the unmapped claim was DISCARDED, not bucketed")
+    check("benefit outcome scores positive", by_outcome["sleep_onset"]["score"] >= 70,
+          f"score {by_outcome['sleep_onset']['score']}")
+    check("nulls on a second outcome score NEGATIVE",
+          by_outcome["anxiety"]["score"] < -40,
+          f"score {by_outcome['anxiety']['score']} — dropping nulls would bias every score up")
+    check("provenance stamped on every row",
+          by_outcome["sleep_onset"]["provenance"]["vocab_versions"] == vocab.versions())
+
+    # The differentiator, end to end: same evidence, different bottle.
+    oxide = build_ecus(corpus, {**product, "form_vocab_id": "magnesium_oxide"},
+                       prompt_version="v1.1")
+    ox_score = {r["outcome_vocab_id"]: r["score"] for r in oxide}["sleep_onset"]
+    check("transfer factor discounts a different salt family",
+          ox_score < by_outcome["sleep_onset"]["score"] - 40,
+          f"glycinate {by_outcome['sleep_onset']['score']} -> oxide {ox_score}")
+
+    check("registry overrides S4's null on item 3",
+          _rob_items({"item3_prospective_registration": None},
+                     {"item3_prospective": 1})["i3"] == 1,
+          "a date comparison has a right answer")
+    check("S4 null with no registry stays null",
+          _rob_items({"item3_prospective_registration": None}, None)["i3"] is None)
+    check("attrition threshold applied in code, not by a model",
+          _rob_items({"item5_attrition_ok": None}, {"dropout_rate": 0.35})["i5"] == 0)
+    check("missing S8 -> undisclosed, the vocabulary's own value",
+          to_studies({"_canonical": "x", "ingredient": "magnesium", "design_rank": 4},
+                     {"S8": None, "outcomes": [
+                         {"claim": {"direction": "benefit"},
+                          "outcome_vocab_id": "sleep_onset", "discarded": False}]},
+                     product)[0][1].funding == "undisclosed")
+
     print("\nGREEN OA RESOLUTION")
     from sources import oa as oamod
     oa_work = {"best_oa_location": {"is_oa": True, "pdf_url": "http://x/y.pdf",
