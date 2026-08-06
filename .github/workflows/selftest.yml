@@ -35,4 +35,12 @@ jobs:
           print(f"{len(agents)} subagents wired")
           PY
       - name: Deterministic regression
-        run: python -m pipeline.selftest
+        run: |
+          set -o pipefail
+          python -m pipeline.selftest 2>&1 | tee selftest-log.txt
+      - name: Upload selftest log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: selftest-log
+          path: selftest-log.txt
