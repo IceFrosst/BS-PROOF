@@ -330,10 +330,10 @@ Everything below the line needs credentials the founder has to create.
 
 ### Unblocked — anyone can pick these up now
 
-3. **S2 synthesis path.** Highest-value subagent: one OA systematic review
-   carries characteristics + RoB tables for ~15 unreadable primaries. 462
-   syntheses are already stored and classified. `sources/oa.referenced_dois()`
-   narrows the included-study search space; S2 decides actual membership.
+3. **S2 synthesis path — deterministic half DONE** (`pipeline/synthesis.py`:
+   included-study resolution, q_s, inherited RoB, the bounded multiplier).
+   Remaining is the S2 call itself, which needs the API key. 462 syntheses are
+   already stored and classified.
 4. **Derive dose bands.** The one axis of the 5-tuple that is not live. Needs a
    first extraction pass to cluster real doses, then `band_version` 0 -> 1 and
    `storage.stale_bands()` lists what to recompute.
@@ -341,7 +341,11 @@ Everything below the line needs credentials the founder has to create.
    `population_text`; nothing maps it to the four axes, so `pop_match` currently
    compares defaults. Recommended fix in `docs/SPEC.md` §5: pass the population
    vocab into S3. Needs a `PROMPT_VERSION` bump.
-6. **Calibration harness** — EFSA one-sided constraint + the 28 anchors.
+6. **Calibration harness — BUILT** (`pipeline/calibration.py`). But only
+   **7 of 35 anchors are runnable**: the other 28 need 17 ingredients added to
+   `vocab/form.json`. Run `python3 -m pipeline.calibration` for the list. This
+   is vocabulary work, needs no credentials, and is the largest single
+   unblocked task in the repo. EFSA (Tier 1) still needs a manual download.
 7. **Raise the fetch caps and re-measure coverage — highest-value unblocked
    item.** magnesium matches 10 555 records and creatine 9 457; the run sees
    1500 each, in relevance order, so 88.9% is optimistic by an unknown margin.
