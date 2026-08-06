@@ -26,10 +26,42 @@ _REG_IN_TEXT = re.compile(r"(NCT\d{8}|ISRCTN\d{6,8}|ChiCTR[-A-Z0-9]{6,}"
                           r"|CTRI/\d{4}/\d+/\d+|UMIN\d{6,9})", re.I)
 
 
-def _query(ingredient: str, *, syntheses: bool) -> str:
+# Contexts where the ingredient is a DRUG, not a supplement. IV magnesium
+# sulfate in eclampsia or cardiac surgery is not the product this system scores,
+# can never map to a consumer outcome, and costs a full extraction to discover.
+CLINICAL_EXCLUSIONS = (
+    "eclampsia OR anesthesia OR anaesthesia OR surgery OR intravenous "
+    "OR infusion OR intubation OR ventilation OR sedation")
+
+SUPPLEMENT_CONTEXT = 'supplementation OR "dietary supplement" OR "oral supplement"'
+
+
+def _query(ingredient: str, *, syntheses: bool, scope: str = "broad") -> str:
+    """
+    scope 'broad'      ingredient + design. What every measurement to date used.
+    scope 'supplement' adds a supplement context and excludes drug contexts.
+
+    MEASURED 2026-08-06 on magnesium RCTs:
+
+      broad                      6736 hits, 25% clinical-context titles
+      + MeSH Dietary Supplements   10 hits  (MeSH indexing far too sparse)
+      + supplement terms         2022 hits, 12% clinical
+      + supplement NOT clinical  1420 hits,  1% clinical
+
+    'broad' remains the DEFAULT on purpose. Switching it silently would change
+    the corpus behind every coverage number already recorded, and the RECALL
+    cost of the NOT clause is not yet measured -- a supplement trial that merely
+    mentions surgery in its exclusion criteria would be dropped. Measure recall
+    against the anchor set before promoting this.
+    """
     kinds = ('PUB_TYPE:"Meta-Analysis" OR PUB_TYPE:"Systematic Review"'
              if syntheses else 'PUB_TYPE:"Randomized Controlled Trial"')
-    return f'("{ingredient}") AND (SRC:"MED") AND ({kinds})'
+    q = f'("{ingredient}") AND (SRC:"MED") AND ({kinds})'
+    if scope == "supplement":
+        q += f' AND ({SUPPLEMENT_CONTEXT}) NOT ({CLINICAL_EXCLUSIONS})'
+    elif scope != "broad":
+        raise ValueError(f"unknown scope {scope!r}")
+    return q
 
 
 def search(query: str, *, page_size: int = 100, max_records: int = 1000) -> list[dict]:
@@ -55,7 +87,7 @@ def search(query: str, *, page_size: int = 100, max_records: int = 1000) -> list
     return out[:max_records]
 
 
-def hit_count(ingredient: str, *, syntheses: bool) -> int:
+def hit_count(ingredient: str, *, syntheses: bool, scope: str = "broad") -> int:
     """
     How many records the query ACTUALLY matches, independent of any fetch cap.
 
@@ -63,7 +95,7 @@ def hit_count(ingredient: str, *, syntheses: bool) -> int:
     truncated slice, and every ratio computed over it is unfalsifiable. One
     cheap request answers it.
     """
-    page = get_json(SEARCH, {"query": _query(ingredient, syntheses=syntheses),
+    page = get_json(SEARCH, {"query": _query(ingredient, syntheses=syntheses, scope=scope),
                              "format": "json", "pageSize": 1})
     return int(page.get("hitCount") or 0)
 
@@ -147,7 +179,7 @@ def normalise(rec: dict) -> dict:
 
 
 def discover(ingredient: str, *, max_syntheses: int = 200,
-             max_primaries: int = 800) -> dict:
+             max_primaries: int = 800, scope: str = "broad") -> dict:
     """
     Full discovery for one ingredient, syntheses first.
 
@@ -155,8 +187,8 @@ def discover(ingredient: str, *, max_syntheses: int = 200,
     Neither list is deduplicated -- that is pipeline/dedup.py's job, and it must
     happen before any conclusion exists (SPEC section 6).
     """
-    syn = [normalise(r) for r in search(_query(ingredient, syntheses=True),
+    syn = [normalise(r) for r in search(_query(ingredient, syntheses=True, scope=scope),
                                         max_records=max_syntheses)]
-    pri = [normalise(r) for r in search(_query(ingredient, syntheses=False),
+    pri = [normalise(r) for r in search(_query(ingredient, syntheses=False, scope=scope),
                                         max_records=max_primaries)]
     return {"syntheses": syn, "primaries": pri}
