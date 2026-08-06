@@ -1,20 +1,8 @@
 """
 grok_adapter — pure-function S1–S8 extraction via Grok Build CLI.
 
-Same role as claude_adapter's --bare path:
-
-    grok -p <prompt> --output-format json --max-turns 1
-         --no-memory --no-subagents --no-plan
-         --cwd <empty> -m <model>
-
-On the founder machine (WSL):
-
-    curl -fsSL https://x.ai/cli/install.sh | bash
-    grok login
-    python3 grok_adapter.py smoke
-    python3 run_pipeline.py creatine --form creatine_monohydrate --grok
-
-Auth: `grok login` (subscription) or XAI_API_KEY. Test SEPARATELY from Claude.
+Speed: SP_GROK_CONCURRENCY defaults to 16 concurrent `grok -p` processes.
+Override lower if the machine or weekly quota thrash.
 """
 from __future__ import annotations
 
@@ -43,7 +31,8 @@ TIER_MODEL = {
     "C": os.environ.get("SP_GROK_MODEL_C", "grok-4.5"),
 }
 
-MAX_CONCURRENCY = int(os.environ.get("SP_GROK_CONCURRENCY", "4"))
+# High default for throughput. Cap is concurrent Grok CLI processes.
+MAX_CONCURRENCY = int(os.environ.get("SP_GROK_CONCURRENCY", "16"))
 CALL_TIMEOUT_S = int(os.environ.get("SP_GROK_TIMEOUT_S", "300"))
 _slots = threading.Semaphore(MAX_CONCURRENCY)
 _lock = threading.Lock()
@@ -92,28 +81,23 @@ def _extract_json_from_text(text: str) -> dict | None:
                 return None
         return obj if isinstance(obj, dict) else None
 
-    # Direct JSON
     obj = try_parse(text)
     if obj is None:
         return None
 
-    # Grok CLI envelope: {"text": "...", "sessionId": ...}
     if "text" in obj and isinstance(obj["text"], str):
         inner = try_parse(obj["text"])
         if inner is not None:
             return inner
-        # Strip markdown fences inside text
         t = obj["text"]
         if "```" in t:
             t = t.replace("```json", "```")
-            parts = t.split("```")
-            for p in parts:
+            for p in t.split("```"):
                 inner = try_parse(p)
                 if inner is not None:
                     return inner
         return None
 
-    # Already looks like extraction payload
     return obj
 
 
@@ -128,14 +112,10 @@ def _build_user_prompt(schema: str, body: str) -> str:
 
 def _run_variants(grok_bin: str, system: str, user: str, model: str,
                   timeout: int) -> tuple[int, str, str, list[str]]:
-    """
-    Try progressively simpler flag sets. CLI versions differ; first success wins.
-    """
     cwd = Path(tempfile.mkdtemp(prefix="bsproof-grok-"))
     full_prompt = system.rstrip() + "\n\n---\n\n" + user
 
     variants: list[list[str]] = [
-        # Preferred: pure + override system + no agent features
         [
             grok_bin, "--no-auto-update", "-p", full_prompt,
             "--output-format", "json", "--max-turns", "1",
@@ -143,14 +123,12 @@ def _run_variants(grok_bin: str, system: str, user: str, model: str,
             "-m", model, "--cwd", str(cwd),
             "--system-prompt-override", system,
         ],
-        # Without system-prompt-override (may not exist on older CLI)
         [
             grok_bin, "--no-auto-update", "-p", full_prompt,
             "--output-format", "json", "--max-turns", "1",
             "--no-memory", "--no-subagents", "--no-plan",
             "-m", model, "--cwd", str(cwd),
         ],
-        # Minimal headless
         [
             grok_bin, "--no-auto-update", "-p", full_prompt,
             "--output-format", "json", "--max-turns", "1",
@@ -171,15 +149,15 @@ def _run_variants(grok_bin: str, system: str, user: str, model: str,
             except subprocess.TimeoutExpired:
                 last_code, last_out, last_err = 124, "", f"timeout after {timeout}s"
                 continue
-            last_code, last_out, last_err = proc.returncode, proc.stdout or "", proc.stderr or ""
-            if proc.returncode == 0 and (proc.stdout or "").strip():
-                return proc.returncode, proc.stdout or "", proc.stderr or "", cmd
-            # Unknown flag → try next variant
+            last_code = proc.returncode
+            last_out = proc.stdout or ""
+            last_err = proc.stderr or ""
+            if proc.returncode == 0 and last_out.strip():
+                return proc.returncode, last_out, last_err, cmd
             blob = (last_out + last_err).lower()
             if "unknown" in blob or "unrecognized" in blob or "unexpected argument" in blob:
                 continue
             if proc.returncode != 0:
-                # Auth failures: no point in more flag variants
                 if any(x in blob for x in ("not logged", "login", "unauthor", "api key")):
                     break
                 continue
@@ -218,7 +196,7 @@ def call(agent: str, payload: dict, *, timeout: int | None = None) -> tuple[dict
 
     grok_bin = _which_grok()
     if not grok_bin:
-        meta["error"] = "grok CLI not on PATH — install from https://x.ai/cli/install.sh"
+        meta["error"] = "grok CLI not on PATH"
         meta["flagged"] = True
         return None, meta
 
@@ -230,9 +208,7 @@ def call(agent: str, payload: dict, *, timeout: int | None = None) -> tuple[dict
         detail = (stdout or stderr or "")[:400]
         low = detail.lower()
         if any(x in low for x in ("not logged", "login", "unauthor")):
-            meta["error"] = (
-                f"auth failed. Run `grok login` or export XAI_API_KEY. ({detail[:180]})"
-            )
+            meta["error"] = f"auth failed. grok login or XAI_API_KEY. ({detail[:180]})"
         elif code == 124:
             meta["error"] = detail or f"timeout after {timeout}s"
         else:
@@ -265,11 +241,8 @@ def preflight() -> bool:
     grok_bin = _which_grok()
     if not grok_bin:
         print("BLOCKED: `grok` not on PATH")
-        print("  curl -fsSL https://x.ai/cli/install.sh | bash")
-        print("  echo 'export PATH=\"$HOME/.grok/bin:$PATH\"' >> ~/.bashrc && source ~/.bashrc")
         return False
     print(f"  CLI: {grok_bin}")
-
     try:
         v = subprocess.run([grok_bin, "version"], capture_output=True, text=True, timeout=30)
         print(f"  version: {(v.stdout or v.stderr or '').strip()[:100]}")
@@ -287,11 +260,9 @@ def preflight() -> bool:
         if not f.exists()
     ]
     if missing:
-        print("BLOCKED: missing prompt/schema files:")
-        for m in missing:
-            print(" ", m)
+        print("BLOCKED: missing files:", *missing, sep="\n  ")
         return False
-    print("  8 subagents wired (shared prompts/schemas with Claude)")
+    print("  8 subagents wired")
     print("=" * 60)
     return True
 
@@ -302,15 +273,11 @@ def smoke_s8() -> int:
     print("\nSmoke S8 (funding)...")
     t0 = time.time()
     result, meta = call("S8", {
-        "text": (
-            "Funded by NutraCorp Inc. Dr. Smith reports consulting fees from NutraCorp."
-        )
+        "text": "Funded by NutraCorp Inc. Dr. Smith reports consulting fees from NutraCorp."
     })
     print(f"elapsed={time.time() - t0:.1f}s")
     if meta.get("error"):
         print("FAIL:", meta["error"])
-        if meta.get("cmd_tail"):
-            print("cmd_tail:", meta["cmd_tail"])
         return 1
     print("OK result:", json.dumps(result, indent=2)[:600])
     return 0
