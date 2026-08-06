@@ -4,23 +4,21 @@ End-to-end v1 run: corpus -> extraction -> assembly -> scored ECU rows.
 
     python3 run_pipeline.py magnesium --form magnesium_glycinate            # live
     python3 run_pipeline.py magnesium --form magnesium_glycinate --wiring   # no key
+    python3 run_pipeline.py creatine --form creatine_monohydrate --pilot    # subscription
 
 TWO MODES, and the difference matters:
 
   live      calls the real subagents. Needs ANTHROPIC_API_KEY.
-  --wiring  runs the same code path with a SYNTHETIC extractor. It proves the
-            wiring works; it says NOTHING about magnesium.
+  --pilot   real extractions on subscription auth (labelled non-production).
+  --wiring  SYNTHETIC extractor. Proves the code path only.
 
-Wiring mode exists because every stage between retrieval and scoring was written
-without ever being able to run one model call, and untested wiring is where
-integration bugs hide. Its output is fabricated by construction, so it:
+Pilot default --limit is 40 primary RCTs (~6-8 model calls each via S3–S8 + S6).
+That is sized as a **single Claude Pro session-class batch**. If you hit rate
+limits, pass --limit 20 (or lower). Raise only deliberately.
 
-  - writes to a SEPARATE database (out/wiring_demo.sqlite), never the real one
-  - stamps prompt_version "SYNTHETIC-NOT-REAL" into every row's provenance
-  - prints SYNTHETIC on every line
-
-Anything that leaks out of wiring mode is therefore self-identifying. Do not
-remove those guards to make a screenshot look better.
+Reviews (umbrella / meta-analysis / systematic review) are **retrieved first**
+and stored, but this runner scores **primary RCTs** (design_rank == 4). SR-table
+inheritance is a separate path: `run_sr_inheritance.py` (S2).
 """
 from __future__ import annotations
 import os
@@ -32,13 +30,20 @@ from pipeline.storage import Store, DEFAULT_DB
 from pipeline.retrieve import retrieve
 
 WIRING_DB = DEFAULT_DB.parent / "wiring_demo.sqlite"
-PILOT_DB = DEFAULT_DB.parent / "pilot.sqlite"
-PILOT_SUPP_DB = DEFAULT_DB.parent / "pilot_supp.sqlite"
+
+# Pilot batch size: one Pro-friendly run (not the whole literature).
+# Per study ≈ S3,S4,S5,S7,S8 (+ S6 × claims). Measured non-bare calls are slow.
+DEFAULT_PILOT_LIMIT = 40
+DEFAULT_WIRING_SCORE_CAP = 40
+RETRIEVE_MAX_PRIMARIES = 150
+RETRIEVE_MAX_SYNTHESES = 50
 
 
 def _pilot_db(ingredient, scope):
     """One store per (ingredient, scope). Mixing them makes yields unfalsifiable."""
     return DEFAULT_DB.parent / f"pilot_{ingredient}{'_supp' if scope == 'supplement' else ''}.sqlite"
+
+
 SYNTHETIC_VERSION = "SYNTHETIC-NOT-REAL"
 
 
@@ -89,7 +94,7 @@ def main(argv: list[str]) -> int:
     scope = "supplement" if "--supplement-scope" in args else "broad"
     if scope == "supplement":
         args.remove("--supplement-scope")
-    limit = 12
+    limit = DEFAULT_PILOT_LIMIT
     if "--limit" in args:
         i = args.index("--limit")
         limit = int(args[i + 1]); del args[i:i + 2]
@@ -106,6 +111,7 @@ def main(argv: list[str]) -> int:
         print("  --pilot   real extractions on subscription auth. Results are")
         print("            REAL but labelled pilot: not reproducible in the sense")
         print("            invariant 2 requires, and not for public claims.")
+        print(f"            Default --limit {DEFAULT_PILOT_LIMIT} primary RCTs.")
         print("  --wiring  SYNTHETIC extractor. Proves the code path, says")
         print("            nothing about the ingredient.")
         return 1
@@ -125,12 +131,19 @@ def main(argv: list[str]) -> int:
     with Store(db) as store:
         if store.counts()["studies"] == 0:
             print(f"no corpus in {db.name}; retrieving...")
-            retrieve(ingredient, store, max_syntheses=50, max_primaries=150,
+            print("  (syntheses are fetched BEFORE primaries — see pipeline/retrieve.py)")
+            retrieve(ingredient, store,
+                     max_syntheses=RETRIEVE_MAX_SYNTHESES,
+                     max_primaries=RETRIEVE_MAX_PRIMARIES,
                      scope=scope)
 
-        primaries = [s for s in store.studies(syntheses=False)
-                     if s.get("design_rank") == 4]
-        print(f"\n{len(primaries)} RCT-rank primaries in the store")
+        all_rows = store.studies(syntheses=False)
+        syn_rows = store.studies(syntheses=True)
+        primaries = [s for s in all_rows if s.get("design_rank") == 4]
+        print(f"\nstore: {len(all_rows)} primaries, {len(syn_rows)} syntheses "
+              f"(umbrella/MA/SR ranks 1–3); {len(primaries)} RCT-rank (4)")
+        print("  note: this runner extracts RCT-rank primaries; SR inheritance "
+              "is run_sr_inheritance.py (S2)")
 
         if wiring:
             print("\n" + "!" * 68)
@@ -142,7 +155,7 @@ def main(argv: list[str]) -> int:
                             "registry": store.registry_facts(p["registration_id"])
                                         if p.get("registration_id") else None,
                             "extraction": synthetic_extraction(p, axes)}
-                           for p in primaries[:40]]
+                           for p in primaries[:DEFAULT_WIRING_SCORE_CAP]]
             prompt_version = SYNTHETIC_VERSION
         elif pilot:
             import pilot_adapter as pa
@@ -153,9 +166,11 @@ def main(argv: list[str]) -> int:
             print("PILOT MODE. Extractions are REAL. Reproducibility is NOT")
             print("guaranteed: plugins and auto-memory load without --bare.")
             print("Not for public claims. Written to a separate store.")
+            print(f"Batch size: {limit} (default {DEFAULT_PILOT_LIMIT}; "
+                  f"override with --limit N if rate-limited).")
             print("-" * 68)
             targets = primaries[:limit]
-            print(f"extracting {len(targets)} studies...")
+            print(f"extracting {len(targets)} RCT-rank studies...")
             raw = workers.extract_corpus(
                 [{**p, "_canonical": p["canonical_id"], "ingredient": ingredient}
                  for p in targets],
@@ -194,7 +209,7 @@ def main(argv: list[str]) -> int:
             texts = {p["canonical_id"]: (p.get("title") or "") for p in primaries}
             raw = workers.extract_corpus(
                 [{**p, "_canonical": p["canonical_id"], "ingredient": ingredient}
-                 for p in primaries[:40]],
+                 for p in primaries[:DEFAULT_WIRING_SCORE_CAP]],
                 text_for=lambda r: texts.get(r["_canonical"], ""))
             extractions = [{"record": r["record"], "extraction": r["extraction"],
                             "registry": store.registry_facts(r["record"]["registration_id"])
