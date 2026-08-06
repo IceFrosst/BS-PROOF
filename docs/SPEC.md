@@ -638,6 +638,7 @@ it's the most common trick in the industry and no consumer can currently detect 
 | Epistemonikos supplement coverage | Unknown — measure |
 | OA full-text rate | **MEASURED on the FULL corpus (20 155 records, 100%): 68.7%** Europe PMC alone, **76.2%** with green OA. Estimate was 70–75% |
 | Methods-fact coverage | **MEASURED: 77.5% — BELOW the ≥80% target.** Estimate was 80–88%. Two named, unbuilt paths remain: Unpaywall and SR-table inheritance |
+| Unpaywall uplift | **FALSIFIED 2026-08-06.** SPEC called it "the largest single uplift". Measured head-to-head on 47 closed records: 20 found by both OpenAlex and Unpaywall, **0 by either alone**. They are not independent — OpenAlex ingests Unpaywall. Marginal gain: **0.0pp**. SR-table inheritance is the only remaining rung |
 | Relevance-order bias | **RESOLVED 2026-08-06** by re-measuring uncapped. The bias was real and large: the 16% slice read 88.9%, the full corpus reads 77.5%. Any future coverage claim must state the fraction of corpus measured |
 | SR RoB-table parse reliability | Untested; the 10–20× leverage claim depends on it |
 | Blinding integrity | Binary in proxy; over-credits detectable placebos |
@@ -770,6 +771,29 @@ system that are currently exact.
 ---
 
 ## Changelog
+
+- **2026-08-06 rev 5** — **Unpaywall adds nothing over OpenAlex, and the model
+  layer is proven.**
+
+  The contact email was obtained and Unpaywall enabled. Full-corpus coverage did
+  not move: still 76.2% OA / 77.5% methods-level facts. Head-to-head on 47
+  closed records with DOIs: 20 resolved by both, **0 by OpenAlex only, 0 by
+  Unpaywall only**, 27 by neither. OpenAlex already ingests Unpaywall data, so
+  §4's "green OA is the largest single uplift" is **falsified**. The 2.5-point
+  gap to the 80% target must close through **SR-table inheritance**, which is
+  unbuilt and where synthesis:primary = 0.52 says the leverage is.
+
+  First real subagent extractions ran (`pilot_adapter.py`, subscription auth,
+  labelled non-production). S7 read "400 mg magnesium citrate twice daily",
+  normalised to 800 mg/day compound, and returned `elemental_dose_mg: null`,
+  `dose_basis: compound_only`, confidence 0.6 — refusing to guess, exactly as
+  §5 requires — after which `elemental_dose_range_mg()` bounded it at
+  95.1–129.3 mg in code. The elemental-dose trap works end to end.
+
+  Also measured: dropping `--bare` re-enables CLAUDE.md auto-discovery and **no
+  flag suppresses it** (`--settings '{}'` and `--strict-mcp-config` both leaked
+  a canary). Only a working directory with no CLAUDE.md in it *or any ancestor*
+  is hermetic — discovery walks up the tree.
 
 - **2026-08-06 rev 4** — **Coverage re-measured over the FULL corpus and the
   target is NOT met.** 20 155 records, 100% of what the query matches:

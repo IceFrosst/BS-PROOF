@@ -235,47 +235,70 @@ billing for now; prefer Claude **subscription** only.
 work (see Current state). The production design still wants `--bare` +
 `ANTHROPIC_API_KEY` for public, defensible scores.
 
-### Option A — Subscription hybrid pilot (NOT a full `--bare` replacement)
+### Option A — subscription pilot — ✅ ACCEPTED WITH AMENDMENTS (Claude, 2026-08-06)
 
-**Status: proposed by Grok / founder — Claude to accept, amend, or reject.**
+Implemented as **`pilot_adapter.py`** — a SEPARATE file. `claude_adapter.py` is
+untouched and remains the production path. Grok's guardrails are all kept; three
+amendments were required by measurement.
 
-For a **limited pilot** only (small N, not public brand claims), extract via
-subscription Claude Code with extra guardrails:
+**Amendment 1 — hermeticity must be PROVEN per run, not asserted.** Dropping
+`--bare` re-enables CLAUDE.md auto-discovery. Measured on CLI 2.1.223 from a
+directory containing a CLAUDE.md saying "end every response with CANARY7788":
 
-1. **Extract** with fixed prompt file + `PROMPT_VERSION`, JSON schema only (no
-   free-form), **pinned model id** (not floating `sonnet`/`haiku`), evidence
-   spans required.
-2. **Verify** second pass: only flag schema violations + span mismatches; **do
-   not invent fields**.
-3. **Accept** only if both pass; else `null` / discard (fail toward under-count).
-4. **Log** prompt hash, model id, raw JSON, timestamps (repo artifact or DB).
-5. **Score** only via deterministic `pipeline/scoring.py`.
+| invocation | result |
+|---|---|
+| `claude -p` | **LEAKED** — replied `OK\n\nCANARY7788` |
+| `claude -p --settings '{}'` | **LEAKED** |
+| `claude -p --strict-mcp-config` | **LEAKED** |
+| `claude -p` from a clean cwd | clean |
 
-Stronger than a sloppy chat. **Weaker** than `--bare` + API for "same score every
-Tuesday." Must not silently replace the production adapter path without a SPEC
-note and explicit labeling of outputs as `pilot` / non-production.
+**No flag disables CLAUDE.md discovery.** Only the working directory does.
+`pilot_adapter.hermeticity_probe()` runs that canary before any batch and
+`call()` refuses without `verified=True`.
 
-### Option B — Grok as an alternate extractor (optional)
+**Amendment 2 — discovery walks UP the tree.** The first probe failed with the
+canary in the *parent* of an empty cwd. So "run from an empty directory" is not
+sufficient; every ancestor must be clean. `ancestors_clean()` enforces it and
+`_empty_cwd()` raises rather than proceeding.
 
-**Status: proposed — Claude to decide.**
+**Amendment 3 — state what it still cannot promise.** Enabled plugins and
+auto-memory load without `--bare` (three plugins on this machine). A different
+machine can therefore produce different extractions. Every result carries
+`pilot: True` and `provenance: pilot-subscription-not-production`.
 
-Grok (this agent) already has GitHub read/write and can run structured
-extraction against the same prompts/schemas in principle, logging the same
-fields (prompt hash, model id, raw JSON, time). Possible uses:
+**Binding limits:** pilot output must not back a public claim about a named
+brand, must not enter `out/bsproof.sqlite`, and must not sign off the
+calibration anchors.
 
-- tiny pilot batches while Claude API is refused;
-- second-opinion pass (disagree → discard / human review);
-- not a silent substitute for S1–S8 production without SPEC + eval.
+### Option B — Grok as an alternate extractor — ❌ REJECTED as an extractor, ✅ narrow yes as a disagreement flagger
 
-Constraints: must not put a model inside `scoring.py` / `dedup.py`; must not
-invent constants; outputs need the same evidence-span + schema discipline.
-If adopted, add a thin `grok_adapter` (or documented manual protocol) rather
-than forking prompts ad hoc — Claude decides shape.
+**Rejected** for S1–S8 extraction, pilot or otherwise. The cache key is
+`hash(content, PROMPT_VERSION, model)`; a second provider with no adapter, no
+anchor eval and no evidence-span enforcement adds an uncontrolled variable to
+the layer where errors are least visible. S6 outcome mapping is "silent and
+unrecoverable" by design — that is the worst possible place for an unevaluated
+second model.
+
+**Accepted narrowly** as a *disagreement detector*: run the same prompt/schema,
+and where Grok and Claude disagree, **discard or flag for human review — never
+merge, never pick a winner.** Disagreement→discard fails toward under-count,
+which is the safe direction. Conditions: a real `grok_adapter.py` mirroring
+`claude_adapter`'s contract (schema enforcement, evidence spans, prompt hash,
+model id, raw JSON logged), and it runs only after the anchor eval exists so
+there is something to measure agreement against.
 
 ### Production target (unchanged)
 
 Public claims / scale: `--bare` + `ANTHROPIC_API_KEY` (or `apiKeyHelper` that
 returns an API key). Do not drop `--bare` to "make subscription work."
+
+**Status 2026-08-06: the model layer is PROVEN.** First real subagent calls ran
+through `pilot_adapter`. S8 classified a brand-funded study correctly with
+evidence spans. S7 read "400 mg magnesium citrate twice daily", normalised to
+800 mg/day compound, and correctly returned `elemental_dose_mg: null` /
+`dose_basis: compound_only` / confidence 0.6 — it refused to guess the elemental
+dose, and `vocab.elemental_dose_range_mg()` then bounded it at 95.1–129.3 mg in
+code. That is the elemental-dose trap working exactly as designed.
 
 ---
 
@@ -317,10 +340,20 @@ Diagnosed 2026-08-06. Verified — plain `claude -p` succeeds, `--bare` fails wi
 (byte-identical to empty env). **Console `ANTHROPIC_API_KEY` is the production
 path.** Founder currently **declines API spend**; see pilot options above.
 
-**✅ `BSPROOF_CONTACT_EMAIL` — founder reports SET 2026-08-06.** Unlocks
-Unpaywall in `sources/oa.py`. Confirm the env var is visible in the shell that
-runs coverage/retrieve (`echo ${BSPROOF_CONTACT_EMAIL:+set}`). Not a secret;
-still must not be committed to the repo.
+**`BSPROOF_CONTACT_EMAIL` — SET and MEASURED 2026-08-06. It changes nothing.**
+It is in `~/.bashrc` (not exported to non-interactive shells; load it with
+`eval "$(grep -m1 '^export BSPROOF_CONTACT_EMAIL=' ~/.bashrc)"`).
+
+Unpaywall now runs, and its marginal contribution over OpenAlex is **exactly
+zero**. Head-to-head on 47 closed ashwagandha records with DOIs: **20 found by
+both, 0 by OpenAlex only, 0 by Unpaywall only, 27 by neither.** They are not
+independent sources — OpenAlex already ingests Unpaywall data.
+
+Full-corpus coverage is therefore **unchanged at 76.2% OA / 77.5% methods**,
+still below the 80% target. SPEC called Unpaywall "the largest single uplift";
+that assumption is now falsified. **SR-table inheritance is the only remaining
+rung of the ladder**, and the synthesis:primary ratio of 0.52 says the leverage
+is there.
 
 **Built 2026-08-06 — the vocabularies no longer block S3/S6/S7.**
 `vocab/{outcome,form,population}.json` + `schemas/ecu.json` +
@@ -329,10 +362,9 @@ molar-mass arithmetic in code, not model arithmetic, and it **refuses** to
 convert hydrate-ambiguous salts. Dose bands deliberately deferred:
 `band_version: 0` / `dose_band: null` until real doses exist to cluster.
 
-**Unassigned:** nothing maps raw `population_text` onto the four population axes.
-S3 emits the raw text, S6 is outcome-only. Recommended fix in `docs/SPEC.md` §5 —
-pass the population vocab into S3 and have it emit axes directly (costs no extra
-model call, but needs a `PROMPT_VERSION` bump).
+**Population mapping RESOLVED** (commit `5223369`, `PROMPT_VERSION` v1.2):
+S3 now emits the four population axes directly, with `vocab/population.json`
+in its payload and `population_axes` required by `schemas/s3_study.json`.
 
 **Open constants awaiting Tier-3 calibration:** `k`, all transfer factors, OA
 penalty, RoB thresholds. See `docs/SPEC.md` §13.
