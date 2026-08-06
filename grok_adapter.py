@@ -1,8 +1,8 @@
 """
 grok_adapter — pure-function S1–S8 extraction via Grok Build CLI.
 
-Speed: SP_GROK_CONCURRENCY defaults to 16 concurrent `grok -p` processes.
-Override lower if the machine or weekly quota thrash.
+Windows note: subprocess must use encoding=utf-8. Default cp1252 blows up on
+non-ASCII model output (UnicodeDecodeError in reader threads).
 """
 from __future__ import annotations
 
@@ -31,7 +31,6 @@ TIER_MODEL = {
     "C": os.environ.get("SP_GROK_MODEL_C", "grok-4.5"),
 }
 
-# High default for throughput. Cap is concurrent Grok CLI processes.
 MAX_CONCURRENCY = int(os.environ.get("SP_GROK_CONCURRENCY", "16"))
 CALL_TIMEOUT_S = int(os.environ.get("SP_GROK_TIMEOUT_S", "300"))
 _slots = threading.Semaphore(MAX_CONCURRENCY)
@@ -58,6 +57,28 @@ def _key(agent: str, model: str, payload: str) -> str:
         h.update(part.encode())
         h.update(b"\0")
     return h.hexdigest()
+
+
+def _child_env() -> dict:
+    env = {**os.environ}
+    env["PYTHONIOENCODING"] = "utf-8"
+    env["PYTHONUTF8"] = "1"
+    # Encourage UTF-8 console I/O for the child on Windows
+    env.setdefault("LANG", "C.UTF-8")
+    return env
+
+
+def _run_grok(cmd: list[str], timeout: int) -> subprocess.CompletedProcess:
+    """Always decode as UTF-8 so Windows cp1252 cannot crash reader threads."""
+    return subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=timeout,
+        env=_child_env(),
+    )
 
 
 def _extract_json_from_text(text: str) -> dict | None:
@@ -142,10 +163,7 @@ def _run_variants(grok_bin: str, system: str, user: str, model: str,
             used = cmd
             try:
                 with _slots:
-                    proc = subprocess.run(
-                        cmd, capture_output=True, text=True, timeout=timeout,
-                        env={**os.environ},
-                    )
+                    proc = _run_grok(cmd, timeout)
             except subprocess.TimeoutExpired:
                 last_code, last_out, last_err = 124, "", f"timeout after {timeout}s"
                 continue
@@ -174,7 +192,7 @@ def call(agent: str, payload: dict, *, timeout: int | None = None) -> tuple[dict
     timeout = CALL_TIMEOUT_S if timeout is None else timeout
     tier, schema_f, prompt_f = AGENTS[agent]
     model = TIER_MODEL[tier]
-    schema = (SCHEMAS / schema_f).read_text()
+    schema = (SCHEMAS / schema_f).read_text(encoding="utf-8")
     system = _system_prompt(prompt_f)
     body = json.dumps(payload, ensure_ascii=False, sort_keys=True)
     k = _key(agent, model, body)
@@ -244,7 +262,7 @@ def preflight() -> bool:
         return False
     print(f"  CLI: {grok_bin}")
     try:
-        v = subprocess.run([grok_bin, "version"], capture_output=True, text=True, timeout=30)
+        v = _run_grok([grok_bin, "version"], 30)
         print(f"  version: {(v.stdout or v.stderr or '').strip()[:100]}")
     except Exception as e:
         print(f"  warning: grok version failed: {e}")
