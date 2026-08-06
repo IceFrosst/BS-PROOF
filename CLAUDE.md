@@ -229,31 +229,30 @@ alias string. When an alias moves, the cache serves stale extractions under
 unchanged keys. Pin full model IDs before any cached extraction run.
 Also unconfirmed: `--help` does not list `haiku` as a valid alias.
 
-**⚠️ Git auth is not set up on this machine.** `git pull` fails with
-`could not read Username for 'https://github.com'`; `gh auth status` reports not
-logged in. The pull/push workflow above cannot run until this is fixed.
+**✅ Git auth fixed 2026-08-06.** `gh auth status` confirms logged in as
+IceFrosst, https git operations use the gh credential helper, `git pull`
+succeeds. The pull/push workflow above is unblocked.
 
 ## Next
 
-1. **`gh auth login`** — unblocks the commit/push workflow (nothing can be pushed
-   today)
-2. **Smoke-test one subagent from a plain terminal** — the last unproven layer.
-   Confirm `--model haiku` resolves while you're there
-3. Pin full model IDs in `TIER_MODEL`; add a spend cap (`--max-budget-usd` is
+1. Resolve the `--bare` / `ANTHROPIC_API_KEY` blocker above, then smoke-test one
+   subagent from a plain terminal — the last unproven layer. Confirm
+   `--model haiku` resolves while you're there
+2. Pin full model IDs in `TIER_MODEL`; add a spend cap (`--max-budget-usd` is
    unused)
-4. **Phase 2 — retrieval.** ✅ `sources/http.py`, `sources/europepmc.py`,
+3. **Phase 2 — retrieval.** ✅ `sources/http.py`, `sources/europepmc.py`,
    `sources/clinicaltrials.py` built and verified live. **Remaining:**
    `sources/oa.py` (Unpaywall + OpenAlex) — blocked on `BSPROOF_CONTACT_EMAIL`,
    which Unpaywall requires. This is the green-OA uplift that closes 69.5% → 80%
-5. **Phase 3 — classify + dedup wiring.** Deterministic design classifier from
+4. **Phase 3 — classify + dedup wiring.** Deterministic design classifier from
    publicationType/MeSH into the existing dedup. Last thing buildable with zero
    model calls
-6. **Phase 4 — first real extractions.** S1/S3/S4/S5/S7/S8 over ~10 studies, then
+5. **Phase 4 — first real extractions.** S1/S3/S4/S5/S7/S8 over ~10 studies, then
    S2 (highest value), then S6 with an anchor eval (highest risk)
-7. **Phase 5 — storage + assembly.** SQLite on a portable, Postgres-shaped schema
+6. **Phase 5 — storage + assembly.** SQLite on a portable, Postgres-shaped schema
    so the move to Supabase is a dump-and-load. All DB access behind one module
-8. **Phase 6 — calibration harness.** EFSA one-sided constraint + the 28 anchors
-9. Decide the population-text mapping (see Current state)
+7. **Phase 6 — calibration harness.** EFSA one-sided constraint + the 28 anchors
+8. Decide the population-text mapping (see Current state)
 
 ---
 
