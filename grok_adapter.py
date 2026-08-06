@@ -4,6 +4,7 @@ grok_adapter — pure-function S1–S8 via Grok Build CLI.
 Windows:
   - stdout encoding=utf-8 (not cp1252)
   - long study text via --prompt-file (avoids WinError 206 command-line limit)
+Defaults: SP_GROK_CONCURRENCY=48
 """
 from __future__ import annotations
 
@@ -32,7 +33,7 @@ TIER_MODEL = {
     "C": os.environ.get("SP_GROK_MODEL_C", "grok-4.5"),
 }
 
-MAX_CONCURRENCY = int(os.environ.get("SP_GROK_CONCURRENCY", "16"))
+MAX_CONCURRENCY = int(os.environ.get("SP_GROK_CONCURRENCY", "48"))
 CALL_TIMEOUT_S = int(os.environ.get("SP_GROK_TIMEOUT_S", "300"))
 _slots = threading.Semaphore(MAX_CONCURRENCY)
 _lock = threading.Lock()
@@ -83,14 +84,14 @@ def speed_report() -> str:
             f"  set SP_GROK_STUDIES_IN_FLIGHT={max(4, MAX_CONCURRENCY // 3)}"
         )
     elif fail_rate < 0.05 and s["peak_in_flight"] >= MAX_CONCURRENCY * 0.8 and avg_lat < 90:
-        nxt = min(80, MAX_CONCURRENCY + 8)
+        nxt = min(96, MAX_CONCURRENCY + 12)
         advice = (
             f"HEADROOM — stable at {MAX_CONCURRENCY}. You can try:\n"
             f"  set SP_GROK_CONCURRENCY={nxt}\n"
-            f"  set SP_GROK_STUDIES_IN_FLIGHT={min(40, nxt * 3 // 4)}"
+            f"  set SP_GROK_STUDIES_IN_FLIGHT={min(48, nxt * 3 // 4)}"
         )
     elif fail_rate < 0.10:
-        advice = f"OK at {MAX_CONCURRENCY}. Optional small bump (+4–8)."
+        advice = f"OK at {MAX_CONCURRENCY}. Optional small bump (+8)."
     else:
         advice = f"Hold at {MAX_CONCURRENCY} — mixed results."
 
@@ -193,19 +194,11 @@ def _build_user_prompt(schema: str, body: str) -> str:
 
 def _run_variants(grok_bin: str, system: str, user: str, model: str,
                   timeout: int) -> tuple[int, str, str, list[str]]:
-    """
-    Write the full prompt to a file. Windows CreateProcess has ~8191 char
-    argv limit — long abstracts triggered WinError 206 when passed as -p text.
-    """
     cwd = Path(tempfile.mkdtemp(prefix="bsproof-grok-"))
     full_prompt = system.rstrip() + "\n\n---\n\n" + user
     prompt_path = cwd / "prompt.txt"
     prompt_path.write_text(full_prompt, encoding="utf-8")
-    # Short system only if CLI supports override; keep path short
-    sys_path = cwd / "system.txt"
-    sys_path.write_text(system, encoding="utf-8")
 
-    # Prefer --prompt-file so argv stays short.
     variants: list[list[str]] = [
         [
             grok_bin, "--no-auto-update",
@@ -216,11 +209,10 @@ def _run_variants(grok_bin: str, system: str, user: str, model: str,
         ],
         [
             grok_bin, "--no-auto-update",
-            "-p", f"@" + str(prompt_path),  # some CLIs accept @file
+            "-p", "@" + str(prompt_path),
             "--output-format", "json", "--max-turns", "1",
             "-m", model, "--cwd", str(cwd),
         ],
-        # Last resort: truncated inline prompt (may lose tail of long papers)
         [
             grok_bin, "--no-auto-update",
             "-p", full_prompt[:6000],
@@ -249,7 +241,6 @@ def _run_variants(grok_bin: str, system: str, user: str, model: str,
                 last_code, last_out, last_err = 124, "", f"timeout after {timeout}s"
                 continue
             except OSError as e:
-                # WinError 206 filename/command too long — try next variant
                 last_code, last_out, last_err = 206, "", f"OSError {e}"
                 continue
 
