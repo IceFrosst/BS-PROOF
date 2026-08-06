@@ -32,7 +32,21 @@ from pipeline.storage import Store, DEFAULT_DB
 from pipeline.retrieve import retrieve
 
 WIRING_DB = DEFAULT_DB.parent / "wiring_demo.sqlite"
+PILOT_DB = DEFAULT_DB.parent / "pilot.sqlite"
 SYNTHETIC_VERSION = "SYNTHETIC-NOT-REAL"
+
+
+def _best_text(record: dict) -> str:
+    """
+    Best available text for one study, via the ladder in sources/fulltext.
+    Falls back to the abstract, which is honest but costs the 0.55 OA factor.
+    """
+    from sources import fulltext as ft
+    try:
+        text, _tier = ft.best_text(record)
+    except Exception:
+        text = record.get("abstract") or record.get("title") or ""
+    return text or (record.get("title") or "")
 
 
 def synthetic_extraction(record: dict, axes: dict) -> dict:
@@ -63,6 +77,13 @@ def main(argv: list[str]) -> int:
     wiring = "--wiring" in args
     if wiring:
         args.remove("--wiring")
+    pilot = "--pilot" in args
+    if pilot:
+        args.remove("--pilot")
+    limit = 12
+    if "--limit" in args:
+        i = args.index("--limit")
+        limit = int(args[i + 1]); del args[i:i + 2]
     form = "magnesium_glycinate"
     if "--form" in args:
         i = args.index("--form")
@@ -71,11 +92,13 @@ def main(argv: list[str]) -> int:
     ingredients = args or ["magnesium"]
     ingredient = ingredients[0]
 
-    if not wiring and not os.environ.get("ANTHROPIC_API_KEY"):
-        print("ANTHROPIC_API_KEY is not set, so live extraction cannot run.")
-        print("Re-run with --wiring to exercise the pipeline with a SYNTHETIC")
-        print("extractor, which proves the wiring and tells you nothing about")
-        print("the ingredient.")
+    if not wiring and not pilot and not os.environ.get("ANTHROPIC_API_KEY"):
+        print("ANTHROPIC_API_KEY is not set, so production extraction cannot run.")
+        print("  --pilot   real extractions on subscription auth. Results are")
+        print("            REAL but labelled pilot: not reproducible in the sense")
+        print("            invariant 2 requires, and not for public claims.")
+        print("  --wiring  SYNTHETIC extractor. Proves the code path, says")
+        print("            nothing about the ingredient.")
         return 1
 
     if vocab.form(ingredient, form) is None:
@@ -89,7 +112,7 @@ def main(argv: list[str]) -> int:
                "population": {"id": pv["id"], **{a: pv[a] for a in vocab.AXES}}}
     axes = {a: pv[a] for a in vocab.AXES}
 
-    db = WIRING_DB if wiring else DEFAULT_DB
+    db = WIRING_DB if wiring else (PILOT_DB if pilot else DEFAULT_DB)
     with Store(db) as store:
         if store.counts()["studies"] == 0:
             print(f"no corpus in {db.name}; retrieving...")
@@ -111,6 +134,31 @@ def main(argv: list[str]) -> int:
                             "extraction": synthetic_extraction(p, axes)}
                            for p in primaries[:40]]
             prompt_version = SYNTHETIC_VERSION
+        elif pilot:
+            import pilot_adapter as pa
+            import workers
+            if not pa.preflight():
+                return 1
+            print("\n" + "-" * 68)
+            print("PILOT MODE. Extractions are REAL. Reproducibility is NOT")
+            print("guaranteed: plugins and auto-memory load without --bare.")
+            print("Not for public claims. Written to a separate store.")
+            print("-" * 68)
+            targets = primaries[:limit]
+            print(f"extracting {len(targets)} studies...")
+            raw = workers.extract_corpus(
+                [{**p, "_canonical": p["canonical_id"], "ingredient": ingredient}
+                 for p in targets],
+                text_for=lambda r: _best_text(r),
+                registry_for=lambda r: store.registry_facts(r["registration_id"])
+                                       if r.get("registration_id") else None,
+                call=lambda agent, payload: pa.call(agent, payload, verified=True))
+            extractions = [{"record": r["record"], "extraction": r["extraction"],
+                            "registry": store.registry_facts(
+                                r["record"]["registration_id"])
+                                if r["record"].get("registration_id") else None}
+                           for r in raw]
+            prompt_version = f"{pa.PROMPT_VERSION}+{pa.PILOT_MARKER}"
         else:
             import workers
             import claude_adapter
@@ -132,7 +180,7 @@ def main(argv: list[str]) -> int:
         for row in rows:
             store.upsert_ecu(row)
 
-        tag = "SYNTHETIC " if wiring else ""
+        tag = "SYNTHETIC " if wiring else ("PILOT " if pilot else "")
         print(f"\n{tag}ECU ROWS — {ingredient}, form={form}, "
               f"population={product['population']['id']}")
         print("-" * 74)
@@ -145,6 +193,8 @@ def main(argv: list[str]) -> int:
         print(f"dose_band: unbanded (band_version 0 — the dose axis is not live yet)")
         if wiring:
             print(f"\nWritten to {db} — the SYNTHETIC store, not the real one.")
+        elif pilot:
+            print(f"\nWritten to {db} — the PILOT store, not out/bsproof.sqlite.")
     return 0
 
 
