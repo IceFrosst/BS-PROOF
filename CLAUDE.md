@@ -192,10 +192,14 @@ against Europe PMC — no query string needed fixing. 741 records over magnesium
 creatine / ashwagandha. **METHODS% = 69.5 against a target of ≥80** — this is the
 floor, before green OA and SR-table inheritance. Green OA is the named uplift.
 
-**The one hard blocker: no successful model call has ever been made.** CLI flag
-shape is confirmed correct (raw content, not paths), but the round trip is
-unproven. A nested `claude -p` inside a Claude Code session returns "Not logged
-in" — **the smoke test must be run from a plain terminal.**
+**🔴 The one hard blocker: `--bare` cannot use a Claude.ai subscription.**
+Diagnosed 2026-08-06. `claude --help`: *"Anthropic auth is strictly
+`ANTHROPIC_API_KEY` or apiKeyHelper via `--settings` (OAuth and keychain are
+never read)"*. Verified — plain `claude -p` succeeds, adding `--bare` fails with
+"Not logged in" even while `claude auth status` reports `loggedIn: true` on a Pro
+subscription. **An `ANTHROPIC_API_KEY` is required.** Preflight now blocks on it.
+Do not drop `--bare` to work around this (invariant 2). No successful subagent
+call has been made yet.
 
 **Built 2026-08-06 — the vocabularies no longer block S3/S6/S7.**
 `vocab/{outcome,form,population}.json` + `schemas/ecu.json` +
@@ -237,10 +241,10 @@ logged in. The pull/push workflow above cannot run until this is fixed.
    Confirm `--model haiku` resolves while you're there
 3. Pin full model IDs in `TIER_MODEL`; add a spend cap (`--max-budget-usd` is
    unused)
-4. **Phase 2 — retrieval as real modules.** Lift Europe PMC out of
-   `run_coverage.py` into `sources/europepmc.py`; add `sources/clinicaltrials.py`
-   (RoB items 3+4, unpublished flag) and `sources/oa.py` (Unpaywall + OpenAlex,
-   needs `BSPROOF_CONTACT_EMAIL`). Cached fixtures so tests never hit the network
+4. **Phase 2 — retrieval.** ✅ `sources/http.py`, `sources/europepmc.py`,
+   `sources/clinicaltrials.py` built and verified live. **Remaining:**
+   `sources/oa.py` (Unpaywall + OpenAlex) — blocked on `BSPROOF_CONTACT_EMAIL`,
+   which Unpaywall requires. This is the green-OA uplift that closes 69.5% → 80%
 5. **Phase 3 — classify + dedup wiring.** Deterministic design classifier from
    publicationType/MeSH into the existing dedup. Last thing buildable with zero
    model calls
