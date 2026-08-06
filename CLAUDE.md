@@ -77,6 +77,9 @@ not absence of evidence. `s_i = −0.7`. This is what frees `0` to mean
 
 ```
 claude_adapter.py          the ONE model boundary. All CLI coupling lives here.
+workers.py                 per-study subagent fan-out              [MODEL]
+run_pipeline.py            end-to-end run; --wiring needs no key
+pipeline/assemble.py       worker JSON -> Study -> ECU rows        [NO MODEL]
 prompts/*.md               subagent instructions S1-S8 + _shared.md. The real IP.
 schemas/*.json             output contracts, enforced via --json-schema
 vocab/*.json               outcome / form / population vocabularies (DATA)
@@ -224,12 +227,23 @@ required after install. Cloud sessions do not automatically inherit WSL plugins.
 
 ## Current state
 
-**Built and tested:** scoring, dedup, adapter, prompts, schemas, selftest.
+**The deterministic half of v1 is COMPLETE and runs end to end**, Europe PMC →
+classify → dedup → registry facts → storage → assembly → scored ECU rows. Zero
+model calls. `python3 run_pipeline.py magnesium --form magnesium_glycinate
+--wiring` demonstrates the whole path today; 2076 studies and 109 registry
+records are already persisted in `out/bsproof.sqlite`.
 
-**Verified live 2026-08-06:** `run_coverage.py` + `sources/ratelimit.py` work
-against Europe PMC — no query string needed fixing. 741 records over magnesium /
-creatine / ashwagandha. **METHODS% = 69.5 against a target of ≥80** — this is the
-floor, before green OA and SR-table inheritance. Green OA is the named uplift.
+**⚠️ `--wiring` output is SYNTHETIC** — separate DB (`out/wiring_demo.sqlite`),
+`prompt_version: "SYNTHETIC-NOT-REAL"`, every line prefixed. It proves the wiring
+and says nothing about any ingredient. Do not remove those guards.
+
+**✅ COVERAGE RESOLVED 2026-08-06 — the project's largest unknown.**
+Measured over 3141 records: Europe PMC alone **78.7%** raw OA, **87.8%**
+projected with green OA, **88.9%** methods-level facts — **clears the ≥80%
+target**. Unpaywall is not in that number (needs the contact email), so it is a
+floor. Honest caveat: most of the jump from the earlier 69.5% is de-biasing the
+sample, not green OA — the old script truncated at 300 records in relevance
+order. The two effects are not separable from these runs.
 
 **🔴 The one hard blocker: `--bare` cannot use a Claude.ai subscription.**
 Diagnosed 2026-08-06. `claude --help`: *"Anthropic auth is strictly
@@ -295,25 +309,36 @@ succeeds. The pull/push workflow above is unblocked.
 
 ## Next
 
-1. **Get an `ANTHROPIC_API_KEY` from console.anthropic.com** — this is now the
-   only unblock (subscription auth is ruled out, see above; do not retry it).
-   Then smoke-test one subagent from a plain terminal — the last unproven layer.
-   Confirm `--model haiku` resolves while you're there
-2. Pin full model IDs in `TIER_MODEL`; add a spend cap (`--max-budget-usd` is
-   unused)
-3. **Phase 2 — retrieval.** ✅ `sources/http.py`, `sources/europepmc.py`,
-   `sources/clinicaltrials.py` built and verified live. **Remaining:**
-   `sources/oa.py` (Unpaywall + OpenAlex) — blocked on `BSPROOF_CONTACT_EMAIL`,
-   which Unpaywall requires. This is the green-OA uplift that closes 69.5% → 80%
-4. **Phase 3 — classify + dedup wiring.** Deterministic design classifier from
-   publicationType/MeSH into the existing dedup. Last thing buildable with zero
-   model calls
-5. **Phase 4 — first real extractions.** S1/S3/S4/S5/S7/S8 over ~10 studies, then
-   S2 (highest value), then S6 with an anchor eval (highest risk)
-6. **Phase 5 — storage + assembly.** SQLite on a portable, Postgres-shaped schema
-   so the move to Supabase is a dump-and-load. All DB access behind one module
-7. **Phase 6 — calibration harness.** EFSA one-sided constraint + the 28 anchors
-8. Decide the population-text mapping (see Current state)
+**Handoff (Claude, 2026-08-06):** the deterministic half is done and green.
+Everything below the line needs credentials the founder has to create.
+
+### Blocked on the founder (both are one-liners)
+
+1. **`ANTHROPIC_API_KEY`** from console.anthropic.com. This is the ONLY unblock
+   for extraction. Subscription auth is ruled out and measured — do not retry it.
+   Then `python3 run_pipeline.py magnesium --form magnesium_glycinate` runs the
+   real thing. Confirm the pinned model ids resolve on the first call.
+2. **`BSPROOF_CONTACT_EMAIL`** — one address, not a secret. Unlocks Unpaywall,
+   the only untested rung of the OA ladder. OpenAlex already works without it.
+
+### Unblocked — anyone can pick these up now
+
+3. **S2 synthesis path.** Highest-value subagent: one OA systematic review
+   carries characteristics + RoB tables for ~15 unreadable primaries. 462
+   syntheses are already stored and classified. `sources/oa.referenced_dois()`
+   narrows the included-study search space; S2 decides actual membership.
+4. **Derive dose bands.** The one axis of the 5-tuple that is not live. Needs a
+   first extraction pass to cluster real doses, then `band_version` 0 -> 1 and
+   `storage.stale_bands()` lists what to recompute.
+5. **Population-text mapping — still unassigned.** S3 emits raw
+   `population_text`; nothing maps it to the four axes, so `pop_match` currently
+   compares defaults. Recommended fix in `docs/SPEC.md` §5: pass the population
+   vocab into S3. Needs a `PROMPT_VERSION` bump.
+6. **Calibration harness** — EFSA one-sided constraint + the 28 anchors.
+7. **Raise the fetch caps.** magnesium and creatine hit 1200 primaries, so the
+   corpus is still truncated and the synthesis:primary ratio is unmeasurable.
+8. **Venue factor.** `Study.venue_ok` is a boolean; SJR quartiles have nowhere
+   to go until a real venue factor exists (new constant -> SPEC §13 first).
 
 ---
 
