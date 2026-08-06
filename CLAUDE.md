@@ -387,6 +387,20 @@ S2 succeeded on 3/4 reviews, 36 included studies listed, 0 resolved (pre-fix),
 0 primaries rescued of 298 starved. Re-run needed after the resolution fix
 before any claim about closing the 2.5-point coverage gap.
 
+**S6 is working correctly; the CORPUS is wrong.** Ran S6's null-rationales —
+the backlog mechanism its prompt was designed around — over three real studies.
+It refused postoperative atrial fibrillation, opioid consumption, vasopressor
+use, plasma ropivacaine levels and QoR-15, and correctly mapped
+`muscle_strength`, `inflammation_crp`, `adverse_events_any`. Sample rationale:
+
+> "Postoperative atrial fibrillation is a clinical cardiac arrhythmia event
+> with no corresponding id in this sleep/stress/exercise vocabulary"
+
+**Do not "fix" this by growing the outcome vocabulary.** POAF and intraoperative
+opioid use are not consumer-supplement outcomes; adding them would file drug
+trials under supplement claims. The high discard rate is a **retrieval**
+symptom. See the retrieval-scope entry below.
+
 **Population mapping RESOLVED** (commit `5223369`, `PROMPT_VERSION` v1.2):
 S3 now emits the four population axes directly, with `vocab/population.json`
 in its payload and `population_axes` required by `schemas/s3_study.json`.
