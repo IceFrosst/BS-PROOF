@@ -267,11 +267,29 @@ and the form id; `vocab.elemental_dose_mg()` converts using molar masses recorde
 in the vocabulary. This keeps the 5× dose trap in deterministic, auditable code
 (invariant 1) instead of in a model's arithmetic.
 
-**Conversion refuses more often than it converts.** A `conversion_safe: false`
-form returns `(None, "compound_only")` — no elemental dose. Magnesium citrate,
-sulfate and chloride all have common hydrates whose state is routinely unstated,
-and the resulting ambiguity exceeds 2×. Refusing costs coverage; guessing
-corrupts the axis the product rests on (invariant 5).
+**Hydrate ambiguity is bounded, not unknown.** Magnesium citrate, sulfate and
+chloride all have common hydrates whose state is routinely unstated. There is no
+single defensible elemental number, so `elemental_dose_mg()` returns `None`.
+But the true dose is bracketed by the hydrate and anhydrous conversions, and
+`elemental_dose_range_mg()` returns that interval:
+
+| Form | 400 mg compound → elemental | Spread |
+|---|---|---|
+| orotate | 26.2 – 29.1 mg | 1.11× |
+| lactate | 40.8 – 48.0 mg | 1.18× |
+| malate | 50.5 – 62.2 mg | 1.23× |
+| citrate | 47.6 – 64.7 mg | 1.36× |
+| sulfate | 39.4 – 80.8 mg | 2.05× |
+| chloride | 47.8 – 102.1 mg | 2.14× |
+
+Most intervals are narrower than a dose band, so the band assignment is
+unaffected and the study is usable. Discarding a study we can bracket is
+over-caution, and over-caution costs coverage this project cannot spare.
+When an interval genuinely straddles two bands, that resolves to
+`dose_match: "unspecified"` downstream — it is never resolved by picking the
+likelier band. Where no fixed formula exists at all (basic magnesium carbonate,
+proprietary buffered creatine) the answer stays `compound_only`: unknown, not
+bounded (invariant 5).
 
 **Population match composes by worst axis.** All four axes exact → `exact`; any
 axis `different` → `different`; otherwise `adjacent`. `unknown` is a member of

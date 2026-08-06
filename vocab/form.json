@@ -6,169 +6,405 @@
     "salt_family": "Drives the 0.50 partial-transfer tier. For botanicals it means PREPARATION family, not a chemical salt.",
     "unspecified": "Every ingredient has exactly one *_unspecified form. It takes the 0.30 penalty. S7 must use it rather than guess a salt.",
     "conversion": "The MODEL never does the elemental arithmetic. S7 reports the compound dose and the form id; pipeline/vocab.py converts using molar masses recorded here. Arithmetic stays deterministic (invariant 1) and auditable.",
-    "conversion_safe": "false means a hydrate of this salt is common in supplements AND the hydration state is routinely unstated, so compound->elemental is ambiguous by a factor that can exceed 2. When false the pipeline does NOT convert: elemental_dose_mg stays null and the study takes the unspecified-dose path. A known unknown, never a guess (invariant 5).",
+    "conversion_safe": "false means a hydrate of this salt is common in supplements AND the hydration state is routinely unstated. The ambiguity reaches 2.1x for chloride and 2.0x for sulfate. When false there is no single defensible elemental number, so elemental_dose_mg returns null (invariant 5).",
+    "hydrate_molar_mass_g_mol": "Where the common hydrate is known, the ambiguity is BOUNDED rather than unknown: the true elemental dose lies between the hydrate and anhydrous conversions. elemental_dose_range_mg() returns that interval, which is usually narrow enough to land in one dose band anyway. Discarding a study we can bound would be over-caution, not caution.",
     "standardisation": "Botanical withanolide percentages are LABEL CLAIMS that vary by batch. They are recorded for matching and are never used in arithmetic."
   },
-  "atomic_masses_g_mol": {"Mg": 24.305},
+  "atomic_masses_g_mol": {
+    "Mg": 24.305
+  },
   "ingredients": {
     "magnesium": {
       "dose_basis_kind": "elemental",
-      "salt_families": ["inorganic", "organic_acid_salt", "amino_acid_chelate"],
+      "salt_families": [
+        "inorganic",
+        "organic_acid_salt",
+        "amino_acid_chelate"
+      ],
       "forms": [
-        {"id": "magnesium_oxide", "label": "Magnesium oxide", "salt_family": "inorganic",
-         "formula": "MgO", "molar_mass_g_mol": 40.304, "active_mass_g_mol": 24.305,
-         "conversion_safe": true, "aliases": ["MgO", "magnesia"]},
-
-        {"id": "magnesium_hydroxide", "label": "Magnesium hydroxide", "salt_family": "inorganic",
-         "formula": "Mg(OH)2", "molar_mass_g_mol": 58.320, "active_mass_g_mol": 24.305,
-         "conversion_safe": true, "aliases": ["milk of magnesia"]},
-
-        {"id": "magnesium_carbonate", "label": "Magnesium carbonate", "salt_family": "inorganic",
-         "formula": "MgCO3", "molar_mass_g_mol": 84.314, "active_mass_g_mol": 24.305,
-         "conversion_safe": false,
-         "hydration_note": "Supplement-grade is usually basic/hydrated magnesium carbonate of variable composition.",
-         "aliases": []},
-
-        {"id": "magnesium_chloride", "label": "Magnesium chloride", "salt_family": "inorganic",
-         "formula": "MgCl2", "molar_mass_g_mol": 95.211, "active_mass_g_mol": 24.305,
-         "conversion_safe": false,
-         "hydration_note": "Hexahydrate (203.30) is common and usually unstated — a 2.1x difference.",
-         "aliases": []},
-
-        {"id": "magnesium_sulfate", "label": "Magnesium sulfate", "salt_family": "inorganic",
-         "formula": "MgSO4", "molar_mass_g_mol": 120.366, "active_mass_g_mol": 24.305,
-         "conversion_safe": false,
-         "hydration_note": "Heptahydrate (Epsom salt, 246.47) is the common form — a 2.0x difference.",
-         "aliases": ["Epsom salt"]},
-
-        {"id": "magnesium_citrate", "label": "Magnesium citrate", "salt_family": "organic_acid_salt",
-         "formula": "Mg3(C6H5O7)2", "molar_mass_g_mol": 451.114, "active_mass_g_mol": 72.915,
-         "conversion_safe": false,
-         "hydration_note": "Nonahydrate and monomagnesium dicitrate both sold; stoichiometry often unstated.",
-         "aliases": []},
-
-        {"id": "magnesium_malate", "label": "Magnesium malate", "salt_family": "organic_acid_salt",
-         "formula": "MgC4H4O5", "molar_mass_g_mol": 156.376, "active_mass_g_mol": 24.305,
-         "conversion_safe": false,
-         "hydration_note": "Dihydrate common.", "aliases": []},
-
-        {"id": "magnesium_lactate", "label": "Magnesium lactate", "salt_family": "organic_acid_salt",
-         "formula": "Mg(C3H5O3)2", "molar_mass_g_mol": 202.446, "active_mass_g_mol": 24.305,
-         "conversion_safe": false,
-         "hydration_note": "Dihydrate common.", "aliases": []},
-
-        {"id": "magnesium_orotate", "label": "Magnesium orotate", "salt_family": "organic_acid_salt",
-         "formula": "Mg(C5H3N2O4)2", "molar_mass_g_mol": 334.485, "active_mass_g_mol": 24.305,
-         "conversion_safe": false,
-         "hydration_note": "Dihydrate common.", "aliases": []},
-
-        {"id": "magnesium_glycinate", "label": "Magnesium glycinate (bisglycinate)", "salt_family": "amino_acid_chelate",
-         "formula": "Mg(C2H4NO2)2", "molar_mass_g_mol": 172.424, "active_mass_g_mol": 24.305,
-         "conversion_safe": true,
-         "aliases": ["magnesium bisglycinate", "magnesium diglycinate"]},
-
-        {"id": "magnesium_threonate", "label": "Magnesium L-threonate", "salt_family": "amino_acid_chelate",
-         "formula": "Mg(C4H7O5)2", "molar_mass_g_mol": 294.501, "active_mass_g_mol": 24.305,
-         "conversion_safe": true,
-         "aliases": ["Magtein", "magnesium L-threonate"]},
-
-        {"id": "magnesium_taurate", "label": "Magnesium taurate", "salt_family": "amino_acid_chelate",
-         "formula": "Mg(C2H6NO3S)2", "molar_mass_g_mol": 272.625, "active_mass_g_mol": 24.305,
-         "conversion_safe": true, "aliases": ["magnesium ditaurate"]},
-
-        {"id": "magnesium_aspartate", "label": "Magnesium aspartate", "salt_family": "amino_acid_chelate",
-         "formula": "Mg(C4H6NO4)2", "molar_mass_g_mol": 288.508, "active_mass_g_mol": 24.305,
-         "conversion_safe": false,
-         "hydration_note": "Dihydrate common.", "aliases": []},
-
-        {"id": "magnesium_unspecified", "label": "Magnesium, form not stated", "salt_family": null,
-         "formula": null, "molar_mass_g_mol": null, "active_mass_g_mol": null,
-         "conversion_safe": false, "aliases": ["magnesium supplementation", "Mg"]}
+        {
+          "id": "magnesium_oxide",
+          "label": "Magnesium oxide",
+          "salt_family": "inorganic",
+          "formula": "MgO",
+          "molar_mass_g_mol": 40.304,
+          "active_mass_g_mol": 24.305,
+          "conversion_safe": true,
+          "aliases": [
+            "MgO",
+            "magnesia"
+          ]
+        },
+        {
+          "id": "magnesium_hydroxide",
+          "label": "Magnesium hydroxide",
+          "salt_family": "inorganic",
+          "formula": "Mg(OH)2",
+          "molar_mass_g_mol": 58.32,
+          "active_mass_g_mol": 24.305,
+          "conversion_safe": true,
+          "aliases": [
+            "milk of magnesia"
+          ]
+        },
+        {
+          "id": "magnesium_carbonate",
+          "label": "Magnesium carbonate",
+          "salt_family": "inorganic",
+          "formula": "MgCO3",
+          "molar_mass_g_mol": 84.314,
+          "active_mass_g_mol": 24.305,
+          "conversion_safe": false,
+          "hydration_note": "Supplement-grade is usually basic/hydrated magnesium carbonate of variable composition.",
+          "aliases": []
+        },
+        {
+          "id": "magnesium_chloride",
+          "label": "Magnesium chloride",
+          "salt_family": "inorganic",
+          "formula": "MgCl2",
+          "molar_mass_g_mol": 95.211,
+          "active_mass_g_mol": 24.305,
+          "conversion_safe": false,
+          "hydration_note": "Hexahydrate (203.30) is common and usually unstated — a 2.1x difference.",
+          "aliases": [],
+          "hydrate_formula": "MgCl2.6H2O",
+          "hydrate_molar_mass_g_mol": 203.301
+        },
+        {
+          "id": "magnesium_sulfate",
+          "label": "Magnesium sulfate",
+          "salt_family": "inorganic",
+          "formula": "MgSO4",
+          "molar_mass_g_mol": 120.366,
+          "active_mass_g_mol": 24.305,
+          "conversion_safe": false,
+          "hydration_note": "Heptahydrate (Epsom salt, 246.47) is the common form — a 2.0x difference.",
+          "aliases": [
+            "Epsom salt"
+          ],
+          "hydrate_formula": "MgSO4.7H2O",
+          "hydrate_molar_mass_g_mol": 246.471
+        },
+        {
+          "id": "magnesium_citrate",
+          "label": "Magnesium citrate",
+          "salt_family": "organic_acid_salt",
+          "formula": "Mg3(C6H5O7)2",
+          "molar_mass_g_mol": 451.114,
+          "active_mass_g_mol": 72.915,
+          "conversion_safe": false,
+          "hydration_note": "Nonahydrate and monomagnesium dicitrate both sold; stoichiometry often unstated.",
+          "aliases": [],
+          "hydrate_formula": "Mg3(C6H5O7)2.9H2O",
+          "hydrate_molar_mass_g_mol": 613.249
+        },
+        {
+          "id": "magnesium_malate",
+          "label": "Magnesium malate",
+          "salt_family": "organic_acid_salt",
+          "formula": "MgC4H4O5",
+          "molar_mass_g_mol": 156.376,
+          "active_mass_g_mol": 24.305,
+          "conversion_safe": false,
+          "hydration_note": "Dihydrate common.",
+          "aliases": [],
+          "hydrate_formula": "MgC4H4O5.2H2O",
+          "hydrate_molar_mass_g_mol": 192.406
+        },
+        {
+          "id": "magnesium_lactate",
+          "label": "Magnesium lactate",
+          "salt_family": "organic_acid_salt",
+          "formula": "Mg(C3H5O3)2",
+          "molar_mass_g_mol": 202.446,
+          "active_mass_g_mol": 24.305,
+          "conversion_safe": false,
+          "hydration_note": "Dihydrate common.",
+          "aliases": [],
+          "hydrate_formula": "Mg(C3H5O3)2.2H2O",
+          "hydrate_molar_mass_g_mol": 238.476
+        },
+        {
+          "id": "magnesium_orotate",
+          "label": "Magnesium orotate",
+          "salt_family": "organic_acid_salt",
+          "formula": "Mg(C5H3N2O4)2",
+          "molar_mass_g_mol": 334.485,
+          "active_mass_g_mol": 24.305,
+          "conversion_safe": false,
+          "hydration_note": "Dihydrate common.",
+          "aliases": [],
+          "hydrate_formula": "Mg(C5H3N2O4)2.2H2O",
+          "hydrate_molar_mass_g_mol": 370.515
+        },
+        {
+          "id": "magnesium_glycinate",
+          "label": "Magnesium glycinate (bisglycinate)",
+          "salt_family": "amino_acid_chelate",
+          "formula": "Mg(C2H4NO2)2",
+          "molar_mass_g_mol": 172.424,
+          "active_mass_g_mol": 24.305,
+          "conversion_safe": true,
+          "aliases": [
+            "magnesium bisglycinate",
+            "magnesium diglycinate"
+          ]
+        },
+        {
+          "id": "magnesium_threonate",
+          "label": "Magnesium L-threonate",
+          "salt_family": "amino_acid_chelate",
+          "formula": "Mg(C4H7O5)2",
+          "molar_mass_g_mol": 294.501,
+          "active_mass_g_mol": 24.305,
+          "conversion_safe": true,
+          "aliases": [
+            "Magtein",
+            "magnesium L-threonate"
+          ]
+        },
+        {
+          "id": "magnesium_taurate",
+          "label": "Magnesium taurate",
+          "salt_family": "amino_acid_chelate",
+          "formula": "Mg(C2H6NO3S)2",
+          "molar_mass_g_mol": 272.625,
+          "active_mass_g_mol": 24.305,
+          "conversion_safe": true,
+          "aliases": [
+            "magnesium ditaurate"
+          ]
+        },
+        {
+          "id": "magnesium_aspartate",
+          "label": "Magnesium aspartate",
+          "salt_family": "amino_acid_chelate",
+          "formula": "Mg(C4H6NO4)2",
+          "molar_mass_g_mol": 288.508,
+          "active_mass_g_mol": 24.305,
+          "conversion_safe": false,
+          "hydration_note": "Dihydrate common.",
+          "aliases": [],
+          "hydrate_formula": "Mg(C4H6NO4)2.2H2O",
+          "hydrate_molar_mass_g_mol": 324.538
+        },
+        {
+          "id": "magnesium_unspecified",
+          "label": "Magnesium, form not stated",
+          "salt_family": null,
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [
+            "magnesium supplementation",
+            "Mg"
+          ]
+        }
       ]
     },
-
     "creatine": {
       "dose_basis_kind": "active_moiety",
       "note": "'Elemental' is a mineral term. For creatine the active moiety is creatine base; the same conversion machinery applies.",
-      "salt_families": ["creatine_hydrate", "creatine_salt", "creatine_ester"],
+      "salt_families": [
+        "creatine_hydrate",
+        "creatine_salt",
+        "creatine_ester"
+      ],
       "forms": [
-        {"id": "creatine_monohydrate", "label": "Creatine monohydrate", "salt_family": "creatine_hydrate",
-         "formula": "C4H9N3O2.H2O", "molar_mass_g_mol": 149.146, "active_mass_g_mol": 131.131,
-         "conversion_safe": true,
-         "aliases": ["CrM", "creatine monohydrate", "Creapure"]},
-
-        {"id": "creatine_anhydrous", "label": "Creatine anhydrous", "salt_family": "creatine_hydrate",
-         "formula": "C4H9N3O2", "molar_mass_g_mol": 131.131, "active_mass_g_mol": 131.131,
-         "conversion_safe": true, "aliases": ["creatine base"]},
-
-        {"id": "creatine_hcl", "label": "Creatine hydrochloride", "salt_family": "creatine_salt",
-         "formula": "C4H9N3O2.HCl", "molar_mass_g_mol": 167.592, "active_mass_g_mol": 131.131,
-         "conversion_safe": true, "aliases": ["creatine HCl"]},
-
-        {"id": "creatine_citrate", "label": "Creatine citrate", "salt_family": "creatine_salt",
-         "formula": null, "molar_mass_g_mol": null, "active_mass_g_mol": null,
-         "conversion_safe": false,
-         "hydration_note": "Sold at several creatine:citrate ratios; stoichiometry usually unstated.",
-         "aliases": []},
-
-        {"id": "creatine_malate", "label": "Creatine malate", "salt_family": "creatine_salt",
-         "formula": null, "molar_mass_g_mol": null, "active_mass_g_mol": null,
-         "conversion_safe": false,
-         "hydration_note": "Di- and tri-creatine malate both sold.", "aliases": ["tri-creatine malate"]},
-
-        {"id": "creatine_nitrate", "label": "Creatine nitrate", "salt_family": "creatine_salt",
-         "formula": null, "molar_mass_g_mol": null, "active_mass_g_mol": null,
-         "conversion_safe": false, "aliases": []},
-
-        {"id": "creatine_ethyl_ester", "label": "Creatine ethyl ester", "salt_family": "creatine_ester",
-         "formula": null, "molar_mass_g_mol": null, "active_mass_g_mol": null,
-         "conversion_safe": false,
-         "hydration_note": "Usually sold as the HCl salt; which is dosed is often unstated.",
-         "aliases": ["CEE"]},
-
-        {"id": "creatine_buffered", "label": "Buffered creatine (Kre-Alkalyn)", "salt_family": "creatine_salt",
-         "formula": null, "molar_mass_g_mol": null, "active_mass_g_mol": null,
-         "conversion_safe": false,
-         "hydration_note": "Proprietary composition; creatine content not disclosed.",
-         "aliases": ["Kre-Alkalyn"]},
-
-        {"id": "creatine_unspecified", "label": "Creatine, form not stated", "salt_family": null,
-         "formula": null, "molar_mass_g_mol": null, "active_mass_g_mol": null,
-         "conversion_safe": false, "aliases": ["creatine supplementation"]}
+        {
+          "id": "creatine_monohydrate",
+          "label": "Creatine monohydrate",
+          "salt_family": "creatine_hydrate",
+          "formula": "C4H9N3O2.H2O",
+          "molar_mass_g_mol": 149.146,
+          "active_mass_g_mol": 131.131,
+          "conversion_safe": true,
+          "aliases": [
+            "CrM",
+            "creatine monohydrate",
+            "Creapure"
+          ]
+        },
+        {
+          "id": "creatine_anhydrous",
+          "label": "Creatine anhydrous",
+          "salt_family": "creatine_hydrate",
+          "formula": "C4H9N3O2",
+          "molar_mass_g_mol": 131.131,
+          "active_mass_g_mol": 131.131,
+          "conversion_safe": true,
+          "aliases": [
+            "creatine base"
+          ]
+        },
+        {
+          "id": "creatine_hcl",
+          "label": "Creatine hydrochloride",
+          "salt_family": "creatine_salt",
+          "formula": "C4H9N3O2.HCl",
+          "molar_mass_g_mol": 167.592,
+          "active_mass_g_mol": 131.131,
+          "conversion_safe": true,
+          "aliases": [
+            "creatine HCl"
+          ]
+        },
+        {
+          "id": "creatine_citrate",
+          "label": "Creatine citrate",
+          "salt_family": "creatine_salt",
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "hydration_note": "Sold at several creatine:citrate ratios; stoichiometry usually unstated.",
+          "aliases": []
+        },
+        {
+          "id": "creatine_malate",
+          "label": "Creatine malate",
+          "salt_family": "creatine_salt",
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "hydration_note": "Di- and tri-creatine malate both sold.",
+          "aliases": [
+            "tri-creatine malate"
+          ]
+        },
+        {
+          "id": "creatine_nitrate",
+          "label": "Creatine nitrate",
+          "salt_family": "creatine_salt",
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": []
+        },
+        {
+          "id": "creatine_ethyl_ester",
+          "label": "Creatine ethyl ester",
+          "salt_family": "creatine_ester",
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "hydration_note": "Usually sold as the HCl salt; which is dosed is often unstated.",
+          "aliases": [
+            "CEE"
+          ]
+        },
+        {
+          "id": "creatine_buffered",
+          "label": "Buffered creatine (Kre-Alkalyn)",
+          "salt_family": "creatine_salt",
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "hydration_note": "Proprietary composition; creatine content not disclosed.",
+          "aliases": [
+            "Kre-Alkalyn"
+          ]
+        },
+        {
+          "id": "creatine_unspecified",
+          "label": "Creatine, form not stated",
+          "salt_family": null,
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [
+            "creatine supplementation"
+          ]
+        }
       ]
     },
-
     "ashwagandha": {
       "dose_basis_kind": "extract",
       "note": "Botanical. The dose IS the extract dose — there is no conversion. Standardisation is the dominant source of between-study variance, so standardised extracts are DISTINCT FORMS, not the same plant.",
-      "salt_families": ["standardised_root_extract", "whole_root_powder", "leaf_containing"],
+      "salt_families": [
+        "standardised_root_extract",
+        "whole_root_powder",
+        "leaf_containing"
+      ],
       "forms": [
-        {"id": "ashwagandha_ksm66", "label": "KSM-66 root extract", "salt_family": "standardised_root_extract",
-         "standardisation": "~5% withanolides, root only, water-based extraction (label claim)",
-         "conversion_safe": false, "aliases": ["KSM-66", "KSM66"]},
-
-        {"id": "ashwagandha_sensoril", "label": "Sensoril root and leaf extract", "salt_family": "leaf_containing",
-         "standardisation": "~10% withanolide glycosides, root + leaf (label claim)",
-         "conversion_safe": false, "aliases": ["Sensoril"]},
-
-        {"id": "ashwagandha_shoden", "label": "Shoden extract", "salt_family": "standardised_root_extract",
-         "standardisation": "~35% withanolide glycosides (label claim)",
-         "conversion_safe": false, "aliases": ["Shoden"]},
-
-        {"id": "ashwagandha_root_extract_generic", "label": "Root extract, unbranded", "salt_family": "standardised_root_extract",
-         "standardisation": null, "conversion_safe": false,
-         "aliases": ["Withania somnifera root extract"]},
-
-        {"id": "ashwagandha_root_powder", "label": "Whole root powder", "salt_family": "whole_root_powder",
-         "standardisation": null, "conversion_safe": false,
-         "aliases": ["churna", "root powder"]},
-
-        {"id": "ashwagandha_leaf_extract", "label": "Leaf extract", "salt_family": "leaf_containing",
-         "standardisation": null, "conversion_safe": false, "aliases": []},
-
-        {"id": "ashwagandha_unspecified", "label": "Ashwagandha, preparation not stated", "salt_family": null,
-         "standardisation": null, "conversion_safe": false,
-         "aliases": ["Withania somnifera", "ashwagandha supplementation"]}
+        {
+          "id": "ashwagandha_ksm66",
+          "label": "KSM-66 root extract",
+          "salt_family": "standardised_root_extract",
+          "standardisation": "~5% withanolides, root only, water-based extraction (label claim)",
+          "conversion_safe": false,
+          "aliases": [
+            "KSM-66",
+            "KSM66"
+          ]
+        },
+        {
+          "id": "ashwagandha_sensoril",
+          "label": "Sensoril root and leaf extract",
+          "salt_family": "leaf_containing",
+          "standardisation": "~10% withanolide glycosides, root + leaf (label claim)",
+          "conversion_safe": false,
+          "aliases": [
+            "Sensoril"
+          ]
+        },
+        {
+          "id": "ashwagandha_shoden",
+          "label": "Shoden extract",
+          "salt_family": "standardised_root_extract",
+          "standardisation": "~35% withanolide glycosides (label claim)",
+          "conversion_safe": false,
+          "aliases": [
+            "Shoden"
+          ]
+        },
+        {
+          "id": "ashwagandha_root_extract_generic",
+          "label": "Root extract, unbranded",
+          "salt_family": "standardised_root_extract",
+          "standardisation": null,
+          "conversion_safe": false,
+          "aliases": [
+            "Withania somnifera root extract"
+          ]
+        },
+        {
+          "id": "ashwagandha_root_powder",
+          "label": "Whole root powder",
+          "salt_family": "whole_root_powder",
+          "standardisation": null,
+          "conversion_safe": false,
+          "aliases": [
+            "churna",
+            "root powder"
+          ]
+        },
+        {
+          "id": "ashwagandha_leaf_extract",
+          "label": "Leaf extract",
+          "salt_family": "leaf_containing",
+          "standardisation": null,
+          "conversion_safe": false,
+          "aliases": []
+        },
+        {
+          "id": "ashwagandha_unspecified",
+          "label": "Ashwagandha, preparation not stated",
+          "salt_family": null,
+          "standardisation": null,
+          "conversion_safe": false,
+          "aliases": [
+            "Withania somnifera",
+            "ashwagandha supplementation"
+          ]
+        }
       ]
     }
   }

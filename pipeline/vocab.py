@@ -104,6 +104,48 @@ def elemental_dose_mg(ingredient: str, form_vocab_id: str,
     return round(compound_dose_mg * (am / mm), 3), "converted"
 
 
+def elemental_dose_range_mg(ingredient: str, form_vocab_id: str,
+                            compound_dose_mg: float | None) -> dict:
+    """
+    The elemental dose as an INTERVAL. Returns {low, high, basis}.
+
+    Refusing to convert a hydrate-ambiguous salt (see elemental_dose_mg) is the
+    right answer for a point estimate and the wrong answer for the pipeline: the
+    ambiguity is bounded, not unknown. The true elemental dose lies between the
+    fully-hydrated and anhydrous conversions, and that interval is usually narrow
+    enough to fall inside a single dose band -- 1.1x to 1.4x for the organic
+    salts, worst case 2.1x for chloride. Discarding a study we can bracket is
+    over-caution, and over-caution costs coverage the project cannot spare.
+
+      basis 'converted'    exact; low == high
+      basis 'bounded'      low != high; band assignment must handle the interval
+      basis 'compound_only' no molar data at all -- genuinely unknown
+      basis 'unstated'     no dose given
+
+    A 'bounded' dose that straddles two bands is NOT resolved by picking one.
+    That is a dose_match of 'unspecified', decided downstream, not here.
+    """
+    if compound_dose_mg is None:
+        return {"low": None, "high": None, "basis": "unstated"}
+
+    point, basis = elemental_dose_mg(ingredient, form_vocab_id, compound_dose_mg)
+    if basis == "converted":
+        return {"low": point, "high": point, "basis": "converted"}
+
+    f = form(ingredient, form_vocab_id)
+    if not f:
+        return {"low": None, "high": None, "basis": "compound_only"}
+    mm, am, hm = (f.get("molar_mass_g_mol"), f.get("active_mass_g_mol"),
+                  f.get("hydrate_molar_mass_g_mol"))
+    if not (mm and am and hm):
+        return {"low": None, "high": None, "basis": "compound_only"}
+
+    # More water per mole of salt -> less active mass per mg of powder.
+    return {"low": round(compound_dose_mg * (am / hm), 3),
+            "high": round(compound_dose_mg * (am / mm), 3),
+            "basis": "bounded"}
+
+
 def form_match(ingredient: str, study_form_id: str | None,
                product_form_id: str | None) -> str:
     """
@@ -210,6 +252,11 @@ def validate() -> list[str]:
                 problems.append(f"form/{ing}/{f['id']}: conversion_safe but no molar masses")
             if f.get("conversion_safe") and f["active_mass_g_mol"] > f["molar_mass_g_mol"]:
                 problems.append(f"form/{ing}/{f['id']}: active mass exceeds molar mass")
+            hm = f.get("hydrate_molar_mass_g_mol")
+            if hm and hm <= (f.get("molar_mass_g_mol") or 0):
+                problems.append(f"form/{ing}/{f['id']}: hydrate mass not above anhydrous")
+            if hm and f.get("conversion_safe"):
+                problems.append(f"form/{ing}/{f['id']}: conversion_safe forms need no hydrate mass")
 
     pop = load("population")
     for ax in AXES:

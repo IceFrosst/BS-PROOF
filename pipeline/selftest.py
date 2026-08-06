@@ -131,6 +131,29 @@ def main():
     none_dose, basis_none = vocab.elemental_dose_mg("magnesium", "magnesium_oxide", None)
     check("null dose stays null", none_dose is None and basis_none == "unstated")
 
+    print("\nBOUNDED DOSE (refuse a point estimate, keep the interval)")
+    r_ox = vocab.elemental_dose_range_mg("magnesium", "magnesium_oxide", 400)
+    check("safe salt -> degenerate interval",
+          r_ox["basis"] == "converted" and r_ox["low"] == r_ox["high"],
+          f"{r_ox['low']} mg exactly")
+    r_cit = vocab.elemental_dose_range_mg("magnesium", "magnesium_citrate", 400)
+    check("ambiguous salt -> bounded, not discarded",
+          r_cit["basis"] == "bounded" and r_cit["low"] < r_cit["high"],
+          f"{r_cit['low']}-{r_cit['high']} mg (ratio {r_cit['high']/r_cit['low']:.2f}x)")
+    check("hydrate bound is the LOW end",
+          r_cit["low"] < 400 * 72.915 / 451.114,
+          "more water per mole -> less active mass per mg")
+    r_carb = vocab.elemental_dose_range_mg("magnesium", "magnesium_carbonate", 400)
+    check("unbounded ambiguity stays unknown",
+          r_carb["basis"] == "compound_only" and r_carb["low"] is None,
+          "basic/hydrated carbonate has no fixed formula")
+    r_none = vocab.elemental_dose_range_mg("magnesium", "magnesium_citrate", None)
+    check("no dose -> no interval", r_none["basis"] == "unstated")
+    worst = vocab.elemental_dose_range_mg("magnesium", "magnesium_chloride", 400)
+    check("worst-case salt is still bounded",
+          worst["basis"] == "bounded" and worst["high"] / worst["low"] < 2.2,
+          f"chloride {worst['low']}-{worst['high']} mg")
+
     print("\nFORM TRANSFER TIERS")
     check("same form -> exact",
           vocab.form_match("magnesium", "magnesium_citrate", "magnesium_citrate") == "exact")

@@ -272,6 +272,18 @@ def preflight() -> bool:
         print("claude CLI present but not working:", p.stderr[:200]); return False
     print("claude CLI:", p.stdout.strip())
 
+    # --bare reads ANTHROPIC_API_KEY or an apiKeyHelper and NOTHING else -- not
+    # OAuth, not the keychain. `claude auth status` can say loggedIn:true with a
+    # subscription and every subagent call will still fail "Not logged in".
+    # Catch it here rather than 200 calls into a run.
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        print("BLOCKED: ANTHROPIC_API_KEY is not set.")
+        print("  --bare never reads OAuth or the keychain, so a Claude.ai")
+        print("  subscription cannot authenticate subagent calls. Get a key at")
+        print("  console.anthropic.com and export ANTHROPIC_API_KEY.")
+        print("  Do NOT drop --bare to work around this -- see invariant 2.")
+        return False
+
     missing = [f for _, (_, s, pr) in AGENTS.items()
                for f in ((SCHEMAS / s), (PROMPTS / pr)) if not f.exists()]
     if SHARED_PROMPT.exists() is False:
