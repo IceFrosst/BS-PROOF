@@ -115,7 +115,17 @@ python3 -m pipeline.selftest    # deterministic regression, zero model calls
 python3 -m pipeline.vocab       # validate the three vocabularies
 python3 -m pipeline.retrieve magnesium creatine ashwagandha   # zero model calls
 python3 run_coverage.py --sample 45 magnesium   # zero model calls
+
+# extraction (needs a model path)
+python3 pilot_adapter.py                       # hermeticity probe, subscription
+python3 run_pipeline.py creatine --form creatine_monohydrate \
+        --pilot --supplement-scope --limit 10  # REAL rows, labelled pilot
+python3 run_pipeline.py magnesium --wiring     # SYNTHETIC, no credentials
+python3 run_sr_inheritance.py magnesium --limit 5
 ```
+
+Pilot knobs: `SP_PILOT_CONCURRENCY` (default 3), `SP_PILOT_TIMEOUT_S` (600).
+Pilot stores are per (ingredient, scope) — never `out/bsproof.sqlite`.
 
 **Run `pipeline.selftest` after any change to `pipeline/`.** It costs nothing and
 it catches the failures that matter: the dedup trap, sign of nulls, the transfer
