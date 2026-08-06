@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
 """
-End-to-end v1 run: corpus -> extraction -> assembly -> scored ECU rows.
+End-to-end v1 run. After --grok / --pilot: auto report + git push reports/.
 
-Grok defaults (override with env / --limit):
-  SP_GROK_CONCURRENCY=48
-  SP_GROK_STUDIES_IN_FLIGHT=36
-  Default --limit for --grok = 100 RCT-rank studies (more mass → less "inconclusive")
+Disable push: set SP_AUTO_PUSH=0
 """
 from __future__ import annotations
 import os
@@ -19,9 +16,9 @@ from pipeline.retrieve import retrieve
 WIRING_DB = DEFAULT_DB.parent / "wiring_demo.sqlite"
 
 DEFAULT_PILOT_LIMIT = 40
-DEFAULT_GROK_LIMIT = 100          # more studies → higher E → less inconclusive
+DEFAULT_GROK_LIMIT = 100
 DEFAULT_WIRING_SCORE_CAP = 40
-RETRIEVE_MAX_PRIMARIES = 250      # larger pool to feed the 100-study batch
+RETRIEVE_MAX_PRIMARIES = 250
 RETRIEVE_MAX_SYNTHESES = 80
 SYNTHETIC_VERSION = "SYNTHETIC-NOT-REAL"
 GROK_STUDIES_IN_FLIGHT = int(os.environ.get("SP_GROK_STUDIES_IN_FLIGHT", "36"))
@@ -80,6 +77,18 @@ def _report_failures(raw: list[dict]) -> None:
         print(f"  skipped {len(skipped)}/{len(raw)} studies with no usable text")
 
 
+def _auto_push_report(ingredient: str, form: str, mode: str) -> None:
+    """Write reports/ and push to GitHub so source of truth stays current."""
+    try:
+        from scripts.auto_report_push import write_report, git_push_reports
+        write_report(ingredient, form, mode)
+        git_push_reports()
+    except Exception as e:
+        print(f"Auto-report/push failed: {e}")
+        print("  You can still run: python scripts/auto_report_push.py "
+              f"--ingredient {ingredient} --form {form} --mode {mode}")
+
+
 def main(argv: list[str]) -> int:
     args = list(argv)
     wiring = "--wiring" in args
@@ -99,8 +108,6 @@ def main(argv: list[str]) -> int:
     if scope == "supplement":
         args.remove("--supplement-scope")
 
-    # Limit: grok wants a bigger batch by default for conclusive mass
-    limit_was_set = "--limit" in args
     limit = DEFAULT_GROK_LIMIT if grok else DEFAULT_PILOT_LIMIT
     if "--limit" in args:
         i = args.index("--limit")
@@ -140,7 +147,6 @@ def main(argv: list[str]) -> int:
 
     with Store(db) as store:
         counts = store.counts()
-        # Grow corpus if thin relative to target batch
         need_retrieve = counts["studies"] == 0 or (
             grok and counts["studies"] < min(limit + 50, RETRIEVE_MAX_PRIMARIES)
         )
@@ -174,16 +180,13 @@ def main(argv: list[str]) -> int:
                 ga.reset_stats()
                 if not ga.preflight():
                     return 1
-                # Use every RCT we have up to limit
                 effective = min(limit, len(primaries))
                 print("\n" + "-" * 68)
                 print("GROK MODE — larger batch for more conclusive mass")
                 print(f"  studies in flight: {GROK_STUDIES_IN_FLIGHT}")
                 print(f"  concurrent grok CLI: {ga.MAX_CONCURRENCY}")
-                print(f"  batch size: {effective} "
-                      f"(default {DEFAULT_GROK_LIMIT}; override --limit N)")
-                print("  Tip: conclusive bands need successful S5/S6 + form match,")
-                print("  not only more parallel processes.")
+                print(f"  batch size: {effective}")
+                print("  After scores: auto-report + git push reports/")
                 print("-" * 68)
                 call_fn = ga.call
                 prompt_version = f"{ga.PROMPT_VERSION}+{ga.PROVENANCE}"
@@ -263,10 +266,13 @@ def main(argv: list[str]) -> int:
         print("-" * 74)
         print(f"dose_band: unbanded (band_version 0)")
         print(f"\nWritten to {db}")
-        if any((r.get("band") or "").startswith("inconclusive") for r in rows):
-            print("\nNote: 'inconclusive' = score between -9 and +9 (low confidence mass).")
-            print("  More successful extractions + form/dose match raise |score|.")
-            print("  WinError-206 is fixed; re-run after git pull for fuller S3–S8.")
+
+    # Outside Store lock: report + push (GitHub = source of truth for reports)
+    if grok:
+        _auto_push_report(ingredient, form, "grok")
+    elif pilot:
+        _auto_push_report(ingredient, form, "pilot")
+
     return 0
 
 
