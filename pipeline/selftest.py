@@ -2,7 +2,7 @@
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from pipeline.scoring import Study, score_ecu, band_for
-from pipeline.dedup import dedup
+from pipeline.dedup import dedup, canonical_id, registry_id
 
 ROB_CLEAN = {f"i{i}": 1 for i in range(1, 7)}
 def rcts(n, **kw):
@@ -26,6 +26,27 @@ def main():
             {"first_author":"Lee","year":2017,"n":25,"label":"Lee 2017"}]
     u, _, st = dedup(recs)
     check("one trial = one unit", st["out"] == 3, f"5 papers -> {st['out']} units")
+
+    print("\nREGISTRY ID EXTRACTION")
+    # A bare prefix must never match -- it would merge every trial in a registry.
+    check("bare prefix rejected", registry_id("ChiCTR") is None)
+    check("bare prefix falls through to DOI",
+          canonical_id({"registration_id": "ChiCTR", "doi": "10.1/b"})[0] == "doi")
+    # ...but surrounding text must NOT defeat the match, or one trial splits
+    # across its papers by DOI -- the dedup trap, in the dangerous direction.
+    noisy = [{"registration_id": "NCT01234567", "doi": "10.1/a", "label": "primary"},
+             {"registration_id": "NCT01234567 (primary outcome paper)",
+              "doi": "10.1/b", "label": "secondary"},
+             {"registration_id": "Registered at ClinicalTrials.gov: NCT01234567.",
+              "doi": "10.1/c", "label": "followup"}]
+    _, _, nst = dedup(noisy)
+    check("noisy registry fields still collapse", nst["out"] == 1,
+          f"3 papers of 1 trial -> {nst['out']} unit(s)")
+    for label, val in [("ChiCTR", "ChiCTR-TRC-12005678"), ("ChiCTR new", "ChiCTR2000029308"),
+                       ("CTRI", "CTRI/2020/01/023001"), ("UMIN", "UMIN000012345"),
+                       ("ISRCTN", "ISRCTN12345678"),
+                       ("EudraCT spaced", "EudraCT 2015-000123-45")]:
+        check(f"{label} recognised", registry_id(val) is not None, val)
 
     print("\nDEDUP TRAP")
     p = rcts(9)

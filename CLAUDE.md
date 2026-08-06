@@ -151,15 +151,29 @@ pipeline where reproducibility is the product.
 3. **Handing off:** put a one-line **`Handoff:`** note at the top of `Next`
    (what's in flight · what's next · any risk). The successor deletes it once
    picked up.
-4. **Anything pushed is a valid resume point.** Commit + push frequently to a
-   feature branch so the last push is a clean handoff. Never push straight to
-   `main` without confirmation.
+4. **Anything pushed is a valid resume point.** Commit + push frequently so the
+   last push is a clean handoff. See `Git / source of truth` below for the exact
+   rules — they supersede any earlier "ask before pushing" habit.
 5. **After any change to `pipeline/`**, run `python -m pipeline.selftest` and
    keep the result green. This is non-negotiable.
 6. **Never invent a constant or raise `--max-turns`.** If a subagent seems to need
    a second turn, the prompt is wrong — fix the prompt.
 7. When a design decision changes, update `docs/SPEC.md` **and** its changelog,
    then regenerate the diagram (`pipeline_v1.excalidraw`).
+
+### Git / source of truth
+
+- GitHub `IceFrosst/BS-PROOF` is the source of truth.
+- At the start of every session: `git pull`.
+- After each completed unit of work: commit with a clear message, then `git push`
+  to origin.
+- Do not wait for extra confirmation to push after a completed unit.
+- Never `git push --force` to main.
+- If push fails (auth/network), stop and report — do not retry destructively.
+
+A "completed unit of work" means the change is coherent on its own **and**
+`python -m pipeline.selftest` is green if `pipeline/` was touched. Push a broken
+tree and the next agent inherits it as a resume point.
 
 ### Why this is stricter here than in Personal-Hub
 
@@ -173,8 +187,15 @@ is why the hard invariants above exist and why agents must not quietly bypass th
 
 **Built and tested:** scoring, dedup, adapter, prompts, schemas, selftest.
 
-**Built, untested against live endpoints:** `run_coverage.py`, `sources/ratelimit.py`.
-Expect to fix a query string.
+**Verified live 2026-08-06:** `run_coverage.py` + `sources/ratelimit.py` work
+against Europe PMC — no query string needed fixing. 741 records over magnesium /
+creatine / ashwagandha. **METHODS% = 69.5 against a target of ≥80** — this is the
+floor, before green OA and SR-table inheritance. Green OA is the named uplift.
+
+**The one hard blocker: no successful model call has ever been made.** CLI flag
+shape is confirmed correct (raw content, not paths), but the round trip is
+unproven. A nested `claude -p` inside a Claude Code session returns "Not logged
+in" — **the smoke test must be run from a plain terminal.**
 
 **Not built yet, blocking everything else:** the ECU JSON schema and the three
 controlled vocabularies (`outcome`, `form`, `population`). S3, S6 and S7 extract
@@ -183,24 +204,37 @@ controlled vocabularies (`outcome`, `form`, `population`). S3, S6 and S7 extract
 **Open constants awaiting Tier-3 calibration:** `k`, all transfer factors, OA
 penalty, RoB thresholds. See `docs/SPEC.md` §13.
 
-**2026-08-05 audit fixes (Grok) — pending Claude review:** see `REVIEW.md`.
-Band boundaries, magnitude default, pop_match default, shared prompt injection,
-S7→B, registry regex, synthesis_contribution_cap. PROMPT_VERSION=v1.1.
-CLI flag shape (content vs path) still needs a live smoke test.
-Manual demo-setup checklist added — Claude must critique it.
+**2026-08-05 audit fixes (Grok) — ✅ reviewed and signed off by Claude
+2026-08-06.** See `REVIEW.md`. Seven fixes accepted as-is; the registry regex was
+amended (anchoring made it validate whole fields, so noisy registry fields fell
+through to DOI and split one trial across its papers — the dedup trap in its
+dangerous direction). Adapter error reporting also fixed: it read stderr, but the
+CLI writes errors to stdout. PROMPT_VERSION=v1.1.
+
+**⚠️ Open reproducibility risk — `TIER_MODEL` uses floating aliases.**
+`haiku`/`sonnet`/`opus` resolve to "the latest model", and `_key()` hashes the
+alias string. When an alias moves, the cache serves stale extractions under
+unchanged keys. Pin full model IDs before any cached extraction run.
+Also unconfirmed: `--help` does not list `haiku` as a valid alias.
+
+**⚠️ Git auth is not set up on this machine.** `git pull` fails with
+`could not read Username for 'https://github.com'`; `gh auth status` reports not
+logged in. The pull/push workflow above cannot run until this is fixed.
 
 ## Next
 
-**Handoff:** Claude — (1) review audit fixes in `REVIEW.md`, run `python -m pipeline.selftest`, smoke-test Claude CLI schema/prompt flags; (2) **critique the Manual setup for demo list** in `REVIEW.md` (wrong / missing / premature / env names); fill the response template at the bottom of REVIEW.md. Do not treat audit fixes or the setup list as settled until you sign off.
-
-1. Confirm or amend the audit fixes + setup list in `REVIEW.md`
-2. `run_coverage.py` on 3 ingredients — settles the largest unknown, costs nothing
-3. ClinicalTrials.gov integration — RoB items 3+4 and the unpublished flag, one API
-4. Calibration harness — EFSA one-sided constraint + the 28 anchors
-5. **ECU schema + three vocabularies** — blocks S3/S6/S7
-6. Retrieval + dedup wiring
-7. Per-study workers
-8. Scoring + storage
+1. **`gh auth login`** — unblocks the commit/push workflow (nothing can be pushed
+   today)
+2. **Smoke-test one subagent from a plain terminal** — the last unproven layer.
+   Confirm `--model haiku` resolves while you're there
+3. Pin full model IDs in `TIER_MODEL`; add a spend cap (`--max-budget-usd` is
+   unused)
+4. ClinicalTrials.gov integration — RoB items 3+4 and the unpublished flag, one API
+5. Calibration harness — EFSA one-sided constraint + the 28 anchors
+6. **ECU schema + three vocabularies** — blocks S3/S6/S7
+7. Retrieval + dedup wiring
+8. Per-study workers
+9. Scoring + storage
 
 ---
 

@@ -438,10 +438,10 @@ inconclusive.** No-data is caught by the sufficiency gate; conflict is caught by
 |---|---|
 | +70 … +100 | strong support |
 | +30 … +69 | moderate support |
-| +10 … +29 | weak / preliminary |
+| +10 … +29 | weak support |
 | −9 … +9 | inconclusive |
 | −10 … −39 | weak evidence against |
-| −40 … −69 | evidence it does not work |
+| −40 … −69 | does not work |
 | −70 … −100 | strong evidence against / harm |
 
 ### Sufficiency gate
@@ -708,6 +708,15 @@ system that are currently exact.
 ---
 
 ## Changelog
+
+- **2026-08-06** — Claude review of the 2026-08-05 audit (`REVIEW.md`). Band
+  boundaries confirmed inclusive per §9 and now asserted at every edge. §9 band
+  *labels* aligned to the strings `scoring.band_for` actually emits ("weak
+  support", "does not work") — these are user-facing output, so the two must not
+  drift. Registry-ID resolution in §6 amended: IDs are now **extracted** from the
+  field rather than matched against the whole field, because a non-match splits
+  one trial across its papers by DOI — the dedup trap in its dangerous direction.
+  No constants changed.
 
 - **2026-08-05 rev 3** — Added §15 stack inventory and §16 subagent roster (S1–S8,
   pure-function contracts, evidence spans, cache keying on prompt_version).

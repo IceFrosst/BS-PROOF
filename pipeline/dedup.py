@@ -2,8 +2,9 @@
 Deterministic deduplication. No model may enter this file.
 One trial = one evidence unit. Implements SPEC.md section 6.
 
-2026-08-05 audit fixes (pending Claude review — see REVIEW.md):
+2026-08-05 audit fixes (Grok) — reviewed 2026-08-06 (Claude), see REVIEW.md:
 - Registry regex tightened for ChiCTR / CTRI / UMIN / EudraCT full IDs.
+  AMENDED: extract-not-validate, so surrounding text no longer defeats the match.
 - synthesis_contribution_cap no longer a no-op; still not applied in score_ecu
   (under-count is the safe direction until wired deliberately).
 """
@@ -11,16 +12,20 @@ from __future__ import annotations
 import re, unicodedata
 from collections import defaultdict
 
-# Full-ish patterns. Prefer over-rejecting a short prefix over accepting "ChiCTR" alone.
+# Bare prefixes ("ChiCTR" alone) must NOT match -- they would collapse every
+# Chinese trial into one unit. But full-string anchoring is the wrong cure:
+# registry fields arrive as "NCT01234567 (primary outcome paper)", and a
+# non-match falls through to DOI, which splits one trial across its four papers.
+# That is the dedup trap SPEC section 6 exists to prevent, so this EXTRACTS the
+# ID from the field rather than validating the whole field.
 _REGISTRY_RE = re.compile(
-    r"^("
-    r"NCT\d{8}"
-    r"|ISRCTN\d+"
-    r"|ChiCTR[-A-Z0-9]+"
-    r"|CTRI/[0-9/]+"
-    r"|UMIN[A-Z0-9]+"
-    r"|EudraCT[-\d]+"
-    r")$",
+    r"(NCT\d{8}"
+    r"|ISRCTN\d{6,8}"
+    r"|ChiCTR[-A-Z0-9]{6,}"
+    r"|CTRI/\d{4}/\d+/\d+"
+    r"|UMIN\d{6,9}"
+    r"|EudraCT[\s:-]*\d{4}-\d{6}-\d{2}"
+    r")",
     re.I,
 )
 
@@ -31,12 +36,22 @@ def _norm(s):
     return re.sub(r"[^a-z0-9]", "", s.lower())
 
 
+def registry_id(value) -> str | None:
+    """The registry ID inside a field, normalised -- or None. Never guesses."""
+    if not value:
+        return None
+    m = _REGISTRY_RE.search(str(value))
+    return _norm(m.group(1)) if m else None
+
+
 def canonical_id(rec: dict) -> tuple[str, str]:
     """NCT > DOI > PMID > fingerprint. Returns (kind, id)."""
     for k in ("nct", "registration_id"):
-        v = rec.get(k)
-        if v and _REGISTRY_RE.match(str(v).strip()):
-            return ("registry", _norm(v))
+        rid = registry_id(rec.get(k))
+        if rid:
+            # the matched ID, not the whole field -- so the same trial collapses
+            # regardless of what text surrounds the ID in each paper.
+            return ("registry", rid)
     if rec.get("doi"):
         return ("doi", _norm(rec["doi"]))
     if rec.get("pmid"):

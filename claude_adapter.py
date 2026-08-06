@@ -23,9 +23,14 @@ CLI FLAGS DRIFT. This was written against Claude Code ~2.1.220 (Aug 2026).
 Run `claude --help` and fix THIS FILE if invocation breaks. That is the entire
 point of putting it in one place.
 
-OPEN VERIFICATION (see REVIEW.md): confirm whether --json-schema and
---append-system-prompt expect file paths or raw content. Current code passes
-raw content. Smoke-test before production extraction runs.
+RESOLVED 2026-08-06: --json-schema and --append-system-prompt both take RAW
+CONTENT, not file paths. `claude --help` documents --json-schema with an inline
+JSON example, and --append-system-prompt has a separate --append-system-prompt-file
+sibling. The code below is correct; do not "fix" it to temp files.
+
+STILL UNVERIFIED: no successful live call has been made yet -- the flag shape is
+confirmed, the round trip is not. Auth blocks it inside a Claude Code session
+(nested `claude -p` reports "Not logged in"). Smoke-test from a plain terminal.
 """
 
 from __future__ import annotations
@@ -124,6 +129,29 @@ def _system_prompt(prompt_f: str) -> str:
     return specific
 
 
+def _envelope_error(raw: str) -> str:
+    """The CLI's own error text, which it prints to stdout, not stderr."""
+    try:
+        env = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return (raw or "").strip()
+    res = env.get("result")
+    if isinstance(res, str) and res.strip():
+        return res.strip()
+    return str(env.get("api_error_status") or env.get("terminal_reason") or "").strip()
+
+
+# Failures no amount of retrying will fix. Fail loudly on the first attempt
+# rather than burning 3 backoffs per call across a whole extraction run.
+_FATAL = ("not logged in", "please run /login", "invalid api key",
+          "authentication_error", "credit balance", "max-budget")
+
+
+def _is_fatal(detail: str) -> bool:
+    d = (detail or "").lower()
+    return any(f in d for f in _FATAL)
+
+
 def _extract_payload(raw: str):
     """
     Claude Code's JSON envelope shape has moved around between versions.
@@ -203,7 +231,13 @@ def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
             last_err = "timeout"; time.sleep(2 ** attempt); continue
 
         if proc.returncode != 0:
-            last_err = f"exit {proc.returncode}: {proc.stderr[:300]}"
+            # The CLI reports the actual reason ("Not logged in", auth errors,
+            # budget) in the JSON envelope on STDOUT and leaves stderr empty.
+            # Reading only stderr gives the operator "exit 1: " and nothing else.
+            detail = _envelope_error(proc.stdout) or proc.stderr.strip()
+            last_err = f"exit {proc.returncode}: {detail[:300]}"
+            if _is_fatal(detail):
+                break            # auth/config failure -- retrying cannot fix it
             time.sleep(2 ** attempt); continue
 
         result, cost = _extract_payload(proc.stdout)
