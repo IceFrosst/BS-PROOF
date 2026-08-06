@@ -44,9 +44,10 @@ DEFAULT_SAMPLE = 40
 MAX_SYNTHESES, MAX_PRIMARIES = 300, 1200
 
 
-def probe(ingredient: str, sample: int) -> Counter:
-    found = ep.discover(ingredient, max_syntheses=MAX_SYNTHESES,
-                        max_primaries=MAX_PRIMARIES)
+def probe(ingredient: str, sample: int, *, max_syntheses: int = MAX_SYNTHESES,
+          max_primaries: int = MAX_PRIMARIES) -> Counter:
+    found = ep.discover(ingredient, max_syntheses=max_syntheses,
+                        max_primaries=max_primaries)
     recs = found["syntheses"] + found["primaries"]
     c = Counter()
     c["total"] = len(recs)
@@ -55,8 +56,8 @@ def probe(ingredient: str, sample: int) -> Counter:
     # every rate computed over it is unfalsifiable.
     c["corpus_syntheses"] = ep.hit_count(ingredient, syntheses=True)
     c["corpus_primaries"] = ep.hit_count(ingredient, syntheses=False)
-    if (len(found["syntheses"]) >= MAX_SYNTHESES
-            or len(found["primaries"]) >= MAX_PRIMARIES):
+    if (len(found["syntheses"]) >= max_syntheses
+            or len(found["primaries"]) >= max_primaries):
         c["capped"] = 1
 
     for r in recs:
@@ -192,13 +193,20 @@ def main(argv: list[str]) -> int:
         i = args.index("--sample")
         sample = int(args[i + 1])
         del args[i:i + 2]
+    caps = {}
+    for flag, key in (("--max-primaries", "max_primaries"),
+                      ("--max-syntheses", "max_syntheses")):
+        if flag in args:
+            i = args.index(flag)
+            caps[key] = int(args[i + 1])
+            del args[i:i + 2]
     ingredients = args or ["magnesium", "creatine", "ashwagandha"]
 
     if not CONTACT_EMAIL:
         print("note: BSPROOF_CONTACT_EMAIL unset -- Unpaywall will be skipped and")
         print("      reported as unmeasured. OpenAlex needs no credentials.\n")
 
-    report([(ing, probe(ing, sample)) for ing in ingredients])
+    report([(ing, probe(ing, sample, **caps)) for ing in ingredients])
     return 0
 
 
