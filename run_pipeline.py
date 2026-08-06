@@ -2,13 +2,10 @@
 """
 End-to-end v1 run: corpus -> extraction -> assembly -> scored ECU rows.
 
-    python run_pipeline.py creatine --form creatine_monohydrate --wiring
-    python run_pipeline.py creatine --form creatine_monohydrate --pilot
-    python run_pipeline.py creatine --form creatine_monohydrate --grok
-
 Grok speed knobs (env):
-  SP_GROK_CONCURRENCY=16     concurrent grok CLI processes (default 16)
-  SP_GROK_STUDIES_IN_FLIGHT  studies extracted in parallel (default 12)
+  SP_GROK_CONCURRENCY=16
+  SP_GROK_STUDIES_IN_FLIGHT=12
+After a --grok run, SPEED REPORT says if you can raise them.
 """
 from __future__ import annotations
 import os
@@ -26,8 +23,6 @@ DEFAULT_WIRING_SCORE_CAP = 40
 RETRIEVE_MAX_PRIMARIES = 150
 RETRIEVE_MAX_SYNTHESES = 50
 SYNTHETIC_VERSION = "SYNTHETIC-NOT-REAL"
-
-# Parallelism for Grok batches (throughput-oriented).
 GROK_STUDIES_IN_FLIGHT = int(os.environ.get("SP_GROK_STUDIES_IN_FLIGHT", "12"))
 
 
@@ -116,7 +111,6 @@ def main(argv: list[str]) -> int:
 
     if not wiring and not pilot and not grok and not os.environ.get("ANTHROPIC_API_KEY"):
         print("No extraction backend selected / configured.")
-        print("  --wiring  --pilot  --grok  or set ANTHROPIC_API_KEY")
         return 1
 
     if vocab.form(ingredient, form) is None:
@@ -167,6 +161,7 @@ def main(argv: list[str]) -> int:
             import workers
             if grok:
                 import grok_adapter as ga
+                ga.reset_stats()
                 if not ga.preflight():
                     return 1
                 print("\n" + "-" * 68)
@@ -174,7 +169,6 @@ def main(argv: list[str]) -> int:
                 print(f"  studies in flight: {GROK_STUDIES_IN_FLIGHT}")
                 print(f"  concurrent grok CLI: {ga.MAX_CONCURRENCY}")
                 print(f"  batch size: {limit}")
-                print("  Separate store. Do not merge with Claude scores.")
                 print("-" * 68)
                 call_fn = ga.call
                 prompt_version = f"{ga.PROMPT_VERSION}+{ga.PROVENANCE}"
@@ -192,6 +186,7 @@ def main(argv: list[str]) -> int:
                 prompt_version = f"{pa.PROMPT_VERSION}+{pa.PILOT_MARKER}"
                 tag = "PILOT "
                 in_flight = 4
+                ga = None
 
             targets = primaries[:limit]
             print(f"extracting {len(targets)} RCT-rank studies...")
@@ -205,6 +200,8 @@ def main(argv: list[str]) -> int:
                 max_studies_in_flight=in_flight,
             )
             _report_failures(raw)
+            if grok:
+                print(ga.speed_report())
             extractions = [{
                 "record": r["record"],
                 "extraction": r["extraction"],
