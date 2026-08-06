@@ -55,6 +55,19 @@ def search(query: str, *, page_size: int = 100, max_records: int = 1000) -> list
     return out[:max_records]
 
 
+def hit_count(ingredient: str, *, syntheses: bool) -> int:
+    """
+    How many records the query ACTUALLY matches, independent of any fetch cap.
+
+    Without this, a capped run cannot tell whether it saw the whole corpus or a
+    truncated slice, and every ratio computed over it is unfalsifiable. One
+    cheap request answers it.
+    """
+    page = get_json(SEARCH, {"query": _query(ingredient, syntheses=syntheses),
+                             "format": "json", "pageSize": 1})
+    return int(page.get("hitCount") or 0)
+
+
 def is_synthesis(rec: dict) -> bool:
     tags = [t.lower() for t in (rec.get("pubTypeList", {}) or {}).get("pubType", [])]
     return any(any(s in t for s in SYNTHESIS_TAGS) for t in tags)

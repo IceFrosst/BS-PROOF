@@ -50,8 +50,11 @@ def probe(ingredient: str, sample: int) -> Counter:
     recs = found["syntheses"] + found["primaries"]
     c = Counter()
     c["total"] = len(recs)
-    # A capped corpus is a truncated corpus. Record it, because any ratio
-    # computed over a capped fetch measures the cap, not the literature.
+    # How much of the real corpus is this? Without it, a capped run cannot tell
+    # whether it measured the literature or the top of a relevance ranking, and
+    # every rate computed over it is unfalsifiable.
+    c["corpus_syntheses"] = ep.hit_count(ingredient, syntheses=True)
+    c["corpus_primaries"] = ep.hit_count(ingredient, syntheses=False)
     if (len(found["syntheses"]) >= MAX_SYNTHESES
             or len(found["primaries"]) >= MAX_PRIMARIES):
         c["capped"] = 1
@@ -127,6 +130,18 @@ def report(rows: list[tuple[str, Counter]]) -> None:
     green_rate = grand["oa_recovered_green"] / s          # of the CLOSED ones
     closed_frac = grand["closed_total"] / n
     projected_oa = epmc_oa + 100 * closed_frac * green_rate
+
+    corpus = grand["corpus_syntheses"] + grand["corpus_primaries"]
+    seen_pct = 100 * grand["total"] / max(corpus, 1)
+    print(f"\nCORPUS COVERAGE")
+    print(f"  records measured            {grand['total']} of {corpus} "
+          f"({seen_pct:.0f}% of everything the query matches)")
+    if grand["capped"]:
+        print(f"  ** {grand['capped']} ingredient(s) truncated. Europe PMC returns")
+        print(f"  ** RELEVANCE ORDER, so a truncated slice is biased toward")
+        print(f"  ** well-cited papers, which are disproportionately open access.")
+        print(f"  ** Every rate below is therefore an OPTIMISTIC estimate for")
+        print(f"  ** those ingredients. Compare an uncapped ingredient to see it.")
 
     print(f"\nOA LADDER")
     print(f"  Europe PMC alone            {epmc_oa:5.1f}%")

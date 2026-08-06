@@ -636,9 +636,9 @@ it's the most common trick in the industry and no consumer can currently detect 
 | `conversion_safe` per salt | **New.** Which hydrates are "routinely unstated" is judgment. Wrong in the safe direction (refuses to convert) but costs coverage |
 | Who maps raw population text → 4 axes | **RESOLVED 2026-08-06** — S3 emits the axes directly, PROMPT_VERSION v1.2. See §5 |
 | Epistemonikos supplement coverage | Unknown — measure |
-| OA full-text rate | **RESOLVED 2026-08-06: 78.7%** Europe PMC alone, **87.8%** projected with green OA (n=3141). Estimate was 70–75% |
-| Methods-fact coverage | **RESOLVED 2026-08-06: 88.9%** projected — **clears the ≥80% target**. Estimate was 80–88% |
-| Coverage sample truncation | **New.** magnesium and creatine still hit the 1200-primary fetch cap, so any ratio over that corpus measures the cap. `run_coverage.py` now refuses to report the synthesis:primary ratio when capped |
+| OA full-text rate | 78.7% Europe PMC alone, 87.8% projected with green OA — but on **16% of the corpus**, see below |
+| Methods-fact coverage | 88.9% projected on the same 16% slice. **The one COMPLETE corpus (ashwagandha, n=141) gives 65.2% raw OA and 81.5% methods** |
+| **Relevance-order bias — the live risk to the coverage claim** | **New, unresolved.** magnesium (10 555 records) and creatine (9 457) are fetched at caps of 300+1200, so only 14–16% is seen, in *relevance order*. Well-cited papers are disproportionately OA, so those rates are **optimistic**. The gap is visible: the truncated ingredients read 78.9% / 79.7% raw OA, the complete one reads 65.2%. Resolve by raising the caps and re-measuring, not by arguing about it |
 | SR RoB-table parse reliability | Untested; the 10–20× leverage claim depends on it |
 | Blinding integrity | Binary in proxy; over-credits detectable placebos |
 | Multi-ingredient roll-up | Deferred; v1 is 1–2 ingredient products only |
@@ -771,18 +771,25 @@ system that are currently exact.
 
 ## Changelog
 
-- **2026-08-06 rev 3** — **The largest unknown in the project is settled.**
-  Coverage measured over 3141 records with the real source modules: Europe PMC
-  alone reaches **78.7%** raw OA, and adding green OA via OpenAlex projects
-  **87.8%**. Methods-level facts project **88.9%**, clearing the ≥80% target
-  §14 called the go/no-go. Unpaywall is not in that number — it needs a contact
-  email — so the figure is a floor on the ladder, not a ceiling.
+- **2026-08-06 rev 3** — Coverage measured over 3141 records with the real
+  source modules. Europe PMC alone **78.7%** raw OA, **87.8%** projected with
+  green OA, **88.9%** methods-level facts — above the ≥80% target §14 called the
+  go/no-go. Unpaywall is not in it (needs a contact email).
 
-  The earlier 65.5% / 69.5% figures were **not wrong about the ladder, they were
-  measuring a different corpus**: the old script capped at 3 pages, so magnesium
-  and creatine were truncated at exactly 300 records in relevance order. Most of
-  the jump is de-biasing the sample, not green OA. Both effects are real and they
-  are not separable from these runs alone.
+  **That headline is not yet trustworthy, and the reason is now measured.**
+  `hit_count()` shows magnesium matches 10 555 records and creatine 9 457, while
+  the run fetches 300 syntheses + 1200 primaries each — **16% of the corpus, in
+  relevance order**. Well-cited papers are disproportionately open access, so a
+  top-of-ranking slice reads high. The evidence for the bias is in the run
+  itself: the two truncated ingredients report 78.9% and 79.7% raw OA, while
+  ashwagandha — the **only complete corpus** (141 of 141) — reports **65.2%**,
+  projecting 81.5% methods-level facts.
+
+  So the honest reading is: **the ladder clears 80% on the one corpus we have
+  seen in full, and the multi-thousand-record ingredients are unmeasured.** The
+  earlier 69.5% figure was a *differently* truncated slice, so the jump to 88.9%
+  is mostly sample composition, not green OA. `run_coverage.py` now prints the
+  truncation and refuses to report ratios computed over a capped fetch.
 
   Also built: deterministic design classification from PubMed tags
   (`pipeline/classify.py`), the retrieval orchestrator (`pipeline/retrieve.py`),

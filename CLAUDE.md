@@ -237,13 +237,20 @@ records are already persisted in `out/bsproof.sqlite`.
 `prompt_version: "SYNTHETIC-NOT-REAL"`, every line prefixed. It proves the wiring
 and says nothing about any ingredient. Do not remove those guards.
 
-**✅ COVERAGE RESOLVED 2026-08-06 — the project's largest unknown.**
-Measured over 3141 records: Europe PMC alone **78.7%** raw OA, **87.8%**
-projected with green OA, **88.9%** methods-level facts — **clears the ≥80%
-target**. Unpaywall is not in that number (needs the contact email), so it is a
-floor. Honest caveat: most of the jump from the earlier 69.5% is de-biasing the
-sample, not green OA — the old script truncated at 300 records in relevance
-order. The two effects are not separable from these runs.
+**COVERAGE MEASURED 2026-08-06 — headline good, caveat serious.**
+Over 3141 records: Europe PMC alone **78.7%** raw OA, **87.8%** projected with
+green OA, **88.9%** methods-level facts, against a ≥80% target.
+
+**But that is 16% of the corpus, in relevance order.** magnesium matches 10 555
+records and creatine 9 457; the run fetches 1500 each. Well-cited papers are
+disproportionately OA, so a top-of-ranking slice reads high — and the bias is
+visible in the run: the two truncated ingredients report 78.9% / 79.7% raw OA,
+while **ashwagandha, the only corpus seen in full (141 of 141), reports 65.2%**
+and projects 81.5% methods-level facts.
+
+Honest reading: **the ladder clears 80% on the one complete corpus; the big
+ingredients are unmeasured.** Raising `MAX_PRIMARIES` and re-measuring settles
+it — see `Next`. Do not quote 88.9% externally until then.
 
 **🔴 The one hard blocker: `--bare` cannot use a Claude.ai subscription.**
 Diagnosed 2026-08-06. `claude --help`: *"Anthropic auth is strictly
@@ -335,8 +342,11 @@ Everything below the line needs credentials the founder has to create.
    compares defaults. Recommended fix in `docs/SPEC.md` §5: pass the population
    vocab into S3. Needs a `PROMPT_VERSION` bump.
 6. **Calibration harness** — EFSA one-sided constraint + the 28 anchors.
-7. **Raise the fetch caps.** magnesium and creatine hit 1200 primaries, so the
-   corpus is still truncated and the synthesis:primary ratio is unmeasurable.
+7. **Raise the fetch caps and re-measure coverage — highest-value unblocked
+   item.** magnesium matches 10 555 records and creatine 9 457; the run sees
+   1500 each, in relevance order, so 88.9% is optimistic by an unknown margin.
+   Set `MAX_PRIMARIES` high in `run_coverage.py` and rerun. Costs only time and
+   politeness; the HTTP cache makes reruns free.
 8. **Venue factor.** `Study.venue_ok` is a boolean; SJR quartiles have nowhere
    to go until a real venue factor exists (new constant -> SPEC §13 first).
 
