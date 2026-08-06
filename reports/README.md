@@ -1,45 +1,50 @@
-# Reports — viewable test / demo results
+# Reports — full audit trail on GitHub
 
-This folder is for **human-readable results** committed to GitHub so you can open
-them in the browser without digging through a terminal scrollback.
+Open **[`latest.md`](./latest.md)** in the browser after you regenerate it.
 
-| File | What it is |
-|------|------------|
-| [`latest.md`](./latest.md) | Most recent local demo / selftest summary (regenerate with the script below) |
-| CI artifacts | Every push also runs `pipeline.selftest`; open the **Actions** tab → latest **selftest** run → Artifacts |
+## What is in the report (everything we can document)
 
-## Regenerate after a local run
+| Section | Contents |
+|---------|----------|
+| **How a score is built** | The recipe: weights, transfer factors, d / c / H / E, gate |
+| **Selftest** | Deterministic regression PASS/FAIL + log |
+| **Product INPUT** | Ingredient, form (bottle), population axes, dose band status |
+| **Corpus** | Study counts, syntheses, registry facts, RCT primaries |
+| **Study table** | Canonical id, author/year, design rank, OA tier, title, **links** (PubMed, PMC, DOI, ClinicalTrials.gov) |
+| **Each ECU OUTPUT** | Score, band, gate, ECU key, flags, prompt/scorer versions |
+| **Score components** | d, c, H, E, E′, coverage with plain-language meanings |
+| **Per-study audit** | weight w, effect s, form/dose/pop match, funding, OA, n, links |
+| **Pilot DBs** (if present) | Separate section, labelled not-for-public-claims |
+
+## Regenerate (on your machine)
 
 ```bash
-cd ~/BS-PROOF
-source .venv/bin/activate   # if you use it
-python3 scripts/write_demo_report.py
-# optional: also exercise synthetic end-to-end scores
+cd ~/BS-PROOF && git pull
+source .venv/bin/activate   # if used
+
+# Full audit (selftest + synthetic end-to-end with study links + score math)
 python3 scripts/write_demo_report.py --wiring
+
 git add reports/latest.md
-git commit -m "Refresh demo report"
+git commit -m "Refresh full demo audit report"
 git push
 ```
 
-Then open:
+View: https://github.com/IceFrosst/BS-PROOF/blob/main/reports/latest.md
 
-https://github.com/IceFrosst/BS-PROOF/blob/main/reports/latest.md
+`--wiring` uses **SYNTHETIC** extractions (same fixed fake fields for every study).
+That still documents the *whole path* and real corpus/links; it does not claim
+real efficacy. For pilot model rows, run `--pilot` separately, then re-run the
+report script so `out/pilot*.sqlite` is summarized.
 
-## What belongs here vs what does not
+## What stays out of GitHub
 
-| OK to commit | Do not commit |
-|--------------|----------------|
-| Selftest PASS/FAIL summary | API keys, tokens |
-| `--wiring` SYNTHETIC score tables | Secrets / `.env` |
-| High-level pilot notes already in `CLAUDE.md` | Raw pilot rows meant as public brand claims |
-| Coverage headline numbers | Full paper PDFs |
+| Do not commit |
+|----------------|
+| API keys / OAuth tokens |
+| Full paper PDFs / copyrighted full text dumps |
+| Unlabelled “this brand scores X” marketing claims from pilot mode |
 
-**Pilot extractions** (`--pilot`) are real model output but **not production**.
-If you commit a pilot table, keep the `PILOT` label and never treat it as a
-public score. Prefer summarizing in `latest.md` rather than dumping full JSON.
+## CI
 
-## Related
-
-- Live terminal table: `python3 run_pipeline.py … --wiring` or `--pilot`
-- DB on disk: `out/*.sqlite` (usually gitignored)
-- Design / handoff: root `CLAUDE.md`
+Every push runs `pipeline.selftest`. See **Actions → selftest → Artifacts → selftest-log**.
