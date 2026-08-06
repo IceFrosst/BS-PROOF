@@ -42,6 +42,7 @@ import json
 import os
 import subprocess
 import tempfile
+import threading
 from pathlib import Path
 
 import claude_adapter
@@ -49,6 +50,19 @@ from claude_adapter import AGENTS, PROMPT_VERSION, SCHEMAS, TIER_MODEL, _system_
 
 CANARY = "CANARY7788"
 PILOT_MARKER = "pilot-subscription-not-production"
+
+# A NON-BARE call is far heavier than a --bare one: it loads plugins, settings
+# and auto-memory on every invocation. Measured 2026-08-06 with 5 concurrent
+# calls, S3 took 34s and S5 36s. run_pipeline fans out 4 studies x 5 agents =
+# 20 concurrent subprocesses, which pushed calls past the 180s timeout -- and a
+# timed-out call returns None, which looks exactly like "this study had nothing
+# to say". That is how a batch run produced one ECU row while a single-study run
+# of the same corpus mapped eight claims correctly.
+#
+# Deliberately lower than claude_adapter.MAX_CONCURRENCY (6) because each pilot
+# subprocess costs more.
+MAX_CONCURRENCY = int(os.environ.get("SP_PILOT_CONCURRENCY", "3"))
+_slots = threading.Semaphore(MAX_CONCURRENCY)
 
 
 class HermeticityFailure(RuntimeError):
@@ -135,7 +149,7 @@ def hermeticity_probe(model: str | None = None, timeout: int = 150) -> dict:
     return {"hermetic": True, "detail": f"canary absent (got {result.strip()[:40]!r})"}
 
 
-def call(agent: str, payload: dict, *, timeout: int = 180, retries: int = 1,
+def call(agent: str, payload: dict, *, timeout: int = 300, retries: int = 1,
          verified: bool = False) -> tuple[dict | None, dict]:
     """
     One pilot subagent call. Same prompts, same schemas, same PROMPT_VERSION as
@@ -175,10 +189,11 @@ def call(agent: str, payload: dict, *, timeout: int = 180, retries: int = 1,
     last_err = None
     for attempt in range(retries + 1):
         try:
-            proc = subprocess.run(cmd, input=body, cwd=cwd, capture_output=True,
-                                  text=True, timeout=timeout)
+            with _slots:
+                proc = subprocess.run(cmd, input=body, cwd=cwd, capture_output=True,
+                                      text=True, timeout=timeout)
         except subprocess.TimeoutExpired:
-            last_err = "timeout"
+            last_err = f"timeout after {timeout}s"
             continue
         if proc.returncode != 0:
             last_err = claude_adapter._envelope_error(proc.stdout) or proc.stderr[:200]

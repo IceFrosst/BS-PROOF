@@ -99,6 +99,13 @@ def extract_study(record: dict, text: str, registry: dict | None = None, *,
             result, meta = fut.result()
             out[agent] = result
             out.setdefault("_meta", {})[agent] = meta
+            if result is None:
+                # A failed subagent is NOT "this study said nothing". Record it
+                # so callers can tell an empty study from a broken run --
+                # conflating them is how a thrashing batch looked like a corpus
+                # with no mappable outcomes.
+                out.setdefault("_failed", []).append(
+                    {"agent": agent, "error": meta.get("error")})
 
     # S6 runs after S5 because it consumes S5's raw outcome strings. Each claim
     # is mapped independently; a null mapping DISCARDS that claim rather than

@@ -159,6 +159,15 @@ def main(argv: list[str]) -> int:
                 registry_for=lambda r: store.registry_facts(r["registration_id"])
                                        if r.get("registration_id") else None,
                 call=lambda agent, payload: pa.call(agent, payload, verified=True))
+            failed = [r for r in raw if r["extraction"].get("_failed")]
+            if failed:
+                n = sum(len(r["extraction"]["_failed"]) for r in failed)
+                print(f"  !! {n} subagent calls FAILED across {len(failed)} studies")
+                for r in failed[:3]:
+                    for f in r["extraction"]["_failed"][:2]:
+                        print(f"     {f['agent']}: {str(f['error'])[:70]}")
+                print("     A failed call is not an empty study. Treat these rows")
+                print("     as missing data, not as evidence of no effect.")
             skipped = [r for r in raw if r["extraction"].get("_skipped")]
             if skipped:
                 print(f"  skipped {len(skipped)}/{len(raw)} studies with no usable "
