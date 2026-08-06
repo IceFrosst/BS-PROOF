@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ECU — Evidence Cluster Unit",
+  "description": "One scored row: (ingredient, form, dose_band, outcome, population). Not a subagent contract — no model ever emits this. It is the output of the deterministic scorer and the shape of the storage row. See SPEC sections 1 and 9.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["ecu_key", "ingredient", "form_vocab_id", "dose_band", "band_version",
+               "outcome_vocab_id", "population", "score", "band", "gate_fired", "evidence"],
+  "properties": {
+    "ecu_key": {
+      "type": "string",
+      "description": "Stable join key. ingredient|form|dose_band|outcome|population_id, with 'unbanded' where dose_band is null. Recomputed, never authored."
+    },
+    "ingredient": {"type": "string", "description": "Canonical ingredient id."},
+    "form_vocab_id": {"type": "string", "description": "id from vocab/form.json for this ingredient."},
+
+    "dose_band": {
+      "type": ["string", "null"],
+      "description": "null until bands are DERIVED from observed trial doses. null is a valid, expected state in v1 — not a missing value."
+    },
+    "band_version": {
+      "type": "integer", "minimum": 0,
+      "description": "0 = unbanded (bands not yet derived). Increments whenever bands are re-derived; a change invalidates every cached ECU carrying an older version. SPEC section 5 complexity flag."
+    },
+    "dose_range_mg": {
+      "type": ["object", "null"], "additionalProperties": false,
+      "properties": {"low": {"type": ["number", "null"]}, "high": {"type": ["number", "null"]},
+                     "basis": {"type": "string", "enum": ["elemental", "active_moiety", "extract", "unstated"]}},
+      "description": "Observed dose range backing this row. Populated even when band_version is 0 — this is the raw material bands get derived from."
+    },
+
+    "outcome_vocab_id": {"type": "string", "description": "id from vocab/outcome.json."},
+
+    "population": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "age_band", "sex", "deficiency_status", "pregnancy"],
+      "properties": {
+        "id": {"type": "string"},
+        "age_band": {"enum": ["child", "adolescent", "adult", "older_adult", "unknown"]},
+        "sex": {"enum": ["female", "male", "mixed", "unknown"]},
+        "deficiency_status": {"enum": ["deficient", "insufficient", "replete", "unknown"]},
+        "pregnancy": {"enum": ["pregnant", "lactating", "not_pregnant", "unknown"]}
+      }
+    },
+
+    "score": {
+      "type": ["integer", "null"], "minimum": -100, "maximum": 100,
+      "description": "null when the sufficiency gate fired. 0 means inconclusive and nothing else."
+    },
+    "band": {"type": "string"},
+    "gate_fired": {"type": "boolean"},
+
+    "components": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "d": {"type": "number", "minimum": -1, "maximum": 1},
+        "c": {"type": "number", "minimum": 0, "maximum": 1},
+        "H": {"type": "number", "minimum": 0, "maximum": 1},
+        "E": {"type": "number", "minimum": 0},
+        "E_prime": {"type": "number", "minimum": 0},
+        "coverage": {"type": "number", "minimum": 0, "maximum": 1}
+      },
+      "description": "Every term of 100*d*c*(1-0.4H), stored so any published number can be reconstructed."
+    },
+
+    "evidence": {
+      "type": "object", "additionalProperties": false,
+      "required": ["n_primaries", "n_syntheses", "study_ids"],
+      "properties": {
+        "n_primaries": {"type": "integer", "minimum": 0},
+        "n_syntheses": {"type": "integer", "minimum": 0},
+        "study_ids": {"type": "array", "items": {"type": "string"},
+                      "description": "Canonical ids of the UNIQUE primaries. This is what makes a score auditable."},
+        "synthesis_ids": {"type": "array", "items": {"type": "string"}},
+        "transferred_from": {
+          "type": ["array", "null"],
+          "items": {"type": "object", "additionalProperties": false,
+                    "required": ["study_id", "transfer_factor"],
+                    "properties": {"study_id": {"type": "string"},
+                                   "transfer_factor": {"type": "number", "minimum": 0, "maximum": 1},
+                                   "form_match": {"type": "string"},
+                                   "dose_match": {"type": "string"},
+                                   "pop_match": {"type": "string"}}},
+          "description": "Studies reaching this ECU only via transfer, with the discount each carried. Most ECUs are populated this way — SPEC section 8."
+        }
+      }
+    },
+
+    "flags": {
+      "type": "array", "items": {"type": "string"},
+      "description": "Shown to the user, NEVER scored. Unpublished trials, brand funding, predatory venue, underdosed product."
+    },
+
+    "provenance": {
+      "type": "object", "additionalProperties": false,
+      "required": ["prompt_version", "vocab_versions", "computed_at"],
+      "properties": {
+        "prompt_version": {"type": "string"},
+        "vocab_versions": {
+          "type": "object", "additionalProperties": false,
+          "properties": {"outcome": {"type": "string"}, "form": {"type": "string"}, "population": {"type": "string"}}
+        },
+        "scorer_version": {"type": "string"},
+        "computed_at": {"type": "string", "description": "ISO-8601. Text, so the row is portable to Postgres/Supabase unchanged."}
+      },
+      "description": "The same bottle must produce the same score tomorrow. If it does not, this block says which input moved."
+    }
+  }
+}

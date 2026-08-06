@@ -197,9 +197,17 @@ shape is confirmed correct (raw content, not paths), but the round trip is
 unproven. A nested `claude -p` inside a Claude Code session returns "Not logged
 in" — **the smoke test must be run from a plain terminal.**
 
-**Not built yet, blocking everything else:** the ECU JSON schema and the three
-controlled vocabularies (`outcome`, `form`, `population`). S3, S6 and S7 extract
-*into* these — their prompts reference vocabularies that don't exist yet.
+**Built 2026-08-06 — the vocabularies no longer block S3/S6/S7.**
+`vocab/{outcome,form,population}.json` + `schemas/ecu.json` +
+`pipeline/vocab.py` (deterministic, no model). Elemental conversion is now
+molar-mass arithmetic in code, not model arithmetic, and it **refuses** to
+convert hydrate-ambiguous salts. Dose bands deliberately deferred:
+`band_version: 0` / `dose_band: null` until real doses exist to cluster.
+
+**Unassigned:** nothing maps raw `population_text` onto the four population axes.
+S3 emits the raw text, S6 is outcome-only. Recommended fix in `docs/SPEC.md` §5 —
+pass the population vocab into S3 and have it emit axes directly (costs no extra
+model call, but needs a `PROMPT_VERSION` bump).
 
 **Open constants awaiting Tier-3 calibration:** `k`, all transfer factors, OA
 penalty, RoB thresholds. See `docs/SPEC.md` §13.
@@ -229,12 +237,19 @@ logged in. The pull/push workflow above cannot run until this is fixed.
    Confirm `--model haiku` resolves while you're there
 3. Pin full model IDs in `TIER_MODEL`; add a spend cap (`--max-budget-usd` is
    unused)
-4. ClinicalTrials.gov integration — RoB items 3+4 and the unpublished flag, one API
-5. Calibration harness — EFSA one-sided constraint + the 28 anchors
-6. **ECU schema + three vocabularies** — blocks S3/S6/S7
-7. Retrieval + dedup wiring
-8. Per-study workers
-9. Scoring + storage
+4. **Phase 2 — retrieval as real modules.** Lift Europe PMC out of
+   `run_coverage.py` into `sources/europepmc.py`; add `sources/clinicaltrials.py`
+   (RoB items 3+4, unpublished flag) and `sources/oa.py` (Unpaywall + OpenAlex,
+   needs `BSPROOF_CONTACT_EMAIL`). Cached fixtures so tests never hit the network
+5. **Phase 3 — classify + dedup wiring.** Deterministic design classifier from
+   publicationType/MeSH into the existing dedup. Last thing buildable with zero
+   model calls
+6. **Phase 4 — first real extractions.** S1/S3/S4/S5/S7/S8 over ~10 studies, then
+   S2 (highest value), then S6 with an anchor eval (highest risk)
+7. **Phase 5 — storage + assembly.** SQLite on a portable, Postgres-shaped schema
+   so the move to Supabase is a dump-and-load. All DB access behind one module
+8. **Phase 6 — calibration harness.** EFSA one-sided constraint + the 28 anchors
+9. Decide the population-text mapping (see Current state)
 
 ---
 

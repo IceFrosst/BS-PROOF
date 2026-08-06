@@ -253,6 +253,44 @@ not a footnote.
 A label says "supports restful sleep". Collapsing many measured endpoints onto one
 consumer-facing outcome is an ontology decision, and getting it wrong is invisible.
 
+### v1 implementation (built 2026-08-06)
+
+`vocab/outcome.json` (30 terms), `vocab/form.json` (magnesium, creatine,
+ashwagandha), `vocab/population.json`. All deterministic operations over them
+live in `pipeline/vocab.py` — **no model touches this file**. `schemas/ecu.json`
+is the row contract.
+
+Three decisions worth recording:
+
+**The model does not do the elemental arithmetic.** S7 reports the compound dose
+and the form id; `vocab.elemental_dose_mg()` converts using molar masses recorded
+in the vocabulary. This keeps the 5× dose trap in deterministic, auditable code
+(invariant 1) instead of in a model's arithmetic.
+
+**Conversion refuses more often than it converts.** A `conversion_safe: false`
+form returns `(None, "compound_only")` — no elemental dose. Magnesium citrate,
+sulfate and chloride all have common hydrates whose state is routinely unstated,
+and the resulting ambiguity exceeds 2×. Refusing costs coverage; guessing
+corrupts the axis the product rests on (invariant 5).
+
+**Population match composes by worst axis.** All four axes exact → `exact`; any
+axis `different` → `different`; otherwise `adjacent`. `unknown` is a member of
+every axis and resolves to `adjacent` — a known unknown, never a free pass.
+
+**Dose bands are deliberately absent.** Bands are supposed to be *derived* from
+observed trial doses, and no doses have been extracted yet. Rather than invent
+provisional bands, v1 ships `dose_band: null` with `band_version: 0` meaning
+"unbanded", and the ECU key uses the literal `unbanded`. `dose_range_mg` is
+populated from day one — it is the raw material bands get derived from after the
+first extraction pass. This is the one axis of the 5-tuple that is not yet live.
+
+**Open and unassigned:** S3 emits raw `population_text` and `deficiency_status`;
+S6 is outcome-only. **Nothing maps raw population text onto the four axes.** The
+cheapest fix is to pass `vocab/population.json` into S3's payload and have it
+emit the axes directly — it already has the study in context, and it costs no
+extra model call. That requires an S3 schema and prompt change, hence a
+`PROMPT_VERSION` bump, so it is recorded here rather than done quietly.
+
 ---
 
 ## 6. Deduplication
@@ -572,11 +610,15 @@ it's the most common trick in the industry and no consumer can currently detect 
 |---|---|
 | `k` value | Guess until Tier-3 calibration |
 | Transfer factor constants | Guesses; largest error source in the system |
-| `band_version` invalidation | Designed, not specified |
+| `band_version` invalidation | Designed; `band_version: 0` = unbanded is now in the ECU schema. Re-derivation path still unwritten |
 | Outcome vocabulary mapping | Highest-risk unsolved piece |
+| Population adjacency graph | **New.** Which axis values count as adjacent is a guess. `vocab/population.json` |
+| Population `pop_match` composition | **New.** "Worst axis wins" is a conservative guess, not a measured rule |
+| `conversion_safe` per salt | **New.** Which hydrates are "routinely unstated" is judgment. Wrong in the safe direction (refuses to convert) but costs coverage |
+| Who maps raw population text → 4 axes | **New, unassigned.** S3 emits `population_text`; no subagent maps it. See §5 |
 | Epistemonikos supplement coverage | Unknown — measure |
-| OA full-text rate | Estimated 70–75% with full ladder — measure |
-| Methods-fact coverage | Estimated 80–88% — measure separately |
+| OA full-text rate | **Measured 2026-08-06: 65.5%** on Europe PMC alone (n=741, truncated sample). 70–75% with the full ladder still an estimate |
+| Methods-fact coverage | **Measured 2026-08-06: 69.5%** on Europe PMC alone, against a target of ≥80. 80–88% with the full ladder still an estimate |
 | SR RoB-table parse reliability | Untested; the 10–20× leverage claim depends on it |
 | Blinding integrity | Binary in proxy; over-credits detectable placebos |
 | Multi-ingredient roll-up | Deferred; v1 is 1–2 ingredient products only |
@@ -708,6 +750,15 @@ system that are currently exact.
 ---
 
 ## Changelog
+
+- **2026-08-06 rev 2** — §5 implemented. Three vocabularies + `schemas/ecu.json`
+  + `pipeline/vocab.py` (deterministic, no model). Elemental conversion moved out
+  of the model and into molar-mass arithmetic; `conversion_safe: false` refuses
+  to convert hydrate-ambiguous salts rather than guess. Population match composes
+  by worst axis. **Dose bands deliberately deferred** — `band_version: 0` /
+  `dose_band: null` until bands can be derived from extracted doses, per founder
+  decision. New open items in §13, including the unassigned population-text
+  mapping. No scoring constants changed.
 
 - **2026-08-06** — Claude review of the 2026-08-05 audit (`REVIEW.md`). Band
   boundaries confirmed inclusive per §9 and now asserted at every edge. §9 band

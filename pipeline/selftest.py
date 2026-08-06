@@ -3,6 +3,7 @@ import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from pipeline.scoring import Study, score_ecu, band_for
 from pipeline.dedup import dedup, canonical_id, registry_id
+from pipeline import vocab
 
 ROB_CLEAN = {f"i{i}": 1 for i in range(1, 7)}
 def rcts(n, **kw):
@@ -105,6 +106,66 @@ def main():
     check("unstated benefit < meaningful benefit",
           unstated["score"] < meaningful["score"],
           f"{unstated['score']} < {meaningful['score']}")
+
+    print("\nVOCABULARIES")
+    problems = vocab.validate()
+    check("vocabularies structurally valid", not problems,
+          "; ".join(problems[:3]) if problems else
+          f"{len(vocab.outcome_ids())} outcomes, {len(vocab.ingredients())} ingredients")
+    check("every ingredient has one unspecified form",
+          all(vocab.unspecified_form_id(i) for i in vocab.ingredients()))
+
+    print("\nELEMENTAL DOSE TRAP")
+    mg_ox, basis_ox = vocab.elemental_dose_mg("magnesium", "magnesium_oxide", 400)
+    check("oxide converts by molar mass", basis_ox == "converted" and 241 <= mg_ox <= 242,
+          f"400 mg MgO -> {mg_ox} mg elemental")
+    mg_cit, basis_cit = vocab.elemental_dose_mg("magnesium", "magnesium_citrate", 400)
+    check("hydrate-ambiguous salt REFUSES to convert",
+          mg_cit is None and basis_cit == "compound_only",
+          "citrate -> None (hexahydrate/stoichiometry unstated)")
+    cr, basis_cr = vocab.elemental_dose_mg("creatine", "creatine_monohydrate", 5000)
+    check("creatine monohydrate active moiety", basis_cr == "converted" and 4390 <= cr <= 4400,
+          f"5000 mg -> {cr} mg creatine base")
+    unk, basis_unk = vocab.elemental_dose_mg("magnesium", "magnesium_unspecified", 400)
+    check("unspecified form never converts", unk is None and basis_unk == "compound_only")
+    none_dose, basis_none = vocab.elemental_dose_mg("magnesium", "magnesium_oxide", None)
+    check("null dose stays null", none_dose is None and basis_none == "unstated")
+
+    print("\nFORM TRANSFER TIERS")
+    check("same form -> exact",
+          vocab.form_match("magnesium", "magnesium_citrate", "magnesium_citrate") == "exact")
+    check("same salt family -> salt_family",
+          vocab.form_match("magnesium", "magnesium_citrate", "magnesium_malate") == "salt_family",
+          "both organic_acid_salt")
+    check("across families -> different",
+          vocab.form_match("magnesium", "magnesium_citrate", "magnesium_oxide") == "different",
+          "organic_acid_salt vs inorganic")
+    check("unspecified is not a family match",
+          vocab.form_match("magnesium", "magnesium_unspecified", "magnesium_oxide") == "unspecified")
+    check("branded extracts are distinct forms",
+          vocab.form_match("ashwagandha", "ashwagandha_ksm66", "ashwagandha_sensoril") == "different",
+          "KSM-66 root vs Sensoril root+leaf")
+
+    print("\nPOPULATION MATCH (worst axis wins)")
+    gen = {"age_band": "adult", "sex": "mixed", "deficiency_status": "unknown", "pregnancy": "not_pregnant"}
+    check("identical -> exact", vocab.pop_match(gen, gen) == "exact")
+    older = dict(gen, age_band="older_adult")
+    check("adult vs older_adult -> adjacent", vocab.pop_match(gen, older) == "adjacent")
+    child = dict(gen, age_band="child")
+    check("adult vs child -> different", vocab.pop_match(gen, child) == "different")
+    defic = dict(gen, deficiency_status="deficient")
+    replete = dict(gen, deficiency_status="replete")
+    check("deficient vs replete -> different", vocab.pop_match(defic, replete) == "different",
+          "the axis that flips signs")
+    check("one different axis poisons the whole match",
+          vocab.pop_match(older, dict(gen, sex="female", age_band="child")) == "different")
+    check("four precomputed variants exist", len(vocab.population_variants()) == 4)
+
+    print("\nECU KEY")
+    k = vocab.ecu_key("magnesium", "magnesium_glycinate", None, "sleep_onset", "general_adult")
+    check("unbanded key is well-formed", k.count("|") == 4 and "unbanded" in k, k)
+    banded = vocab.ecu_key("magnesium", "magnesium_glycinate", "150-250", "sleep_onset", "general_adult")
+    check("banding changes the key", banded != k, banded)
 
     print(f"\n{'ALL PASSED' if not fails else 'FAILURES: ' + ', '.join(fails)}\n")
     return 1 if fails else 0
