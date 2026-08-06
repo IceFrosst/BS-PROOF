@@ -23,6 +23,27 @@ and is frequently the difference between a positive and negative verdict.
 - Recruiting from a general population without measuring -> "unstated", NOT
   "replete". Not measuring is not the same as measuring and finding normal.
 
+population_axes
+You also receive the population vocabulary. Place the study population on its
+four axes. Every axis has an "unknown" member and you must use it rather than
+infer -- an unknown is handled by the pipeline, a guess silently files evidence
+about one population under a claim about another.
+
+  age_band          child (<12) / adolescent (12-17) / adult (18-64) /
+                    older_adult (65+) / unknown
+  sex               female / male / mixed / unknown
+                    Use "mixed" only when both sexes were enrolled. A study that
+                    does not report sex is "unknown", not "mixed".
+  deficiency_status deficient / insufficient / replete / unknown
+                    Same rule as deficiency_status above: recruiting without
+                    measuring is "unknown", NOT "replete".
+  pregnancy         pregnant / lactating / not_pregnant / unknown
+                    "not_pregnant" only when stated or structurally impossible
+                    (an all-male population). Silence is "unknown".
+
+A mean age with no range maps to the band containing the mean. A range spanning
+two bands with no breakdown is "unknown" -- do not pick the wider one.
+
 registration_id
 NCT########, ISRCTN########, ChiCTR..., CTRI/..., UMIN..., EudraCT.
 Verbatim as printed. If absent, null. This is the join key to the registry and

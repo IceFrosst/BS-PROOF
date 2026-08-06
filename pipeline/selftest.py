@@ -344,6 +344,28 @@ def main():
           _rob_items({"item3_prospective_registration": None}, None)["i3"] is None)
     check("attrition threshold applied in code, not by a model",
           _rob_items({"item5_attrition_ok": None}, {"dropout_rate": 0.35})["i5"] == 0)
+    # S3 now emits the four axes directly (PROMPT_VERSION v1.2). Verify the
+    # population axis actually reaches the transfer factor.
+    def with_pop(pop):
+        e = ext("registry:nct99999999")
+        e["extraction"]["S3"]["population_axes"] = pop
+        return e
+    deficient = {**axes, "deficiency_status": "deficient"}
+    _, st_def = to_studies(with_pop(deficient)["record"] | {"ingredient": "magnesium"},
+                           with_pop(deficient)["extraction"], product)[0]
+    _, st_match = to_studies(with_pop(axes)["record"] | {"ingredient": "magnesium"},
+                             with_pop(axes)["extraction"], product)[0]
+    check("population axes reach the transfer factor",
+          st_def.pop_match != st_match.pop_match,
+          f"deficient study vs general-adult product: {st_def.pop_match}")
+    _, st_unknown = to_studies(
+        {"_canonical": "x", "ingredient": "magnesium", "design_rank": 4},
+        {"S3": None, "outcomes": [{"claim": {"direction": "benefit"},
+                                   "outcome_vocab_id": "sleep_onset",
+                                   "discarded": False}]}, product)[0]
+    check("S3 failure -> population unknown, not assumed exact",
+          st_unknown.pop_match != "exact", f"pop_match={st_unknown.pop_match}")
+
     check("missing S8 -> undisclosed, the vocabulary's own value",
           to_studies({"_canonical": "x", "ingredient": "magnesium", "design_rank": 4},
                      {"S8": None, "outcomes": [

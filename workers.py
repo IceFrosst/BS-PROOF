@@ -36,7 +36,10 @@ def _payload(agent: str, record: dict, text: str, registry: dict | None) -> dict
     """
     base = {"title": record.get("title"), "text": text}
     if agent == "S3":
-        return base
+        # S3 places the population on the four axes itself. It already has the
+        # study in context, so this costs no extra model call -- the alternative
+        # was a ninth subagent mapping raw population text after the fact.
+        return {**base, "population_vocabulary": vocab.load("population")["axes"]}
     if agent == "S4":
         # RoB items 3 and 4 need registry evidence. Item 3 is already computed
         # deterministically in sources/clinicaltrials.py -- it is passed as a

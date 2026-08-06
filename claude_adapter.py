@@ -46,7 +46,7 @@ SHARED_PROMPT = PROMPTS / "_shared.md"
 
 # Bump when you edit ANY prompt (including _shared.md). This is in the cache key.
 # Forget to bump it and you will silently serve stale extractions forever.
-PROMPT_VERSION = "v1.1"  # bumped 2026-08-05: _shared.md now prepended to every call
+PROMPT_VERSION = "v1.2"  # bumped 2026-08-06: S3 now emits the four population axes
 
 # Tier -> model. FULL IDs, NOT ALIASES.
 #

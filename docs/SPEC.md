@@ -302,12 +302,13 @@ provisional bands, v1 ships `dose_band: null` with `band_version: 0` meaning
 populated from day one — it is the raw material bands get derived from after the
 first extraction pass. This is the one axis of the 5-tuple that is not yet live.
 
-**Open and unassigned:** S3 emits raw `population_text` and `deficiency_status`;
-S6 is outcome-only. **Nothing maps raw population text onto the four axes.** The
-cheapest fix is to pass `vocab/population.json` into S3's payload and have it
-emit the axes directly — it already has the study in context, and it costs no
-extra model call. That requires an S3 schema and prompt change, hence a
-`PROMPT_VERSION` bump, so it is recorded here rather than done quietly.
+**RESOLVED 2026-08-06 (`PROMPT_VERSION` v1.1 → v1.2).** S3 now places the
+population on the four axes itself. `vocab/population.json` is passed in its
+payload, `population_axes` is a required field of `schemas/s3_study.json`, and
+every axis carries an `unknown` member the prompt requires rather than an
+inference — "recruiting without measuring is unknown, NOT replete". No ninth
+subagent and no extra model call, because S3 already has the study in context.
+Raw `population_text` is still emitted alongside as the audit trail.
 
 ---
 
@@ -633,7 +634,7 @@ it's the most common trick in the industry and no consumer can currently detect 
 | Population adjacency graph | **New.** Which axis values count as adjacent is a guess. `vocab/population.json` |
 | Population `pop_match` composition | **New.** "Worst axis wins" is a conservative guess, not a measured rule |
 | `conversion_safe` per salt | **New.** Which hydrates are "routinely unstated" is judgment. Wrong in the safe direction (refuses to convert) but costs coverage |
-| Who maps raw population text → 4 axes | **New, unassigned.** S3 emits `population_text`; no subagent maps it. See §5 |
+| Who maps raw population text → 4 axes | **RESOLVED 2026-08-06** — S3 emits the axes directly, PROMPT_VERSION v1.2. See §5 |
 | Epistemonikos supplement coverage | Unknown — measure |
 | OA full-text rate | **RESOLVED 2026-08-06: 78.7%** Europe PMC alone, **87.8%** projected with green OA (n=3141). Estimate was 70–75% |
 | Methods-fact coverage | **RESOLVED 2026-08-06: 88.9%** projected — **clears the ≥80% target**. Estimate was 80–88% |
