@@ -79,11 +79,21 @@ not absence of evidence. `s_i = −0.7`. This is what frees `0` to mean
 claude_adapter.py          the ONE model boundary. All CLI coupling lives here.
 prompts/*.md               subagent instructions S1-S8 + _shared.md. The real IP.
 schemas/*.json             output contracts, enforced via --json-schema
+vocab/*.json               outcome / form / population vocabularies (DATA)
+pipeline/vocab.py          vocab lookups, elemental conversion     [NO MODEL]
 pipeline/scoring.py        w_study, E, E', d, c, H, signed score   [NO MODEL]
 pipeline/dedup.py          canonical ID resolution                 [NO MODEL]
+pipeline/classify.py       design rank from PubMed tags            [NO MODEL]
+pipeline/storage.py        the ONLY module that talks to the DB    [NO MODEL]
+pipeline/retrieve.py       discover->classify->dedup->persist      [NO MODEL]
 pipeline/selftest.py       zero-cost regression test
+schemas/storage.sql        portable SQL — SQLite now, Supabase later
+sources/http.py            throttled, retried, disk-cached client
+sources/europepmc.py       discovery + normalisation
+sources/clinicaltrials.py  RoB items 3+4, unpublished flag
+sources/oa.py              green OA — OpenAlex + Unpaywall
 sources/ratelimit.py       per-domain token bucket
-run_coverage.py            week-1 measurement script
+run_coverage.py            coverage measurement, zero model calls
 docs/SPEC.md               full design, living document
 docs/ANCHORS.md            28-anchor calibration set
 pipeline_v1.excalidraw     pipeline diagram (root)
@@ -93,10 +103,14 @@ REVIEW.md                  pending audit fixes (signed off 2026-08-06)
 
 ## Commands
 
+Use `python3` (or activate `.venv`) — bare `python` is not on PATH.
+
 ```bash
-python claude_adapter.py        # preflight: CLI present, 8 subagents wired
-python -m pipeline.selftest     # deterministic regression, zero model calls
-python run_coverage.py magnesium creatine ashwagandha   # zero model calls
+python3 claude_adapter.py       # preflight: CLI, models pinned, API key present
+python3 -m pipeline.selftest    # deterministic regression, zero model calls
+python3 -m pipeline.vocab       # validate the three vocabularies
+python3 -m pipeline.retrieve magnesium creatine ashwagandha   # zero model calls
+python3 run_coverage.py --sample 45 magnesium   # zero model calls
 ```
 
 **Run `pipeline.selftest` after any change to `pipeline/`.** It costs nothing and
