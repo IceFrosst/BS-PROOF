@@ -102,7 +102,7 @@ docs/SPEC.md               full design, living document
 docs/ANCHORS.md            28-anchor calibration set
 pipeline_v1.excalidraw     pipeline diagram (root)
 AGENTS.md                  routes every agent to this file
-REVIEW.md                  pending audit fixes (signed off 2026-08-06)
+REVIEW.md                  audit fixes (signed off 2026-08-06)
 ```
 
 ## Commands
@@ -226,6 +226,59 @@ required after install. Cloud sessions do not automatically inherit WSL plugins.
 
 ---
 
+## Extraction auth — founder preference + pilot options
+
+**Founder preference (2026-08-06):** do **not** want pay-per-token Console API
+billing for now; prefer Claude **subscription** only.
+
+**Measured fact:** `--bare` + subscription / `CLAUDE_CODE_OAUTH_TOKEN` does **not**
+work (see Current state). The production design still wants `--bare` +
+`ANTHROPIC_API_KEY` for public, defensible scores.
+
+### Option A — Subscription hybrid pilot (NOT a full `--bare` replacement)
+
+**Status: proposed by Grok / founder — Claude to accept, amend, or reject.**
+
+For a **limited pilot** only (small N, not public brand claims), extract via
+subscription Claude Code with extra guardrails:
+
+1. **Extract** with fixed prompt file + `PROMPT_VERSION`, JSON schema only (no
+   free-form), **pinned model id** (not floating `sonnet`/`haiku`), evidence
+   spans required.
+2. **Verify** second pass: only flag schema violations + span mismatches; **do
+   not invent fields**.
+3. **Accept** only if both pass; else `null` / discard (fail toward under-count).
+4. **Log** prompt hash, model id, raw JSON, timestamps (repo artifact or DB).
+5. **Score** only via deterministic `pipeline/scoring.py`.
+
+Stronger than a sloppy chat. **Weaker** than `--bare` + API for "same score every
+Tuesday." Must not silently replace the production adapter path without a SPEC
+note and explicit labeling of outputs as `pilot` / non-production.
+
+### Option B — Grok as an alternate extractor (optional)
+
+**Status: proposed — Claude to decide.**
+
+Grok (this agent) already has GitHub read/write and can run structured
+extraction against the same prompts/schemas in principle, logging the same
+fields (prompt hash, model id, raw JSON, time). Possible uses:
+
+- tiny pilot batches while Claude API is refused;
+- second-opinion pass (disagree → discard / human review);
+- not a silent substitute for S1–S8 production without SPEC + eval.
+
+Constraints: must not put a model inside `scoring.py` / `dedup.py`; must not
+invent constants; outputs need the same evidence-span + schema discipline.
+If adopted, add a thin `grok_adapter` (or documented manual protocol) rather
+than forking prompts ad hoc — Claude decides shape.
+
+### Production target (unchanged)
+
+Public claims / scale: `--bare` + `ANTHROPIC_API_KEY` (or `apiKeyHelper` that
+returns an API key). Do not drop `--bare` to "make subscription work."
+
+---
+
 ## Current state
 
 **The deterministic half of v1 is COMPLETE and runs end to end**, Europe PMC →
@@ -251,44 +304,23 @@ relevance-order truncation — Europe PMC ranks by relevance, well-cited papers
 are disproportionately OA, and a top slice reads ~11 points high. Re-measuring
 uncapped settled it.
 
-This does not invalidate the approach: the gap is 2.5 points with two named,
-unbuilt paths to close it — **Unpaywall** (needs only the contact email; OpenAlex
-alone recovered 19–20% of closed records) and **SR-table inheritance**, entirely
-unbuilt, whose leverage the now-meaningful synthesis:primary ratio of **0.52**
-makes substantial. But **do not claim 80% is demonstrated.** It is not.
+This does not invalidate the approach: the gap is 2.5 points with two named
+paths to close it — **Unpaywall** and **SR-table inheritance**. But **do not
+claim 80% is demonstrated.** It is not.
 
 Any future coverage figure must state what fraction of the corpus it measured.
 `europepmc.hit_count()` supplies it and `run_coverage.py` prints it.
 
-**🔴 The one hard blocker: `--bare` cannot use a Claude.ai subscription.**
-Diagnosed 2026-08-06. `claude --help`: *"Anthropic auth is strictly
-`ANTHROPIC_API_KEY` or apiKeyHelper via `--settings` (OAuth and keychain are
-never read)"*. Verified — plain `claude -p` succeeds, adding `--bare` fails with
-"Not logged in" even while `claude auth status` reports `loggedIn: true` on a Pro
-subscription. **An `ANTHROPIC_API_KEY` is required.** Preflight now blocks on it.
-Do not drop `--bare` to work around this (invariant 2). No successful subagent
-call has been made yet.
+**🔴 Production extraction blocker: `--bare` cannot use a Claude.ai subscription.**
+Diagnosed 2026-08-06. Verified — plain `claude -p` succeeds, `--bare` fails with
+"Not logged in" on Pro. `CLAUDE_CODE_OAUTH_TOKEN` is never read under `--bare`
+(byte-identical to empty env). **Console `ANTHROPIC_API_KEY` is the production
+path.** Founder currently **declines API spend**; see pilot options above.
 
-**`CLAUDE_CODE_OAUTH_TOKEN` does not rescue this — measured 2026-08-06, CLI
-2.1.223.** Differential test under `--bare`, all `--model haiku --max-turns 1`:
-
-| credential | result |
-|---|---|
-| garbage `ANTHROPIC_API_KEY` | hangs to timeout — key accepted, real API call attempted |
-| `CLAUDE_CODE_OAUTH_TOKEN` set | instant "Not logged in", `duration_api_ms: 0` |
-| no credential at all | instant "Not logged in" — **identical** |
-
-The OAuth token is not rejected, it is *never read* — behaviour is byte-identical
-to an empty environment. `claude setup-token` therefore cannot unblock subagents
-either, despite its tokens being "inference-only", which is the right scope.
-**Do not spend another session on subscription auth.** The only two routes are
-`ANTHROPIC_API_KEY` or an `apiKeyHelper` via `--settings` that itself returns an
-API key. Both mean console (pay-per-use) billing, separate from a Pro plan.
-
-Operational note from the same test: a *malformed* API key makes the CLI hang
-rather than return a recognisable error, so adapter `_FATAL` matching never fires
-and a bad key burns `retries x timeout` (~9 min/call at defaults). Consider a
-credential smoke-test in `preflight()` before any batch run.
+**✅ `BSPROOF_CONTACT_EMAIL` — founder reports SET 2026-08-06.** Unlocks
+Unpaywall in `sources/oa.py`. Confirm the env var is visible in the shell that
+runs coverage/retrieve (`echo ${BSPROOF_CONTACT_EMAIL:+set}`). Not a secret;
+still must not be committed to the repo.
 
 **Built 2026-08-06 — the vocabularies no longer block S3/S6/S7.**
 `vocab/{outcome,form,population}.json` + `schemas/ecu.json` +
@@ -306,65 +338,40 @@ model call, but needs a `PROMPT_VERSION` bump).
 penalty, RoB thresholds. See `docs/SPEC.md` §13.
 
 **2026-08-05 audit fixes (Grok) — ✅ reviewed and signed off by Claude
-2026-08-06.** See `REVIEW.md`. Seven fixes accepted as-is; the registry regex was
-amended (anchoring made it validate whole fields, so noisy registry fields fell
-through to DOI and split one trial across its papers — the dedup trap in its
-dangerous direction). Adapter error reporting also fixed: it read stderr, but the
-CLI writes errors to stdout. PROMPT_VERSION=v1.1.
+2026-08-06.** See `REVIEW.md`.
 
 **⚠️ Open reproducibility risk — `TIER_MODEL` uses floating aliases.**
-`haiku`/`sonnet`/`opus` resolve to "the latest model", and `_key()` hashes the
-alias string. When an alias moves, the cache serves stale extractions under
-unchanged keys. Pin full model IDs before any cached extraction run.
-Also unconfirmed: `--help` does not list `haiku` as a valid alias.
+Pin full model IDs before any cached extraction run.
 
 **✅ Git auth fixed 2026-08-06.** `gh auth status` confirms logged in as
-IceFrosst, https git operations use the gh credential helper, `git pull`
-succeeds. The pull/push workflow above is unblocked.
+IceFrosst.
 
 ## Next
 
-**Handoff (Claude, 2026-08-06):** the deterministic half is done and green.
-Everything below the line needs credentials the founder has to create.
+**Handoff:** Claude — review **Extraction auth — founder preference + pilot
+options** (subscription hybrid + optional Grok extractor). Accept / amend /
+reject in this file. Do not implement a silent bypass of `--bare` for
+production. Unpaywall path is unblocked if `BSPROOF_CONTACT_EMAIL` is present
+in the run environment.
 
-### Blocked on the founder (both are one-liners)
+### Founder / credentials
 
-1. **`ANTHROPIC_API_KEY`** from console.anthropic.com. This is the ONLY unblock
-   for extraction. Subscription auth is ruled out and measured — do not retry it.
-   Then `python3 run_pipeline.py magnesium --form magnesium_glycinate` runs the
-   real thing. Confirm the pinned model ids resolve on the first call.
-2. **`BSPROOF_CONTACT_EMAIL`** — one address, not a secret. Unlocks Unpaywall,
-   the only untested rung of the OA ladder. OpenAlex already works without it.
+1. **`ANTHROPIC_API_KEY`** — declined for now (cost). Production extraction
+   remains blocked until this or an accepted pilot path exists.
+2. **`BSPROOF_CONTACT_EMAIL`** — ✅ founder says set. Next: run OA/coverage with
+   Unpaywall enabled and record the new methods% on the **full corpus**.
 
-### Unblocked — anyone can pick these up now
+### Unblocked / decide
 
-3. **S2 synthesis path — deterministic half DONE** (`pipeline/synthesis.py`:
-   included-study resolution, q_s, inherited RoB, the bounded multiplier).
-   Remaining is the S2 call itself, which needs the API key. 462 syntheses are
-   already stored and classified.
-4. **Derive dose bands.** The one axis of the 5-tuple that is not live. Needs a
-   first extraction pass to cluster real doses, then `band_version` 0 -> 1 and
-   `storage.stale_bands()` lists what to recompute.
-5. **Population-text mapping — still unassigned.** S3 emits raw
-   `population_text`; nothing maps it to the four axes, so `pop_match` currently
-   compares defaults. Recommended fix in `docs/SPEC.md` §5: pass the population
-   vocab into S3. Needs a `PROMPT_VERSION` bump.
-6. **Calibration harness — BUILT and vocabulary-ready.** 34/34 in-scope
-   anchors have vocabulary entries; running them needs extraction (API key).
-   EFSA (Tier 1) still needs a manual download. New ingredient blocks in
-   `vocab/form.json` are marked **needs chemistry review** — molar masses were
-   set only for single well-defined compounds.
-7. **Close the 2.5-point coverage gap — now the highest-value work.**
-   77.5% measured against a ≥80% target. Two unbuilt rungs: **Unpaywall**
-   (needs only the contact email) and **SR-table inheritance**, which is
-   entirely unbuilt and where the leverage is — synthesis:primary is 0.52 and
-   one OA review carries methods facts for ~15 unreadable primaries.
-   `pipeline/synthesis.py` resolves included studies and `sources/fulltext.py`
-   fetches JATS + extracts the characteristics tables (verified: 8/8 OA records
-   parsed, included-study tables found in 5). **The only missing piece is the S2
-   call itself**, which needs the API key.
-8. **Venue factor.** `Study.venue_ok` is a boolean; SJR quartiles have nowhere
-   to go until a real venue factor exists (new constant -> SPEC §13 first).
+3. **Claude decision:** hybrid subscription pilot (Option A) and/or Grok
+   extractor (Option B) vs wait for API key — document the choice here.
+4. **S2 synthesis path** — deterministic half done; live S2 needs a model path.
+5. **Derive dose bands** after a first real extraction pass.
+6. **Population-text mapping** — still unassigned (`docs/SPEC.md` §5).
+7. **Calibration harness** — built; running needs extraction.
+8. **Close the 2.5-point coverage gap** — Unpaywall (email set) + SR-table
+   inheritance (needs S2).
+9. **Venue factor** — still open (SPEC §13 first).
 
 ---
 
