@@ -387,6 +387,22 @@ S2 succeeded on 3/4 reviews, 36 included studies listed, 0 resolved (pre-fix),
 0 primaries rescued of 298 starved. Re-run needed after the resolution fix
 before any claim about closing the 2.5-point coverage gap.
 
+**CORRECTION 2026-08-06: the empty pilot runs were CONCURRENCY, not the corpus.**
+`pilot_adapter` had no semaphore while `claude_adapter` does. `run_pipeline`
+fans out 4 studies x 5 agents = 20 concurrent non-bare `claude -p` subprocesses,
+and a non-bare call loads plugins/settings/auto-memory every time — measured at
+only 5 concurrent, S3 took 34s and S5 36s. At 20 they exceeded the timeout, and
+**a timed-out call returns None, which is indistinguishable from "this study
+reported nothing."**
+
+Proof: one study from the same scoped store, run alone through the same code,
+mapped **8 claims** — 5 to `glycaemic_control`, 1 to `adverse_events_any`, 2
+correctly discarded as unspecified catch-alls.
+
+Fixed: pilot semaphore (default 3), 300s timeout, `_failed` recorded per study,
+and `run_pipeline` prints failures loudly. The retrieval-scope finding below is
+real and independently evidenced, but it was **not** the cause of the empty runs.
+
 **S6 is working correctly; the CORPUS is wrong.** Ran S6's null-rationales —
 the backlog mechanism its prompt was designed around — over three real studies.
 It refused postoperative atrial fibrillation, opioid consumption, vasopressor
