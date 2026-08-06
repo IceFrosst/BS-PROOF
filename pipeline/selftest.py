@@ -373,6 +373,55 @@ def main():
                           "outcome_vocab_id": "sleep_onset", "discarded": False}]},
                      product)[0][1].funding == "undisclosed")
 
+    print("\nSYNTHESIS RESOLUTION (the dedup trap, from the SR side)")
+    from pipeline import synthesis as syn
+    corpus_rows = [{"canonical_id": "registry:nct00000001", "registration_id": "NCT00000001"},
+                   {"canonical_id": "doi:101abc", "doi": "10.1/ABC"},
+                   {"canonical_id": "pmid:555", "pmid": "555"}]
+    idx = syn.known_index(corpus_rows)
+    s2_good = {"extraction_complete": True,
+               "rob_table": [{"study_label": "Smith 2019", "overall": "low"},
+                             {"study_label": "Jones 2018", "overall": "unclear"}],
+               "included_studies": [{"label": "Smith 2019", "nct": "NCT00000001"},
+                                    {"label": "Jones 2018", "doi": "10.1/abc"},
+                                    {"label": "Lee 2017", "pmid": "555"},
+                                    {"label": "Unknown 2016"}]}
+    r = syn.resolve_included(s2_good, idx)
+    check("included studies map to the SAME canonical ids as the primaries",
+          r["included_ids"] == {"registry:nct00000001", "doi:101abc", "pmid:555"},
+          "otherwise the SR row and the paper are two units")
+    check("unresolvable rows counted, never approximated",
+          r["unresolved_labels"] == ["Unknown 2016"])
+    check("resolved when most rows map", r["resolved"] is True,
+          f"{r['resolved_fraction']:.0%} resolved")
+
+    mostly_unknown = {"extraction_complete": True, "included_studies":
+                      [{"label": f"X{i}"} for i in range(9)]
+                      + [{"label": "Y", "nct": "NCT00000001"}]}
+    r2 = syn.resolve_included(mostly_unknown, idx)
+    check("an SR we cannot resolve is UNRESOLVED, not partial credit",
+          r2["resolved"] is False and syn.quality(mostly_unknown, r2) == 0.0,
+          f"{r2['resolved_fraction']:.0%} resolved — score_ecu ignores it")
+
+    check("complete SR with a RoB table scores highest quality",
+          syn.quality(s2_good, r) == syn.Q_COMPLETE_WITH_ROB)
+    check("incomplete extraction is downgraded",
+          syn.quality({**s2_good, "extraction_complete": False}, r) == syn.Q_PARTIAL)
+    check("'unclear' RoB is dropped, not mapped to a band",
+          syn.inherited_rob(s2_good) == {"Smith 2019": "low"},
+          "an unclear judgment is not a judgment")
+
+    # The trap itself, from the synthesis side: many SRs over the same trials.
+    p9 = rcts(9)
+    thirty = [syn.to_scoring_input(
+        {"extraction_complete": True, "rob_table": [],
+         "included_studies": [{"label": f"p{i}", "pmid": f"{i}"} for i in range(9)]},
+        {str(i): f"p{i}" for i in range(9)}) for _ in range(30)]
+    trapped = score_ecu(p9, thirty)
+    check("30 RESOLVED syntheses over 9 RCTs still bounded",
+          trapped["E_prime"] / trapped["E"] <= 1.31,
+          f"E'/E = {trapped['E_prime']/trapped['E']:.2f}")
+
     print("\nGREEN OA RESOLUTION")
     from sources import oa as oamod
     oa_work = {"best_oa_location": {"is_oa": True, "pdf_url": "http://x/y.pdf",
