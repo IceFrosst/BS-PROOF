@@ -522,6 +522,26 @@ def main():
           tier == "abstract_only" and txt == "Only an abstract.",
           "silently calling an abstract full_text inflates every score on it")
 
+    print("\nSR-TABLE INHERITANCE PAYLOAD")
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    import run_sr_inheritance as sri
+    pay = sri.s2_payload({"title": "An SR"}, jats)
+    check("only the included-studies table is sent when the filter hits",
+          pay["table_filter_hit"] and len(pay["tables"]) == 1
+          and "included" in (pay["tables"][0]["caption"] or "").lower(),
+          "the adverse-events table is not S2's job")
+    check("table row structure survives into the payload",
+          pay["tables"][0]["rows"][1][2] == "400 mg",
+          "prose would lose which dose belongs to which trial")
+    check("methods included, discussion not",
+          "double-blind" in pay["methods"] and "conclude" not in pay["methods"])
+    no_match = """<article><body><table-wrap><caption><p>Baseline data</p></caption>
+      <table><tr><th>Age</th></tr><tr><td>44</td></tr></table></table-wrap></body></article>"""
+    pay2 = sri.s2_payload({"title": "x"}, no_match)
+    check("filter miss falls back to all tables, never to nothing",
+          pay2["table_filter_hit"] is False and len(pay2["tables"]) == 1,
+          "the heuristic filters; S2 decides")
+
     print("\nSTORAGE (SQLite on a Postgres-shaped schema)")
     import tempfile
     from pipeline.storage import Store, now_iso
