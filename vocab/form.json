@@ -406,6 +406,1077 @@
           ]
         }
       ]
+    },
+    "vitamin_d": {
+      "dose_basis_kind": "elemental",
+      "note": "Dosed in IU as often as mg. 1 ug cholecalciferol = 40 IU, so 1 mg = 40000 IU. Unit conversion is arithmetic and belongs in code, not in a model.",
+      "iu_per_mg": 40000,
+      "salt_families": [
+        "secosteroid_d3",
+        "secosteroid_d2"
+      ],
+      "forms": [
+        {
+          "id": "vitamin_d3_cholecalciferol",
+          "label": "Vitamin D3 (cholecalciferol)",
+          "salt_family": "secosteroid_d3",
+          "formula": "C27H44O",
+          "molar_mass_g_mol": 384.648,
+          "active_mass_g_mol": 384.648,
+          "conversion_safe": true,
+          "aliases": [
+            "cholecalciferol",
+            "D3"
+          ]
+        },
+        {
+          "id": "vitamin_d2_ergocalciferol",
+          "label": "Vitamin D2 (ergocalciferol)",
+          "salt_family": "secosteroid_d2",
+          "formula": "C28H44O",
+          "molar_mass_g_mol": 396.659,
+          "active_mass_g_mol": 396.659,
+          "conversion_safe": true,
+          "aliases": [
+            "ergocalciferol",
+            "D2"
+          ]
+        },
+        {
+          "id": "calcifediol",
+          "label": "Calcifediol (25-OH-D3)",
+          "salt_family": "secosteroid_d3",
+          "formula": "C27H44O2",
+          "molar_mass_g_mol": 400.647,
+          "active_mass_g_mol": 400.647,
+          "conversion_safe": true,
+          "aliases": [
+            "25-hydroxyvitamin D3"
+          ]
+        },
+        {
+          "id": "vitamin_d_unspecified",
+          "label": "Vitamin D, form not stated",
+          "salt_family": null,
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [
+            "vitamin D supplementation"
+          ]
+        }
+      ],
+      "status": "forms enumerated 2026-08-06; molar masses set ONLY where the compound is a single well-defined entity. Everything else is conversion_safe:false. Needs chemistry review before any dose-band work."
+    },
+    "zinc": {
+      "dose_basis_kind": "elemental",
+      "salt_families": [
+        "inorganic",
+        "organic_acid_salt",
+        "amino_acid_chelate"
+      ],
+      "forms": [
+        {
+          "id": "zinc_oxide",
+          "label": "Zinc oxide",
+          "salt_family": "inorganic",
+          "formula": "ZnO",
+          "molar_mass_g_mol": 81.379,
+          "active_mass_g_mol": 65.38,
+          "conversion_safe": true,
+          "aliases": []
+        },
+        {
+          "id": "zinc_sulfate",
+          "label": "Zinc sulfate",
+          "salt_family": "inorganic",
+          "formula": "ZnSO4",
+          "molar_mass_g_mol": 161.436,
+          "active_mass_g_mol": 65.38,
+          "conversion_safe": false,
+          "aliases": [
+            "zinc sulphate"
+          ],
+          "hydration_note": "Heptahydrate (287.56) is the common supplement form -- a 1.8x difference."
+        },
+        {
+          "id": "zinc_gluconate",
+          "label": "Zinc gluconate",
+          "salt_family": "organic_acid_salt",
+          "formula": "Zn(C6H11O7)2",
+          "molar_mass_g_mol": 455.684,
+          "active_mass_g_mol": 65.38,
+          "conversion_safe": true,
+          "aliases": []
+        },
+        {
+          "id": "zinc_citrate",
+          "label": "Zinc citrate",
+          "salt_family": "organic_acid_salt",
+          "formula": "Zn3(C6H5O7)2",
+          "molar_mass_g_mol": 574.339,
+          "active_mass_g_mol": 196.14,
+          "conversion_safe": false,
+          "aliases": [],
+          "hydration_note": "Dihydrate common."
+        },
+        {
+          "id": "zinc_acetate",
+          "label": "Zinc acetate",
+          "salt_family": "organic_acid_salt",
+          "formula": "Zn(C2H3O2)2",
+          "molar_mass_g_mol": 183.482,
+          "active_mass_g_mol": 65.38,
+          "conversion_safe": false,
+          "aliases": [],
+          "hydration_note": "Dihydrate common."
+        },
+        {
+          "id": "zinc_picolinate",
+          "label": "Zinc picolinate",
+          "salt_family": "amino_acid_chelate",
+          "formula": "Zn(C6H4NO2)2",
+          "molar_mass_g_mol": 309.61,
+          "active_mass_g_mol": 65.38,
+          "conversion_safe": true,
+          "aliases": []
+        },
+        {
+          "id": "zinc_bisglycinate",
+          "label": "Zinc bisglycinate",
+          "salt_family": "amino_acid_chelate",
+          "formula": "Zn(C2H4NO2)2",
+          "molar_mass_g_mol": 213.52,
+          "active_mass_g_mol": 65.38,
+          "conversion_safe": true,
+          "aliases": [
+            "zinc glycinate"
+          ]
+        },
+        {
+          "id": "zinc_unspecified",
+          "label": "Zinc, form not stated",
+          "salt_family": null,
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [
+            "zinc supplementation"
+          ]
+        }
+      ],
+      "status": "forms enumerated 2026-08-06; molar masses set ONLY where the compound is a single well-defined entity. Everything else is conversion_safe:false. Needs chemistry review before any dose-band work."
+    },
+    "iron": {
+      "dose_basis_kind": "elemental",
+      "salt_families": [
+        "ferrous_salt",
+        "ferric_complex",
+        "amino_acid_chelate"
+      ],
+      "forms": [
+        {
+          "id": "ferrous_sulfate",
+          "label": "Ferrous sulfate",
+          "salt_family": "ferrous_salt",
+          "formula": "FeSO4",
+          "molar_mass_g_mol": 151.908,
+          "active_mass_g_mol": 55.845,
+          "conversion_safe": false,
+          "aliases": [
+            "ferrous sulphate"
+          ],
+          "hydration_note": "Heptahydrate (278.01) is the common form -- a 1.8x difference."
+        },
+        {
+          "id": "ferrous_fumarate",
+          "label": "Ferrous fumarate",
+          "salt_family": "ferrous_salt",
+          "formula": "FeC4H2O4",
+          "molar_mass_g_mol": 169.9,
+          "active_mass_g_mol": 55.845,
+          "conversion_safe": true,
+          "aliases": []
+        },
+        {
+          "id": "ferrous_gluconate",
+          "label": "Ferrous gluconate",
+          "salt_family": "ferrous_salt",
+          "formula": "Fe(C6H11O7)2",
+          "molar_mass_g_mol": 446.14,
+          "active_mass_g_mol": 55.845,
+          "conversion_safe": false,
+          "aliases": [],
+          "hydration_note": "Dihydrate common."
+        },
+        {
+          "id": "ferrous_bisglycinate",
+          "label": "Ferrous bisglycinate",
+          "salt_family": "amino_acid_chelate",
+          "formula": "Fe(C2H4NO2)2",
+          "molar_mass_g_mol": 203.96,
+          "active_mass_g_mol": 55.845,
+          "conversion_safe": true,
+          "aliases": [
+            "iron bisglycinate"
+          ]
+        },
+        {
+          "id": "iron_polysaccharide",
+          "label": "Iron polysaccharide complex",
+          "salt_family": "ferric_complex",
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [],
+          "hydration_note": "Complex of variable composition; iron content is a label claim."
+        },
+        {
+          "id": "iron_unspecified",
+          "label": "Iron, form not stated",
+          "salt_family": null,
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [
+            "iron supplementation"
+          ]
+        }
+      ],
+      "status": "forms enumerated 2026-08-06; molar masses set ONLY where the compound is a single well-defined entity. Everything else is conversion_safe:false. Needs chemistry review before any dose-band work."
+    },
+    "folic_acid": {
+      "dose_basis_kind": "active_moiety",
+      "salt_families": [
+        "synthetic_folate",
+        "reduced_folate"
+      ],
+      "forms": [
+        {
+          "id": "folic_acid",
+          "label": "Folic acid",
+          "salt_family": "synthetic_folate",
+          "formula": "C19H19N7O6",
+          "molar_mass_g_mol": 441.397,
+          "active_mass_g_mol": 441.397,
+          "conversion_safe": true,
+          "aliases": [
+            "pteroylglutamic acid"
+          ]
+        },
+        {
+          "id": "l_methylfolate",
+          "label": "L-5-methyltetrahydrofolate",
+          "salt_family": "reduced_folate",
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [
+            "5-MTHF",
+            "Metafolin"
+          ],
+          "hydration_note": "Sold as calcium or glucosamine salts of differing mass; which is dosed is often unstated."
+        },
+        {
+          "id": "folate_unspecified",
+          "label": "Folate, form not stated",
+          "salt_family": null,
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [
+            "folate",
+            "folic acid supplementation"
+          ]
+        }
+      ],
+      "status": "forms enumerated 2026-08-06; molar masses set ONLY where the compound is a single well-defined entity. Everything else is conversion_safe:false. Needs chemistry review before any dose-band work."
+    },
+    "melatonin": {
+      "dose_basis_kind": "active_moiety",
+      "note": "Release profile, not salt chemistry, is the axis that matters here: immediate and prolonged release behave differently for sleep onset vs maintenance.",
+      "salt_families": [
+        "immediate_release",
+        "prolonged_release"
+      ],
+      "forms": [
+        {
+          "id": "melatonin_immediate",
+          "label": "Melatonin, immediate release",
+          "salt_family": "immediate_release",
+          "formula": "C13H16N2O2",
+          "molar_mass_g_mol": 232.283,
+          "active_mass_g_mol": 232.283,
+          "conversion_safe": true,
+          "aliases": []
+        },
+        {
+          "id": "melatonin_prolonged",
+          "label": "Melatonin, prolonged release",
+          "salt_family": "prolonged_release",
+          "formula": "C13H16N2O2",
+          "molar_mass_g_mol": 232.283,
+          "active_mass_g_mol": 232.283,
+          "conversion_safe": true,
+          "aliases": [
+            "Circadin",
+            "slow release"
+          ]
+        },
+        {
+          "id": "melatonin_unspecified",
+          "label": "Melatonin, release profile not stated",
+          "salt_family": null,
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [
+            "melatonin"
+          ]
+        }
+      ],
+      "status": "forms enumerated 2026-08-06; molar masses set ONLY where the compound is a single well-defined entity. Everything else is conversion_safe:false. Needs chemistry review before any dose-band work."
+    },
+    "caffeine": {
+      "dose_basis_kind": "active_moiety",
+      "salt_families": [
+        "caffeine_base",
+        "caffeine_salt",
+        "natural_source"
+      ],
+      "forms": [
+        {
+          "id": "caffeine_anhydrous",
+          "label": "Caffeine anhydrous",
+          "salt_family": "caffeine_base",
+          "formula": "C8H10N4O2",
+          "molar_mass_g_mol": 194.194,
+          "active_mass_g_mol": 194.194,
+          "conversion_safe": true,
+          "aliases": []
+        },
+        {
+          "id": "caffeine_citrate",
+          "label": "Caffeine citrate",
+          "salt_family": "caffeine_salt",
+          "formula": "C8H10N4O2.C6H8O7",
+          "molar_mass_g_mol": 386.31,
+          "active_mass_g_mol": 194.194,
+          "conversion_safe": true,
+          "aliases": []
+        },
+        {
+          "id": "caffeine_from_coffee",
+          "label": "Caffeine from coffee or tea",
+          "salt_family": "natural_source",
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [
+            "coffee",
+            "green tea"
+          ],
+          "hydration_note": "A beverage carries many other actives; not interchangeable with isolated caffeine."
+        },
+        {
+          "id": "caffeine_unspecified",
+          "label": "Caffeine, source not stated",
+          "salt_family": null,
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [
+            "caffeine"
+          ]
+        }
+      ],
+      "status": "forms enumerated 2026-08-06; molar masses set ONLY where the compound is a single well-defined entity. Everything else is conversion_safe:false. Needs chemistry review before any dose-band work."
+    },
+    "vitamin_c": {
+      "dose_basis_kind": "active_moiety",
+      "salt_families": [
+        "free_acid",
+        "mineral_ascorbate",
+        "lipid_formulation"
+      ],
+      "forms": [
+        {
+          "id": "ascorbic_acid",
+          "label": "Ascorbic acid",
+          "salt_family": "free_acid",
+          "formula": "C6H8O6",
+          "molar_mass_g_mol": 176.124,
+          "active_mass_g_mol": 176.124,
+          "conversion_safe": true,
+          "aliases": [
+            "vitamin C",
+            "L-ascorbic acid"
+          ]
+        },
+        {
+          "id": "sodium_ascorbate",
+          "label": "Sodium ascorbate",
+          "salt_family": "mineral_ascorbate",
+          "formula": "C6H7NaO6",
+          "molar_mass_g_mol": 198.106,
+          "active_mass_g_mol": 176.124,
+          "conversion_safe": true,
+          "aliases": []
+        },
+        {
+          "id": "calcium_ascorbate",
+          "label": "Calcium ascorbate",
+          "salt_family": "mineral_ascorbate",
+          "formula": "Ca(C6H7O6)2",
+          "molar_mass_g_mol": 390.305,
+          "active_mass_g_mol": 352.248,
+          "conversion_safe": false,
+          "aliases": [],
+          "hydration_note": "Dihydrate common."
+        },
+        {
+          "id": "liposomal_vitamin_c",
+          "label": "Liposomal vitamin C",
+          "salt_family": "lipid_formulation",
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [],
+          "hydration_note": "Carrier composition proprietary; ascorbate content is a label claim."
+        },
+        {
+          "id": "vitamin_c_unspecified",
+          "label": "Vitamin C, form not stated",
+          "salt_family": null,
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [
+            "vitamin C supplementation"
+          ]
+        }
+      ],
+      "status": "forms enumerated 2026-08-06; molar masses set ONLY where the compound is a single well-defined entity. Everything else is conversion_safe:false. Needs chemistry review before any dose-band work."
+    },
+    "selenium": {
+      "dose_basis_kind": "elemental",
+      "salt_families": [
+        "inorganic",
+        "organic_selenium",
+        "yeast"
+      ],
+      "forms": [
+        {
+          "id": "sodium_selenite",
+          "label": "Sodium selenite",
+          "salt_family": "inorganic",
+          "formula": "Na2SeO3",
+          "molar_mass_g_mol": 172.938,
+          "active_mass_g_mol": 78.971,
+          "conversion_safe": true,
+          "aliases": []
+        },
+        {
+          "id": "sodium_selenate",
+          "label": "Sodium selenate",
+          "salt_family": "inorganic",
+          "formula": "Na2SeO4",
+          "molar_mass_g_mol": 188.937,
+          "active_mass_g_mol": 78.971,
+          "conversion_safe": false,
+          "aliases": [],
+          "hydration_note": "Decahydrate common."
+        },
+        {
+          "id": "selenomethionine",
+          "label": "Selenomethionine",
+          "salt_family": "organic_selenium",
+          "formula": "C5H11NO2Se",
+          "molar_mass_g_mol": 196.106,
+          "active_mass_g_mol": 78.971,
+          "conversion_safe": true,
+          "aliases": [
+            "L-selenomethionine"
+          ]
+        },
+        {
+          "id": "selenium_yeast",
+          "label": "Selenium-enriched yeast",
+          "salt_family": "yeast",
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [
+            "Se-yeast"
+          ],
+          "hydration_note": "Selenium content is a label claim; speciation varies by batch."
+        },
+        {
+          "id": "selenium_unspecified",
+          "label": "Selenium, form not stated",
+          "salt_family": null,
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [
+            "selenium supplementation"
+          ]
+        }
+      ],
+      "status": "forms enumerated 2026-08-06; molar masses set ONLY where the compound is a single well-defined entity. Everything else is conversion_safe:false. Needs chemistry review before any dose-band work."
+    },
+    "vitamin_e": {
+      "dose_basis_kind": "active_moiety",
+      "note": "Natural (RRR-) and synthetic (all-rac-) alpha-tocopherol are NOT equipotent and their IU conversions differ. IU is deliberately not converted here.",
+      "salt_families": [
+        "natural_tocopherol",
+        "synthetic_tocopherol",
+        "mixed_tocopherols"
+      ],
+      "forms": [
+        {
+          "id": "d_alpha_tocopherol",
+          "label": "d-alpha-tocopherol (natural)",
+          "salt_family": "natural_tocopherol",
+          "formula": "C29H50O2",
+          "molar_mass_g_mol": 430.717,
+          "active_mass_g_mol": 430.717,
+          "conversion_safe": true,
+          "aliases": [
+            "RRR-alpha-tocopherol"
+          ]
+        },
+        {
+          "id": "d_alpha_tocopheryl_acetate",
+          "label": "d-alpha-tocopheryl acetate",
+          "salt_family": "natural_tocopherol",
+          "formula": "C31H52O3",
+          "molar_mass_g_mol": 472.743,
+          "active_mass_g_mol": 430.717,
+          "conversion_safe": true,
+          "aliases": []
+        },
+        {
+          "id": "dl_alpha_tocopherol",
+          "label": "dl-alpha-tocopherol (synthetic)",
+          "salt_family": "synthetic_tocopherol",
+          "formula": "C29H50O2",
+          "molar_mass_g_mol": 430.717,
+          "active_mass_g_mol": 430.717,
+          "conversion_safe": false,
+          "aliases": [
+            "all-rac-alpha-tocopherol"
+          ],
+          "hydration_note": "Synthetic is ~74% as potent as natural per mg; potency is not a mass conversion."
+        },
+        {
+          "id": "mixed_tocopherols",
+          "label": "Mixed tocopherols",
+          "salt_family": "mixed_tocopherols",
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [],
+          "hydration_note": "Gamma/delta ratio varies; alpha content is a label claim."
+        },
+        {
+          "id": "vitamin_e_unspecified",
+          "label": "Vitamin E, form not stated",
+          "salt_family": null,
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [
+            "vitamin E supplementation"
+          ]
+        }
+      ],
+      "status": "forms enumerated 2026-08-06; molar masses set ONLY where the compound is a single well-defined entity. Everything else is conversion_safe:false. Needs chemistry review before any dose-band work."
+    },
+    "beta_carotene": {
+      "dose_basis_kind": "active_moiety",
+      "salt_families": [
+        "synthetic",
+        "natural_source"
+      ],
+      "forms": [
+        {
+          "id": "beta_carotene_synthetic",
+          "label": "Beta-carotene, synthetic",
+          "salt_family": "synthetic",
+          "formula": "C40H56",
+          "molar_mass_g_mol": 536.888,
+          "active_mass_g_mol": 536.888,
+          "conversion_safe": true,
+          "aliases": []
+        },
+        {
+          "id": "beta_carotene_natural",
+          "label": "Beta-carotene from algae or palm",
+          "salt_family": "natural_source",
+          "formula": "C40H56",
+          "molar_mass_g_mol": 536.888,
+          "active_mass_g_mol": 536.888,
+          "conversion_safe": false,
+          "aliases": [
+            "D. salina"
+          ],
+          "hydration_note": "Natural sources carry mixed carotenoids; isomer ratio differs from synthetic."
+        },
+        {
+          "id": "beta_carotene_unspecified",
+          "label": "Beta-carotene, source not stated",
+          "salt_family": null,
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [
+            "beta-carotene"
+          ]
+        }
+      ],
+      "status": "forms enumerated 2026-08-06; molar masses set ONLY where the compound is a single well-defined entity. Everything else is conversion_safe:false. Needs chemistry review before any dose-band work."
+    },
+    "glucosamine": {
+      "dose_basis_kind": "active_moiety",
+      "salt_families": [
+        "glucosamine_salt"
+      ],
+      "forms": [
+        {
+          "id": "glucosamine_hcl",
+          "label": "Glucosamine hydrochloride",
+          "salt_family": "glucosamine_salt",
+          "formula": "C6H13NO5.HCl",
+          "molar_mass_g_mol": 215.63,
+          "active_mass_g_mol": 179.17,
+          "conversion_safe": true,
+          "aliases": [
+            "glucosamine HCl"
+          ]
+        },
+        {
+          "id": "glucosamine_sulfate",
+          "label": "Glucosamine sulfate",
+          "salt_family": "glucosamine_salt",
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [
+            "glucosamine sulphate"
+          ],
+          "hydration_note": "Usually stabilised as a KCl or NaCl co-crystal of variable stoichiometry; this is the form most trials used and its mass basis is often unstated."
+        },
+        {
+          "id": "glucosamine_unspecified",
+          "label": "Glucosamine, form not stated",
+          "salt_family": null,
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [
+            "glucosamine"
+          ]
+        }
+      ],
+      "status": "forms enumerated 2026-08-06; molar masses set ONLY where the compound is a single well-defined entity. Everything else is conversion_safe:false. Needs chemistry review before any dose-band work."
+    },
+    "curcumin": {
+      "dose_basis_kind": "extract",
+      "note": "Bioavailability formulation is the dominant variance source, exactly as with botanical standardisation. Enhanced formulations are DISTINCT forms.",
+      "salt_families": [
+        "unformulated",
+        "bioavailability_enhanced",
+        "phospholipid_complex"
+      ],
+      "forms": [
+        {
+          "id": "curcumin_unformulated",
+          "label": "Curcumin / turmeric extract, unformulated",
+          "salt_family": "unformulated",
+          "formula": "C21H20O6",
+          "molar_mass_g_mol": 368.38,
+          "active_mass_g_mol": 368.38,
+          "conversion_safe": false,
+          "aliases": [
+            "curcuminoids"
+          ],
+          "standardisation": "typically 95% curcuminoids (label claim)"
+        },
+        {
+          "id": "curcumin_piperine",
+          "label": "Curcumin with piperine",
+          "salt_family": "bioavailability_enhanced",
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [
+            "BioPerine",
+            "curcumin + black pepper"
+          ],
+          "standardisation": "piperine co-administration, ratio varies"
+        },
+        {
+          "id": "curcumin_phytosome",
+          "label": "Curcumin phytosome",
+          "salt_family": "phospholipid_complex",
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [
+            "Meriva"
+          ],
+          "standardisation": "phospholipid complex; curcuminoid content ~20% of product mass"
+        },
+        {
+          "id": "curcumin_longvida",
+          "label": "Longvida solid lipid curcumin",
+          "salt_family": "bioavailability_enhanced",
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [
+            "Longvida"
+          ],
+          "standardisation": "solid lipid particle; ~23-26% curcumin (label claim)"
+        },
+        {
+          "id": "turmeric_powder",
+          "label": "Turmeric root powder",
+          "salt_family": "unformulated",
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [
+            "Curcuma longa powder"
+          ],
+          "standardisation": "~3% curcuminoids; NOT interchangeable with extract"
+        },
+        {
+          "id": "curcumin_unspecified",
+          "label": "Curcumin, formulation not stated",
+          "salt_family": null,
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [
+            "curcumin",
+            "turmeric"
+          ]
+        }
+      ],
+      "status": "forms enumerated 2026-08-06; molar masses set ONLY where the compound is a single well-defined entity. Everything else is conversion_safe:false. Needs chemistry review before any dose-band work."
+    },
+    "omega_3": {
+      "dose_basis_kind": "active_moiety",
+      "note": "The dose that matters is EPA+DHA, not total oil. A 1000 mg fish oil capsule typically carries ~300 mg EPA+DHA -- a 3x trap directly analogous to the elemental-dose trap.",
+      "salt_families": [
+        "triglyceride",
+        "ethyl_ester",
+        "phospholipid",
+        "algal"
+      ],
+      "forms": [
+        {
+          "id": "fish_oil_triglyceride",
+          "label": "Fish oil, triglyceride form",
+          "salt_family": "triglyceride",
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [
+            "rTG",
+            "natural triglyceride"
+          ],
+          "hydration_note": "EPA+DHA content is a label claim; total oil mass is not the dose."
+        },
+        {
+          "id": "fish_oil_ethyl_ester",
+          "label": "Fish oil, ethyl ester form",
+          "salt_family": "ethyl_ester",
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [
+            "EE",
+            "Lovaza",
+            "Omacor"
+          ],
+          "hydration_note": "Absorption differs from triglyceride form."
+        },
+        {
+          "id": "krill_oil",
+          "label": "Krill oil",
+          "salt_family": "phospholipid",
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [
+            "Neptune krill oil"
+          ],
+          "hydration_note": "Phospholipid-bound; EPA+DHA per gram is much lower than fish oil."
+        },
+        {
+          "id": "algal_oil",
+          "label": "Algal oil",
+          "salt_family": "algal",
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [
+            "DHA algae oil"
+          ],
+          "hydration_note": "Often DHA-dominant with little EPA."
+        },
+        {
+          "id": "omega_3_unspecified",
+          "label": "Omega-3, form not stated",
+          "salt_family": null,
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [
+            "omega-3",
+            "fish oil",
+            "EPA/DHA"
+          ]
+        }
+      ],
+      "status": "forms enumerated 2026-08-06; molar masses set ONLY where the compound is a single well-defined entity. Everything else is conversion_safe:false. Needs chemistry review before any dose-band work."
+    },
+    "collagen": {
+      "dose_basis_kind": "extract",
+      "salt_families": [
+        "hydrolysed_peptide",
+        "undenatured",
+        "gelatin"
+      ],
+      "forms": [
+        {
+          "id": "collagen_peptides_bovine",
+          "label": "Hydrolysed bovine collagen peptides",
+          "salt_family": "hydrolysed_peptide",
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [
+            "bovine collagen hydrolysate"
+          ],
+          "standardisation": "peptide molecular weight varies by process and is rarely reported"
+        },
+        {
+          "id": "collagen_peptides_marine",
+          "label": "Hydrolysed marine collagen peptides",
+          "salt_family": "hydrolysed_peptide",
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [
+            "fish collagen"
+          ]
+        },
+        {
+          "id": "collagen_uc2",
+          "label": "Undenatured type II collagen",
+          "salt_family": "undenatured",
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [
+            "UC-II"
+          ],
+          "standardisation": "dosed at ~40 mg, two orders of magnitude below peptides -- NOT interchangeable"
+        },
+        {
+          "id": "gelatin",
+          "label": "Gelatin",
+          "salt_family": "gelatin",
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": []
+        },
+        {
+          "id": "collagen_unspecified",
+          "label": "Collagen, form not stated",
+          "salt_family": null,
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [
+            "collagen"
+          ]
+        }
+      ],
+      "status": "forms enumerated 2026-08-06; molar masses set ONLY where the compound is a single well-defined entity. Everything else is conversion_safe:false. Needs chemistry review before any dose-band work."
+    },
+    "ginkgo_biloba": {
+      "dose_basis_kind": "extract",
+      "salt_families": [
+        "standardised_leaf_extract",
+        "crude_leaf"
+      ],
+      "forms": [
+        {
+          "id": "ginkgo_egb761",
+          "label": "EGb 761 standardised leaf extract",
+          "salt_family": "standardised_leaf_extract",
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [
+            "EGb761",
+            "Tanakan",
+            "Tebonin"
+          ],
+          "standardisation": "24% flavone glycosides, 6% terpene lactones (label claim). Most trial evidence uses this extract specifically."
+        },
+        {
+          "id": "ginkgo_extract_generic",
+          "label": "Standardised leaf extract, unbranded",
+          "salt_family": "standardised_leaf_extract",
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [],
+          "standardisation": "nominally 24/6 standardisation"
+        },
+        {
+          "id": "ginkgo_leaf_powder",
+          "label": "Crude leaf powder",
+          "salt_family": "crude_leaf",
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [],
+          "standardisation": "not standardised; NOT interchangeable with extract"
+        },
+        {
+          "id": "ginkgo_unspecified",
+          "label": "Ginkgo, preparation not stated",
+          "salt_family": null,
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [
+            "ginkgo biloba",
+            "ginkgo"
+          ]
+        }
+      ],
+      "status": "forms enumerated 2026-08-06; molar masses set ONLY where the compound is a single well-defined entity. Everything else is conversion_safe:false. Needs chemistry review before any dose-band work."
+    },
+    "probiotics": {
+      "dose_basis_kind": "cfu",
+      "note": "Dosed in COLONY-FORMING UNITS, not mass, and effects are STRAIN-specific -- not species-specific and certainly not genus-specific. Treating two strains of one species as the same form is the probiotic equivalent of treating magnesium oxide as magnesium glycinate.",
+      "salt_families": [
+        "single_strain",
+        "multi_strain",
+        "yeast"
+      ],
+      "forms": [
+        {
+          "id": "lactobacillus_rhamnosus_gg",
+          "label": "Lactobacillus rhamnosus GG",
+          "salt_family": "single_strain",
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [
+            "LGG",
+            "ATCC 53103"
+          ]
+        },
+        {
+          "id": "saccharomyces_boulardii",
+          "label": "Saccharomyces boulardii",
+          "salt_family": "yeast",
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [
+            "S. boulardii CNCM I-745"
+          ]
+        },
+        {
+          "id": "bifidobacterium_longum_1714",
+          "label": "Bifidobacterium longum 1714",
+          "salt_family": "single_strain",
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [
+            "B. longum 1714"
+          ]
+        },
+        {
+          "id": "multi_strain_blend",
+          "label": "Multi-strain blend",
+          "salt_family": "multi_strain",
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [
+            "VSL#3",
+            "probiotic blend"
+          ],
+          "hydration_note": "Composition proprietary and often reformulated under the same name."
+        },
+        {
+          "id": "probiotic_unspecified",
+          "label": "Probiotic, strain not stated",
+          "salt_family": null,
+          "formula": null,
+          "molar_mass_g_mol": null,
+          "active_mass_g_mol": null,
+          "conversion_safe": false,
+          "aliases": [
+            "probiotics"
+          ]
+        }
+      ],
+      "status": "forms enumerated 2026-08-06; molar masses set ONLY where the compound is a single well-defined entity. Everything else is conversion_safe:false. Needs chemistry review before any dose-band work."
     }
   }
 }

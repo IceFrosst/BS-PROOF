@@ -636,9 +636,9 @@ it's the most common trick in the industry and no consumer can currently detect 
 | `conversion_safe` per salt | **New.** Which hydrates are "routinely unstated" is judgment. Wrong in the safe direction (refuses to convert) but costs coverage |
 | Who maps raw population text → 4 axes | **RESOLVED 2026-08-06** — S3 emits the axes directly, PROMPT_VERSION v1.2. See §5 |
 | Epistemonikos supplement coverage | Unknown — measure |
-| OA full-text rate | 78.7% Europe PMC alone, 87.8% projected with green OA — but on **16% of the corpus**, see below |
-| Methods-fact coverage | 88.9% projected on the same 16% slice. **The one COMPLETE corpus (ashwagandha, n=141) gives 65.2% raw OA and 81.5% methods** |
-| **Relevance-order bias — the live risk to the coverage claim** | **New, unresolved.** magnesium (10 555 records) and creatine (9 457) are fetched at caps of 300+1200, so only 14–16% is seen, in *relevance order*. Well-cited papers are disproportionately OA, so those rates are **optimistic**. The gap is visible: the truncated ingredients read 78.9% / 79.7% raw OA, the complete one reads 65.2%. Resolve by raising the caps and re-measuring, not by arguing about it |
+| OA full-text rate | **MEASURED on the FULL corpus (20 155 records, 100%): 68.7%** Europe PMC alone, **76.2%** with green OA. Estimate was 70–75% |
+| Methods-fact coverage | **MEASURED: 77.5% — BELOW the ≥80% target.** Estimate was 80–88%. Two named, unbuilt paths remain: Unpaywall and SR-table inheritance |
+| Relevance-order bias | **RESOLVED 2026-08-06** by re-measuring uncapped. The bias was real and large: the 16% slice read 88.9%, the full corpus reads 77.5%. Any future coverage claim must state the fraction of corpus measured |
 | SR RoB-table parse reliability | Untested; the 10–20× leverage claim depends on it |
 | Blinding integrity | Binary in proxy; over-credits detectable placebos |
 | Multi-ingredient roll-up | Deferred; v1 is 1–2 ingredient products only |
@@ -771,7 +771,31 @@ system that are currently exact.
 
 ## Changelog
 
-- **2026-08-06 rev 3** — Coverage measured over 3141 records with the real
+- **2026-08-06 rev 4** — **Coverage re-measured over the FULL corpus and the
+  target is NOT met.** 20 155 records, 100% of what the query matches:
+
+  | | 16% slice | full corpus |
+  |---|---|---|
+  | Europe PMC alone | 78.7% | **68.7%** |
+  | + green OA (OpenAlex) | 87.8% | **76.2%** |
+  | methods-level facts | 88.9% | **77.5%** |
+
+  The relevance-order bias predicted in rev 3 was real and large. Europe PMC
+  returns results by relevance, well-cited papers are disproportionately open
+  access, and a top-of-ranking slice therefore reads ~11 points high.
+
+  **77.5% against a ≥80% target.** This does not invalidate the approach — the
+  gap is 2.5 points and there are two named, unbuilt paths to close it:
+  **Unpaywall** (needs only a contact email; OpenAlex alone recovered 19–20% of
+  closed records) and **SR-table inheritance**, which is entirely unbuilt and
+  whose leverage the now-meaningful synthesis:primary ratio of **0.52** makes
+  substantial. But 80% is not currently demonstrated, and nothing should claim
+  it is.
+
+  Method note: any coverage figure must now state what fraction of the corpus it
+  measured. `run_coverage.py` prints it and `europepmc.hit_count()` supplies it.
+
+- **2026-08-06 rev 3** — [SUPERSEDED BY REV 4] Coverage measured over 3141 records with the real
   source modules. Europe PMC alone **78.7%** raw OA, **87.8%** projected with
   green OA, **88.9%** methods-level facts — above the ≥80% target §14 called the
   go/no-go. Unpaywall is not in it (needs a contact email).

@@ -379,10 +379,15 @@ def main():
     check("anchor set structurally valid", not cal.validate(anchors),
           "; ".join(cal.validate(anchors)[:2]) or f"{len(anchors)} anchors")
     ready = cal.readiness(anchors)
-    check("readiness names the vocabulary gap",
-          ready["runnable"] < ready["total"] and ready["missing_ingredients"],
-          f"{ready['runnable']}/{ready['total']} runnable, "
-          f"{len(ready['missing_ingredients'])} ingredients missing")
+    check("every in-scope anchor has a vocabulary entry",
+          not ready["missing_ingredients"],
+          f"{ready['runnable']}/{ready['in_scope']} runnable"
+          + (f", missing {ready['missing_ingredients']}"
+             if ready["missing_ingredients"] else ""))
+    check("multi-ingredient anchors deferred, not counted as a gap",
+          ready["deferred_out_of_scope"] == 1
+          and ready["in_scope"] == ready["total"] - 1,
+          "v1 is 1-2 ingredient products (SPEC §2)")
 
     pos = next(a for a in anchors
                if a["band"] == "strong_positive" and a["expected_min"])

@@ -237,20 +237,27 @@ records are already persisted in `out/bsproof.sqlite`.
 `prompt_version: "SYNTHETIC-NOT-REAL"`, every line prefixed. It proves the wiring
 and says nothing about any ingredient. Do not remove those guards.
 
-**COVERAGE MEASURED 2026-08-06 — headline good, caveat serious.**
-Over 3141 records: Europe PMC alone **78.7%** raw OA, **87.8%** projected with
-green OA, **88.9%** methods-level facts, against a ≥80% target.
+**COVERAGE MEASURED ON THE FULL CORPUS 2026-08-06 — target NOT met.**
+20 155 records, 100% of what the query matches:
 
-**But that is 16% of the corpus, in relevance order.** magnesium matches 10 555
-records and creatine 9 457; the run fetches 1500 each. Well-cited papers are
-disproportionately OA, so a top-of-ranking slice reads high — and the bias is
-visible in the run: the two truncated ingredients report 78.9% / 79.7% raw OA,
-while **ashwagandha, the only corpus seen in full (141 of 141), reports 65.2%**
-and projects 81.5% methods-level facts.
+| | Europe PMC | + green OA | methods-level facts |
+|---|---|---|---|
+| **full corpus** | **68.7%** | **76.2%** | **77.5%** |
+| 16% slice (superseded) | 78.7% | 87.8% | 88.9% |
 
-Honest reading: **the ladder clears 80% on the one complete corpus; the big
-ingredients are unmeasured.** Raising `MAX_PRIMARIES` and re-measuring settles
-it — see `Next`. Do not quote 88.9% externally until then.
+**77.5% against a ≥80% target.** The earlier 88.9% was inflated by
+relevance-order truncation — Europe PMC ranks by relevance, well-cited papers
+are disproportionately OA, and a top slice reads ~11 points high. Re-measuring
+uncapped settled it.
+
+This does not invalidate the approach: the gap is 2.5 points with two named,
+unbuilt paths to close it — **Unpaywall** (needs only the contact email; OpenAlex
+alone recovered 19–20% of closed records) and **SR-table inheritance**, entirely
+unbuilt, whose leverage the now-meaningful synthesis:primary ratio of **0.52**
+makes substantial. But **do not claim 80% is demonstrated.** It is not.
+
+Any future coverage figure must state what fraction of the corpus it measured.
+`europepmc.hit_count()` supplies it and `run_coverage.py` prints it.
 
 **🔴 The one hard blocker: `--bare` cannot use a Claude.ai subscription.**
 Diagnosed 2026-08-06. `claude --help`: *"Anthropic auth is strictly

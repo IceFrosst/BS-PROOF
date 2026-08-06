@@ -25,6 +25,11 @@ ANCHORS_CSV = Path(__file__).parent.parent / "docs" / "anchors.csv"
 # not against an absolute range, so a range check on them is meaningless.
 PAIR_BANDS = {"form_pair", "dose_pair", "dose_pair_null", "population_pair"}
 
+# Anchors that cannot run in v1 by DESIGN, not for want of data. v1 scope is
+# 1-2 ingredient products (SPEC section 2); multi-ingredient roll-up is deferred.
+# Listing them as "missing vocabulary" would imply work that should not be done.
+OUT_OF_V1_SCOPE = {"multivitamin"}
+
 
 def load() -> list[dict]:
     with open(ANCHORS_CSV) as f:
@@ -64,6 +69,18 @@ def validate(rows: list[dict] | None = None) -> list[str]:
     return problems
 
 
+def ingredient_key(name: str) -> str:
+    """
+    Anchor-set ingredient name -> vocab/form.json key.
+
+    The anchor set is written for humans ("vitamin D", "omega-3", "folic acid");
+    the vocabulary is keyed for machines. Normalising here rather than rewriting
+    either file keeps the anchor set readable, which matters because a human has
+    to be able to check it.
+    """
+    return name.strip().lower().replace("-", "_").replace(" ", "_")
+
+
 def readiness(rows: list[dict] | None = None) -> dict:
     """
     Which anchors can actually be run today.
@@ -74,12 +91,17 @@ def readiness(rows: list[dict] | None = None) -> dict:
     """
     rows = rows if rows is not None else load()
     known = set(vocab.ingredients())
-    ready = [r for r in rows if r["ingredient"] in known]
-    blocked = sorted({r["ingredient"] for r in rows if r["ingredient"] not in known})
+    in_scope = [r for r in rows if r["ingredient"] not in OUT_OF_V1_SCOPE]
+    deferred = [r for r in rows if r["ingredient"] in OUT_OF_V1_SCOPE]
+    ready = [r for r in in_scope if ingredient_key(r["ingredient"]) in known]
+    blocked = sorted({r["ingredient"] for r in in_scope
+                      if ingredient_key(r["ingredient"]) not in known})
     return {
         "total": len(rows),
+        "in_scope": len(in_scope),
         "runnable": len(ready),
-        "blocked_anchors": len(rows) - len(ready),
+        "deferred_out_of_scope": len(deferred),
+        "blocked_anchors": len(in_scope) - len(ready),
         "missing_ingredients": blocked,
         "pair_anchors": sum(1 for r in rows if r["band"] in PAIR_BANDS),
         "by_test": _count_tests(rows),
@@ -152,14 +174,19 @@ def main() -> int:
     for p in problems:
         print("  PROBLEM:", p)
 
-    print(f"\nrunnable today: {rep['runnable']}/{rep['total']}")
-    print(f"blocked:        {rep['blocked_anchors']} anchors, missing "
-          f"{len(rep['missing_ingredients'])} ingredients from vocab/form.json:")
-    for ing in rep["missing_ingredients"]:
-        print(f"    {ing}")
-    print("\nThe harness is code-complete. The distance to running it is")
-    print("VOCABULARY work, not code: each missing ingredient needs a forms")
-    print("block with salt families and molar masses.")
+    print(f"\nrunnable today: {rep['runnable']}/{rep['in_scope']} in-scope anchors")
+    if rep["deferred_out_of_scope"]:
+        print(f"deferred:       {rep['deferred_out_of_scope']} anchor(s) are "
+              f"multi-ingredient, which v1 does not do (SPEC section 2).")
+        print(f"                Not a vocabulary gap -- do not 'fix' it.")
+    if rep["missing_ingredients"]:
+        print(f"blocked:        {rep['blocked_anchors']} anchors, missing "
+              f"{len(rep['missing_ingredients'])} ingredients from vocab/form.json:")
+        for ing in rep["missing_ingredients"]:
+            print(f"    {ing}")
+    else:
+        print("blocked:        none -- every in-scope anchor has a vocabulary entry.")
+        print("                Running them needs extraction, i.e. ANTHROPIC_API_KEY.")
 
     print("\nmechanisms exercised:")
     for t, n in rep["by_test"].items():
