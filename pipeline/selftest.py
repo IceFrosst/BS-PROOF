@@ -286,6 +286,60 @@ def main():
     check("no posted results -> attrition all null",
           ct.attrition({})["dropout_rate"] is None)
 
+    print("\nSTORAGE (SQLite on a Postgres-shaped schema)")
+    import tempfile
+    from pipeline.storage import Store, now_iso
+    with Store(os.path.join(tempfile.mkdtemp(), "t.sqlite")) as st_db:
+        st_db.upsert_studies([
+            {"_canonical": "registry:nct01234567", "pmid": "1", "is_synthesis": False,
+             "design_rank": 4, "oa": "full_text", "source": "europepmc",
+             "_merged_from": ["a", "b", "c"]},
+            {"_canonical": "doi:109abc", "is_synthesis": True, "design_rank": 2,
+             "oa": "abstract_only", "source": "europepmc"},
+            {"_canonical": "pmid:99", "is_synthesis": False, "design_rank": None,
+             "oa": "abstract_only", "source": "europepmc"}])
+        c = st_db.counts()
+        check("studies persisted", c["studies"] == 3 and c["syntheses"] == 1)
+        check("unclassified queryable as the S1 budget",
+              [r["canonical_id"] for r in st_db.unclassified()] == ["pmid:99"])
+
+        try:
+            st_db.upsert_studies([{"pmid": "7"}])
+            ok = False
+        except ValueError:
+            ok = True
+        check("refuses records that skipped dedup", ok,
+              "no _canonical -> one trial would land four times")
+
+        key = vocab.ecu_key("magnesium", "magnesium_glycinate", None,
+                            "sleep_onset", "general_adult")
+        pv = vocab.population_variants()[0]
+        row = {"ecu_key": key, "ingredient": "magnesium",
+               "form_vocab_id": "magnesium_glycinate", "dose_band": None,
+               "band_version": 0, "outcome_vocab_id": "sleep_onset",
+               "population": {"id": pv["id"], **{a: pv[a] for a in vocab.AXES}},
+               "score": 71, "band": "strong support", "gate_fired": False,
+               "components": {"d": 0.9, "c": 0.85, "H": 0.1, "E": 4.2,
+                              "E_prime": 4.8, "coverage": 0.6},
+               "evidence": {"n_primaries": 5, "n_syntheses": 2, "study_ids": []},
+               "flags": ["brand_funded"],
+               "provenance": {"prompt_version": "v1.1",
+                              "vocab_versions": vocab.versions(),
+                              "computed_at": now_iso()}}
+        st_db.upsert_ecu(row, evidence=[
+            {"canonical_id": "registry:nct01234567", "role": "primary",
+             "w_study": 0.8, "s_value": 1.0, "transfer_factor": 1.0}])
+        check("ECU round-trips", st_db.ecu(key)["score"] == 71)
+        check("audit trail links study to ECU",
+              st_db.evidence_for(key)[0]["canonical_id"] == "registry:nct01234567",
+              "every published number must be reconstructible")
+        check("band_version bump invalidates cached ECUs",
+              st_db.stale_bands(1) == [key],
+              "SPEC section 5 complexity flag, made queryable")
+        st_db.upsert_ecu({**row, "score": 42})
+        check("re-scoring updates in place, no duplicate row",
+              st_db.counts()["ecus"] == 1 and st_db.ecu(key)["score"] == 42)
+
     print(f"\n{'ALL PASSED' if not fails else 'FAILURES: ' + ', '.join(fails)}\n")
     return 1 if fails else 0
 
