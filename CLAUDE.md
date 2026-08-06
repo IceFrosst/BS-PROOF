@@ -17,145 +17,132 @@ product. Full design in `docs/SPEC.md`.
 
 ## Hard invariants — do not violate these
 
-### 1. `claude_adapter.py` is the ONLY file that talks to a model
+### 1. Only **adapter** files may talk to a model
+
+Allowed model boundaries (nothing else):
+
+| File | Role |
+|------|------|
+| `claude_adapter.py` | Claude production (`--bare` + API key) |
+| `pilot_adapter.py` | Claude subscription pilot (not production) |
+| `grok_adapter.py` | Grok pure-function path (separate backend) |
 
 Everything in `pipeline/` and `sources/` is deterministic. If you find yourself
-importing the adapter into `scoring.py` or `dedup.py`, stop.
-
-Deduplication, canonical ID resolution, scoring arithmetic, band mapping, and
-transfer-factor application all have right answers. Putting a model in those
-loops means the same bottle scores differently next Tuesday, and a system making
-public claims about named brands has to be reproducible to be defensible.
+importing an adapter into `scoring.py` or `dedup.py`, stop.
 
 ### 2. Subagents are pure functions, not agents
 
-Invoked with `--bare --max-turns 1`, no tools, no loop, no state. Input JSON on
-stdin, output JSON matching the schema, exit.
+One shot, no tools, no loop, no ambient project memory when possible. Input JSON,
+output JSON matching the schema, exit. If a subagent needs a second turn, the
+**prompt** is wrong — do not raise turn limits to paper over it.
 
-If a subagent seems to need a second turn, the **prompt** is wrong. Do not raise
-`--max-turns`. Do not give a subagent tools.
-
-`--bare` is not optional — it skips CLAUDE.md discovery, hooks, MCP servers, and
-auto-memory. A scientific extraction must not vary with ambient project state.
+Claude production uses `--bare`. Grok path must be equivalently pure (no chat
+memory, fixed prompt version, temperature 0).
 
 ### 3. Bump `PROMPT_VERSION` when you edit any prompt
 
-It's in the cache key (`hash(content, PROMPT_VERSION, model)`). Forget, and the
-system silently serves stale extractions with no error and no way to notice.
-This is the most likely quiet bug in the codebase. Editing `prompts/_shared.md`
-also requires a bump — it is prepended to every subagent call.
+Shared across Claude and Grok adapters. Forget, and caches silently serve stale
+extractions.
 
 ### 4. Never invent a constant
 
-`k = 3.0`, the transfer factors, the RoB thresholds, the OA penalty — these are
-**guesses awaiting calibration**, and they are marked as such. If you change one,
-say so in the PR and update `docs/SPEC.md`. Do not tune them to make a test pass.
+`k`, transfer factors, RoB thresholds, OA penalty — guesses awaiting calibration.
+Change → PR + `docs/SPEC.md`.
 
 ### 5. `null` is a valid answer everywhere
 
-The extraction contract is: never infer a field you cannot see. A `null` is a
-known unknown the pipeline handles. A guess is an unknown unknown that silently
-corrupts every downstream number. Do not add "sensible default" fallbacks to
-extraction code.
+Never infer a field you cannot see.
 
 ### 6. Syntheses are data, not evidence
 
-A meta-analysis contains zero new patients. It never enters evidence mass. It
-contributes: discovery, effect estimates, and a **bounded** multiplier
-(ceiling 1.30). If you change the synthesis path, run the dedup trap test —
-30 meta-analyses over 9 RCTs must not scale with document count.
+Meta-analyses add no evidence mass; bounded multiplier only (ceiling 1.30).
 
 ### 7. Nulls are negative
 
-A well-run trial finding no effect is evidence *against* the product's claim,
-not absence of evidence. `s_i = −0.7`. This is what frees `0` to mean
-"inconclusive" and nothing else. Do not "fix" this to 0.
+Well-run null trial → evidence against (`s_i = −0.7`), not “no data.”
+
+### 8. Dual backends: test separately, never silent-merge
+
+**Founder decision 2026-08-06:** Claude and Grok extraction setups both exist and
+must be **run and evaluated separately**.
+
+- Same prompts/schemas/`PROMPT_VERSION`.
+- Separate stores / report labels (`claude-pilot` vs `grok` vs production).
+- **Never** blend field-level outputs from two providers into one Study without
+  an explicit, logged rule. Default on disagreement: **discard or human review**
+  (under-count), never “average” or “pick the higher score.”
+
+---
+
+## Extraction backends (three paths)
+
+| Path | Auth | Reproducibility | Use for public claims? |
+|------|------|-----------------|------------------------|
+| **Claude production** `claude_adapter` | `ANTHROPIC_API_KEY` + `--bare` | Strongest (hermetic CLI) | Yes, when ready |
+| **Claude pilot** `pilot_adapter` | Claude Pro/Max subscription | Weaker (no `--bare`) | **No** |
+| **Grok pure** `grok_adapter` | `XAI_API_KEY` | Strong if API is pure + pinned model | Only after anchor eval |
+
+```bash
+# Claude pilot (subscription)
+python3 run_pipeline.py creatine --form creatine_monohydrate --pilot
+
+# Grok preflight (scaffold until XAI_API_KEY set)
+python3 grok_adapter.py
+
+# Wiring / no model
+python3 run_pipeline.py creatine --form creatine_monohydrate --wiring
+```
+
+Wire `run_pipeline --grok` when the adapter is live; until then call
+`grok_adapter.call` from a small pilot script or inject `call=` into workers.
+Archive each backend’s run under `reports/runs/` with mode in the filename.
 
 ---
 
 ## Layout
 
 ```
-claude_adapter.py          the ONE model boundary. All CLI coupling lives here.
-pilot_adapter.py           subscription pilot path (NOT production)
-workers.py                 per-study subagent fan-out              [MODEL]
-run_pipeline.py            end-to-end run; --wiring / --pilot
-pipeline/assemble.py       worker JSON -> Study -> ECU rows        [NO MODEL]
-pipeline/scoring.py        signed score                            [NO MODEL]
-pipeline/selftest.py       zero-cost regression test
-scripts/write_demo_report.py  full audit report -> reports/runs/
-reports/                   human-viewable run archive on GitHub
-reports/runs/              one markdown file per test/demo run
-reports/INDEX.md           table of all runs
-reports/latest.md          copy of the newest run
-docs/SPEC.md               full design
-AGENTS.md                  routes every agent here
+claude_adapter.py          Claude production model boundary
+pilot_adapter.py           Claude subscription pilot
+grok_adapter.py            Grok pure-function boundary (separate tests)
+workers.py                 fan-out; `call=` injectable per backend
+run_pipeline.py            --wiring / --pilot (default limit 40)
+scripts/write_demo_report.py
+reports/runs/              immutable human-readable run archive
+pipeline/*                 deterministic only
 ```
 
 ## Commands
 
-Use `python3` (or activate `.venv`) — bare `python` is not on PATH.
-
 ```bash
 python3 -m pipeline.selftest
-python3 run_pipeline.py magnesium --form magnesium_glycinate --wiring
 python3 run_pipeline.py creatine --form creatine_monohydrate --wiring
+python3 run_pipeline.py creatine --form creatine_monohydrate --pilot   # limit 40
+python3 grok_adapter.py                                               # preflight
 python3 scripts/write_demo_report.py --wiring --ingredient creatine --form creatine_monohydrate
-# then: git add reports/ && git commit && git push
 ```
 
 **Run `pipeline.selftest` after any change to `pipeline/`.**
 
 ---
 
-## Reports archive (required for demos)
+## Reports archive
 
-**Every selftest / wiring / pilot summary meant for humans is stored on GitHub**
-under `reports/` so the founder can open it in the browser without terminal
-scrollback.
+Every human-facing demo goes under `reports/runs/` + `INDEX.md` + `latest.md`.
+Commit and push. Never overwrite an old run file. Label provider in the report.
 
-```text
-reports/
-  INDEX.md           # newest run at the top
-  latest.md          # mirror of the newest run body
-  runs/<stamp>_<ingredient>_<form>_<mode>.md   # immutable
-```
-
-### Agent rules
-
-1. After a completed demo, wiring audit, or selftest you want recorded: run
-   `python3 scripts/write_demo_report.py` (add `--wiring` and
-   `--ingredient` / `--form` when scoring a product path).
-2. **Commit and push** `reports/runs/*`, `reports/INDEX.md`, and
-   `reports/latest.md` with that unit of work. Do not only print to the terminal.
-3. **Never overwrite** an old file in `reports/runs/`. The script always creates
-   a new timestamped file.
-4. Label SYNTHETIC vs PILOT clearly (the script does this). Pilot rows must not
-   be presented as production brand scores.
-5. Do not commit API keys, OAuth tokens, or full copyrighted PDFs into `reports/`.
-
-Full field list (inputs, study links, score components, per-study weights): see
-`reports/README.md`.
-
-### Demo caps (wiring path, current build)
+### Demo caps
 
 | Stage | Cap |
 |-------|----:|
-| `retrieve` max primaries | 150 |
-| `retrieve` max syntheses | 50 |
-| Studies fed into synthetic score table | ≤ 40 RCT-rank (`design_rank==4`) primaries |
+| Retrieve max primaries | 150 |
+| Retrieve max syntheses | 50 |
+| Wiring score table | ≤ 40 RCT-rank |
+| **Pilot default `--limit`** | **40** RCT-rank primaries |
 
-`run_pipeline.py --pilot --limit N` defaults to **N=12** studies extracted.
-`retrieve()` defaults elsewhere are higher (800 primaries / 200 syntheses) —
-wiring/report path uses the tighter 150/50 caps above.
-
-Retrieval is by **ingredient** (`creatine`), not form. Form
-(`creatine_monohydrate`) only changes transfer matching when scoring.
-
-Europe PMC hit counts (literature size, not what one demo scores) were measured
-in the millions-of-tokens era around **~9.5k creatine** records for the broad
-query; a single wiring run still only **stores ≤150 primaries** and **scores ≤40**
-RCT-rank rows unless those caps are raised deliberately and documented.
+Retrieval by **ingredient**; form only affects transfer matching.
+Reviews (umbrella / MA / SR) are **fetched first** and ranked 1–3, but the main
+pilot loop extracts **RCT-rank (4)** primaries. SR tables: `run_sr_inheritance.py`.
 
 ---
 
@@ -163,101 +150,57 @@ RCT-rank rows unless those caps are raised deliberately and documented.
 
 | ID | Job | Tier |
 |---|---|---|
-| S1 | design classifier — only when PubMed tags are ambiguous | A |
-| S2 | synthesis extractor | B |
-| S3 | study extractor | B |
-| S4 | RoB scorer | B |
-| S5 | conclusion extractor | B |
-| S6 | outcome mapper | C |
-| S7 | form normalizer | B |
-| S8 | funding classifier | A |
+| S1 | design when tags ambiguous | A |
+| S2 | synthesis / SR tables | B |
+| S3 | study facts | B |
+| S4 | RoB | B |
+| S5 | conclusions | B |
+| S6 | outcome → vocab | C |
+| S7 | form / dose | B |
+| S8 | funding | A |
 
-Tier models: A = haiku-class, B = sonnet-class, C = opus-class (see
-`claude_adapter.TIER_MODEL`). Pin full model IDs before cached production runs.
+Claude tiers: see `claude_adapter.TIER_MODEL`. Grok tiers: `grok_adapter.TIER_MODEL`.
 
 ---
 
 ## Multi-agent workflow (Claude Code + Grok + Codex)
 
-Three agents share this repo and must be able to **take over from each other
-mid-task with no lost context**. The living docs ARE the handoff.
+- **Claude Code** — coding + Claude extractors.
+- **Grok** — GitHub agent + **Grok extraction backend** (this file / `grok_adapter`).
+- **Codex** — via `AGENTS.md` → here.
 
-- **Claude Code** — coding sessions; auto-loads this `CLAUDE.md`.
-- **Grok** — full GitHub read/write; must read this entire file before starting.
-- **Codex** — reads root `AGENTS.md`, which routes it here.
-
-### Rules for every agent
-
-1. **Enter every task as a continuation.** Inspect branch, tree, recent commits,
-   and `Current state` / `Next` before editing.
-2. **Keep `Current state` / `Next` live** in the same commit as the code change.
-3. **Handoff:** one-line `Handoff:` at the top of `Next` when work is in flight.
-4. **Push completed units** so the last push is a clean resume point.
-5. **After any change to `pipeline/`**, run `python -m pipeline.selftest` green.
-6. **Never invent a constant or raise `--max-turns`.**
-7. When design changes, update `docs/SPEC.md` + changelog + diagram.
-8. **Archive demo/selftest reports** under `reports/runs/` (see above).
-
-### Git / source of truth
-
-- GitHub `IceFrosst/BS-PROOF` is the source of truth.
-- Start of session: `git pull`.
-- After each completed unit: commit + `git push` (no force to main).
-- Include `reports/` updates when the unit produced a human-viewable run.
-
----
-
-## Extraction auth (short)
-
-- **Production:** `--bare` + `ANTHROPIC_API_KEY` only. Subscription OAuth does
-  **not** work with `--bare` (measured).
-- **Pilot:** `pilot_adapter.py` on subscription; labelled non-production;
-  hermeticity probe required.
-- **Grok as S1–S8 extractor:** rejected. Narrow yes later as disagreement flagger
-  only, after anchor eval + real adapter.
-
-Details and measurement tables: keep in git history / prior Current state notes;
-do not re-litigate subscription-for-`--bare`.
+Rules: continue in-flight work; keep `Current state` / `Next` live; push completed
+units; selftest after `pipeline/` changes; archive reports; **never silent-merge
+Claude and Grok extractions.**
 
 ---
 
 ## Current state
 
-**Deterministic half of v1 is complete** (retrieve → classify → dedup → registry
-→ storage → assemble → score). Selftest green when last measured.
-
-**Reports archive:** `reports/runs/` + `INDEX.md` + `write_demo_report.py` —
-**required** for founder-visible audits. No runs committed until someone executes
-the script locally and pushes.
-
-**Coverage:** full corpus methods **77.5%** (below 80%). Unpaywall marginal over
-OpenAlex **0.0 pp**. SR-table inheritance is the remaining coverage bet.
-
-**Production extraction** blocked on API key (founder declines spend for now).
-Pilot path exists and model layer was proven on sample S7/S8 calls.
-
-**Form `creatine_monohydrate`** is in vocab; wiring/demo for creatine uses the
-caps in the Reports section (≤150 stored primaries, ≤40 scored).
+Deterministic half complete. Reports archive required. Pilot default **40**.
+**`grok_adapter.py` scaffold added** — needs `XAI_API_KEY` + live wiring +
+anchor comparison before trust. Claude production still needs API key for
+`--bare`. Founder wants **both** Claude and Grok setups tested **separately**.
 
 ## Next
 
-**Handoff:** After local `write_demo_report.py --wiring` runs, commit `reports/`
-so INDEX is no longer empty. Prefer creatine monohydrate or magnesium glycinate
-as the first archived wiring audit.
+**Handoff:** Implement/live-test `grok_adapter` against the same S8/S7 smoke
+payloads used for Claude; archive a Claude-pilot report and a Grok report as
+two rows in `reports/INDEX.md`. Do not merge scores.
 
-1. Founder/agents: archive at least one wiring report to `reports/runs/`.
-2. Re-measure SR-inheritance uplift after author+year resolution fix.
-3. Production API key when public scores are required.
-4. Pin full model IDs before any cached production extraction.
-5. Dose bands after first real extraction clusters.
-6. Venue factor (SPEC §13).
+1. Archive wiring + pilot reports under `reports/runs/`.
+2. Finish `grok_adapter` HTTP path + optional `run_pipeline --grok`.
+3. Side-by-side agreement table on a small fixed paper set (not production).
+4. SR-inheritance uplift re-measure.
+5. Pin model IDs before cached production runs.
+6. Dose bands / venue factor when data exists.
 
 ---
 
 ## Conventions
 
-- Deterministic code → unit tests. Model calls → anchor evals.
-- Every model output carries evidence spans.
-- New constants → `docs/SPEC.md` §13 first.
-- Design change → SPEC + changelog + diagram.
-- **Demo results → `reports/runs/` + INDEX + push.**
+- Deterministic → unit tests. Model → anchor evals (per **provider**).
+- Evidence spans on every model output.
+- New constants → SPEC §13.
+- Demo results → `reports/runs/` + push.
+- Dual backends → separate runs, separate labels, no silent merge.
