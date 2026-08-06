@@ -1,14 +1,9 @@
 """
 Worker JSON -> Study objects -> scored ECU rows. NO MODEL MAY ENTER THIS FILE.
 
-This is the deterministic reducer. Subagents produce observations; every
-judgement made about those observations -- how they weigh, how they transfer,
-what they sum to -- happens here, in arithmetic, so the same corpus produces the
-same score tomorrow.
-
-The riskiest thing this file does is decide what a MISSING extraction means.
-The rule throughout: a null propagates as a null and takes the pessimistic
-factor. It is never replaced by a plausible value.
+Demo flags (for founder demos only — not production claims):
+  exact_form_only=True  drop studies that are not form_match == "exact"
+  ignore_population=True  treat every study as pop_match == "exact"
 """
 from __future__ import annotations
 from datetime import datetime, timezone
@@ -17,25 +12,10 @@ from pipeline import vocab
 from pipeline.scoring import Study, score_ecu
 
 SCORER_VERSION = "v1"
-
-# While band_version is 0 there is no dose axis: the ECU key carries "unbanded",
-# so every study for an ingredient/form is in the same (single) dose bucket by
-# definition and there is no mismatch to penalise. This is NOT a free pass --
-# it is the honest consequence of the dose axis not being live yet. When bands
-# are derived, this becomes a real comparison and scores will move.
 UNBANDED_DOSE_MATCH = "in_band"
 
 
 def _rob_items(s4: dict | None, registry: dict | None) -> dict:
-    """
-    Six binary items. S4 may return null for any of them, and null must survive:
-    scoring.rob_band counts only items that are 0 or 1, so an unverifiable item
-    lowers confidence rather than silently scoring as a failure.
-
-    Item 3 is overridden by the registry when the registry knows, because a date
-    comparison has a right answer and a model's opinion of it does not improve on
-    that.
-    """
     items = {}
     for i in range(1, 7):
         key = {1: "item1_randomisation_method", 2: "item2_double_blind_placebo",
@@ -46,8 +26,6 @@ def _rob_items(s4: dict | None, registry: dict | None) -> dict:
     if registry and registry.get("item3_prospective") is not None:
         items["i3"] = registry["item3_prospective"]
 
-    # Attrition is structured data when the registry has it; RoB item 5's own
-    # threshold (<20%) is applied here rather than trusted to a model.
     if (s4 or {}).get("item5_attrition_ok") is None and registry:
         rate = registry.get("dropout_rate")
         if rate is not None:
@@ -56,28 +34,20 @@ def _rob_items(s4: dict | None, registry: dict | None) -> dict:
 
 
 def to_studies(record: dict, extraction: dict, product: dict,
-               registry: dict | None = None) -> list[tuple[str, Study]]:
-    """
-    One paper -> (outcome_vocab_id, Study) per surviving claim.
-
-    A study that reports six outcomes produces six Studies, five of which may be
-    null_effect. Dropping the nulls would bias every score upward, which is why
-    S5 is instructed to emit them and why they are carried here unchanged.
-
-    Claims whose outcome S6 could not map are DISCARDED, not bucketed into a
-    nearest match.
-    """
+               registry: dict | None = None, *,
+               ignore_population: bool = False) -> list[tuple[str, Study]]:
     s3, s4, s7, s8 = (extraction.get(k) for k in ("S3", "S4", "S7", "S8"))
     ingredient = record["ingredient"]
 
     form_id = (s7 or {}).get("form_vocab_id") or vocab.unspecified_form_id(ingredient)
     form_match = vocab.form_match(ingredient, form_id, product.get("form_vocab_id"))
 
-    study_pop = (s3 or {}).get("population_axes") or {}
-    pop_match = vocab.pop_match(study_pop, product.get("population") or {})
+    if ignore_population:
+        pop_match = "exact"
+    else:
+        study_pop = (s3 or {}).get("population_axes") or {}
+        pop_match = vocab.pop_match(study_pop, product.get("population") or {})
 
-    # funding: S8 null -> "undisclosed", which is the vocabulary's own value for
-    # "not stated", not a default we invented. FUNDING_FACTOR penalises it (0.80).
     funding = (s8 or {}).get("funding_class") or "undisclosed"
 
     rob = _rob_items(s4, registry)
@@ -116,27 +86,38 @@ def _now() -> str:
 def build_ecus(extractions: list[dict], product: dict, *,
                syntheses: list[dict] | None = None,
                prompt_version: str = "unknown",
-               band_version: int = 0) -> list[dict]:
+               band_version: int = 0,
+               exact_form_only: bool = False,
+               ignore_population: bool = False) -> list[dict]:
     """
-    Group every surviving claim by ECU key, score each group, and emit rows
-    matching schemas/ecu.json.
-
-    `extractions`: [{"record": {...}, "extraction": {...}, "registry": {...}}]
-
-    Syntheses are passed to the scorer as a bounded multiplier and NEVER as
-    evidence mass (invariant 6). They are not grouped here at all.
+    exact_form_only: keep only studies with form_match == "exact" (demo).
+    ignore_population: force pop_match == "exact" (demo — no pop transfer penalty).
     """
     ingredient = product["ingredient"]
     form_id = product["form_vocab_id"]
     pop = product["population"]
 
     buckets: dict[str, list[tuple[Study, dict]]] = {}
+    dropped_form = 0
+    kept = 0
     for item in extractions:
         rec, ext = item["record"], item["extraction"]
-        for outcome_id, study in to_studies(rec, ext, product, item.get("registry")):
+        for outcome_id, study in to_studies(
+            rec, ext, product, item.get("registry"),
+            ignore_population=ignore_population,
+        ):
+            if exact_form_only and study.form_match != "exact":
+                dropped_form += 1
+                continue
+            kept += 1
             key = vocab.ecu_key(ingredient, form_id, None if band_version == 0
                                 else product.get("dose_band"), outcome_id, pop["id"])
             buckets.setdefault(key, []).append((study, {"outcome_id": outcome_id}))
+
+    if exact_form_only or ignore_population:
+        print(f"  demo assemble: exact_form_only={exact_form_only} "
+              f"ignore_population={ignore_population} "
+              f"kept_claims={kept} dropped_nonexact_form={dropped_form}")
 
     rows = []
     for key, pairs in sorted(buckets.items()):
@@ -167,14 +148,14 @@ def build_ecus(extractions: list[dict], product: dict, *,
                 "vocab_versions": vocab.versions(),
                 "scorer_version": SCORER_VERSION,
                 "computed_at": _now(),
+                "demo_exact_form_only": exact_form_only,
+                "demo_ignore_population": ignore_population,
             },
         })
     return rows
 
 
 def _flags(s: Study) -> list[str]:
-    """Shown to the user, NEVER scored. These already moved w_study; surfacing
-    them again as a number would double-count."""
     out = []
     if s.funding == "brand_funded":
         out.append("brand_funded")
@@ -188,7 +169,6 @@ def _flags(s: Study) -> list[str]:
 
 
 def evidence_rows(ecu: dict, extractions: list[dict]) -> list[dict]:
-    """The ecu_evidence audit trail: which study, at what weight and discount."""
     by_id = {i["record"]["_canonical"]: i for i in extractions}
     rows = []
     for sid in ecu["evidence"]["study_ids"]:
