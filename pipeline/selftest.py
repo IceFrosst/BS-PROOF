@@ -190,6 +190,67 @@ def main():
     banded = vocab.ecu_key("magnesium", "magnesium_glycinate", "150-250", "sleep_onset", "general_adult")
     check("banding changes the key", banded != k, banded)
 
+    # Sources are tested against FIXTURES, never the network. A regression suite
+    # that needs the internet is one outage away from being skipped.
+    print("\nEUROPE PMC NORMALISATION")
+    from sources import europepmc as ep
+    raw = {"pmid": "123", "doi": "10.1/x", "title": "A trial",
+           "authorString": "Smith J, Jones K", "pubYear": "2019",
+           "abstractText": "Registered as NCT01234567. Magnesium 400 mg daily.",
+           "pubTypeList": {"pubType": ["Randomized Controlled Trial", "Journal Article"]},
+           "isOpenAccess": "N", "journalInfo": {"journal": {"title": "J Test"}}}
+    n = ep.normalise(raw)
+    check("registry id recovered from abstract", n["registration_id"] == "NCT01234567")
+    check("primary not misread as synthesis", n["is_synthesis"] is False)
+    check("no OA -> abstract_only", n["oa"] == "abstract_only")
+    check("fields with no source stay null",
+          n["n"] is None and n["country"] is None and n["dose_text"] is None,
+          "no invented defaults")
+    syn = ep.normalise({**raw, "pubTypeList": {"pubType": ["Meta-Analysis"]},
+                        "pmcid": "PMC1"})
+    check("meta-analysis classified as synthesis", syn["is_synthesis"] is True)
+    check("PMC id -> full_text", syn["oa"] == "full_text")
+
+    print("\nCLINICALTRIALS.GOV (RoB items 3+4, unpublished flag)")
+    from sources import clinicaltrials as ct
+    from datetime import date as _date
+
+    def ctrec(reg, start, **kw):
+        return {"protocolSection": {"statusModule": {
+            "studyFirstSubmitDate": reg,
+            "startDateStruct": {"date": start}, **kw}}}
+
+    check("registered before enrolment -> 1",
+          ct.item3_prospective_registration(ctrec("2019-04-30", "2019-09-01"))[0] == 1)
+    check("registered after enrolment -> 0",
+          ct.item3_prospective_registration(ctrec("2016-03-22", "2008-01-01"))[0] == 0)
+    check("missing start date -> null, not a guess",
+          ct.item3_prospective_registration(ctrec("1999-11-03", None))[0] is None)
+    check("same month at month precision -> null",
+          ct.item3_prospective_registration(ctrec("2019-04-15", "2019-04"))[0] is None,
+          "the answer would depend on a day we do not have")
+
+    done = {"protocolSection": {"statusModule": {
+        "overallStatus": "COMPLETED",
+        "completionDateStruct": {"date": "2014-12-01"}}}}
+    check("completed, no results, overdue -> flagged",
+          ct.unpublished_flag(done, today=_date(2026, 8, 6))["flagged"] is True)
+    check("results posted -> not flagged",
+          ct.unpublished_flag({**done, "hasResults": True},
+                              today=_date(2026, 8, 6))["flagged"] is False)
+    check("recently completed -> not flagged",
+          ct.unpublished_flag(done, today=_date(2015, 1, 1))["flagged"] is False)
+
+    flow = {"resultsSection": {"participantFlowModule": {"periods": [{"milestones": [
+        {"type": "STARTED", "achievements": [{"numSubjects": "800"}, {"numSubjects": "805"}]},
+        {"type": "COMPLETED", "achievements": [{"numSubjects": "760"}, {"numSubjects": "747"}]}]}]}}}
+    a = ct.attrition(flow)
+    check("attrition computed from participant flow",
+          a["n_started"] == 1605 and a["dropout_rate"] == 0.061,
+          f"{a['n_started']} started, dropout {a['dropout_rate']}")
+    check("no posted results -> attrition all null",
+          ct.attrition({})["dropout_rate"] is None)
+
     print(f"\n{'ALL PASSED' if not fails else 'FAILURES: ' + ', '.join(fails)}\n")
     return 1 if fails else 0
 
