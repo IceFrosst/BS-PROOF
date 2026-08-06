@@ -226,6 +226,27 @@ subscription. **An `ANTHROPIC_API_KEY` is required.** Preflight now blocks on it
 Do not drop `--bare` to work around this (invariant 2). No successful subagent
 call has been made yet.
 
+**`CLAUDE_CODE_OAUTH_TOKEN` does not rescue this — measured 2026-08-06, CLI
+2.1.223.** Differential test under `--bare`, all `--model haiku --max-turns 1`:
+
+| credential | result |
+|---|---|
+| garbage `ANTHROPIC_API_KEY` | hangs to timeout — key accepted, real API call attempted |
+| `CLAUDE_CODE_OAUTH_TOKEN` set | instant "Not logged in", `duration_api_ms: 0` |
+| no credential at all | instant "Not logged in" — **identical** |
+
+The OAuth token is not rejected, it is *never read* — behaviour is byte-identical
+to an empty environment. `claude setup-token` therefore cannot unblock subagents
+either, despite its tokens being "inference-only", which is the right scope.
+**Do not spend another session on subscription auth.** The only two routes are
+`ANTHROPIC_API_KEY` or an `apiKeyHelper` via `--settings` that itself returns an
+API key. Both mean console (pay-per-use) billing, separate from a Pro plan.
+
+Operational note from the same test: a *malformed* API key makes the CLI hang
+rather than return a recognisable error, so adapter `_FATAL` matching never fires
+and a bad key burns `retries x timeout` (~9 min/call at defaults). Consider a
+credential smoke-test in `preflight()` before any batch run.
+
 **Built 2026-08-06 — the vocabularies no longer block S3/S6/S7.**
 `vocab/{outcome,form,population}.json` + `schemas/ecu.json` +
 `pipeline/vocab.py` (deterministic, no model). Elemental conversion is now
@@ -260,9 +281,10 @@ succeeds. The pull/push workflow above is unblocked.
 
 ## Next
 
-1. Resolve the `--bare` / `ANTHROPIC_API_KEY` blocker above, then smoke-test one
-   subagent from a plain terminal — the last unproven layer. Confirm
-   `--model haiku` resolves while you're there
+1. **Get an `ANTHROPIC_API_KEY` from console.anthropic.com** — this is now the
+   only unblock (subscription auth is ruled out, see above; do not retry it).
+   Then smoke-test one subagent from a plain terminal — the last unproven layer.
+   Confirm `--model haiku` resolves while you're there
 2. Pin full model IDs in `TIER_MODEL`; add a spend cap (`--max-budget-usd` is
    unused)
 3. **Phase 2 — retrieval.** ✅ `sources/http.py`, `sources/europepmc.py`,
