@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """
-End-to-end v1 run. After --grok / --pilot: auto report + git push reports/.
+End-to-end v1 run.
 
-Disable push: set SP_AUTO_PUSH=0
+  python run_pipeline.py magnesium --form magnesium_glycinate --grok --demo
+
+--demo  exact form match only + ignore population transfer (founder demos)
 """
 from __future__ import annotations
 import os
@@ -21,7 +23,7 @@ DEFAULT_WIRING_SCORE_CAP = 40
 RETRIEVE_MAX_PRIMARIES = 250
 RETRIEVE_MAX_SYNTHESES = 80
 SYNTHETIC_VERSION = "SYNTHETIC-NOT-REAL"
-GROK_STUDIES_IN_FLIGHT = int(os.environ.get("SP_GROK_STUDIES_IN_FLIGHT", "36"))
+GROK_STUDIES_IN_FLIGHT = int(os.environ.get("SP_GROK_STUDIES_IN_FLIGHT", "32"))
 
 
 def _pilot_db(ingredient: str, scope: str):
@@ -78,15 +80,12 @@ def _report_failures(raw: list[dict]) -> None:
 
 
 def _auto_push_report(ingredient: str, form: str, mode: str) -> None:
-    """Write reports/ and push to GitHub so source of truth stays current."""
     try:
         from scripts.auto_report_push import write_report, git_push_reports
         write_report(ingredient, form, mode)
         git_push_reports()
     except Exception as e:
         print(f"Auto-report/push failed: {e}")
-        print("  You can still run: python scripts/auto_report_push.py "
-              f"--ingredient {ingredient} --form {form} --mode {mode}")
 
 
 def main(argv: list[str]) -> int:
@@ -100,6 +99,9 @@ def main(argv: list[str]) -> int:
     grok = "--grok" in args
     if grok:
         args.remove("--grok")
+    demo = "--demo" in args
+    if demo:
+        args.remove("--demo")
     if sum([wiring, pilot, grok]) > 1:
         print("Pick only one of --wiring, --pilot, --grok")
         return 1
@@ -134,7 +136,6 @@ def main(argv: list[str]) -> int:
     pv = vocab.population_variants()[0]
     product = {"ingredient": ingredient, "form_vocab_id": form,
                "population": {"id": pv["id"], **{a: pv[a] for a in vocab.AXES}}}
-    axes = {a: pv[a] for a in vocab.AXES}
 
     if wiring:
         db = WIRING_DB
@@ -162,9 +163,12 @@ def main(argv: list[str]) -> int:
         primaries = [s for s in all_rows if s.get("design_rank") == 4]
         print(f"\nstore: {len(all_rows)} primaries, {len(syn_rows)} syntheses; "
               f"{len(primaries)} RCT-rank (4)")
+        if demo:
+            print("DEMO MODE: score only exact form match; population transfer OFF")
 
         if wiring:
             print("\n!! WIRING MODE — SYNTHETIC numbers only !!\n")
+            axes = {a: pv[a] for a in vocab.AXES}
             extractions = [{
                 "record": {**p, "_canonical": p["canonical_id"], "ingredient": ingredient},
                 "registry": store.registry_facts(p["registration_id"])
@@ -182,11 +186,12 @@ def main(argv: list[str]) -> int:
                     return 1
                 effective = min(limit, len(primaries))
                 print("\n" + "-" * 68)
-                print("GROK MODE — larger batch for more conclusive mass")
+                print("GROK MODE")
                 print(f"  studies in flight: {GROK_STUDIES_IN_FLIGHT}")
                 print(f"  concurrent grok CLI: {ga.MAX_CONCURRENCY}")
                 print(f"  batch size: {effective}")
-                print("  After scores: auto-report + git push reports/")
+                if demo:
+                    print("  --demo: exact form only + no pop penalty")
                 print("-" * 68)
                 call_fn = ga.call
                 prompt_version = f"{ga.PROMPT_VERSION}+{ga.PROVENANCE}"
@@ -197,10 +202,6 @@ def main(argv: list[str]) -> int:
                 import pilot_adapter as pa
                 if not pa.preflight():
                     return 1
-                print("\n" + "-" * 68)
-                print("PILOT MODE — Claude subscription (not production)")
-                print(f"Batch size: {limit}")
-                print("-" * 68)
                 call_fn = lambda agent, payload: pa.call(agent, payload, verified=True)
                 prompt_version = f"{pa.PROMPT_VERSION}+{pa.PILOT_MARKER}"
                 tag = "PILOT "
@@ -228,7 +229,7 @@ def main(argv: list[str]) -> int:
                             if r["record"].get("registration_id") else None,
             } for r in raw if not r["extraction"].get("_skipped")]
             if not extractions:
-                print("No study had usable text — retrieval problem, not scoring.")
+                print("No study had usable text.")
                 return 1
         else:
             import workers
@@ -249,14 +250,18 @@ def main(argv: list[str]) -> int:
             } for r in raw]
             prompt_version = claude_adapter.PROMPT_VERSION
             tag = ""
-            print(claude_adapter.USAGE.report())
 
-        rows = build_ecus(extractions, product, prompt_version=prompt_version)
+        rows = build_ecus(
+            extractions, product,
+            prompt_version=prompt_version,
+            exact_form_only=demo,
+            ignore_population=demo,
+        )
         for row in rows:
             store.upsert_ecu(row)
 
-        print(f"\n{tag}ECU ROWS — {ingredient}, form={form}, "
-              f"population={product['population']['id']}")
+        print(f"\n{tag}ECU ROWS — {ingredient}, form={form}"
+              + (" [DEMO exact-form]" if demo else ""))
         print("-" * 74)
         for row in sorted(rows, key=lambda r: -(r["score"] or -999)):
             o = vocab.outcome(row["outcome_vocab_id"]) or {}
@@ -264,12 +269,10 @@ def main(argv: list[str]) -> int:
             print(f"{tag}{o.get('label', row['outcome_vocab_id']):<32}"
                   f"{score:>7}  {row['band']:<24} n={row['evidence']['n_primaries']}")
         print("-" * 74)
-        print(f"dose_band: unbanded (band_version 0)")
         print(f"\nWritten to {db}")
 
-    # Outside Store lock: report + push (GitHub = source of truth for reports)
     if grok:
-        _auto_push_report(ingredient, form, "grok")
+        _auto_push_report(ingredient, form, "grok-demo" if demo else "grok")
     elif pilot:
         _auto_push_report(ingredient, form, "pilot")
 
