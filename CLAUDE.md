@@ -362,6 +362,31 @@ molar-mass arithmetic in code, not model arithmetic, and it **refuses** to
 convert hydrate-ambiguous salts. Dose bands deliberately deferred:
 `band_version: 0` / `dose_band: null` until real doses exist to cluster.
 
+**First real runs, 2026-08-06 — three silent failures found and fixed.**
+All the same shape: something reported success while producing nothing. This is
+what running the thing catches and unit tests do not.
+
+1. **Storage dropped the abstract.** No `abstract` column, so `retrieve()`
+   fetched abstracts and the store discarded them. The pilot then extracted six
+   studies from an **empty string** — every subagent returned schema-valid
+   output, S5 found no claims, zero ECU rows, exit 0. Fixed with the column plus
+   an additive `_migrate()`: `CREATE TABLE IF NOT EXISTS` skips an existing
+   table, so a new column never reaches an older DB and the symptom is silent
+   data loss.
+2. **Workers spent model calls on empty text.** `extract_study` now refuses
+   below `MIN_TEXT_CHARS`, and the runner says no usable text is a *retrieval*
+   problem, not a scoring one.
+3. **SR inheritance resolved 0 of 36 included studies.** S2 worked — it pulled
+   20 and 16 rows from real reviews — but characteristics tables name trials
+   "Smith 2019", and resolution required a DOI/PMID/NCT. Added author+year as
+   the last tier, which **refuses when ambiguous** (two different Smith 2019
+   studies exist in the corpus; picking one is the dedup trap).
+
+**SR-table inheritance is built but its uplift is still UNMEASURED.** First run:
+S2 succeeded on 3/4 reviews, 36 included studies listed, 0 resolved (pre-fix),
+0 primaries rescued of 298 starved. Re-run needed after the resolution fix
+before any claim about closing the 2.5-point coverage gap.
+
 **Population mapping RESOLVED** (commit `5223369`, `PROMPT_VERSION` v1.2):
 S3 now emits the four population axes directly, with `vocab/population.json`
 in its payload and `population_axes` required by `schemas/s3_study.json`.
