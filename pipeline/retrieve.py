@@ -36,7 +36,7 @@ from sources.http import SourceError
 
 def retrieve(ingredient: str, store: Store, *, max_syntheses: int = 200,
              max_primaries: int = 800, registry_lookups: int = 50,
-             verbose: bool = True) -> dict:
+             scope: str = "broad", verbose: bool = True) -> dict:
     """
     One ingredient, end to end. Returns a stats dict.
 
@@ -48,9 +48,9 @@ def retrieve(ingredient: str, store: Store, *, max_syntheses: int = 200,
     t0 = time.time()
     log = (lambda *a: print(*a)) if verbose else (lambda *a: None)
 
-    log(f"\n=== {ingredient} ===")
+    log(f"\n=== {ingredient} (scope={scope}) ===")
     found = ep.discover(ingredient, max_syntheses=max_syntheses,
-                        max_primaries=max_primaries)
+                        max_primaries=max_primaries, scope=scope)
     syn, pri = found["syntheses"], found["primaries"]
     log(f"  discovered  {len(syn)} syntheses, {len(pri)} primaries")
 

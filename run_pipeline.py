@@ -33,6 +33,7 @@ from pipeline.retrieve import retrieve
 
 WIRING_DB = DEFAULT_DB.parent / "wiring_demo.sqlite"
 PILOT_DB = DEFAULT_DB.parent / "pilot.sqlite"
+PILOT_SUPP_DB = DEFAULT_DB.parent / "pilot_supp.sqlite"
 SYNTHETIC_VERSION = "SYNTHETIC-NOT-REAL"
 
 
@@ -80,6 +81,9 @@ def main(argv: list[str]) -> int:
     pilot = "--pilot" in args
     if pilot:
         args.remove("--pilot")
+    scope = "supplement" if "--supplement-scope" in args else "broad"
+    if scope == "supplement":
+        args.remove("--supplement-scope")
     limit = 12
     if "--limit" in args:
         i = args.index("--limit")
@@ -112,11 +116,13 @@ def main(argv: list[str]) -> int:
                "population": {"id": pv["id"], **{a: pv[a] for a in vocab.AXES}}}
     axes = {a: pv[a] for a in vocab.AXES}
 
-    db = WIRING_DB if wiring else (PILOT_DB if pilot else DEFAULT_DB)
+    db = WIRING_DB if wiring else (
+        (PILOT_SUPP_DB if scope == "supplement" else PILOT_DB) if pilot else DEFAULT_DB)
     with Store(db) as store:
         if store.counts()["studies"] == 0:
             print(f"no corpus in {db.name}; retrieving...")
-            retrieve(ingredient, store, max_syntheses=50, max_primaries=150)
+            retrieve(ingredient, store, max_syntheses=50, max_primaries=150,
+                     scope=scope)
 
         primaries = [s for s in store.studies(syntheses=False)
                      if s.get("design_rank") == 4]
