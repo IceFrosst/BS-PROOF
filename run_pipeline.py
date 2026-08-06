@@ -2,10 +2,10 @@
 """
 End-to-end v1 run: corpus -> extraction -> assembly -> scored ECU rows.
 
-Grok speed knobs (env):
-  SP_GROK_CONCURRENCY=16
-  SP_GROK_STUDIES_IN_FLIGHT=12
-After a --grok run, SPEED REPORT says if you can raise them.
+Grok defaults (override with env / --limit):
+  SP_GROK_CONCURRENCY=48
+  SP_GROK_STUDIES_IN_FLIGHT=36
+  Default --limit for --grok = 100 RCT-rank studies (more mass → less "inconclusive")
 """
 from __future__ import annotations
 import os
@@ -19,11 +19,12 @@ from pipeline.retrieve import retrieve
 WIRING_DB = DEFAULT_DB.parent / "wiring_demo.sqlite"
 
 DEFAULT_PILOT_LIMIT = 40
+DEFAULT_GROK_LIMIT = 100          # more studies → higher E → less inconclusive
 DEFAULT_WIRING_SCORE_CAP = 40
-RETRIEVE_MAX_PRIMARIES = 150
-RETRIEVE_MAX_SYNTHESES = 50
+RETRIEVE_MAX_PRIMARIES = 250      # larger pool to feed the 100-study batch
+RETRIEVE_MAX_SYNTHESES = 80
 SYNTHETIC_VERSION = "SYNTHETIC-NOT-REAL"
-GROK_STUDIES_IN_FLIGHT = int(os.environ.get("SP_GROK_STUDIES_IN_FLIGHT", "12"))
+GROK_STUDIES_IN_FLIGHT = int(os.environ.get("SP_GROK_STUDIES_IN_FLIGHT", "36"))
 
 
 def _pilot_db(ingredient: str, scope: str):
@@ -97,10 +98,14 @@ def main(argv: list[str]) -> int:
     scope = "supplement" if "--supplement-scope" in args else "broad"
     if scope == "supplement":
         args.remove("--supplement-scope")
-    limit = DEFAULT_PILOT_LIMIT
+
+    # Limit: grok wants a bigger batch by default for conclusive mass
+    limit_was_set = "--limit" in args
+    limit = DEFAULT_GROK_LIMIT if grok else DEFAULT_PILOT_LIMIT
     if "--limit" in args:
         i = args.index("--limit")
         limit = int(args[i + 1]); del args[i:i + 2]
+
     form = "magnesium_glycinate"
     if "--form" in args:
         i = args.index("--form")
@@ -134,8 +139,13 @@ def main(argv: list[str]) -> int:
         db = DEFAULT_DB
 
     with Store(db) as store:
-        if store.counts()["studies"] == 0:
-            print(f"no corpus in {db.name}; retrieving...")
+        counts = store.counts()
+        # Grow corpus if thin relative to target batch
+        need_retrieve = counts["studies"] == 0 or (
+            grok and counts["studies"] < min(limit + 50, RETRIEVE_MAX_PRIMARIES)
+        )
+        if need_retrieve:
+            print(f"retrieving / expanding corpus in {db.name}...")
             retrieve(ingredient, store,
                      max_syntheses=RETRIEVE_MAX_SYNTHESES,
                      max_primaries=RETRIEVE_MAX_PRIMARIES,
@@ -164,16 +174,22 @@ def main(argv: list[str]) -> int:
                 ga.reset_stats()
                 if not ga.preflight():
                     return 1
+                # Use every RCT we have up to limit
+                effective = min(limit, len(primaries))
                 print("\n" + "-" * 68)
-                print("GROK MODE — high-throughput pure-function path")
+                print("GROK MODE — larger batch for more conclusive mass")
                 print(f"  studies in flight: {GROK_STUDIES_IN_FLIGHT}")
                 print(f"  concurrent grok CLI: {ga.MAX_CONCURRENCY}")
-                print(f"  batch size: {limit}")
+                print(f"  batch size: {effective} "
+                      f"(default {DEFAULT_GROK_LIMIT}; override --limit N)")
+                print("  Tip: conclusive bands need successful S5/S6 + form match,")
+                print("  not only more parallel processes.")
                 print("-" * 68)
                 call_fn = ga.call
                 prompt_version = f"{ga.PROMPT_VERSION}+{ga.PROVENANCE}"
                 tag = "GROK "
                 in_flight = GROK_STUDIES_IN_FLIGHT
+                limit = effective
             else:
                 import pilot_adapter as pa
                 if not pa.preflight():
@@ -247,6 +263,10 @@ def main(argv: list[str]) -> int:
         print("-" * 74)
         print(f"dose_band: unbanded (band_version 0)")
         print(f"\nWritten to {db}")
+        if any((r.get("band") or "").startswith("inconclusive") for r in rows):
+            print("\nNote: 'inconclusive' = score between -9 and +9 (low confidence mass).")
+            print("  More successful extractions + form/dose match raise |score|.")
+            print("  WinError-206 is fixed; re-run after git pull for fuller S3–S8.")
     return 0
 
 
