@@ -1,8 +1,9 @@
 """
 grok_adapter — pure-function S1–S8 extraction via Grok Build CLI.
 
-Windows note: subprocess must use encoding=utf-8. Default cp1252 blows up on
-non-ASCII model output (UnicodeDecodeError in reader threads).
+Windows: subprocess uses encoding=utf-8 (not cp1252).
+Speed: SP_GROK_CONCURRENCY (default 16). After a run, speed_report() says
+whether you can bump limits higher.
 """
 from __future__ import annotations
 
@@ -36,6 +37,79 @@ CALL_TIMEOUT_S = int(os.environ.get("SP_GROK_TIMEOUT_S", "300"))
 _slots = threading.Semaphore(MAX_CONCURRENCY)
 _lock = threading.Lock()
 
+# Live counters for speed advice
+_stats = {
+    "calls": 0,
+    "ok": 0,
+    "fail": 0,
+    "cache": 0,
+    "timeout": 0,
+    "auth": 0,
+    "latencies": [],  # seconds, successful live calls only
+    "in_flight": 0,
+    "peak_in_flight": 0,
+}
+
+
+def reset_stats() -> None:
+    with _lock:
+        _stats.update({
+            "calls": 0, "ok": 0, "fail": 0, "cache": 0, "timeout": 0, "auth": 0,
+            "latencies": [], "in_flight": 0, "peak_in_flight": 0,
+        })
+
+
+def speed_report() -> str:
+    """Human advice: can we raise concurrency further?"""
+    with _lock:
+        s = dict(_stats)
+        lats = list(_stats["latencies"])
+
+    total_live = s["ok"] + s["fail"]
+    fail_rate = (s["fail"] / total_live) if total_live else 0.0
+    avg_lat = (sum(lats) / len(lats)) if lats else 0.0
+    p95 = sorted(lats)[int(0.95 * (len(lats) - 1))] if len(lats) >= 5 else avg_lat
+
+    lines = [
+        "=" * 60,
+        "GROK SPEED REPORT",
+        f"  concurrent limit (SP_GROK_CONCURRENCY): {MAX_CONCURRENCY}",
+        f"  peak in-flight observed:               {s['peak_in_flight']}",
+        f"  live calls ok/fail/cache: {s['ok']}/{s['fail']}/{s['cache']}",
+        f"  timeouts: {s['timeout']}  auth failures: {s['auth']}",
+        f"  avg latency (ok): {avg_lat:.1f}s   p95: {p95:.1f}s",
+        f"  fail rate: {fail_rate * 100:.1f}%",
+    ]
+
+    # Recommendation
+    if total_live < 10:
+        advice = "Too few calls to judge — run a full batch first."
+    elif s["auth"] > 0:
+        advice = "Auth problems — fix `grok login` / XAI_API_KEY before raising limits."
+    elif fail_rate > 0.25 or s["timeout"] > total_live * 0.15:
+        advice = (
+            f"BACK OFF — high fail/timeout. Try lower, e.g.\n"
+            f"  $env:SP_GROK_CONCURRENCY = \"{max(4, MAX_CONCURRENCY // 2)}\"\n"
+            f"  $env:SP_GROK_STUDIES_IN_FLIGHT = \"{max(4, MAX_CONCURRENCY // 3)}\""
+        )
+    elif fail_rate < 0.05 and s["peak_in_flight"] >= MAX_CONCURRENCY * 0.8 and avg_lat < 90:
+        nxt = min(80, MAX_CONCURRENCY + 8)
+        advice = (
+            f"HEADROOM — stable at {MAX_CONCURRENCY}. You can try higher:\n"
+            f"  $env:SP_GROK_CONCURRENCY = \"{nxt}\"\n"
+            f"  $env:SP_GROK_STUDIES_IN_FLIGHT = \"{min(40, nxt * 3 // 4)}\""
+        )
+    elif fail_rate < 0.10:
+        advice = (
+            f"OK at {MAX_CONCURRENCY}. Optional small bump (+4–8) if you want more speed."
+        )
+    else:
+        advice = f"Hold at {MAX_CONCURRENCY} — mixed results; don't raise yet."
+
+    lines.append(f"  RECOMMENDATION: {advice}")
+    lines.append("=" * 60)
+    return "\n".join(lines)
+
 
 def _which_grok() -> str | None:
     return shutil.which("grok")
@@ -63,13 +137,11 @@ def _child_env() -> dict:
     env = {**os.environ}
     env["PYTHONIOENCODING"] = "utf-8"
     env["PYTHONUTF8"] = "1"
-    # Encourage UTF-8 console I/O for the child on Windows
     env.setdefault("LANG", "C.UTF-8")
     return env
 
 
 def _run_grok(cmd: list[str], timeout: int) -> subprocess.CompletedProcess:
-    """Always decode as UTF-8 so Windows cp1252 cannot crash reader threads."""
     return subprocess.run(
         cmd,
         capture_output=True,
@@ -163,7 +235,16 @@ def _run_variants(grok_bin: str, system: str, user: str, model: str,
             used = cmd
             try:
                 with _slots:
-                    proc = _run_grok(cmd, timeout)
+                    with _lock:
+                        _stats["in_flight"] += 1
+                        _stats["peak_in_flight"] = max(
+                            _stats["peak_in_flight"], _stats["in_flight"]
+                        )
+                    try:
+                        proc = _run_grok(cmd, timeout)
+                    finally:
+                        with _lock:
+                            _stats["in_flight"] -= 1
             except subprocess.TimeoutExpired:
                 last_code, last_out, last_err = 124, "", f"timeout after {timeout}s"
                 continue
@@ -209,6 +290,8 @@ def call(agent: str, payload: dict, *, timeout: int | None = None) -> tuple[dict
     with _lock:
         row = _CONN.execute("SELECT v FROM c WHERE k=?", (k,)).fetchone()
     if row:
+        with _lock:
+            _stats["cache"] += 1
         meta["cached"] = True
         return json.loads(row[0]), meta
 
@@ -216,21 +299,37 @@ def call(agent: str, payload: dict, *, timeout: int | None = None) -> tuple[dict
     if not grok_bin:
         meta["error"] = "grok CLI not on PATH"
         meta["flagged"] = True
+        with _lock:
+            _stats["fail"] += 1
         return None, meta
 
     user = _build_user_prompt(schema, body)
+    t0 = time.time()
     code, stdout, stderr, cmd = _run_variants(grok_bin, system, user, model, timeout)
+    elapsed = time.time() - t0
     meta["cmd_tail"] = " ".join(cmd[-8:]) if cmd else ""
+    meta["latency_s"] = round(elapsed, 2)
+
+    with _lock:
+        _stats["calls"] += 1
 
     if code != 0:
         detail = (stdout or stderr or "")[:400]
         low = detail.lower()
         if any(x in low for x in ("not logged", "login", "unauthor")):
             meta["error"] = f"auth failed. grok login or XAI_API_KEY. ({detail[:180]})"
+            with _lock:
+                _stats["auth"] += 1
+                _stats["fail"] += 1
         elif code == 124:
             meta["error"] = detail or f"timeout after {timeout}s"
+            with _lock:
+                _stats["timeout"] += 1
+                _stats["fail"] += 1
         else:
             meta["error"] = f"exit {code}: {detail[:300]}"
+            with _lock:
+                _stats["fail"] += 1
         meta["flagged"] = True
         return None, meta
 
@@ -238,11 +337,15 @@ def call(agent: str, payload: dict, *, timeout: int | None = None) -> tuple[dict
     if result is None:
         meta["error"] = f"unparseable JSON: {stdout[:240]}"
         meta["flagged"] = True
+        with _lock:
+            _stats["fail"] += 1
         return None, meta
 
     with _lock:
         _CONN.execute("INSERT OR REPLACE INTO c VALUES (?,?)", (k, json.dumps(result)))
         _CONN.commit()
+        _stats["ok"] += 1
+        _stats["latencies"].append(elapsed)
     meta["cached"] = False
     return result, meta
 
@@ -286,6 +389,7 @@ def preflight() -> bool:
 
 
 def smoke_s8() -> int:
+    reset_stats()
     if not preflight():
         return 1
     print("\nSmoke S8 (funding)...")
@@ -296,8 +400,10 @@ def smoke_s8() -> int:
     print(f"elapsed={time.time() - t0:.1f}s")
     if meta.get("error"):
         print("FAIL:", meta["error"])
+        print(speed_report())
         return 1
     print("OK result:", json.dumps(result, indent=2)[:600])
+    print(speed_report())
     return 0
 
 
