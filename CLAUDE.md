@@ -88,7 +88,7 @@ docs/SPEC.md               full design, living document
 docs/ANCHORS.md            28-anchor calibration set
 pipeline_v1.excalidraw     pipeline diagram (root)
 AGENTS.md                  routes every agent to this file
-REVIEW.md                  pending audit fixes awaiting Claude sign-off
+REVIEW.md                  pending audit fixes (signed off 2026-08-06)
 ```
 
 ## Commands
@@ -180,6 +180,31 @@ tree and the next agent inherits it as a resume point.
 A personal app can ship a slightly wrong UI. This system will make public claims
 about named brands. The same bottle must produce the same score tomorrow. That
 is why the hard invariants above exist and why agents must not quietly bypass them.
+
+---
+
+## Local Claude Code plugins (machine-only)
+
+These are **optional developer conveniences** on a local WSL/Claude Code install.
+They are **not** product dependencies. They do not ship via `git clone`. They do
+not replace `claude_adapter.py` or the S1–S8 research agents. Headless `--bare`
+calls ignore MCP/plugins by design (invariant 2).
+
+**Recorded 2026-08-06 on founder machine (user scope / WSL):**
+
+| Plugin / MCP | Status | Role |
+|---|---|---|
+| `claude-md-management` | enabled | Audit / improve this `CLAUDE.md` |
+| `skill-creator` | enabled | Build/eval Claude skills (meta; not required for pipeline) |
+| `github` (official MCP) | installed; MCP **failed** last check | Repo helpers inside Claude Code — fix auth if needed |
+| claude.ai Canva MCP | connected | Design assets; unrelated to scoring |
+| claude.ai Cloudflare MCP | connected | Infra helpers; unrelated to scoring |
+
+**Not installed (deliberately):** playwright, chrome-devtools, superpowers — no
+product UI yet; avoid extra subagent frameworks that compete with S1–S8.
+
+To inspect on a machine: `/plugin` → Installed. New Claude sessions may be
+required after install. Cloud sessions do not automatically inherit WSL plugins.
 
 ---
 
