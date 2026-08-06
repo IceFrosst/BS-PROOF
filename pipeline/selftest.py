@@ -486,6 +486,42 @@ def main():
     check("Unpaywall RAISES without an email, never returns 'no OA'", gated,
           "a silent miss is indistinguishable from a paywalled paper")
 
+    print("\nFULL TEXT (JATS parsing, SR tables)")
+    from sources import fulltext as ft
+    jats = """<article><front><article-meta><abstract><p>Short abstract.</p>
+      </abstract></article-meta></front><body>
+      <sec><title>Materials and Methods</title><p>Randomised, double-blind.</p></sec>
+      <sec><title>Results</title><p>PSQI improved by 2.1 points.</p></sec>
+      <sec><title>Discussion</title><p>We conclude it works.</p></sec>
+      <table-wrap><label>Table 1</label><caption><p>Characteristics of included
+        studies</p></caption><table><tr><th>Author</th><th>Year</th><th>Dose</th>
+        <th>Duration</th></tr><tr><td>Smith</td><td>2019</td><td>400 mg</td>
+        <td>8 wk</td></tr></table></table-wrap>
+      <table-wrap><label>Table 2</label><caption><p>Adverse events</p></caption>
+        <table><tr><th>Event</th><th>n</th></tr><tr><td>Nausea</td><td>3</td></tr>
+        </table></table-wrap></body></article>"""
+    sec = ft.sections(jats)
+    check("JATS sections parsed", set(sec) == {"methods", "results", "discussion"})
+    check("'Materials and Methods' matched as methods",
+          "double-blind" in sec["methods"],
+          "S4 must see methods, not the discussion's confidence")
+    check("results kept separate from discussion",
+          "PSQI" in sec["results"] and "PSQI" not in sec["discussion"],
+          "S5 reads numbers; spin lives in the discussion")
+    tabs = ft.extract_tables(jats)
+    check("tables keep row structure", len(tabs) == 2 and tabs[0]["rows"][1][2] == "400 mg",
+          "flattening a characteristics table loses which dose is whose")
+    inc = [t for t in tabs if ft.looks_like_included_studies(t)]
+    check("included-studies table identified, adverse-events table not",
+          len(inc) == 1 and "included" in (inc[0]["caption"] or "").lower(),
+          "a FILTER for S2, not a decision")
+    check("unparseable XML -> empty, never a partial guess",
+          ft.sections("<not xml") == {} and ft.extract_tables(None) == [])
+    txt, tier = ft.best_text({"pmcid": None, "abstract": "Only an abstract."})
+    check("no full text -> abstract tier is REPORTED, not assumed",
+          tier == "abstract_only" and txt == "Only an abstract.",
+          "silently calling an abstract full_text inflates every score on it")
+
     print("\nSTORAGE (SQLite on a Postgres-shaped schema)")
     import tempfile
     from pipeline.storage import Store, now_iso

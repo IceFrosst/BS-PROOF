@@ -95,6 +95,7 @@ sources/http.py            throttled, retried, disk-cached client
 sources/europepmc.py       discovery + normalisation
 sources/clinicaltrials.py  RoB items 3+4, unpublished flag
 sources/oa.py              green OA — OpenAlex + Unpaywall
+sources/fulltext.py        JATS full text, sections, SR tables
 sources/ratelimit.py       per-domain token bucket
 run_coverage.py            coverage measurement, zero model calls
 docs/SPEC.md               full design, living document
@@ -358,8 +359,10 @@ Everything below the line needs credentials the founder has to create.
    (needs only the contact email) and **SR-table inheritance**, which is
    entirely unbuilt and where the leverage is — synthesis:primary is 0.52 and
    one OA review carries methods facts for ~15 unreadable primaries.
-   `pipeline/synthesis.py` already resolves included studies; what is missing is
-   fetching SR full text and running S2 over it.
+   `pipeline/synthesis.py` resolves included studies and `sources/fulltext.py`
+   fetches JATS + extracts the characteristics tables (verified: 8/8 OA records
+   parsed, included-study tables found in 5). **The only missing piece is the S2
+   call itself**, which needs the API key.
 8. **Venue factor.** `Study.venue_ok` is a boolean; SJR quartiles have nowhere
    to go until a real venue factor exists (new constant -> SPEC §13 first).
 
