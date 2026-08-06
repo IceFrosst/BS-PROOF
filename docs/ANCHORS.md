@@ -1,6 +1,7 @@
 # v1 Calibration Anchor Set
 
-**28 anchors.** Top-tier evidence only — every entry is backed by large RCTs,
+**35 anchors** (`anchors.csv`; this document said 28 until 2026-08-06 — the
+CSV is authoritative and `pipeline/calibration.py` validates it). Top-tier evidence only — every entry is backed by large RCTs,
 Cochrane reviews, or policy-level consensus. No contested-frontier science.
 
 **Purpose:** these are not a gold standard for *magnitude*. They are a face-validity

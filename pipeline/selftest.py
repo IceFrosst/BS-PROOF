@@ -373,6 +373,38 @@ def main():
                           "outcome_vocab_id": "sleep_onset", "discarded": False}]},
                      product)[0][1].funding == "undisclosed")
 
+    print("\nCALIBRATION HARNESS (face validity, not magnitude)")
+    from pipeline import calibration as cal
+    anchors = cal.load()
+    check("anchor set structurally valid", not cal.validate(anchors),
+          "; ".join(cal.validate(anchors)[:2]) or f"{len(anchors)} anchors")
+    ready = cal.readiness(anchors)
+    check("readiness names the vocabulary gap",
+          ready["runnable"] < ready["total"] and ready["missing_ingredients"],
+          f"{ready['runnable']}/{ready['total']} runnable, "
+          f"{len(ready['missing_ingredients'])} ingredients missing")
+
+    pos = next(a for a in anchors
+               if a["band"] == "strong_positive" and a["expected_min"])
+    ev = cal.evaluate({pos["id"]: -50}, anchors)
+    check("wrong side of zero is a SIGN error, the fatal class",
+          len(ev["sign_errors"]) == 1 and not ev["face_valid"],
+          "telling users the opposite of the evidence")
+    ev = cal.evaluate({pos["id"]: None}, anchors)
+    check("gating a well-studied anchor is fatal too",
+          ev["gate_errors"] == [pos["id"]] and not ev["face_valid"])
+    ev = cal.evaluate({pos["id"]: pos["expected_min"] - 20}, anchors)
+    check("right sign, wrong magnitude is NOT fatal",
+          len(ev["range_misses"]) == 1 and ev["face_valid"],
+          "expected while k and the transfer factors are uncalibrated")
+    ev = cal.evaluate({pos["id"]: pos["expected_min"]}, anchors)
+    check("in-range anchor passes", ev["passed"] == 1 and ev["face_valid"])
+    pair = next((a for a in anchors if a["band"] in cal.PAIR_BANDS), None)
+    if pair:
+        ev = cal.evaluate({pair["id"]: 0}, anchors)
+        check("relative pair anchors skipped, not judged on a range",
+              ev["skipped_pair_anchors"] == [pair["id"]])
+
     print("\nSYNTHESIS RESOLUTION (the dedup trap, from the SR side)")
     from pipeline import synthesis as syn
     corpus_rows = [{"canonical_id": "registry:nct00000001", "registration_id": "NCT00000001"},
