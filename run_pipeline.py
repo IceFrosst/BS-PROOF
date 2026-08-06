@@ -153,11 +153,19 @@ def main(argv: list[str]) -> int:
                 registry_for=lambda r: store.registry_facts(r["registration_id"])
                                        if r.get("registration_id") else None,
                 call=lambda agent, payload: pa.call(agent, payload, verified=True))
+            skipped = [r for r in raw if r["extraction"].get("_skipped")]
+            if skipped:
+                print(f"  skipped {len(skipped)}/{len(raw)} studies with no usable "
+                      f"text (no full text and no stored abstract)")
             extractions = [{"record": r["record"], "extraction": r["extraction"],
                             "registry": store.registry_facts(
                                 r["record"]["registration_id"])
                                 if r["record"].get("registration_id") else None}
-                           for r in raw]
+                           for r in raw if not r["extraction"].get("_skipped")]
+            if not extractions:
+                print("\nNo study had usable text. Nothing to score -- this is a")
+                print("retrieval problem, not a scoring one.")
+                return 1
             prompt_version = f"{pa.PROMPT_VERSION}+{pa.PILOT_MARKER}"
         else:
             import workers

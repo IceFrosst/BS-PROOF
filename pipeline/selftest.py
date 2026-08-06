@@ -440,6 +440,23 @@ def main():
           r2["resolved"] is False and syn.quality(mostly_unknown, r2) == 0.0,
           f"{r2['resolved_fraction']:.0%} resolved — score_ecu ignores it")
 
+    # SR characteristics tables name trials "Smith 2019", not by DOI. Measured:
+    # 36 included studies from 3 real reviews resolved ZERO without this tier.
+    ay_corpus = [{"canonical_id": "doi:jones", "first_author": "Jones A", "year": 2018},
+                 {"canonical_id": "doi:smith1", "first_author": "Smith J", "year": 2019},
+                 {"canonical_id": "doi:smith2", "first_author": "Smith K", "year": 2019}]
+    ay_idx = syn.known_index(ay_corpus)
+    ay_res = syn.resolve_included(
+        {"extraction_complete": True, "included_studies": [
+            {"label": "Jones 2018", "first_author": "Jones A", "year": 2018},
+            {"label": "Smith 2019", "first_author": "Smith", "year": 2019}]}, ay_idx)
+    check("author+year resolves an SR row with no DOI",
+          "doi:jones" in ay_res["included_ids"],
+          "without this tier SR inheritance yields nothing")
+    check("ambiguous author+year REFUSES rather than merging two trials",
+          ay_res["unresolved_labels"] == ["Smith 2019"],
+          "two different Smith 2019 studies exist in the corpus")
+
     check("complete SR with a RoB table scores highest quality",
           syn.quality(s2_good, r) == syn.Q_COMPLETE_WITH_ROB)
     check("incomplete extraction is downgraded",

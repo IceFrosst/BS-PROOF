@@ -41,7 +41,20 @@ class Store:
         # uses no FK constraints (Postgres would enforce them differently and
         # partial pipelines legitimately write children before parents).
         self.conn.executescript(SCHEMA_SQL.read_text())
+        self._migrate()
         self.conn.commit()
+
+    def _migrate(self):
+        """
+        Additive column migrations. CREATE TABLE IF NOT EXISTS silently skips an
+        existing table, so a new column never appears in a database created by
+        an older schema -- and the symptom is silent data loss, not an error.
+        Postgres accepts the same ADD COLUMN syntax.
+        """
+        have = {r[1] for r in self.conn.execute("PRAGMA table_info(study)")}
+        for col, ddl in (("abstract", "ALTER TABLE study ADD COLUMN abstract TEXT"),):
+            if col not in have:
+                self.conn.execute(ddl)
 
     def close(self):
         self.conn.close()
@@ -69,7 +82,8 @@ class Store:
             kind = canonical.split(":", 1)[0]
             rows.append((
                 canonical, kind, r.get("pmid"), r.get("pmcid"), r.get("doi"),
-                r.get("registration_id"), r.get("title"), r.get("journal"),
+                r.get("registration_id"), r.get("title"), r.get("abstract"),
+                r.get("journal"),
                 r.get("year"), r.get("first_author"),
                 1 if r.get("is_synthesis") else 0,
                 r.get("design_rank"), r.get("basis"), r.get("oa"),
@@ -79,12 +93,15 @@ class Store:
             ))
         self.conn.executemany(
             "INSERT INTO study (canonical_id, id_kind, pmid, pmcid, doi,"
-            " registration_id, title, journal, year, first_author, is_synthesis,"
+            " registration_id, title, abstract, journal, year, first_author, is_synthesis,"
             " design_rank, design_basis, oa, retracted, merged_from, source, fetched_at)"
-            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
             " ON CONFLICT(canonical_id) DO UPDATE SET"
             "   design_rank=excluded.design_rank, design_basis=excluded.design_basis,"
             "   oa=excluded.oa, merged_from=excluded.merged_from,"
+            # Never overwrite a stored abstract with a null from a later,
+            # thinner record -- that is how the text vanished in the first place.
+            "   abstract=COALESCE(excluded.abstract, study.abstract),"
             "   fetched_at=excluded.fetched_at",
             rows)
         self.conn.commit()

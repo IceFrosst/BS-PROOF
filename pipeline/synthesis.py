@@ -80,6 +80,22 @@ def _resolve_one(entry: dict, known: dict[str, str]) -> str | None:
     for candidate in (reg, _norm_key(entry.get("doi")), _norm_key(entry.get("pmid"))):
         if candidate and candidate in known:
             return known[candidate]
+
+    # Author+year fallback. Measured 2026-08-06: S2 extracted 36 included studies
+    # from three reviews and resolved ZERO, because characteristics tables name
+    # trials as "Smith 2019" and rarely carry a DOI or PMID. Without this tier
+    # the whole SR-inheritance path yields nothing.
+    #
+    # It is deliberately the LAST tier and it REFUSES when ambiguous: if
+    # author+year matches more than one study in the corpus, that is two
+    # different trials and picking one would merge them. Unresolved is the safe
+    # answer (SPEC section 6 fails toward under-count).
+    ay = _author_year_key(entry.get("first_author"), entry.get("year"))
+    if ay:
+        hits = known.get(ay)
+        if isinstance(hits, str):
+            return hits
+        # a set means the key was ambiguous at index time
     # Not in the corpus, but still identifiable: build the id the same way dedup
     # would, so it collapses correctly if the primary is retrieved later.
     if reg or entry.get("doi") or entry.get("pmid"):
@@ -88,6 +104,19 @@ def _resolve_one(entry: dict, known: dict[str, str]) -> str | None:
                                   "pmid": entry.get("pmid")})
         return f"{kind}:{cid}"
     return None
+
+
+def _author_year_key(first_author, year) -> str | None:
+    """
+    "Smith 2019" -> "smith|2019". Surname only: reviews write "Smith J",
+    "Smith, J.", or "Smith et al." for the same person.
+    """
+    if not first_author or not year:
+        return None
+    surname = _norm_key(str(first_author).replace(",", " ").split()[0])
+    if not surname or not str(year).strip().isdigit():
+        return None
+    return f"{surname}|{int(year)}"
 
 
 def _norm_key(v) -> str | None:
@@ -141,7 +170,8 @@ def known_index(studies: list[dict]) -> dict[str, str]:
     Build the lookup `resolve_included` wants from stored study rows:
     every identifier a study carries -> its canonical id.
     """
-    index = {}
+    index: dict = {}
+    ambiguous: set[str] = set()
     for s in studies:
         cid = s.get("canonical_id") or s.get("_canonical")
         if not cid:
@@ -150,4 +180,15 @@ def known_index(studies: list[dict]) -> dict[str, str]:
                     _norm_key(s.get("doi")), _norm_key(s.get("pmid"))):
             if key:
                 index[key] = cid
+
+        # Author+year is the weakest tier and the only one that can collide.
+        # A key matching two DIFFERENT studies is poisoned: mark it so
+        # _resolve_one refuses rather than merging two trials.
+        ay = _author_year_key(s.get("first_author"), s.get("year"))
+        if ay:
+            if ay in index and index[ay] != cid:
+                ambiguous.add(ay)
+            index.setdefault(ay, cid)
+    for key in ambiguous:
+        index[key] = {"ambiguous"}
     return index

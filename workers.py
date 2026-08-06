@@ -27,6 +27,10 @@ from pipeline import vocab
 # out. S6 is the exception: it consumes S5's output and must run after it.
 PER_STUDY = ("S3", "S4", "S5", "S7", "S8")
 
+# Below this, the "study" is a title or nothing. An abstract is ~800-2000 chars;
+# a bare title is ~80. Extraction below this floor cannot produce a real claim.
+MIN_TEXT_CHARS = 200
+
 
 def _payload(agent: str, record: dict, text: str, registry: dict | None) -> dict:
     """
@@ -75,6 +79,17 @@ def extract_study(record: dict, text: str, registry: dict | None = None, *,
     scorer handles, a guess corrupts every number downstream (invariant 5).
     """
     call = call or claude_adapter.call
+
+    # Refuse to extract from nothing. Measured 2026-08-06: a storage schema that
+    # dropped the abstract meant six studies were extracted from an EMPTY string.
+    # Every subagent returned schema-valid output, S5 found no claims, and the
+    # run produced zero ECU rows while reporting success. Empty input is not a
+    # study; spending five model calls to discover that is pure waste.
+    if len((text or "").strip()) < MIN_TEXT_CHARS:
+        return {"_skipped": "no text",
+                "_meta": {"chars": len((text or "").strip())},
+                "outcomes": []}
+
     out: dict = {}
 
     with ThreadPoolExecutor(max_workers=max_workers) as pool:

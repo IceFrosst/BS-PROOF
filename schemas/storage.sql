@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS study (
     doi               TEXT,
     registration_id   TEXT,
     title             TEXT,
+    abstract          TEXT,   -- fallback extraction text when no full text
     journal           TEXT,
     year              INTEGER,
     first_author      TEXT,
