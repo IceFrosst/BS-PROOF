@@ -2,9 +2,11 @@
 """
 End-to-end v1 run.
 
+  python run_pipeline.py magnesium --form magnesium_glycinate --grok --with-sr
   python run_pipeline.py magnesium --form magnesium_glycinate --grok --demo
 
---demo  exact form match only + ignore population transfer (founder demos)
+--with-sr  extract S2 on stored meta-analyses and apply capped E' multiplier
+--demo     exact form only + ignore population (founder demos)
 """
 from __future__ import annotations
 import os
@@ -24,6 +26,7 @@ RETRIEVE_MAX_PRIMARIES = 250
 RETRIEVE_MAX_SYNTHESES = 80
 SYNTHETIC_VERSION = "SYNTHETIC-NOT-REAL"
 GROK_STUDIES_IN_FLIGHT = int(os.environ.get("SP_GROK_STUDIES_IN_FLIGHT", "32"))
+MAX_SRS = int(os.environ.get("SP_MAX_SRS", "15"))
 
 
 def _pilot_db(ingredient: str, scope: str):
@@ -102,6 +105,9 @@ def main(argv: list[str]) -> int:
     demo = "--demo" in args
     if demo:
         args.remove("--demo")
+    with_sr = "--with-sr" in args
+    if with_sr:
+        args.remove("--with-sr")
     if sum([wiring, pilot, grok]) > 1:
         print("Pick only one of --wiring, --pilot, --grok")
         return 1
@@ -146,6 +152,7 @@ def main(argv: list[str]) -> int:
     else:
         db = DEFAULT_DB
 
+    call_fn = None
     with Store(db) as store:
         counts = store.counts()
         need_retrieve = counts["studies"] == 0 or (
@@ -165,6 +172,8 @@ def main(argv: list[str]) -> int:
               f"{len(primaries)} RCT-rank (4)")
         if demo:
             print("DEMO MODE: score only exact form match; population transfer OFF")
+        if with_sr:
+            print(f"WITH-SR MODE: up to {MAX_SRS} meta-analyses via S2 (capped multiplier)")
 
         if wiring:
             print("\n!! WIRING MODE — SYNTHETIC numbers only !!\n")
@@ -177,6 +186,7 @@ def main(argv: list[str]) -> int:
             } for p in primaries[:DEFAULT_WIRING_SCORE_CAP]]
             prompt_version = SYNTHETIC_VERSION
             tag = "SYNTHETIC "
+            syntheses_for_score = []
         elif pilot or grok:
             import workers
             if grok:
@@ -190,6 +200,8 @@ def main(argv: list[str]) -> int:
                 print(f"  studies in flight: {GROK_STUDIES_IN_FLIGHT}")
                 print(f"  concurrent grok CLI: {ga.MAX_CONCURRENCY}")
                 print(f"  batch size: {effective}")
+                if with_sr:
+                    print(f"  --with-sr: S2 on ≤{MAX_SRS} reviews")
                 if demo:
                     print("  --demo: exact form only + no pop penalty")
                 print("-" * 68)
@@ -231,6 +243,17 @@ def main(argv: list[str]) -> int:
             if not extractions:
                 print("No study had usable text.")
                 return 1
+
+            syntheses_for_score = []
+            if with_sr and call_fn is not None:
+                from pipeline.synthesis_bridge import build_syntheses_for_scoring
+                syntheses_for_score = build_syntheses_for_scoring(
+                    store,
+                    call=call_fn,
+                    text_for=lambda r: _best_text(r),
+                    max_srs=MAX_SRS,
+                    max_workers=min(4, GROK_STUDIES_IN_FLIGHT),
+                )
         else:
             import workers
             import claude_adapter
@@ -250,9 +273,11 @@ def main(argv: list[str]) -> int:
             } for r in raw]
             prompt_version = claude_adapter.PROMPT_VERSION
             tag = ""
+            syntheses_for_score = []
 
         rows = build_ecus(
             extractions, product,
+            syntheses=syntheses_for_score,
             prompt_version=prompt_version,
             exact_form_only=demo,
             ignore_population=demo,
@@ -261,20 +286,31 @@ def main(argv: list[str]) -> int:
             store.upsert_ecu(row)
 
         print(f"\n{tag}ECU ROWS — {ingredient}, form={form}"
-              + (" [DEMO exact-form]" if demo else ""))
+              + (" [DEMO]" if demo else "")
+              + (" [+SR]" if with_sr else ""))
         print("-" * 74)
         for row in sorted(rows, key=lambda r: -(r["score"] or -999)):
             o = vocab.outcome(row["outcome_vocab_id"]) or {}
             score = "gated" if row["score"] is None else f"{row['score']:+d}"
+            cov = (row.get("components") or {}).get("coverage")
+            extra = f"  cov={cov}" if cov else ""
             print(f"{tag}{o.get('label', row['outcome_vocab_id']):<32}"
-                  f"{score:>7}  {row['band']:<24} n={row['evidence']['n_primaries']}")
+                  f"{score:>7}  {row['band']:<24} n={row['evidence']['n_primaries']}"
+                  f"{extra}")
         print("-" * 74)
+        if with_sr:
+            print("Note: SRs only boost confidence (E'), never add fake trial mass.")
         print(f"\nWritten to {db}")
 
+    mode = "grok"
+    if demo:
+        mode += "-demo"
+    if with_sr:
+        mode += "-sr"
     if grok:
-        _auto_push_report(ingredient, form, "grok-demo" if demo else "grok")
+        _auto_push_report(ingredient, form, mode)
     elif pilot:
-        _auto_push_report(ingredient, form, "pilot")
+        _auto_push_report(ingredient, form, "pilot" + ("-sr" if with_sr else ""))
 
     return 0
 
