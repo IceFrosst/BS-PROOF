@@ -51,6 +51,19 @@ APPLY_FORM_IN_WEIGHT = False
 # flipping it can never silently leave the suite meaningless.
 APPLY_POP_IN_WEIGHT = False
 
+# Founder 2026-08-07: dose OUT of the weight too. All three transfer axes --
+# form, dose, population -- are now APPLICABILITY and live only on the arcs.
+#
+# The centre number therefore answers exactly one question: does this ingredient
+# work for this outcome, on the best evidence available, regardless of whose
+# bottle it is. Whether that evidence applies to YOUR bottle is the arcs' job,
+# and they can only ever qualify the number, never inflate it.
+#
+# The consequence, stated plainly: two products differing only in form or dose
+# now share a centre number. The difference is real and is carried by the arcs,
+# so the centre number must never be published without them.
+APPLY_DOSE_IN_WEIGHT = False
+
 
 def band_for(score: int) -> str:
     """SPEC §9 bands, inclusive on both ends of each range."""
@@ -117,7 +130,8 @@ class Study:
         # Form is applicability (form arc), not a center-score penalty.
         if APPLY_FORM_IN_WEIGHT:
             w *= FORM_FACTOR.get(self.form_match, 0.30)
-        w *= DOSE_FACTOR.get(self.dose_match, 0.45)
+        if APPLY_DOSE_IN_WEIGHT:
+            w *= DOSE_FACTOR.get(self.dose_match, 0.45)
         if APPLY_POP_IN_WEIGHT:
             w *= POP_FACTOR.get(self.pop_match, 0.35)
         return w

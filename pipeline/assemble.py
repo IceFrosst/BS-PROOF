@@ -211,6 +211,10 @@ def build_ecus(extractions: list[dict], product: dict, *,
             },
             "form_mix": {t: sum(1 for st in studies if st.form_match == t)
                          for t in {st.form_match for st in studies}},
+            # Weight-based applicability shares. Counting studies would let ten
+            # tiny trials outvote one large one; the arcs must agree with the
+            # evidence mass the centre number was built from.
+            "applicability": _applicability(pairs),
             "flags": sorted({f for s in studies for f in _flags(s, rec=None)}),
             "provenance": {
                 "prompt_version": prompt_version,
@@ -222,6 +226,46 @@ def build_ecus(extractions: list[dict], product: dict, *,
             },
         })
     return rows
+
+
+def _applicability(pairs: list) -> dict:
+    """
+    How much of this ECU's evidence WEIGHT actually applies to the product.
+
+    `pairs` is [(Study, {"outcome_id", "dose"}), ...] as built in build_ecus.
+
+    Each axis reports two numbers, and the difference between them is the whole
+    point:
+        match       weight that matches the product on this axis
+        assessable  weight where the axis could be judged at all
+
+    0% matched means the evidence disagrees with your bottle. 0% assessable
+    means nobody reported it. Those are opposite messages, and the arc draws
+    them differently -- unfilled versus hatched.
+
+    Weight-based, not study-count-based: ten tiny trials must not outvote one
+    large one, because the arcs have to agree with the evidence mass the centre
+    number was built from.
+    """
+    total = sum(st.weight() for st, _ in pairs) or 1.0
+
+    def share(pred):
+        return round(sum(st.weight() for st, meta in pairs if pred(st, meta)) / total, 3)
+
+    return {
+        "form": {
+            "match": share(lambda st, m: st.form_match == "exact"),
+            "assessable": share(lambda st, m: st.form_match != "unspecified"),
+        },
+        "dose": {
+            "match": share(lambda st, m: st.dose_match == "in_band"),
+            "assessable": share(lambda st, m: m["dose"]["dose_low_mg"] is not None),
+        },
+        "population": {
+            "match": share(lambda st, m: st.pop_match == "exact"),
+            "assessable": share(lambda st, m: st.pop_match != "unknown"),
+        },
+    }
 
 
 def _flags(s: Study, rec=None) -> list[str]:

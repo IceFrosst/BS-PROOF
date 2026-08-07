@@ -125,6 +125,43 @@ ARCS = (
 UNMEASURED = "#b9bec4"
 
 
+def arc_detail(ecu: dict) -> dict:
+    """
+    Per axis: {fill, assessable}. `fill` is how much of the evidence weight
+    matches your product; `assessable` is how much could be judged at all.
+
+    The gap between them is drawn hatched, so the ring reads in three parts:
+        filled    evidence that matches your bottle
+        empty     evidence that was judged and does NOT match
+        hatched   evidence nobody reported this axis for
+    Collapsing the last two would turn "unknown" into "wrong".
+    """
+    app = ecu.get("applicability") or {}
+    out = {"effect": {"fill": (ecu.get("components") or {}).get("c"),
+                      "assessable": 1.0}}
+    if app:
+        for key in ("form", "dose"):
+            a = app.get(key) or {}
+            out[key] = {"fill": a.get("match"), "assessable": a.get("assessable", 0.0)}
+        return out
+
+    # Rows written before `applicability` existed. Derive what we can so an
+    # older report does not silently render as "nothing was assessable".
+    mix = ecu.get("form_mix") or {}
+    total = sum(mix.values())
+    out["form"] = {
+        "fill": (mix.get("exact", 0) / total) if total else None,
+        "assessable": (1 - mix.get("unspecified", 0) / total) if total else 0.0,
+    }
+    legacy_dose = ecu.get("dose") or {}
+    has_band = legacy_dose.get("low") is not None
+    out["dose"] = {
+        "fill": legacy_dose.get("evidence_with_dose") if has_band else None,
+        "assessable": legacy_dose.get("evidence_with_dose", 0.0) if has_band else 0.0,
+    }
+    return out
+
+
 def arc_fills(ecu: dict) -> dict:
     """
     The three fill fractions, or None where the axis is genuinely unassessed.
@@ -132,14 +169,18 @@ def arc_fills(ecu: dict) -> dict:
     None is not zero. An unmeasured axis renders hatched, because "we did not
     check your dose" and "your dose is wrong" are opposite messages.
     """
+    app = ecu.get("applicability")
+    if app:
+        d = arc_detail(ecu)
+        return {k: (v["fill"] if v["assessable"] else None) for k, v in d.items()}
+
+    # Legacy rows written before applicability existed.
     comp = ecu.get("components") or {}
     dose = ecu.get("dose") or {}
     fills = {"effect": comp.get("c")}
-
     mix = ecu.get("form_mix") or {}
     total = sum(mix.values())
     fills["form"] = (mix.get("exact", 0) / total) if total else None
-
     fills["dose"] = dose.get("evidence_with_dose") if dose.get("low") is not None else None
     return fills
 
@@ -170,13 +211,24 @@ def three_arc_svg(ecu: dict, *, size: int = 300) -> str:
         "</pattern></defs>"
     )
 
+    detail = arc_detail(ecu)
     for i, (key, _label, _desc) in enumerate(ARCS):
         r = (size / 2) - stroke / 2 - i * gap
         circ = 2 * math.pi * r
         f = fills.get(key)
+        assessable = detail.get(key, {}).get("assessable", 0.0) or 0.0
+        # Base ring: solid where the axis could be judged, hatched where it
+        # could not. Unfilled-solid means "judged, does not match"; hatched
+        # means "nobody reported it" -- opposite messages, drawn differently.
         rings.append(
             f'<circle cx="{cx}" cy="{cy}" r="{r:.1f}" fill="none" '
-            f'stroke="{"url(#hatch)" if f is None else TRACK}" stroke-width="{stroke:.1f}"/>')
+            f'stroke="url(#hatch)" stroke-width="{stroke:.1f}"/>')
+        if assessable > 0:
+            solid = circ * min(1.0, assessable)
+            rings.append(
+                f'<circle cx="{cx}" cy="{cy}" r="{r:.1f}" fill="none" stroke="{TRACK}" '
+                f'stroke-width="{stroke:.1f}" stroke-dasharray="{solid:.1f} {circ - solid:.1f}" '
+                f'transform="rotate(-90 {cx} {cy})"/>')
         if f is not None and not (gated and key == "effect"):
             dash = circ * max(0.0, min(1.0, float(f)))
             rings.append(

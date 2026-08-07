@@ -95,9 +95,16 @@ def main():
         check("form does NOT move the centre score (founder decision)",
               exact_s == diff_s,
               f"exact {exact_s} == different {diff_s} — form lives on the arc only")
-        check("dose still collapses the score",
-              score_ecu(rcts(9, dose_match="below_50"), [])["score"] < a["score"] - 50,
-              "dose is the ONLY transfer axis still in the weight")
+        if _sc.APPLY_DOSE_IN_WEIGHT:
+            check("dose collapses the score",
+                  score_ecu(rcts(9, dose_match="below_50"), [])["score"] < a["score"] - 50)
+        else:
+            check("no transfer axis moves the centre number any more",
+                  len({score_ecu(rcts(9, form_match=f, dose_match=d, pop_match=p), [])["score"]
+                       for f, d, p in (("exact", "in_band", "exact"),
+                                       ("different", "below_50", "different"))}) == 1,
+                  "centre = design x RoB x size x funding x OA only; "
+                  "form/dose/population are arcs")
         if _sc.APPLY_POP_IN_WEIGHT:
             check("population collapses the score",
                   score_ecu(rcts(9, pop_match="different"), [])["score"] <= a["score"] - 30)
@@ -681,7 +688,7 @@ def main():
           f"{preview.studies_needed(0.023)} vs {preview.studies_needed(0.56)} studies for c=0.9")
 
     print("\nTHREE-ARC DONUT (effect / form / dose)")
-    from pipeline.donut import three_arc_svg, arc_fills
+    from pipeline.donut import three_arc_svg, arc_fills, TRACK
     full = {"score": 33, "band": "moderate support", "gate_fired": False,
             "components": {"c": 0.72},
             "form_mix": {"exact": 4, "salt_family": 1, "different": 1},
@@ -695,9 +702,30 @@ def main():
     check("unassessed dose is None, NOT zero",
           arc_fills(nodose)["dose"] is None,
           "'we did not check' and 'your dose is wrong' are opposite messages")
-    check("unassessed arc renders hatched", "url(#hatch)" in three_arc_svg(nodose))
-    check("measured arcs are not hatched",
-          three_arc_svg(full).count("url(#hatch)") == 0)
+    from pipeline.donut import arc_detail
+    wrong_dose = {"components": {"c": 0.8}, "applicability": {
+        "form": {"match": 1.0, "assessable": 1.0},
+        "dose": {"match": 0.05, "assessable": 1.0}}}
+    check("dose arc tracks MATCH, not coverage",
+          arc_fills(wrong_dose)["dose"] == 0.05,
+          "a 10x-underdosed product must not show a full dose arc")
+    unreported = {"components": {"c": 0.8}, "applicability": {
+        "form": {"match": 1.0, "assessable": 1.0},
+        "dose": {"match": 0.0, "assessable": 0.0}}}
+    check("nobody reported a dose -> None (hatched), not 0 (wrong)",
+          arc_fills(unreported)["dose"] is None
+          and arc_detail(unreported)["dose"]["assessable"] == 0.0)
+    # Every ring now sits on a hatched base; a solid track is drawn over the
+    # ASSESSABLE portion. So "hatch visible" == "part of this axis was never
+    # reported", which is exactly the message it should carry.
+    def solid_tracks(svg):
+        return svg.count(f'stroke="{TRACK}" stroke-width')
+    check("an assessable axis gets a solid track over the hatch",
+          solid_tracks(three_arc_svg(full)) == 3,
+          "all three axes judged")
+    check("an unassessable axis leaves the hatch bare",
+          solid_tracks(three_arc_svg(nodose)) == 2,
+          "dose never reported -> hatched, not empty")
     check("form arc reflects the exact-form share only",
           abs(arc_fills({"form_mix": {"exact": 1, "different": 9}})["form"] - 0.1) < 1e-9)
 
