@@ -23,6 +23,7 @@ Order matters and is not arbitrary:
     python -m pipeline.retrieve magnesium creatine ashwagandha
 """
 from __future__ import annotations
+import os
 import sys
 import time
 
@@ -56,12 +57,19 @@ def retrieve(ingredient: str, store: Store, *, max_syntheses: int = 200,
         # sleep trials do not rank highly for a generic "magnesium" search.
         from pipeline import vocab
         oids = sorted(vocab.outcome_ids())
-        per = max(1, max_primaries // max(len(oids), 1))
+        # The quota is PER OUTCOME and is NOT max_primaries split 30 ways.
+        # Dividing a single-query budget starved everything: 600/30 = 20 each,
+        # which after dedup and the full-text filter left 1.8 studies per
+        # outcome. Two multipliers eat this budget and both are large:
+        #   ~60% of rows are duplicates -- one trial matches sleep AND anxiety
+        #   ~65% of RCTs are dropped by full-text-only (35% survive, measured)
+        # So a quota of N yields roughly N/7 usable studies per outcome.
+        per = int(os.environ.get("SP_PER_OUTCOME_QUOTA", "60"))
         byo = ep.discover_by_outcome(ingredient, oids, per_outcome=per)
         pri = byo["primaries"]
         covered = {k: v for k, v in byo["by_outcome"].items() if v}
         log(f"  per-outcome  {len(covered)}/{len(oids)} outcomes returned trials "
-            f"(quota {per} each)")
+            f"(quota {per} each, ~{per // 7} expected usable after dedup+full-text)")
         thin = sorted(k for k, v in byo["by_outcome"].items() if v < 5)
         if thin:
             log(f"    thin (<5 trials): {', '.join(thin[:8])}"
