@@ -1,0 +1,878 @@
+{
+  "ingredient": "magnesium",
+  "form": "magnesium_glycinate",
+  "scope": "intervention",
+  "studies_targeted": 20,
+  "studies_ok": 20,
+  "studies_skipped": 0,
+  "studies_failed_partial": 6,
+  "predatory": {
+    "list_entries": 0,
+    "studies_checked": 335,
+    "studies_predatory": 0,
+    "journals_predatory": [],
+    "journals_predatory_n": 0,
+    "zero_weight": false,
+    "source": "The Predatory Journals List 2025 (in-repo)"
+  },
+  "studies_list": [
+    {
+      "title": "Efficacy of a Naturally Calcium and Magnesium-Rich Mineral Water on Musculoskeletal Fragility: A Randomized, Double-Blind Controlled Trial.",
+      "year": 2026,
+      "doi": "10.3390/nu18030470",
+      "pmid": "41683292",
+      "canonical_id": "doi:103390nu18030470",
+      "journal": "Nutrients",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Effects of a &lt;i&gt;Scutellaria baicalensis&lt;/i&gt;/&lt;i&gt;Crataegus laevigata&lt;/i&gt;, magnesium and chromium supplement on stressed individuals: A randomised, double-blind, placebo-controlled, crossover trial.",
+      "year": 2025,
+      "doi": "10.1177/02698811251381261",
+      "pmid": "41194549",
+      "canonical_id": "registry:nct05757050",
+      "journal": "Journal of psychopharmacology (Oxford, England)",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": true
+    },
+    {
+      "title": "The Association of Gut Microbiota With TRPM7 Genotype, Colorectal Polyps, and Magnesium.",
+      "year": 2025,
+      "doi": "10.1016/j.tjnut.2025.07.015",
+      "pmid": "40750038",
+      "canonical_id": "registry:nct01105169",
+      "journal": "The Journal of nutrition",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Beneficial Effects of Long-Lasting Bicarbonate-Sulfate-Calcium-Magnesium Water Intake on Metabolic Dysfunction-Associated Steatotic Liver Disease (MASLD)-Related Outcomes via Impacting Intestinal Permeability (IP), IP-Related Systemic Inflammation, and Oxidative Stress.",
+      "year": 2025,
+      "doi": "10.3390/nu17213452",
+      "pmid": "41228524",
+      "canonical_id": "registry:nct07211113",
+      "journal": "Nutrients",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": true
+    },
+    {
+      "title": "Magnesium Supplementation Modulates T-cell Function in People with Type 2 Diabetes and Low Serum Magnesium Levels.",
+      "year": 2024,
+      "doi": "10.1210/clinem/dgae097",
+      "pmid": "38412117",
+      "canonical_id": "doi:101210clinemdgae097",
+      "journal": "The Journal of clinical endocrinology and metabolism",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Comparative Clinical Study on Magnesium Absorption and Side Effects After Oral Intake of Microencapsulated Magnesium (MAGSHAPE<sup>TM</sup> Microcapsules) Versus Other Magnesium Sources.",
+      "year": 2024,
+      "doi": "10.3390/nu16244367",
+      "pmid": "39770988",
+      "canonical_id": "doi:103390nu16244367",
+      "journal": "Nutrients",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Magnesium from Deep Seawater as a Potentially Effective Natural Product against Insulin Resistance: A Randomized Trial.",
+      "year": 2024,
+      "doi": "10.3390/medicina60081265",
+      "pmid": "39202546",
+      "canonical_id": "doi:103390medicina60081265",
+      "journal": "Medicina (Kaunas, Lithuania)",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": true
+    },
+    {
+      "title": "Effects of magnesium and potassium supplementation on insomnia and sleep hormones in patients with diabetes mellitus.",
+      "year": 2024,
+      "doi": "10.3389/fendo.2024.1370733",
+      "pmid": "39534260",
+      "canonical_id": "doi:103389fendo20241370733",
+      "journal": "Frontiers in endocrinology",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Effects of Supplementing Zinc Magnesium Aspartate on Sleep Quality and Submaximal Weightlifting Performance, following Two Consecutive Nights of Partial Sleep Deprivation.",
+      "year": 2024,
+      "doi": "10.3390/nu16020251",
+      "pmid": "38257144",
+      "canonical_id": "doi:103390nu16020251",
+      "journal": "Nutrients",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Comparative Efficacy of Magnesium and Potassium Towards Cholesterol and Quality of Life in Patients With Type 2 Diabetes Mellitus: A Randomised Single-Blinded Controlled Clinical Trial.",
+      "year": 2024,
+      "doi": "10.1002/edm2.511",
+      "pmid": "39410716",
+      "canonical_id": "registry:nct04642313",
+      "journal": "Endocrinology, diabetes & metabolism",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Probiotics and magnesium orotate for the treatment of major depressive disorder: a randomised double blind controlled trial.",
+      "year": 2024,
+      "doi": "10.1038/s41598-024-71093-z",
+      "pmid": "39242786",
+      "canonical_id": "doi:101038s4159802471093z",
+      "journal": "Scientific reports",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Evaluation of Aluminum and Magnesium Absorption Following the Oral Administration of an Antacid Suspension Containing Magaldrate in Healthy Women Under Fed Conditions.",
+      "year": 2024,
+      "doi": "10.1007/s12325-024-02969-9",
+      "pmid": "39249590",
+      "canonical_id": "registry:nct06367452",
+      "journal": "Advances in therapy",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Short-Term Magnesium Therapy Alleviates Moderate Stress in Patients with Fibromyalgia: A Randomized Double-Blind Clinical Trial.",
+      "year": 2022,
+      "doi": "10.3390/nu14102088",
+      "pmid": "35631229",
+      "canonical_id": "doi:103390nu14102088",
+      "journal": "Nutrients",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Effect of oral magnesium supplement on cardiometabolic markers in people with prediabetes: a double blind randomized controlled clinical trial.",
+      "year": 2022,
+      "doi": "10.1038/s41598-022-20277-6",
+      "pmid": "36307427",
+      "canonical_id": "doi:101038s41598022202776",
+      "journal": "Scientific reports",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Effects of Magnesium Citrate, Magnesium Oxide, and Magnesium Sulfate Supplementation on Arterial Stiffness: A Randomized, Double-Blind, Placebo-Controlled Intervention Trial.",
+      "year": 2022,
+      "doi": "10.1161/jaha.121.021783",
+      "pmid": "35253448",
+      "canonical_id": "registry:nct03632590",
+      "journal": "Journal of the American Heart Association",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": true
+    },
+    {
+      "title": "The effects of magnesium supplementation on abnormal uterine bleeding, alopecia, quality of life, and acne in women with polycystic ovary syndrome: a randomized clinical trial.",
+      "year": 2022,
+      "doi": "10.1186/s12958-022-00982-7",
+      "pmid": "35918728",
+      "canonical_id": "doi:101186s12958022009827",
+      "journal": "Reproductive biology and endocrinology : RB&E",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": true
+    },
+    {
+      "title": "Effect of a Combination of Magnesium, B Vitamins, Rhodiola, and Green Tea (L-Theanine) on Chronically Stressed Healthy Individuals-A Randomized, Placebo-Controlled Study.",
+      "year": 2022,
+      "doi": "10.3390/nu14091863",
+      "pmid": "35565828",
+      "canonical_id": "registry:nct04391452",
+      "journal": "Nutrients",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": true
+    },
+    {
+      "title": "A Magtein<sup>\u00ae</sup>, Magnesium L-Threonate, -Based Formula Improves Brain Cognitive Functions in Healthy Chinese Adults.",
+      "year": 2022,
+      "doi": "10.3390/nu14245235",
+      "pmid": "36558392",
+      "canonical_id": "doi:103390nu14245235",
+      "journal": "Nutrients",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Association of the Serum Folate and Total Calcium and Magnesium Levels Before Ovarian Stimulation With Outcomes of Fresh <i>In Vitro</i> Fertilization Cycles in Normogonadotropic Women.",
+      "year": 2022,
+      "doi": "10.3389/fendo.2022.732731",
+      "pmid": "35222266",
+      "canonical_id": "registry:nct03088137",
+      "journal": "Frontiers in endocrinology",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Long-term magnesium supplementation improves glucocorticoid metabolism: A post-hoc analysis of an intervention trial.",
+      "year": 2021,
+      "doi": "10.1111/cen.14350",
+      "pmid": "33030273",
+      "canonical_id": "registry:nct02235805",
+      "journal": "Clinical endocrinology",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    }
+  ],
+  "sr": {
+    "requested": 4,
+    "s2_ok": 4,
+    "resolved": 1
+  },
+  "agent_stats": {
+    "S3": {
+      "ok": 14,
+      "fail": 6,
+      "cache": 0
+    },
+    "S4": {
+      "ok": 20,
+      "fail": 0,
+      "cache": 0
+    },
+    "S5": {
+      "ok": 20,
+      "fail": 0,
+      "cache": 0
+    },
+    "S7": {
+      "ok": 20,
+      "fail": 0,
+      "cache": 0
+    },
+    "S8": {
+      "ok": 20,
+      "fail": 0,
+      "cache": 0
+    }
+  },
+  "speed_report": "============================================================\nGROK SPEED REPORT\n  concurrent limit (SP_GROK_CONCURRENCY): 50\n  peak in-flight observed:               50\n  live calls ok/fail/cache: 265/6/2\n  timeouts: 0  auth failures: 0\n  avg latency (ok): 42.9s   p95: 132.1s\n  fail rate: 2.2%\n  RECOMMENDATION: HEADROOM \u2014 optional set SP_GROK_CONCURRENCY=58\n============================================================",
+  "ecu_rows": [
+    {
+      "outcome_vocab_id": "adverse_events_any",
+      "score": -9,
+      "composite": 1,
+      "arcs": {
+        "effect": {
+          "verdict": -0.7,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "dose": {
+          "verdict": -0.7,
+          "coverage": 1.0
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.125,
+          "is_quantity": true
+        }
+      },
+      "components": {
+        "d": -0.7,
+        "c": 0.125,
+        "H": 0.0,
+        "E": 0.4,
+        "E_prime": 0.4,
+        "coverage": 0.0
+      },
+      "band": "inconclusive",
+      "n_primaries": 2,
+      "prompt_version": "v1.3+grok-cli-pure-function"
+    },
+    {
+      "outcome_vocab_id": "adverse_events_gi",
+      "score": -15,
+      "composite": 0,
+      "arcs": {
+        "effect": {
+          "verdict": -0.976,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "dose": {
+          "verdict": -1.0,
+          "coverage": 0.921
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.155,
+          "is_quantity": true
+        }
+      },
+      "components": {
+        "d": -0.976,
+        "c": 0.155,
+        "H": 0.004,
+        "E": 0.504,
+        "E_prime": 0.504,
+        "coverage": 0.0
+      },
+      "band": "weak evidence against",
+      "n_primaries": 2,
+      "prompt_version": "v1.3+grok-cli-pure-function"
+    },
+    {
+      "outcome_vocab_id": "anxiety",
+      "score": -10,
+      "composite": 5,
+      "arcs": {
+        "effect": {
+          "verdict": -0.45,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "dose": {
+          "verdict": -0.45,
+          "coverage": 1.0
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.234,
+          "is_quantity": true
+        }
+      },
+      "components": {
+        "d": -0.45,
+        "c": 0.234,
+        "H": 0.125,
+        "E": 0.8,
+        "E_prime": 0.8,
+        "coverage": 0.0
+      },
+      "band": "weak evidence against",
+      "n_primaries": 4,
+      "prompt_version": "v1.3+grok-cli-pure-function"
+    },
+    {
+      "outcome_vocab_id": "blood_pressure",
+      "score": -19,
+      "composite": 3,
+      "arcs": {
+        "effect": {
+          "verdict": -0.7,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "dose": {
+          "verdict": -0.7,
+          "coverage": 1.0
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.266,
+          "is_quantity": true
+        }
+      },
+      "components": {
+        "d": -0.7,
+        "c": 0.266,
+        "H": 0.0,
+        "E": 0.929,
+        "E_prime": 0.929,
+        "coverage": 0.0
+      },
+      "band": "weak evidence against",
+      "n_primaries": 2,
+      "prompt_version": "v1.3+grok-cli-pure-function"
+    },
+    {
+      "outcome_vocab_id": "cortisol",
+      "score": 3,
+      "composite": 6,
+      "arcs": {
+        "effect": {
+          "verdict": 0.1,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "dose": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.283,
+          "is_quantity": true
+        }
+      },
+      "components": {
+        "d": 0.1,
+        "c": 0.283,
+        "H": 0.107,
+        "E": 1.0,
+        "E_prime": 1.0,
+        "coverage": 0.0
+      },
+      "band": "inconclusive",
+      "n_primaries": 5,
+      "prompt_version": "v1.3+grok-cli-pure-function"
+    },
+    {
+      "outcome_vocab_id": "depressive_symptoms",
+      "score": -15,
+      "composite": 8,
+      "arcs": {
+        "effect": {
+          "verdict": -0.414,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "dose": {
+          "verdict": -0.414,
+          "coverage": 1.0
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.373,
+          "is_quantity": true
+        }
+      },
+      "components": {
+        "d": -0.414,
+        "c": 0.373,
+        "H": 0.136,
+        "E": 1.4,
+        "E_prime": 1.4,
+        "coverage": 0.0
+      },
+      "band": "weak evidence against",
+      "n_primaries": 7,
+      "prompt_version": "v1.3+grok-cli-pure-function"
+    },
+    {
+      "outcome_vocab_id": "energy_levels",
+      "score": -3,
+      "composite": 0,
+      "arcs": {
+        "effect": {
+          "verdict": -0.7,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "dose": {
+          "verdict": -0.7,
+          "coverage": 0.667
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.039,
+          "is_quantity": true
+        }
+      },
+      "components": {
+        "d": -0.7,
+        "c": 0.039,
+        "H": 0.0,
+        "E": 0.12,
+        "E_prime": 0.12,
+        "coverage": 0.0
+      },
+      "band": "inconclusive",
+      "n_primaries": 3,
+      "prompt_version": "v1.3+grok-cli-pure-function"
+    },
+    {
+      "outcome_vocab_id": "glycaemic_control",
+      "score": -35,
+      "composite": 5,
+      "arcs": {
+        "effect": {
+          "verdict": -0.7,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "dose": {
+          "verdict": -0.7,
+          "coverage": 0.89
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.501,
+          "is_quantity": true
+        }
+      },
+      "components": {
+        "d": -0.7,
+        "c": 0.501,
+        "H": 0.0,
+        "E": 2.086,
+        "E_prime": 2.086,
+        "coverage": 0.0
+      },
+      "band": "weak evidence against",
+      "n_primaries": 6,
+      "prompt_version": "v1.3+grok-cli-pure-function"
+    },
+    {
+      "outcome_vocab_id": "inflammation_crp",
+      "score": -14,
+      "composite": 2,
+      "arcs": {
+        "effect": {
+          "verdict": -0.7,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "dose": {
+          "verdict": -0.7,
+          "coverage": 0.669
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.206,
+          "is_quantity": true
+        }
+      },
+      "components": {
+        "d": -0.7,
+        "c": 0.206,
+        "H": 0.0,
+        "E": 0.694,
+        "E_prime": 0.694,
+        "coverage": 0.0
+      },
+      "band": "weak evidence against",
+      "n_primaries": 3,
+      "prompt_version": "v1.3+grok-cli-pure-function"
+    },
+    {
+      "outcome_vocab_id": "lean_body_mass",
+      "score": 9,
+      "composite": 8,
+      "arcs": {
+        "effect": {
+          "verdict": 0.3,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "dose": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.301,
+          "is_quantity": true
+        }
+      },
+      "components": {
+        "d": 0.3,
+        "c": 0.301,
+        "H": 0.0,
+        "E": 1.075,
+        "E_prime": 1.075,
+        "coverage": 0.0
+      },
+      "band": "inconclusive",
+      "n_primaries": 3,
+      "prompt_version": "v1.3+grok-cli-pure-function"
+    },
+    {
+      "outcome_vocab_id": "memory",
+      "score": 51,
+      "composite": 37,
+      "arcs": {
+        "effect": {
+          "verdict": 1.0,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "dose": {
+          "verdict": 1.0,
+          "coverage": 1.0
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.513,
+          "is_quantity": true
+        }
+      },
+      "components": {
+        "d": 1.0,
+        "c": 0.513,
+        "H": 0.0,
+        "E": 2.16,
+        "E_prime": 2.16,
+        "coverage": 0.0
+      },
+      "band": "moderate support",
+      "n_primaries": 6,
+      "prompt_version": "v1.3+grok-cli-pure-function"
+    },
+    {
+      "outcome_vocab_id": "muscle_power",
+      "score": -2,
+      "composite": 0,
+      "arcs": {
+        "effect": {
+          "verdict": -0.7,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "dose": {
+          "verdict": -0.7,
+          "coverage": 1.0
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.026,
+          "is_quantity": true
+        }
+      },
+      "components": {
+        "d": -0.7,
+        "c": 0.026,
+        "H": 0.0,
+        "E": 0.08,
+        "E_prime": 0.08,
+        "coverage": 0.0
+      },
+      "band": "inconclusive",
+      "n_primaries": 2,
+      "prompt_version": "v1.3+grok-cli-pure-function"
+    },
+    {
+      "outcome_vocab_id": "muscle_strength",
+      "score": -5,
+      "composite": 5,
+      "arcs": {
+        "effect": {
+          "verdict": -0.25,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "dose": {
+          "verdict": -0.7,
+          "coverage": 0.1
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.233,
+          "is_quantity": true
+        }
+      },
+      "components": {
+        "d": -0.25,
+        "c": 0.233,
+        "H": 0.165,
+        "E": 0.797,
+        "E_prime": 0.797,
+        "coverage": 0.0
+      },
+      "band": "inconclusive",
+      "n_primaries": 4,
+      "prompt_version": "v1.3+grok-cli-pure-function"
+    },
+    {
+      "outcome_vocab_id": "perceived_stress",
+      "score": -5,
+      "composite": 8,
+      "arcs": {
+        "effect": {
+          "verdict": -0.191,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "dose": {
+          "verdict": -0.2,
+          "coverage": 0.87
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.264,
+          "is_quantity": true
+        }
+      },
+      "components": {
+        "d": -0.191,
+        "c": 0.264,
+        "H": 0.201,
+        "E": 0.92,
+        "E_prime": 0.92,
+        "coverage": 0.0
+      },
+      "band": "inconclusive",
+      "n_primaries": 7,
+      "prompt_version": "v1.3+grok-cli-pure-function"
+    },
+    {
+      "outcome_vocab_id": "serum_magnesium",
+      "score": -8,
+      "composite": 16,
+      "arcs": {
+        "effect": {
+          "verdict": -0.158,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "dose": {
+          "verdict": -0.248,
+          "coverage": 0.385
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.555,
+          "is_quantity": true
+        }
+      },
+      "components": {
+        "d": -0.158,
+        "c": 0.555,
+        "H": 0.123,
+        "E": 2.426,
+        "E_prime": 2.426,
+        "coverage": 0.0
+      },
+      "band": "inconclusive",
+      "n_primaries": 22,
+      "prompt_version": "v1.3+grok-cli-pure-function"
+    },
+    {
+      "outcome_vocab_id": "sleep_quality",
+      "score": -1,
+      "composite": 0,
+      "arcs": {
+        "effect": {
+          "verdict": -0.7,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "dose": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.013,
+          "is_quantity": true
+        }
+      },
+      "components": {
+        "d": -0.7,
+        "c": 0.013,
+        "H": 0.0,
+        "E": 0.04,
+        "E_prime": 0.04,
+        "coverage": 0.0
+      },
+      "band": "inconclusive",
+      "n_primaries": 1,
+      "prompt_version": "v1.3+grok-cli-pure-function"
+    }
+  ],
+  "prompt_version": "v1.3+grok-cli-pure-function",
+  "concurrency": 50,
+  "studies_in_flight": 40
+}
