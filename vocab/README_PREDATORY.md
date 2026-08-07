@@ -1,20 +1,25 @@
 # Predatory journal list (founder)
 
-**Source:** `The Predatory Journals List 2025.xlsx`  
+**Source:** The Predatory Journals List 2025  
 **Site:** https://www.predatoryjournals.org/the-list/publishers
 
-## Install on Windows (once)
+## After `git pull` (preferred)
 
-Copy the Excel file into the repo vocab folder:
+The list is embedded as compressed chunks under `pipeline/predatory_b64/`.
+On first import of `pipeline.predatory` it expands automatically to
+`vocab/predatory_journals.txt`. **No download, no extra command.**
+
+## One-time fallback (only if expand fails)
+
+If the b64 chunks are incomplete, copy the founder xlsx once:
 
 ```cmd
-copy "C:\path\to\The Predatory Journals List 2025.xlsx" C:\Users\Ignas\BS-PROOF\vocab\
+copy "path\to\The Predatory Journals List 2025.xlsx" vocab\
 ```
 
-Or convert to text:
+Then either run the pipeline (it will auto-expand) or:
 
 ```cmd
-cd C:\Users\Ignas\BS-PROOF
 pip install openpyxl
 python scripts\import_predatory_xlsx.py
 ```
