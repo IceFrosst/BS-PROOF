@@ -1,10 +1,8 @@
-# Predatory / excluded venues for BS-PROOF research layer
-# One journal title OR ISSN per line (case-insensitive substring match on title).
-# Lines starting with # are comments.
+# Predatory / questionable publishers — research-layer flag list
+# Human reference: https://www.predatoryjournals.org/the-list/publishers
 #
-# ACTION FOR FOUNDER: paste the list you use into this file (or replace it).
-# Until this file has real entries, predatory_count will stay 0.
+# This file is auto-filled on first pipeline run (or run):
+#   python scripts/refresh_predatory_list.py
+# Machine source: open Beall-derived publisher CSV (Google Sites page is not scrapable).
+# One publisher name per line after refresh (~1100 entries).
 #
-# Examples (remove the leading # when real):
-# Journal of Fake Nutrition
-# 1234-5678
