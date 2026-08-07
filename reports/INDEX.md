@@ -11,6 +11,8 @@ sweeps `runs/` whenever `scoring.SCORING_MODEL` changes.
 
 | When (UTC) | Mode | Ingredient | Form | Selftest | File |
 |---|---|---|---|---|---|
+| 2026-08-07 14:36 UTC | grok-sr-ft-inter | `magnesium` | `magnesium_glycinate` | summary | [runs/20260807_143607_magnesium_magnesium-glycinate_grok-sr-ft-inter_summary.md](runs/20260807_143607_magnesium_magnesium-glycinate_grok-sr-ft-inter_summary.md) |
+| 2026-08-07 14:36 UTC | grok-sr-ft-inter | `magnesium` | `magnesium_glycinate` | full | [runs/20260807_143607_magnesium_magnesium-glycinate_grok-sr-ft-inter_full.md](runs/20260807_143607_magnesium_magnesium-glycinate_grok-sr-ft-inter_full.md) |
 | 2026-08-07 14:15 UTC | grok-sr-ft | `magnesium` | `magnesium_glycinate` | summary | [runs/20260807_141550_magnesium_magnesium-glycinate_grok-sr-ft_summary.md](runs/20260807_141550_magnesium_magnesium-glycinate_grok-sr-ft_summary.md) |
 | 2026-08-07 14:15 UTC | grok-sr-ft | `magnesium` | `magnesium_glycinate` | full | [runs/20260807_141550_magnesium_magnesium-glycinate_grok-sr-ft_full.md](runs/20260807_141550_magnesium_magnesium-glycinate_grok-sr-ft_full.md) |
 | — | — | — | — | — | _No runs yet under this model._ |
