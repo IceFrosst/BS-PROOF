@@ -78,12 +78,33 @@ def main():
     check("+70 is strong support", band_for(70) == "strong support")
 
     print("\nTRANSFER FACTOR (the moat)")
-    wrong = score_ecu(rcts(9, form_match="different", dose_match="below_50"), [])
-    check("wrong form + underdosed collapses score",
-          wrong["score"] < a["score"] - 50, f"{a['score']} -> {wrong['score']}")
-    fam = score_ecu(rcts(9, form_match="salt_family"), [])
-    check("salt family sits between", wrong["score"] < fam["score"] < a["score"],
-          f"{wrong['score']} < {fam['score']} < {a['score']}")
+    from pipeline import scoring as _sc
+    # Founder decision 2026-08-07: form is an applicability arc, not a centre-score
+    # penalty. Both settings are asserted so the consequence of the switch is
+    # documented in the suite rather than discovered later.
+    if _sc.APPLY_FORM_IN_WEIGHT:
+        wrong = score_ecu(rcts(9, form_match="different", dose_match="below_50"), [])
+        check("wrong form + underdosed collapses score",
+              wrong["score"] < a["score"] - 50, f"{a['score']} -> {wrong['score']}")
+        fam = score_ecu(rcts(9, form_match="salt_family"), [])
+        check("salt family sits between", wrong["score"] < fam["score"] < a["score"],
+              f"{wrong['score']} < {fam['score']} < {a['score']}")
+    else:
+        exact_s = score_ecu(rcts(9, form_match="exact"), [])["score"]
+        diff_s = score_ecu(rcts(9, form_match="different"), [])["score"]
+        check("form does NOT move the centre score (founder decision)",
+              exact_s == diff_s,
+              f"exact {exact_s} == different {diff_s} — form lives on the arc only")
+        check("dose still collapses the score",
+              score_ecu(rcts(9, dose_match="below_50"), [])["score"] < a["score"] - 50,
+              "dose and population remain IN the weight")
+        check("population still collapses the score",
+              score_ecu(rcts(9, pop_match="different"), [])["score"] <= a["score"] - 30,
+              f"{a['score']} -> {score_ecu(rcts(9, pop_match='different'), [])['score']}")
+        # The consequence, asserted so nobody rediscovers it in a demo.
+        check("a glycinate and an oxide product now score IDENTICALLY",
+              exact_s == diff_s,
+              "the form differentiator is no longer in the number")
 
     print("\nGATE")
     g = score_ecu([Study(id="a1", design_rank=12, n=20),
@@ -328,13 +349,25 @@ def main():
     check("provenance stamped on every row",
           by_outcome["sleep_onset"]["provenance"]["vocab_versions"] == vocab.versions())
 
-    # The differentiator, end to end: same evidence, different bottle.
+    # The differentiator, end to end. Founder decision 2026-08-07 moved form OUT
+    # of the centre weight, so the same evidence now yields the SAME number for a
+    # glycinate and an oxide product; the difference is carried by form_mix and
+    # the form arc instead. Asserted either way so the switch stays visible.
     oxide = build_ecus(corpus, {**product, "form_vocab_id": "magnesium_oxide"},
                        prompt_version="v1.1")
     ox_score = {r["outcome_vocab_id"]: r["score"] for r in oxide}["sleep_onset"]
-    check("transfer factor discounts a different salt family",
-          ox_score < by_outcome["sleep_onset"]["score"] - 40,
-          f"glycinate {by_outcome['sleep_onset']['score']} -> oxide {ox_score}")
+    gly_score = by_outcome["sleep_onset"]["score"]
+    if _sc.APPLY_FORM_IN_WEIGHT:
+        check("transfer factor discounts a different salt family",
+              ox_score < gly_score - 40, f"glycinate {gly_score} -> oxide {ox_score}")
+    else:
+        check("form no longer changes the number, only the arc",
+              ox_score == gly_score,
+              f"glycinate {gly_score} == oxide {ox_score}")
+        ox_mix = {r["outcome_vocab_id"]: r["form_mix"] for r in oxide}["sleep_onset"]
+        gly_mix = by_outcome["sleep_onset"]["form_mix"]
+        check("form_mix still records the mismatch the score no longer shows",
+              ox_mix != gly_mix, f"{gly_mix} vs {ox_mix}")
 
     check("registry overrides S4's null on item 3",
           _rob_items({"item3_prospective_registration": None},
