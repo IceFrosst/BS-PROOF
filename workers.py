@@ -80,7 +80,8 @@ def _payload(agent: str, record: dict, text: str, registry: dict | None) -> dict
 
 
 def extract_study(record: dict, text: str, registry: dict | None = None, *,
-                  call=None, max_workers: int = 5) -> dict:
+                  call=None, max_workers: int = 5,
+                  outcome_allowlist: list[str] | None = None) -> dict:
     call = call or claude_adapter.call
 
     # Cheap gate BEFORE any model call: is this actually an oral/supplement
@@ -115,10 +116,16 @@ def extract_study(record: dict, text: str, registry: dict | None = None, *,
 
     # S6 runs after S5 because it consumes S5's raw outcome strings, but the
     # claims are independent of each other -- fan them out.
+    #
+    # Showcase mode: shrink the S6 vocabulary to the top-N outcomes for this
+    # ingredient. That is the main token/complexity win — the model cannot map
+    # into the long tail, so those claims are discarded instead of scored.
     claims = ((out.get("S5") or {}).get("claims")) or []
     out["outcomes"] = []
     if claims:
-        vocabulary = vocab.load("outcome")["outcomes"]
+        from pipeline.showcase import restrict_outcome_vocab
+        full = vocab.load("outcome")["outcomes"]
+        vocabulary = restrict_outcome_vocab(full, outcome_allowlist)
         with ThreadPoolExecutor(max_workers=min(len(claims), 6)) as pool:
             mapped = list(pool.map(
                 lambda cl: (cl, call("S6", {"outcome_raw": cl.get("outcome_raw"),
@@ -127,6 +134,10 @@ def extract_study(record: dict, text: str, registry: dict | None = None, *,
                 claims))
         for claim, (result, _meta) in mapped:
             vid = (result or {}).get("outcome_vocab_id")
+            # If allowlist is active and S6 still returned something outside it
+            # (should not), discard — showcase is a hard product boundary.
+            if outcome_allowlist and vid and vid not in outcome_allowlist:
+                vid = None
             out["outcomes"].append({
                 "claim": claim,
                 "outcome_vocab_id": vid,
@@ -137,7 +148,8 @@ def extract_study(record: dict, text: str, registry: dict | None = None, *,
 
 
 def extract_corpus(records: list[dict], text_for, registry_for=None, *,
-                   call=None, max_studies_in_flight: int = 4) -> list[dict]:
+                   call=None, max_studies_in_flight: int = 4,
+                   outcome_allowlist: list[str] | None = None) -> list[dict]:
     """
     Fan out across studies. Prints live progress so you can judge concurrency.
     """
@@ -152,12 +164,18 @@ def extract_corpus(records: list[dict], text_for, registry_for=None, *,
     print(f"  progress: 0/{n} studies  (in_flight≤{max_studies_in_flight})")
     print(f"  prompt budget: {PROMPT_BUDGET_CHARS} chars (S3 extra trim "
           f"{AGENT_BUDGET_TRIM.get('S3', 0)})")
+    if outcome_allowlist:
+        print(f"  showcase outcomes ({len(outcome_allowlist)}): "
+              + ", ".join(outcome_allowlist))
+    else:
+        print("  showcase: OFF (full outcome vocabulary)")
 
     with ThreadPoolExecutor(max_workers=max_studies_in_flight) as pool:
         future_map = {
             pool.submit(
                 extract_study, r, text_for(r),
                 registry_for(r) if registry_for else None, call=call,
+                outcome_allowlist=outcome_allowlist,
             ): i
             for i, r in enumerate(records)
         }
