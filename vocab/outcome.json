@@ -1,603 +1,634 @@
 {
-  "vocab": "outcome",
-  "version": "v1",
-  "status": "PROVISIONAL — grown from S6 null-rationales, not designed up front. See vocab/README.md.",
-  "policy": {
-    "force_map_or_discard": "An extraction that cannot be mapped to exactly one id is DISCARDED, never approximated.",
-    "kinds": {
-      "clinical": "Something a person experiences or a clinician measures as the outcome itself.",
-      "biomarker": "A measured surrogate. NEVER interchangeable with the clinical outcome it is hypothesised to influence.",
-      "adverse_event": "Harm or tolerability. Never mapped to or from an efficacy outcome."
-    },
-    "prevention_vs_treatment": "Incidence and duration are separate ids. Confusing them inverts the sign of the finding.",
-    "search_terms": "BROAD terms for RETRIEVAL. `includes` is precise because S6 maps INTO it; searching on those exact phrases returned 0 trials for sleep_onset. Recall and precision are different jobs."
+ "vocab": "outcome",
+ "version": "v1",
+ "status": "PROVISIONAL — grown from S6 null-rationales, not designed up front. See vocab/README.md.",
+ "policy": {
+  "force_map_or_discard": "An extraction that cannot be mapped to exactly one id is DISCARDED, never approximated.",
+  "kinds": {
+   "clinical": "Something a person experiences or a clinician measures as the outcome itself.",
+   "biomarker": "A measured surrogate. NEVER interchangeable with the clinical outcome it is hypothesised to influence.",
+   "adverse_event": "Harm or tolerability. Never mapped to or from an efficacy outcome."
   },
-  "outcomes": [
-    {
-      "id": "sleep_onset",
-      "label": "Time to fall asleep",
-      "kind": "clinical",
-      "definition": "Latency from lights-out to sleep onset.",
-      "includes": [
-        "sleep onset latency",
-        "SOL",
-        "time to fall asleep"
-      ],
-      "excludes": [
-        "total sleep time",
-        "wake after sleep onset"
-      ],
-      "search_terms": [
-        "sleep onset",
-        "sleep latency",
-        "time to fall asleep",
-        "insomnia"
-      ]
-    },
-    {
-      "id": "sleep_quality",
-      "label": "Sleep quality",
-      "kind": "clinical",
-      "definition": "Subjective global sleep quality, including composite sleep questionnaires.",
-      "includes": [
-        "PSQI global score",
-        "subjective sleep quality VAS",
-        "Leeds Sleep Evaluation"
-      ],
-      "excludes": [
-        "sleep onset latency alone",
-        "total sleep time alone",
-        "sleep efficiency alone"
-      ],
-      "search_terms": [
-        "sleep quality",
-        "PSQI",
-        "insomnia",
-        "sleep"
-      ]
-    },
-    {
-      "id": "sleep_duration",
-      "label": "Sleep duration",
-      "kind": "clinical",
-      "definition": "Total sleep time per night.",
-      "includes": [
-        "total sleep time",
-        "TST",
-        "hours slept"
-      ],
-      "excludes": [
-        "time in bed",
-        "sleep efficiency"
-      ],
-      "search_terms": [
-        "sleep duration",
-        "total sleep time"
-      ]
-    },
-    {
-      "id": "sleep_wake_after_onset",
-      "label": "Night-time waking",
-      "kind": "clinical",
-      "definition": "Wakefulness after sleep onset; night-time awakenings.",
-      "includes": [
-        "wake after sleep onset",
-        "WASO",
-        "number of awakenings"
-      ],
-      "excludes": [
-        "sleep onset latency"
-      ],
-      "search_terms": [
-        "wake after sleep onset",
-        "night waking",
-        "awakenings"
-      ]
-    },
-    {
-      "id": "anxiety",
-      "label": "Anxiety",
-      "kind": "clinical",
-      "definition": "Anxiety symptom severity on a validated instrument.",
-      "includes": [
-        "HAM-A",
-        "STAI",
-        "GAD-7",
-        "Beck Anxiety Inventory"
-      ],
-      "excludes": [
-        "perceived stress scales",
-        "depression scales"
-      ],
-      "search_terms": [
-        "anxiety",
-        "anxiolytic"
-      ]
-    },
-    {
-      "id": "depressive_symptoms",
-      "label": "Low mood",
-      "kind": "clinical",
-      "definition": "Depressive symptom severity on a validated instrument.",
-      "includes": [
-        "BDI",
-        "HAM-D",
-        "PHQ-9",
-        "MADRS"
-      ],
-      "excludes": [
-        "anxiety scales",
-        "general wellbeing scales"
-      ],
-      "search_terms": [
-        "depression",
-        "depressive symptoms"
-      ]
-    },
-    {
-      "id": "perceived_stress",
-      "label": "Perceived stress",
-      "kind": "clinical",
-      "definition": "Self-reported stress load. Distinct from anxiety as a clinical construct.",
-      "includes": [
-        "PSS-10",
-        "Perceived Stress Scale",
-        "DASS stress subscale"
-      ],
-      "excludes": [
-        "cortisol",
-        "HAM-A",
-        "state anxiety"
-      ],
-      "search_terms": [
-        "perceived stress",
-        "stress"
-      ]
-    },
-    {
-      "id": "cognitive_function",
-      "label": "Overall thinking and cognition",
-      "kind": "clinical",
-      "definition": "Global or composite cognitive performance.",
-      "includes": [
-        "MMSE",
-        "MoCA",
-        "composite cognitive battery score"
-      ],
-      "excludes": [
-        "a single memory subtest",
-        "a single attention subtest"
-      ],
-      "search_terms": [
-        "cognition",
-        "cognitive function"
-      ]
-    },
-    {
-      "id": "attention_focus",
-      "label": "Attention and focus",
-      "kind": "clinical",
-      "definition": "Sustained attention, vigilance, reaction time on attention tasks.",
-      "includes": [
-        "psychomotor vigilance task",
-        "sustained attention to response task"
-      ],
-      "excludes": [
-        "memory recall tasks",
-        "global cognitive composites"
-      ],
-      "search_terms": [
-        "attention",
-        "vigilance",
-        "reaction time"
-      ]
-    },
-    {
-      "id": "memory",
-      "label": "Memory",
-      "kind": "clinical",
-      "definition": "Recall or recognition performance.",
-      "includes": [
-        "word list recall",
-        "logical memory",
-        "working memory span"
-      ],
-      "excludes": [
-        "global cognitive composites",
-        "attention tasks"
-      ],
-      "search_terms": [
-        "memory",
-        "recall"
-      ]
-    },
-    {
-      "id": "energy_levels",
-      "label": "Energy and fatigue",
-      "kind": "clinical",
-      "definition": "SUBJECTIVE fatigue or energy. One construct, both names — there is deliberately no separate 'fatigue' id.",
-      "includes": [
-        "fatigue VAS",
-        "FACIT-Fatigue",
-        "vitality subscale",
-        "subjective energy"
-      ],
-      "excludes": [
-        "exercise endurance performance",
-        "sleepiness scales"
-      ],
-      "search_terms": [
-        "fatigue",
-        "energy",
-        "vitality"
-      ]
-    },
-    {
-      "id": "muscle_strength",
-      "label": "Muscle strength",
-      "kind": "clinical",
-      "definition": "Maximal force production.",
-      "includes": [
-        "1RM",
-        "maximal voluntary contraction",
-        "handgrip strength"
-      ],
-      "excludes": [
-        "power output",
-        "endurance time to exhaustion",
-        "lean mass"
-      ],
-      "search_terms": [
-        "muscle strength",
-        "grip strength",
-        "1RM"
-      ]
-    },
-    {
-      "id": "muscle_power",
-      "label": "Power and sprint performance",
-      "kind": "clinical",
-      "definition": "Rate of force production; short maximal efforts.",
-      "includes": [
-        "Wingate peak power",
-        "vertical jump",
-        "repeated sprint performance"
-      ],
-      "excludes": [
-        "1RM strength",
-        "endurance performance"
-      ],
-      "search_terms": [
-        "power output",
-        "sprint",
-        "vertical jump"
-      ]
-    },
-    {
-      "id": "exercise_endurance",
-      "label": "Endurance performance",
-      "kind": "clinical",
-      "definition": "Sustained submaximal or aerobic performance.",
-      "includes": [
-        "time to exhaustion",
-        "VO2max",
-        "time trial performance"
-      ],
-      "excludes": [
-        "peak power",
-        "maximal strength"
-      ],
-      "search_terms": [
-        "endurance",
-        "VO2max",
-        "time trial"
-      ]
-    },
-    {
-      "id": "exercise_recovery",
-      "label": "Recovery after exercise",
-      "kind": "clinical",
-      "definition": "Restoration of function after exercise.",
-      "includes": [
-        "strength recovery at 24/48h",
-        "recovery of jump height"
-      ],
-      "excludes": [
-        "muscle soreness ratings",
-        "creatine kinase"
-      ],
-      "search_terms": [
-        "exercise recovery",
-        "recovery"
-      ]
-    },
-    {
-      "id": "muscle_soreness",
-      "label": "Muscle soreness",
-      "kind": "clinical",
-      "definition": "Delayed-onset muscle soreness, self-reported.",
-      "includes": [
-        "DOMS VAS",
-        "soreness rating"
-      ],
-      "excludes": [
-        "creatine kinase",
-        "functional recovery measures"
-      ],
-      "search_terms": [
-        "muscle soreness",
-        "DOMS"
-      ]
-    },
-    {
-      "id": "muscle_cramps",
-      "label": "Muscle cramps",
-      "kind": "clinical",
-      "definition": "Frequency, severity or duration of cramping.",
-      "includes": [
-        "nocturnal leg cramps",
-        "cramp frequency"
-      ],
-      "excludes": [
-        "muscle soreness",
-        "restless legs"
-      ],
-      "search_terms": [
-        "cramp",
-        "cramps",
-        "leg cramps"
-      ]
-    },
-    {
-      "id": "lean_body_mass",
-      "label": "Lean body mass",
-      "kind": "clinical",
-      "definition": "Fat-free or lean tissue mass.",
-      "includes": [
-        "fat-free mass",
-        "lean mass by DXA",
-        "muscle cross-sectional area"
-      ],
-      "excludes": [
-        "total body weight",
-        "body fat percentage"
-      ],
-      "search_terms": [
-        "lean mass",
-        "fat-free mass",
-        "body composition"
-      ]
-    },
-    {
-      "id": "joint_pain",
-      "label": "Joint pain",
-      "kind": "clinical",
-      "definition": "Joint pain severity or function.",
-      "includes": [
-        "WOMAC pain",
-        "joint pain VAS"
-      ],
-      "excludes": [
-        "muscle soreness",
-        "general pain scales"
-      ],
-      "search_terms": [
-        "joint pain",
-        "osteoarthritis",
-        "WOMAC"
-      ]
-    },
-    {
-      "id": "cold_incidence",
-      "label": "Catching colds (prevention)",
-      "kind": "clinical",
-      "definition": "Whether an infection occurs. A PREVENTION outcome.",
-      "includes": [
-        "incidence of URTI",
-        "number of episodes",
-        "proportion who fell ill"
-      ],
-      "excludes": [
-        "duration of illness",
-        "symptom severity"
-      ],
-      "search_terms": [
-        "common cold",
-        "upper respiratory tract infection",
-        "infection incidence"
-      ]
-    },
-    {
-      "id": "cold_duration",
-      "label": "Cold duration and severity (treatment)",
-      "kind": "clinical",
-      "definition": "How long or how badly an infection runs once it has started. A TREATMENT outcome.",
-      "includes": [
-        "duration of URTI in days",
-        "symptom severity score"
-      ],
-      "excludes": [
-        "incidence",
-        "number of episodes"
-      ],
-      "search_terms": [
-        "cold duration",
-        "illness duration",
-        "symptom duration"
-      ]
-    },
-    {
-      "id": "digestive_comfort",
-      "label": "Digestive comfort",
-      "kind": "clinical",
-      "definition": "Bowel habit and GI comfort as an EFFICACY outcome (e.g. constipation treatment).",
-      "includes": [
-        "stool frequency",
-        "constipation severity",
-        "IBS symptom score"
-      ],
-      "excludes": [
-        "GI side effects of the supplement — that is adverse_events_gi"
-      ],
-      "search_terms": [
-        "constipation",
-        "bowel habit",
-        "irritable bowel"
-      ]
-    },
-    {
-      "id": "serum_magnesium",
-      "label": "Blood magnesium level",
-      "kind": "biomarker",
-      "definition": "Circulating or intracellular magnesium status.",
-      "includes": [
-        "serum magnesium",
-        "RBC magnesium",
-        "urinary magnesium excretion"
-      ],
-      "excludes": [
-        "ANY clinical outcome magnesium is hypothesised to influence"
-      ],
-      "search_terms": [
-        "serum magnesium",
-        "magnesium status"
-      ]
-    },
-    {
-      "id": "inflammation_crp",
-      "label": "Inflammation markers",
-      "kind": "biomarker",
-      "definition": "Circulating inflammatory markers.",
-      "includes": [
-        "CRP",
-        "hs-CRP",
-        "IL-6",
-        "TNF-alpha"
-      ],
-      "excludes": [
-        "joint pain",
-        "muscle soreness",
-        "any symptom measure"
-      ],
-      "search_terms": [
-        "CRP",
-        "inflammation",
-        "interleukin"
-      ]
-    },
-    {
-      "id": "cortisol",
-      "label": "Cortisol",
-      "kind": "biomarker",
-      "definition": "Cortisol in serum, saliva or hair.",
-      "includes": [
-        "morning serum cortisol",
-        "salivary cortisol AUC",
-        "hair cortisol"
-      ],
-      "excludes": [
-        "perceived_stress",
-        "anxiety"
-      ],
-      "search_terms": [
-        "cortisol"
-      ]
-    },
-    {
-      "id": "testosterone",
-      "label": "Testosterone",
-      "kind": "biomarker",
-      "definition": "Total or free testosterone.",
-      "includes": [
-        "total testosterone",
-        "free testosterone"
-      ],
-      "excludes": [
-        "muscle strength",
-        "lean body mass",
-        "libido"
-      ],
-      "search_terms": [
-        "testosterone"
-      ]
-    },
-    {
-      "id": "blood_pressure",
-      "label": "Blood pressure",
-      "kind": "biomarker",
-      "definition": "Systolic or diastolic blood pressure. Surrogate, not a cardiovascular event.",
-      "includes": [
-        "SBP",
-        "DBP",
-        "24h ambulatory blood pressure"
-      ],
-      "excludes": [
-        "cardiovascular events",
-        "hypertension diagnosis rates"
-      ],
-      "search_terms": [
-        "blood pressure",
-        "hypertension"
-      ]
-    },
-    {
-      "id": "glycaemic_control",
-      "label": "Blood sugar control",
-      "kind": "biomarker",
-      "definition": "Glucose regulation markers.",
-      "includes": [
-        "fasting glucose",
-        "HbA1c",
-        "HOMA-IR",
-        "fasting insulin"
-      ],
-      "excludes": [
-        "diabetes incidence",
-        "body weight"
-      ],
-      "search_terms": [
-        "glucose",
-        "HbA1c",
-        "insulin resistance"
-      ]
-    },
-    {
-      "id": "adverse_events_any",
-      "label": "Side effects (any)",
-      "kind": "adverse_event",
-      "definition": "Any adverse event, withdrawal due to adverse events, or tolerability.",
-      "includes": [
-        "total adverse events",
-        "withdrawals due to AEs",
-        "serious adverse events"
-      ],
-      "excludes": [
-        "ANY efficacy outcome"
-      ],
-      "search_terms": [
-        "adverse events",
-        "safety",
-        "tolerability"
-      ]
-    },
-    {
-      "id": "adverse_events_gi",
-      "label": "Digestive side effects",
-      "kind": "adverse_event",
-      "definition": "GI adverse events CAUSED by the supplement.",
-      "includes": [
-        "diarrhoea as an adverse event",
-        "nausea",
-        "GI upset"
-      ],
-      "excludes": [
-        "digestive_comfort — that is GI symptoms as the treatment target"
-      ],
-      "search_terms": [
-        "gastrointestinal adverse",
-        "diarrhoea",
-        "nausea"
-      ]
-    }
-  ]
+  "prevention_vs_treatment": "Incidence and duration are separate ids. Confusing them inverts the sign of the finding.",
+  "search_terms": "BROAD terms for RETRIEVAL. `includes` is precise because S6 maps INTO it; searching on those exact phrases returned 0 trials for sleep_onset. Recall and precision are different jobs."
+ },
+ "outcomes": [
+  {
+   "id": "sleep_onset",
+   "label": "Time to fall asleep",
+   "kind": "clinical",
+   "definition": "Latency from lights-out to sleep onset.",
+   "includes": [
+    "sleep onset latency",
+    "SOL",
+    "time to fall asleep"
+   ],
+   "excludes": [
+    "total sleep time",
+    "wake after sleep onset"
+   ],
+   "search_terms": [
+    "sleep onset",
+    "sleep latency",
+    "time to fall asleep",
+    "insomnia"
+   ],
+   "polarity": "lower_better"
+  },
+  {
+   "id": "sleep_quality",
+   "label": "Sleep quality",
+   "kind": "clinical",
+   "definition": "Subjective global sleep quality, including composite sleep questionnaires.",
+   "includes": [
+    "PSQI global score",
+    "subjective sleep quality VAS",
+    "Leeds Sleep Evaluation"
+   ],
+   "excludes": [
+    "sleep onset latency alone",
+    "total sleep time alone",
+    "sleep efficiency alone"
+   ],
+   "search_terms": [
+    "sleep quality",
+    "PSQI",
+    "insomnia",
+    "sleep"
+   ],
+   "polarity": "higher_better",
+   "polarity_note": "SCALE-DEPENDENT: PSQI global score is LOWER-better while most 0-10 'sleep quality' ratings are HIGHER-better. polarity here describes the CONCEPT; a PSQI number must not be read against it without checking the instrument."
+  },
+  {
+   "id": "sleep_duration",
+   "label": "Sleep duration",
+   "kind": "clinical",
+   "definition": "Total sleep time per night.",
+   "includes": [
+    "total sleep time",
+    "TST",
+    "hours slept"
+   ],
+   "excludes": [
+    "time in bed",
+    "sleep efficiency"
+   ],
+   "search_terms": [
+    "sleep duration",
+    "total sleep time"
+   ],
+   "polarity": "higher_better"
+  },
+  {
+   "id": "sleep_wake_after_onset",
+   "label": "Night-time waking",
+   "kind": "clinical",
+   "definition": "Wakefulness after sleep onset; night-time awakenings.",
+   "includes": [
+    "wake after sleep onset",
+    "WASO",
+    "number of awakenings"
+   ],
+   "excludes": [
+    "sleep onset latency"
+   ],
+   "search_terms": [
+    "wake after sleep onset",
+    "night waking",
+    "awakenings"
+   ],
+   "polarity": "lower_better"
+  },
+  {
+   "id": "anxiety",
+   "label": "Anxiety",
+   "kind": "clinical",
+   "definition": "Anxiety symptom severity on a validated instrument.",
+   "includes": [
+    "HAM-A",
+    "STAI",
+    "GAD-7",
+    "Beck Anxiety Inventory"
+   ],
+   "excludes": [
+    "perceived stress scales",
+    "depression scales"
+   ],
+   "search_terms": [
+    "anxiety",
+    "anxiolytic"
+   ],
+   "polarity": "lower_better"
+  },
+  {
+   "id": "depressive_symptoms",
+   "label": "Low mood",
+   "kind": "clinical",
+   "definition": "Depressive symptom severity on a validated instrument.",
+   "includes": [
+    "BDI",
+    "HAM-D",
+    "PHQ-9",
+    "MADRS"
+   ],
+   "excludes": [
+    "anxiety scales",
+    "general wellbeing scales"
+   ],
+   "search_terms": [
+    "depression",
+    "depressive symptoms"
+   ],
+   "polarity": "lower_better"
+  },
+  {
+   "id": "perceived_stress",
+   "label": "Perceived stress",
+   "kind": "clinical",
+   "definition": "Self-reported stress load. Distinct from anxiety as a clinical construct.",
+   "includes": [
+    "PSS-10",
+    "Perceived Stress Scale",
+    "DASS stress subscale"
+   ],
+   "excludes": [
+    "cortisol",
+    "HAM-A",
+    "state anxiety"
+   ],
+   "search_terms": [
+    "perceived stress",
+    "stress"
+   ],
+   "polarity": "lower_better"
+  },
+  {
+   "id": "cognitive_function",
+   "label": "Overall thinking and cognition",
+   "kind": "clinical",
+   "definition": "Global or composite cognitive performance.",
+   "includes": [
+    "MMSE",
+    "MoCA",
+    "composite cognitive battery score"
+   ],
+   "excludes": [
+    "a single memory subtest",
+    "a single attention subtest"
+   ],
+   "search_terms": [
+    "cognition",
+    "cognitive function"
+   ],
+   "polarity": "higher_better"
+  },
+  {
+   "id": "attention_focus",
+   "label": "Attention and focus",
+   "kind": "clinical",
+   "definition": "Sustained attention, vigilance, reaction time on attention tasks.",
+   "includes": [
+    "psychomotor vigilance task",
+    "sustained attention to response task"
+   ],
+   "excludes": [
+    "memory recall tasks",
+    "global cognitive composites"
+   ],
+   "search_terms": [
+    "attention",
+    "vigilance",
+    "reaction time"
+   ],
+   "polarity": "higher_better"
+  },
+  {
+   "id": "memory",
+   "label": "Memory",
+   "kind": "clinical",
+   "definition": "Recall or recognition performance.",
+   "includes": [
+    "word list recall",
+    "logical memory",
+    "working memory span"
+   ],
+   "excludes": [
+    "global cognitive composites",
+    "attention tasks"
+   ],
+   "search_terms": [
+    "memory",
+    "recall"
+   ],
+   "polarity": "higher_better"
+  },
+  {
+   "id": "energy_levels",
+   "label": "Energy and fatigue",
+   "kind": "clinical",
+   "definition": "SUBJECTIVE fatigue or energy. One construct, both names — there is deliberately no separate 'fatigue' id.",
+   "includes": [
+    "fatigue VAS",
+    "FACIT-Fatigue",
+    "vitality subscale",
+    "subjective energy"
+   ],
+   "excludes": [
+    "exercise endurance performance",
+    "sleepiness scales"
+   ],
+   "search_terms": [
+    "fatigue",
+    "energy",
+    "vitality"
+   ],
+   "polarity": "higher_better"
+  },
+  {
+   "id": "muscle_strength",
+   "label": "Muscle strength",
+   "kind": "clinical",
+   "definition": "Maximal force production.",
+   "includes": [
+    "1RM",
+    "maximal voluntary contraction",
+    "handgrip strength"
+   ],
+   "excludes": [
+    "power output",
+    "endurance time to exhaustion",
+    "lean mass"
+   ],
+   "search_terms": [
+    "muscle strength",
+    "grip strength",
+    "1RM"
+   ],
+   "polarity": "higher_better"
+  },
+  {
+   "id": "muscle_power",
+   "label": "Power and sprint performance",
+   "kind": "clinical",
+   "definition": "Rate of force production; short maximal efforts.",
+   "includes": [
+    "Wingate peak power",
+    "vertical jump",
+    "repeated sprint performance"
+   ],
+   "excludes": [
+    "1RM strength",
+    "endurance performance"
+   ],
+   "search_terms": [
+    "power output",
+    "sprint",
+    "vertical jump"
+   ],
+   "polarity": "higher_better"
+  },
+  {
+   "id": "exercise_endurance",
+   "label": "Endurance performance",
+   "kind": "clinical",
+   "definition": "Sustained submaximal or aerobic performance.",
+   "includes": [
+    "time to exhaustion",
+    "VO2max",
+    "time trial performance"
+   ],
+   "excludes": [
+    "peak power",
+    "maximal strength"
+   ],
+   "search_terms": [
+    "endurance",
+    "VO2max",
+    "time trial"
+   ],
+   "polarity": "higher_better"
+  },
+  {
+   "id": "exercise_recovery",
+   "label": "Recovery after exercise",
+   "kind": "clinical",
+   "definition": "Restoration of function after exercise.",
+   "includes": [
+    "strength recovery at 24/48h",
+    "recovery of jump height"
+   ],
+   "excludes": [
+    "muscle soreness ratings",
+    "creatine kinase"
+   ],
+   "search_terms": [
+    "exercise recovery",
+    "recovery"
+   ],
+   "polarity": "higher_better"
+  },
+  {
+   "id": "muscle_soreness",
+   "label": "Muscle soreness",
+   "kind": "clinical",
+   "definition": "Delayed-onset muscle soreness, self-reported.",
+   "includes": [
+    "DOMS VAS",
+    "soreness rating"
+   ],
+   "excludes": [
+    "creatine kinase",
+    "functional recovery measures"
+   ],
+   "search_terms": [
+    "muscle soreness",
+    "DOMS"
+   ],
+   "polarity": "lower_better"
+  },
+  {
+   "id": "muscle_cramps",
+   "label": "Muscle cramps",
+   "kind": "clinical",
+   "definition": "Frequency, severity or duration of cramping.",
+   "includes": [
+    "nocturnal leg cramps",
+    "cramp frequency"
+   ],
+   "excludes": [
+    "muscle soreness",
+    "restless legs"
+   ],
+   "search_terms": [
+    "cramp",
+    "cramps",
+    "leg cramps"
+   ],
+   "polarity": "lower_better"
+  },
+  {
+   "id": "lean_body_mass",
+   "label": "Lean body mass",
+   "kind": "clinical",
+   "definition": "Fat-free or lean tissue mass.",
+   "includes": [
+    "fat-free mass",
+    "lean mass by DXA",
+    "muscle cross-sectional area"
+   ],
+   "excludes": [
+    "total body weight",
+    "body fat percentage"
+   ],
+   "search_terms": [
+    "lean mass",
+    "fat-free mass",
+    "body composition"
+   ],
+   "polarity": "higher_better"
+  },
+  {
+   "id": "joint_pain",
+   "label": "Joint pain",
+   "kind": "clinical",
+   "definition": "Joint pain severity or function.",
+   "includes": [
+    "WOMAC pain",
+    "joint pain VAS"
+   ],
+   "excludes": [
+    "muscle soreness",
+    "general pain scales"
+   ],
+   "search_terms": [
+    "joint pain",
+    "osteoarthritis",
+    "WOMAC"
+   ],
+   "polarity": "lower_better"
+  },
+  {
+   "id": "cold_incidence",
+   "label": "Catching colds (prevention)",
+   "kind": "clinical",
+   "definition": "Whether an infection occurs. A PREVENTION outcome.",
+   "includes": [
+    "incidence of URTI",
+    "number of episodes",
+    "proportion who fell ill"
+   ],
+   "excludes": [
+    "duration of illness",
+    "symptom severity"
+   ],
+   "search_terms": [
+    "common cold",
+    "upper respiratory tract infection",
+    "infection incidence"
+   ],
+   "polarity": "lower_better"
+  },
+  {
+   "id": "cold_duration",
+   "label": "Cold duration and severity (treatment)",
+   "kind": "clinical",
+   "definition": "How long or how badly an infection runs once it has started. A TREATMENT outcome.",
+   "includes": [
+    "duration of URTI in days",
+    "symptom severity score"
+   ],
+   "excludes": [
+    "incidence",
+    "number of episodes"
+   ],
+   "search_terms": [
+    "cold duration",
+    "illness duration",
+    "symptom duration"
+   ],
+   "polarity": "lower_better"
+  },
+  {
+   "id": "digestive_comfort",
+   "label": "Digestive comfort",
+   "kind": "clinical",
+   "definition": "Bowel habit and GI comfort as an EFFICACY outcome (e.g. constipation treatment).",
+   "includes": [
+    "stool frequency",
+    "constipation severity",
+    "IBS symptom score"
+   ],
+   "excludes": [
+    "GI side effects of the supplement — that is adverse_events_gi"
+   ],
+   "search_terms": [
+    "constipation",
+    "bowel habit",
+    "irritable bowel"
+   ],
+   "polarity": "higher_better"
+  },
+  {
+   "id": "serum_magnesium",
+   "label": "Blood magnesium level",
+   "kind": "biomarker",
+   "definition": "Circulating or intracellular magnesium status.",
+   "includes": [
+    "serum magnesium",
+    "RBC magnesium",
+    "urinary magnesium excretion"
+   ],
+   "excludes": [
+    "ANY clinical outcome magnesium is hypothesised to influence"
+   ],
+   "search_terms": [
+    "serum magnesium",
+    "magnesium status"
+   ],
+   "polarity": "higher_better"
+  },
+  {
+   "id": "inflammation_crp",
+   "label": "Inflammation markers",
+   "kind": "biomarker",
+   "definition": "Circulating inflammatory markers.",
+   "includes": [
+    "CRP",
+    "hs-CRP",
+    "IL-6",
+    "TNF-alpha"
+   ],
+   "excludes": [
+    "joint pain",
+    "muscle soreness",
+    "any symptom measure"
+   ],
+   "search_terms": [
+    "CRP",
+    "inflammation",
+    "interleukin"
+   ],
+   "polarity": "lower_better"
+  },
+  {
+   "id": "cortisol",
+   "label": "Cortisol",
+   "kind": "biomarker",
+   "definition": "Cortisol in serum, saliva or hair.",
+   "includes": [
+    "morning serum cortisol",
+    "salivary cortisol AUC",
+    "hair cortisol"
+   ],
+   "excludes": [
+    "perceived_stress",
+    "anxiety"
+   ],
+   "search_terms": [
+    "cortisol"
+   ],
+   "polarity": null
+  },
+  {
+   "id": "testosterone",
+   "label": "Testosterone",
+   "kind": "biomarker",
+   "definition": "Total or free testosterone.",
+   "includes": [
+    "total testosterone",
+    "free testosterone"
+   ],
+   "excludes": [
+    "muscle strength",
+    "lean body mass",
+    "libido"
+   ],
+   "search_terms": [
+    "testosterone"
+   ],
+   "polarity": null
+  },
+  {
+   "id": "blood_pressure",
+   "label": "Blood pressure",
+   "kind": "biomarker",
+   "definition": "Systolic or diastolic blood pressure. Surrogate, not a cardiovascular event.",
+   "includes": [
+    "SBP",
+    "DBP",
+    "24h ambulatory blood pressure"
+   ],
+   "excludes": [
+    "cardiovascular events",
+    "hypertension diagnosis rates"
+   ],
+   "search_terms": [
+    "blood pressure",
+    "hypertension"
+   ],
+   "polarity": null
+  },
+  {
+   "id": "glycaemic_control",
+   "label": "Blood sugar control",
+   "kind": "biomarker",
+   "definition": "Glucose regulation markers.",
+   "includes": [
+    "fasting glucose",
+    "HbA1c",
+    "HOMA-IR",
+    "fasting insulin"
+   ],
+   "excludes": [
+    "diabetes incidence",
+    "body weight"
+   ],
+   "search_terms": [
+    "glucose",
+    "HbA1c",
+    "insulin resistance"
+   ],
+   "polarity": null
+  },
+  {
+   "id": "adverse_events_any",
+   "label": "Side effects (any)",
+   "kind": "adverse_event",
+   "definition": "Any adverse event, withdrawal due to adverse events, or tolerability.",
+   "includes": [
+    "total adverse events",
+    "withdrawals due to AEs",
+    "serious adverse events"
+   ],
+   "excludes": [
+    "ANY efficacy outcome"
+   ],
+   "search_terms": [
+    "adverse events",
+    "safety",
+    "tolerability"
+   ],
+   "polarity": "lower_better"
+  },
+  {
+   "id": "adverse_events_gi",
+   "label": "Digestive side effects",
+   "kind": "adverse_event",
+   "definition": "GI adverse events CAUSED by the supplement.",
+   "includes": [
+    "diarrhoea as an adverse event",
+    "nausea",
+    "GI upset"
+   ],
+   "excludes": [
+    "digestive_comfort — that is GI symptoms as the treatment target"
+   ],
+   "search_terms": [
+    "gastrointestinal adverse",
+    "diarrhoea",
+    "nausea"
+   ],
+   "polarity": "lower_better"
+  }
+ ]
 }

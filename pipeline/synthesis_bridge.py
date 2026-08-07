@@ -202,6 +202,8 @@ def build_sr_derived(s2_batch: list[dict], primary_and_syn_rows: list[dict], *,
                                           "vocabulary": vocabulary})), jobs))
 
     stats["outcome_unmapped"] = 0
+    stats["sign_recovered"] = 0
+    stats["sign_unresolvable"] = 0
     for (rec, _raw, res), (result, _meta) in mapped:
         vid = (result or {}).get("outcome_vocab_id")
         if outcome_allowlist and vid and vid not in outcome_allowlist:
@@ -209,10 +211,23 @@ def build_sr_derived(s2_batch: list[dict], primary_and_syn_rows: list[dict], *,
         if not vid:
             stats["outcome_unmapped"] += 1
             continue
+        direction = res.get("direction")
+        if direction is None and res.get("pending_polarity"):
+            # Now that the outcome is known, its polarity decides whether an
+            # interval excluding the null means benefit or harm. Outcomes with
+            # a deliberately null polarity (cortisol, blood_pressure, ...)
+            # still refuse, and the row is dropped rather than guessed.
+            direction = syn.direction_from_effect_text(res.get("effect_text"), vid)
+            if direction:
+                stats["sign_recovered"] += 1
+            else:
+                stats["sign_unresolvable"] += 1
+                continue
+        if direction not in ("benefit", "null_effect", "harm"):
+            continue
         rec.setdefault("outcomes", []).append({
             "outcome_vocab_id": vid, "discarded": False,
-            "claim": {"direction": res.get("direction"),
-                      "magnitude": res.get("magnitude")},
+            "claim": {"direction": direction, "magnitude": res.get("magnitude")},
         })
 
     records = [r for r in records if r.get("outcomes")]

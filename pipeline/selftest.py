@@ -859,10 +859,28 @@ def main():
           == "null_effect"
           and syn.direction_from_effect_text("RR 1.60 (95% CI 1.20 to 2.10)") is None,
           "reading a ratio against 0 makes every RR a benefit")
-    check("a CI excluding the null returns None, NOT a guessed sign",
+    check("with no outcome, a CI excluding the null returns None",
           syn.direction_from_effect_text("MD -1.40 (95% CI -2.20 to -0.60)") is None,
-          "lower is better for sleep_onset and worse for muscle_strength; "
-          "vocab/outcome.json records no polarity, so the sign is unknowable")
+          "the sign is meaningless until you know which way is good")
+    check("the SAME numbers read opposite ways on opposite outcomes",
+          syn.direction_from_effect_text("MD -1.40 (95% CI -2.20 to -0.60)",
+                                         "sleep_onset") == "benefit"
+          and syn.direction_from_effect_text("MD -1.40 (95% CI -2.20 to -0.60)",
+                                             "muscle_strength") == "harm",
+          "fell asleep 1.4 min sooner vs lost 1.4 units of strength")
+    check("an outcome with deliberately null polarity still REFUSES",
+          all(syn.direction_from_effect_text("MD -1.40 (95% CI -2.20 to -0.60)", o)
+              is None for o in ("cortisol", "blood_pressure", "testosterone",
+                                "glycaemic_control")),
+          "lowering BP in a normotensive is not a benefit")
+    check("every outcome carries a polarity decision, none left undecided",
+          all("polarity" in o for o in vocab.load("outcome")["outcomes"]),
+          "a missing key and a deliberate null must not look the same")
+    check("polarity is a DEFINITION, and the obvious ones are right",
+          vocab.outcome_polarity("sleep_onset") == "lower_better"
+          and vocab.outcome_polarity("muscle_strength") == "higher_better"
+          and vocab.outcome_polarity("anxiety") == "lower_better"
+          and vocab.outcome_polarity("adverse_events_any") == "lower_better")
     check("no numbers -> no invented direction",
           syn.direction_from_effect_text("favoured the intervention") is None
           and syn.direction_from_effect_text(None) is None)

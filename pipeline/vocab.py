@@ -77,6 +77,24 @@ def unspecified_form_id(ingredient: str) -> str | None:
     return ids[0] if len(ids) == 1 else None
 
 
+def outcome_polarity(outcome_vocab_id: str) -> str | None:
+    """
+    'lower_better' | 'higher_better' | None, for one outcome.
+
+    Which way the measured NUMBER moves when the product works. This is a
+    DEFINITION, not a calibration constant -- lower sleep-onset latency is
+    better because that is what the outcome means, and no Tier-3 study will
+    revise it.
+
+    None where the direction is genuinely claim-dependent: cortisol (low
+    cortisol is itself pathological), testosterone, blood_pressure (lowering it
+    in a normotensive is not a benefit), glycaemic_control (HbA1c is
+    lower-better, insulin sensitivity higher-better). Those must keep refusing.
+    """
+    o = outcome(outcome_vocab_id)
+    return (o or {}).get("polarity")
+
+
 def form_id_for_text(ingredient: str, text: str | None) -> str | None:
     """
     Free-text form ("magnesium bisglycinate") -> form id, or the unspecified id.

@@ -389,7 +389,20 @@ now been measured head-to-head against OpenAlex and every one adds **0.0pp** —
 Unpaywall, Semantic Scholar (a strict subset: 17 vs 19 of 40, 0 new) and CORE
 (keyless answered 20/40, 67 × HTTP 429, 0 new). They aggregate the same
 repository network and are not independent draws. **Stop adding resolvers.**
-SR-table inheritance is the only remaining rung.
+
+**SR-table trials now enter evidence mass (2026-08-08, invariant 6 amended).**
+The document still adds nothing; the trials it describes are scored once each at
+`sr_table` (0.85 × 0.85 = 0.72 of a directly-read trial). Five refusals gate it
+— see invariant 6. This was the largest source of evidence we were discarding,
+and it is the reason SRs are now retrieved at scale (cap 400, extraction stops
+itself on marginal yield).
+
+**Outcome polarity is recorded** (`vocab/outcome.json`, 26 of 30; 4 deliberately
+null). It converts a review's bare numbers into a direction: a CI spanning the
+null is `null_effect` for anyone, and a CI excluding it reads as benefit or harm
+once the outcome says which way is good. `cortisol`, `testosterone`,
+`blood_pressure` and `glycaemic_control` keep refusing — lowering BP in a
+normotensive is not a benefit.
 
 **Retrieval specificity is the gating problem.** `("magnesium") AND RCT` is 25%
 IV/procedural magnesium; the supplement-scoped variant trades that for
@@ -407,17 +420,24 @@ thresholds, OA penalty. See `docs/SPEC.md` §13.
 
 ## Next
 
-**Handoff:** scoring/reports/storage are consistent as of 2026-08-07. Anything
-describing the score differently is stale — trust `pipeline/scoring.py`,
-`pipeline/arcs.py` and this section.
+**Handoff:** consistent as of **2026-08-08**. Anything describing the score
+differently is stale — trust `pipeline/scoring.py`, `pipeline/arcs.py`,
+`pipeline/synthesis.py` and this section.
+
+Changed 2026-08-08: invariant 6 amended (SR-table trials enter `E`),
+`PROMPT_VERSION` v1.6 (S2 `results_table` + per-study `design`), outcome
+polarity added, SR retrieval scaled with marginal-yield stopping, file
+ownership table added under Multi-agent workflow.
 
 1. **`ANTHROPIC_API_KEY`** — the only unblock for production extraction.
 2. **Constrain retrieval to the intervention**, not the document. Gates
    extraction cost, coverage and outcome mapping simultaneously.
-3. **SR-table inheritance uplift** — the three defects that made it return zero
-   are fixed (payload, table filter, `q_s`); the uplift itself is still
-   UNMEASURED. `run_sr_inheritance.py --grok` now runs on the live backend.
-   Still the only path left to the 80% coverage target.
+3. **SR inheritance uplift is still UNMEASURED** — and it is now the biggest
+   unknown in the system, because SR-derived trials MOVE SCORES rather than only
+   confidence. Six defects that guaranteed zero are fixed (payload builder,
+   table filter, `q_s`, arbitrary cap slice, backend lock-in, missing direction);
+   nothing has yet been run end to end on a live backend. Do this before
+   trusting any number from a `--with-sr` run.
 4. **Anchor eval** — 34/34 in-scope anchors have vocabulary; running them needs
    extraction. Do this before trusting any constant.
 5. **Derive dose bands at scale** and bump `band_version` 0 → 1.

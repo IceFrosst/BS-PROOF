@@ -512,22 +512,31 @@ _CI_ANY = re.compile(
     r"(-?\d+(?:\.\d+)?)\s*(?:to|,|;|–|—)\s*(-?\d+(?:\.\d+)?)", re.I)
 
 
-def direction_from_effect_text(text: str | None) -> str | None:
+def direction_from_effect_text(text: str | None,
+                               outcome_vocab_id: str | None = None) -> str | None:
     """
-    "MD -0.30 (95% CI -1.10 to 0.50)" -> "null_effect". Otherwise None.
+    "MD -0.30 (95% CI -1.10 to 0.50)" -> "null_effect"
+    "MD -1.40 (95% CI -2.20 to -0.60)" + sleep_onset -> "benefit"
 
-    RECOVERS ONE HALF OF A REAL GAP. A review often gives a trial's effect
-    estimate without ever saying in words whether it worked, and S2 is forbidden
-    to judge. But "the confidence interval spans the null" is arithmetic, not
-    judgement, so the deterministic layer can answer it -- and a null IS a
-    result (invariant 7: s = -0.7), so recovering it recovers real evidence.
+    WHY THIS EXISTS. A review routinely lists a trial and never states in words
+    what it found -- its characteristics table describes what the trial DID, its
+    forest plot is an IMAGE, and its summary-of-findings table is POOLED
+    (measured 2026-08-08, see docs/SPEC.md 13). S2 is forbidden to judge. But
+    when the review copies an effect estimate into text, the reading is
+    arithmetic, not judgement, and the deterministic layer can do it.
 
-    THE OTHER HALF STAYS UNANSWERED ON PURPOSE. When the interval excludes the
-    null, the SIGN tells you benefit vs harm only if you know which way is good
-    for that outcome -- lower is better for sleep_onset, higher for
-    muscle_strength. `vocab/outcome.json` records no polarity, so this returns
-    None rather than guessing, and the trial is discarded. Add `polarity` to the
-    outcome vocabulary and the other half opens up. See docs/SPEC.md 13.
+    Two steps, and the second needs the outcome:
+
+      CI spans the null        -> null_effect. Polarity-free, always available.
+                                  A null IS a result (invariant 7, s = -0.7).
+      CI excludes the null     -> benefit or harm, but ONLY once we know which
+                                  way is good for THIS outcome. Lower is better
+                                  for sleep_onset, worse for muscle_strength.
+
+    Without an outcome id, or for an outcome whose polarity is deliberately null
+    (cortisol, testosterone, blood_pressure, glycaemic_control), the second step
+    REFUSES and the trial is discarded. A guessed sign is a wrong-side-of-zero
+    error, the fatal class.
     """
     if not text:
         return None
@@ -542,7 +551,18 @@ def direction_from_effect_text(text: str | None) -> str | None:
     if lo > hi:
         lo, hi = hi, lo
     null_value = 1.0 if any(k in t.lower() for k in _RATIO_MEASURES) else 0.0
-    return "null_effect" if lo <= null_value <= hi else None
+    if lo <= null_value <= hi:
+        return "null_effect"
+
+    if not outcome_vocab_id:
+        return None
+    from pipeline import vocab
+    polarity = vocab.outcome_polarity(outcome_vocab_id)
+    if polarity not in ("lower_better", "higher_better"):
+        return None
+    went_up = lo > null_value
+    good = (polarity == "higher_better") if went_up else (polarity == "lower_better")
+    return "benefit" if good else "harm"
 
 
 def derived_studies(merged: dict[str, dict], *, held_ids: set[str],
@@ -571,8 +591,12 @@ def derived_studies(merged: dict[str, dict], *, held_ids: set[str],
             stats["no_design"] += 1
             continue
         per_outcome = directions.get(cid) or {}
+        # `pending_polarity` rows are kept here and resolved after S6 maps the
+        # outcome, because the sign is unreadable until the outcome is known.
+        # Any that stay unresolved are dropped there, not silently defaulted.
         usable = {k: v for k, v in per_outcome.items()
-                  if v.get("direction") in ("benefit", "null_effect", "harm")}
+                  if v.get("direction") in ("benefit", "null_effect", "harm")
+                  or v.get("pending_polarity")}
         if not usable:
             if any(v.get("_conflict") for v in per_outcome.values()):
                 stats["direction_conflict"] += 1
@@ -615,23 +639,40 @@ def results_by_trial(reviews: list[dict]) -> dict[str, dict]:
                         for i, cid in by_row.items() if i < len(rows)}
         for res in (s2.get("results_table") or []):
             cid = label_to_cid.get(res.get("study_label"))
+            if not cid:
+                continue
+            effect_text = res.get("effect_text")
             direction = res.get("direction")
+            pending = False
             if direction not in ("benefit", "null_effect", "harm"):
                 # S2 could not read a verdict in words. If it copied an effect
-                # estimate, a CI spanning the null is still a real finding, and
-                # arithmetic may answer what prose did not.
-                direction = direction_from_effect_text(res.get("effect_text"))
-            if not cid or direction not in ("benefit", "null_effect", "harm"):
+                # estimate, arithmetic may answer what prose did not -- but the
+                # SIGN needs the outcome's polarity, and the outcome is still
+                # raw review wording at this point. S6 maps it later, so a
+                # resolvable sign is marked PENDING rather than dropped here.
+                direction = direction_from_effect_text(effect_text)
+                if direction is None and _has_interval(effect_text):
+                    pending = True
+            if direction not in ("benefit", "null_effect", "harm") and not pending:
                 continue
             slot = acc.setdefault(cid, {}).setdefault(
                 res.get("outcome_raw") or "?", {})
-            if slot and slot.get("direction") not in (None, direction):
+            if slot.get("direction") and direction and slot["direction"] != direction:
                 slot["_conflict"] = True
                 slot["direction"] = None
             elif not slot.get("_conflict"):
                 slot["direction"] = direction
                 slot["magnitude"] = res.get("magnitude")
+                slot["effect_text"] = effect_text
+                slot["pending_polarity"] = pending
     return acc
+
+
+def _has_interval(text: str | None) -> bool:
+    if not text:
+        return False
+    t = " ".join(str(text).split())
+    return bool(_CI_ANY.search(t) or _CI.search(t))
 
 
 def inherited_rob(s2: dict | None) -> dict[str, str]:
