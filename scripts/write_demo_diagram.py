@@ -405,9 +405,16 @@ SPEC 15: tiers are a prior, not a measurement.""".strip("\n"), VIOLET) + 30
 qy = panel(qx, qy, qw, "MEASURED, NOT ASSUMED", f"""
 Coverage, full corpus n=20155 (100%):
   methods-level facts        77.5%   target >= 80%
-Unpaywall over OpenAlex:     +0.0pp  (not independent)
-SR-table inheritance:        built, UNMEASURED --
-                             the only rung left.
+
+Marginal gain over OpenAlex, all measured head-to-head:
+  Unpaywall                  +0.0pp
+  Semantic Scholar           +0.0pp  (strict subset)
+  CORE (keyless)             +0.0pp  (20/40 answered)
+They aggregate the same repositories. STOP ADDING ONES.
+
+SR-table inheritance: the three defects that made it
+return zero are fixed; the uplift is still UNMEASURED
+and is the only rung left.
 
 Dose band is DERIVED from the trials: the observed
 min-max among BENEFIT trials. Null-effect doses are

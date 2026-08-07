@@ -1,4 +1,4 @@
-{"type":"object","required":["included_studies","rob_table","extraction_complete"],"additionalProperties":false,
+{"type":"object","required":["included_studies","rob_table","review_methods","extraction_complete"],"additionalProperties":false,
 "properties":{
 "included_studies":{"type":"array","items":{"type":"object","required":["label"],"additionalProperties":false,
   "properties":{"label":{"type":"string"},"first_author":{"type":["string","null"]},"year":{"type":["integer","null"]},
@@ -9,5 +9,14 @@
 "rob_table":{"type":"array","items":{"type":"object","required":["study_label","overall"],"additionalProperties":false,
   "properties":{"study_label":{"type":"string"},"overall":{"type":"string","enum":["low","some_concerns","high","unclear"]},
   "tool":{"type":["string","null"]},"evidence_span":{"type":["string","null"]}}}},
+"review_methods":{"type":["object","null"],"additionalProperties":false,
+  "properties":{"protocol_registered":{"type":["boolean","null"]},
+  "databases_searched":{"type":["integer","null"]},
+  "duplicate_selection":{"type":["boolean","null"]},
+  "rob_assessed":{"type":["boolean","null"]},
+  "heterogeneity_assessed":{"type":["boolean","null"]},
+  "publication_bias_assessed":{"type":["boolean","null"]},
+  "review_funding":{"type":["string","null"],"enum":["independent","industry","undisclosed",null]},
+  "evidence_span":{"type":["string","null"]}}},
 "extraction_complete":{"type":"boolean"},
 "notes":{"type":["string","null"],"maxLength":500}}}

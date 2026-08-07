@@ -8,40 +8,40 @@ Invariant 6: syntheses never add evidence mass — only a bounded E' lift.
 """
 from __future__ import annotations
 
-import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from pipeline import synthesis as syn
 
-MIN_TEXT = 200
 DEFAULT_MAX_SRS = 15
-# Keep S2 under the same CLI input wall as per-study agents (see workers.py).
-S2_PROMPT_BUDGET = int(os.environ.get("SP_PROMPT_BUDGET", "12000"))
-S2_FIXED_OVERHEAD = 3500  # system + schema + scaffolding (approx)
+# The prompt budget moved to pipeline.synthesis.s2_payload, which builds the
+# payload and is therefore the only place that can trim it honestly.
 
 
-def _text_for_syn(record: dict, text_for) -> str:
-    if text_for is not None:
+def _xml_for(record: dict, xml_for) -> str | None:
+    """
+    JATS for one synthesis. A failure returns None, and the caller records
+    "could not read" -- never "this review lists no studies".
+    """
+    from sources import fulltext as ft
+    if xml_for is not None:
         try:
-            t = text_for(record) or ""
+            return xml_for(record)
         except Exception:
-            t = ""
-    else:
-        t = ""
-    if len(t.strip()) < MIN_TEXT:
-        t = (record.get("abstract") or record.get("title") or "").strip()
-    # Head of the review is where PRISMA / included-studies tables usually sit.
-    room = max(800, S2_PROMPT_BUDGET - S2_FIXED_OVERHEAD)
-    if len(t) > room:
-        t = t[:room]
-    return t
+            return None
+    pmcid = record.get("pmcid")
+    if not pmcid:
+        return None
+    try:
+        return ft.fetch_xml(pmcid)
+    except Exception:
+        return None
 
 
 def extract_s2_batch(
     syn_records: list[dict],
     *,
     call,
-    text_for=None,
+    xml_for=None,
     max_srs: int = DEFAULT_MAX_SRS,
     max_workers: int = 4,
 ) -> list[dict]:
@@ -58,13 +58,14 @@ def extract_s2_batch(
           f"(cap={max_srs}, workers≤{max_workers})...")
 
     def one(rec: dict):
-        text = _text_for_syn(rec, text_for)
-        if len(text) < MIN_TEXT:
-            return {"record": rec, "s2": None, "meta": {"error": "no text"}}
-        result, meta = call("S2", {
-            "title": rec.get("title"),
-            "text": text,
-        })
+        xml = _xml_for(rec, xml_for)
+        payload = syn.s2_payload(rec, xml)
+        # No tables means we could not READ the review, not that it contains no
+        # trials. Calling S2 anyway spends a model call to be told nothing.
+        if not payload["tables"]:
+            return {"record": rec, "s2": None,
+                    "meta": {"error": "no tables in full text"}}
+        result, meta = call("S2", payload)
         return {"record": rec, "s2": result, "meta": meta}
 
     out = []
@@ -74,7 +75,10 @@ def extract_s2_batch(
             out.append(fut.result())
 
     ok = sum(1 for x in out if x["s2"])
-    print(f"  SR bridge: S2 ok={ok}/{len(out)}")
+    no_tables = sum(1 for x in out
+                    if not x["s2"] and "no tables" in str(x["meta"].get("error")))
+    print(f"  SR bridge: S2 ok={ok}/{len(out)}"
+          + (f"  ({no_tables} unreadable — no tables in full text)" if no_tables else ""))
     return out
 
 
@@ -97,23 +101,28 @@ def to_score_inputs(
         res = packed.get("_resolution") or {}
         n_listed = res.get("n_listed") or 0
         n_res = res.get("n_resolved") or 0
+        rev = packed.get("_review") or {}
         if packed.get("resolved"):
             n_resolved += 1
+            # Overlap is printed as OVERLAP, which is what it is. It no longer
+            # decides q_s -- the review checklist does -- so the two are shown
+            # side by side rather than one standing in for the other.
             print(
-                f"    resolved SR {item['record'].get('canonical_id', '?')[:40]}: "
-                f"{n_res}/{n_listed} "
-                f"q_s={packed['q_s']:.2f}"
+                f"    SR {item['record'].get('canonical_id', '?')[:40]}: "
+                f"{n_listed} included, {n_res} in our corpus  "
+                f"q_s={packed['q_s']:.2f} "
+                f"({rev.get('band')}, {rev.get('hits')}/{rev.get('answered')} "
+                f"methods items)"
             )
         else:
-            # Why it failed — without this, "0 resolved" is a black box.
+            # Why it produced nothing — without this, "0 usable" is a black box.
             sample = (res.get("unresolved_labels") or [])[:3]
             print(
-                f"    unresolved SR {item['record'].get('canonical_id', '?')[:40]}: "
-                f"{n_res}/{n_listed} listed "
-                f"(need ≥{syn.MIN_RESOLVED_FRACTION:.0%} and ≥{syn.MIN_RESOLVED_COUNT}); "
+                f"    SR {item['record'].get('canonical_id', '?')[:40]}: "
+                f"no included-studies list extracted; "
                 f"sample unresolved={sample}"
             )
-    print(f"  SR bridge: {n_resolved}/{len(scoring)} syntheses resolved for multiplier")
+    print(f"  SR bridge: {n_resolved}/{len(scoring)} syntheses usable")
     return scoring
 
 
@@ -121,7 +130,7 @@ def build_syntheses_for_scoring(
     store,
     *,
     call,
-    text_for=None,
+    xml_for=None,
     max_srs: int = DEFAULT_MAX_SRS,
     max_workers: int = 4,
 ) -> list[dict]:
@@ -135,7 +144,7 @@ def build_syntheses_for_scoring(
         all_rows = syn_rows
 
     batch = extract_s2_batch(
-        syn_rows, call=call, text_for=text_for,
+        syn_rows, call=call, xml_for=xml_for,
         max_srs=max_srs, max_workers=max_workers,
     )
     return to_score_inputs(batch, all_rows)

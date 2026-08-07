@@ -15,6 +15,7 @@ hit counts (most-studied first), not a fixed marketing list.
 from __future__ import annotations
 import os
 import sys
+from collections import Counter as _Counter
 
 from pipeline import vocab
 from pipeline import predatory as pred
@@ -438,13 +439,24 @@ def main(argv: list[str]) -> int:
                 from pipeline.synthesis_bridge import build_syntheses_for_scoring
                 run_context["sr"]["requested"] = MAX_SRS
                 syntheses_for_score = build_syntheses_for_scoring(
-                    store, call=call_fn, text_for=lambda r: _best_text(r),
+                    store, call=call_fn,
                     max_srs=MAX_SRS, max_workers=min(6, GROK_STUDIES_IN_FLIGHT),
                 )
                 run_context["sr"]["s2_ok"] = sum(
                     1 for s in syntheses_for_score if s)
                 run_context["sr"]["resolved"] = sum(
                     1 for s in syntheses_for_score if s.get("resolved"))
+                # q_s now comes from a checklist about the REVIEW, so record the
+                # checklist. A quality number with no visible basis is exactly
+                # the kind of thing this pipeline exists to refuse.
+                run_context["sr"]["review_bands"] = _Counter(
+                    (s.get("_review") or {}).get("band") for s in syntheses_for_score
+                    if s.get("resolved"))
+                run_context["sr"]["overlap"] = [
+                    {"listed": (s.get("_resolution") or {}).get("n_listed"),
+                     "in_corpus": (s.get("_resolution") or {}).get("n_resolved"),
+                     "q_s": s.get("q_s")}
+                    for s in syntheses_for_score if s.get("resolved")]
         else:
             import workers
             import claude_adapter

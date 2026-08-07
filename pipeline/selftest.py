@@ -479,13 +479,57 @@ def main():
     check("resolved when most rows map", r["resolved"] is True,
           f"{r['resolved_fraction']:.0%} resolved")
 
+    # Founder 2026-08-07: q_s must NOT depend on how much of the review we
+    # already hold. A Cochrane review of 30 trials where we have 6 was scored 0
+    # and DISCARDED, while a thin review of 4 where we had 3 scored 1.00 -- the
+    # better review was punished for covering more than our retrieval reached.
+    # Overlap belongs to `cov` in score_ecu, which handles it smoothly.
     mostly_unknown = {"extraction_complete": True, "included_studies":
                       [{"label": f"X{i}"} for i in range(9)]
-                      + [{"label": "Y", "nct": "NCT00000001"}]}
+                      + [{"label": "Y", "nct": "NCT00000001"}],
+                      "review_methods": {"protocol_registered": True,
+                                         "databases_searched": 4,
+                                         "duplicate_selection": True,
+                                         "rob_assessed": True,
+                                         "heterogeneity_assessed": True,
+                                         "publication_bias_assessed": True,
+                                         "review_funding": "independent"}}
     r2 = syn.resolve_included(mostly_unknown, idx)
-    check("an SR we cannot resolve is UNRESOLVED, not partial credit",
-          r2["resolved"] is False and syn.quality(mostly_unknown, r2) == 0.0,
-          f"{r2['resolved_fraction']:.0%} resolved — score_ecu ignores it")
+    check("low corpus overlap does NOT reduce a review's quality",
+          r2["resolved"] is True and syn.quality(mostly_unknown, r2) == syn.Q_REVIEW["high"],
+          f"{r2['resolved_fraction']:.0%} of its trials are ours — irrelevant to q_s")
+    check("overlap still reaches the score, through cov not q_s",
+          "included_ids" in r2 and len(r2["included_ids"]) == 1,
+          "score_ecu computes cov = |included ∩ P| / |P|")
+
+    no_list = syn.resolve_included({"extraction_complete": True,
+                                    "included_studies": []}, idx)
+    check("a document with NO included list is not a synthesis",
+          no_list["resolved"] is False
+          and syn.quality({"included_studies": []}, no_list) == syn.Q_UNRESOLVED)
+
+    # The checklist reads the REVIEW's reported methodology, and an unreported
+    # item is dropped rather than failed (invariant 5).
+    thin = {"extraction_complete": True, "rob_table": [],
+            "included_studies": [{"label": "A", "nct": "NCT00000001"}],
+            "review_methods": {"protocol_registered": None,
+                               "databases_searched": 1,
+                               "duplicate_selection": None,
+                               "rob_assessed": False,
+                               "heterogeneity_assessed": None,
+                               "publication_bias_assessed": False,
+                               "review_funding": "industry"}}
+    tr = syn.resolve_included(thin, idx)
+    band, hits, answered = syn.review_band(syn.review_items(thin))
+    check("a review reporting little scores the LOW band",
+          band == "low" and syn.quality(thin, tr) == syn.Q_REVIEW["low"],
+          f"{hits} items passed of {answered} answered")
+    check("unreported items are dropped, not counted as failures",
+          answered == 4, "3 nulls stayed out of the denominator")
+    check("an S2 output with no review_methods is LOW, never assumed good",
+          syn.quality({"extraction_complete": True, "rob_table": [],
+                       "included_studies": [{"label": "A"}]},
+                      {"resolved": True}) == syn.Q_NO_METHODS_REPORTED)
 
     # SR characteristics tables name trials "Smith 2019", not by DOI. Measured:
     # 36 included studies from 3 real reviews resolved ZERO without this tier.
@@ -504,10 +548,22 @@ def main():
           ay_res["unresolved_labels"] == ["Smith 2019"],
           "two different Smith 2019 studies exist in the corpus")
 
-    check("complete SR with a RoB table scores highest quality",
-          syn.quality(s2_good, r) == syn.Q_COMPLETE_WITH_ROB)
-    check("incomplete extraction is downgraded",
-          syn.quality({**s2_good, "extraction_complete": False}, r) == syn.Q_PARTIAL)
+    s2_strong = {**s2_good,
+                 "review_methods": {"protocol_registered": True,
+                                    "databases_searched": 3,
+                                    "duplicate_selection": True,
+                                    "rob_assessed": True,
+                                    "heterogeneity_assessed": True,
+                                    "publication_bias_assessed": None,
+                                    "review_funding": "undisclosed"}}
+    check("a well-conducted review scores the HIGH band",
+          syn.quality(s2_strong, r) == syn.Q_REVIEW["high"])
+    check("a present RoB table proves rob_assessed without the model saying so",
+          syn.review_items({"rob_table": [{"study_label": "A", "overall": "low"}],
+                            "review_methods": {}})["rob_assessed"] is True)
+    check("incomplete extraction caps quality however good the review",
+          syn.quality({**s2_strong, "extraction_complete": False}, r)
+          == syn.Q_INCOMPLETE_CAP)
     check("'unclear' RoB is dropped, not mapped to a band",
           syn.inherited_rob(s2_good) == {"Smith 2019": "low"},
           "an unclear judgment is not a judgment")
@@ -559,8 +615,12 @@ def main():
     check("closed access -> None, a real answer",
           oamod.oa_location(closed) is None)
     check("reference list available for SR resolution",
-          len(oamod.referenced_dois(oa_work)) == 3,
+          len(oamod.referenced_work_ids(oa_work)) == 3,
           "narrows S2's search space; never decides membership")
+    check("reference ids are OPENALEX ids, and the name now says so",
+          oamod.referenced_work_ids({"referenced_works": ["W1"]}) == ["W1"]
+          and not oamod.referenced_work_ids({"referenced_works": ["W1"]})[0].startswith("10."),
+          "the old name promised DOIs and returned W-ids")
     check("europepmc full_text short-circuits the lookup",
           oamod.resolve({"oa": "full_text", "doi": "10.1/x"})["checked"] == ["europepmc"],
           "free answer wins")
@@ -646,23 +706,42 @@ def main():
 
     print("\nSR-TABLE INHERITANCE PAYLOAD")
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    import run_sr_inheritance as sri
-    pay = sri.s2_payload({"title": "An SR"}, jats)
-    check("only the included-studies table is sent when the filter hits",
-          pay["table_filter_hit"] and len(pay["tables"]) == 1
-          and "included" in (pay["tables"][0]["caption"] or "").lower(),
-          "the adverse-events table is not S2's job")
-    check("table row structure survives into the payload",
-          pay["tables"][0]["rows"][1][2] == "400 mg",
+    # ONE payload builder, shared by run_sr_inheritance and the scored pipeline.
+    # They had drifted: only the script sent tables, so every S2 call inside a
+    # scored run was reading flattened prose and resolved 0 of 12.
+    pay = syn.s2_payload({"title": "An SR"}, jats)
+    inc = [t for t in pay["tables"] if "included" in (t["caption"] or "").lower()]
+    check("the included-studies table reaches S2 with its rows intact",
+          pay["table_filter_hit"] and inc and inc[0]["rows"][1][2] == "400 mg",
           "prose would lose which dose belongs to which trial")
     check("methods included, discussion not",
           "double-blind" in pay["methods"] and "conclude" not in pay["methods"])
     no_match = """<article><body><table-wrap><caption><p>Baseline data</p></caption>
       <table><tr><th>Age</th></tr><tr><td>44</td></tr></table></table-wrap></body></article>"""
-    pay2 = sri.s2_payload({"title": "x"}, no_match)
+    pay2 = syn.s2_payload({"title": "x"}, no_match)
     check("filter miss falls back to all tables, never to nothing",
           pay2["table_filter_hit"] is False and len(pay2["tables"]) == 1,
           "the heuristic filters; S2 decides")
+    check("no full text -> no tables, and the caller must not read that as "
+          "'this review lists no studies'",
+          syn.s2_payload({"title": "x"}, None)["tables"] == [])
+
+    # Measured 2026-08-07 on three real OA reviews: the old filter returned
+    # False on 14 of 14 tables. These are verbatim headers/captions it missed.
+    check("'included systematic reviews' matches, not just 'included studies'",
+          ft.looks_like_included_studies(
+              {"caption": "Results of the quality assessment of included "
+                          "systematic reviews with AMSTAR-2", "rows": [["REFERENCE"]]}))
+    check("a header saying 'Patient' counts like 'participants'",
+          ft.looks_like_included_studies(
+              {"caption": None, "label": None,
+               "rows": [["Sr. No", "Treatment option", "Reviews (n)",
+                         "Patient (n)", "Author, year"]]}))
+    check("a search-terms table is still rejected",
+          not ft.looks_like_included_studies(
+              {"caption": "", "label": None,
+               "rows": [["", "Search terms"], ["1", "Achillea"]]}),
+          "over-matching is cheap, but not free")
 
     print("\nEFFECTIVE DOSE BAND (derived, not invented)")
     from pipeline import dose as dosemod

@@ -168,6 +168,26 @@ def extract_tables(xml: str | None) -> list[dict]:
     return tables
 
 
+# Over-matching here is CHEAP (S2 is shown one extra table and is told to ignore
+# what it is not); under-matching is FATAL (the row structure never reaches S2 at
+# all, and s2_payload's fallback then ships every table in the paper). So both
+# lists are deliberately generous. "included" is listed bare because reviews
+# write "included systematic reviews", "included trials", "studies included in
+# the meta-analysis" -- the old literal "included stud" matched none of them.
+CAPTION_SIGNALS = (
+    "included", "characteristics", "summary of stud", "summary of find",
+    "trial characteristics", "study characteristics", "eligible stud",
+    "overview of stud", "description of stud", "quality assessment",
+    "risk of bias", "certainty of evidence", "grade",
+)
+HEADER_SIGNALS = (
+    "author", "year", "sample", "dose", "duration", "population",
+    "intervention", "participants", "patient", "trial", "stud", "reference",
+    "design", "country", "follow", "comparator", "control", "outcome",
+    "treatment", "arm", "group", "age", "sex", "n =", "no.", "citation",
+)
+
+
 def looks_like_included_studies(table: dict) -> bool:
     """
     Heuristic: is this an SR's characteristics-of-included-studies table?
@@ -178,13 +198,17 @@ def looks_like_included_studies(table: dict) -> bool:
     content, which is exactly what this codebase does not do.
     """
     blob = " ".join(filter(None, [table.get("caption"), table.get("label")])).lower()
-    if any(k in blob for k in ("included stud", "characteristics", "study characteristics",
-                               "summary of stud", "trial characteristics")):
+    if any(k in blob for k in CAPTION_SIGNALS):
         return True
-    header = " ".join(table["rows"][0]).lower() if table.get("rows") else ""
-    signals = ("author", "year", "sample", "dose", "duration", "population",
-               "intervention", "participants")
-    return sum(1 for s in signals if s in header) >= 3
+    # Headers are frequently split across two rows (a spanning group header over
+    # a column header), so scan both. Measured 2026-08-07 on three real OA
+    # reviews: the old single-row scan returned False on 14 of 14 tables,
+    # including "Treatment option | Reviews (n) | Patient (n) | Author, year" --
+    # which scored 2 because the signal list said "participants" and the table
+    # said "Patient".
+    rows = table.get("rows") or []
+    header = " ".join(c for row in rows[:2] for c in row).lower()
+    return sum(1 for s in HEADER_SIGNALS if s in header) >= 3
 
 
 def best_text(record: dict, *, prefer: tuple[str, ...] = ("methods", "results")) -> tuple[str, str]:

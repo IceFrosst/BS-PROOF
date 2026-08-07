@@ -207,7 +207,27 @@ Commit and push. Never overwrite an old run file. Label provider in the report.
 
 Retrieval by **ingredient**; form only affects transfer matching.
 Reviews (umbrella / MA / SR) are **fetched first** and ranked 1–3, but the main
-pilot loop extracts **RCT-rank (4)** primaries. SR tables: `run_sr_inheritance.py`.
+pilot loop extracts **RCT-rank (4)** primaries.
+
+### Syntheses
+
+`q_s` measures the **review**, never our corpus overlap. It was gated on
+`resolved_fraction >= 0.5` until 2026-08-07 — the share of a review's included
+studies we already held — which discarded a Cochrane review of 30 trials where
+we had 6 (`q_s = 0`) while a thin review of 4 where we had 3 scored `1.00`.
+Overlap reaches the score through `cov` in `score_ecu`, smoothly, and always did.
+Quality now comes from `synthesis.REVIEW_ITEMS`, an AMSTAR-2-shaped checklist S2
+reads off the review. `resolved` means only "S2 found an included-studies list".
+
+`pipeline.synthesis.s2_payload` is the ONE payload builder. There were two, and
+only the standalone script sent tables — the scored path sent flattened prose, so
+S2 was asked to read a table it had never been shown (12/12 ok, 0 resolved).
+
+```bash
+python3 run_sr_inheritance.py creatine --limit 8 --grok    # or --pilot / --claude
+```
+
+One file per backend: `out/sr_inheritance_<backend>.json`. Never blended.
 
 ---
 
@@ -280,9 +300,12 @@ alongside — a product dosed where trials found nothing is the most useful warn
 the axis can give.
 
 **Coverage measured on the FULL corpus (20 155 records, 100%): 77.5%
-methods-level facts, BELOW the ≥80% target.** Unpaywall adds exactly 0.0pp over
-OpenAlex (measured head-to-head; they are not independent). SR-table inheritance
-is the only remaining rung.
+methods-level facts, BELOW the ≥80% target.** Every additional OA resolver has
+now been measured head-to-head against OpenAlex and every one adds **0.0pp** —
+Unpaywall, Semantic Scholar (a strict subset: 17 vs 19 of 40, 0 new) and CORE
+(keyless answered 20/40, 67 × HTTP 429, 0 new). They aggregate the same
+repository network and are not independent draws. **Stop adding resolvers.**
+SR-table inheritance is the only remaining rung.
 
 **Retrieval specificity is the gating problem.** `("magnesium") AND RCT` is 25%
 IV/procedural magnesium; the supplement-scoped variant trades that for
@@ -307,8 +330,10 @@ describing the score differently is stale — trust `pipeline/scoring.py`,
 1. **`ANTHROPIC_API_KEY`** — the only unblock for production extraction.
 2. **Constrain retrieval to the intervention**, not the document. Gates
    extraction cost, coverage and outcome mapping simultaneously.
-3. **SR-table inheritance uplift** — built, still UNMEASURED. The only path left
-   to the 80% coverage target.
+3. **SR-table inheritance uplift** — the three defects that made it return zero
+   are fixed (payload, table filter, `q_s`); the uplift itself is still
+   UNMEASURED. `run_sr_inheritance.py --grok` now runs on the live backend.
+   Still the only path left to the 80% coverage target.
 4. **Anchor eval** — 34/34 in-scope anchors have vocabulary; running them needs
    extraction. Do this before trusting any constant.
 5. **Derive dose bands at scale** and bump `band_version` 0 → 1.

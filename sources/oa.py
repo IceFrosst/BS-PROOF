@@ -63,18 +63,30 @@ def oa_location(work: dict | None) -> dict | None:
     }
 
 
-def referenced_dois(work: dict | None, *, limit: int = 200) -> list[str]:
+def referenced_work_ids(work: dict | None, *, limit: int = 200) -> list[str]:
     """
-    OpenAlex ids of the works this one cites. For a systematic review these are
-    the candidate included studies, which is how an SR's included list gets
-    resolved to canonical ids without parsing its tables. S2 remains the
-    authority on what was ACTUALLY included -- a reference list also contains
-    methods citations and excluded studies, so this narrows the search space and
-    never decides membership on its own.
+    OPENALEX WORK IDS (`https://openalex.org/W...`) of the works this one cites.
+
+    NOT DOIs. This was named `referenced_dois` and returned W-ids, so any caller
+    that trusted the name would have fed W-ids into DOI matching and resolved
+    nothing -- silently, which is the failure mode this codebase keeps hitting.
+    Turning one into a DOI needs a second OpenAlex lookup per reference; do that
+    deliberately and pay for it, do not assume it happened.
+
+    For a systematic review these are the candidate included studies, which is
+    how an SR's included list can be narrowed without parsing its tables. S2
+    remains the authority on what was ACTUALLY included -- a reference list also
+    contains methods citations and excluded studies, so this narrows the search
+    space and never decides membership on its own.
     """
     if not work:
         return []
     return [r for r in (work.get("referenced_works") or [])][:limit]
+
+
+# Old name kept so nothing breaks mid-refactor. It is a lie about the return
+# type; new callers must use referenced_work_ids.
+referenced_dois = referenced_work_ids
 
 
 # ----------------------------------------------------------------- Unpaywall

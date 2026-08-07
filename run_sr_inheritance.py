@@ -2,7 +2,8 @@
 """
 SR-table inheritance — the last unbuilt rung of the coverage ladder.
 
-    python3 run_sr_inheritance.py magnesium --limit 5
+    python3 run_sr_inheritance.py magnesium --limit 5 --grok
+    python3 run_sr_inheritance.py magnesium --limit 5 --pilot   # default
 
 WHY THIS IS THE REMAINING WORK
 Coverage on the full corpus is 77.5% methods-level facts against a >=80% target.
@@ -22,8 +23,10 @@ WHAT IT DOES NOT DO
 Syntheses never enter evidence mass (invariant 6). Nothing here changes E.
 Inherited RoB carries the 0.85 penalty -- it is another team's judgement.
 
-Uses pilot_adapter (subscription, non-production) while ANTHROPIC_API_KEY is
-declined, so every extraction is labelled pilot and must not back public claims.
+BACKENDS
+--grok / --pilot / --claude, one per run, never blended (invariant 9). Results
+are written to out/sr_inheritance_<backend>.json. The pilot backend is a
+subscription and must not back public claims.
 """
 from __future__ import annotations
 import json
@@ -34,46 +37,42 @@ from pipeline.storage import Store
 from sources import fulltext as ft
 from sources.http import SourceError
 
-MAX_TABLE_ROWS = 60          # a very long table is truncated, and we say so
-MAX_METHODS_CHARS = 6000
+# The payload builder lives in pipeline.synthesis so this script and the scored
+# pipeline cannot drift apart again -- they had, and only this one sent tables.
 
 
-def s2_payload(record: dict, xml: str) -> dict:
+def backend(name: str):
     """
-    What S2 sees: the candidate tables WITH their row structure, plus the
-    methods section for context.
+    (call, label) for one extraction backend.
 
-    Not the whole paper. Flattening a characteristics table to prose loses which
-    dose belongs to which trial, and sending the full text costs 10-20x for
-    material S2 is told to ignore (it does not evaluate the review).
+    This script was pilot-only, which meant the one measurement standing between
+    us and the 80% coverage target could not be run on the backend actually in
+    use. Backends stay SEPARATE (invariant 9) -- this picks one, labels the
+    output with it, and never blends two.
     """
-    tables = ft.extract_tables(xml)
-    candidates = [t for t in tables if ft.looks_like_included_studies(t)]
-    # If the filter finds nothing, fall back to every table rather than giving
-    # S2 nothing -- the heuristic is a filter, not a decision (see fulltext.py).
-    chosen = candidates or tables
-    trimmed = []
-    for t in chosen:
-        rows = t["rows"][:MAX_TABLE_ROWS]
-        trimmed.append({"label": t["label"], "caption": t["caption"],
-                        "rows": rows,
-                        "truncated": len(t["rows"]) > MAX_TABLE_ROWS})
-    sections = ft.sections(xml)
-    return {
-        "title": record.get("title"),
-        "tables": trimmed,
-        "methods": (sections.get("methods") or "")[:MAX_METHODS_CHARS],
-        "table_filter_hit": bool(candidates),
-    }
-
-
-def run(ingredient: str, limit: int, *, verbose: bool = True) -> dict:
+    if name == "grok":
+        import grok_adapter as ga
+        if not ga.preflight():
+            return None, "grok"
+        return (lambda agent, payload: ga.call(agent, payload, timeout=300)), "grok"
+    if name == "claude":
+        import claude_adapter as ca
+        return (lambda agent, payload: ca.call(agent, payload)), "claude-production"
     import pilot_adapter as pa
-
     probe = pa.hermeticity_probe()
     print(f"hermeticity: {'PASS' if probe['hermetic'] else 'FAIL'} — {probe['detail']}")
     if not probe["hermetic"]:
-        return {"error": "not hermetic"}
+        return None, "claude-pilot"
+    return (lambda agent, payload: pa.call(agent, payload, verified=True, timeout=300)), \
+        "claude-pilot"
+
+
+def run(ingredient: str, limit: int, *, mode: str = "pilot",
+        verbose: bool = True) -> dict:
+    call, label = backend(mode)
+    if call is None:
+        return {"error": f"backend {mode} unavailable"}
+    print(f"backend: {label}\n")
 
     with Store() as store:
         all_studies = store.studies()
@@ -108,13 +107,13 @@ def run(ingredient: str, limit: int, *, verbose: bool = True) -> dict:
                 stats["no_fulltext"] += 1
                 continue
 
-            payload = s2_payload(s, xml)
+            payload = syn.s2_payload(s, xml)
             if not payload["tables"]:
                 print(f"  {s['pmcid']}: no tables in JATS")
                 stats["no_fulltext"] += 1
                 continue
 
-            result, meta = pa.call("S2", payload, verified=True, timeout=300)
+            result, meta = call("S2", payload)
             if not result:
                 print(f"  {s['pmcid']}: S2 failed — {meta.get('error')}")
                 stats["s2_failed"] += 1
@@ -147,7 +146,7 @@ def run(ingredient: str, limit: int, *, verbose: bool = True) -> dict:
     print("Inherited RoB carries the 0.85 penalty; syntheses still add no")
     print("evidence mass (invariant 6).")
     return {**stats, "starved": len(starved), "rescued": len(rescued),
-            "rob_inherited": rob_inherited}
+            "rob_inherited": rob_inherited, "backend": label}
 
 
 def main(argv: list[str]) -> int:
@@ -156,10 +155,18 @@ def main(argv: list[str]) -> int:
     if "--limit" in args:
         i = args.index("--limit")
         limit = int(args[i + 1]); del args[i:i + 2]
+    mode = "pilot"
+    for flag in ("--grok", "--pilot", "--claude"):
+        if flag in args:
+            args.remove(flag); mode = flag[2:]
     ingredient = args[0] if args else "magnesium"
-    out = run(ingredient, limit)
-    with open("out/sr_inheritance.json", "w") as f:
+    out = run(ingredient, limit, mode=mode)
+    # One file per backend. Overwriting a Grok measurement with a Claude one and
+    # calling the result "the uplift" is the silent-merge failure (invariant 9).
+    path = f"out/sr_inheritance_{out.get('backend', mode)}.json"
+    with open(path, "w") as f:
         json.dump(out, f, indent=1)
+    print(f"\nwrote {path}")
     return 0
 
 
