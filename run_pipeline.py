@@ -408,7 +408,7 @@ def main(argv: list[str]) -> int:
         rows = build_ecus(
             extractions, product, syntheses=syntheses_for_score,
             prompt_version=prompt_version,
-            exact_form_only=demo, ignore_population=demo,
+            exact_form_only=demo, ignore_population=True,
         )
         for row in rows:
             store.upsert_ecu(row)

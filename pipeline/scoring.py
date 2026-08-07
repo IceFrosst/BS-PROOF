@@ -42,6 +42,15 @@ GATE_MIN_HUMAN_WD = 0.5
 # Founder 2026-08-07: form is an applicability arc, not a center-score penalty.
 APPLY_FORM_IN_WEIGHT = False
 
+# Founder 2026-08-07: population OFF entirely, everywhere -- not just under
+# --demo. S3 recovers the four axes from an abstract only rarely, so the factor
+# was mostly applying the 0.70 "adjacent" penalty to data we never actually had.
+# Penalising a study for an unknown is not conservatism, it is noise.
+#
+# Turning this back on is one line, and the selftest asserts BOTH settings so
+# flipping it can never silently leave the suite meaningless.
+APPLY_POP_IN_WEIGHT = False
+
 
 def band_for(score: int) -> str:
     """SPEC §9 bands, inclusive on both ends of each range."""
@@ -109,7 +118,8 @@ class Study:
         if APPLY_FORM_IN_WEIGHT:
             w *= FORM_FACTOR.get(self.form_match, 0.30)
         w *= DOSE_FACTOR.get(self.dose_match, 0.45)
-        w *= POP_FACTOR.get(self.pop_match, 0.35)
+        if APPLY_POP_IN_WEIGHT:
+            w *= POP_FACTOR.get(self.pop_match, 0.35)
         return w
 
 

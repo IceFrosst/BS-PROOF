@@ -97,10 +97,16 @@ def main():
               f"exact {exact_s} == different {diff_s} — form lives on the arc only")
         check("dose still collapses the score",
               score_ecu(rcts(9, dose_match="below_50"), [])["score"] < a["score"] - 50,
-              "dose and population remain IN the weight")
-        check("population still collapses the score",
-              score_ecu(rcts(9, pop_match="different"), [])["score"] <= a["score"] - 30,
-              f"{a['score']} -> {score_ecu(rcts(9, pop_match='different'), [])['score']}")
+              "dose is the ONLY transfer axis still in the weight")
+        if _sc.APPLY_POP_IN_WEIGHT:
+            check("population collapses the score",
+                  score_ecu(rcts(9, pop_match="different"), [])["score"] <= a["score"] - 30)
+        else:
+            check("population is OFF -- no tier moves the score (founder decision)",
+                  len({score_ecu(rcts(9, pop_match=pm), [])["score"]
+                       for pm in ("exact", "adjacent", "different")}) == 1,
+                  "S3 rarely recovers the axes from an abstract; penalising an "
+                  "unknown is noise, not conservatism")
         # The consequence, asserted so nobody rediscovers it in a demo.
         check("a glycinate and an oxide product now score IDENTICALLY",
               exact_s == diff_s,
@@ -388,9 +394,10 @@ def main():
                            with_pop(deficient)["extraction"], product)[0]
     _, st_match, _ = to_studies(with_pop(axes)["record"] | {"ingredient": "magnesium"},
                              with_pop(axes)["extraction"], product)[0]
-    check("population axes reach the transfer factor",
+    check("population axes are still EXTRACTED and recorded",
           st_def.pop_match != st_match.pop_match,
-          f"deficient study vs general-adult product: {st_def.pop_match}")
+          f"deficient vs general-adult: {st_def.pop_match} — recorded even though "
+          f"APPLY_POP_IN_WEIGHT is off, so re-enabling costs one line")
     _, st_unknown, _ = to_studies(
         {"_canonical": "x", "ingredient": "magnesium", "design_rank": 4},
         {"S3": None, "outcomes": [{"claim": {"direction": "benefit"},
