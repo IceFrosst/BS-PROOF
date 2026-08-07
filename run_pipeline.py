@@ -4,11 +4,12 @@ End-to-end v1 run.
 
   python run_pipeline.py magnesium --form magnesium_glycinate --grok --limit 20
 
-Flags: --with-sr --demo --full-text-only
+Flags: --with-sr --demo --full-text-only --all-oa --broad-scope
 Predatory list: vocab/predatory_journals.txt (auto-expanded after git pull)
 
-Corpus strategy: retrieve broadly (up to 600 primaries), rank by OA + year,
-then extract only the top `--limit` as evidence. Store size ≠ evidence mass.
+Default demo scope is **intervention**: ingredient in TITLE/ABSTRACT as the
+thing being tested (not a whole-record keyword match). Relevance gate also
+skips IV/surgical noise before any agent spend.
 """
 from __future__ import annotations
 import os
@@ -18,7 +19,8 @@ from pipeline import vocab
 from pipeline import predatory as pred
 from pipeline.assemble import build_ecus
 from pipeline import arcs as arcsmod
-from pipeline.donut import donut_line, four_arc_lines
+from pipeline.donut import four_arc_lines
+from pipeline.relevance import relevance_check
 from pipeline.storage import Store, DEFAULT_DB
 from pipeline.retrieve import retrieve
 
@@ -27,7 +29,6 @@ WIRING_DB = DEFAULT_DB.parent / "wiring_demo.sqlite"
 DEFAULT_PILOT_LIMIT = 40
 DEFAULT_GROK_LIMIT = 100
 DEFAULT_WIRING_SCORE_CAP = 40
-# Broad retrieve, narrow extract: store up to 600, score only --limit top-ranked.
 RETRIEVE_MAX_PRIMARIES = int(os.environ.get("SP_RETRIEVE_MAX_PRIMARIES", "600"))
 RETRIEVE_MAX_SYNTHESES = int(os.environ.get("SP_RETRIEVE_MAX_SYNTHESES", "120"))
 SYNTHETIC_VERSION = "SYNTHETIC-NOT-REAL"
@@ -42,14 +43,14 @@ _OA_RANK = {
 
 def _pilot_db(ingredient: str, scope: str):
     return DEFAULT_DB.parent / (
-        f"pilot_{ingredient}{'_supp' if scope == 'supplement' else ''}.sqlite"
+        f"pilot_{ingredient}{'_supp' if scope != 'broad' else ''}.sqlite"
     )
 
 
 def _grok_db(ingredient: str, scope: str):
-    return DEFAULT_DB.parent / (
-        f"grok_{ingredient}{'_supp' if scope == 'supplement' else ''}.sqlite"
-    )
+    # Separate file when not broad so intervention corpus does not mix with noise.
+    suffix = "" if scope == "broad" else f"_{scope[:4]}"
+    return DEFAULT_DB.parent / f"grok_{ingredient}{suffix}.sqlite"
 
 
 def _best_text(record: dict) -> str:
@@ -63,7 +64,6 @@ def _best_text(record: dict) -> str:
 
 def _prioritize_primaries(primaries: list[dict], *,
                           full_text_only: bool = False) -> list[dict]:
-    """Highest-value first: full-text/green OA, then newer year."""
     def key(s: dict):
         oa = (s.get("oa") or "abstract_only").lower()
         return (_OA_RANK.get(oa, 6), -(s.get("year") or 0))
@@ -105,11 +105,13 @@ def _report_failures(raw: list[dict]) -> None:
         print(f"  !! {n} subagent calls FAILED across {len(failed)} studies")
     skipped = [r for r in raw if r["extraction"].get("_skipped")]
     if skipped:
-        print(f"  skipped {len(skipped)}/{len(raw)} studies with no usable text")
+        rel = sum(1 for r in skipped
+                  if str(r["extraction"].get("_skipped", "")).startswith("relevance:"))
+        print(f"  skipped {len(skipped)}/{len(raw)} "
+              f"(relevance gate: {rel}, no text / other: {len(skipped) - rel})")
 
 
 def _agent_stats(raw: list[dict]) -> dict:
-    """Aggregate S3–S8 (+S6) ok/fail from extraction metadata."""
     stats: dict[str, dict[str, int]] = {}
     for r in raw:
         ext = r.get("extraction") or {}
@@ -139,6 +141,7 @@ def _studies_list(raw: list[dict]) -> list[dict]:
     out = []
     for r in raw:
         rec = r.get("record") or {}
+        ext = r.get("extraction") or {}
         out.append({
             "title": rec.get("title"),
             "year": rec.get("year"),
@@ -148,8 +151,9 @@ def _studies_list(raw: list[dict]) -> list[dict]:
             "journal": rec.get("journal") or rec.get("journal_name"),
             "oa": rec.get("oa"),
             "predatory_venue": bool(rec.get("predatory_venue")),
-            "skipped": bool((r.get("extraction") or {}).get("_skipped")),
-            "failed_partial": bool((r.get("extraction") or {}).get("_failed")),
+            "skipped": bool(ext.get("_skipped")),
+            "skip_reason": ext.get("_skipped"),
+            "failed_partial": bool(ext.get("_failed")),
         })
     return out
 
@@ -178,11 +182,6 @@ def main(argv: list[str]) -> int:
     demo = "--demo" in args
     if demo:
         args.remove("--demo")
-    # Full-text-only. Default ON for the pilot/grok demo backends: an
-    # abstract-only study carries OA_FACTOR 0.55 AND cannot verify most RoB
-    # items, so it lands near w=0.02 and needs ~300 of its kind to reach c=0.9.
-    # A full-text study needs ~50. Extracting them is the same token cost, so
-    # spending the budget on readable papers is strictly better value.
     full_text_only = grok or pilot
     if "--all-oa" in args:
         args.remove("--all-oa"); full_text_only = False
@@ -195,9 +194,14 @@ def main(argv: list[str]) -> int:
         print("Pick only one of --wiring, --pilot, --grok")
         return 1
 
-    scope = "supplement" if "--supplement-scope" in args else "broad"
-    if scope == "supplement":
-        args.remove("--supplement-scope")
+    # Scope: intervention is the demo default (ingredient in title/abstract).
+    scope = "intervention" if (grok or pilot) else "broad"
+    if "--broad-scope" in args:
+        args.remove("--broad-scope"); scope = "broad"
+    if "--supplement-scope" in args:
+        args.remove("--supplement-scope"); scope = "supplement"
+    if "--intervention-scope" in args:
+        args.remove("--intervention-scope"); scope = "intervention"
 
     limit = DEFAULT_GROK_LIMIT if grok else DEFAULT_PILOT_LIMIT
     if "--limit" in args:
@@ -239,6 +243,7 @@ def main(argv: list[str]) -> int:
     run_context: dict = {
         "ingredient": ingredient,
         "form": form,
+        "scope": scope,
         "studies_targeted": 0,
         "studies_ok": 0,
         "studies_skipped": 0,
@@ -261,7 +266,7 @@ def main(argv: list[str]) -> int:
         )
         if need_retrieve:
             print(f"retrieving / expanding corpus in {db.name} "
-                  f"(max primaries={RETRIEVE_MAX_PRIMARIES})...")
+                  f"(scope={scope}, max primaries={RETRIEVE_MAX_PRIMARIES})...")
             retrieve(ingredient, store,
                      max_syntheses=RETRIEVE_MAX_SYNTHESES,
                      max_primaries=RETRIEVE_MAX_PRIMARIES,
@@ -270,7 +275,6 @@ def main(argv: list[str]) -> int:
         all_rows = store.studies(syntheses=False)
         syn_rows = store.studies(syntheses=True)
 
-        # Research layer: flag predatory venues
         pred_summary = pred.flag_records(all_rows)
         pred.flag_records(syn_rows)
         print(pred.format_summary(pred_summary))
@@ -280,9 +284,21 @@ def main(argv: list[str]) -> int:
             [s for s in all_rows if s.get("design_rank") == 4],
             full_text_only=full_text_only,
         )
+
+        # Pre-filter with relevance gate so --limit is spent on real candidates.
+        relevant = []
+        rejected = 0
+        for s in primaries:
+            ok, reason = relevance_check(s, ingredient)
+            if ok:
+                relevant.append(s)
+            else:
+                rejected += 1
         print(f"\nstore: {len(all_rows)} primaries, {len(syn_rows)} syntheses; "
-              f"{len(primaries)} RCT-rank after filters "
-              f"(will extract top {min(limit, len(primaries))})")
+              f"{len(primaries)} RCT-rank after OA filters; "
+              f"{len(relevant)} after relevance gate "
+              f"(dropped {rejected} noise)")
+        primaries = relevant
 
         raw: list[dict] = []
         syntheses_for_score: list = []
@@ -307,15 +323,15 @@ def main(argv: list[str]) -> int:
                 if not ga.preflight():
                     return 1
                 if not primaries:
-                    print("No RCTs left after filters.")
+                    print("No RCTs left after relevance / OA filters.")
                     return 1
                 effective = min(limit, len(primaries))
                 print("\n" + "-" * 68)
                 print("GROK MODE")
+                print(f"  scope: {scope}")
                 print(f"  studies in flight: {GROK_STUDIES_IN_FLIGHT}")
                 print(f"  concurrent grok CLI: {ga.MAX_CONCURRENCY}")
                 print(f"  batch size (extract): {effective}")
-                print(f"  corpus stored: up to {RETRIEVE_MAX_PRIMARIES} primaries")
                 print("-" * 68)
                 call_fn = ga.call
                 prompt_version = f"{ga.PROMPT_VERSION}+{ga.PROVENANCE}"
@@ -339,7 +355,7 @@ def main(argv: list[str]) -> int:
             targets = primaries[:limit]
             run_context["studies_targeted"] = len(targets)
             print(f"extracting {len(targets)} studies "
-                  f"(from {len(primaries)} ranked RCTs in store)...")
+                  f"(from {len(primaries)} relevance-filtered RCTs)...")
             raw = workers.extract_corpus(
                 [{**p, "_canonical": p["canonical_id"], "ingredient": ingredient}
                  for p in targets],
@@ -370,7 +386,7 @@ def main(argv: list[str]) -> int:
                             if r["record"].get("registration_id") else None,
             } for r in raw if not r["extraction"].get("_skipped")]
             if not extractions:
-                print("No study had usable text.")
+                print("No study passed relevance + text checks.")
                 return 1
 
             if with_sr and call_fn is not None:
@@ -417,16 +433,14 @@ def main(argv: list[str]) -> int:
         run_context["ecu_rows"] = [{
             "outcome_vocab_id": r["outcome_vocab_id"],
             "score": r["score"],
+            "composite": r.get("composite"),
             "band": r["band"],
             "n_primaries": r["evidence"]["n_primaries"],
             "prompt_version": prompt_version,
         } for r in rows]
 
-        print(f"\n{tag}ECU ROWS — {ingredient}, form={form}")
-        print("  0-100 = 100 x c x mean(effect, form, dose).  Each arc shows its")
-        print("  verdict and the share of evidence behind it.  A low number with a")
-        print("  FULL evidence arc means 'does not work'; an EMPTY one means")
-        print("  'barely studied'.  The number must never be quoted without them.")
+        print(f"\n{tag}ECU ROWS — {ingredient}, form={form}, scope={scope}")
+        print("  0-100 = 100 x c x mean(effect, form, dose)")
         print("-" * 74)
         for row in sorted(rows, key=lambda r: -(r.get("composite")
                                                 if r.get("composite") is not None else -999)):
@@ -451,6 +465,7 @@ def main(argv: list[str]) -> int:
         mode += "-sr"
     if full_text_only:
         mode += "-ft"
+    mode += f"-{scope[:5]}"
     if grok:
         _auto_push_report(ingredient, form, mode, run_context=run_context)
     elif pilot:
