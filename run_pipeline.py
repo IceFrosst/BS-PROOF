@@ -208,6 +208,18 @@ def main(argv: list[str]) -> int:
         args.remove("--supplement-scope"); scope = "supplement"
     if "--intervention-scope" in args:
         args.remove("--intervention-scope"); scope = "intervention"
+    if "--per-outcome" in args:
+        # One query per outcome, each with its own quota. A single ranked query
+        # starves whole outcomes: 62 magnesium sleep RCTs exist and a run off
+        # one generic query surfaced sleep_quality n=1.
+        args.remove("--per-outcome"); scope = "per_outcome"
+
+    # The product's elemental dose. Without it the dose axis CANNOT be judged --
+    # that is a missing input, not a default, and the arc must say so.
+    dose_mg = None
+    if "--dose" in args:
+        i = args.index("--dose")
+        dose_mg = float(args[i + 1]); del args[i:i + 2]
 
     limit = DEFAULT_GROK_LIMIT if grok else DEFAULT_PILOT_LIMIT
     if "--limit" in args:
@@ -234,7 +246,13 @@ def main(argv: list[str]) -> int:
 
     pv = vocab.population_variants()[0]
     product = {"ingredient": ingredient, "form_vocab_id": form,
-               "population": {"id": pv["id"], **{a: pv[a] for a in vocab.AXES}}}
+               "population": {"id": pv["id"], **{a: pv[a] for a in vocab.AXES}},
+               # Without a dose the dose axis CANNOT be judged -- it is not a
+               # default, it is a missing input, and the arc says so.
+               "dose_low_mg": dose_mg, "dose_high_mg": dose_mg}
+    if dose_mg is None:
+        print("\nNOTE: no --dose given, so the dose arc will read 'not tested'.")
+        print("      Pass --dose <mg elemental> to judge the dose axis.")
 
     if wiring:
         db = WIRING_DB
@@ -459,7 +477,12 @@ def main(argv: list[str]) -> int:
             o = vocab.outcome(row["outcome_vocab_id"]) or {}
             comp = row.get("composite")
             shown = "gated" if comp is None else f"{comp:>3}/100"
-            verdict = arcsmod.label(comp, (row.get("components") or {}).get("c"))
+            verdict = arcsmod.label(
+                comp, (row.get("components") or {}).get("c"),
+                effect_verdict=((row.get("arcs") or {}).get("effect") or {}).get("verdict"),
+                applicability_limited=any(
+                    ((row.get("arcs") or {}).get(k) or {}).get("verdict") is None
+                    for k in ("form", "dose")))
             print(f"{tag}{o.get('label', row['outcome_vocab_id']):<30}{shown:>9}  "
                   f"{verdict:<24} n={row['evidence']['n_primaries']}"
                   f"   (signed {row.get('score')})")
@@ -492,8 +515,12 @@ def main(argv: list[str]) -> int:
                 return f"{v:+.2f}@{cov:.0%}"
 
             print(f"  best outcome   : {o.get('label', top['outcome_vocab_id'])}")
-            print(f"  SCORE          : {top['composite']}/100   "
-                  f"{arcsmod.label(top['composite'], c)}")
+            _lab = arcsmod.label(
+                top["composite"], c,
+                effect_verdict=(a.get("effect") or {}).get("verdict"),
+                applicability_limited=any((a.get(k) or {}).get("verdict") is None
+                                          for k in ("form", "dose")))
+            print(f"  SCORE          : {top['composite']}/100   {_lab}")
             print(f"  arcs           : effect {_a('effect')} | form {_a('form')} "
                   f"| dose {_a('dose')} | evidence {_a('evidence')}")
             print(f"  outcomes scored: {len(scored)}   range "

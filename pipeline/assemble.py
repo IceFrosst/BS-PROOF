@@ -74,7 +74,11 @@ def to_studies(record: dict, extraction: dict, product: dict,
         dose_match = dosemod.dose_match_for(
             product.get("dose_low_mg"), product.get("dose_high_mg"), dose_band)
     else:
-        dose_match = UNBANDED_DOSE_MATCH
+        # No band could be derived. The axis is UNASSESSABLE, which is not the
+        # same as matching. Marking it "in_band" made the dose arc read
+        # +1.00 @ 100% precisely when no dose had been extracted at all --
+        # most confident exactly where we knew least.
+        dose_match = "unspecified"
 
     rob = _rob_items(s4, registry)
     n = (s3 or {}).get("n_randomised")
@@ -92,6 +96,19 @@ def to_studies(record: dict, extraction: dict, product: dict,
         if entry.get("discarded") or not entry.get("outcome_vocab_id"):
             continue
         claim = entry["claim"]
+        direction = claim.get("direction") or "unclear"
+        magnitude = claim.get("magnitude")
+        # SAFETY OUTCOMES INVERT. s_i is signed against the product's CLAIM, and
+        # for efficacy a null is disconfirming (invariant 7). For an adverse
+        # event the claim is "this is safe", so a trial finding NO difference in
+        # side effects CONFIRMS it. Scoring that -0.7 published magnesium's
+        # safety data as "does not work" -- the worst score on the board for a
+        # reassuring result.
+        if vocab.outcome_kind(entry["outcome_vocab_id"]) == "adverse_event":
+            if direction == "null_effect":
+                direction, magnitude = "benefit", "trivial"   # reassuring, mild
+            elif direction == "harm":
+                pass                                          # already negative
         out.append((entry["outcome_vocab_id"], Study(
             id=record["_canonical"],
             design_rank=record.get("design_rank") or 14,
@@ -105,8 +122,8 @@ def to_studies(record: dict, extraction: dict, product: dict,
             form_match=form_match,
             dose_match=dose_match,
             pop_match=pop_match,
-            direction=claim.get("direction") or "unclear",
-            magnitude=claim.get("magnitude"),
+            direction=direction,
+            magnitude=magnitude,
         ), dose))
     return out
 

@@ -761,6 +761,37 @@ def main():
     check("runner projects every field the report renders", not _missing,
           f"missing: {_missing}" if _missing else f"{len(_need)} fields present")
 
+    print("\nSAFETY OUTCOMES + APPLICABILITY LABELS")
+    from pipeline.assemble import to_studies as _ts
+    def _one(outcome, direction):
+        rec = {"_canonical": "x", "ingredient": "magnesium", "design_rank": 4,
+               "oa": "full_text"}
+        ext = {"S3": {"n_randomised": 100}, "S7": {"form_vocab_id": "magnesium_glycinate"},
+               "S8": {"funding_class": "independent"},
+               "outcomes": [{"claim": {"direction": direction, "magnitude": None},
+                             "outcome_vocab_id": outcome, "discarded": False}]}
+        return _ts(rec, ext, product)[0][1]
+
+    check("a null on an EFFICACY outcome stays negative",
+          _one("sleep_onset", "null_effect").s_value() < 0,
+          "invariant 7: a well-run trial finding nothing disconfirms the claim")
+    check("a null on a SAFETY outcome is reassurance, not failure",
+          _one("adverse_events_gi", "null_effect").s_value() > 0,
+          "no difference in side effects CONFIRMS 'this is safe'; scoring it "
+          "-0.7 published magnesium's safety data as 'does not work'")
+    check("harm on a safety outcome is still negative",
+          _one("adverse_events_any", "harm").s_value() < 0)
+
+    check("an applicability penalty is not reported as a verdict",
+          A.label(37, 0.51, effect_verdict=1.0, applicability_limited=True)
+          == "works, but not tested for your product",
+          "effect arc was +1.00 and it read 'probably does not work'")
+    check("a genuinely negative finding still reads negative",
+          A.label(5, 0.50, effect_verdict=-0.70, applicability_limited=True)
+          == "does not work")
+    check("a good form match cannot rescue negative evidence",
+          A.label(60, 0.9, effect_verdict=-0.5) == "does not work")
+
     print("\nTHREE-ARC DONUT (effect / form / dose)")
     from pipeline.donut import three_arc_svg, arc_fills, TRACK
     full = {"score": 33, "band": "moderate support", "gate_fired": False,

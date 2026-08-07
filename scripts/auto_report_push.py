@@ -217,7 +217,12 @@ def _section_ecu_this_run(ctx: dict) -> str:
                                           if x.get("composite") is not None else -999)):
         comp = r.get("composite")
         shown = "gated" if comp is None else comp
-        verdict = _arcs.label(comp, ((r.get("components") or {}).get("c")))
+        verdict = _arcs.label(
+            comp, ((r.get("components") or {}).get("c")),
+            effect_verdict=((r.get("arcs") or {}).get("effect") or {}).get("verdict"),
+            applicability_limited=any(
+                ((r.get("arcs") or {}).get(k) or {}).get("verdict") is None
+                for k in ("form", "dose")))
         lines.append(
             f"| {r.get('outcome_vocab_id')} | {shown} | {verdict} | "
             f"{arc(r, 'effect')} | {arc(r, 'form')} | {arc(r, 'dose')} | "

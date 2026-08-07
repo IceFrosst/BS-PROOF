@@ -124,7 +124,9 @@ def composite(effect_d: float | None, form_d: float | None,
     return round(100 * c * (eff + form + dose) / 3)
 
 
-def label(composite_score: int | None, c: float | None) -> str:
+def label(composite_score: int | None, c: float | None,
+          effect_verdict: float | None = None,
+          applicability_limited: bool = False) -> str:
     """
     Plain words. Deliberately does NOT read a low number as 'bad' when the
     evidence arc is empty -- that is the confusion the whole system exists to
@@ -138,6 +140,20 @@ def label(composite_score: int | None, c: float | None) -> str:
         return "confidence unknown"
     if c < 0.15:
         return "barely studied"
+
+    # A composite can be dragged down by APPLICABILITY -- no trial in your form,
+    # no dose band -- while the evidence itself is clearly positive. Reading
+    # that as a verdict published "probably does not work" for an outcome whose
+    # effect arc was +1.00 (unanimous benefit). An applicability penalty is not
+    # a finding, and must never be reported as one.
+    if effect_verdict is not None and effect_verdict >= 0.25 and composite_score < 45:
+        return ("works, but not tested for your product"
+                if applicability_limited else "works, but weakly evidenced")
+    if effect_verdict is not None and effect_verdict <= -0.25 and composite_score >= 55:
+        # The mirror case: never let a good form match read as "works" when the
+        # evidence itself is negative.
+        return "does not work"
+
     if composite_score >= 70:
         return "works"
     if composite_score >= 55:
