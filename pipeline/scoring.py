@@ -6,6 +6,14 @@ Implements SPEC.md sections 7-9.
 - Band assignment uses inclusive SPEC ranges; -70 is strong-against, not "does not work".
 - Benefit with magnitude None/"unstated" scores as trivial (0.3), not meaningful.
 - pop_match defaults to "different" (pessimistic), matching form's unspecified policy.
+
+2026-08-07 founder decision (pending Claude review):
+- Form is NO LONGER multiplied into the center score weight.
+- Center score = form-agnostic science ("Does it work?").
+- Form applicability lives only on the form arc of the 3-arc donut
+  (share of exact-form evidence). Different-form studies still contribute
+  to the science score; the form arc shows how transferable that is.
+- Dose and population factors remain in the weight for now.
 """
 from __future__ import annotations
 import math
@@ -17,6 +25,7 @@ DESIGN_W = {4:1.00, 5:0.55, 6:0.30, 7:0.18, 8:0.12, 9:0.07,
 ROB_FACTOR = {"low":1.00, "some_concerns":0.60, "high":0.25}
 FUNDING_FACTOR = {"independent":1.00, "industry_other":0.90,
                   "undisclosed":0.80, "brand_funded":0.60}
+# Kept for form_mix reporting and the form arc — NOT applied in weight().
 FORM_FACTOR = {"exact":1.00, "salt_family":0.50, "different":0.15, "unspecified":0.30}
 DOSE_FACTOR = {"in_band":1.00, "low_50_99":0.45, "below_50":0.10, "above_200":0.60}
 POP_FACTOR  = {"exact":1.00, "adjacent":0.70, "different":0.35}
@@ -29,6 +38,9 @@ K = 3.0                 # confidence saturation. CALIBRATE ON TIER-3.
 LAMBDA = 0.3            # synthesis multiplier ceiling
 H_PENALTY = 0.4
 GATE_MIN_HUMAN_WD = 0.5
+
+# Founder 2026-08-07: form is an applicability arc, not a center-score penalty.
+APPLY_FORM_IN_WEIGHT = False
 
 
 def band_for(score: int) -> str:
@@ -93,7 +105,9 @@ class Study:
         w *= FUNDING_FACTOR.get(self.funding, 0.8)
         w *= OA_FACTOR.get(self.oa, 0.55)
         if self.rob_inherited: w *= 0.85
-        w *= FORM_FACTOR.get(self.form_match, 0.30)
+        # Form is applicability (form arc), not a center-score penalty.
+        if APPLY_FORM_IN_WEIGHT:
+            w *= FORM_FACTOR.get(self.form_match, 0.30)
         w *= DOSE_FACTOR.get(self.dose_match, 0.45)
         w *= POP_FACTOR.get(self.pop_match, 0.35)
         return w
