@@ -687,6 +687,62 @@ def main():
           preview.studies_needed(0.023) > 10 * preview.studies_needed(0.56),
           f"{preview.studies_needed(0.023)} vs {preview.studies_needed(0.56)} studies for c=0.9")
 
+    print("\nFOUR ARCS + 0-100 COMPOSITE")
+    from pipeline import arcs as A
+    from pipeline.donut import four_arc_svg
+    ROBC = {f"i{i}": 1 for i in range(1, 7)}
+    def _s(direction, form, dose, mag=None, n=200, oa="full_text", rob=None):
+        return Study(id=f"{direction}{form}{dose}{n}{oa}", design_rank=4, n=n,
+                     rob_items=rob or ROBC, funding="independent", oa=oa,
+                     form_match=form, dose_match=dose, pop_match="exact",
+                     direction=direction, magnitude=mag)
+
+    harmful = A.build([_s("harm", "exact", "in_band") for _ in range(10)])
+    works = A.build([_s("benefit", "exact", "in_band", "meaningful") for _ in range(10)])
+    check("harmful product cannot accumulate points from a good form match",
+          harmful["composite"] == 0,
+          "summing arcs gave it 74/100; the form arc is now the VERDICT, -1.00")
+    check("clean positive reaches the top", works["composite"] >= 90)
+
+    yourform = A.build([_s("benefit", "different", "in_band", "meaningful") for _ in range(8)]
+                       + [_s("null_effect", "exact", "in_band") for _ in range(4)])
+    check("works overall but YOUR form found nothing",
+          yourform["arcs"]["effect"]["verdict"] > 0
+          and yourform["arcs"]["form"]["verdict"] < 0,
+          f"effect {yourform['arcs']['effect']['verdict']:+.2f} vs "
+          f"form {yourform['arcs']['form']['verdict']:+.2f} — the case that "
+          f"justifies a per-form arc at all")
+    check("that arc reports how little evidence backs it",
+          yourform["arcs"]["form"]["coverage"] < 0.5,
+          f"{yourform['arcs']['form']['coverage']:.0%} of the evidence")
+
+    untested = A.build([_s("benefit", "different", "in_band", "meaningful") for _ in range(10)])
+    check("no trial in your form is PENALISED, not dropped",
+          untested["composite"] < works["composite"],
+          f"{untested['composite']} vs {works['composite']} — averaging over "
+          f"available arcs gave both 99")
+    check("an untested axis has no verdict and zero coverage",
+          untested["arcs"]["form"]["verdict"] is None
+          and untested["arcs"]["form"]["coverage"] == 0.0)
+
+    thin = A.build([_s("benefit", "exact", "in_band", "meaningful", n=20,
+                       oa="abstract_only", rob={f"i{i}": 0 for i in range(1, 7)})])
+    nulls = A.build([_s("null_effect", "exact", "in_band") for _ in range(20)])
+    check("confidence MULTIPLIES -- one weak trial cannot score well",
+          thin["composite"] < 10,
+          f"{thin['composite']}/100; as a fourth term in a mean it scored 76")
+    check("'barely studied' and 'does not work' stay distinguishable",
+          A.label(thin["composite"], thin["c"]) != A.label(nulls["composite"], nulls["c"]),
+          f"{A.label(thin['composite'], thin['c'])!r} vs "
+          f"{A.label(nulls['composite'], nulls['c'])!r} — SPEC §9's collapse, avoided")
+    check("the evidence arc is what separates them",
+          thin["arcs"]["evidence"]["coverage"] < 0.1
+          and nulls["arcs"]["evidence"]["coverage"] > 0.9)
+    check("signed score retained alongside the 0-100",
+          works["signed"] is not None and nulls["signed"] < 0,
+          "bands and the anchor set depend on it; only the DISPLAY is 0-100")
+    check("four rings render", four_arc_svg(works).count("<circle") == 12)
+
     print("\nTHREE-ARC DONUT (effect / form / dose)")
     from pipeline.donut import three_arc_svg, arc_fills, TRACK
     full = {"score": 33, "band": "moderate support", "gate_fired": False,

@@ -12,6 +12,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from pipeline import vocab
+from pipeline import arcs as arcsmod
 from pipeline import dose as dosemod
 from pipeline.scoring import Study, score_ecu
 
@@ -215,6 +216,11 @@ def build_ecus(extractions: list[dict], product: dict, *,
             # tiny trials outvote one large one; the arcs must agree with the
             # evidence mass the centre number was built from.
             "applicability": _applicability(pairs),
+            # The four arcs and the 0-100 headline. Each arc carries a verdict
+            # AND the coverage behind it, so "your form failed" and "nobody
+            # tested your form" never collapse into the same picture.
+            **{k: v for k, v in arcsmod.build(studies, syntheses or []).items()
+               if k in ("arcs", "composite")},
             "flags": sorted({f for s in studies for f in _flags(s, rec=None)}),
             "provenance": {
                 "prompt_version": prompt_version,

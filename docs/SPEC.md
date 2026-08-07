@@ -501,6 +501,45 @@ inconclusive.** No-data is caught by the sufficiency gate; conflict is caught by
 | −40 … −69 | does not work |
 | −70 … −100 | strong evidence against / harm |
 
+### The four arcs and the 0–100 display (2026-08-07)
+
+Founder decision. The signed −100…+100 score is **retained** — bands, the anchor
+set and every stored row depend on it — and the *display* becomes four arcs plus
+a 0–100 composite.
+
+Each arc carries **two** facts, and separating them is the point:
+
+| arc | verdict | coverage |
+|---|---|---|
+| effect | d over all evidence | 1.0 |
+| form | d over YOUR-FORM trials | share of evidence weight in that subset |
+| dose | d over IN-BAND trials | share of evidence weight in that subset |
+| evidence | — (pure quantity) | c |
+
+A form arc showing only coverage cannot tell a well-tested form from a
+well-tested-and-useless one. A form arc showing only a verdict hides that the
+answer rests on two studies. Both are needed, so each renders as filled
+(verdict), solid (assessable) and hatched (never reported).
+
+```
+composite = 100 × c × mean(effect, form, dose)      each mapped −1…+1 → 0…1
+```
+
+Two things were measured and rejected on the way:
+
+**Confidence cannot be a fourth term in a mean.** As a peer it let a single tiny
+abstract-only trial score **76/100**, because three direction terms outvoted it.
+It multiplies instead — if we barely know anything, nothing else matters.
+
+**A missing subset cannot be dropped from the mean.** Averaging over "available"
+arcs gave **99/100** to a product no trial had ever used that form for, identical
+to one whose form was tested and worked. Silence is not a pass, so a missing
+subset is penalised at the transfer tier that situation already implies.
+
+The 0–100 scale does not reintroduce §9's collapse, because the evidence arc
+carries what the number cannot: *"barely studied"* scores 3 with an empty
+evidence arc, *"20 solid trials, all null"* scores 15 with a full one.
+
 ### Sufficiency gate
 
 If `Σ w_d` over human primaries < 0.5 (about half a single good RCT), show no number

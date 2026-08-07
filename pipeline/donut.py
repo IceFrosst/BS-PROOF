@@ -244,3 +244,112 @@ def three_arc_svg(ecu: dict, *, size: int = 300) -> str:
             f'<text x="{cx}" y="{cy}" text-anchor="middle" dominant-baseline="central" '
             f'font-family="ui-monospace, monospace" font-size="{size * 0.2:.0f}" '
             f'font-weight="600" fill="{colour}">{centre}</text></svg>')
+
+
+# ---------------------------------------------------------------- four arcs
+
+FOUR_ARCS = (
+    ("effect",   "Does it work?",      "verdict across all the evidence"),
+    ("form",     "In your form?",      "verdict from trials using your preparation"),
+    ("dose",     "At your dose?",      "verdict from trials in your dose range"),
+    ("evidence", "How much is known?", "total weight of trustworthy evidence"),
+)
+
+POSITIVE = "#0f7b4f"
+NEGATIVE = "#a32d21"
+QUANTITY = "#4a6fa5"      # the evidence arc has no direction, so it is not on
+                          # the good/bad ramp -- a full ring here is neither.
+
+
+def four_arc_svg(built: dict, *, size: int = 320) -> str:
+    """
+    `built` is pipeline.arcs.build() output. Four concentric rings, each showing
+    a verdict AND how much evidence backs it:
+
+        filled   the verdict, green positive / red negative
+        solid    the share of evidence that could be judged on this axis
+        hatched  the rest -- nobody reported it
+
+    The centre is the 0-100 composite. A gated ECU shows "--" over empty rings,
+    because refusing to answer must not look like answering zero.
+    """
+    a = built.get("arcs") or {}
+    composite = built.get("composite")
+    gated = built.get("gate_fired") or composite is None
+
+    cx = cy = size / 2
+    stroke = size * 0.048
+    gap = stroke * 1.5
+    parts = [
+        '<defs><pattern id="h4" width="6" height="6" patternTransform="rotate(45)"'
+        ' patternUnits="userSpaceOnUse">'
+        f'<rect width="6" height="6" fill="{TRACK}"/>'
+        f'<line x1="0" y1="0" x2="0" y2="6" stroke="{UNMEASURED}" stroke-width="2.5"/>'
+        "</pattern></defs>"
+    ]
+
+    for i, (key, _label, _desc) in enumerate(FOUR_ARCS):
+        r = (size / 2) - stroke / 2 - i * gap
+        circ = 2 * math.pi * r
+        arc = a.get(key) or {}
+        coverage = float(arc.get("coverage") or 0.0)
+        verdict = arc.get("verdict")
+
+        parts.append(f'<circle cx="{cx}" cy="{cy}" r="{r:.1f}" fill="none" '
+                     f'stroke="url(#h4)" stroke-width="{stroke:.1f}"/>')
+        if coverage > 0:
+            solid = circ * min(1.0, coverage)
+            parts.append(
+                f'<circle cx="{cx}" cy="{cy}" r="{r:.1f}" fill="none" stroke="{TRACK}" '
+                f'stroke-width="{stroke:.1f}" stroke-dasharray="{solid:.1f} '
+                f'{circ - solid:.1f}" transform="rotate(-90 {cx} {cy})"/>')
+
+        if gated:
+            continue
+        if arc.get("is_quantity"):
+            fill, colour = coverage, QUANTITY
+        elif verdict is None:
+            continue
+        else:
+            fill = abs(verdict)
+            colour = POSITIVE if verdict >= 0 else NEGATIVE
+        dash = circ * max(0.0, min(1.0, fill))
+        parts.append(
+            f'<circle cx="{cx}" cy="{cy}" r="{r:.1f}" fill="none" stroke="{colour}" '
+            f'stroke-width="{stroke:.1f}" stroke-linecap="round" '
+            f'stroke-dasharray="{dash:.1f} {circ - dash:.1f}" '
+            f'transform="rotate(-90 {cx} {cy})"/>')
+
+    centre = "--" if gated else str(composite)
+    tone = (TRACK if gated else
+            POSITIVE if composite >= 55 else NEGATIVE if composite < 45 else "#8a8f98")
+    parts.append(
+        f'<text x="{cx}" y="{cy}" text-anchor="middle" dominant-baseline="central" '
+        f'font-family="ui-monospace, monospace" font-size="{size * 0.19:.0f}" '
+        f'font-weight="600" fill="{tone}">{centre}</text>')
+
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {size} {size}" '
+            f'width="{size}" height="{size}" role="img" '
+            f'aria-label="{built.get("band", "score")} {centre} out of 100">'
+            + "".join(parts) + "</svg>")
+
+
+def four_arc_lines(built: dict) -> str:
+    """Terminal view of the same four facts."""
+    a = built.get("arcs") or {}
+    out = []
+    for key, label, _ in FOUR_ARCS:
+        arc = a.get(key) or {}
+        v, cov = arc.get("verdict"), float(arc.get("coverage") or 0)
+        if arc.get("is_quantity"):
+            bar = "#" * int(round(cov * 16)) + "." * (16 - int(round(cov * 16)))
+            out.append(f"  {label:<20} [{bar}]  c={cov:.2f}")
+            continue
+        if v is None:
+            out.append(f"  {label:<20} [{'/' * 16}]  no trials on this axis")
+            continue
+        n = int(round(abs(v) * 16))
+        sign = "+" if v >= 0 else "-"
+        out.append(f"  {label:<20} [{sign * n}{'.' * (16 - n)}]  "
+                   f"{v:+.2f} from {cov:.0%} of the evidence")
+    return "\n".join(out)
