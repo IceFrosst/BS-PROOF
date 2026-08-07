@@ -163,29 +163,37 @@ def _run_variants(grok_bin: str, system: str, user: str, model: str,
                   timeout: int) -> tuple[int, str, str, list[str]]:
     cwd = Path(tempfile.mkdtemp(prefix="bsproof-grok-"))
     full_prompt = system.rstrip() + "\n\n---\n\n" + user
-    prompt_path = cwd / "prompt.txt"
-    prompt_path.write_text(full_prompt, encoding="utf-8")
-    # PURITY FLAGS BELONG ON EVERY VARIANT. Only the first carried
-    # --no-memory/--no-subagents/--no-plan, so when it failed the fallbacks let
-    # Grok behave like an agent: the 15:41 run's S3 failures are all Grok saying
-    # "Checking the workspace for study input" instead of answering. A subagent
-    # with tools is not a pure function (invariant 2).
-    _pure = ["--output-format", "json", "--max-turns", "1",
-             "--no-memory", "--no-subagents", "--no-plan", "-m", model,
-             "--cwd", str(cwd)]
-
-    variants = [
-        [grok_bin, "--no-auto-update", "--prompt-file", str(prompt_path), *_pure],
-        [grok_bin, "--no-auto-update", "-p", "@" + str(prompt_path), *_pure],
+    # Written for debugging only -- it is NOT passed to the CLI. Keeping it
+    # means a failed call can be reproduced by hand from the exact prompt sent.
+    (cwd / "prompt.txt").write_text(full_prompt, encoding="utf-8")
+    # Flags below are the DOCUMENTED headless interface (docs.x.ai/build/cli).
+    # `-p "<prompt>"` is the only documented way to pass a prompt: there is no
+    # --prompt-file and no `-p @file`. Both were invented here, so every call
+    # fell through to the third variant, which truncated the prompt to 6000
+    # characters. That single self-inflicted cap explains the entire S3 failure
+    # pattern:
+    #
+    #   agent   system prompt   room left for schema + study text
+    #   S8            3311                                   2689   0 failures
+    #   S4            3678                                   2322   0 failures
+    #   S7            3413                                   2587   1 failure
+    #   S3            5015                                    985   12 failures
+    #
+    # At 985 characters S3's SCHEMA was being cut and no study text survived at
+    # all, which is exactly what Grok reported back: "the schema and study input
+    # look truncated". Nothing about S3 was special except its longer prompt.
+    #
+    # The real ceiling is the OS command line (~32k on Windows), and
+    # workers.PROMPT_BUDGET_CHARS keeps us at 14k, well under it.
+    _pure = [
+        "--output-format", "json",
+        "--max-turns", "1",
+        "--no-memory", "--no-subagents", "--no-plan",
+        "--disable-web-search",   # a pure function does not browse
+        "-m", model,
+        "--cwd", str(cwd),
     ]
-    # NEVER send a truncated prompt. The old third variant passed
-    # full_prompt[:6000], which for S3 (system prompt alone is ~5k, plus schema
-    # and the population vocabulary) cut off the study text entirely -- Grok
-    # then correctly reported "the schema and study input look truncated".
-    # A mutilated prompt cannot produce a valid extraction, so an inline
-    # fallback is only offered when the whole prompt genuinely fits.
-    if len(full_prompt) <= 6000:
-        variants.append([grok_bin, "--no-auto-update", "-p", full_prompt, *_pure])
+    variants = [[grok_bin, "--no-auto-update", "-p", full_prompt, *_pure]]
     last_code, last_out, last_err, used = 1, "", "", []
     try:
         for cmd in variants:
@@ -286,7 +294,8 @@ def preflight() -> bool:
     if not grok_bin:
         print("BLOCKED: grok not on PATH"); return False
     print(f"  CLI: {grok_bin}")
-    print("  8 subagents wired; --prompt-file Windows-safe")
+    print("  8 subagents wired; documented headless flags only "
+          "(-p inline, no --prompt-file)")
     print("=" * 60)
     return True
 
