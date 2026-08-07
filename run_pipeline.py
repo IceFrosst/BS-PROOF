@@ -2,17 +2,17 @@
 """
 End-to-end v1 run.
 
-  python run_pipeline.py creatine --form creatine_monohydrate --supplement-scope --grok --with-sr --full-text-only --limit 80
+  python run_pipeline.py magnesium --form magnesium_glycinate --grok --limit 12
 
---with-sr         S2 on meta-analyses → capped E' multiplier
---demo            exact form only + ignore population (founder slides only)
---full-text-only  extract/score only full_text / green_oa studies (raises weight; SPEC prefers discount not exclusion for production)
+Flags: --with-sr --demo --full-text-only
+Predatory list: vocab/predatory_journals.txt (one title or ISSN per line)
 """
 from __future__ import annotations
 import os
 import sys
 
 from pipeline import vocab
+from pipeline import predatory as pred
 from pipeline.assemble import build_ecus
 from pipeline.donut import donut_line
 from pipeline.storage import Store, DEFAULT_DB
@@ -30,14 +30,8 @@ GROK_STUDIES_IN_FLIGHT = int(os.environ.get("SP_GROK_STUDIES_IN_FLIGHT", "32"))
 MAX_SRS = int(os.environ.get("SP_MAX_SRS", "12"))
 
 _OA_RANK = {
-    "full_text": 0,
-    "fulltext": 0,
-    "green_oa": 1,
-    "hybrid": 2,
-    "bronze": 3,
-    "abstract_only": 4,
-    "closed": 5,
-    "unknown": 6,
+    "full_text": 0, "fulltext": 0, "green_oa": 1, "hybrid": 2,
+    "bronze": 3, "abstract_only": 4, "closed": 5, "unknown": 6,
 }
 
 
@@ -64,22 +58,19 @@ def _best_text(record: dict) -> str:
 
 def _prioritize_primaries(primaries: list[dict], *,
                           full_text_only: bool = False) -> list[dict]:
-    """Full text first; optional hard filter for high-weight batches."""
     def key(s: dict):
         oa = (s.get("oa") or "abstract_only").lower()
         return (_OA_RANK.get(oa, 6), -(s.get("year") or 0))
-
     ordered = sorted(primaries, key=key)
     if full_text_only:
         kept = [s for s in ordered
                 if _OA_RANK.get((s.get("oa") or "").lower(), 9) <= 1]
-        print(f"  FULL-TEXT-ONLY: {len(kept)}/{len(ordered)} RCTs kept "
-              f"(full_text/green_oa)")
+        print(f"  FULL-TEXT-ONLY: {len(kept)}/{len(ordered)} RCTs kept")
         ordered = kept
     else:
         n_ft = sum(1 for s in ordered
                    if _OA_RANK.get((s.get("oa") or "").lower(), 9) <= 1)
-        print(f"  priority: full-text/green first ({n_ft}/{len(ordered)} high-OA)")
+        print(f"  priority: full-text/green first ({n_ft}/{len(ordered)})")
     return ordered
 
 
@@ -102,10 +93,6 @@ def synthetic_extraction(record: dict, axes: dict) -> dict:
 
 
 def _report_failures(raw: list[dict]) -> None:
-    quota = next((r["extraction"]["_quota_exhausted"] for r in raw
-                  if r["extraction"].get("_quota_exhausted")), None)
-    if quota:
-        print(f"\n  !! QUOTA EXHAUSTED: {quota}")
     failed = [r for r in raw if r["extraction"].get("_failed")]
     if failed:
         n = sum(len(r["extraction"]["_failed"]) for r in failed)
@@ -203,18 +190,18 @@ def main(argv: list[str]) -> int:
 
         all_rows = store.studies(syntheses=False)
         syn_rows = store.studies(syntheses=True)
+
+        # Research layer: flag predatory venues (list in vocab/predatory_journals.txt)
+        pred_summary = pred.flag_records(all_rows)
+        pred.flag_records(syn_rows)  # flag SRs too for the count story
+        print(pred.format_summary(pred_summary))
+
         primaries = _prioritize_primaries(
             [s for s in all_rows if s.get("design_rank") == 4],
             full_text_only=full_text_only,
         )
         print(f"\nstore: {len(all_rows)} primaries, {len(syn_rows)} syntheses; "
               f"{len(primaries)} RCT-rank after filters")
-        if demo:
-            print("DEMO MODE: exact form only; population transfer OFF")
-        if with_sr:
-            print(f"WITH-SR MODE: up to {MAX_SRS} meta-analyses")
-        if full_text_only:
-            print("FULL-TEXT-ONLY: abstracts excluded from this batch")
 
         if wiring:
             axes = {a: pv[a] for a in vocab.AXES}
@@ -319,10 +306,7 @@ def main(argv: list[str]) -> int:
         for row in rows:
             store.upsert_ecu(row)
 
-        print(f"\n{tag}ECU ROWS — {ingredient}, form={form}"
-              + (" [DEMO]" if demo else "")
-              + (" [+SR]" if with_sr else "")
-              + (" [FT-only]" if full_text_only else ""))
+        print(f"\n{tag}ECU ROWS — {ingredient}, form={form}")
         print("-" * 74)
         for row in sorted(rows, key=lambda r: -(r["score"] or -999)):
             o = vocab.outcome(row["outcome_vocab_id"]) or {}
