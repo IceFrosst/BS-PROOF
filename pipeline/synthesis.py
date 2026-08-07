@@ -337,6 +337,102 @@ def s2_payload(record: dict, xml: str | None) -> dict:
     }
 
 
+# --------------------------------------------------- many reviews, one corpus
+#
+# WHY SCALING SRs CANNOT DOUBLE-COUNT EVIDENCE
+#
+# Three different things could be duplicated, and only the third needs new code:
+#
+#  1. EVIDENCE MASS. Syntheses never enter E (invariant 6). E is the sum of
+#     w_study over UNIQUE PRIMARIES. 400 reviews add exactly 0.0 to it. This is
+#     not a safeguard we maintain -- it is the definition.
+#
+#  2. THE MULTIPLIER. score_ecu takes the MAXIMUM cov across syntheses, not a
+#     sum: `if c > cov: cov, q = c, q_s`. Thirty meta-analyses of the same nine
+#     RCTs therefore yield ONE lift, ceiling 1.30 -- not thirty. Already safe.
+#
+#  3. INHERITED FACTS. This is the real one. Thirty reviews describe the same
+#     trial and disagree about its n or its risk of bias. Resolution collapses
+#     them to one canonical id, so the trial stays one unit -- but SOMETHING
+#     has to decide which number wins, and "last review processed" is not a
+#     rule. merge_inherited is that rule.
+#
+# What must NEVER become a signal: how many reviews mention a trial. Reviews
+# copy each other's inclusion lists. Counting mentions would reward a trial for
+# being fashionable, which is the citation-count trap the whole system rejects.
+ROB_SEVERITY = {"low": 0, "some_concerns": 1, "high": 2}
+
+
+def merge_inherited(reviews: list[dict]) -> dict[str, dict]:
+    """
+    Facts for each primary, merged across every review that described it.
+
+    reviews: [{"review_id": str, "s2": {...}, "included_ids_by_row": {row_index:
+    canonical_id}}]  -- see bridge.inherited_facts, which builds it.
+
+    Returns {canonical_id: {n, rob, form, dose_text, duration_days, population,
+                            sources: [review_id], conflicts: [field]}}
+
+    CONFLICT RULES, all failing toward under-count (SPEC section 6):
+
+      rob          WORST band wins. Two teams read the same paper and disagreed;
+                   taking the kinder judgement would let a product shop for the
+                   review that liked its trials.
+      n            must AGREE. A disagreement usually means the reviews counted
+                   different arms or different follow-ups, and picking one
+                   silently changes size_factor. Disagreement -> None.
+      everything   only when unanimous among the reviews that reported it.
+      else
+
+    Conflicts are RECORDED, not smoothed. A field in `conflicts` is a field we
+    refuse to state, and a run that hides that is claiming knowledge it lacks.
+    """
+    acc: dict[str, dict] = {}
+    for rev in reviews:
+        rid = rev.get("review_id") or "?"
+        s2 = rev.get("s2") or {}
+        rob_by_label = inherited_rob(s2)
+        rows = s2.get("included_studies") or []
+        by_row = rev.get("included_ids_by_row") or {}
+        for i, row in enumerate(rows):
+            cid = by_row.get(i)
+            if not cid:
+                continue
+            slot = acc.setdefault(cid, {"_seen": {}, "sources": [], "conflicts": []})
+            if rid not in slot["sources"]:
+                slot["sources"].append(rid)
+            facts = {
+                "n": row.get("n"),
+                "rob": rob_by_label.get(row.get("label")),
+                "form": row.get("form"),
+                "dose_text": row.get("dose_text"),
+                "duration_days": row.get("duration_days"),
+                "population": row.get("population"),
+            }
+            for field, value in facts.items():
+                if value is None:
+                    continue
+                slot["_seen"].setdefault(field, []).append(value)
+
+    out: dict[str, dict] = {}
+    for cid, slot in acc.items():
+        merged = {"sources": slot["sources"], "conflicts": [],
+                  "n_reviews": len(slot["sources"])}
+        for field, values in slot["_seen"].items():
+            distinct = list(dict.fromkeys(values))
+            if len(distinct) == 1:
+                merged[field] = distinct[0]
+            elif field == "rob":
+                # Worst wins, and the disagreement is still recorded.
+                merged["rob"] = max(distinct, key=lambda b: ROB_SEVERITY.get(b, 1))
+                merged["conflicts"].append("rob")
+            else:
+                merged[field] = None
+                merged["conflicts"].append(field)
+        out[cid] = merged
+    return out
+
+
 def inherited_rob(s2: dict | None) -> dict[str, str]:
     """
     {study_label -> rob band} from the SR's risk-of-bias table.

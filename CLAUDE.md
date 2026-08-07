@@ -174,13 +174,19 @@ the precise phrases returned **0** trials for sleep_onset.
 
 | tier | agents | model | why |
 |---|---|---|---|
-| A | S1, S8 | `grok-4.3` | simple classification; ~40% cheaper |
+| A | S1, S8 | `grok-4.5` | simple classification; a cheaper id is wanted, see below |
 | B | S2, S3, S4, S5, S7 | `grok-4.5` | extraction under adversarial conditions |
 | C | S6 | `grok-4.5` | highest-risk agent; wants fewest hallucinations |
 
+**`grok-4.3` is NOT a valid CLI model id.** Setting it made S8 fail 0/80 on the
+2026-08-07 creatine run — `Couldn't set model 'grok-4.3': Invalid params` — and
+every study read as a partial failure. The **pricing table is not the CLI's id
+namespace**; run `grok models` and verify before setting any tier. `preflight`
+now blocks placeholder ids.
+
 Override with `SP_GROK_MODEL_A/B/C`. **S6 is ~5 of the ~10 calls per study**, so
-tier C is the dominant cost — moving it to a `grok-4.20-*-reasoning` variant
-saves ~24% *and* is the better model for it. Run `grok models` for the exact id.
+tier C is the dominant cost, not tier A — a cheaper reasoning variant there is
+worth ~24% *and* is the better model for the job.
 
 Do not move tier B on cost alone: SPEC §15 says tiers are "a prior, not a
 measurement" — A/B them on the 28 anchors first.
@@ -229,10 +235,28 @@ python3 run_sr_inheritance.py creatine --limit 8 --grok    # or --pilot / --clau
 
 One file per backend: `out/sr_inheritance_<backend>.json`. Never blended.
 
-We retrieve **`PUB_TYPE:"Meta-Analysis" OR PUB_TYPE:"Systematic Review"`** (up to
-120) and extract only **`SP_MAX_SRS`= 12** of them, because S2 is a full-text
-table read and the budget is real. Umbrella reviews are rank 1 in `classify` but
-are NOT searched for — they arrive only when also tagged SR/MA.
+Founder 2026-08-07: **retrieve as many reviews as possible.** Query is
+`PUB_TYPE:"Meta-Analysis" OR "Systematic Review" OR TITLE:"umbrella review" OR
+TITLE:"overview of reviews"` (umbrella reviews have no PUB_TYPE, so they were
+never searched for), cap `SP_RETRIEVE_MAX_SYNTHESES` = 400.
+
+`SP_MAX_SRS` = 60 is a **ceiling on a loop that stops itself**, not a budget.
+S2 runs in ranked chunks and stops after 2 consecutive chunks that name fewer
+than 2 trials no earlier review named. 30 meta-analyses commonly re-analyse the
+same 9 RCTs; the stop is on NEW TRIALS, so a rich corpus keeps going and a
+repetitive one stops early.
+
+**Scaling SRs cannot double-count evidence**, and only one of the three routes
+needed new code:
+1. *Evidence mass* — syntheses never enter `E` (invariant 6). 400 reviews add 0.0.
+2. *The multiplier* — `score_ecu` takes the MAX `cov`, not a sum. 30 reviews of
+   the same trials give ONE lift ≤1.30. Covered by a selftest.
+3. *Inherited facts* — the real one. `synthesis.merge_inherited` resolves every
+   review's rows to canonical ids, then: **worst RoB band wins**, **disagreeing
+   `n` is refused** (different arms, and guessing moves `size_factor`), other
+   fields only when unanimous. Conflicts are recorded, never smoothed.
+   `n_reviews` is auditing only — reviews copy each other's inclusion lists, so
+   counting mentions would be the citation-count trap.
 
 The 12 are chosen by `synthesis_bridge.rank_syntheses`: **readable first**
 (no PMC id → no table → the call cannot produce anything), then design rank,
@@ -268,6 +292,31 @@ Claude tiers: see `claude_adapter.TIER_MODEL`. Grok tiers: `grok_adapter.TIER_MO
 Rules: continue in-flight work; keep `Current state` / `Next` live; push completed
 units; selftest after `pipeline/` changes; archive reports; **never silent-merge
 Claude and Grok extractions.**
+
+### File ownership
+
+**Founder decision 2026-08-07**, after three agents edited `pipeline/synthesis.py`
+inside one hour and produced conflicts in four files plus two different fixes for
+the same bug.
+
+| Area | Owner | Others may |
+|---|---|---|
+| `pipeline/synthesis*.py`, `sources/fulltext.py`, S2 schema + prompt | **Claude Code** | open an issue, not a commit |
+| `grok_adapter.py`, Grok tiers/models/CLI flags | **Grok** | read; Claude must not re-guess model ids |
+| `pipeline/showcase.py`, report/demo presentation | **Grok** | — |
+| `pipeline/scoring.py`, `arcs.py`, `dose.py`, SPEC §13 | **Claude Code** | propose in `docs/REVIEW_PENDING.md` |
+| `run_pipeline.py`, `workers.py` | shared — **announce in the commit body first line** | |
+
+Not ownership of ideas — Grok found the invalid `grok-4.3` id and the label
+parser, both of which stood. It is ownership of the EDIT, so two agents stop
+writing two fixes for one bug.
+
+**Do not delete a comment recording a MEASUREMENT.** Commit `db5e9b9` stripped 52
+lines from `sources/europepmc.py`, including the measured 25% clinical-context
+rate and the sleep n=1 finding, while adding 14 useful ones. Those numbers cost
+hours to obtain and cannot be recovered by reading the code. Restored in
+`sources/europepmc.py`; if a refactor makes a docstring inconvenient, move it,
+do not drop it.
 
 ---
 

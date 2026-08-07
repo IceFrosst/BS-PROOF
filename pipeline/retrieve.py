@@ -39,6 +39,7 @@ from sources.http import SourceError
 def retrieve(ingredient: str, store: Store, *, max_syntheses: int = 200,
              max_primaries: int = 800, registry_lookups: int = 50,
              scope: str = "broad", oa_lookups: int = 250,
+             outcome_ids: list[str] | None = None,
              verbose: bool = True) -> dict:
     """
     One ingredient, end to end. Returns a stats dict.
@@ -58,7 +59,12 @@ def retrieve(ingredient: str, store: Store, *, max_syntheses: int = 200,
         # had 62 magnesium RCTs available and the run surfaced ONE, because
         # sleep trials do not rank highly for a generic "magnesium" search.
         from pipeline import vocab
-        oids = sorted(vocab.outcome_ids())
+        # Retrieve for the outcomes we will actually SCORE. Showcase mode
+        # (added 2026-08-07) shrinks S6's vocabulary to the top-N outcomes and
+        # discards every claim outside it -- but retrieval was still firing all
+        # 30 queries and spending its quota on outcomes destined for the bin.
+        # Two features that never met.
+        oids = sorted(outcome_ids or vocab.outcome_ids())
         # The quota is PER OUTCOME and is NOT max_primaries split 30 ways.
         # Dividing a single-query budget starved everything: 600/30 = 20 each,
         # which after dedup and the full-text filter left 1.8 studies per

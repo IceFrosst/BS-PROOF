@@ -744,6 +744,49 @@ def main():
           == ["oa-ma-new", "oa-sr-old", "unclassified-oa"],
           "unclassified sorts after real ranks, not before")
 
+    # SCALING SRs WITHOUT DUPLICATING EVIDENCE. Two reviews describe the same
+    # trial and disagree. Resolution already collapses them to one canonical id;
+    # merge_inherited decides which facts survive that collapse.
+    revA = {"review_id": "sr:A", "included_ids_by_row": {0: "doi:t1"},
+            "s2": {"included_studies": [{"label": "Smith 2019", "n": 40,
+                                         "form": "magnesium_glycinate",
+                                         "dose_text": "400 mg"}],
+                   "rob_table": [{"study_label": "Smith 2019", "overall": "low"}]}}
+    revB = {"review_id": "sr:B", "included_ids_by_row": {0: "doi:t1"},
+            "s2": {"included_studies": [{"label": "Smith 2019", "n": 44,
+                                         "form": "magnesium_glycinate",
+                                         "dose_text": "400 mg"}],
+                   "rob_table": [{"study_label": "Smith 2019", "overall": "high"}]}}
+    m = syn.merge_inherited([revA, revB])["doi:t1"]
+    check("two reviews describing one trial stay ONE unit",
+          len(syn.merge_inherited([revA, revB])) == 1,
+          "canonical id collapses them; that is the dedup")
+    check("disagreeing RoB takes the WORST band, and says it disagreed",
+          m["rob"] == "high" and "rob" in m["conflicts"],
+          "the kinder judgement would let a product shop for a friendly review")
+    check("disagreeing n is REFUSED, not averaged",
+          m["n"] is None and "n" in m["conflicts"],
+          "40 vs 44 usually means different arms; guessing changes size_factor")
+    check("unanimous facts survive",
+          m["form"] == "magnesium_glycinate" and m["dose_text"] == "400 mg")
+    check("provenance recorded for every merged trial",
+          m["sources"] == ["sr:A", "sr:B"] and m["n_reviews"] == 2,
+          "n_reviews is auditing, NEVER a corroboration signal — "
+          "reviews copy each other's inclusion lists")
+
+    # Invariant 6 restated as a test: syntheses cannot add mass however many
+    # we read. 30 reviews of the same 9 trials must not move E.
+    from pipeline.scoring import Study as _S, score_ecu as _score
+    prim = [_S(id=f"t{i}", design_rank=4, n=100, oa="full_text",
+               rob_items={"a": 1, "b": 1, "c": 1, "d": 1, "e": 1},
+               direction="benefit", magnitude="meaningful") for i in range(9)]
+    one_sr = [{"included_ids": {f"t{i}" for i in range(9)}, "q_s": 1.0,
+               "resolved": True}]
+    many_sr = one_sr * 30
+    check("30 reviews of the same trials lift E exactly as much as 1",
+          _score(prim, one_sr)["score"] == _score(prim, many_sr)["score"],
+          "score_ecu takes the MAX cov, not a sum — invariant 6 by construction")
+
     # Measured 2026-08-07 on three real OA reviews: the old filter returned
     # False on 14 of 14 tables. These are verbatim headers/captions it missed.
     check("'included systematic reviews' matches, not just 'included studies'",

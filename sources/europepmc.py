@@ -22,10 +22,16 @@ SYNTHESIS_TAGS = ("meta-analysis", "systematic review", "review")
 _REG_IN_TEXT = re.compile(r"(NCT\d{8}|ISRCTN\d{6,8}|ChiCTR[-A-Z0-9]{6,}"
                           r"|CTRI/\d{4}/\d+/\d+|UMIN\d{6,9})", re.I)
 
+# Contexts where the ingredient is a DRUG, not a supplement.
 CLINICAL_EXCLUSIONS = (
     "eclampsia OR anesthesia OR anaesthesia OR surgery OR intravenous "
     "OR infusion OR intubation OR ventilation OR sedation OR perioperative "
     "OR postoperative OR preoperative OR ketamine"
+)
+
+SYNTHESIS_KINDS = (
+    'PUB_TYPE:"Meta-Analysis" OR PUB_TYPE:"Systematic Review" '
+    'OR TITLE:"umbrella review" OR TITLE:"overview of reviews"'
 )
 
 SUPPLEMENT_CONTEXT = (
@@ -34,11 +40,27 @@ SUPPLEMENT_CONTEXT = (
 
 
 def _query(ingredient: str, *, syntheses: bool, scope: str = "broad") -> str:
-    kinds = ('PUB_TYPE:"Meta-Analysis" OR PUB_TYPE:"Systematic Review"'
-             if syntheses else 'PUB_TYPE:"Randomized Controlled Trial"')
+    """
+    scope 'broad'        ingredient anywhere + design. Legacy measurement baseline.
+    scope 'supplement'   + supplement terms, NOT clinical drug contexts.
+    scope 'intervention' ingredient forced into TITLE/ABSTRACT as the thing
+                         being tested (founder 2026-08-07). Default for demos.
+
+    MEASURED 2026-08-06: broad had ~25% clinical-context titles; supplement NOT
+    clinical ~1% clinical but still pulled wrong-ingredient papers that merely
+    mention magnesium. Intervention scope constrains the field of match.
+    """
+    # Umbrella reviews are rank 1 in pipeline.classify but Europe PMC has no
+    # PUB_TYPE for them, so they were never SEARCHED for -- they arrived only
+    # when a record happened to be tagged SR/MA as well. An umbrella review is a
+    # review OF reviews: the densest included-studies table available, and the
+    # single most valuable document for inheritance. Ask for it by title.
+    kinds = (SYNTHESIS_KINDS if syntheses
+             else 'PUB_TYPE:"Randomized Controlled Trial"')
     ing = ingredient.strip()
 
     if scope == "intervention":
+        # Ingredient as intervention: title hit OR oral/supplement phrase in abstract.
         intervention = (
             f'(TITLE:"{ing}") OR '
             f'(ABSTRACT:"{ing} supplementation") OR '
@@ -61,10 +83,17 @@ def _query(ingredient: str, *, syntheses: bool, scope: str = "broad") -> str:
 
 
 def outcome_terms(outcome_id: str) -> list[str]:
+    """
+    Search terms for one outcome, taken from the vocabulary that S6 maps INTO.
+    Reusing the same source keeps retrieval and mapping in step: if a term is
+    good enough to define the outcome, it is good enough to search for.
+    """
     from pipeline import vocab
     o = vocab.outcome(outcome_id)
     if not o:
         return []
+    # search_terms first: broad, for recall. `includes` is precise because S6
+    # maps into it, and searching those exact phrases finds almost nothing.
     terms = list(o.get("search_terms") or []) or ([o["label"]] + list(o.get("includes") or []))
     seen, out = set(), []
     for t in terms:
@@ -75,6 +104,21 @@ def outcome_terms(outcome_id: str) -> list[str]:
 
 
 def outcome_query(ingredient: str, outcome_id: str) -> str:
+    """
+    Ingredient-as-intervention AND this specific outcome.
+
+    WHY THIS EXISTS. One generic query per ingredient, ranked by relevance and
+    truncated, silently starves whole outcomes. Measured 2026-08-07: the
+    intervention-scoped magnesium query matches 337 trials; **62 magnesium sleep
+    RCTs exist**, and a 20-study extraction off the top of that ranking gave
+    sleep_quality n=1. Sleep is the single most common reason people buy
+    magnesium glycinate, and it was effectively absent.
+
+    Querying per outcome gives every outcome its own pool and its own quota, so
+    the canonical outcome set is populated by construction rather than by
+    whatever the relevance ranking happened to favour. It also keeps SPEC section
+    1's decision intact -- the user is still never asked what they want it for.
+    """
     terms = outcome_terms(outcome_id)
     if not terms:
         return _query(ingredient, syntheses=False, scope="intervention")
@@ -101,6 +145,13 @@ def outcome_hit_count(ingredient: str, outcome_id: str) -> int:
 
 def discover_by_outcome(ingredient: str, outcome_ids: list[str], *,
                         per_outcome: int = 40) -> dict:
+    """
+    One query per outcome, each with its own quota, then merged.
+
+    Returns {"primaries": [...], "by_outcome": {id: n_found}}. Records are NOT
+    deduplicated here -- a trial reporting both sleep and anxiety legitimately
+    arrives twice and pipeline.dedup collapses it to one evidence unit.
+    """
     found, counts = [], {}
     for oid in outcome_ids:
         recs = search(outcome_query(ingredient, oid), max_records=per_outcome)

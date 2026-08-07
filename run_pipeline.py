@@ -34,10 +34,12 @@ DEFAULT_GROK_LIMIT = 100
 DEFAULT_WIRING_SCORE_CAP = 40
 DEFAULT_TOP_OUTCOMES = 5
 RETRIEVE_MAX_PRIMARIES = int(os.environ.get("SP_RETRIEVE_MAX_PRIMARIES", "600"))
-RETRIEVE_MAX_SYNTHESES = int(os.environ.get("SP_RETRIEVE_MAX_SYNTHESES", "120"))
+RETRIEVE_MAX_SYNTHESES = int(os.environ.get("SP_RETRIEVE_MAX_SYNTHESES", "400"))
 SYNTHETIC_VERSION = "SYNTHETIC-NOT-REAL"
 GROK_STUDIES_IN_FLIGHT = int(os.environ.get("SP_GROK_STUDIES_IN_FLIGHT", "32"))
-MAX_SRS = int(os.environ.get("SP_MAX_SRS", "12"))
+# A CEILING, not a budget: extraction stops itself when reviews stop naming
+# trials we have not seen (synthesis_bridge marginal-yield stopping).
+MAX_SRS = int(os.environ.get("SP_MAX_SRS", "60"))
 
 _OA_RANK = {
     "full_text": 0, "fulltext": 0, "green_oa": 1, "hybrid": 2,
@@ -311,6 +313,7 @@ def main(argv: list[str]) -> int:
             retrieve(ingredient, store,
                      max_syntheses=RETRIEVE_MAX_SYNTHESES,
                      max_primaries=RETRIEVE_MAX_PRIMARIES,
+                     outcome_ids=outcome_allowlist,
                      scope=scope)
 
         all_rows = store.studies(syntheses=False)

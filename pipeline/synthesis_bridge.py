@@ -12,7 +12,13 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from pipeline import synthesis as syn
 
-DEFAULT_MAX_SRS = 15
+# Founder 2026-08-07: retrieve as many reviews as we can. The cap is now a
+# CEILING on a loop that stops itself (see marginal-yield stopping below), not a
+# budget someone picked. 15 was a budget.
+DEFAULT_MAX_SRS = 60
+STOP_MIN_NEW = 2                 # new trials a chunk must name to count as productive
+STOP_AFTER_BARREN_CHUNKS = 2     # consecutive unproductive chunks before stopping
+
 # The prompt budget moved to pipeline.synthesis.s2_payload, which builds the
 # payload and is therefore the only place that can trim it honestly.
 
@@ -78,8 +84,8 @@ def extract_s2_batch(
         return []
 
     readable = sum(1 for t in targets if (t.get("pmcid") or "").strip())
-    print(f"  SR bridge: extracting S2 for {len(targets)} of {len(syn_records)} "
-          f"syntheses (cap={max_srs}, workers≤{max_workers}); "
+    print(f"  SR bridge: extracting S2 for up to {len(targets)} of "
+          f"{len(syn_records)} syntheses (cap={max_srs}, chunk={max_workers}); "
           f"{readable}/{len(targets)} have full text")
 
     def one(rec: dict):
@@ -93,18 +99,77 @@ def extract_s2_batch(
         result, meta = call("S2", payload)
         return {"record": rec, "s2": result, "meta": meta}
 
-    out = []
-    with ThreadPoolExecutor(max_workers=max_workers) as pool:
-        futs = {pool.submit(one, r): r for r in targets}
-        for fut in as_completed(futs):
-            out.append(fut.result())
+    # MARGINAL-YIELD STOPPING. "As many reviews as possible" is the right goal
+    # and a bad loop: 30 meta-analyses commonly re-analyse the same 9 RCTs, so
+    # after the first few the marginal review names trials we already have and
+    # costs a full-text table read to tell us so.
+    #
+    # Reviews are processed in RANKED chunks and the run stops when a whole
+    # chunk contributes fewer than STOP_MIN_NEW previously-unseen trial labels.
+    # Stopping on NEW TRIALS rather than on a fixed count means a rich corpus
+    # keeps going and a repetitive one stops early, without either being a
+    # number someone had to guess.
+    out: list[dict] = []
+    seen_labels: set[str] = set()
+    barren = 0
+    for start in range(0, len(targets), max_workers):
+        chunk = targets[start:start + max_workers]
+        with ThreadPoolExecutor(max_workers=len(chunk)) as pool:
+            results = [f.result() for f in
+                       as_completed({pool.submit(one, r) for r in chunk})]
+        out.extend(results)
+        new = set()
+        for r in results:
+            for row in ((r.get("s2") or {}).get("included_studies") or []):
+                key = (row.get("nct") or row.get("doi") or row.get("pmid")
+                       or row.get("label") or "")
+                if key and key not in seen_labels:
+                    new.add(key)
+        seen_labels |= new
+        print(f"    chunk {start // max_workers + 1}: "
+              f"+{len(new)} trials not seen in an earlier review "
+              f"({len(seen_labels)} distinct so far)")
+        barren = barren + 1 if len(new) < STOP_MIN_NEW else 0
+        if barren >= STOP_AFTER_BARREN_CHUNKS:
+            print(f"    stopping: {barren} consecutive chunks added "
+                  f"<{STOP_MIN_NEW} new trials — the remaining "
+                  f"{len(targets) - len(out)} reviews are re-analysing the "
+                  f"same corpus")
+            break
 
     ok = sum(1 for x in out if x["s2"])
     no_tables = sum(1 for x in out
                     if not x["s2"] and "no tables" in str(x["meta"].get("error")))
-    print(f"  SR bridge: S2 ok={ok}/{len(out)}"
+    print(f"  SR bridge: S2 ok={ok}/{len(out)} reviews, "
+          f"{len(seen_labels)} distinct trials named"
           + (f"  ({no_tables} unreadable — no tables in full text)" if no_tables else ""))
     return out
+
+
+def inherited_facts(s2_batch: list[dict], primary_and_syn_rows: list[dict]) -> dict:
+    """
+    {canonical_id: merged facts} across every review in the batch.
+
+    Separate from to_score_inputs on purpose: that function answers "how much
+    should the multiplier lift E", this one answers "what do we now know about
+    trials we cannot read". The second is the reason to retrieve SRs at scale;
+    the first is capped at 1.30 no matter how many we read.
+    """
+    known = syn.known_index(primary_and_syn_rows)
+    packed = []
+    for item in s2_batch:
+        s2 = item.get("s2")
+        if not s2:
+            continue
+        rows = s2.get("included_studies") or []
+        by_row = {}
+        for i, row in enumerate(rows):
+            cid = syn._resolve_one(row, known)
+            if cid:
+                by_row[i] = cid
+        packed.append({"review_id": item["record"].get("canonical_id") or "?",
+                       "s2": s2, "included_ids_by_row": by_row})
+    return syn.merge_inherited(packed)
 
 
 def to_score_inputs(
