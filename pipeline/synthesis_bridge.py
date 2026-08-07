@@ -8,12 +8,16 @@ Invariant 6: syntheses never add evidence mass — only a bounded E' lift.
 """
 from __future__ import annotations
 
+import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from pipeline import synthesis as syn
 
 MIN_TEXT = 200
 DEFAULT_MAX_SRS = 15
+# Keep S2 under the same CLI input wall as per-study agents (see workers.py).
+S2_PROMPT_BUDGET = int(os.environ.get("SP_PROMPT_BUDGET", "12000"))
+S2_FIXED_OVERHEAD = 3500  # system + schema + scaffolding (approx)
 
 
 def _text_for_syn(record: dict, text_for) -> str:
@@ -24,9 +28,13 @@ def _text_for_syn(record: dict, text_for) -> str:
             t = ""
     else:
         t = ""
-    if len(t.strip()) >= MIN_TEXT:
-        return t
-    return (record.get("abstract") or record.get("title") or "").strip()
+    if len(t.strip()) < MIN_TEXT:
+        t = (record.get("abstract") or record.get("title") or "").strip()
+    # Head of the review is where PRISMA / included-studies tables usually sit.
+    room = max(800, S2_PROMPT_BUDGET - S2_FIXED_OVERHEAD)
+    if len(t) > room:
+        t = t[:room]
+    return t
 
 
 def extract_s2_batch(
@@ -86,13 +94,24 @@ def to_score_inputs(
             continue
         packed = syn.to_scoring_input(s2, known)
         scoring.append(packed)
+        res = packed.get("_resolution") or {}
+        n_listed = res.get("n_listed") or 0
+        n_res = res.get("n_resolved") or 0
         if packed.get("resolved"):
             n_resolved += 1
-            res = packed.get("_resolution") or {}
             print(
                 f"    resolved SR {item['record'].get('canonical_id', '?')[:40]}: "
-                f"{res.get('n_resolved')}/{res.get('n_listed')} "
+                f"{n_res}/{n_listed} "
                 f"q_s={packed['q_s']:.2f}"
+            )
+        else:
+            # Why it failed — without this, "0 resolved" is a black box.
+            sample = (res.get("unresolved_labels") or [])[:3]
+            print(
+                f"    unresolved SR {item['record'].get('canonical_id', '?')[:40]}: "
+                f"{n_res}/{n_listed} listed "
+                f"(need ≥{syn.MIN_RESOLVED_FRACTION:.0%} and ≥{syn.MIN_RESOLVED_COUNT}); "
+                f"sample unresolved={sample}"
             )
     print(f"  SR bridge: {n_resolved}/{len(scoring)} syntheses resolved for multiplier")
     return scoring
@@ -110,7 +129,6 @@ def build_syntheses_for_scoring(
     Full path: store syntheses -> S2 -> resolve -> score_ecu-ready list.
     """
     syn_rows = store.studies(syntheses=True)
-    all_rows = store.studies(syntheses=None)  # may not support None
     try:
         all_rows = store.studies(syntheses=True) + store.studies(syntheses=False)
     except Exception:

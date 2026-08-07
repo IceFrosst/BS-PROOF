@@ -47,7 +47,8 @@ SHARED_PROMPT = PROMPTS / "_shared.md"
 
 # Bump when you edit ANY prompt (including _shared.md). This is in the cache key.
 # Forget to bump it and you will silently serve stale extractions forever.
-PROMPT_VERSION = "v1.4"  # bumped 2026-08-07: S3 output bounded (only failing agent)
+# v1.5: S3 prompt shortened; no population-vocab attachment claim; SR label resolve
+PROMPT_VERSION = "v1.5"
 
 # Tier -> model. FULL IDs, NOT ALIASES.
 #

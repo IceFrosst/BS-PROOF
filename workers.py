@@ -16,15 +16,18 @@ MIN_TEXT_CHARS = 200
 
 # Total prompt budget per call: system + schema + payload.
 #
-# Measured 2026-08-07 against the Grok CLI. Failures track TOTAL PROMPT SIZE and
-# nothing else:
+# Measured 2026-08-07 against the Grok CLI. Failures track TOTAL PROMPT SIZE:
 #     S8 12.8k -> 0 fails      S4 13.4k -> 0 fails
-#     S5 14.8k -> 0 fails      S7 15.5k -> 1 fail (a timeout)
+#     S5 14.8k -> 0 fails      S7 15.5k -> 1 fail (timeout)
 #     S3 18.1k -> 12 fails, all "the schema and study input look truncated"
-# The wall sits near 16k, so the fix is to keep every call under it rather than
-# to bound one agent's output (which is what v1.4 tried, and it did not help --
-# the truncation was on the INPUT).
-PROMPT_BUDGET_CHARS = int(os.environ.get("SP_PROMPT_BUDGET", "14000"))
+# Wall ~16k. Default tightened 14k -> 12k after magnesium still showed 12 S3 fails.
+PROMPT_BUDGET_CHARS = int(os.environ.get("SP_PROMPT_BUDGET", "12000"))
+
+# S3 is the longest system prompt + schema among per-study agents. Give it a
+# stricter text headroom so full-text papers do not re-hit the wall.
+AGENT_BUDGET_TRIM = {
+    "S3": 1500,   # extra reserved vs other agents
+}
 
 
 def _fit_text(agent: str, text: str, fixed_chars: int) -> str:
@@ -36,7 +39,8 @@ def _fit_text(agent: str, text: str, fixed_chars: int) -> str:
     than a shorter one. Methods and results lead the text, so the head is the
     part worth keeping.
     """
-    room = PROMPT_BUDGET_CHARS - fixed_chars
+    extra = AGENT_BUDGET_TRIM.get(agent, 0)
+    room = PROMPT_BUDGET_CHARS - fixed_chars - extra
     if room <= 0 or len(text) <= room:
         return text
     return text[:room]
@@ -50,10 +54,9 @@ def _payload(agent: str, record: dict, text: str, registry: dict | None) -> dict
               + len((SCHEMAS / _schema_f).read_text()) + 400)
     base = {"title": record.get("title"), "text": _fit_text(agent, text, _fixed)}
     if agent == "S3":
-        # The population vocabulary is deliberately NOT sent. S3's prompt already
-        # lists all four axes and every allowed value verbatim, so shipping the
-        # JSON duplicated ~1.9k characters and pushed the one agent with the
-        # longest prompt over the CLI's input wall.
+        # Population vocabulary is NOT sent. S3's prompt lists the four axes and
+        # allowed values; shipping the JSON duplicated ~1.9k and pushed S3 over
+        # the CLI input wall (magnesium: 12/54 S3 fails).
         return base
     if agent == "S4":
         return {**base,
@@ -111,9 +114,7 @@ def extract_study(record: dict, text: str, registry: dict | None = None, *,
                     {"agent": agent, "error": meta.get("error")})
 
     # S6 runs after S5 because it consumes S5's raw outcome strings, but the
-    # claims are independent of each other -- they were being fired one at a
-    # time, so a study reporting 8 outcomes serialised 8 round trips and became
-    # the slowest thing in the batch. Fan them out.
+    # claims are independent of each other -- fan them out.
     claims = ((out.get("S5") or {}).get("claims")) or []
     out["outcomes"] = []
     if claims:
@@ -149,6 +150,8 @@ def extract_corpus(records: list[dict], text_for, registry_for=None, *,
     relevance_skip = 0
 
     print(f"  progress: 0/{n} studies  (in_flight≤{max_studies_in_flight})")
+    print(f"  prompt budget: {PROMPT_BUDGET_CHARS} chars (S3 extra trim "
+          f"{AGENT_BUDGET_TRIM.get('S3', 0)})")
 
     with ThreadPoolExecutor(max_workers=max_studies_in_flight) as pool:
         future_map = {

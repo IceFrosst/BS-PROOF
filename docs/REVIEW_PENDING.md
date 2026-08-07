@@ -30,7 +30,7 @@ Rationale (founder):
 
 ---
 
-## 5. CRITICAL FIX — S8 model id invalid (creatine run 2026-08-07)
+## 5. CRITICAL FIX — S8 model id invalid (creatine run 2026-08-07) — DONE
 
 **Report:** `reports/runs/20260807_164410_creatine_creatine-monohydrate_grok-sr-ft-per-o_*`
 
@@ -50,7 +50,7 @@ Couldn't set model 'grok-4.3': Invalid params: "unknow...
 
 **Fix on main:** all Grok tiers default to `grok-4.5`. Preflight blocks placeholder/invalid ids.
 
-**S3 status:** This run S3 was **80/80 OK**. Earlier truncation fixed by `PROMPT_BUDGET_CHARS=14000` + not shipping population vocab into S3. No further S3 change required for that failure mode.
+**Action for next run:** `git pull`, delete/clear `out/grok_llm_cache.sqlite` so S8 is not served from empty fails, re-run creatine.
 
 ---
 
@@ -64,7 +64,42 @@ Stacked causes for Claude:
 2. **null_effect = -0.7 is harsh** when those nulls map into consumer muscle outcomes via S6.
 3. **Magnitude default** — unstated benefit → trivial (+0.3).
 4. **S6 mapping risk** — disease endpoints → consumer ids (silent).
-5. **SR multiplier dead** — 12 S2 ok, 0 resolved.
-6. **S8 missing** — funding defaulted undisclosed (secondary).
+5. **SR multiplier dead** — 12 S2 ok, 0 resolved (see §7).
+6. **S8 missing** — funding defaulted undisclosed (secondary; fixed in §5).
 
-**Next steps (not in this patch):** claim-scope filter vs disease-drug trials; audit S5/S6 on muscle_strength rows; fix SR join keys; restore predatory list; re-run creatine after S8 fix + cache clear.
+**Still open (not this patch):** claim-scope filter vs disease-drug trials; audit S5/S6 on muscle_strength rows; restore predatory list.
+
+---
+
+## 7. SR resolution path — FIXED (pending Claude confirm)
+
+**Problem:** creatine `--with-sr` had S2 ok=12, **resolved=0**. Confidence multiplier never fired.
+
+**Causes:**
+- Characteristics tables name trials as `"Smith 2019"` with empty `first_author`/`year` fields; only `label` was filled.
+- `MIN_RESOLVED_FRACTION = 0.5` was too high when extract batch is ~80 of hundreds of RCTs.
+- S2 full text was not budget-capped (could truncate mid-table).
+
+**Changes (`pipeline/synthesis.py`, `synthesis_bridge.py`):**
+1. Parse author+year from **label** (`Smith 2019`, `Smith et al. 2019`).
+2. `MIN_RESOLVED_FRACTION` **0.5 → 0.25**, plus `MIN_RESOLVED_COUNT = 2`.
+3. S2 text trimmed to same `SP_PROMPT_BUDGET` wall as per-study agents.
+4. Print why each SR failed resolve (sample unresolved labels).
+
+Still fails under-count when we cannot place trials (SPEC §6). Claude: confirm 0.25 bar or restore 0.5.
+
+---
+
+## 8. S3 truncation on long full texts — HARDENED (pending Claude confirm)
+
+**Magnesium 15:41:** S3 **42 OK / 12 FAIL** with `"schema and study input look truncated"` even after 14k budget.
+
+**Creatine 16:44:** S3 80/80 OK (shorter texts / luck) — does **not** prove S3 was fixed.
+
+**Changes:**
+1. Default `SP_PROMPT_BUDGET` **14000 → 12000**.
+2. Extra 1500-char trim reserved for S3 only (`AGENT_BUDGET_TRIM`).
+3. S3 prompt shortened; removed false claim that population vocabulary is attached.
+4. `PROMPT_VERSION` **v1.4 → v1.5** (cache key; forces fresh extractions).
+
+Claude: if S3 still fails after this, next lever is abstract-only for S3 on full texts >N chars, not a higher budget.

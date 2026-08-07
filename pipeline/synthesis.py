@@ -17,6 +17,8 @@ it has a right answer, so no model may do it.
 """
 from __future__ import annotations
 
+import re
+
 from pipeline.dedup import canonical_id, registry_id
 
 # AMSTAR-2-shaped quality proxy, q_s in [0, 1]. Multiplied by coverage and by
@@ -30,7 +32,23 @@ Q_UNRESOLVED = 0.0              # nothing usable
 # An SR whose included studies we cannot resolve is not evidence of agreement --
 # it is an unknown. Below this fraction the synthesis is marked unresolved and
 # score_ecu ignores it entirely (the conservative direction).
-MIN_RESOLVED_FRACTION = 0.5
+#
+# 2026-08-07: lowered 0.5 -> 0.25. Measured on creatine: 12 S2 ok, 0 resolved.
+# Characteristics tables mostly say "Smith 2019" with no DOI; our extract batch
+# is ~80 of hundreds of RCTs, so a 50% bar rejected every review. Fail still
+# under-counts (SPEC §6); we only accept SRs where we can place ≥25% of listed
+# trials AND at least MIN_RESOLVED_COUNT concrete ids.
+MIN_RESOLVED_FRACTION = 0.25
+MIN_RESOLVED_COUNT = 2
+
+# "Smith 2019", "Smith et al. 2019", "Smith, J. (2019)"
+_LABEL_AY = re.compile(
+    r"^\s*([A-Za-z][A-Za-z'\-]{1,40})"
+    r"(?:\s*,?\s*[A-Z]\.?)?"
+    r"(?:\s+et\s+al\.?)?"
+    r"(?:\s*,)?\s*\(?((?:19|20)\d{2})\)?\s*$",
+    re.I,
+)
 
 
 def resolve_included(s2: dict | None, known: dict[str, str] | None = None) -> dict:
@@ -63,7 +81,9 @@ def resolve_included(s2: dict | None, known: dict[str, str] | None = None) -> di
         "n_resolved": len(ids),
         "resolved_fraction": round(frac, 3),
         # 'resolved' gates whether score_ecu counts this synthesis at all.
-        "resolved": bool(n_listed) and frac >= MIN_RESOLVED_FRACTION,
+        "resolved": bool(n_listed)
+                    and frac >= MIN_RESOLVED_FRACTION
+                    and len(ids) >= MIN_RESOLVED_COUNT,
         "unresolved_labels": unresolved,
     }
 
@@ -72,7 +92,7 @@ def _resolve_one(entry: dict, known: dict[str, str]) -> str | None:
     """
     One included-study row -> canonical id, or None.
 
-    Priority mirrors dedup: registry > DOI > PMID > fingerprint. A row we cannot
+    Priority mirrors dedup: registry > DOI > PMID > author+year. A row we cannot
     resolve returns None and is COUNTED, never approximated to the nearest
     plausible study -- a wrong resolution silently merges two different trials.
     """
@@ -83,19 +103,19 @@ def _resolve_one(entry: dict, known: dict[str, str]) -> str | None:
 
     # Author+year fallback. Measured 2026-08-06: S2 extracted 36 included studies
     # from three reviews and resolved ZERO, because characteristics tables name
-    # trials as "Smith 2019" and rarely carry a DOI or PMID. Without this tier
-    # the whole SR-inheritance path yields nothing.
+    # trials as "Smith 2019" and rarely carry a DOI or PMID.
     #
-    # It is deliberately the LAST tier and it REFUSES when ambiguous: if
-    # author+year matches more than one study in the corpus, that is two
-    # different trials and picking one would merge them. Unresolved is the safe
-    # answer (SPEC section 6 fails toward under-count).
+    # 2026-08-07: also parse the *label* when first_author/year fields are empty.
+    # S2 often fills only label="Smith 2019".
     ay = _author_year_key(entry.get("first_author"), entry.get("year"))
+    if not ay:
+        ay = _author_year_from_label(entry.get("label"))
     if ay:
         hits = known.get(ay)
         if isinstance(hits, str):
             return hits
         # a set means the key was ambiguous at index time
+
     # Not in the corpus, but still identifiable: build the id the same way dedup
     # would, so it collapses correctly if the primary is retrieved later.
     if reg or entry.get("doi") or entry.get("pmid"):
@@ -106,6 +126,15 @@ def _resolve_one(entry: dict, known: dict[str, str]) -> str | None:
     return None
 
 
+def _author_year_from_label(label) -> str | None:
+    if not label or not isinstance(label, str):
+        return None
+    m = _LABEL_AY.match(label.strip())
+    if not m:
+        return None
+    return _author_year_key(m.group(1), m.group(2))
+
+
 def _author_year_key(first_author, year) -> str | None:
     """
     "Smith 2019" -> "smith|2019". Surname only: reviews write "Smith J",
@@ -113,7 +142,12 @@ def _author_year_key(first_author, year) -> str | None:
     """
     if not first_author or not year:
         return None
-    surname = _norm_key(str(first_author).replace(",", " ").split()[0])
+    raw = str(first_author).replace(",", " ").strip()
+    # Drop leading "et al" noise if the field was mangled.
+    parts = [p for p in raw.split() if p.lower() not in ("et", "al", "al.")]
+    if not parts:
+        return None
+    surname = _norm_key(parts[0])
     if not surname or not str(year).strip().isdigit():
         return None
     return f"{surname}|{int(year)}"
