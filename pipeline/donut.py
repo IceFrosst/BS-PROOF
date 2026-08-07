@@ -106,3 +106,89 @@ def donut_line(ecu: dict, label: str | None = None) -> str:
     name = label or ecu.get("outcome_vocab_id", "")
     return (f"{name:<26}{centre}  [{bar}]  c={0.0 if gated else (c or 0):.2f}"
             f"  {confidence_label(None if gated else c)}")
+
+
+# --------------------------------------------------------------- three arcs
+
+# The three questions a buyer actually has, in the order they matter.
+# NOTE these are NOT three thirds of one score. Only the first is evidence about
+# whether the thing works; the other two are APPLICABILITY -- how much that
+# evidence has to do with the bottle in your hand. They can only ever shrink the
+# verdict, never prop it up, which is why they are drawn as separate arcs around
+# the same number rather than averaged into it.
+ARCS = (
+    ("effect", "Does it work?", "how much trustworthy evidence stands behind the verdict"),
+    ("form",   "In your form?", "share of that evidence that used this exact preparation"),
+    ("dose",   "At your dose?", "share carrying a usable dose, judged against the effective band"),
+)
+
+UNMEASURED = "#b9bec4"
+
+
+def arc_fills(ecu: dict) -> dict:
+    """
+    The three fill fractions, or None where the axis is genuinely unassessed.
+
+    None is not zero. An unmeasured axis renders hatched, because "we did not
+    check your dose" and "your dose is wrong" are opposite messages.
+    """
+    comp = ecu.get("components") or {}
+    dose = ecu.get("dose") or {}
+    fills = {"effect": comp.get("c")}
+
+    mix = ecu.get("form_mix") or {}
+    total = sum(mix.values())
+    fills["form"] = (mix.get("exact", 0) / total) if total else None
+
+    fills["dose"] = dose.get("evidence_with_dose") if dose.get("low") is not None else None
+    return fills
+
+
+def three_arc_svg(ecu: dict, *, size: int = 300) -> str:
+    """
+    One number, three concentric arcs. Outer = effect, middle = form, inner = dose.
+
+    Concentric rather than a split ring on purpose: a ring cut into three equal
+    segments reads as three things adding up to one total, which would invite
+    "good form match" to visually compensate for thin evidence. Nested arcs read
+    as three independent conditions on the same answer, which is what they are.
+    """
+    score = ecu.get("score")
+    band = ecu.get("band") or "inconclusive"
+    gated = bool(ecu.get("gate_fired")) or score is None
+    colour = BAND_COLOUR.get(band, BAND_COLOUR["inconclusive"])
+    fills = arc_fills(ecu)
+
+    cx = cy = size / 2
+    stroke = size * 0.055
+    gap = stroke * 1.55
+    rings, defs = [], (
+        '<defs><pattern id="hatch" width="6" height="6" '
+        'patternTransform="rotate(45)" patternUnits="userSpaceOnUse">'
+        f'<rect width="6" height="6" fill="{TRACK}"/>'
+        f'<line x1="0" y1="0" x2="0" y2="6" stroke="{UNMEASURED}" stroke-width="2.5"/>'
+        "</pattern></defs>"
+    )
+
+    for i, (key, _label, _desc) in enumerate(ARCS):
+        r = (size / 2) - stroke / 2 - i * gap
+        circ = 2 * math.pi * r
+        f = fills.get(key)
+        rings.append(
+            f'<circle cx="{cx}" cy="{cy}" r="{r:.1f}" fill="none" '
+            f'stroke="{"url(#hatch)" if f is None else TRACK}" stroke-width="{stroke:.1f}"/>')
+        if f is not None and not (gated and key == "effect"):
+            dash = circ * max(0.0, min(1.0, float(f)))
+            rings.append(
+                f'<circle cx="{cx}" cy="{cy}" r="{r:.1f}" fill="none" stroke="{colour}" '
+                f'stroke-width="{stroke:.1f}" stroke-linecap="round" '
+                f'stroke-dasharray="{dash:.1f} {circ - dash:.1f}" '
+                f'transform="rotate(-90 {cx} {cy})" opacity="{1 - i * 0.22:.2f}"/>')
+
+    centre = "--" if gated else f"{score:+d}"
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {size} {size}" '
+            f'width="{size}" height="{size}" role="img" aria-label="{band}">{defs}'
+            + "".join(rings) +
+            f'<text x="{cx}" y="{cy}" text-anchor="middle" dominant-baseline="central" '
+            f'font-family="ui-monospace, monospace" font-size="{size * 0.2:.0f}" '
+            f'font-weight="600" fill="{colour}">{centre}</text></svg>')

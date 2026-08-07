@@ -9,6 +9,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from pipeline import vocab
+from pipeline import dose as dosemod
 from pipeline.scoring import Study, score_ecu
 
 SCORER_VERSION = "v1"
@@ -33,9 +34,28 @@ def _rob_items(s4: dict | None, registry: dict | None) -> dict:
     return items
 
 
+def study_dose(ingredient: str, s7: dict | None) -> dict:
+    """
+    S7's reading -> elemental/active mg, as an interval. The MODEL never does
+    this arithmetic (invariant 1); vocab converts from recorded molar masses and
+    REFUSES on hydrate-ambiguous salts, returning bounds instead of a point.
+    """
+    if not s7:
+        return {"dose_low_mg": None, "dose_high_mg": None, "dose_basis": "unstated"}
+    form_id = s7.get("form_vocab_id")
+    stated = s7.get("elemental_dose_mg")
+    if stated is not None:
+        return {"dose_low_mg": stated, "dose_high_mg": stated,
+                "dose_basis": s7.get("dose_basis") or "elemental_stated"}
+    rng = vocab.elemental_dose_range_mg(ingredient, form_id, s7.get("compound_dose_mg"))
+    return {"dose_low_mg": rng["low"], "dose_high_mg": rng["high"],
+            "dose_basis": rng["basis"]}
+
+
 def to_studies(record: dict, extraction: dict, product: dict,
                registry: dict | None = None, *,
-               ignore_population: bool = False) -> list[tuple[str, Study]]:
+               ignore_population: bool = False,
+               dose_band: dict | None = None) -> list[tuple[str, Study]]:
     s3, s4, s7, s8 = (extraction.get(k) for k in ("S3", "S4", "S7", "S8"))
     ingredient = record["ingredient"]
 
@@ -49,6 +69,16 @@ def to_studies(record: dict, extraction: dict, product: dict,
         pop_match = vocab.pop_match(study_pop, product.get("population") or {})
 
     funding = (s8 or {}).get("funding_class") or "undisclosed"
+
+    # Dose. Until a band exists this stays UNBANDED_DOSE_MATCH -- there is no
+    # dose axis to mismatch against. Once a band is derived from the trials, the
+    # product's dose is judged against it.
+    dose = study_dose(ingredient, s7)
+    if dose_band and dose_band.get("low") is not None:
+        dose_match = dosemod.dose_match_for(
+            product.get("dose_low_mg"), product.get("dose_high_mg"), dose_band)
+    else:
+        dose_match = UNBANDED_DOSE_MATCH
 
     rob = _rob_items(s4, registry)
     n = (s3 or {}).get("n_randomised")
@@ -71,11 +101,11 @@ def to_studies(record: dict, extraction: dict, product: dict,
             oa=record.get("oa") or "abstract_only",
             rob_inherited=bool(record.get("rob_inherited")),
             form_match=form_match,
-            dose_match=UNBANDED_DOSE_MATCH,
+            dose_match=dose_match,
             pop_match=pop_match,
             direction=claim.get("direction") or "unclear",
             magnitude=claim.get("magnitude"),
-        )))
+        ), dose))
     return out
 
 
@@ -97,15 +127,32 @@ def build_ecus(extractions: list[dict], product: dict, *,
     form_id = product["form_vocab_id"]
     pop = product["population"]
 
+    # PASS 1 -- collect doses and directions per outcome so the effective band
+    # can be DERIVED from the trials before anything is scored against it.
+    per_outcome: dict[str, list[dict]] = {}
+    for item in extractions:
+        rec, ext = item["record"], item["extraction"]
+        for outcome_id, study, dose in to_studies(
+            rec, ext, product, item.get("registry"),
+            ignore_population=ignore_population,
+        ):
+            per_outcome.setdefault(outcome_id, []).append(
+                {**dose, "direction": study.direction, "weight": study.weight()})
+
+    bands = {oid: dosemod.effective_range(entries)
+             for oid, entries in per_outcome.items()}
+
+    # PASS 2 -- score, now judging each product dose against its outcome's band.
     buckets: dict[str, list[tuple[Study, dict]]] = {}
     dropped_form = 0
     kept = 0
     form_mix: dict[str, int] = {}
     for item in extractions:
         rec, ext = item["record"], item["extraction"]
-        for outcome_id, study in to_studies(
+        for outcome_id, study, dose in to_studies(
             rec, ext, product, item.get("registry"),
             ignore_population=ignore_population,
+            dose_band=bands.get(outcome_id),
         ):
             form_mix[study.form_match] = form_mix.get(study.form_match, 0) + 1
             if exact_form_only and study.form_match != "exact":
@@ -114,7 +161,8 @@ def build_ecus(extractions: list[dict], product: dict, *,
             kept += 1
             key = vocab.ecu_key(ingredient, form_id, None if band_version == 0
                                 else product.get("dose_band"), outcome_id, pop["id"])
-            buckets.setdefault(key, []).append((study, {"outcome_id": outcome_id}))
+            buckets.setdefault(key, []).append(
+                (study, {"outcome_id": outcome_id, "dose": dose}))
 
     # Always show which forms contributed and at what discount. The product's
     # whole claim is that evidence TRANSFERS between forms at a stated price --
@@ -152,11 +200,27 @@ def build_ecus(extractions: list[dict], product: dict, *,
             "gate_fired": result["gate_fired"],
             "components": {k: result[k] for k in ("d", "c", "H", "E", "E_prime",
                                                   "coverage") if k in result},
+            "dose": {
+                **{k: v for k, v in bands.get(outcome_id, {}).items()
+                   if k in ("low", "high", "n_benefit", "n_null", "null_range",
+                            "band_version", "basis")},
+                "observed": dosemod.observed_range(per_outcome.get(outcome_id, [])),
+                "evidence_with_dose": dosemod.coverage_fraction(
+                    bands.get(outcome_id, {}), per_outcome.get(outcome_id, [])),
+                "product_match": next((p["dose"] for _, p in pairs), {}).get("dose_basis"),
+            },
+            "dose_range_mg": {
+                "low": bands.get(outcome_id, {}).get("low"),
+                "high": bands.get(outcome_id, {}).get("high"),
+                "basis": bands.get(outcome_id, {}).get("basis", "unknown"),
+            },
             "evidence": {
                 "n_primaries": result["n_primaries"],
                 "n_syntheses": result["n_syntheses"],
                 "study_ids": [s.id for s in studies],
             },
+            "form_mix": {t: sum(1 for st in studies if st.form_match == t)
+                         for t in {st.form_match for st in studies}},
             "flags": sorted({f for s in studies for f in _flags(s)}),
             "provenance": {
                 "prompt_version": prompt_version,

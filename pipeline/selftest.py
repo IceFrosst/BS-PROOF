@@ -351,14 +351,14 @@ def main():
         e["extraction"]["S3"]["population_axes"] = pop
         return e
     deficient = {**axes, "deficiency_status": "deficient"}
-    _, st_def = to_studies(with_pop(deficient)["record"] | {"ingredient": "magnesium"},
+    _, st_def, _ = to_studies(with_pop(deficient)["record"] | {"ingredient": "magnesium"},
                            with_pop(deficient)["extraction"], product)[0]
-    _, st_match = to_studies(with_pop(axes)["record"] | {"ingredient": "magnesium"},
+    _, st_match, _ = to_studies(with_pop(axes)["record"] | {"ingredient": "magnesium"},
                              with_pop(axes)["extraction"], product)[0]
     check("population axes reach the transfer factor",
           st_def.pop_match != st_match.pop_match,
           f"deficient study vs general-adult product: {st_def.pop_match}")
-    _, st_unknown = to_studies(
+    _, st_unknown, _ = to_studies(
         {"_canonical": "x", "ingredient": "magnesium", "design_rank": 4},
         {"S3": None, "outcomes": [{"claim": {"direction": "benefit"},
                                    "outcome_vocab_id": "sleep_onset",
@@ -559,6 +559,36 @@ def main():
           pay2["table_filter_hit"] is False and len(pay2["tables"]) == 1,
           "the heuristic filters; S2 decides")
 
+    print("\nEFFECTIVE DOSE BAND (derived, not invented)")
+    from pipeline import dose as dosemod
+    ents = [{"dose_low_mg": 200, "dose_high_mg": 200, "direction": "benefit"},
+            {"dose_low_mg": 300, "dose_high_mg": 300, "direction": "benefit"},
+            {"dose_low_mg": 50,  "dose_high_mg": 50,  "direction": "null_effect"},
+            {"dose_low_mg": None,"dose_high_mg": None,"direction": "benefit"}]
+    band = dosemod.effective_range(ents)
+    check("band is the observed benefit range, nothing chosen",
+          band["low"] == 200 and band["high"] == 300 and band["n_benefit"] == 2,
+          "a percentile or margin would be a new free constant")
+    check("null doses reported separately",
+          band["null_range"] == {"low": 50, "high": 50},
+          "a dose where trials found NOTHING is the useful warning")
+    check("undosed trial excluded, never guessed",
+          band["n_benefit"] == 2 and dosemod.coverage_fraction(band, ents) == 0.75)
+    check("no dosed benefit trial -> no band, band_version 0",
+          dosemod.effective_range(
+              [{"dose_low_mg": 5, "dose_high_mg": 5, "direction": "null_effect"}]
+          )["band_version"] == 0)
+
+    check("dose inside the band", dosemod.dose_match_for(250, 250, band) == "in_band")
+    check("just under the low end", dosemod.dose_match_for(150, 150, band) == "low_50_99")
+    check("far under", dosemod.dose_match_for(40, 40, band) == "below_50")
+    check("far over", dosemod.dose_match_for(700, 700, band) == "above_200")
+    check("interval straddling a tier edge REFUSES to pick",
+          dosemod.dose_match_for(150, 250, band) == "unspecified",
+          "rounding to the likelier side would silently move the score")
+    check("no band -> unspecified, not a free pass",
+          dosemod.dose_match_for(200, 200, {"low": None}) == "unspecified")
+
     print("\nDONUT (score in the centre, arc = confidence)")
     from pipeline.donut import donut_svg, donut_line, confidence_label
     strong = {"score": 86, "band": "strong support", "gate_fired": False,
@@ -585,6 +615,27 @@ def main():
     check("svg is self-contained", donut_svg(strong).startswith("<svg")
           and "http" not in donut_svg(strong).split("aria-label")[0].replace(
               "http://www.w3.org/2000/svg", ""))
+
+    print("\nTHREE-ARC DONUT (effect / form / dose)")
+    from pipeline.donut import three_arc_svg, arc_fills
+    full = {"score": 33, "band": "moderate support", "gate_fired": False,
+            "components": {"c": 0.72},
+            "form_mix": {"exact": 4, "salt_family": 1, "different": 1},
+            "dose": {"low": 56, "high": 296, "evidence_with_dose": 0.83}}
+    f = arc_fills(full)
+    check("three independent fills, not thirds of one total",
+          round(f["effect"], 2) == 0.72 and round(f["form"], 2) == 0.67
+          and round(f["dose"], 2) == 0.83,
+          "they do not sum to anything -- each is its own condition")
+    nodose = {**full, "dose": {"low": None, "evidence_with_dose": 0.0}}
+    check("unassessed dose is None, NOT zero",
+          arc_fills(nodose)["dose"] is None,
+          "'we did not check' and 'your dose is wrong' are opposite messages")
+    check("unassessed arc renders hatched", "url(#hatch)" in three_arc_svg(nodose))
+    check("measured arcs are not hatched",
+          three_arc_svg(full).count("url(#hatch)") == 0)
+    check("form arc reflects the exact-form share only",
+          abs(arc_fills({"form_mix": {"exact": 1, "different": 9}})["form"] - 0.1) < 1e-9)
 
     print("\nSTORAGE (SQLite on a Postgres-shaped schema)")
     import tempfile
