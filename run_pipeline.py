@@ -2,12 +2,11 @@
 """
 End-to-end v1 run.
 
-Meeting demos (see scripts/MEETING_DEMO_RUNS.md):
-  python run_pipeline.py creatine --form creatine_monohydrate --supplement-scope --grok --with-sr --limit 100
-  python run_pipeline.py magnesium --form magnesium_glycinate --grok --with-sr --limit 100
+  python run_pipeline.py creatine --form creatine_monohydrate --supplement-scope --grok --with-sr --full-text-only --limit 80
 
---with-sr  S2 on meta-analyses → capped E' multiplier
---demo     exact form only + ignore population (founder slides only)
+--with-sr         S2 on meta-analyses → capped E' multiplier
+--demo            exact form only + ignore population (founder slides only)
+--full-text-only  extract/score only full_text / green_oa studies (raises weight; SPEC prefers discount not exclusion for production)
 """
 from __future__ import annotations
 import os
@@ -63,14 +62,24 @@ def _best_text(record: dict) -> str:
     return text or (record.get("title") or "")
 
 
-def _prioritize_primaries(primaries: list[dict]) -> list[dict]:
-    """Full text first — raises study weight (OA factor) for the same N."""
+def _prioritize_primaries(primaries: list[dict], *,
+                          full_text_only: bool = False) -> list[dict]:
+    """Full text first; optional hard filter for high-weight batches."""
     def key(s: dict):
         oa = (s.get("oa") or "abstract_only").lower()
         return (_OA_RANK.get(oa, 6), -(s.get("year") or 0))
+
     ordered = sorted(primaries, key=key)
-    n_ft = sum(1 for s in ordered if _OA_RANK.get((s.get("oa") or "").lower(), 9) <= 1)
-    print(f"  priority: full-text/green first ({n_ft}/{len(ordered)} high-OA in pool)")
+    if full_text_only:
+        kept = [s for s in ordered
+                if _OA_RANK.get((s.get("oa") or "").lower(), 9) <= 1]
+        print(f"  FULL-TEXT-ONLY: {len(kept)}/{len(ordered)} RCTs kept "
+              f"(full_text/green_oa)")
+        ordered = kept
+    else:
+        n_ft = sum(1 for s in ordered
+                   if _OA_RANK.get((s.get("oa") or "").lower(), 9) <= 1)
+        print(f"  priority: full-text/green first ({n_ft}/{len(ordered)} high-OA)")
     return ordered
 
 
@@ -97,16 +106,10 @@ def _report_failures(raw: list[dict]) -> None:
                   if r["extraction"].get("_quota_exhausted")), None)
     if quota:
         print(f"\n  !! QUOTA EXHAUSTED: {quota}")
-        print("     Subscription ceiling — not a corpus failure.")
-
     failed = [r for r in raw if r["extraction"].get("_failed")]
     if failed:
         n = sum(len(r["extraction"]["_failed"]) for r in failed)
         print(f"  !! {n} subagent calls FAILED across {len(failed)} studies")
-        for r in failed[:3]:
-            for f in r["extraction"]["_failed"][:2]:
-                print(f"     {f['agent']}: {str(f['error'])[:70]}")
-        print("     Treat failed calls as missing data, not as null effects.")
     skipped = [r for r in raw if r["extraction"].get("_skipped")]
     if skipped:
         print(f"  skipped {len(skipped)}/{len(raw)} studies with no usable text")
@@ -138,6 +141,9 @@ def main(argv: list[str]) -> int:
     with_sr = "--with-sr" in args
     if with_sr:
         args.remove("--with-sr")
+    full_text_only = "--full-text-only" in args
+    if full_text_only:
+        args.remove("--full-text-only")
     if sum([wiring, pilot, grok]) > 1:
         print("Pick only one of --wiring, --pilot, --grok")
         return 1
@@ -198,18 +204,19 @@ def main(argv: list[str]) -> int:
         all_rows = store.studies(syntheses=False)
         syn_rows = store.studies(syntheses=True)
         primaries = _prioritize_primaries(
-            [s for s in all_rows if s.get("design_rank") == 4]
+            [s for s in all_rows if s.get("design_rank") == 4],
+            full_text_only=full_text_only,
         )
         print(f"\nstore: {len(all_rows)} primaries, {len(syn_rows)} syntheses; "
-              f"{len(primaries)} RCT-rank (4)")
+              f"{len(primaries)} RCT-rank after filters")
         if demo:
-            print("DEMO MODE: score only exact form match; population transfer OFF")
-            print("  !! Not a production claim — watermark on slides.")
+            print("DEMO MODE: exact form only; population transfer OFF")
         if with_sr:
-            print(f"WITH-SR MODE: up to {MAX_SRS} meta-analyses via S2 (capped multiplier)")
+            print(f"WITH-SR MODE: up to {MAX_SRS} meta-analyses")
+        if full_text_only:
+            print("FULL-TEXT-ONLY: abstracts excluded from this batch")
 
         if wiring:
-            print("\n!! WIRING MODE — SYNTHETIC numbers only !!\n")
             axes = {a: pv[a] for a in vocab.AXES}
             extractions = [{
                 "record": {**p, "_canonical": p["canonical_id"], "ingredient": ingredient},
@@ -227,16 +234,15 @@ def main(argv: list[str]) -> int:
                 ga.reset_stats()
                 if not ga.preflight():
                     return 1
+                if not primaries:
+                    print("No RCTs left after filters.")
+                    return 1
                 effective = min(limit, len(primaries))
                 print("\n" + "-" * 68)
                 print("GROK MODE")
                 print(f"  studies in flight: {GROK_STUDIES_IN_FLIGHT}")
                 print(f"  concurrent grok CLI: {ga.MAX_CONCURRENCY}")
-                print(f"  batch size: {effective} (full-text preferred in order)")
-                if with_sr:
-                    print(f"  --with-sr: S2 on ≤{MAX_SRS} reviews")
-                if demo:
-                    print("  --demo: exact form only + no pop penalty")
+                print(f"  batch size: {effective}")
                 print("-" * 68)
                 call_fn = ga.call
                 prompt_version = f"{ga.PROMPT_VERSION}+{ga.PROVENANCE}"
@@ -254,10 +260,7 @@ def main(argv: list[str]) -> int:
                 ga = None
 
             targets = primaries[:limit]
-            n_ft = sum(1 for t in targets
-                       if _OA_RANK.get((t.get("oa") or "").lower(), 9) <= 1)
-            print(f"extracting {len(targets)} RCT-rank studies "
-                  f"({n_ft} high-OA in this batch)...")
+            print(f"extracting {len(targets)} studies...")
             raw = workers.extract_corpus(
                 [{**p, "_canonical": p["canonical_id"], "ingredient": ingredient}
                  for p in targets],
@@ -284,11 +287,8 @@ def main(argv: list[str]) -> int:
             if with_sr and call_fn is not None:
                 from pipeline.synthesis_bridge import build_syntheses_for_scoring
                 syntheses_for_score = build_syntheses_for_scoring(
-                    store,
-                    call=call_fn,
-                    text_for=lambda r: _best_text(r),
-                    max_srs=MAX_SRS,
-                    max_workers=min(4, GROK_STUDIES_IN_FLIGHT),
+                    store, call=call_fn, text_for=lambda r: _best_text(r),
+                    max_srs=MAX_SRS, max_workers=min(4, GROK_STUDIES_IN_FLIGHT),
                 )
         else:
             import workers
@@ -312,36 +312,29 @@ def main(argv: list[str]) -> int:
             syntheses_for_score = []
 
         rows = build_ecus(
-            extractions, product,
-            syntheses=syntheses_for_score,
+            extractions, product, syntheses=syntheses_for_score,
             prompt_version=prompt_version,
-            exact_form_only=demo,
-            ignore_population=demo,
+            exact_form_only=demo, ignore_population=demo,
         )
         for row in rows:
             store.upsert_ecu(row)
 
         print(f"\n{tag}ECU ROWS — {ingredient}, form={form}"
               + (" [DEMO]" if demo else "")
-              + (" [+SR]" if with_sr else ""))
+              + (" [+SR]" if with_sr else "")
+              + (" [FT-only]" if full_text_only else ""))
         print("-" * 74)
         for row in sorted(rows, key=lambda r: -(r["score"] or -999)):
             o = vocab.outcome(row["outcome_vocab_id"]) or {}
             score = "gated" if row["score"] is None else f"{row['score']:+d}"
-            cov = (row.get("components") or {}).get("coverage")
-            extra = f"  cov={cov}" if cov else ""
             label = o.get("label", row["outcome_vocab_id"])
             print(f"{tag}{label:<32}{score:>7}  {row['band']:<24} "
-                  f"n={row['evidence']['n_primaries']}{extra}")
+                  f"n={row['evidence']['n_primaries']}")
             try:
                 print(f"     {donut_line(row)}")
             except Exception:
                 pass
         print("-" * 74)
-        if with_sr:
-            print("Note: SRs only boost confidence (E'), never add fake trial mass.")
-        if demo:
-            print("DEMO watermark: exact-form / no-pop rules — not for production claims.")
         print(f"\nWritten to {db}")
 
     mode = "grok"
@@ -349,10 +342,12 @@ def main(argv: list[str]) -> int:
         mode += "-demo"
     if with_sr:
         mode += "-sr"
+    if full_text_only:
+        mode += "-ft"
     if grok:
         _auto_push_report(ingredient, form, mode)
     elif pilot:
-        _auto_push_report(ingredient, form, "pilot" + ("-sr" if with_sr else ""))
+        _auto_push_report(ingredient, form, "pilot")
 
     return 0
 
