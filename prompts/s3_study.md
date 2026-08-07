@@ -49,5 +49,21 @@ NCT########, ISRCTN########, ChiCTR..., CTRI/..., UMIN..., EudraCT.
 Verbatim as printed. If absent, null. This is the join key to the registry and
 a wrong one is worse than none.
 
+KEEP THE OUTPUT SHORT. You are a pure function with ONE turn. A response that
+runs long is cut off mid-JSON and the WHOLE extraction is discarded -- a terse
+answer beats a thorough one that never arrives. Measured 2026-08-07: S3 was the
+only per-study agent without length limits and the only one failing (3 of 20,
+while S4/S5/S7/S8 were 20 of 20).
+
+  arms              at most 8. Report the real trial arms, not every subgroup.
+  intervention_text 200 characters maximum. The preparation and dose, not the
+                    whole methods sentence.
+  evidence_spans    at most 8, each 200 characters maximum. The shortest quote
+                    that supports the field, never a paragraph.
+  population_text   300 characters maximum.
+
+Never drop a required field to save room -- a missing field fails the schema
+just as hard as a truncated one. Shorten the values, not the structure.
+
 duration_days: convert weeks/months to days (1 week = 7, 1 month = 30). If the
 intervention period and follow-up period differ, use the INTERVENTION period.

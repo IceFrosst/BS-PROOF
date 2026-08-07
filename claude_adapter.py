@@ -47,7 +47,7 @@ SHARED_PROMPT = PROMPTS / "_shared.md"
 
 # Bump when you edit ANY prompt (including _shared.md). This is in the cache key.
 # Forget to bump it and you will silently serve stale extractions forever.
-PROMPT_VERSION = "v1.3"  # bumped 2026-08-07: S5 output bounded (max_turns truncation)
+PROMPT_VERSION = "v1.4"  # bumped 2026-08-07: S3 output bounded (only failing agent)
 
 # Tier -> model. FULL IDs, NOT ALIASES.
 #

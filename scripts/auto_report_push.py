@@ -170,11 +170,15 @@ def _section_agents(ctx: dict) -> str:
     if not agents:
         lines.append("_Agent stats not captured._\n")
         return "\n".join(lines)
-    lines += ["| Agent | OK | Fail | Cache |", "|---|---:|---:|---:|"]
+    lines += ["| Agent | OK | Fail | Cache | Why it failed |",
+              "|---|---:|---:|---:|---|"]
     for name in sorted(agents.keys()):
         a = agents[name]
         lines.append(
-            f"| {name} | {a.get('ok', 0)} | {a.get('fail', 0)} | {a.get('cache', 0)} |"
+            f"| {name} | {a.get('ok', 0)} | {a.get('fail', 0)} | {a.get('cache', 0)} | "
+            + ("; ".join(f"{k} (x{v})" for k, v in
+                        sorted((a.get("errors") or {}).items(),
+                               key=lambda kv: -kv[1])[:2]) or "—") + " |"
         )
     lines.append("")
     return "\n".join(lines)

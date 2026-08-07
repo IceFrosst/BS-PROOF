@@ -122,9 +122,14 @@ def _agent_stats(raw: list[dict]) -> dict:
         for agent, m in meta.items():
             if agent.startswith("_"):
                 continue
-            bucket = stats.setdefault(agent, {"ok": 0, "fail": 0, "cache": 0})
+            bucket = stats.setdefault(agent, {"ok": 0, "fail": 0, "cache": 0,
+                                              "errors": {}})
             if agent in failed_agents or m.get("error"):
                 bucket["fail"] += 1
+                # Record WHY, deduplicated. "3 failures" told us nothing; the
+                # reason is what identifies the agent and the fix.
+                why = str(m.get("error") or "")[:90] or "unknown"
+                bucket["errors"][why] = bucket["errors"].get(why, 0) + 1
             else:
                 bucket["ok"] += 1
             if m.get("cached"):
@@ -132,7 +137,8 @@ def _agent_stats(raw: list[dict]) -> dict:
         for f in (ext.get("_failed") or []):
             agent = f.get("agent") or "?"
             if agent not in meta:
-                bucket = stats.setdefault(agent, {"ok": 0, "fail": 0, "cache": 0})
+                bucket = stats.setdefault(agent, {"ok": 0, "fail": 0, "cache": 0,
+                                              "errors": {}})
                 bucket["fail"] += 1
     return stats
 
