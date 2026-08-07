@@ -2,11 +2,12 @@
 """
 End-to-end v1 run.
 
-  python run_pipeline.py magnesium --form magnesium_glycinate --grok --with-sr
-  python run_pipeline.py magnesium --form magnesium_glycinate --grok --demo
+Meeting demos (see scripts/MEETING_DEMO_RUNS.md):
+  python run_pipeline.py creatine --form creatine_monohydrate --supplement-scope --grok --with-sr --limit 100
+  python run_pipeline.py magnesium --form magnesium_glycinate --grok --with-sr --limit 100
 
---with-sr  extract S2 on stored meta-analyses and apply capped E' multiplier
---demo     exact form only + ignore population (founder demos)
+--with-sr  S2 on meta-analyses → capped E' multiplier
+--demo     exact form only + ignore population (founder slides only)
 """
 from __future__ import annotations
 import os
@@ -23,11 +24,22 @@ WIRING_DB = DEFAULT_DB.parent / "wiring_demo.sqlite"
 DEFAULT_PILOT_LIMIT = 40
 DEFAULT_GROK_LIMIT = 100
 DEFAULT_WIRING_SCORE_CAP = 40
-RETRIEVE_MAX_PRIMARIES = 250
+RETRIEVE_MAX_PRIMARIES = 300
 RETRIEVE_MAX_SYNTHESES = 80
 SYNTHETIC_VERSION = "SYNTHETIC-NOT-REAL"
 GROK_STUDIES_IN_FLIGHT = int(os.environ.get("SP_GROK_STUDIES_IN_FLIGHT", "32"))
-MAX_SRS = int(os.environ.get("SP_MAX_SRS", "15"))
+MAX_SRS = int(os.environ.get("SP_MAX_SRS", "12"))
+
+_OA_RANK = {
+    "full_text": 0,
+    "fulltext": 0,
+    "green_oa": 1,
+    "hybrid": 2,
+    "bronze": 3,
+    "abstract_only": 4,
+    "closed": 5,
+    "unknown": 6,
+}
 
 
 def _pilot_db(ingredient: str, scope: str):
@@ -51,6 +63,17 @@ def _best_text(record: dict) -> str:
     return text or (record.get("title") or "")
 
 
+def _prioritize_primaries(primaries: list[dict]) -> list[dict]:
+    """Full text first — raises study weight (OA factor) for the same N."""
+    def key(s: dict):
+        oa = (s.get("oa") or "abstract_only").lower()
+        return (_OA_RANK.get(oa, 6), -(s.get("year") or 0))
+    ordered = sorted(primaries, key=key)
+    n_ft = sum(1 for s in ordered if _OA_RANK.get((s.get("oa") or "").lower(), 9) <= 1)
+    print(f"  priority: full-text/green first ({n_ft}/{len(ordered)} high-OA in pool)")
+    return ordered
+
+
 def synthetic_extraction(record: dict, axes: dict) -> dict:
     return {
         "S3": {"n_randomised": 100, "population_axes": axes},
@@ -70,17 +93,11 @@ def synthetic_extraction(record: dict, axes: dict) -> dict:
 
 
 def _report_failures(raw: list[dict]) -> None:
-    # A quota ceiling is not a property of the corpus and will fail identically
-    # for every remaining study. Say so first, or an empty run reads as "this
-    # supplement has no evidence". Measured 2026-08-06: a 10-study creatine
-    # batch burned 43 calls against the subscription session limit.
     quota = next((r["extraction"]["_quota_exhausted"] for r in raw
                   if r["extraction"].get("_quota_exhausted")), None)
     if quota:
         print(f"\n  !! QUOTA EXHAUSTED: {quota}")
-        print("     The subscription's throughput ceiling, not a code failure")
-        print("     and not a property of the corpus. Batches this size need")
-        print("     ANTHROPIC_API_KEY (or a smaller --limit).")
+        print("     Subscription ceiling — not a corpus failure.")
 
     failed = [r for r in raw if r["extraction"].get("_failed")]
     if failed:
@@ -180,11 +197,14 @@ def main(argv: list[str]) -> int:
 
         all_rows = store.studies(syntheses=False)
         syn_rows = store.studies(syntheses=True)
-        primaries = [s for s in all_rows if s.get("design_rank") == 4]
+        primaries = _prioritize_primaries(
+            [s for s in all_rows if s.get("design_rank") == 4]
+        )
         print(f"\nstore: {len(all_rows)} primaries, {len(syn_rows)} syntheses; "
               f"{len(primaries)} RCT-rank (4)")
         if demo:
             print("DEMO MODE: score only exact form match; population transfer OFF")
+            print("  !! Not a production claim — watermark on slides.")
         if with_sr:
             print(f"WITH-SR MODE: up to {MAX_SRS} meta-analyses via S2 (capped multiplier)")
 
@@ -212,7 +232,7 @@ def main(argv: list[str]) -> int:
                 print("GROK MODE")
                 print(f"  studies in flight: {GROK_STUDIES_IN_FLIGHT}")
                 print(f"  concurrent grok CLI: {ga.MAX_CONCURRENCY}")
-                print(f"  batch size: {effective}")
+                print(f"  batch size: {effective} (full-text preferred in order)")
                 if with_sr:
                     print(f"  --with-sr: S2 on ≤{MAX_SRS} reviews")
                 if demo:
@@ -234,7 +254,10 @@ def main(argv: list[str]) -> int:
                 ga = None
 
             targets = primaries[:limit]
-            print(f"extracting {len(targets)} RCT-rank studies...")
+            n_ft = sum(1 for t in targets
+                       if _OA_RANK.get((t.get("oa") or "").lower(), 9) <= 1)
+            print(f"extracting {len(targets)} RCT-rank studies "
+                  f"({n_ft} high-OA in this batch)...")
             raw = workers.extract_corpus(
                 [{**p, "_canonical": p["canonical_id"], "ingredient": ingredient}
                  for p in targets],
@@ -307,12 +330,18 @@ def main(argv: list[str]) -> int:
             score = "gated" if row["score"] is None else f"{row['score']:+d}"
             cov = (row.get("components") or {}).get("coverage")
             extra = f"  cov={cov}" if cov else ""
-            print(f"{tag}{o.get('label', row['outcome_vocab_id']):<32}"
-                  f"{score:>7}  {row['band']:<24} n={row['evidence']['n_primaries']}"
-                  f"{extra}")
+            label = o.get("label", row["outcome_vocab_id"])
+            print(f"{tag}{label:<32}{score:>7}  {row['band']:<24} "
+                  f"n={row['evidence']['n_primaries']}{extra}")
+            try:
+                print(f"     {donut_line(row)}")
+            except Exception:
+                pass
         print("-" * 74)
         if with_sr:
             print("Note: SRs only boost confidence (E'), never add fake trial mass.")
+        if demo:
+            print("DEMO watermark: exact-form / no-pop rules — not for production claims.")
         print(f"\nWritten to {db}")
 
     mode = "grok"
