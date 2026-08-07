@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """
-After a live extraction run: write reports/runs/*.md from out/*.sqlite and
-push reports/ to GitHub (source of truth).
+After every live extraction: write BOTH reports and push reports/ to GitHub.
+
+  1) Summary  → reports/latest.md + reports/runs/*_summary.md
+  2) Full     → reports/runs/*_full.md  (formula, selftest, ECU tables, notes)
+
+Called automatically from run_pipeline.py — no extra steps for the founder.
 
     python scripts/auto_report_push.py --ingredient magnesium --form magnesium_glycinate --mode grok
 
-Env:
-  SP_AUTO_PUSH=0   skip git push (still writes local report)
+Env: SP_AUTO_PUSH=0 skips git push (still writes both reports locally).
 """
 from __future__ import annotations
 
@@ -80,59 +83,120 @@ def _ecu_section(pattern: str, title: str) -> str:
     return "\n".join(lines)
 
 
-def _update_index(rel: str, meta: dict) -> None:
+def _formula() -> str:
+    return """## How the score is built
+
+Deterministic (`pipeline/scoring.py`). Models extract fields only.
+
+```text
+w = design × RoB × size × funding × OA × form × dose × pop
+    (0 if retracted or predatory venue)
+score = clamp(round(100 × d × c × (1 − 0.4 × H)), −100, +100)
+```
+
+SRs (`--with-sr`) only raise confidence E′, never invent patients.
+Predatory list: human ref https://www.predatoryjournals.org/the-list/publishers
+"""
+
+
+def _selftest_tail() -> str:
+    try:
+        p = subprocess.run(
+            [sys.executable, "-m", "pipeline.selftest"],
+            cwd=ROOT, capture_output=True, text=True, timeout=120,
+            env={**os.environ, "PYTHONUNBUFFERED": "1"},
+        )
+        ok = p.returncode == 0
+        tail = "\n".join(((p.stdout or "") + (p.stderr or "")).strip().splitlines()[-40:])
+        return f"## Selftest: **{'PASS' if ok else 'FAIL'}**\n\n```text\n{tail}\n```\n"
+    except Exception as e:
+        return f"## Selftest\n_skipped: {e}_\n"
+
+
+def _update_index(rows: list[tuple[str, dict]]) -> None:
     index = REPORTS / "INDEX.md"
     header = (
         "# Report runs index\n\n"
-        "| When (UTC) | Mode | Ingredient | Form | File |\n"
-        "|---|---|---|---|---|\n"
+        "| When (UTC) | Mode | Ingredient | Form | Kind | File |\n"
+        "|---|---|---|---|---|---|\n"
     )
-    row = (
-        f"| {meta['when']} | {meta['mode']} | `{meta['ingredient']}` | "
-        f"`{meta['form']}` | [{rel}]({rel}) |\n"
-    )
+    new_lines = []
+    for rel, meta in rows:
+        new_lines.append(
+            f"| {meta['when']} | {meta['mode']} | `{meta['ingredient']}` | "
+            f"`{meta['form']}` | {meta['kind']} | [{rel}]({rel}) |\n"
+        )
     if index.exists() and "| When (UTC) |" in index.read_text(encoding="utf-8"):
         parts = index.read_text(encoding="utf-8").splitlines(keepends=True)
         out, inserted = [], False
         for line in parts:
             out.append(line)
             if not inserted and line.startswith("|---"):
-                out.append(row)
+                out.extend(new_lines)
                 inserted = True
         index.write_text("".join(out), encoding="utf-8")
     else:
-        index.write_text(header + row, encoding="utf-8")
+        index.write_text(header + "".join(new_lines), encoding="utf-8")
 
 
-def write_report(ingredient: str, form: str, mode: str) -> Path:
+def write_report(ingredient: str, form: str, mode: str) -> list[Path]:
+    """Write summary + full; update latest.md to summary; index both."""
     REPORTS.mkdir(parents=True, exist_ok=True)
     RUNS.mkdir(parents=True, exist_ok=True)
+    stamp = _stamp()
+    base = f"{stamp}_{_slug(ingredient)}_{_slug(form)}_{_slug(mode)}"
 
-    body = "\n".join([
-        f"# BS-PROOF run report ({mode})\n",
+    ecu_grok = _ecu_section("grok_*.sqlite", "Grok databases")
+    ecu_pilot = _ecu_section("pilot*.sqlite", "Claude pilot databases")
+
+    summary = "\n".join([
+        f"# BS-PROOF summary report ({mode})\n",
         f"Generated: **{_now()}**\n",
         f"Ingredient: `{ingredient}` · Form: `{form}` · Mode: **{mode}**\n",
-        "Auto-written after extraction so GitHub stays the source of truth.\n",
-        _ecu_section("grok_*.sqlite", "Grok databases"),
-        _ecu_section("pilot*.sqlite", "Claude pilot databases"),
+        "Auto-written after every extraction (no extra steps).\n",
+        "Full audit for this run: see matching `*_full.md` in `reports/runs/`.\n",
+        ecu_grok,
+        ecu_pilot,
     ])
-    fname = f"{_stamp()}_{_slug(ingredient)}_{_slug(form)}_{_slug(mode)}.md"
-    path = RUNS / fname
-    path.write_text(body, encoding="utf-8")
-    (REPORTS / "latest.md").write_text(body, encoding="utf-8")
-    rel = f"runs/{fname}"
-    _update_index(rel, {
-        "when": _now(), "mode": mode,
-        "ingredient": ingredient, "form": form,
-    })
-    print(f"Wrote reports/{rel}")
-    print("Wrote reports/latest.md")
-    return path
+
+    full = "\n".join([
+        f"# BS-PROOF full audit report ({mode})\n",
+        f"Generated: **{_now()}**\n",
+        f"Ingredient: `{ingredient}` · Form: `{form}` · Mode: **{mode}**\n",
+        "Auto-written with the summary after every extraction.\n",
+        _formula(),
+        _selftest_tail(),
+        ecu_grok,
+        ecu_pilot,
+        "## Notes\n",
+        "- Claude and Grok scores are **never merged**.\n",
+        "- Predatory venues (list) get weight 0 when journal/publisher matches.\n",
+        "- Inconclusive scores with low n are often the confidence ceiling (SPEC 13), not a bug.\n",
+    ])
+
+    path_sum = RUNS / f"{base}_summary.md"
+    path_full = RUNS / f"{base}_full.md"
+    path_sum.write_text(summary, encoding="utf-8")
+    path_full.write_text(full, encoding="utf-8")
+    (REPORTS / "latest.md").write_text(summary, encoding="utf-8")
+    (REPORTS / "latest_full.md").write_text(full, encoding="utf-8")
+
+    meta_base = {"when": _now(), "mode": mode,
+                 "ingredient": ingredient, "form": form}
+    _update_index([
+        (f"runs/{path_sum.name}", {**meta_base, "kind": "summary"}),
+        (f"runs/{path_full.name}", {**meta_base, "kind": "full"}),
+    ])
+    print(f"Wrote reports/runs/{path_sum.name}")
+    print(f"Wrote reports/runs/{path_full.name}")
+    print("Wrote reports/latest.md (summary)")
+    print("Wrote reports/latest_full.md (full)")
+    return [path_sum, path_full]
 
 
 def git_push_reports() -> int:
     if os.environ.get("SP_AUTO_PUSH", "1") in ("0", "false", "no"):
-        print("SP_AUTO_PUSH disabled — report is local only.")
+        print("SP_AUTO_PUSH disabled — reports local only.")
         return 0
     try:
         subprocess.run(["git", "-C", str(ROOT), "add", "reports"], check=True)
@@ -143,9 +207,8 @@ def git_push_reports() -> int:
         if not (st.stdout or "").strip():
             print("No report changes to commit.")
             return 0
-        msg = f"Auto-report {_now()}"
         subprocess.run(
-            ["git", "-C", str(ROOT), "commit", "-m", msg],
+            ["git", "-C", str(ROOT), "commit", "-m", f"Auto-report {_now()}"],
             check=True,
         )
         subprocess.run(["git", "-C", str(ROOT), "push"], check=True)
@@ -153,7 +216,7 @@ def git_push_reports() -> int:
         return 0
     except subprocess.CalledProcessError as e:
         print(f"git push failed: {e}")
-        print("Report is on disk under reports/ — push manually if needed.")
+        print("Reports are on disk under reports/ — push manually if needed.")
         return 1
 
 
