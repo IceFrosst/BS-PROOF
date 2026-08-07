@@ -201,7 +201,7 @@ Commit and push. Never overwrite an old run file. Label provider in the report.
 | Stage | Cap |
 |-------|----:|
 | Retrieve max primaries | 150 |
-| Retrieve max syntheses | 50 |
+| Retrieve max syntheses | 120 (`SP_RETRIEVE_MAX_SYNTHESES`) |
 | Wiring score table | ≤ 40 RCT-rank |
 | **Pilot default `--limit`** | **40** RCT-rank primaries |
 
@@ -228,6 +228,17 @@ python3 run_sr_inheritance.py creatine --limit 8 --grok    # or --pilot / --clau
 ```
 
 One file per backend: `out/sr_inheritance_<backend>.json`. Never blended.
+
+We retrieve **`PUB_TYPE:"Meta-Analysis" OR PUB_TYPE:"Systematic Review"`** (up to
+120) and extract only **`SP_MAX_SRS`= 12** of them, because S2 is a full-text
+table read and the budget is real. Umbrella reviews are rank 1 in `classify` but
+are NOT searched for — they arrive only when also tagged SR/MA.
+
+The 12 are chosen by `synthesis_bridge.rank_syntheses`: **readable first**
+(no PMC id → no table → the call cannot produce anything), then design rank,
+then newest. `store.studies()` has no `ORDER BY`, so the cap used to be an
+arbitrary insertion-order slice — measured on a 462-synthesis store, the first
+12 rows held 7 unreadable and 3 unclassified.
 
 ---
 

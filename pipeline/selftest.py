@@ -726,6 +726,24 @@ def main():
           "'this review lists no studies'",
           syn.s2_payload({"title": "x"}, None)["tables"] == [])
 
+    # A cap of 12 must buy 12 USABLE reviews. store.studies() has no ORDER BY,
+    # so the cap was an arbitrary slice: measured on a 462-synthesis store, the
+    # first 12 rows held 7 with no PMC id and 3 never classified.
+    from pipeline.synthesis_bridge import rank_syntheses
+    ranked = rank_syntheses([
+        {"canonical_id": "closed-umbrella", "pmcid": "", "design_rank": 1, "year": 2024},
+        {"canonical_id": "unclassified-oa", "pmcid": "PMC3", "design_rank": None, "year": 2024},
+        {"canonical_id": "oa-sr-old", "pmcid": "PMC1", "design_rank": 3, "year": 2015},
+        {"canonical_id": "oa-ma-new", "pmcid": "PMC2", "design_rank": 2, "year": 2024},
+    ])
+    check("unreadable reviews sort LAST however good they are",
+          ranked[-1]["canonical_id"] == "closed-umbrella",
+          "no full text -> no table -> the call cannot produce anything")
+    check("among readable ones, the strongest design wins",
+          [r["canonical_id"] for r in ranked[:3]]
+          == ["oa-ma-new", "oa-sr-old", "unclassified-oa"],
+          "unclassified sorts after real ranks, not before")
+
     # Measured 2026-08-07 on three real OA reviews: the old filter returned
     # False on 14 of 14 tables. These are verbatim headers/captions it missed.
     check("'included systematic reviews' matches, not just 'included studies'",

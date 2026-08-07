@@ -86,8 +86,9 @@ def run(ingredient: str, limit: int, *, mode: str = "pilot",
         print(f"corpus: {len(primaries)} primaries, {len(starved)} with no route "
               f"to methods facts today")
 
-        syntheses = [s for s in all_studies
-                     if s["is_synthesis"] and s.get("pmcid")][:limit]
+        from pipeline.synthesis_bridge import rank_syntheses
+        syntheses = rank_syntheses(
+            [s for s in all_studies if s["is_synthesis"] and s.get("pmcid")])[:limit]
         print(f"running S2 over {len(syntheses)} open-access syntheses\n")
 
         rescued: set[str] = set()

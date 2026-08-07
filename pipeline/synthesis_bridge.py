@@ -17,6 +17,28 @@ DEFAULT_MAX_SRS = 15
 # payload and is therefore the only place that can trim it honestly.
 
 
+def rank_syntheses(rows: list[dict]) -> list[dict]:
+    """
+    Best reviews first, so a cap of 12 spends its calls on 12 USABLE reviews.
+
+    `store.studies()` has no ORDER BY, so it returns insertion order and the cap
+    was an arbitrary slice. Measured on a 462-synthesis store: the first 12 rows
+    contained 7 with NO PMC id -- unreadable, so s2_payload returns no tables and
+    the call cannot produce anything -- plus 3 never classified at all. More than
+    half the budget was spent before the first usable review.
+
+    Order:
+      1. readable first          no full text -> no table -> nothing to extract
+      2. design rank             umbrella (1) > SR+MA (2) > SR (3)
+      3. newest                  a 2024 review covers the 2019 review's trials
+    """
+    def key(s: dict):
+        readable = 0 if (s.get("pmcid") or "").strip() else 1
+        rank = s.get("design_rank") or 9        # unclassified sorts after real ranks
+        return (readable, rank, -(s.get("year") or 0))
+    return sorted(rows, key=key)
+
+
 def _xml_for(record: dict, xml_for) -> str | None:
     """
     JATS for one synthesis. A failure returns None, and the caller records
@@ -49,13 +71,16 @@ def extract_s2_batch(
     Run S2 on up to max_srs synthesis records.
     Returns list of {"record", "s2", "meta"} (s2 may be None).
     """
-    targets = syn_records[:max_srs]
+    ranked = rank_syntheses(syn_records)
+    targets = ranked[:max_srs]
     if not targets:
         print("  SR bridge: no synthesis records in store")
         return []
 
-    print(f"  SR bridge: extracting S2 for {len(targets)} syntheses "
-          f"(cap={max_srs}, workers≤{max_workers})...")
+    readable = sum(1 for t in targets if (t.get("pmcid") or "").strip())
+    print(f"  SR bridge: extracting S2 for {len(targets)} of {len(syn_records)} "
+          f"syntheses (cap={max_srs}, workers≤{max_workers}); "
+          f"{readable}/{len(targets)} have full text")
 
     def one(rec: dict):
         xml = _xml_for(rec, xml_for)
