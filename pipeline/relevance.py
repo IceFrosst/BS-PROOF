@@ -99,13 +99,3 @@ def relevance_check(record: dict, ingredient: str) -> tuple[bool, str]:
     return False, "ingredient mention only (not intervention)"
 
 
-def filter_records(records: list[dict], ingredient: str) -> tuple[list[dict], list[dict]]:
-    """Split into (kept, rejected) with rejection reason on each rejected row."""
-    kept, rejected = [], []
-    for r in records:
-        ok, reason = relevance_check(r, ingredient)
-        if ok:
-            kept.append(r)
-        else:
-            rejected.append({**r, "_relevance_reject": reason})
-    return kept, rejected

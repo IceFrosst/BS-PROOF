@@ -143,20 +143,70 @@ Archive each backend’s run under `reports/runs/` with mode in the filename.
 
 ## Layout
 
+**Three model boundaries. Everything else is deterministic.**
+
 ```
-claude_adapter.py          Claude production model boundary
-pilot_adapter.py           Claude subscription pilot
-grok_adapter.py            Grok pure-function boundary (separate tests)
-workers.py                 fan-out; `call=` injectable per backend
-run_pipeline.py            --wiring / --pilot (default limit 40)
-scripts/write_demo_report.py
-scripts/write_demo_diagram.py  regenerates pipeline_v2_demo.excalidraw
-reports/runs/              immutable human-readable run archive
-pipeline/arcs.py           4 arcs + the 0-100 composite            [NO MODEL]
-pipeline/donut.py          arc rendering (SVG + terminal)          [NO MODEL]
-pipeline/dose.py           effective dose band from benefit trials [NO MODEL]
-pipeline/preview.py        small-run projection (never rescales k) [NO MODEL]
-pipeline/*                 deterministic only
+claude_adapter.py     Claude production      --bare + ANTHROPIC_API_KEY
+pilot_adapter.py      Claude subscription    development only, never a claim
+grok_adapter.py       Grok CLI               separate store, separate report
+workers.py            fan-out; `call=` injectable per backend      [MODEL via injection]
+```
+
+**Entry points**
+
+```
+run_pipeline.py              one ingredient end to end. --wiring / --pilot / --grok
+                             default --limit: 100 grok, 40 pilot
+run_sr_inheritance.py        measure SR-table uplift alone. --grok / --pilot / --claude
+run_coverage.py              measure OA + methods-fact coverage. no model calls
+scripts/write_demo_report.py write a human-readable run report
+scripts/write_demo_diagram.py regenerate pipeline_v2_demo.excalidraw from the code
+scripts/archive_reports.py   sweep old-scoring-model runs into reports/archive/
+```
+
+**`pipeline/` — deterministic, NO MODEL, unit-tested**
+
+```
+scoring.py       w_study, score_ecu, the bands. The formula lives here
+arcs.py          4 arcs + the 0-100 composite
+donut.py         arc rendering (SVG + terminal)
+assemble.py      worker JSON -> Study objects -> scored ECU rows
+dedup.py         canonical id: NCT > DOI > PMID > fingerprint
+classify.py      design rank from PubMed tags; S1 only when ambiguous
+retrieve.py      orchestrates discovery; scopes incl. per-outcome
+synthesis.py     SR resolution, q_s checklist, SR-derived trials
+synthesis_bridge.py  S2 batching, marginal-yield stopping    [MODEL via injection]
+dose.py          effective dose band from BENEFIT trials
+preview.py       small-run projection; refuses below n=20, never rescales k
+relevance.py     pre-model gate: is this oral supplementation at all
+predatory.py     venue flag (flag-only; the list is currently EMPTY)
+showcase.py      top-N outcomes by published RCT count
+storage.py       SQLite, postgres-shaped
+vocab.py         forms, outcomes, populations, ECU key, polarity
+selftest.py      236 checks. Run after ANY pipeline/ change
+```
+
+**`sources/` — deterministic, NO MODEL**
+
+```
+http.py          the one HTTP client: throttled, retried, disk-cached
+europepmc.py     search + normalise; the discovery layer
+clinicaltrials.py registry facts (RoB items 3 and 4)
+oa.py            OpenAlex + Unpaywall green-OA resolution
+fulltext.py      JATS parsing, section + TABLE extraction, PDF/HTML
+ratelimit.py     token bucket per domain
+```
+
+**Data and output**
+
+```
+vocab/*.json     forms, outcomes (+polarity), populations
+prompts/*.md     one per subagent; edit -> bump PROMPT_VERSION
+schemas/*.json   one per subagent; the model must match these exactly
+reports/runs/    immutable run archive, current scoring model
+reports/archive/<model>/   runs from superseded scoring models
+docs/history/    closed audits. NOT a task list
+out/             sqlite stores + HTTP cache (gitignored)
 ```
 
 ## Commands
@@ -272,7 +322,9 @@ repetitive one stops early.
 
 **Scaling SRs cannot double-count evidence**, and only one of the three routes
 needed new code:
-1. *Evidence mass* — syntheses never enter `E` (invariant 6). 400 reviews add 0.0.
+1. *Evidence mass* — the synthesis DOCUMENT never enters `E` (invariant 6).
+   400 reviews add 0.0. The trials they describe are separate units and are
+   deduped by canonical id, so a trial named by 30 reviews is still one.
 2. *The multiplier* — `score_ecu` takes the MAX `cov`, not a sum. 30 reviews of
    the same trials give ONE lift ≤1.30. Covered by a selftest.
 3. *Inherited facts* — the real one. `synthesis.merge_inherited` resolves every

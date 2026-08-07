@@ -1,3 +1,7 @@
+> **HISTORICAL — closed 2026-08-06.** Kept for the record. Every item here was
+> reviewed and signed off; nothing in it is pending. Current rules live in
+> `CLAUDE.md`, current open questions in `docs/REVIEW_PENDING.md`.
+
 # Audit fixes — pending Claude review
 
 **Date:** 2026-08-05  

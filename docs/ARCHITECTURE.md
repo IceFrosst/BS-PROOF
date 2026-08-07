@@ -1,7 +1,8 @@
-# BS-PROOF architecture (2026-08-07)
+# BS-PROOF architecture (updated 2026-08-08)
 
-**Canonical diagram for demos.**  
-`pipeline_v1.excalidraw` at repo root is the **original** sketch; this file is the **current** system. SPEC still says `supplement_pipeline_v1.excalidraw` in one place — that filename does not exist (name drift).
+**The system in text.** For a picture, use `pipeline_v2_demo.excalidraw`, which is
+generated from the code. For the rules that govern changes, use `CLAUDE.md`.
+This file is the middle layer: what runs, in what order.
 
 ```text
                     ┌─────────────────────────────────────┐
@@ -74,16 +75,31 @@
 ## Weight factors (score path)
 
 ```text
-w_study = design × RoB × size × funding × OA × form × dose × pop
-          × (0 if retracted or venue_ok=False)
+w_study = design × RoB × size × funding × OA
+          × 0.85 if rob_inherited      (another team's RoB judgement)
+          × 0 if retracted or venue_ok = False
 ```
 
-**Venue / predatory:** SPEC requires predatory → weight 0. Code has `venue_ok`
-but **no live predatory-journal list is applied at retrieve time yet** (see
-`docs/AUDIT_INCONSISTENCIES.md`).
+**Form, dose and population are NOT in the weight.** Founder decision
+2026-08-07: the centre number is study QUALITY only, and form/dose/population
+became arcs. `FORM_FACTOR`, `DOSE_FACTOR` and `POP_FACTOR` still exist in
+`scoring.py` — they feed the arcs and the missing-subset penalties, and the
+`APPLY_*_IN_WEIGHT` switches are all `False`. See CLAUDE.md invariant 8.
 
-## Open Excalidraw in the app
+**OA tiers:** `full_text` 1.00 · `sr_table` 0.85 · `abstract_only` 0.55. A trial
+reached only through a review's table scores at `sr_table × rob_inherited` =
+**0.72** of the same trial read directly (invariant 6, amended 2026-08-08).
 
-1. Open [excalidraw.com](https://excalidraw.com)
-2. Load `pipeline_v1.excalidraw` for history
-3. Prefer redrawing from this markdown for meetings (current truth)
+**Venue / predatory:** flag-only, `pipeline.predatory.ZERO_WEIGHT = False`
+(founder policy). The list itself is currently EMPTY — `vocab/predatory_journals.txt`
+is a placeholder and the b64 chunks are truncated, so every run reports
+"0 flagged" regardless. Needs the founder xlsx.
+
+## Diagrams
+
+| file | use |
+|------|-----|
+| `pipeline_v2_demo.excalidraw` | **current.** How one run works end to end, with the arcs, backends and known limits. Regenerate with `python3 scripts/write_demo_diagram.py` — it imports its constants from `pipeline/scoring.py`, so it cannot drift from the code |
+| `pipeline_v1.excalidraw` | the original technical sketch. Predates the four-arc rewrite; kept for history only |
+
+Drop either into [excalidraw.com](https://excalidraw.com) to edit.

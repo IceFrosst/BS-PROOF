@@ -1,3 +1,9 @@
+> **HISTORICAL — closed 2026-08-08.** Every issue listed here has been fixed or
+> superseded. Notably: the excalidraw is regenerated from code now
+> (`pipeline_v2_demo.excalidraw`), the donut has FOUR arcs, and CLAUDE.md
+> "Current state" is live again. Do not act on this file — it is a snapshot of
+> problems, not a task list.
+
 # Repo & docs inconsistency audit
 
 **Date:** 2026-08-07  

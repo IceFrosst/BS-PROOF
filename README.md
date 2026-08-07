@@ -18,84 +18,144 @@ This scores the tuple, not the ingredient.
 ECU = (ingredient, form, dose_band, outcome, population)
 ```
 
-An RCT on 400 mg magnesium citrate, applied to a 100 mg magnesium oxide product,
-carries `0.15 × 0.10 × 1.00 = 0.015` of its original weight. That discount is the
-product.
+One ECU per outcome. Five outcomes means five scores — there is no single
+product number, and there deliberately cannot be one.
 
-## Output
-
-A signed score, −100 to +100, per ECU.
+## Output: a number and four arcs, never the number alone
 
 ```
-d = Σ(wᵢ·sᵢ) / Σ(wᵢ)      direction      −1 … +1
-c = 1 − e^(−E′/k)          confidence      0 … 1
-H = weighted var(sᵢ)       heterogeneity   0 … 1
+displayed   0…100      = 100 × c × mean(effect, form, dose)
+internal    −100…+100  = 100 × d × c × (1 − 0.4H)
 
-SCORE = 100 · d · c · (1 − 0.4H)
+d = Σ(wᵢ·sᵢ) / Σ(wᵢ)      direction       −1 … +1
+c = 1 − e^(−E′/k)          confidence       0 … 1
+H = weighted var(sᵢ)       heterogeneity    0 … 1
+```
+
+**The weight is study QUALITY only** — `design × RoB × size × funding × OA`.
+Form, dose and population are *not* in it. That is a deliberate decision
+(founder, 2026-08-07) with a consequence that has to be stated every time:
+
+> Two products differing only in form or dose **share a centre number**. The
+> difference is carried by the arcs. A score published without its arcs is a
+> false claim.
+
+Each arc carries a **verdict** and the **coverage** behind it:
+
+| arc | verdict | coverage |
+|---|---|---|
+| **effect** | what all the evidence says | 1.0 |
+| **form** | what trials using *your* preparation found | their share of evidence weight |
+| **dose** | what trials in *your* dose band found | their share of evidence weight |
+| **evidence** | — (pure quantity) | `c` |
+
+`0.00 @ 0%` ("nobody tested your form") and `−0.70 @ 100%` ("your form was
+tested and failed") are opposite messages and never render the same.
+
+This is also why a low number isn't automatically bad news:
+
+```
+1 weak positive trial   →   3/100   with an EMPTY evidence arc  ("barely studied")
+20 solid null trials    →  15/100   with a FULL  evidence arc  ("does not work")
 ```
 
 **A null result scores −0.7, not 0.** A product claims a benefit; a well-run
-trial finding no effect is disconfirming evidence for that claim. This is what
-lets `0` mean "inconclusive" and nothing else — no-data is caught by the
-sufficiency gate, disagreement by `H`.
+trial finding no effect is disconfirming evidence for that claim. The one
+exception is adverse-event outcomes, where the claim is "this is safe" and a
+null is reassurance — scoring those −0.7 once published magnesium's safety data
+as the worst row on the board.
 
-## The two traps this is built around
+## The three traps this is built around
 
 **Deduplication.** Thirty meta-analyses routinely re-analyse the same nine RCTs.
-Counting them as independent breaks everything downstream — and an LLM asked to
-merge similar conclusions will *correctly* observe they agree, reading one trial
-pool as thirty corroborations. Dedup therefore happens at ingestion, in
-deterministic code, keyed on `NCT > DOI > PMID > fingerprint`. Syntheses never
-enter evidence mass; they contribute a multiplier capped at +30%.
+An LLM asked to merge similar conclusions will *correctly* observe they agree,
+reading one trial pool as thirty corroborations. Dedup therefore happens at
+ingestion, in deterministic code, keyed on `NCT > DOI > PMID > fingerprint`, and
+`score_ecu` takes the **maximum** synthesis coverage rather than a sum.
 
 **Transfer.** A single ingredient might have 360 possible ECUs of which the
 literature populates 15. The other 345 are reached only by discounting evidence
-across form, dose, and population distance. Those factors do most of the work in
-the system and are its largest error source.
+across form, dose and population distance. Those factors are the system's
+largest error source and are all uncalibrated — see `docs/SPEC.md` §13.
+
+**Reachability.** Most trials are paywalled. An abstract-only study lands near
+`w = 0.023` and would need ~300 of its kind to reach `c = 0.9`; a full-text
+study needs ~50. So a systematic review's tables are not a footnote — they are
+often the only route to a trial at all, and since 2026-08-08 the trials
+described in them are **scored**, once each, at 0.72 of the weight of a paper we
+read ourselves.
 
 ## Quick start
 
 ```bash
-npm install -g @anthropic-ai/claude-code
-claude login
 pip install -r requirements.txt
-
-python claude_adapter.py                                 # preflight
-python -m pipeline.selftest                              # zero model calls
-python run_coverage.py magnesium creatine ashwagandha    # zero model calls
+python3 -m pipeline.selftest        # 236 checks, no model calls, no network
 ```
 
-Subagents run through Claude Code headless mode, so a Claude subscription is
-enough for development. Set concurrency to 2 on subscription auth — it's built
-for interactive work and 5+ concurrent agents hits limits within hours.
-Production serving wants API billing (`ANTHROPIC_API_KEY=...`, nothing else
-changes).
+Then a real run. Pick exactly one backend:
 
-## Verified behaviour
+```bash
+# no model at all — proves the plumbing end to end
+python3 run_pipeline.py creatine --form creatine_monohydrate --wiring
 
-`python -m pipeline.selftest` — all zero-cost, no network:
+# Grok backend (XAI_API_KEY + grok CLI)
+python3 run_pipeline.py magnesium --form magnesium_glycinate --grok \
+        --per-outcome --dose 400 --limit 120
+
+# Claude subscription pilot — development only, never a public claim
+python3 run_pipeline.py creatine --form creatine_monohydrate --pilot
+```
+
+`--dose` is your product's **elemental** mg. Without it the dose arc reads
+"not assessable" and means it.
+
+## What is actually verified
+
+`python3 -m pipeline.selftest` — zero cost, no network:
 
 | Test | Result |
 |---|---|
 | 3 papers sharing one NCT + 2 distinct trials | 5 → **3 units** |
-| 9 clean RCTs | +95 |
+| 9 clean RCTs | **+95** |
 | 9 RCTs + **30 syntheses over the same 9** | E′/E = **1.24** (ceiling 1.30) |
+| 9 RCTs + **1** synthesis vs **30** | **identical score** |
 | 12 null-result RCTs | **−69** "does not work" |
-| Same 9 trials, wrong form + underdosed | +95 → **+4** |
-| Same 9 trials, salt-family form | +78 (between, correctly) |
-| Animal + in vitro only | gate fires, no number |
+| Works overall, but your form found nothing | effect **+0.43** vs form **−0.70** |
+| No trial in your form | **69** vs 96 — penalised, not dropped |
+| One weak trial | **3/100** — confidence multiplies, it does not average in |
+| SR-table trial vs the same trial read directly | **0.72×** the weight |
+| Animal + in vitro only | gate fires, **no number** |
 | Retracted | zero weight |
 
 ## Docs
 
-- **[`CLAUDE.md`](CLAUDE.md)** — architectural invariants + multi-agent workflow. Read before changing code.
-- **[`docs/SPEC.md`](docs/SPEC.md)** — full design, living document with changelog
-- **[`docs/ANCHORS.md`](docs/ANCHORS.md)** — 28-anchor calibration set
-- **[`pipeline_v2_demo.excalidraw`](pipeline_v2_demo.excalidraw)** — how one demo run works, end to end. The one to show people. Regenerate with `python3 scripts/write_demo_diagram.py`, which imports its constants from `pipeline/scoring.py` so it cannot drift from the code.
-- **[`pipeline_v1.excalidraw`](pipeline_v1.excalidraw)** — the original technical sketch, kept for history
+| file | what it is |
+|---|---|
+| **[`CLAUDE.md`](CLAUDE.md)** | the invariants, the workflow, and current state. **Read before changing code.** |
+| **[`docs/SPEC.md`](docs/SPEC.md)** | full design; §13 is every open question and uncalibrated constant |
+| **[`docs/ANCHORS.md`](docs/ANCHORS.md)** | the 28-anchor calibration set (not yet run) |
+| **[`pipeline_v2_demo.excalidraw`](pipeline_v2_demo.excalidraw)** | how one run works, end to end. The one to show people. Regenerated by `scripts/write_demo_diagram.py`, which imports its constants from `pipeline/scoring.py` so it cannot drift |
+| **[`docs/history/`](docs/history/)** | completed audits and sign-offs, kept for the record |
 
 ## Status
 
-Design + deterministic core. Not production.
+**Deterministic core: built and tested.** Retrieval, dedup, full-text ladder,
+scoring, arcs, storage, reports — 236 selftest checks, no network required.
 
-Untested against live endpoints: `run_coverage.py`, `sources/ratelimit.py`.
+**Model layer: proven, production blocked.** S1–S8 all return schema-valid
+output with evidence spans. Production extraction needs `ANTHROPIC_API_KEY`
+(`--bare` never reads a subscription); the Grok backend runs today.
+
+**Not yet true, and load-bearing:**
+
+- **No constant is calibrated.** `k`, the transfer factors, RoB thresholds, the
+  OA penalty and the review-quality bands are all guesses awaiting the anchor
+  eval. Do not read a score as accurate.
+- **Coverage is 77.5%** of methods-level facts against an ≥80% target, measured
+  on the full 20 155-record corpus.
+- **Retrieval specificity is the gating problem.** `("magnesium") AND RCT` is
+  ~25% IV/procedural magnesium. It has already produced a visibly wrong answer:
+  creatine scored 22/100 "does not work" for muscle strength, because
+  Parkinson's and HIV trials landed in that outcome.
+- **SR inheritance is unmeasured.** Six defects that guaranteed it returned zero
+  are fixed; it has never run end to end on a live backend.

@@ -2,7 +2,8 @@
 
 **Status:** design, pre-build
 **Last updated:** 2026-08-05 (rev 3)
-**Companion artifacts:** `supplement_pipeline_v1.excalidraw`, `ANCHORS.md`, `anchors.csv`
+**Companion artifacts:** `pipeline_v2_demo.excalidraw` (current, generated from
+the code), `pipeline_v1.excalidraw` (original sketch), `ANCHORS.md`, `anchors.csv`
 
 > This is a living document. When a decision changes, update the relevant section
 > *and* the changelog at the bottom, then regenerate the diagram.
@@ -461,13 +462,21 @@ transfer = form_factor × dose_factor × population_factor     (definition retai
 
 Population: exact 1.00 / adjacent 0.70 / different 0.35.
 
-A 400 mg magnesium citrate trial applied to a 100 mg magnesium oxide product carries
-`0.15 × 0.10 × 1.00 = 0.015` of its original weight. **That number is the product.**
+A 400 mg magnesium citrate trial applied to a 100 mg magnesium oxide product is
+still a **full-weight** study for the centre number — that number is study
+quality, and the trial's quality did not change. What changes is the ARCS: it
+contributes nothing to the form arc's coverage, nothing to the dose arc's, and
+if NO in-form trial exists the composite is charged the `different` tier (0.15)
+rather than quietly averaging over the arcs that do exist.
 
-**Why this is defensible against competitors:** the transfer factor is only
-expressible because the ECU records form and dose. Competitors keyed on ingredient
-discarded that information at ingestion and cannot retrofit it without re-extracting
-their entire corpus.
+**That distinction is the product.** Competitors keyed on ingredient cannot say
+"the evidence is good and none of it used your form" — they have one number and
+no way to separate the two claims.
+
+**Why this is defensible against competitors:** the arcs are only expressible
+because the ECU records form and dose. Competitors keyed on ingredient discarded
+that information at ingestion and cannot retrofit it without re-extracting their
+entire corpus.
 
 **Where the risk concentrates:** a single ingredient might have 4 forms × 5 dose
 bands × 6 outcomes × 3 populations = 360 possible ECUs, of which the literature
@@ -947,7 +956,7 @@ system that are currently exact.
   decision. New open items in §13, including the unassigned population-text
   mapping. No scoring constants changed.
 
-- **2026-08-06** — Claude review of the 2026-08-05 audit (`REVIEW.md`). Band
+- **2026-08-06** — Claude review of the 2026-08-05 audit (`docs/history/2026-08-05-grok-full-repo-audit.md`). Band
   boundaries confirmed inclusive per §9 and now asserted at every edge. §9 band
   *labels* aligned to the strings `scoring.band_for` actually emits ("weak
   support", "does not work") — these are user-facing output, so the two must not

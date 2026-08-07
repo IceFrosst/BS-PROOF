@@ -324,6 +324,10 @@ def main(argv: list[str]) -> int:
         print(pred.format_summary(pred_summary))
         run_context["predatory"] = pred_summary
 
+        # How many studies were AVAILABLE to score, before --limit. Used for the
+        # sample-size note at the end: a capped run is a SAMPLE, and its score
+        # does not estimate the full-corpus score (pipeline/preview.py).
+        n_available = 0
         primaries = _prioritize_primaries(
             [s for s in all_rows if s.get("design_rank") == 4],
             full_text_only=full_text_only,
@@ -342,6 +346,10 @@ def main(argv: list[str]) -> int:
               f"{len(relevant)} after relevance gate "
               f"(dropped {rejected} noise)")
         primaries = relevant
+        # Everything that SURVIVED the gates, before --limit. This is the
+        # denominator for the sample-size note; counting pre-gate records would
+        # project against studies we were never going to score.
+        n_available = len(primaries)
 
         raw: list[dict] = []
         syntheses_for_score: list = []
@@ -578,6 +586,21 @@ def main(argv: list[str]) -> int:
                   f"scored {len(scored)}  range "
                   f"{min(r['composite'] for r in scored)}-"
                   f"{max(r['composite'] for r in scored)}/100")
+
+            # A capped run is a SAMPLE of the corpus, and the score it produces
+            # is not an estimate of the full-corpus score: d and H are
+            # sample-size independent, c grows with n by construction. Printing
+            # the sample score with no note invites reading a --limit 40 run as
+            # the answer. preview.py has done this arithmetic since it was
+            # written and nothing called it.
+            _n_avail = n_available or len(extractions)
+            if _n_avail > len(extractions):
+                from pipeline import preview as _prev
+                _best = {"score": top.get("score"),
+                         **{k: (top.get("components") or {}).get(k)
+                            for k in ("c", "d", "H", "E")}}
+                if _best.get("E"):
+                    print("\n" + _prev.summarise(_best, len(extractions), _n_avail))
         print("=" * 74)
         print(f"\nWritten to {db}")
 

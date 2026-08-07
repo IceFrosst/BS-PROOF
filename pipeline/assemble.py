@@ -416,11 +416,3 @@ def _flags(s: Study, rec=None) -> list[str]:
     return out
 
 
-def evidence_rows(ecu: dict, extractions: list[dict]) -> list[dict]:
-    by_id = {i["record"]["_canonical"]: i for i in extractions}
-    rows = []
-    for sid in ecu["evidence"]["study_ids"]:
-        if sid not in by_id:
-            continue
-        rows.append({"canonical_id": sid, "role": "primary"})
-    return rows

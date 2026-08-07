@@ -45,7 +45,8 @@ python3 grok_adapter.py smoke     # one S8 funding call
 
 ```bash
 python3 run_pipeline.py creatine --form creatine_monohydrate --grok
-# optional: --limit 60   if weekly quota allows
+# add --per-outcome for one query per outcome, and --dose <mg elemental>
+# for the dose arc; --with-sr also mines review tables
 # optional: --supplement-scope
 ```
 
@@ -72,7 +73,10 @@ python3 run_pipeline.py creatine --form creatine_monohydrate --grok    # Grok
 
 ## Limits
 
-- Default batch **40** studies (~6–8 calls each). Raise with `--limit` if quota allows.
+- Default batch: **100** studies on `--grok`, **40** on `--pilot`
+  (`run_pipeline.DEFAULT_GROK_LIMIT` / `DEFAULT_PILOT_LIMIT`). Change with
+  `--limit`. A study costs ~10 model calls, and about half of those are S6,
+  which fires once per extracted claim.
 - Grok weekly limits apply to subscription usage; stop and resume with a higher
   offset later if needed (future: resume cursor).
 - Not a substitute for Claude production `--bare` until anchor eval agrees.
