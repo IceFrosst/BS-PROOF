@@ -17,7 +17,8 @@ import sys
 from pipeline import vocab
 from pipeline import predatory as pred
 from pipeline.assemble import build_ecus
-from pipeline.donut import donut_line
+from pipeline import arcs as arcsmod
+from pipeline.donut import donut_line, four_arc_lines
 from pipeline.storage import Store, DEFAULT_DB
 from pipeline.retrieve import retrieve
 
@@ -422,15 +423,22 @@ def main(argv: list[str]) -> int:
         } for r in rows]
 
         print(f"\n{tag}ECU ROWS — {ingredient}, form={form}")
+        print("  0-100 = 100 x c x mean(effect, form, dose).  Each arc shows its")
+        print("  verdict and the share of evidence behind it.  A low number with a")
+        print("  FULL evidence arc means 'does not work'; an EMPTY one means")
+        print("  'barely studied'.  The number must never be quoted without them.")
         print("-" * 74)
-        for row in sorted(rows, key=lambda r: -(r["score"] or -999)):
+        for row in sorted(rows, key=lambda r: -(r.get("composite")
+                                                if r.get("composite") is not None else -999)):
             o = vocab.outcome(row["outcome_vocab_id"]) or {}
-            score = "gated" if row["score"] is None else f"{row['score']:+d}"
-            label = o.get("label", row["outcome_vocab_id"])
-            print(f"{tag}{label:<32}{score:>7}  {row['band']:<24} "
-                  f"n={row['evidence']['n_primaries']}")
+            comp = row.get("composite")
+            shown = "gated" if comp is None else f"{comp:>3}/100"
+            verdict = arcsmod.label(comp, (row.get("components") or {}).get("c"))
+            print(f"{tag}{o.get('label', row['outcome_vocab_id']):<30}{shown:>9}  "
+                  f"{verdict:<24} n={row['evidence']['n_primaries']}"
+                  f"   (signed {row.get('score')})")
             try:
-                print(f"     {donut_line(row)}")
+                print(four_arc_lines(row))
             except Exception:
                 pass
         print("-" * 74)

@@ -80,10 +80,21 @@ Deterministic path in `pipeline/scoring.py` + `pipeline/assemble.py`.
 **No model decides the number** — models extract fields; arithmetic scores.
 
 ```text
-1. weight w = design × RoB × size × funding × OA × form × dose × pop
-2. E, d, H, c, E' from weights and signed effects
-3. score = clamp(round(100 × d × c × (1 − 0.4 × H)), −100, +100)
-4. Gate if almost no human clinical weight → null
+1. weight w = design × RoB × size × funding × OA        (study QUALITY only)
+   form / dose / population are NOT in the weight — they are arcs
+2. E = Σw ; E' adds a capped synthesis lift (ceiling 1.30)
+3. d = Σ(w·s)/Σw      direction, −1…+1
+   H = weighted var(s)/1.5
+   c = 1 − e^(−E'/k)  confidence, k = 3
+4. signed  = clamp(round(100 × d × c × (1 − 0.4 × H)), −100, +100)   [internal]
+5. FOUR ARCS, each carrying a verdict AND its coverage:
+     effect    d over ALL evidence
+     form      d over trials using YOUR form      + share of evidence
+     dose      d over trials in YOUR dose band    + share of evidence
+     evidence  c (pure quantity, no direction)
+6. composite = 100 × c × mean(effect, form, dose)   [the 0–100 shown]
+   a MISSING subset is penalised at its transfer tier, never dropped
+7. Gate if almost no human clinical weight → no number at all
 ```
 """
 

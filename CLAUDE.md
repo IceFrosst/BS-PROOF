@@ -61,7 +61,25 @@ Meta-analyses add no evidence mass; bounded multiplier only (ceiling 1.30).
 
 Well-run null trial → evidence against (`s_i = −0.7`), not “no data.”
 
-### 8. Dual backends: test separately, never silent-merge
+### 8. The centre number never travels without its arcs
+
+**Founder decision 2026-08-07.** Form, dose and population are OUT of `w_study`
+(`APPLY_*_IN_WEIGHT = False`). The weight is study QUALITY only:
+`design × RoB × size × funding × OA`.
+
+Consequence, and it is not optional to state it: **two products differing only
+in form or dose share a centre number.** The difference is carried by the arcs.
+So a score published without its arcs is a false claim — no ranked table, no API
+field, no "magnesium glycinate scores 52" in isolation.
+
+Each arc carries a VERDICT and its COVERAGE. `0.00 @ 0%` ("nobody tested your
+form") and `-0.70 @ 100%` ("your form was tested and failed") are opposite
+messages and must never render the same.
+
+The signed −100…+100 score is retained internally — bands, `docs/ANCHORS.md` and
+every stored row depend on it. Only the DISPLAY is 0–100.
+
+### 9. Dual backends: test separately, never silent-merge
 
 **Founder decision 2026-08-06:** Claude and Grok extraction setups both exist and
 must be **run and evaluated separately**.
@@ -109,6 +127,10 @@ workers.py                 fan-out; `call=` injectable per backend
 run_pipeline.py            --wiring / --pilot (default limit 40)
 scripts/write_demo_report.py
 reports/runs/              immutable human-readable run archive
+pipeline/arcs.py           4 arcs + the 0-100 composite            [NO MODEL]
+pipeline/donut.py          arc rendering (SVG + terminal)          [NO MODEL]
+pipeline/dose.py           effective dose band from benefit trials [NO MODEL]
+pipeline/preview.py        small-run projection (never rescales k) [NO MODEL]
 pipeline/*                 deterministic only
 ```
 
@@ -119,6 +141,7 @@ python3 -m pipeline.selftest
 python3 run_pipeline.py creatine --form creatine_monohydrate --wiring
 python3 run_pipeline.py creatine --form creatine_monohydrate --pilot   # limit 40
 python3 grok_adapter.py                                               # preflight
+python3 -m pipeline.arcs        # (import-only module; see selftest for behaviour)
 python3 scripts/write_demo_report.py --wiring --ingredient creatine --form creatine_monohydrate
 ```
 
@@ -177,23 +200,79 @@ Claude and Grok extractions.**
 
 ## Current state
 
-Deterministic half complete. Reports archive required. Pilot default **40**.
-**`grok_adapter.py` scaffold added** — needs `XAI_API_KEY` + live wiring +
-anchor comparison before trust. Claude production still needs API key for
-`--bare`. Founder wants **both** Claude and Grok setups tested **separately**.
+**Scoring was redesigned 2026-08-07 (founder decisions). This supersedes any
+earlier description of the score anywhere in the repo.**
+
+`w_study = design × RoB × size × funding × OA` — study QUALITY only. Form, dose
+and population are no longer in the weight; they are arcs.
+
+**Four arcs**, each carrying a verdict AND the coverage behind it:
+
+| arc | verdict | coverage |
+|---|---|---|
+| effect | d over all evidence | 1.0 |
+| form | d over trials using YOUR form | share of evidence weight |
+| dose | d over trials in YOUR dose band | share of evidence weight |
+| evidence | — (pure quantity) | c |
+
+```
+composite (0–100, displayed) = 100 × c × mean(effect, form, dose)
+signed (−100…+100, internal) = 100 × d × c × (1 − 0.4H)
+```
+
+A missing subset is penalised at its transfer tier, never dropped. Confidence
+multiplies rather than averaging in — both were measured, see `docs/SPEC.md` §9.
+
+`0–100` does not collapse "useless" into "unstudied", because the evidence arc
+separates them: 1 weak trial → **3** with an empty evidence arc; 20 solid null
+trials → **15** with a full one.
+
+**Demo runs are FULL-TEXT ONLY** (`--pilot` / `--grok` default on). An
+abstract-only study lands near `w = 0.023` and needs ~300 of its kind to reach
+`c = 0.9`; a full-text study needs ~50. Same token cost, 6× the confidence.
+`--all-oa` opts back in.
+
+**Dose band is DERIVED** from the trials, not assumed: the observed min–max of
+doses among *benefit* trials (`pipeline/dose.py`). Null-effect doses are reported
+alongside — a product dosed where trials found nothing is the most useful warning
+the axis can give.
+
+**Coverage measured on the FULL corpus (20 155 records, 100%): 77.5%
+methods-level facts, BELOW the ≥80% target.** Unpaywall adds exactly 0.0pp over
+OpenAlex (measured head-to-head; they are not independent). SR-table inheritance
+is the only remaining rung.
+
+**Retrieval specificity is the gating problem.** `("magnesium") AND RCT` is 25%
+IV/procedural magnesium; the supplement-scoped variant trades that for
+wrong-ingredient noise (Astragalus, whey protein). Neither scope is right — the
+ingredient must be constrained to the INTERVENTION, not the document.
+
+**Model layer proven, production blocked.** S1–S8 all return schema-valid output
+with evidence spans via `pilot_adapter` (subscription, non-production). `--bare`
+reads only `ANTHROPIC_API_KEY`, never OAuth, so production extraction is blocked
+on that key. The subscription has a hard throughput ceiling: a 10-study batch
+burned 43 calls against the session limit.
+
+**Open constants awaiting Tier-3 calibration:** `k`, transfer factors, RoB
+thresholds, OA penalty. See `docs/SPEC.md` §13.
 
 ## Next
 
-**Handoff:** Implement/live-test `grok_adapter` against the same S8/S7 smoke
-payloads used for Claude; archive a Claude-pilot report and a Grok report as
-two rows in `reports/INDEX.md`. Do not merge scores.
+**Handoff:** scoring/reports/storage are consistent as of 2026-08-07. Anything
+describing the score differently is stale — trust `pipeline/scoring.py`,
+`pipeline/arcs.py` and this section.
 
-1. Archive wiring + pilot reports under `reports/runs/`.
-2. Finish `grok_adapter` HTTP path + optional `run_pipeline --grok`.
-3. Side-by-side agreement table on a small fixed paper set (not production).
-4. SR-inheritance uplift re-measure.
-5. Pin model IDs before cached production runs.
-6. Dose bands / venue factor when data exists.
+1. **`ANTHROPIC_API_KEY`** — the only unblock for production extraction.
+2. **Constrain retrieval to the intervention**, not the document. Gates
+   extraction cost, coverage and outcome mapping simultaneously.
+3. **SR-table inheritance uplift** — built, still UNMEASURED. The only path left
+   to the 80% coverage target.
+4. **Anchor eval** — 34/34 in-scope anchors have vocabulary; running them needs
+   extraction. Do this before trusting any constant.
+5. **Derive dose bands at scale** and bump `band_version` 0 → 1.
+6. **Grok/Claude agreement table** on a fixed paper set. Never merge scores.
+7. Venue factor (`Study.venue_ok` is still a boolean; SJR quartiles have nowhere
+   to go until a real factor exists — new constant, so SPEC §13 first).
 
 ---
 

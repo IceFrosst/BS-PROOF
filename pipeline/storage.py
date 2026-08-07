@@ -55,6 +55,12 @@ class Store:
         for col, ddl in (("abstract", "ALTER TABLE study ADD COLUMN abstract TEXT"),):
             if col not in have:
                 self.conn.execute(ddl)
+        # ECU gained the 0-100 composite and the per-arc detail on 2026-08-07.
+        ecu_have = {r[1] for r in self.conn.execute("PRAGMA table_info(ecu)")}
+        for col, ddl in (("composite", "ALTER TABLE ecu ADD COLUMN composite INTEGER"),
+                         ("arcs", "ALTER TABLE ecu ADD COLUMN arcs TEXT")):
+            if col not in ecu_have:
+                self.conn.execute(ddl)
 
     def close(self):
         self.conn.close()
@@ -172,16 +178,17 @@ class Store:
             "INSERT INTO ecu (ecu_key, ingredient, form_vocab_id, dose_band,"
             " band_version, outcome_vocab_id, population_id, age_band, sex,"
             " deficiency_status, pregnancy, score, band, gate_fired, d, c, h, e,"
-            " e_prime, coverage, n_primaries, n_syntheses, dose_low_mg,"
+            " e_prime, coverage, composite, arcs, n_primaries, n_syntheses, dose_low_mg,"
             " dose_high_mg, dose_basis, flags, prompt_version, vocab_versions,"
             " scorer_version, computed_at)"
-            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
             " ON CONFLICT(ecu_key) DO UPDATE SET"
             "   score=excluded.score, band=excluded.band,"
             "   gate_fired=excluded.gate_fired, d=excluded.d, c=excluded.c,"
             "   h=excluded.h, e=excluded.e, e_prime=excluded.e_prime,"
             "   coverage=excluded.coverage, n_primaries=excluded.n_primaries,"
             "   n_syntheses=excluded.n_syntheses, flags=excluded.flags,"
+            "   composite=excluded.composite, arcs=excluded.arcs,"
             "   prompt_version=excluded.prompt_version,"
             "   vocab_versions=excluded.vocab_versions,"
             "   band_version=excluded.band_version, computed_at=excluded.computed_at",
@@ -192,6 +199,7 @@ class Store:
              ecu.get("score"), ecu["band"], 1 if ecu.get("gate_fired") else 0,
              comp.get("d"), comp.get("c"), comp.get("H"), comp.get("E"),
              comp.get("E_prime"), comp.get("coverage"),
+             ecu.get("composite"), json.dumps(ecu.get("arcs") or {}),
              ecu["evidence"]["n_primaries"], ecu["evidence"]["n_syntheses"],
              dose.get("low"), dose.get("high"), dose.get("basis"),
              json.dumps(ecu.get("flags") or []), prov["prompt_version"],

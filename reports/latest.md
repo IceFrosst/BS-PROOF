@@ -1,3 +1,8 @@
+> **STALE — predates the 2026-08-07 scoring redesign.** This report shows the
+> old signed-only score with form/dose/population in the weight. The current
+> model is four arcs + a 0–100 composite; see `docs/SPEC.md` §9 and CLAUDE.md.
+> Regenerated on the next run.
+
 # BS-PROOF summary report (grok-sr)
 
 Generated: **2026-08-07 12:41 UTC**

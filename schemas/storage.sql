@@ -69,7 +69,9 @@ CREATE TABLE IF NOT EXISTS ecu (
     deficiency_status TEXT NOT NULL,
     pregnancy         TEXT NOT NULL,
 
-    score             INTEGER,            -- NULL when the sufficiency gate fired
+    score             INTEGER,            -- signed -100..100, INTERNAL (bands, anchors)
+    composite         INTEGER,            -- 0..100, the DISPLAYED number
+    arcs              TEXT,               -- JSON: per-arc verdict + coverage
     band              TEXT NOT NULL,
     gate_fired        INTEGER NOT NULL DEFAULT 0,
 

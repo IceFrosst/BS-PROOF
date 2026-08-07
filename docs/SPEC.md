@@ -362,12 +362,22 @@ evidence mass. That is the correct use of the instrument.
 ## 7. Per-study weight
 
 ```
-w_study = w_d × RoB × size × funding × venue × transfer × OA_factor
+w_study = w_d × RoB × size × funding × venue × OA_factor
 ```
 
 All factors ≤ 1, multiplicative. Multiplicative is correct — a fatal flaw in any
 single factor should kill the study — but it means weights collapse toward zero
 fast, and raw evidence mass has no natural scale. Calibration (§10) maps it back.
+
+**Changed 2026-08-07 (founder decision).** The transfer factors — form, dose and
+population — are **no longer multiplied into `w_study`**. They are applicability,
+not study quality, and they now live on the arcs (§9). The weight answers one
+question only: *how much should this study count as evidence at all?*
+
+Switchable in one line each: `APPLY_FORM_IN_WEIGHT`, `APPLY_DOSE_IN_WEIGHT`,
+`APPLY_POP_IN_WEIGHT` in `pipeline/scoring.py`, all currently `False`. The
+selftest asserts **both** settings of each, so flipping one can never silently
+leave the suite meaningless.
 
 ### Design weight `w_d`
 
@@ -434,8 +444,12 @@ Items 3 and 4 come primarily from ClinicalTrials.gov — ~2/6 from registry data
 
 ## 8. Transfer factor — the moat
 
+**No longer applied to `w_study`** — see §7. The tiers below are unchanged and
+are now used two ways: to judge each arc (§9), and to price a *missing* subset in
+the composite (no in-form trial at all is charged the `different` tier).
+
 ```
-transfer = form_factor × dose_factor × population_factor
+transfer = form_factor × dose_factor × population_factor     (definition retained)
 ```
 
 | Form | | Dose vs studied effective band | |
@@ -815,6 +829,30 @@ system that are currently exact.
 ---
 
 ## Changelog
+
+- **2026-08-07 rev 6** — **Scoring redesigned; this supersedes §7–§9 as written
+  before today.** Founder decisions, all measured rather than argued:
+
+  1. Form, dose and population are OUT of `w_study`. The weight is study quality
+     only. They are applicability and live on the arcs.
+  2. **Four arcs**, each carrying a verdict AND its coverage — effect, form,
+     dose, evidence. A form arc showing only coverage cannot tell a well-tested
+     form from a well-tested-and-useless one; showing only a verdict hides that
+     it rests on two studies.
+  3. **0–100 composite** = `100 × c × mean(effect, form, dose)`. Confidence
+     MULTIPLIES (as a fourth term in a mean, one tiny abstract-only trial scored
+     76/100). A missing subset is PENALISED at its transfer tier (dropping it
+     gave 99/100 to a product no trial had used that form for).
+  4. The signed score is retained internally; only the display is 0–100. It does
+     not reintroduce the §9 collapse because the evidence arc separates
+     "barely studied" (3, empty arc) from "does not work" (15, full arc).
+  5. Demo runs are FULL-TEXT ONLY by default. ~50 full-text studies reach the
+     confidence ~300 abstract-only ones would.
+  6. `pipeline/preview.py` projects small-run scores instead of rescaling `k`;
+     it refuses below n=20, where the error spans four bands.
+
+  Storage gained `composite` and `arcs` columns with an additive migration.
+  Reports, the diagram and CLAUDE.md were brought in line in the same commit.
 
 - **2026-08-06 rev 5** — **Unpaywall adds nothing over OpenAlex, and the model
   layer is proven.**

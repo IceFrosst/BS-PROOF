@@ -50,16 +50,31 @@ def _formula() -> str:
 Deterministic (`pipeline/scoring.py`). Models extract fields only.
 
 ```text
-w = design × RoB × size × funding × OA × dose × pop
-    (form is NOT in the center weight — it is the form arc only)
-    (0 if retracted; predatory is flag-only for now)
-score = clamp(round(100 × d × c × (1 − 0.4 × H)), −100, +100)
+1. weight w = design × RoB × size × funding × OA        (study QUALITY only)
+   form / dose / population are NOT in the weight — they are arcs
+2. E = Σw ; E' adds a capped synthesis lift (ceiling 1.30)
+3. d = Σ(w·s)/Σw      direction, −1…+1
+   H = weighted var(s)/1.5
+   c = 1 − e^(−E'/k)  confidence, k = 3
+4. signed  = clamp(round(100 × d × c × (1 − 0.4 × H)), −100, +100)   [internal]
+5. FOUR ARCS, each carrying a verdict AND its coverage:
+     effect    d over ALL evidence
+     form      d over trials using YOUR form      + share of evidence
+     dose      d over trials in YOUR dose band    + share of evidence
+     evidence  c (pure quantity, no direction)
+6. composite = 100 × c × mean(effect, form, dose)   [the 0–100 shown]
+   a MISSING subset is penalised at its transfer tier, never dropped
+7. Gate if almost no human clinical weight → no number at all
 ```
 
-3-arc donut:
-- **effect** (center): form-agnostic science — "Does it work?"
-- **form** arc: share of evidence that used the *exact* product form
-- **dose** arc: share with usable dose vs effective band
+4-arc donut — every arc carries a VERDICT and the COVERAGE behind it:
+- **effect** — what all the evidence says
+- **form** — what trials using *your* form found, and how many there were
+- **dose** — what trials in *your* dose band found, and how many
+- **evidence** — how much trustworthy evidence exists at all (c)
+
+Centre = the 0–100 composite. A low number with a full evidence arc means
+"does not work"; a low number with an empty one means "barely studied".
 
 SRs (`--with-sr`) only raise confidence E′, never invent patients.
 Predatory list: https://www.predatoryjournals.org/the-list/publishers
@@ -177,16 +192,37 @@ def _section_ecu_this_run(ctx: dict) -> str:
         lines.append("_No ECU rows from this run._\n")
         return "\n".join(lines)
     lines += [
-        "| Outcome | Score | Band | n primaries | prompt |",
-        "|---|---:|---|---:|---|",
+        "| Outcome | 0–100 | Verdict | effect | in your form | at your dose | evidence | n |",
+        "|---|---:|---|---|---|---|---|---:|",
     ]
-    for r in sorted(rows, key=lambda x: -(x.get("score") if x.get("score") is not None else -999)):
-        sc = "gated" if r.get("score") is None else r["score"]
+
+    def arc(row, key):
+        """verdict @ coverage, or an explicit 'not tested' -- never a blank."""
+        a = (row.get("arcs") or {}).get(key) or {}
+        v, cov = a.get("verdict"), a.get("coverage")
+        if a.get("is_quantity"):
+            return f"{cov:.0%}" if cov is not None else "—"
+        if v is None:
+            return "not tested"
+        return f"{v:+.2f} @ {cov:.0%}" if cov is not None else f"{v:+.2f}"
+
+    from pipeline import arcs as _arcs
+    for r in sorted(rows, key=lambda x: -(x.get("composite")
+                                          if x.get("composite") is not None else -999)):
+        comp = r.get("composite")
+        shown = "gated" if comp is None else comp
+        verdict = _arcs.label(comp, ((r.get("components") or {}).get("c")))
         lines.append(
-            f"| {r.get('outcome_vocab_id')} | {sc} | {r.get('band')} | "
-            f"{r.get('n_primaries', r.get('evidence', {}).get('n_primaries', '?'))} | "
-            f"`{r.get('prompt_version', '')}` |"
+            f"| {r.get('outcome_vocab_id')} | {shown} | {verdict} | "
+            f"{arc(r, 'effect')} | {arc(r, 'form')} | {arc(r, 'dose')} | "
+            f"{arc(r, 'evidence')} | "
+            f"{r.get('n_primaries', r.get('evidence_n', (r.get('evidence') or {}).get('n_primaries', '?')))} |"
         )
+    lines.append("")
+    lines.append("_0–100 = 100 × c × mean(effect, form, dose). Each arc shows its "
+                 "verdict and the share of evidence behind it. A low number with a "
+                 "FULL evidence arc means 'does not work'; with an EMPTY one it "
+                 "means 'barely studied'._\n")
     lines.append("")
     lines.append("_Old rows from previous runs are not shown here._\n")
     return "\n".join(lines)
