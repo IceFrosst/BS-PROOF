@@ -1,0 +1,10 @@
+# Predatory / excluded venues for BS-PROOF research layer
+# One journal title OR ISSN per line (case-insensitive substring match on title).
+# Lines starting with # are comments.
+#
+# ACTION FOR FOUNDER: paste the list you use into this file (or replace it).
+# Until this file has real entries, predatory_count will stay 0.
+#
+# Examples (remove the leading # when real):
+# Journal of Fake Nutrition
+# 1234-5678
