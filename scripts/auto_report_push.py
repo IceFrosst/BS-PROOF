@@ -3,23 +3,26 @@
 After every live extraction: write BOTH reports and push reports/ to GitHub.
 
   1) Summary  → reports/latest.md + reports/runs/*_summary.md
-  2) Full     → reports/runs/*_full.md  (formula, selftest, ECU tables, notes)
+  2) Full     → reports/latest_full.md + reports/runs/*_full.md
+
+Reports are RUN-SCOPED: only the ingredient/DB from this run, never mixed
+with other ingredients (no creatine rows inside a magnesium report).
 
 Called automatically from run_pipeline.py — no extra steps for the founder.
-
-    python scripts/auto_report_push.py --ingredient magnesium --form magnesium_glycinate --mode grok
 
 Env: SP_AUTO_PUSH=0 skips git push (still writes both reports locally).
 """
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -41,61 +44,25 @@ def _slug(s: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", s.lower()).strip("-") or "x"
 
 
-def _ecu_section(pattern: str, title: str) -> str:
-    from pipeline.storage import Store
-
-    lines = [f"## {title}\n"]
-    if not OUT.exists():
-        lines.append("_No out/ directory._\n")
-        return "\n".join(lines)
-    found = sorted(OUT.glob(pattern))
-    if not found:
-        lines.append(f"_No `{pattern}` files._\n")
-        return "\n".join(lines)
-    for db in found:
-        lines.append(f"### `{db.name}`\n")
-        try:
-            with Store(db) as store:
-                c = store.counts()
-                lines.append(
-                    f"Studies={c['studies']}, ECUs={c['ecus']}, "
-                    f"syntheses={c['syntheses']}\n"
-                )
-                rows = store.conn.execute(
-                    "SELECT outcome_vocab_id, score, band, n_primaries, "
-                    "prompt_version, computed_at FROM ecu ORDER BY score DESC"
-                ).fetchall()
-                if not rows:
-                    lines.append("_No ECU rows._\n")
-                    continue
-                lines += [
-                    "| Outcome | Score | Band | n | prompt | when |",
-                    "|---|---:|---|---:|---|---|",
-                ]
-                for oc, score, band, np_, pv, when in rows:
-                    sc = "gated" if score is None else score
-                    lines.append(
-                        f"| {oc} | {sc} | {band} | {np_} | `{pv}` | {when} |"
-                    )
-                lines.append("")
-        except Exception as e:
-            lines.append(f"**Error reading {db.name}:** `{e}`\n")
-    return "\n".join(lines)
-
-
 def _formula() -> str:
     return """## How the score is built
 
 Deterministic (`pipeline/scoring.py`). Models extract fields only.
 
 ```text
-w = design × RoB × size × funding × OA × form × dose × pop
-    (0 if retracted or predatory venue)
+w = design × RoB × size × funding × OA × dose × pop
+    (form is NOT in the center weight — it is the form arc only)
+    (0 if retracted; predatory is flag-only for now)
 score = clamp(round(100 × d × c × (1 − 0.4 × H)), −100, +100)
 ```
 
+3-arc donut:
+- **effect** (center): form-agnostic science — "Does it work?"
+- **form** arc: share of evidence that used the *exact* product form
+- **dose** arc: share with usable dose vs effective band
+
 SRs (`--with-sr`) only raise confidence E′, never invent patients.
-Predatory list: human ref https://www.predatoryjournals.org/the-list/publishers
+Predatory list: https://www.predatoryjournals.org/the-list/publishers
 """
 
 
@@ -111,6 +78,156 @@ def _selftest_tail() -> str:
         return f"## Selftest: **{'PASS' if ok else 'FAIL'}**\n\n```text\n{tail}\n```\n"
     except Exception as e:
         return f"## Selftest\n_skipped: {e}_\n"
+
+
+def _section_run_stats(ctx: dict) -> str:
+    lines = ["## This run — extraction stats\n"]
+    lines.append(f"- Targeted studies: **{ctx.get('studies_targeted', '?')}**")
+    lines.append(f"- Succeeded (usable): **{ctx.get('studies_ok', '?')}**")
+    lines.append(f"- Skipped (no text): **{ctx.get('studies_skipped', 0)}**")
+    lines.append(f"- Partial agent failures: **{ctx.get('studies_failed_partial', 0)}**")
+    lines.append(f"- Prompt version: `{ctx.get('prompt_version', '?')}`")
+    lines.append(f"- Concurrency: {ctx.get('concurrency', '?')}  |  "
+                 f"studies in flight: {ctx.get('studies_in_flight', '?')}")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _section_predatory(ctx: dict) -> str:
+    p = ctx.get("predatory") or {}
+    lines = ["## Predatory journal check (flag only — not in score)\n"]
+    lines.append(f"- List entries loaded: **{p.get('list_entries', 0)}**")
+    lines.append(f"- Studies checked: **{p.get('studies_checked', 0)}**")
+    lines.append(f"- Studies flagged predatory: **{p.get('studies_predatory', 0)}**")
+    lines.append(f"- Distinct journals flagged: **{p.get('journals_predatory_n', 0)}**")
+    lines.append(f"- Affects score: **{'YES' if p.get('zero_weight') else 'NO (count only)'}**")
+    for j in (p.get("journals_predatory") or [])[:30]:
+        lines.append(f"  - {j}")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _section_studies(ctx: dict) -> str:
+    studies = ctx.get("studies_list") or []
+    lines = [f"## Studies extracted this run ({len(studies)})\n"]
+    if not studies:
+        lines.append("_No study list captured._\n")
+        return "\n".join(lines)
+    lines += [
+        "| # | Year | Title | DOI / PMID | Journal | OA | Predatory |",
+        "|---:|---:|---|---|---|---|---|",
+    ]
+    for i, s in enumerate(studies, 1):
+        title = (s.get("title") or "?")[:80].replace("|", "/")
+        doi = s.get("doi") or ""
+        pmid = s.get("pmid") or ""
+        link = f"https://doi.org/{doi}" if doi else (f"PMID:{pmid}" if pmid else "—")
+        if doi:
+            link = f"[{doi}](https://doi.org/{doi})"
+        elif pmid:
+            link = f"[PMID {pmid}](https://pubmed.ncbi.nlm.nih.gov/{pmid}/)"
+        journal = (s.get("journal") or "—")[:40].replace("|", "/")
+        oa = s.get("oa") or "?"
+        pred = "YES" if s.get("predatory_venue") else "no"
+        year = s.get("year") or ""
+        lines.append(
+            f"| {i} | {year} | {title} | {link} | {journal} | {oa} | {pred} |"
+        )
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _section_sr(ctx: dict) -> str:
+    sr = ctx.get("sr") or {}
+    lines = ["## Systematic reviews / meta-analyses (S2)\n"]
+    lines.append(f"- Requested (cap): **{sr.get('requested', 0)}**")
+    lines.append(f"- S2 extractions ok: **{sr.get('s2_ok', 0)}**")
+    lines.append(f"- Resolved for multiplier: **{sr.get('resolved', 0)}**")
+    lines.append("_SRs never add patients; only a capped confidence boost (≤ +30%)._\n")
+    return "\n".join(lines)
+
+
+def _section_agents(ctx: dict) -> str:
+    agents = ctx.get("agent_stats") or {}
+    lines = ["## Per-agent success rates (this run)\n"]
+    if not agents:
+        lines.append("_Agent stats not captured._\n")
+        return "\n".join(lines)
+    lines += ["| Agent | OK | Fail | Cache |", "|---|---:|---:|---:|"]
+    for name in sorted(agents.keys()):
+        a = agents[name]
+        lines.append(
+            f"| {name} | {a.get('ok', 0)} | {a.get('fail', 0)} | {a.get('cache', 0)} |"
+        )
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _section_speed(ctx: dict) -> str:
+    text = ctx.get("speed_report") or ""
+    if not text:
+        return "## SPEED REPORT\n_Not available._\n"
+    return f"## SPEED REPORT\n\n```text\n{text.strip()}\n```\n"
+
+
+def _section_ecu_this_run(ctx: dict) -> str:
+    rows = ctx.get("ecu_rows") or []
+    lines = ["## ECU scores — this run only\n"]
+    if not rows:
+        lines.append("_No ECU rows from this run._\n")
+        return "\n".join(lines)
+    lines += [
+        "| Outcome | Score | Band | n primaries | prompt |",
+        "|---|---:|---|---:|---|",
+    ]
+    for r in sorted(rows, key=lambda x: -(x.get("score") if x.get("score") is not None else -999)):
+        sc = "gated" if r.get("score") is None else r["score"]
+        lines.append(
+            f"| {r.get('outcome_vocab_id')} | {sc} | {r.get('band')} | "
+            f"{r.get('n_primaries', r.get('evidence', {}).get('n_primaries', '?'))} | "
+            f"`{r.get('prompt_version', '')}` |"
+        )
+    lines.append("")
+    lines.append("_Old rows from previous runs are not shown here._\n")
+    return "\n".join(lines)
+
+
+def _section_db_snapshot(ingredient: str, form: str) -> str:
+    """Only the matching grok/pilot DB for this ingredient — never other ingredients."""
+    from pipeline.storage import Store
+
+    lines = [f"## Database snapshot (`{ingredient}`)\n"]
+    if not OUT.exists():
+        lines.append("_No out/ directory._\n")
+        return "\n".join(lines)
+
+    patterns = [
+        f"grok_{ingredient}*.sqlite",
+        f"pilot_{ingredient}*.sqlite",
+    ]
+    found = []
+    for pat in patterns:
+        found.extend(sorted(OUT.glob(pat)))
+
+    # Never include other ingredients or the shared cache in the human report.
+    found = [p for p in found if "cache" not in p.name and ingredient in p.name]
+
+    if not found:
+        lines.append(f"_No `{ingredient}` database files found._\n")
+        return "\n".join(lines)
+
+    for db in found:
+        lines.append(f"### `{db.name}`\n")
+        try:
+            with Store(db) as store:
+                c = store.counts()
+                lines.append(
+                    f"Studies stored (corpus): **{c['studies']}** · "
+                    f"ECUs: **{c['ecus']}** · syntheses: **{c['syntheses']}\n"
+                )
+        except Exception as e:
+            lines.append(f"**Error reading {db.name}:** `{e}`\n")
+    return "\n".join(lines)
 
 
 def _update_index(rows: list[tuple[str, dict]]) -> None:
@@ -139,40 +256,53 @@ def _update_index(rows: list[tuple[str, dict]]) -> None:
         index.write_text(header + "".join(new_lines), encoding="utf-8")
 
 
-def write_report(ingredient: str, form: str, mode: str) -> list[Path]:
-    """Write summary + full; update latest.md to summary; index both."""
+def write_report(ingredient: str, form: str, mode: str,
+                 run_context: dict | None = None) -> list[Path]:
+    """Write summary + full for THIS run only; update latest*; index both."""
     REPORTS.mkdir(parents=True, exist_ok=True)
     RUNS.mkdir(parents=True, exist_ok=True)
     stamp = _stamp()
     base = f"{stamp}_{_slug(ingredient)}_{_slug(form)}_{_slug(mode)}"
+    ctx = run_context or {}
 
-    ecu_grok = _ecu_section("grok_*.sqlite", "Grok databases")
-    ecu_pilot = _ecu_section("pilot*.sqlite", "Claude pilot databases")
-
-    summary = "\n".join([
+    summary_parts = [
         f"# BS-PROOF summary report ({mode})\n",
         f"Generated: **{_now()}**\n",
         f"Ingredient: `{ingredient}` · Form: `{form}` · Mode: **{mode}**\n",
         "Auto-written after every extraction (no extra steps).\n",
-        "Full audit for this run: see matching `*_full.md` in `reports/runs/`.\n",
-        ecu_grok,
-        ecu_pilot,
-    ])
+        "Full audit: matching `*_full.md` in `reports/runs/`.\n",
+        _section_run_stats(ctx),
+        _section_predatory(ctx),
+        _section_sr(ctx),
+        _section_ecu_this_run(ctx),
+        _section_db_snapshot(ingredient, form),
+    ]
 
-    full = "\n".join([
+    full_parts = [
         f"# BS-PROOF full audit report ({mode})\n",
         f"Generated: **{_now()}**\n",
         f"Ingredient: `{ingredient}` · Form: `{form}` · Mode: **{mode}**\n",
         "Auto-written with the summary after every extraction.\n",
         _formula(),
         _selftest_tail(),
-        ecu_grok,
-        ecu_pilot,
+        _section_run_stats(ctx),
+        _section_predatory(ctx),
+        _section_sr(ctx),
+        _section_agents(ctx),
+        _section_speed(ctx),
+        _section_studies(ctx),
+        _section_ecu_this_run(ctx),
+        _section_db_snapshot(ingredient, form),
         "## Notes\n",
         "- Claude and Grok scores are **never merged**.\n",
-        "- Predatory venues (list) get weight 0 when journal/publisher matches.\n",
-        "- Inconclusive scores with low n are often the confidence ceiling (SPEC 13), not a bug.\n",
-    ])
+        "- Form does **not** penalize the center score; it is the form arc only.\n",
+        "- Predatory venues: flagged + counted; weight zero is OFF for now.\n",
+        "- Inconclusive + low n is often the confidence ceiling (SPEC 13), not a bug.\n",
+        "- This report is **this run only** — other ingredients are not mixed in.\n",
+    ]
+
+    summary = "\n".join(summary_parts)
+    full = "\n".join(full_parts)
 
     path_sum = RUNS / f"{base}_summary.md"
     path_full = RUNS / f"{base}_full.md"
@@ -180,6 +310,13 @@ def write_report(ingredient: str, form: str, mode: str) -> list[Path]:
     path_full.write_text(full, encoding="utf-8")
     (REPORTS / "latest.md").write_text(summary, encoding="utf-8")
     (REPORTS / "latest_full.md").write_text(full, encoding="utf-8")
+
+    # Machine-readable run context for later tooling
+    ctx_path = RUNS / f"{base}_context.json"
+    try:
+        ctx_path.write_text(json.dumps(ctx, indent=2, default=str), encoding="utf-8")
+    except Exception:
+        pass
 
     meta_base = {"when": _now(), "mode": mode,
                  "ingredient": ingredient, "form": form}
@@ -226,8 +363,13 @@ def main() -> int:
     ap.add_argument("--form", required=True)
     ap.add_argument("--mode", default="grok")
     ap.add_argument("--no-push", action="store_true")
+    ap.add_argument("--context-json", default=None,
+                    help="Optional path to run_context JSON")
     args = ap.parse_args()
-    write_report(args.ingredient, args.form, args.mode)
+    ctx = None
+    if args.context_json and Path(args.context_json).exists():
+        ctx = json.loads(Path(args.context_json).read_text(encoding="utf-8"))
+    write_report(args.ingredient, args.form, args.mode, run_context=ctx)
     if args.no_push:
         return 0
     return git_push_reports()
