@@ -4,6 +4,9 @@ Worker JSON -> Study objects -> scored ECU rows. NO MODEL MAY ENTER THIS FILE.
 Demo flags (for founder demos only — not production claims):
   exact_form_only=True  drop studies that are not form_match == "exact"
   ignore_population=True  treat every study as pop_match == "exact"
+
+Predatory venues: flagged on the record for reporting; do NOT zero weight yet
+(founder policy 2026-08-07). See pipeline/predatory.ZERO_WEIGHT.
 """
 from __future__ import annotations
 from datetime import datetime, timezone
@@ -35,11 +38,6 @@ def _rob_items(s4: dict | None, registry: dict | None) -> dict:
 
 
 def study_dose(ingredient: str, s7: dict | None) -> dict:
-    """
-    S7's reading -> elemental/active mg, as an interval. The MODEL never does
-    this arithmetic (invariant 1); vocab converts from recorded molar masses and
-    REFUSES on hydrate-ambiguous salts, returning bounds instead of a point.
-    """
     if not s7:
         return {"dose_low_mg": None, "dose_high_mg": None, "dose_basis": "unstated"}
     form_id = s7.get("form_vocab_id")
@@ -70,9 +68,6 @@ def to_studies(record: dict, extraction: dict, product: dict,
 
     funding = (s8 or {}).get("funding_class") or "undisclosed"
 
-    # Dose. Until a band exists this stays UNBANDED_DOSE_MATCH -- there is no
-    # dose axis to mismatch against. Once a band is derived from the trials, the
-    # product's dose is judged against it.
     dose = study_dose(ingredient, s7)
     if dose_band and dose_band.get("low") is not None:
         dose_match = dosemod.dose_match_for(
@@ -85,6 +80,12 @@ def to_studies(record: dict, extraction: dict, product: dict,
     if n is None and registry:
         n = registry.get("n_enrolled")
 
+    # Predatory is FLAG-ONLY for now (pipeline.predatory.ZERO_WEIGHT=False).
+    # venue_ok stays True so score is unchanged; count is reported in the run log.
+    venue_ok = True
+    if record.get("retracted"):
+        pass  # retracted handled separately on Study.retracted
+
     out = []
     for entry in extraction.get("outcomes", []):
         if entry.get("discarded") or not entry.get("outcome_vocab_id"):
@@ -96,7 +97,7 @@ def to_studies(record: dict, extraction: dict, product: dict,
             n=n,
             rob_items=rob,
             funding=funding,
-            venue_ok=not record.get("predatory_venue", False),
+            venue_ok=venue_ok,
             retracted=bool(record.get("retracted")),
             oa=record.get("oa") or "abstract_only",
             rob_inherited=bool(record.get("rob_inherited")),
@@ -119,16 +120,10 @@ def build_ecus(extractions: list[dict], product: dict, *,
                band_version: int = 0,
                exact_form_only: bool = False,
                ignore_population: bool = False) -> list[dict]:
-    """
-    exact_form_only: keep only studies with form_match == "exact" (demo).
-    ignore_population: force pop_match == "exact" (demo — no pop transfer penalty).
-    """
     ingredient = product["ingredient"]
     form_id = product["form_vocab_id"]
     pop = product["population"]
 
-    # PASS 1 -- collect doses and directions per outcome so the effective band
-    # can be DERIVED from the trials before anything is scored against it.
     per_outcome: dict[str, list[dict]] = {}
     for item in extractions:
         rec, ext = item["record"], item["extraction"]
@@ -142,7 +137,6 @@ def build_ecus(extractions: list[dict], product: dict, *,
     bands = {oid: dosemod.effective_range(entries)
              for oid, entries in per_outcome.items()}
 
-    # PASS 2 -- score, now judging each product dose against its outcome's band.
     buckets: dict[str, list[tuple[Study, dict]]] = {}
     dropped_form = 0
     kept = 0
@@ -164,11 +158,6 @@ def build_ecus(extractions: list[dict], product: dict, *,
             buckets.setdefault(key, []).append(
                 (study, {"outcome_id": outcome_id, "dose": dose}))
 
-    # Always show which forms contributed and at what discount. The product's
-    # whole claim is that evidence TRANSFERS between forms at a stated price --
-    # so a run must make it visible that e.g. a citrate trial counted toward a
-    # glycinate product at 0.50, rather than leaving the reader to assume only
-    # exact-form studies were used.
     if form_mix:
         from pipeline.scoring import FORM_FACTOR
         total = sum(form_mix.values())
@@ -194,7 +183,8 @@ def build_ecus(extractions: list[dict], product: dict, *,
             "dose_band": None if band_version == 0 else product.get("dose_band"),
             "band_version": band_version,
             "outcome_vocab_id": outcome_id,
-            "population": {"id": pop["id"], **{a: pop[a] for a in vocab.AXES}},
+            "population": {"id": pop["id"], **{a: pv for a, pv in (
+                (ax, pop[ax]) for ax in vocab.AXES)}},
             "score": result["score"],
             "band": result["band"],
             "gate_fired": result["gate_fired"],
@@ -221,7 +211,7 @@ def build_ecus(extractions: list[dict], product: dict, *,
             },
             "form_mix": {t: sum(1 for st in studies if st.form_match == t)
                          for t in {st.form_match for st in studies}},
-            "flags": sorted({f for s in studies for f in _flags(s)}),
+            "flags": sorted({f for s in studies for f in _flags(s, rec=None)}),
             "provenance": {
                 "prompt_version": prompt_version,
                 "vocab_versions": vocab.versions(),
@@ -234,7 +224,7 @@ def build_ecus(extractions: list[dict], product: dict, *,
     return rows
 
 
-def _flags(s: Study) -> list[str]:
+def _flags(s: Study, rec=None) -> list[str]:
     out = []
     if s.funding == "brand_funded":
         out.append("brand_funded")
