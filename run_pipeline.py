@@ -67,11 +67,27 @@ def _prioritize_primaries(primaries: list[dict], *,
     def key(s: dict):
         oa = (s.get("oa") or "abstract_only").lower()
         return (_OA_RANK.get(oa, 6), -(s.get("year") or 0))
+    def readable(s: dict) -> bool:
+        """
+        In PubMed Central, OR carrying a reachable OA copy found off-PMC.
+
+        The second half matters: the filter used to run on `oa` alone, which
+        reflects PMC membership. Records recovered by the green-OA rungs were
+        being dropped BEFORE best_text could read them, so the whole ladder was
+        dead weight. If extraction then fails at read time, best_text returns
+        abstract_only and the score reflects that honestly.
+        """
+        if _OA_RANK.get((s.get("oa") or "").lower(), 9) <= 1:
+            return True
+        return bool(s.get("oa_location") or s.get("full_text_urls"))
+
     ordered = sorted(primaries, key=key)
     if full_text_only:
-        kept = [s for s in ordered
-                if _OA_RANK.get((s.get("oa") or "").lower(), 9) <= 1]
-        print(f"  FULL-TEXT-ONLY: {len(kept)}/{len(ordered)} RCTs kept")
+        kept = [s for s in ordered if readable(s)]
+        via_oa = sum(1 for s in kept
+                     if _OA_RANK.get((s.get("oa") or "").lower(), 9) > 1)
+        print(f"  FULL-TEXT-ONLY: {len(kept)}/{len(ordered)} RCTs kept"
+              + (f" ({via_oa} via green OA, not PMC)" if via_oa else ""))
         ordered = kept
     else:
         n_ft = sum(1 for s in ordered

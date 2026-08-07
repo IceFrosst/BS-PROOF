@@ -174,6 +174,23 @@ def oa_status(rec: dict) -> str:
     return "abstract_only"
 
 
+def free_fulltext_urls(rec: dict) -> list[dict]:
+    """
+    Locations Europe PMC says are FREE, from the record we already fetched.
+
+    "Subscription required" entries are dropped -- a link we cannot open is not
+    a full-text source, and counting it would inflate the OA rate.
+    """
+    urls = (rec.get("fullTextUrlList") or {}).get("fullTextUrl", [])
+    out = []
+    for u in urls:
+        if (u.get("availability") or "").lower() in ("free", "open access"):
+            out.append({"url": u.get("url"),
+                        "style": (u.get("documentStyle") or "").lower(),
+                        "site": u.get("site")})
+    return out
+
+
 def mesh_terms(rec: dict) -> list[str]:
     heads = (rec.get("meshHeadingList", {}) or {}).get("meshHeading", [])
     return [h.get("descriptorName") for h in heads if h.get("descriptorName")]
@@ -211,6 +228,11 @@ def normalise(rec: dict) -> dict:
         "oa": oa_status(rec),
         "pub_types": (rec.get("pubTypeList", {}) or {}).get("pubType", []),
         "mesh_terms": mesh_terms(rec),
+        # Free full-text locations Europe PMC ALREADY returns in the same
+        # response. We were paying for these fields and throwing them away:
+        # of 63 records marked abstract_only, 4 listed a Free/pdf or
+        # Open-access/html URL right here.
+        "full_text_urls": free_fulltext_urls(rec),
         "n": None,
         "country": None,
         "dose_text": None,

@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS study (
     design_rank       INTEGER,            -- NULL = unclassified, needs S1
     design_basis      TEXT,
     oa                TEXT,               -- full_text | sr_table | abstract_only
+    oa_location       TEXT,               -- JSON: reachable OA copy found off-PMC
     retracted         INTEGER NOT NULL DEFAULT 0,
     merged_from       TEXT,               -- JSON array of the papers collapsed here
     source            TEXT NOT NULL,

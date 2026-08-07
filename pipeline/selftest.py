@@ -586,6 +586,40 @@ def main():
           tier == "abstract_only" and txt == "Only an abstract.",
           "silently calling an abstract full_text inflates every score on it")
 
+    print("\nFULL-TEXT LADDER (3 sources, not 1)")
+    import json as _json
+    check("free Europe PMC URLs are captured, subscription ones dropped",
+          [u["style"] for u in ep.free_fulltext_urls({"fullTextUrlList": {"fullTextUrl": [
+              {"availability": "Subscription required", "documentStyle": "doi", "url": "a"},
+              {"availability": "Free", "documentStyle": "pdf", "url": "b"},
+              {"availability": "Open access", "documentStyle": "html", "url": "c"}]}})]
+          == ["pdf", "html"],
+          "a link we cannot open is not a source; counting it inflates the OA rate")
+    check("pdf extraction is OPTIONAL at runtime",
+          isinstance(ft.pdf_available(), bool),
+          "a machine without pypdf must still run the pipeline")
+    check("a stored oa_location (JSON string) is parsed, not crashed on",
+          ft.best_text({"pmcid": None, "abstract": "x",
+                        "oa_location": _json.dumps({"url": "http://nope/x.pdf"})})[1]
+          == "abstract_only",
+          "storage round-trips it as text; an unreadable copy stays abstract_only")
+    check("a too-short extraction is REFUSED",
+          ft.MIN_USABLE_CHARS >= 1000,
+          "a 200-char PDF is a cover page; handing it to S4 as methods "
+          "produces confident nonsense")
+
+    # The wiring that made the ladder matter: the filter must accept records
+    # whose full text is reachable OFF PubMed Central.
+    import run_pipeline as _rp
+    kept = _rp._prioritize_primaries(
+        [{"oa": "full_text", "year": 2020},
+         {"oa": "abstract_only", "year": 2020, "oa_location": {"url": "x.pdf"}},
+         {"oa": "abstract_only", "year": 2020}],
+        full_text_only=True)
+    check("green-OA records survive the full-text filter", len(kept) == 2,
+          "they were being dropped BEFORE best_text could read them, "
+          "which made the whole ladder dead weight")
+
     print("\nSR-TABLE INHERITANCE PAYLOAD")
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     import run_sr_inheritance as sri

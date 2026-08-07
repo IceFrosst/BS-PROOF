@@ -1,1 +1,2 @@
 httpx>=0.27
+pypdf>=5.0        # PDF full text; optional at runtime, see sources/fulltext.py

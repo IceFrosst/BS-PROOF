@@ -32,12 +32,14 @@ from pipeline.dedup import dedup
 from pipeline.storage import Store
 from sources import clinicaltrials as ct
 from sources import europepmc as ep
+from sources import oa
 from sources.http import SourceError
 
 
 def retrieve(ingredient: str, store: Store, *, max_syntheses: int = 200,
              max_primaries: int = 800, registry_lookups: int = 50,
-             scope: str = "broad", verbose: bool = True) -> dict:
+             scope: str = "broad", oa_lookups: int = 250,
+             verbose: bool = True) -> dict:
     """
     One ingredient, end to end. Returns a stats dict.
 
@@ -97,6 +99,30 @@ def retrieve(ingredient: str, store: Store, *, max_syntheses: int = 200,
     unique_syn, _, sstats = dedup(syntheses)
     log(f"  deduped     {dstats['in']} -> {dstats['out']} primary units "
         f"({dstats['collapsed']} collapsed, by kind {dstats['by_kind']})")
+
+    # GREEN OA RESOLUTION. sources/oa.py was built and then never called by the
+    # pipeline -- it was only used by run_coverage.py, so `oa` reflected PubMed
+    # Central membership rather than actual open access. Measured 2026-08-07: of
+    # 100 intervention-scoped magnesium RCTs only 37 had a pmcid, while 20% of
+    # the remainder had a reachable OA copy nobody was looking for.
+    #
+    # One HTTP call per closed record, bounded, and the disk cache makes reruns
+    # free. A record whose OA copy we cannot actually READ keeps oa=abstract_only
+    # -- finding a URL is not the same as extracting text, and inflating the OA
+    # tier would inflate every score built on it.
+    if oa_lookups:
+        closed = [r for r in unique_pri if r.get("oa") != "full_text" and r.get("doi")]
+        upgraded = 0
+        for rec in closed[:oa_lookups]:
+            try:
+                res = oa.resolve(rec)
+            except SourceError:
+                continue
+            if res.get("location"):
+                rec["oa_location"] = res["location"]
+                upgraded += 1
+        log(f"  green OA    {upgraded}/{min(len(closed), oa_lookups)} closed records "
+            f"have a reachable copy (text extracted at read time)")
 
     stored = store.upsert_studies(unique_pri + unique_syn)
     log(f"  stored      {stored} unique records")

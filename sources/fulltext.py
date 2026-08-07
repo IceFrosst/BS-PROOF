@@ -17,6 +17,9 @@ characteristics-of-included-studies and risk-of-bias tables are what make one
 open-access review worth ~15 unreadable primaries.
 """
 from __future__ import annotations
+import hashlib
+import io
+import json
 import re
 import xml.etree.ElementTree as ET
 
@@ -204,4 +207,119 @@ def best_text(record: dict, *, prefer: tuple[str, ...] = ("methods", "results"))
             # Full text exists but has no parseable sections -- some publishers
             # ship unstructured JATS. Honest tier is abstract_only.
             return abs_text, "abstract_only"
+
+    # RUNG 2: free locations Europe PMC already told us about, in the response
+    # we had. Measured 2026-08-07: 4 of 63 records marked abstract_only listed a
+    # Free/pdf or Open-access/html URL we were discarding.
+    for loc in (record.get("full_text_urls") or []):
+        url, style = loc.get("url"), (loc.get("style") or "")
+        text = (fetch_pdf_text(url) if style == "pdf"
+                else fetch_html_text(url) if style == "html" else None)
+        if text:
+            return text, "full_text"
+
+    # RUNG 3: green OA found by OpenAlex/Unpaywall. Measured: 20% of closed
+    # records with a DOI have a reachable copy. Only attempted when a caller
+    # opts in -- it is an HTTP call per record and the disk cache makes the
+    # SECOND run free, not the first.
+    loc = record.get("oa_location")
+    if isinstance(loc, str):          # storage round-trips it as JSON text
+        try:
+            loc = json.loads(loc)
+        except (ValueError, TypeError):
+            loc = None
+    if loc:
+        url = loc.get("url") or ""
+        text = (fetch_pdf_text(url) if url.lower().endswith(".pdf")
+                else fetch_html_text(url))
+        if text:
+            return text, "full_text"
+
     return (record.get("abstract") or ""), "abstract_only"
+
+
+# ----------------------------------------------------- beyond Europe PMC JATS
+
+# pypdf is optional at runtime. A machine without it still runs the whole
+# pipeline -- it just cannot read PDFs, and says so once rather than crashing
+# mid-batch. Grok and Claude run on different machines; a hard import would make
+# the pipeline machine-dependent, which is what invariant 2 exists to prevent.
+try:
+    from pypdf import PdfReader
+    _PDF_OK = True
+except ImportError:  # pragma: no cover
+    PdfReader = None
+    _PDF_OK = False
+
+MIN_USABLE_CHARS = 1500      # below this a "full text" is a landing page stub
+_TAG = re.compile(r"<[^>]+>")
+_WS = re.compile(r"\s+")
+
+
+def pdf_available() -> bool:
+    return _PDF_OK
+
+
+def fetch_pdf_text(url: str, *, timeout: int = 90) -> str | None:
+    """
+    Download a PDF and extract its text. None when unusable.
+
+    Returns None rather than a stub for the same reason S3 refuses to guess:
+    a 200-character extraction is a cover page, and handing that to S4 as if it
+    were a methods section produces confident nonsense.
+    """
+    if not _PDF_OK or not url:
+        return None
+    import httpx
+    from sources.http import _headers
+    cache = CACHE_DIR / f"pdf_{hashlib.sha256(url.encode()).hexdigest()[:24]}.txt"
+    if cache.exists():
+        t = cache.read_text(errors="replace")
+        return t if len(t) >= MIN_USABLE_CHARS else None
+    try:
+        throttle(url)
+        r = httpx.get(url, headers=_headers(url), timeout=timeout,
+                      follow_redirects=True)
+        if r.status_code >= 400 or not r.content[:5].startswith(b"%PDF"):
+            return None
+        text = "\n".join((p.extract_text() or "")
+                         for p in PdfReader(io.BytesIO(r.content)).pages)
+    except Exception:
+        # A malformed PDF is a dead end, not a pipeline failure. Callers fall
+        # back down the ladder.
+        return None
+    text = _WS.sub(" ", text).strip()
+    if len(text) < MIN_USABLE_CHARS:
+        return None
+    cache.parent.mkdir(parents=True, exist_ok=True)
+    cache.write_text(text)
+    return text
+
+
+def fetch_html_text(url: str, *, timeout: int = 60) -> str | None:
+    """Strip tags from an open-access HTML article. Crude but adequate: the
+    subagents want prose, not structure, and JATS is preferred whenever it
+    exists."""
+    if not url:
+        return None
+    import httpx
+    from sources.http import _headers
+    cache = CACHE_DIR / f"html_{hashlib.sha256(url.encode()).hexdigest()[:24]}.txt"
+    if cache.exists():
+        t = cache.read_text(errors="replace")
+        return t if len(t) >= MIN_USABLE_CHARS else None
+    try:
+        throttle(url)
+        r = httpx.get(url, headers=_headers(url), timeout=timeout,
+                      follow_redirects=True)
+        if r.status_code >= 400:
+            return None
+        body = re.sub(r"(?is)<(script|style|nav|footer|header)[^>]*>.*?</\1>", " ", r.text)
+        text = _WS.sub(" ", _TAG.sub(" ", body)).strip()
+    except Exception:
+        return None
+    if len(text) < MIN_USABLE_CHARS:
+        return None
+    cache.parent.mkdir(parents=True, exist_ok=True)
+    cache.write_text(text)
+    return text

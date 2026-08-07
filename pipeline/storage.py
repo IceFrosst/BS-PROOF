@@ -52,7 +52,9 @@ class Store:
         Postgres accepts the same ADD COLUMN syntax.
         """
         have = {r[1] for r in self.conn.execute("PRAGMA table_info(study)")}
-        for col, ddl in (("abstract", "ALTER TABLE study ADD COLUMN abstract TEXT"),):
+        for col, ddl in (("abstract", "ALTER TABLE study ADD COLUMN abstract TEXT"),
+                         ("oa_location",
+                          "ALTER TABLE study ADD COLUMN oa_location TEXT")):
             if col not in have:
                 self.conn.execute(ddl)
         # ECU gained the 0-100 composite and the per-arc detail on 2026-08-07.
@@ -93,6 +95,7 @@ class Store:
                 r.get("year"), r.get("first_author"),
                 1 if r.get("is_synthesis") else 0,
                 r.get("design_rank"), r.get("basis"), r.get("oa"),
+                json.dumps(r["oa_location"]) if r.get("oa_location") else None,
                 1 if r.get("retracted") else 0,
                 json.dumps(r.get("_merged_from") or []),
                 r.get("source") or "unknown", now_iso(),
@@ -100,11 +103,13 @@ class Store:
         self.conn.executemany(
             "INSERT INTO study (canonical_id, id_kind, pmid, pmcid, doi,"
             " registration_id, title, abstract, journal, year, first_author, is_synthesis,"
-            " design_rank, design_basis, oa, retracted, merged_from, source, fetched_at)"
-            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+            " design_rank, design_basis, oa, oa_location, retracted, merged_from,"
+            " source, fetched_at)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
             " ON CONFLICT(canonical_id) DO UPDATE SET"
             "   design_rank=excluded.design_rank, design_basis=excluded.design_basis,"
             "   oa=excluded.oa, merged_from=excluded.merged_from,"
+            "   oa_location=COALESCE(excluded.oa_location, study.oa_location),"
             # Never overwrite a stored abstract with a null from a later,
             # thinner record -- that is how the text vanished in the first place.
             "   abstract=COALESCE(excluded.abstract, study.abstract),"
