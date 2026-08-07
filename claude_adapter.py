@@ -47,10 +47,13 @@ SHARED_PROMPT = PROMPTS / "_shared.md"
 
 # Bump when you edit ANY prompt (including _shared.md). This is in the cache key.
 # Forget to bump it and you will silently serve stale extractions forever.
+# v1.7 (2026-08-08): S3 reports population_axes.health_status. The first four
+# axes could not express "this trial was in patients", so a Huntington's trial
+# matched a general-adult product exactly.
 # v1.6 (2026-08-08): S2 reports results_table + per-study design. SR-table trials
 # now enter evidence mass, so S2's output moves scores and not just confidence.
 # v1.5 (2026-08-07): S3 prompt shortened, SR label resolve, review_methods.
-PROMPT_VERSION = "v1.6"
+PROMPT_VERSION = "v1.7"
 
 # Tier -> model. FULL IDs, NOT ALIASES.
 #

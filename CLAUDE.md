@@ -467,6 +467,31 @@ reads only `ANTHROPIC_API_KEY`, never OAuth, so production extraction is blocked
 on that key. The subscription has a hard throughput ceiling: a 10-study batch
 burned 43 calls against the session limit.
 
+**Population gained a fifth axis, `health_status` (2026-08-08).** Measured: 15
+of 80 studies (19%) in the creatine corpus were disease trials — Huntington's,
+Parkinson's, HIV, cancer cachexia, haemodialysis, muscular dystrophy. On
+age/sex/deficiency/pregnancy each scored `pop_match = "exact"` against a
+general-adult product, so their nulls counted at FULL weight as evidence that
+creatine does not build muscle in healthy adults. S3 now reports it
+(`PROMPT_VERSION` v1.7).
+
+**Every scored run now prints a POPULATION A/B** and stores only variant A:
+
+| | policy |
+|---|---|
+| **A** | everything counts (`ignore_population=True`) — current behaviour, STORED |
+| **B** | `pop_match == "different"` is excluded — a different question, not weaker evidence |
+
+Exclusion, not a discount: invariant 8 keeps population out of `w_study`, and
+population is an ECU axis. Extraction is the expensive part and `build_ecus` is
+deterministic, so the second pass costs **nothing**. Never blend them — same
+discipline as invariant 9.
+
+On a synthetic corpus (8 healthy benefit + 4 disease null) B raised the effect
+verdict from **+0.43 to +1.00** but dropped n from 12 to 8, and the composite
+moved **28 → 29**. Higher `d`, lower `c`. Which wins is a real question on a
+real corpus, which is why it is an A/B and not a switch.
+
 **Open constants awaiting Tier-3 calibration:** `k`, transfer factors, RoB
 thresholds, OA penalty. See `docs/SPEC.md` §13.
 

@@ -1,71 +1,182 @@
 {
-  "vocab": "population",
-  "version": "v1",
-  "status": "PROVISIONAL — the axes are settled (SPEC §5); the ADJACENCY GRAPH below is a guess awaiting Tier-3 calibration. See SPEC §13.",
-  "policy": {
-    "four_axes": "A population is a 4-tuple. All four variants are precomputed offline, so the delta between them costs table rows, not runtime queries.",
-    "unknown_is_a_value": "Every axis has an 'unknown' member. Unknown is a known unknown that the adjacency graph handles explicitly — never silently treated as the general case (invariant 5).",
-    "composition": "Overall pop_match across the four axes = WORST axis. All four exact -> 'exact'. Any axis 'different' -> 'different'. Otherwise 'adjacent'. Conservative by construction; this composition rule is itself provisional.",
-    "deficiency_is_the_sign_flipper": "Deficiency status is the axis that flips signs hardest and the one the user genuinely does not know. v1 shows both numbers rather than picking one."
+ "vocab": "population",
+ "version": "v1",
+ "status": "PROVISIONAL — the axes are settled (SPEC §5); the ADJACENCY GRAPH below is a guess awaiting Tier-3 calibration. See SPEC §13.",
+ "policy": {
+  "four_axes": "A population is a 5-tuple as of 2026-08-08 (health_status added). All variants are precomputed offline, so the delta between them costs table rows, not runtime queries.",
+  "unknown_is_a_value": "Every axis has an 'unknown' member. Unknown is a known unknown that the adjacency graph handles explicitly — never silently treated as the general case (invariant 5).",
+  "composition": "Overall pop_match across the four axes = WORST axis. All four exact -> 'exact'. Any axis 'different' -> 'different'. Otherwise 'adjacent'. Conservative by construction; this composition rule is itself provisional.",
+  "deficiency_is_the_sign_flipper": "Deficiency status is the axis that flips signs hardest and the one the user genuinely does not know. v1 shows both numbers rather than picking one."
+ },
+ "axes": {
+  "age_band": {
+   "values": [
+    "child",
+    "adolescent",
+    "adult",
+    "older_adult",
+    "unknown"
+   ],
+   "definitions": {
+    "child": "under 12",
+    "adolescent": "12-17",
+    "adult": "18-64",
+    "older_adult": "65+",
+    "unknown": "not reported"
+   },
+   "adjacent_pairs": [
+    [
+     "child",
+     "adolescent"
+    ],
+    [
+     "adolescent",
+     "adult"
+    ],
+    [
+     "adult",
+     "older_adult"
+    ]
+   ],
+   "unknown_policy": "adjacent"
   },
-  "axes": {
-    "age_band": {
-      "values": ["child", "adolescent", "adult", "older_adult", "unknown"],
-      "definitions": {
-        "child": "under 12",
-        "adolescent": "12-17",
-        "adult": "18-64",
-        "older_adult": "65+",
-        "unknown": "not reported"
-      },
-      "adjacent_pairs": [["child", "adolescent"], ["adolescent", "adult"], ["adult", "older_adult"]],
-      "unknown_policy": "adjacent"
-    },
-    "sex": {
-      "values": ["female", "male", "mixed", "unknown"],
-      "definitions": {
-        "female": "female-only study population",
-        "male": "male-only study population",
-        "mixed": "both sexes enrolled",
-        "unknown": "not reported"
-      },
-      "adjacent_pairs": [["mixed", "female"], ["mixed", "male"]],
-      "unknown_policy": "adjacent",
-      "note": "female <-> male is 'different', not 'adjacent'. Single-sex trials transfer poorly and the literature is male-skewed in sports outcomes."
-    },
-    "deficiency_status": {
-      "values": ["deficient", "insufficient", "replete", "unknown"],
-      "definitions": {
-        "deficient": "below the clinical deficiency threshold at baseline",
-        "insufficient": "sub-optimal but above the deficiency threshold",
-        "replete": "adequate status at baseline",
-        "unknown": "baseline status not measured or not reported"
-      },
-      "adjacent_pairs": [["deficient", "insufficient"], ["insufficient", "replete"]],
-      "unknown_policy": "adjacent",
-      "note": "deficient <-> replete is 'different'. Repletion of a deficiency and supplementation of a replete person are different interventions, and this is where the sign flips."
-    },
-    "pregnancy": {
-      "values": ["pregnant", "lactating", "not_pregnant", "unknown"],
-      "definitions": {
-        "pregnant": "pregnant at enrolment",
-        "lactating": "breastfeeding at enrolment",
-        "not_pregnant": "explicitly not pregnant, or a population where it does not apply",
-        "unknown": "not reported"
-      },
-      "adjacent_pairs": [["pregnant", "lactating"]],
-      "unknown_policy": "adjacent",
-      "note": "pregnant/lactating <-> not_pregnant is 'different' in both directions. Safety and physiology both diverge."
-    }
+  "sex": {
+   "values": [
+    "female",
+    "male",
+    "mixed",
+    "unknown"
+   ],
+   "definitions": {
+    "female": "female-only study population",
+    "male": "male-only study population",
+    "mixed": "both sexes enrolled",
+    "unknown": "not reported"
+   },
+   "adjacent_pairs": [
+    [
+     "mixed",
+     "female"
+    ],
+    [
+     "mixed",
+     "male"
+    ]
+   ],
+   "unknown_policy": "adjacent",
+   "note": "female <-> male is 'different', not 'adjacent'. Single-sex trials transfer poorly and the literature is male-skewed in sports outcomes."
   },
-  "precomputed_variants": [
-    {"id": "general_adult", "label": "General adults",
-     "age_band": "adult", "sex": "mixed", "deficiency_status": "unknown", "pregnancy": "not_pregnant"},
-    {"id": "deficient_adult", "label": "Adults who are deficient",
-     "age_band": "adult", "sex": "mixed", "deficiency_status": "deficient", "pregnancy": "not_pregnant"},
-    {"id": "older_adult", "label": "Adults 65+",
-     "age_band": "older_adult", "sex": "mixed", "deficiency_status": "unknown", "pregnancy": "not_pregnant"},
-    {"id": "pregnant", "label": "Pregnant or breastfeeding",
-     "age_band": "adult", "sex": "female", "deficiency_status": "unknown", "pregnancy": "pregnant"}
-  ]
+  "deficiency_status": {
+   "values": [
+    "deficient",
+    "insufficient",
+    "replete",
+    "unknown"
+   ],
+   "definitions": {
+    "deficient": "below the clinical deficiency threshold at baseline",
+    "insufficient": "sub-optimal but above the deficiency threshold",
+    "replete": "adequate status at baseline",
+    "unknown": "baseline status not measured or not reported"
+   },
+   "adjacent_pairs": [
+    [
+     "deficient",
+     "insufficient"
+    ],
+    [
+     "insufficient",
+     "replete"
+    ]
+   ],
+   "unknown_policy": "adjacent",
+   "note": "deficient <-> replete is 'different'. Repletion of a deficiency and supplementation of a replete person are different interventions, and this is where the sign flips."
+  },
+  "pregnancy": {
+   "values": [
+    "pregnant",
+    "lactating",
+    "not_pregnant",
+    "unknown"
+   ],
+   "definitions": {
+    "pregnant": "pregnant at enrolment",
+    "lactating": "breastfeeding at enrolment",
+    "not_pregnant": "explicitly not pregnant, or a population where it does not apply",
+    "unknown": "not reported"
+   },
+   "adjacent_pairs": [
+    [
+     "pregnant",
+     "lactating"
+    ]
+   ],
+   "unknown_policy": "adjacent",
+   "note": "pregnant/lactating <-> not_pregnant is 'different' in both directions. Safety and physiology both diverge."
+  },
+  "health_status": {
+   "values": [
+    "healthy",
+    "disease",
+    "mixed",
+    "unknown"
+   ],
+   "definitions": {
+    "healthy": "participants recruited as healthy / general population, or for a non-clinical trait (athletes, students, poor sleepers)",
+    "disease": "participants recruited FOR a diagnosed condition — the trial is testing the ingredient as a therapy",
+    "mixed": "both, or a condition so mild it is a risk factor rather than a diagnosis",
+    "unknown": "not stated"
+   },
+   "adjacent_pairs": [
+    [
+     "healthy",
+     "mixed"
+    ],
+    [
+     "disease",
+     "mixed"
+    ]
+   ],
+   "unknown_policy": "adjacent",
+   "note": "healthy <-> disease is 'different'. MEASURED 2026-08-08: 15 of 80 studies (19%) in the creatine corpus were disease trials — Huntington's, Parkinson's, HIV, cancer cachexia, haemodialysis, muscular dystrophy. On the original four axes each scored pop_match='exact' against a general-adult product, because age/sex/deficiency/pregnancy cannot express 'this trial was in patients'. Their nulls counted at FULL weight as evidence that creatine does not build muscle in healthy adults."
+  }
+ },
+ "precomputed_variants": [
+  {
+   "id": "general_adult",
+   "label": "General adults",
+   "age_band": "adult",
+   "sex": "mixed",
+   "deficiency_status": "unknown",
+   "pregnancy": "not_pregnant",
+   "health_status": "healthy"
+  },
+  {
+   "id": "deficient_adult",
+   "label": "Adults who are deficient",
+   "age_band": "adult",
+   "sex": "mixed",
+   "deficiency_status": "deficient",
+   "pregnancy": "not_pregnant",
+   "health_status": "healthy"
+  },
+  {
+   "id": "older_adult",
+   "label": "Adults 65+",
+   "age_band": "older_adult",
+   "sex": "mixed",
+   "deficiency_status": "unknown",
+   "pregnancy": "not_pregnant",
+   "health_status": "healthy"
+  },
+  {
+   "id": "pregnant",
+   "label": "Pregnant or breastfeeding",
+   "age_band": "adult",
+   "sex": "female",
+   "deficiency_status": "unknown",
+   "pregnancy": "pregnant",
+   "health_status": "healthy"
+  }
+ ]
 }

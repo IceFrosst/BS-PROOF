@@ -196,8 +196,25 @@ def build_ecus(extractions: list[dict], product: dict, *,
                band_version: int = 0,
                exact_form_only: bool = False,
                ignore_population: bool = False,
+               exclude_offtarget_population: bool = False,
                searched_outcomes: list[str] | None = None,
                sr_derived: list[dict] | None = None) -> list[dict]:
+    """
+    extractions -> scored ECU rows, one per outcome.
+
+    `exclude_offtarget_population` is VARIANT B of the 2026-08-08 A/B. When
+    True, a study whose pop_match is 'different' does not enter this product's
+    ECU at all -- it is a different question, not weaker evidence for the same
+    one. Measured motivation: 19% of the creatine corpus was disease trials
+    (Huntington's, Parkinson's, HIV) whose nulls counted at FULL weight as
+    evidence that creatine does not build muscle in healthy adults.
+
+    It is EXCLUSION, not a discount, because invariant 8 keeps population out
+    of w_study. Population is an ECU axis; this routes on it.
+
+    Requires ignore_population=False to do anything -- otherwise every study is
+    stamped 'exact' before the check.
+    """
     ingredient = product["ingredient"]
     form_id = product["form_vocab_id"]
     pop = product["population"]
@@ -222,6 +239,7 @@ def build_ecus(extractions: list[dict], product: dict, *,
 
     buckets: dict[str, list[tuple[Study, dict]]] = {}
     dropped_form = 0
+    dropped_population = 0
     kept = 0
     form_mix: dict[str, int] = {}
     for item in extractions:
@@ -234,6 +252,9 @@ def build_ecus(extractions: list[dict], product: dict, *,
             form_mix[study.form_match] = form_mix.get(study.form_match, 0) + 1
             if exact_form_only and study.form_match != "exact":
                 dropped_form += 1
+                continue
+            if exclude_offtarget_population and study.pop_match == "different":
+                dropped_population += 1
                 continue
             kept += 1
             key = vocab.ecu_key(ingredient, form_id, None if band_version == 0
@@ -266,6 +287,10 @@ def build_ecus(extractions: list[dict], product: dict, *,
         for tier, count in sorted(form_mix.items(), key=lambda kv: -kv[1]):
             print(f"    {tier:<12} x{FORM_FACTOR.get(tier, 0.30):<5} {count:>4} claims"
                   f"  ({100 * count / total:.0f}%)")
+    if dropped_population:
+        print(f"  population routing: {dropped_population} claims excluded "
+              f"(pop_match='different' — a different question, not weaker "
+              f"evidence for this one)")
     if exact_form_only or ignore_population:
         print(f"  !! DEMO MODE: exact_form_only={exact_form_only} "
               f"ignore_population={ignore_population} "

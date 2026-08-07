@@ -876,6 +876,22 @@ def main():
     check("every outcome carries a polarity decision, none left undecided",
           all("polarity" in o for o in vocab.load("outcome")["outcomes"]),
           "a missing key and a deliberate null must not look the same")
+    # health_status, added 2026-08-08. The first four axes cannot express
+    # "this trial was in patients", so a Huntington's trial matched a
+    # general-adult product EXACTLY and its null counted at full weight.
+    _prod_pop = {"age_band": "adult", "sex": "mixed", "deficiency_status": "unknown",
+                 "pregnancy": "not_pregnant", "health_status": "healthy"}
+    check("a disease-population trial no longer matches a healthy product",
+          vocab.pop_match({**_prod_pop, "health_status": "disease"}, _prod_pop)
+          == "different",
+          "19% of the creatine corpus; on four axes every one scored 'exact'")
+    check("a trial that did not say is ADJACENT, not excluded",
+          vocab.pop_match({**_prod_pop, "health_status": "unknown"}, _prod_pop)
+          == "adjacent",
+          "treating silence as disease would strand most of the corpus")
+    check("health_status is a real axis, not a loose field",
+          "health_status" in vocab.AXES and not vocab.validate())
+
     check("polarity is a DEFINITION, and the obvious ones are right",
           vocab.outcome_polarity("sleep_onset") == "lower_better"
           and vocab.outcome_polarity("muscle_strength") == "higher_better"

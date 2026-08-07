@@ -23,7 +23,7 @@ One of: deficient / replete / mixed / unstated. This drives the population axis.
   "replete". Not measuring is not the same as measuring and finding normal.
 
 population_axes
-Place the study population on four axes. Every axis has "unknown" — use it
+Place the study population on five axes. Every axis has "unknown" — use it
 rather than infer. Allowed values ONLY:
 
   age_band          child / adolescent / adult / older_adult / unknown
@@ -33,9 +33,26 @@ rather than infer. Allowed values ONLY:
                     recruiting without measuring is unknown, NOT replete
   pregnancy         pregnant / lactating / not_pregnant / unknown
                     "not_pregnant" only when stated or all-male; silence unknown
+  health_status     healthy / disease / mixed / unknown
 
 A mean age with no range maps to the band containing the mean. A range spanning
 two bands with no breakdown is "unknown".
+
+health_status — WHY WERE THESE PEOPLE RECRUITED?
+  healthy   recruited as general population, or for a non-clinical trait:
+            athletes, students, poor sleepers, resistance-trained men.
+  disease   recruited FOR a diagnosed condition, and the trial is testing the
+            ingredient as a THERAPY for it. Huntington's, Parkinson's, HIV,
+            cancer cachexia, haemodialysis, muscular dystrophy.
+  mixed     both arms drawn from both, or the condition is a risk factor
+            rather than a diagnosis (pre-hypertensive, overweight).
+  unknown   not stated.
+
+Read the ELIGIBILITY CRITERIA, not the outcome. A trial measuring muscle
+strength in Huntington's patients is `disease` — the outcome is the same as a
+sports trial's, the population is not, and the pipeline scores them as
+different questions. Do not infer disease from a clinical setting alone;
+hospital staff are healthy participants.
 
 registration_id
 NCT########, ISRCTN########, ChiCTR..., CTRI/..., UMIN..., EudraCT.

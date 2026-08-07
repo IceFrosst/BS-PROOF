@@ -101,7 +101,8 @@
     "age_band",
     "sex",
     "deficiency_status",
-    "pregnancy"
+    "pregnancy",
+    "health_status"
    ],
    "properties": {
     "age_band": {
@@ -138,6 +139,15 @@
       "pregnant",
       "lactating",
       "not_pregnant",
+      "unknown"
+     ]
+    },
+    "health_status": {
+     "type": "string",
+     "enum": [
+      "healthy",
+      "disease",
+      "mixed",
       "unknown"
      ]
     }

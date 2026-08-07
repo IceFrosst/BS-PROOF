@@ -212,7 +212,11 @@ def form_match(ingredient: str, study_form_id: str | None,
 
 # ---------------------------------------------------------------- population
 
-AXES = ("age_band", "sex", "deficiency_status", "pregnancy")
+# health_status added 2026-08-08. The first four axes cannot express "this trial
+# was in patients", so a Huntington's trial scored pop_match='exact' against a
+# general-adult product and its null counted at full weight. See
+# vocab/population.json for the measurement.
+AXES = ("age_band", "sex", "deficiency_status", "pregnancy", "health_status")
 
 
 def _axis_match(axis: str, a: str, b: str) -> str:

@@ -532,12 +532,60 @@ def main(argv: list[str]) -> int:
         else:
             searched = None
 
-        rows = build_ecus(
-            extractions, product, syntheses=syntheses_for_score,
-            prompt_version=prompt_version,
-            exact_form_only=demo, ignore_population=True,
-            searched_outcomes=searched, sr_derived=sr_derived,
-        )
+        # A/B, founder 2026-08-08: score the SAME extractions twice and decide
+        # which population policy to keep. Extraction is the expensive part;
+        # build_ecus is deterministic and free, so the second pass costs nothing.
+        #
+        #   A  everything counts   (current behaviour, ignore_population=True)
+        #   B  route on population (a disease trial is a DIFFERENT question)
+        #
+        # A is what gets STORED. B is computed, printed and reported, never
+        # blended into A -- same discipline as invariant 9 for backends.
+        def _score(variant_b: bool):
+            return build_ecus(
+                extractions, product, syntheses=syntheses_for_score,
+                prompt_version=prompt_version,
+                exact_form_only=demo,
+                ignore_population=not variant_b,
+                exclude_offtarget_population=variant_b,
+                searched_outcomes=searched, sr_derived=sr_derived,
+            )
+
+        rows = _score(False)
+        try:
+            rows_b = _score(True)
+        except Exception as e:
+            print(f"  population A/B unavailable: {e}")
+            rows_b = []
+        if rows_b:
+            _b = {r["outcome_vocab_id"]: r for r in rows_b}
+            print("\n" + "=" * 74)
+            print("POPULATION A/B — same studies, two policies. Neither is stored as truth.")
+            print("  A = everything counts        B = disease-population trials excluded")
+            print("-" * 74)
+            print(f"  {'outcome':<24}{'A':>5}{'B':>6}{'delta':>8}   {'n A':>4}{'n B':>5}")
+            for r in rows:
+                b = _b.get(r["outcome_vocab_id"])
+                if not b:
+                    continue
+                a_s, b_s = r.get("composite"), b.get("composite")
+                na = (r.get("evidence") or {}).get("n_primaries", 0)
+                nb = (b.get("evidence") or {}).get("n_primaries", 0)
+                d = ("" if a_s is None or b_s is None else f"{b_s - a_s:+d}")
+                print(f"  {r['outcome_vocab_id']:<24}"
+                      f"{'--' if a_s is None else a_s:>5}"
+                      f"{'--' if b_s is None else b_s:>6}{d:>8}   {na:>4}{nb:>5}")
+            print("-" * 74)
+            print("  A big positive delta means A was being dragged down by trials")
+            print("  asking a different question. A big NEGATIVE n_B means B is")
+            print("  starving the row -- check S3 health_status before trusting it.")
+            print("=" * 74)
+            run_context["population_ab"] = [
+                {"outcome": r["outcome_vocab_id"],
+                 "a": r.get("composite"), "b": (_b.get(r["outcome_vocab_id"]) or {}).get("composite"),
+                 "n_a": (r.get("evidence") or {}).get("n_primaries", 0),
+                 "n_b": ((_b.get(r["outcome_vocab_id"]) or {}).get("evidence") or {}).get("n_primaries", 0)}
+                for r in rows if r["outcome_vocab_id"] in _b]
         rows = show.filter_ecu_rows(rows, outcome_allowlist)
         for row in rows:
             store.upsert_ecu(row)
