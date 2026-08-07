@@ -140,6 +140,7 @@ pipeline/*                 deterministic only
 python3 -m pipeline.selftest
 python3 run_pipeline.py creatine --form creatine_monohydrate --wiring
 python3 run_pipeline.py creatine --form creatine_monohydrate --pilot   # limit 40
+python3 run_pipeline.py magnesium --form magnesium_glycinate --grok --per-outcome
 python3 grok_adapter.py                                               # preflight
 python3 -m pipeline.arcs        # (import-only module; see selftest for behaviour)
 python3 scripts/write_demo_report.py --wiring --ingredient creatine --form creatine_monohydrate
@@ -148,6 +149,24 @@ python3 scripts/write_demo_report.py --wiring --ingredient creatine --form creat
 **Run `pipeline.selftest` after any change to `pipeline/`.**
 
 ---
+
+### Retrieval scopes
+
+| scope | what it does |
+|---|---|
+| `broad` | ingredient anywhere. The legacy measurement baseline |
+| `supplement` | + supplement terms, NOT clinical drug contexts |
+| `intervention` | ingredient forced into TITLE/ABSTRACT as the thing tested |
+| **`per_outcome`** | **one query per outcome, each with its own quota** |
+
+`--per-outcome` exists because a single ranked query starves outcomes. Measured
+2026-08-07: 62 magnesium sleep RCTs exist; a 20-study run off one generic query
+surfaced **sleep_quality n=1**, while serum_magnesium took n=20. Sleep is the
+main reason people buy magnesium glycinate.
+
+Retrieval uses `search_terms` from `vocab/outcome.json` — BROAD, deliberately
+different from `includes`, which is precise because S6 maps into it. Searching
+the precise phrases returned **0** trials for sleep_onset.
 
 ## Reports archive
 

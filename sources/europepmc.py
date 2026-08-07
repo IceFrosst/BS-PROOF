@@ -72,6 +72,74 @@ def _query(ingredient: str, *, syntheses: bool, scope: str = "broad") -> str:
     return q
 
 
+def outcome_terms(outcome_id: str) -> list[str]:
+    """
+    Search terms for one outcome, taken from the vocabulary that S6 maps INTO.
+    Reusing the same source keeps retrieval and mapping in step: if a term is
+    good enough to define the outcome, it is good enough to search for.
+    """
+    from pipeline import vocab
+    o = vocab.outcome(outcome_id)
+    if not o:
+        return []
+    # search_terms first: broad, for recall. `includes` is precise because S6
+    # maps into it, and searching those exact phrases finds almost nothing.
+    terms = list(o.get("search_terms") or []) or ([o["label"]] + list(o.get("includes") or []))
+    seen, out = set(), []
+    for t in terms:
+        t = t.strip()
+        if len(t) > 2 and t.lower() not in seen:
+            seen.add(t.lower()); out.append(t)
+    return out[:8]
+
+
+def outcome_query(ingredient: str, outcome_id: str) -> str:
+    """
+    Ingredient-as-intervention AND this specific outcome.
+
+    WHY THIS EXISTS. One generic query per ingredient, ranked by relevance and
+    truncated, silently starves whole outcomes. Measured 2026-08-07: the
+    intervention-scoped magnesium query matches 337 trials; **62 magnesium sleep
+    RCTs exist**, and a 20-study extraction off the top of that ranking gave
+    sleep_quality n=1. Sleep is the single most common reason people buy
+    magnesium glycinate, and it was effectively absent.
+
+    Querying per outcome gives every outcome its own pool and its own quota, so
+    the canonical outcome set is populated by construction rather than by
+    whatever the relevance ranking happened to favour. It also keeps SPEC section
+    1's decision intact -- the user is still never asked what they want it for.
+    """
+    terms = outcome_terms(outcome_id)
+    if not terms:
+        return _query(ingredient, syntheses=False, scope="intervention")
+    ing = ingredient.strip()
+    outcome_clause = " OR ".join(f'"{t}"' for t in terms)
+    return (f'(TITLE:"{ing}" OR ABSTRACT:"{ing} supplementation" '
+            f'OR ABSTRACT:"oral {ing}") '
+            f'AND (SRC:"MED") AND (PUB_TYPE:"Randomized Controlled Trial") '
+            f'AND ({outcome_clause}) NOT ({CLINICAL_EXCLUSIONS})')
+
+
+def discover_by_outcome(ingredient: str, outcome_ids: list[str], *,
+                        per_outcome: int = 40) -> dict:
+    """
+    One query per outcome, each with its own quota, then merged.
+
+    Returns {"primaries": [...], "by_outcome": {id: n_found}}. Records are NOT
+    deduplicated here -- a trial reporting both sleep and anxiety legitimately
+    arrives twice and pipeline.dedup collapses it to one evidence unit.
+    """
+    found, counts = [], {}
+    for oid in outcome_ids:
+        recs = search(outcome_query(ingredient, oid), max_records=per_outcome)
+        counts[oid] = len(recs)
+        for r in recs:
+            n = normalise(r)
+            n["retrieved_for"] = oid          # provenance: why this study is here
+            found.append(n)
+    return {"primaries": found, "by_outcome": counts}
+
+
 def search(query: str, *, page_size: int = 100, max_records: int = 1000) -> list[dict]:
     out, cursor = [], "*"
     while len(out) < max_records:

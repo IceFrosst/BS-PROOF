@@ -462,6 +462,38 @@ def main(argv: list[str]) -> int:
             except Exception:
                 pass
         print("-" * 74)
+
+        # A run must END with the numbers. Burying them above a wall of logs is
+        # why the last Grok run's scores went unread.
+        scored = [r for r in rows if r.get("composite") is not None]
+        print("\n" + "=" * 74)
+        print(f"{tag}RESULT — {ingredient} / {form}")
+        if not scored:
+            print("  no scored outcomes (every ECU gated, or extraction failed)")
+        else:
+            top = max(scored, key=lambda r: r["composite"])
+            o = vocab.outcome(top["outcome_vocab_id"]) or {}
+            c = (top.get("components") or {}).get("c")
+            a = top.get("arcs") or {}
+
+            def _a(k):
+                arc = a.get(k) or {}
+                v, cov = arc.get("verdict"), arc.get("coverage")
+                if arc.get("is_quantity"):
+                    return f"{cov:.0%}" if cov is not None else "n/a"
+                if v is None:
+                    return "not tested"
+                return f"{v:+.2f}@{cov:.0%}"
+
+            print(f"  best outcome   : {o.get('label', top['outcome_vocab_id'])}")
+            print(f"  SCORE          : {top['composite']}/100   "
+                  f"{arcsmod.label(top['composite'], c)}")
+            print(f"  arcs           : effect {_a('effect')} | form {_a('form')} "
+                  f"| dose {_a('dose')} | evidence {_a('evidence')}")
+            print(f"  outcomes scored: {len(scored)}   range "
+                  f"{min(r['composite'] for r in scored)}-"
+                  f"{max(r['composite'] for r in scored)}/100")
+        print("=" * 74)
         print(f"\nWritten to {db}")
 
     mode = "grok"

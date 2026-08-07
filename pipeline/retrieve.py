@@ -49,8 +49,29 @@ def retrieve(ingredient: str, store: Store, *, max_syntheses: int = 200,
     log = (lambda *a: print(*a)) if verbose else (lambda *a: None)
 
     log(f"\n=== {ingredient} (scope={scope}) ===")
-    found = ep.discover(ingredient, max_syntheses=max_syntheses,
-                        max_primaries=max_primaries, scope=scope)
+    if scope == "per_outcome":
+        # One query per outcome, each with its own quota. A single generic query
+        # ranked by relevance starves whole outcomes: measured 2026-08-07, sleep
+        # had 62 magnesium RCTs available and the run surfaced ONE, because
+        # sleep trials do not rank highly for a generic "magnesium" search.
+        from pipeline import vocab
+        oids = sorted(vocab.outcome_ids())
+        per = max(1, max_primaries // max(len(oids), 1))
+        byo = ep.discover_by_outcome(ingredient, oids, per_outcome=per)
+        pri = byo["primaries"]
+        covered = {k: v for k, v in byo["by_outcome"].items() if v}
+        log(f"  per-outcome  {len(covered)}/{len(oids)} outcomes returned trials "
+            f"(quota {per} each)")
+        thin = sorted(k for k, v in byo["by_outcome"].items() if v < 5)
+        if thin:
+            log(f"    thin (<5 trials): {', '.join(thin[:8])}"
+                + (" ..." if len(thin) > 8 else ""))
+        syn = ep.discover(ingredient, max_syntheses=max_syntheses,
+                          max_primaries=1, scope="intervention")["syntheses"]
+        found = {"syntheses": syn, "primaries": pri}
+    else:
+        found = ep.discover(ingredient, max_syntheses=max_syntheses,
+                            max_primaries=max_primaries, scope=scope)
     syn, pri = found["syntheses"], found["primaries"]
     log(f"  discovered  {len(syn)} syntheses, {len(pri)} primaries")
 
