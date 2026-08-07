@@ -5,15 +5,12 @@ End-to-end v1 run.
   python run_pipeline.py magnesium --form magnesium_glycinate --grok --limit 20
 
 Flags: --with-sr --demo --full-text-only --all-oa --broad-scope
-       --all-outcomes   (score full vocab; default is showcase top-5)
+       --all-outcomes   (score full vocab; default is showcase top-5 by RCT count)
        --top-outcomes N (default 5)
 
 Default demo scope is **intervention**: ingredient in TITLE/ABSTRACT as the
-thing being tested (not a whole-record keyword match). Relevance gate also
-skips IV/surgical noise before any agent spend.
-
-Default showcase: only the top-5 product outcomes are mapped by S6 and shown
-in the report (muscle strength etc. for creatine — not 30 biomarkers).
+thing being tested. Showcase top-N outcomes are chosen by Europe PMC RCT
+hit counts (most-studied first), not a fixed marketing list.
 """
 from __future__ import annotations
 import os
@@ -54,7 +51,6 @@ def _pilot_db(ingredient: str, scope: str):
 
 
 def _grok_db(ingredient: str, scope: str):
-    # Separate file when not broad so intervention corpus does not mix with noise.
     suffix = "" if scope == "broad" else f"_{scope[:4]}"
     return DEFAULT_DB.parent / f"grok_{ingredient}{suffix}.sqlite"
 
@@ -218,7 +214,6 @@ def main(argv: list[str]) -> int:
         print("Pick only one of --wiring, --pilot, --grok")
         return 1
 
-    # Scope: intervention is the demo default (ingredient in title/abstract).
     scope = "intervention" if (grok or pilot) else "broad"
     if "--broad-scope" in args:
         args.remove("--broad-scope"); scope = "broad"
@@ -257,10 +252,12 @@ def main(argv: list[str]) -> int:
             print("   ", f["id"])
         return 1
 
-    # Showcase: top-N product outcomes only (default). Saves S6 tokens and
-    # keeps the report to what a buyer actually cares about.
+    # Top-N by published RCT count (Europe PMC), not a fixed list.
+    showcase_counts: dict = {}
     outcome_allowlist = show.outcomes_for(
-        ingredient, top_n=top_n, all_outcomes=all_outcomes)
+        ingredient, top_n=top_n, all_outcomes=all_outcomes,
+        counts_out=showcase_counts,
+    )
 
     pv = vocab.population_variants()[0]
     product = {"ingredient": ingredient, "form_vocab_id": form,
@@ -285,6 +282,8 @@ def main(argv: list[str]) -> int:
         "form": form,
         "scope": scope,
         "showcase_outcomes": outcome_allowlist,
+        "showcase_study_counts": {k: v for k, v in showcase_counts.items()
+                                  if not str(k).startswith("_")},
         "studies_targeted": 0,
         "studies_ok": 0,
         "studies_skipped": 0,
@@ -373,7 +372,7 @@ def main(argv: list[str]) -> int:
                 print(f"  concurrent grok CLI: {ga.MAX_CONCURRENCY}")
                 print(f"  batch size (extract): {effective}")
                 if outcome_allowlist:
-                    print(f"  showcase top-{len(outcome_allowlist)}: "
+                    print(f"  showcase top-{len(outcome_allowlist)} by RCT count: "
                           + ", ".join(outcome_allowlist))
                 else:
                     print("  showcase: OFF (full outcome vocabulary)")
@@ -469,8 +468,6 @@ def main(argv: list[str]) -> int:
 
         run_context["prompt_version"] = prompt_version
 
-        # Searched outcomes for "we looked, found nothing": showcase list, or
-        # full vocab under --all-outcomes / per-outcome retrieval.
         if outcome_allowlist:
             searched = list(outcome_allowlist)
         elif scope == "per_outcome":
@@ -484,8 +481,6 @@ def main(argv: list[str]) -> int:
             exact_form_only=demo, ignore_population=True,
             searched_outcomes=searched,
         )
-        # Hard filter report rows to showcase order (build_ecus may still emit
-        # only mapped outcomes; this keeps the table to top-N even if S6 leaks).
         rows = show.filter_ecu_rows(rows, outcome_allowlist)
         for row in rows:
             store.upsert_ecu(row)
@@ -503,7 +498,7 @@ def main(argv: list[str]) -> int:
 
         print(f"\n{tag}ECU ROWS — {ingredient}, form={form}, scope={scope}")
         if outcome_allowlist:
-            print(f"  showcase top-{len(outcome_allowlist)} only")
+            print(f"  showcase top-{len(outcome_allowlist)} by published RCT count")
         print("  0-100 = 100 x c x mean(effect, form, dose)")
         print("-" * 74)
         for row in rows:
