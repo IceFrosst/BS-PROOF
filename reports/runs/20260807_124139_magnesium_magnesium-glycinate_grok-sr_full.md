@@ -1,12 +1,68 @@
-# BS-PROOF summary report (grok-sr)
+# BS-PROOF full audit report (grok-sr)
 
 Generated: **2026-08-07 12:41 UTC**
 
 Ingredient: `magnesium` · Form: `magnesium_glycinate` · Mode: **grok-sr**
 
-Auto-written after every extraction (no extra steps).
+Auto-written with the summary after every extraction.
 
-Full audit for this run: see matching `*_full.md` in `reports/runs/`.
+## How the score is built
+
+Deterministic (`pipeline/scoring.py`). Models extract fields only.
+
+```text
+w = design × RoB × size × funding × OA × form × dose × pop
+    (0 if retracted or predatory venue)
+score = clamp(round(100 × d × c × (1 − 0.4 × H)), −100, +100)
+```
+
+SRs (`--with-sr`) only raise confidence E′, never invent patients.
+Predatory list: human ref https://www.predatoryjournals.org/the-list/publishers
+
+## Selftest: **PASS**
+
+```text
+  PASS  filter miss falls back to all tables, never to nothing  the heuristic filters; S2 decides
+
+EFFECTIVE DOSE BAND (derived, not invented)
+  PASS  band is the observed benefit range, nothing chosen  a percentile or margin would be a new free constant
+  PASS  null doses reported separately  a dose where trials found NOTHING is the useful warning
+  PASS  undosed trial excluded, never guessed  
+  PASS  no dosed benefit trial -> no band, band_version 0  
+  PASS  dose inside the band  
+  PASS  just under the low end  
+  PASS  far under  
+  PASS  far over  
+  PASS  interval straddling a tier edge REFUSES to pick  rounding to the likelier side would silently move the score
+  PASS  no band -> unspecified, not a free pass  
+
+DONUT (score in the centre, arc = confidence)
+  PASS  arc length tracks c, not the score  same +4 -- one is genuine conflict, one is nobody-has-looked
+  PASS  gated row draws an EMPTY ring  'no number' must not look like 'zero'
+  PASS  gated centre is not a number  
+  PASS  sign is shown explicitly  
+  PASS  band drives colour  inconclusive is grey, never pale green
+  PASS  confidence has plain-words labels  
+  PASS  svg is self-contained  
+
+THREE-ARC DONUT (effect / form / dose)
+  PASS  three independent fills, not thirds of one total  they do not sum to anything -- each is its own condition
+  PASS  unassessed dose is None, NOT zero  'we did not check' and 'your dose is wrong' are opposite messages
+  PASS  unassessed arc renders hatched  
+  PASS  measured arcs are not hatched  
+  PASS  form arc reflects the exact-form share only  
+
+STORAGE (SQLite on a Postgres-shaped schema)
+  PASS  studies persisted  
+  PASS  unclassified queryable as the S1 budget  
+  PASS  refuses records that skipped dedup  no _canonical -> one trial would land four times
+  PASS  ECU round-trips  
+  PASS  audit trail links study to ECU  every published number must be reconstructible
+  PASS  band_version bump invalidates cached ECUs  SPEC section 5 complexity flag, made queryable
+  PASS  re-scoring updates in place, no duplicate row  
+
+ALL PASSED
+```
 
 ## Grok databases
 
@@ -72,3 +128,11 @@ Studies=200, ECUs=22, syntheses=52
 ## Claude pilot databases
 
 _No `pilot*.sqlite` files._
+
+## Notes
+
+- Claude and Grok scores are **never merged**.
+
+- Predatory venues (list) get weight 0 when journal/publisher matches.
+
+- Inconclusive scores with low n are often the confidence ceiling (SPEC 13), not a bug.
