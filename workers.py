@@ -8,6 +8,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import claude_adapter
 from pipeline import vocab
+from pipeline.relevance import relevance_check
 
 PER_STUDY = ("S3", "S4", "S5", "S7", "S8")
 MIN_TEXT_CHARS = 200
@@ -42,6 +43,15 @@ def extract_study(record: dict, text: str, registry: dict | None = None, *,
                   call=None, max_workers: int = 5) -> dict:
     call = call or claude_adapter.call
 
+    # Cheap gate BEFORE any model call: is this actually an oral/supplement
+    # intervention for our ingredient, or IV/surgery/noise?
+    ingredient = record.get("ingredient") or ""
+    ok, reason = relevance_check(record, ingredient)
+    if not ok:
+        return {"_skipped": f"relevance: {reason}",
+                "_meta": {"relevance": reason},
+                "outcomes": []}
+
     if len((text or "").strip()) < MIN_TEXT_CHARS:
         return {"_skipped": "no text",
                 "_meta": {"chars": len((text or "").strip())},
@@ -57,16 +67,9 @@ def extract_study(record: dict, text: str, registry: dict | None = None, *,
             out[agent] = result
             out.setdefault("_meta", {})[agent] = meta
             if result is None:
-                # A quota failure is not a property of this study -- it will
-                # fail identically for every remaining study. Mark it so the
-                # runner can stop instead of grinding through the whole corpus.
                 err = str(meta.get("error") or "").lower()
                 if any(k in err for k in ("session limit", "usage limit", "rate limit")):
                     out["_quota_exhausted"] = meta.get("error")
-                # A failed subagent is NOT "this study said nothing". Record it
-                # so callers can tell an empty study from a broken run --
-                # conflating them is how a thrashing batch looked like a corpus
-                # with no mappable outcomes.
                 out.setdefault("_failed", []).append(
                     {"agent": agent, "error": meta.get("error")})
 
@@ -97,6 +100,7 @@ def extract_corpus(records: list[dict], text_for, registry_for=None, *,
     done = 0
     skipped = 0
     failed_studies = 0
+    relevance_skip = 0
 
     print(f"  progress: 0/{n} studies  (in_flight≤{max_studies_in_flight})")
 
@@ -119,6 +123,8 @@ def extract_corpus(records: list[dict], text_for, registry_for=None, *,
             done += 1
             if extraction.get("_skipped"):
                 skipped += 1
+                if str(extraction.get("_skipped", "")).startswith("relevance:"):
+                    relevance_skip += 1
             if extraction.get("_failed"):
                 failed_studies += 1
             elapsed = time.time() - t0
@@ -127,9 +133,12 @@ def extract_corpus(records: list[dict], text_for, registry_for=None, *,
             print(
                 f"  progress: {done}/{n}  "
                 f"ok={done - skipped - failed_studies} skip={skipped} "
-                f"fail_partial={failed_studies}  "
+                f"(relevance={relevance_skip}) fail_partial={failed_studies}  "
                 f"{elapsed:.0f}s elapsed  ~{eta:.0f}s left  "
                 f"({rate * 60:.1f} studies/min)"
             )
 
+    if relevance_skip:
+        print(f"  relevance gate skipped {relevance_skip}/{n} "
+              f"(not oral/supplement intervention — no agent spend)")
     return [results_by_id[i] for i in range(n)]
