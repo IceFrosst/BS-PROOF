@@ -2,10 +2,13 @@
 """
 End-to-end v1 run.
 
-  python run_pipeline.py magnesium --form magnesium_glycinate --grok --limit 12
+  python run_pipeline.py magnesium --form magnesium_glycinate --grok --limit 20
 
 Flags: --with-sr --demo --full-text-only
-Predatory list: vocab/predatory_journals.txt (one title or ISSN per line)
+Predatory list: vocab/predatory_journals.txt (auto-expanded after git pull)
+
+Corpus strategy: retrieve broadly (up to 600 primaries), rank by OA + year,
+then extract only the top `--limit` as evidence. Store size ≠ evidence mass.
 """
 from __future__ import annotations
 import os
@@ -23,8 +26,9 @@ WIRING_DB = DEFAULT_DB.parent / "wiring_demo.sqlite"
 DEFAULT_PILOT_LIMIT = 40
 DEFAULT_GROK_LIMIT = 100
 DEFAULT_WIRING_SCORE_CAP = 40
-RETRIEVE_MAX_PRIMARIES = 300
-RETRIEVE_MAX_SYNTHESES = 80
+# Broad retrieve, narrow extract: store up to 600, score only --limit top-ranked.
+RETRIEVE_MAX_PRIMARIES = int(os.environ.get("SP_RETRIEVE_MAX_PRIMARIES", "600"))
+RETRIEVE_MAX_SYNTHESES = int(os.environ.get("SP_RETRIEVE_MAX_SYNTHESES", "120"))
 SYNTHETIC_VERSION = "SYNTHETIC-NOT-REAL"
 GROK_STUDIES_IN_FLIGHT = int(os.environ.get("SP_GROK_STUDIES_IN_FLIGHT", "32"))
 MAX_SRS = int(os.environ.get("SP_MAX_SRS", "12"))
@@ -58,6 +62,7 @@ def _best_text(record: dict) -> str:
 
 def _prioritize_primaries(primaries: list[dict], *,
                           full_text_only: bool = False) -> list[dict]:
+    """Highest-value first: full-text/green OA, then newer year."""
     def key(s: dict):
         oa = (s.get("oa") or "abstract_only").lower()
         return (_OA_RANK.get(oa, 6), -(s.get("year") or 0))
@@ -102,10 +107,57 @@ def _report_failures(raw: list[dict]) -> None:
         print(f"  skipped {len(skipped)}/{len(raw)} studies with no usable text")
 
 
-def _auto_push_report(ingredient: str, form: str, mode: str) -> None:
+def _agent_stats(raw: list[dict]) -> dict:
+    """Aggregate S3–S8 (+S6) ok/fail from extraction metadata."""
+    stats: dict[str, dict[str, int]] = {}
+    for r in raw:
+        ext = r.get("extraction") or {}
+        if ext.get("_skipped"):
+            continue
+        meta = ext.get("_meta") or {}
+        failed_agents = {f.get("agent") for f in (ext.get("_failed") or [])}
+        for agent, m in meta.items():
+            if agent.startswith("_"):
+                continue
+            bucket = stats.setdefault(agent, {"ok": 0, "fail": 0, "cache": 0})
+            if agent in failed_agents or m.get("error"):
+                bucket["fail"] += 1
+            else:
+                bucket["ok"] += 1
+            if m.get("cached"):
+                bucket["cache"] += 1
+        for f in (ext.get("_failed") or []):
+            agent = f.get("agent") or "?"
+            if agent not in meta:
+                bucket = stats.setdefault(agent, {"ok": 0, "fail": 0, "cache": 0})
+                bucket["fail"] += 1
+    return stats
+
+
+def _studies_list(raw: list[dict]) -> list[dict]:
+    out = []
+    for r in raw:
+        rec = r.get("record") or {}
+        out.append({
+            "title": rec.get("title"),
+            "year": rec.get("year"),
+            "doi": rec.get("doi"),
+            "pmid": rec.get("pmid"),
+            "canonical_id": rec.get("_canonical") or rec.get("canonical_id"),
+            "journal": rec.get("journal") or rec.get("journal_name"),
+            "oa": rec.get("oa"),
+            "predatory_venue": bool(rec.get("predatory_venue")),
+            "skipped": bool((r.get("extraction") or {}).get("_skipped")),
+            "failed_partial": bool((r.get("extraction") or {}).get("_failed")),
+        })
+    return out
+
+
+def _auto_push_report(ingredient: str, form: str, mode: str,
+                      run_context: dict | None = None) -> None:
     try:
         from scripts.auto_report_push import write_report, git_push_reports
-        write_report(ingredient, form, mode)
+        write_report(ingredient, form, mode, run_context=run_context)
         git_push_reports()
     except Exception as e:
         print(f"Auto-report/push failed: {e}")
@@ -176,13 +228,32 @@ def main(argv: list[str]) -> int:
         db = DEFAULT_DB
 
     call_fn = None
+    run_context: dict = {
+        "ingredient": ingredient,
+        "form": form,
+        "studies_targeted": 0,
+        "studies_ok": 0,
+        "studies_skipped": 0,
+        "studies_failed_partial": 0,
+        "predatory": {},
+        "studies_list": [],
+        "sr": {"requested": 0, "s2_ok": 0, "resolved": 0},
+        "agent_stats": {},
+        "speed_report": "",
+        "ecu_rows": [],
+        "prompt_version": "",
+        "concurrency": None,
+        "studies_in_flight": None,
+    }
+
     with Store(db) as store:
         counts = store.counts()
         need_retrieve = counts["studies"] == 0 or (
             grok and counts["studies"] < min(limit + 50, RETRIEVE_MAX_PRIMARIES)
         )
         if need_retrieve:
-            print(f"retrieving / expanding corpus in {db.name}...")
+            print(f"retrieving / expanding corpus in {db.name} "
+                  f"(max primaries={RETRIEVE_MAX_PRIMARIES})...")
             retrieve(ingredient, store,
                      max_syntheses=RETRIEVE_MAX_SYNTHESES,
                      max_primaries=RETRIEVE_MAX_PRIMARIES,
@@ -191,17 +262,22 @@ def main(argv: list[str]) -> int:
         all_rows = store.studies(syntheses=False)
         syn_rows = store.studies(syntheses=True)
 
-        # Research layer: flag predatory venues (list in vocab/predatory_journals.txt)
+        # Research layer: flag predatory venues
         pred_summary = pred.flag_records(all_rows)
-        pred.flag_records(syn_rows)  # flag SRs too for the count story
+        pred.flag_records(syn_rows)
         print(pred.format_summary(pred_summary))
+        run_context["predatory"] = pred_summary
 
         primaries = _prioritize_primaries(
             [s for s in all_rows if s.get("design_rank") == 4],
             full_text_only=full_text_only,
         )
         print(f"\nstore: {len(all_rows)} primaries, {len(syn_rows)} syntheses; "
-              f"{len(primaries)} RCT-rank after filters")
+              f"{len(primaries)} RCT-rank after filters "
+              f"(will extract top {min(limit, len(primaries))})")
+
+        raw: list[dict] = []
+        syntheses_for_score: list = []
 
         if wiring:
             axes = {a: pv[a] for a in vocab.AXES}
@@ -213,7 +289,8 @@ def main(argv: list[str]) -> int:
             } for p in primaries[:DEFAULT_WIRING_SCORE_CAP]]
             prompt_version = SYNTHETIC_VERSION
             tag = "SYNTHETIC "
-            syntheses_for_score = []
+            run_context["studies_targeted"] = len(extractions)
+            run_context["studies_ok"] = len(extractions)
         elif pilot or grok:
             import workers
             if grok:
@@ -229,13 +306,16 @@ def main(argv: list[str]) -> int:
                 print("GROK MODE")
                 print(f"  studies in flight: {GROK_STUDIES_IN_FLIGHT}")
                 print(f"  concurrent grok CLI: {ga.MAX_CONCURRENCY}")
-                print(f"  batch size: {effective}")
+                print(f"  batch size (extract): {effective}")
+                print(f"  corpus stored: up to {RETRIEVE_MAX_PRIMARIES} primaries")
                 print("-" * 68)
                 call_fn = ga.call
                 prompt_version = f"{ga.PROMPT_VERSION}+{ga.PROVENANCE}"
                 tag = "GROK "
                 in_flight = GROK_STUDIES_IN_FLIGHT
                 limit = effective
+                run_context["concurrency"] = ga.MAX_CONCURRENCY
+                run_context["studies_in_flight"] = in_flight
             else:
                 import pilot_adapter as pa
                 if not pa.preflight():
@@ -245,9 +325,13 @@ def main(argv: list[str]) -> int:
                 tag = "PILOT "
                 in_flight = 4
                 ga = None
+                run_context["concurrency"] = 4
+                run_context["studies_in_flight"] = in_flight
 
             targets = primaries[:limit]
-            print(f"extracting {len(targets)} studies...")
+            run_context["studies_targeted"] = len(targets)
+            print(f"extracting {len(targets)} studies "
+                  f"(from {len(primaries)} ranked RCTs in store)...")
             raw = workers.extract_corpus(
                 [{**p, "_canonical": p["canonical_id"], "ingredient": ingredient}
                  for p in targets],
@@ -258,8 +342,19 @@ def main(argv: list[str]) -> int:
                 max_studies_in_flight=in_flight,
             )
             _report_failures(raw)
+            run_context["studies_skipped"] = sum(
+                1 for r in raw if r["extraction"].get("_skipped"))
+            run_context["studies_failed_partial"] = sum(
+                1 for r in raw if r["extraction"].get("_failed"))
+            run_context["studies_ok"] = (
+                len(raw) - run_context["studies_skipped"]
+            )
+            run_context["agent_stats"] = _agent_stats(raw)
+            run_context["studies_list"] = _studies_list(raw)
             if grok:
-                print(ga.speed_report())
+                speed = ga.speed_report()
+                print(speed)
+                run_context["speed_report"] = speed
             extractions = [{
                 "record": r["record"],
                 "extraction": r["extraction"],
@@ -270,13 +365,17 @@ def main(argv: list[str]) -> int:
                 print("No study had usable text.")
                 return 1
 
-            syntheses_for_score = []
             if with_sr and call_fn is not None:
                 from pipeline.synthesis_bridge import build_syntheses_for_scoring
+                run_context["sr"]["requested"] = MAX_SRS
                 syntheses_for_score = build_syntheses_for_scoring(
                     store, call=call_fn, text_for=lambda r: _best_text(r),
-                    max_srs=MAX_SRS, max_workers=min(4, GROK_STUDIES_IN_FLIGHT),
+                    max_srs=MAX_SRS, max_workers=min(6, GROK_STUDIES_IN_FLIGHT),
                 )
+                run_context["sr"]["s2_ok"] = sum(
+                    1 for s in syntheses_for_score if s)
+                run_context["sr"]["resolved"] = sum(
+                    1 for s in syntheses_for_score if s.get("resolved"))
         else:
             import workers
             import claude_adapter
@@ -296,7 +395,8 @@ def main(argv: list[str]) -> int:
             } for r in raw]
             prompt_version = claude_adapter.PROMPT_VERSION
             tag = ""
-            syntheses_for_score = []
+
+        run_context["prompt_version"] = prompt_version
 
         rows = build_ecus(
             extractions, product, syntheses=syntheses_for_score,
@@ -305,6 +405,14 @@ def main(argv: list[str]) -> int:
         )
         for row in rows:
             store.upsert_ecu(row)
+
+        run_context["ecu_rows"] = [{
+            "outcome_vocab_id": r["outcome_vocab_id"],
+            "score": r["score"],
+            "band": r["band"],
+            "n_primaries": r["evidence"]["n_primaries"],
+            "prompt_version": prompt_version,
+        } for r in rows]
 
         print(f"\n{tag}ECU ROWS — {ingredient}, form={form}")
         print("-" * 74)
@@ -329,9 +437,9 @@ def main(argv: list[str]) -> int:
     if full_text_only:
         mode += "-ft"
     if grok:
-        _auto_push_report(ingredient, form, mode)
+        _auto_push_report(ingredient, form, mode, run_context=run_context)
     elif pilot:
-        _auto_push_report(ingredient, form, "pilot")
+        _auto_push_report(ingredient, form, "pilot", run_context=run_context)
 
     return 0
 
