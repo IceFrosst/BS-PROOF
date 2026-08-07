@@ -57,6 +57,16 @@ def extract_study(record: dict, text: str, registry: dict | None = None, *,
             out[agent] = result
             out.setdefault("_meta", {})[agent] = meta
             if result is None:
+                # A quota failure is not a property of this study -- it will
+                # fail identically for every remaining study. Mark it so the
+                # runner can stop instead of grinding through the whole corpus.
+                err = str(meta.get("error") or "").lower()
+                if any(k in err for k in ("session limit", "usage limit", "rate limit")):
+                    out["_quota_exhausted"] = meta.get("error")
+                # A failed subagent is NOT "this study said nothing". Record it
+                # so callers can tell an empty study from a broken run --
+                # conflating them is how a thrashing batch looked like a corpus
+                # with no mappable outcomes.
                 out.setdefault("_failed", []).append(
                     {"agent": agent, "error": meta.get("error")})
 

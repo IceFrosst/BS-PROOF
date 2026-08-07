@@ -69,6 +69,18 @@ def synthetic_extraction(record: dict, axes: dict) -> dict:
 
 
 def _report_failures(raw: list[dict]) -> None:
+    # A quota ceiling is not a property of the corpus and will fail identically
+    # for every remaining study. Say so first, or an empty run reads as "this
+    # supplement has no evidence". Measured 2026-08-06: a 10-study creatine
+    # batch burned 43 calls against the subscription session limit.
+    quota = next((r["extraction"]["_quota_exhausted"] for r in raw
+                  if r["extraction"].get("_quota_exhausted")), None)
+    if quota:
+        print(f"\n  !! QUOTA EXHAUSTED: {quota}")
+        print("     The subscription's throughput ceiling, not a code failure")
+        print("     and not a property of the corpus. Batches this size need")
+        print("     ANTHROPIC_API_KEY (or a smaller --limit).")
+
     failed = [r for r in raw if r["extraction"].get("_failed")]
     if failed:
         n = sum(len(r["extraction"]["_failed"]) for r in failed)

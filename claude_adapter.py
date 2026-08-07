@@ -28,9 +28,10 @@ CONTENT, not file paths. `claude --help` documents --json-schema with an inline
 JSON example, and --append-system-prompt has a separate --append-system-prompt-file
 sibling. The code below is correct; do not "fix" it to temp files.
 
-STILL UNVERIFIED: no successful live call has been made yet -- the flag shape is
-confirmed, the round trip is not. Auth blocks it inside a Claude Code session
-(nested `claude -p` reports "Not logged in"). Smoke-test from a plain terminal.
+ROUND TRIP VERIFIED 2026-08-06 via pilot_adapter (subscription auth, non-bare).
+S3/S4/S5/S6/S7/S8 all returned schema-valid output with evidence spans. THIS
+file's --bare path is still unexercised because --bare requires
+ANTHROPIC_API_KEY, which is not yet provisioned.
 """
 
 from __future__ import annotations
@@ -164,7 +165,11 @@ def _envelope_error(raw: str) -> str:
 # Failures no amount of retrying will fix. Fail loudly on the first attempt
 # rather than burning 3 backoffs per call across a whole extraction run.
 _FATAL = ("not logged in", "please run /login", "invalid api key",
-          "authentication_error", "credit balance", "max-budget")
+          "authentication_error", "credit balance", "max-budget",
+          # Subscription throughput ceiling. Measured 2026-08-06: a 10-study
+          # creatine batch burned 43 calls against it. Retrying cannot help --
+          # the limit is time-based -- and every retry is a wasted minute.
+          "session limit", "usage limit", "rate limit", "rate_limit")
 
 
 def _is_fatal(detail: str) -> bool:
