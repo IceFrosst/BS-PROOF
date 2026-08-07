@@ -787,6 +787,79 @@ def main():
           _score(prim, one_sr)["score"] == _score(prim, many_sr)["score"],
           "score_ecu takes the MAX cov, not a sum — invariant 6 by construction")
 
+    print("\nSR-TABLE TRIALS ENTER EVIDENCE MASS (invariant 6 amended 2026-08-08)")
+    _sr_w = _S(id="x", design_rank=4, n=60, rob_items={}, rob_band_direct="low",
+               rob_inherited=True, funding="undisclosed", oa="sr_table").weight()
+    _direct_w = _S(id="y", design_rank=4, n=60, rob_items={}, rob_band_direct="low",
+                   funding="undisclosed", oa="full_text").weight()
+    check("second-hand facts cost 28% of the weight",
+          abs(_sr_w / _direct_w - 0.85 * 0.85) < 1e-9,
+          f"{_sr_w / _direct_w:.4f} = oa sr_table 0.85 x rob_inherited 0.85")
+    check("a review's overall RoB band is used WITHOUT inventing six items",
+          _S(id="x", design_rank=4, n=60, rob_items={}, rob_band_direct="high",
+             rob_inherited=True).weight()
+          < _S(id="x", design_rank=4, n=60, rob_items={}, rob_band_direct="low",
+               rob_inherited=True).weight(),
+          "synthesising items to hit a hit-count would be inventing data")
+
+    facts = {"t1": {"design": "randomised, double-blind", "n": 40, "rob": "low",
+                    "sources": ["sr:A"], "conflicts": []},
+             "t2": {"design": "randomised", "n": 20, "sources": ["sr:A"],
+                    "conflicts": []},
+             "t3": {"design": None, "n": 30, "sources": ["sr:A"], "conflicts": []},
+             "t4": {"design": "randomised", "n": 10, "sources": ["sr:A"],
+                    "conflicts": []}}
+    dirs = {"t1": {"PSQI": {"direction": "benefit", "magnitude": "meaningful"}},
+            "t2": {},
+            "t3": {"PSQI": {"direction": "benefit"}},
+            "t4": {"PSQI": {"direction": None, "_conflict": True}}}
+    recs, st = syn.derived_studies(facts, held_ids={"t9"}, directions=dirs)
+    got = {r["_canonical"] for r in recs}
+    check("a trial with a direction and a design is emitted",
+          got == {"t1"}, f"emitted {sorted(got)}")
+    check("NO DIRECTION is discarded, never defaulted to null_effect",
+          st["no_direction"] == 1,
+          "Study.direction defaults to -0.7 — the most dangerous default here")
+    check("NO DESIGN is discarded", st["no_design"] == 1,
+          "design_rank spans a 250x weight range; assuming RCT is not free")
+    check("reviews disagreeing about what a trial FOUND is discarded",
+          st["direction_conflict"] == 1,
+          "the one fact that cannot be averaged or under-counted")
+    held_out, _ = syn.derived_studies(facts, held_ids={"t1"}, directions=dirs)
+    check("a trial we already hold is NOT added a second time",
+          not held_out, "this is the double-count invariant 6 exists to stop")
+
+    check("non-randomised is not promoted to RCT by substring",
+          syn.design_rank_from_text("non-randomised open trial") == 5
+          and syn.design_rank_from_text("randomised crossover") == 4,
+          "'randomis' is inside 'non-randomis' — order is load-bearing")
+    check("a design we cannot read stays None",
+          syn.design_rank_from_text("multi-centre") is None)
+
+    r2t = syn.results_by_trial([
+        {"review_id": "A", "included_ids_by_row": {0: "t1"},
+         "s2": {"included_studies": [{"label": "Smith 2019"}],
+                "results_table": [{"study_label": "Smith 2019", "outcome_raw": "PSQI",
+                                   "direction": "benefit"}]}},
+        {"review_id": "B", "included_ids_by_row": {0: "t1"},
+         "s2": {"included_studies": [{"label": "Smith 2019"}],
+                "results_table": [{"study_label": "Smith 2019", "outcome_raw": "PSQI",
+                                   "direction": "harm"}]}}])
+    check("two reviews reporting opposite findings cancel to a conflict",
+          r2t["t1"]["PSQI"]["_conflict"] and r2t["t1"]["PSQI"]["direction"] is None,
+          "picking one would manufacture a result for a trial nobody can check")
+
+    check("free-text form resolves to the right arc",
+          vocab.form_id_for_text("magnesium", "magnesium bisglycinate 400mg")
+          == "magnesium_glycinate"
+          or vocab.form_id_for_text("magnesium", "magnesium oxide") == "magnesium_oxide")
+    check("an ambiguous form REFUSES rather than picking the longer match",
+          vocab.form_id_for_text("magnesium", "magnesium citrate malate")
+          in (vocab.unspecified_form_id("magnesium"), "magnesium_citrate")
+          and vocab.form_id_for_text("magnesium", "some novel chelate")
+          == vocab.unspecified_form_id("magnesium"),
+          "a wrong resolution puts another salt's evidence on YOUR form arc")
+
     # Measured 2026-08-07 on three real OA reviews: the old filter returned
     # False on 14 of 14 tables. These are verbatim headers/captions it missed.
     check("'included systematic reviews' matches, not just 'included studies'",

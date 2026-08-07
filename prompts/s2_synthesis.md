@@ -35,6 +35,33 @@ For each trial, map their judgement onto: low / some_concerns / high / unclear.
 Record which instrument in `tool`. If no RoB assessment exists, return an empty
 rob_table. An empty table is a correct answer.
 
+PER-STUDY RESULTS  (`results_table`)  -- NEW, AND IT NOW CARRIES WEIGHT
+Find where the review reports what EACH included trial FOUND: the forest plot,
+the summary-of-findings table, or the results text naming trials individually.
+For each trial x outcome:
+
+  study_label   must match the label you used in included_studies. EXACTLY.
+  outcome_raw   the outcome as the review words it, e.g. "PSQI global score"
+  direction     benefit | null_effect | harm | unclear
+  magnitude     meaningful | trivial | null
+  effect_text   verbatim, e.g. "MD -1.4 (95% CI -2.2 to -0.6)"
+
+This is the difference between knowing a trial EXISTS and knowing what it FOUND,
+and the pipeline now scores trials it can only reach through your table. A trial
+you list without a direction contributes NOTHING -- it is discarded, not assumed.
+
+So: `unclear` is a real and correct answer. A pooled result is NOT a per-study
+result -- if the review only reports the pooled estimate, return an empty
+results_table. Never distribute a pooled effect back onto the individual trials,
+and never infer a trial's direction from the review's overall conclusion. That
+would manufacture agreement out of nothing, for trials nobody can check.
+
+DESIGN  (`design` on each included study)
+Verbatim, as the review states it: "randomised, double-blind, placebo-controlled",
+"crossover", "open-label". Do not normalise and do not guess from the review's
+inclusion criteria -- a review of RCTs sometimes includes a non-randomised trial.
+Null if the table does not say.
+
 REVIEW METHODS  (`review_methods`)
 Seven facts about how THIS review was conducted. They decide how much weight the
 review's agreement is worth, so they must come from what the review REPORTS --

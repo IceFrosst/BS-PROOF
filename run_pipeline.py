@@ -345,6 +345,7 @@ def main(argv: list[str]) -> int:
 
         raw: list[dict] = []
         syntheses_for_score: list = []
+        sr_derived: list[dict] = []
 
         if wiring:
             axes = {a: pv[a] for a in vocab.AXES}
@@ -441,10 +442,19 @@ def main(argv: list[str]) -> int:
             if with_sr and call_fn is not None:
                 from pipeline.synthesis_bridge import build_syntheses_for_scoring
                 run_context["sr"]["requested"] = MAX_SRS
-                syntheses_for_score = build_syntheses_for_scoring(
-                    store, call=call_fn,
-                    max_srs=MAX_SRS, max_workers=min(6, GROK_STUDIES_IN_FLIGHT),
-                )
+                syntheses_for_score, _s2_batch, _all_rows = (
+                    build_syntheses_for_scoring(
+                        store, call=call_fn, max_srs=MAX_SRS,
+                        max_workers=min(6, GROK_STUDIES_IN_FLIGHT)))
+                # Invariant 6 as amended 2026-08-08: the review adds no mass,
+                # the trials it describes add themselves, once each, at
+                # oa='sr_table'. This is the largest source of evidence we were
+                # discarding -- trials whose own full text we cannot reach.
+                from pipeline.synthesis_bridge import build_sr_derived
+                sr_derived, sr_stats = build_sr_derived(
+                    _s2_batch, _all_rows, call=call_fn,
+                    outcome_allowlist=outcome_allowlist)
+                run_context["sr"]["derived"] = sr_stats
                 run_context["sr"]["s2_ok"] = sum(
                     1 for s in syntheses_for_score if s)
                 run_context["sr"]["resolved"] = sum(
@@ -494,7 +504,7 @@ def main(argv: list[str]) -> int:
             extractions, product, syntheses=syntheses_for_score,
             prompt_version=prompt_version,
             exact_form_only=demo, ignore_population=True,
-            searched_outcomes=searched,
+            searched_outcomes=searched, sr_derived=sr_derived,
         )
         rows = show.filter_ecu_rows(rows, outcome_allowlist)
         for row in rows:

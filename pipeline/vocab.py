@@ -77,6 +77,32 @@ def unspecified_form_id(ingredient: str) -> str | None:
     return ids[0] if len(ids) == 1 else None
 
 
+def form_id_for_text(ingredient: str, text: str | None) -> str | None:
+    """
+    Free-text form ("magnesium bisglycinate") -> form id, or the unspecified id.
+
+    Deterministic label/alias matching. Exists because an SR's characteristics
+    table gives form as PROSE, where S7 gives a vocabulary id -- and a trial we
+    can only reach through a table still has to land on the right form arc.
+
+    REFUSES on ambiguity: text matching two forms returns the unspecified id,
+    not the longer match. "magnesium citrate malate" contains "magnesium
+    citrate", and silently resolving it would put a different salt's evidence on
+    the user's form arc, which is precisely the claim this product must not make.
+    """
+    if not text:
+        return unspecified_form_id(ingredient)
+    t = " ".join(str(text).lower().split())
+    hits = set()
+    for f in forms_for(ingredient):
+        if f.get("salt_family") is None:
+            continue                       # the unspecified entry is not a match
+        for name in [f["label"], f["id"].replace("_", " "), *(f.get("aliases") or [])]:
+            if str(name).lower() in t:
+                hits.add(f["id"])
+    return hits.pop() if len(hits) == 1 else unspecified_form_id(ingredient)
+
+
 def elemental_dose_mg(ingredient: str, form_vocab_id: str,
                       compound_dose_mg: float | None) -> tuple[float | None, str]:
     """

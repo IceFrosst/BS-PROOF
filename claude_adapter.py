@@ -47,9 +47,10 @@ SHARED_PROMPT = PROMPTS / "_shared.md"
 
 # Bump when you edit ANY prompt (including _shared.md). This is in the cache key.
 # Forget to bump it and you will silently serve stale extractions forever.
-# v1.5 (2026-08-07): S3 prompt shortened, no population-vocab attachment claim,
-# SR label resolve, and S2 now reports review_methods for the q_s checklist.
-PROMPT_VERSION = "v1.5"
+# v1.6 (2026-08-08): S2 reports results_table + per-study design. SR-table trials
+# now enter evidence mass, so S2's output moves scores and not just confidence.
+# v1.5 (2026-08-07): S3 prompt shortened, SR label resolve, review_methods.
+PROMPT_VERSION = "v1.6"
 
 # Tier -> model. FULL IDs, NOT ALIASES.
 #

@@ -51,6 +51,64 @@ def study_dose(ingredient: str, s7: dict | None) -> dict:
             "dose_basis": rng["basis"]}
 
 
+def sr_derived_to_studies(rec: dict, product: dict, *,
+                          bands: dict | None = None
+                          ) -> list[tuple[str, Study, dict]]:
+    """
+    One SR-table-derived trial -> (outcome_id, Study, dose) tuples.
+
+    Scored by the SAME rules as a paper we read: design x RoB x size x funding
+    x OA. The only differences are honest ones and both are already in the
+    scoring model -- oa='sr_table' (0.85) and rob_inherited (0.85), together
+    ~0.72 of the weight of the same trial read directly.
+
+    Funding is 'undisclosed' (0.80) rather than 'independent': reviews almost
+    never report per-trial funding, and absence of a disclosure is not evidence
+    of independence.
+    """
+    ingredient = product["ingredient"]
+    form_id = vocab.form_id_for_text(ingredient, rec.get("form_text"))
+    form_match = vocab.form_match(ingredient, form_id, product.get("form_vocab_id"))
+
+    dose = {"dose_low_mg": None, "dose_high_mg": None, "dose_basis": "sr_table"}
+
+    out = []
+    for entry in rec.get("outcomes") or []:
+        oid = entry.get("outcome_vocab_id")
+        if not oid or entry.get("discarded"):
+            continue
+        # The band is per OUTCOME, so it can only be looked up once we know
+        # which outcome this row is for.
+        band = (bands or {}).get(oid)
+        if band and band.get("low") is not None:
+            dose_match = dosemod.dose_match_for(
+                product.get("dose_low_mg"), product.get("dose_high_mg"), band)
+        else:
+            dose_match = "unspecified"
+        claim = entry.get("claim") or {}
+        direction = claim.get("direction")
+        magnitude = claim.get("magnitude")
+        if vocab.outcome_kind(oid) == "adverse_event" and direction == "null_effect":
+            direction, magnitude = "benefit", "trivial"
+        out.append((oid, Study(
+            id=rec["_canonical"],
+            design_rank=rec.get("design_rank") or 14,
+            n=rec.get("n"),
+            rob_items={},
+            rob_band_direct=rec.get("rob"),
+            rob_inherited=True,
+            funding="undisclosed",
+            venue_ok=True,
+            oa="sr_table",
+            form_match=form_match,
+            dose_match=dose_match,
+            pop_match="exact",
+            direction=direction,
+            magnitude=magnitude,
+        ), dose))
+    return out
+
+
 def to_studies(record: dict, extraction: dict, product: dict,
                registry: dict | None = None, *,
                ignore_population: bool = False,
@@ -138,7 +196,8 @@ def build_ecus(extractions: list[dict], product: dict, *,
                band_version: int = 0,
                exact_form_only: bool = False,
                ignore_population: bool = False,
-               searched_outcomes: list[str] | None = None) -> list[dict]:
+               searched_outcomes: list[str] | None = None,
+               sr_derived: list[dict] | None = None) -> list[dict]:
     ingredient = product["ingredient"]
     form_id = product["form_vocab_id"]
     pop = product["population"]
@@ -155,6 +214,11 @@ def build_ecus(extractions: list[dict], product: dict, *,
 
     bands = {oid: dosemod.effective_range(entries)
              for oid, entries in per_outcome.items()}
+
+    # SR-derived trials are appended AFTER the band pass on purpose: they carry
+    # no extractable dose, so letting them into effective_range would add rows
+    # with dose None and nothing else. They are scored against the band the
+    # readable trials produced.
 
     buckets: dict[str, list[tuple[Study, dict]]] = {}
     dropped_form = 0
@@ -176,6 +240,24 @@ def build_ecus(extractions: list[dict], product: dict, *,
                                 else product.get("dose_band"), outcome_id, pop["id"])
             buckets.setdefault(key, []).append(
                 (study, {"outcome_id": outcome_id, "dose": dose}))
+
+    n_sr_derived = 0
+    for rec in (sr_derived or []):
+        for outcome_id, study, dose in sr_derived_to_studies(
+                rec, product, bands=bands):
+            form_mix[study.form_match] = form_mix.get(study.form_match, 0) + 1
+            if exact_form_only and study.form_match != "exact":
+                dropped_form += 1
+                continue
+            key = vocab.ecu_key(ingredient, form_id, None if band_version == 0
+                                else product.get("dose_band"), outcome_id, pop["id"])
+            buckets.setdefault(key, []).append(
+                (study, {"outcome_id": outcome_id, "dose": dose,
+                         "sr_derived": True, "from_reviews": rec.get("from_reviews")}))
+            n_sr_derived += 1
+    if n_sr_derived:
+        print(f"  +{n_sr_derived} claims from trials reachable ONLY through "
+              f"review tables (oa=sr_table x0.85, rob_inherited x0.85)")
 
     if form_mix:
         from pipeline.scoring import FORM_FACTOR

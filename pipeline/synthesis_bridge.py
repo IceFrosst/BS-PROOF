@@ -146,6 +146,86 @@ def extract_s2_batch(
     return out
 
 
+def build_sr_derived(s2_batch: list[dict], primary_and_syn_rows: list[dict], *,
+                     call, outcome_allowlist: list[str] | None = None,
+                     max_workers: int = 6) -> tuple[list[dict], dict]:
+    """
+    Trials reachable ONLY through review tables, ready for assemble.
+
+    Invariant 6 as amended 2026-08-08: the review adds nothing, the trials it
+    describes add themselves, once each, at the sr_table tier.
+
+    Returns (records, stats). Every record carries provenance -- which reviews
+    described it -- so a score built partly on second-hand facts can be audited
+    rather than taken on trust.
+    """
+    from concurrent.futures import ThreadPoolExecutor
+    from pipeline import vocab
+
+    known = syn.known_index(primary_and_syn_rows)
+    held = {r.get("canonical_id") for r in primary_and_syn_rows
+            if not r.get("is_synthesis")}
+
+    packed = []
+    for item in s2_batch:
+        s2 = item.get("s2")
+        if not s2:
+            continue
+        rows = s2.get("included_studies") or []
+        by_row = {i: cid for i, cid in
+                  ((i, syn._resolve_one(row, known)) for i, row in enumerate(rows))
+                  if cid}
+        packed.append({"review_id": item["record"].get("canonical_id") or "?",
+                       "s2": s2, "included_ids_by_row": by_row})
+
+    merged = syn.merge_inherited(packed)
+    directions = syn.results_by_trial(packed)
+    records, stats = syn.derived_studies(merged, held_ids=held,
+                                         directions=directions)
+
+    # S6 maps the REVIEW's outcome wording into our vocabulary, exactly as it
+    # does for a paper we read ourselves. Same agent, same vocabulary, same
+    # refusal: an unmappable outcome is discarded, never nudged into a
+    # neighbouring id.
+    vocabulary = vocab.load("outcome")["outcomes"]
+    if outcome_allowlist:
+        from pipeline.showcase import restrict_outcome_vocab
+        vocabulary = restrict_outcome_vocab(vocabulary, outcome_allowlist)
+
+    jobs = [(rec, raw, res) for rec in records
+            for raw, res in (rec.get("results") or {}).items()]
+    mapped = []
+    if jobs:
+        with ThreadPoolExecutor(max_workers=min(len(jobs), max_workers)) as pool:
+            mapped = list(pool.map(
+                lambda j: (j, call("S6", {"outcome_raw": j[1], "measure": None,
+                                          "vocabulary": vocabulary})), jobs))
+
+    stats["outcome_unmapped"] = 0
+    for (rec, _raw, res), (result, _meta) in mapped:
+        vid = (result or {}).get("outcome_vocab_id")
+        if outcome_allowlist and vid and vid not in outcome_allowlist:
+            vid = None
+        if not vid:
+            stats["outcome_unmapped"] += 1
+            continue
+        rec.setdefault("outcomes", []).append({
+            "outcome_vocab_id": vid, "discarded": False,
+            "claim": {"direction": res.get("direction"),
+                      "magnitude": res.get("magnitude")},
+        })
+
+    records = [r for r in records if r.get("outcomes")]
+    stats["scorable"] = len(records)
+    print(f"  SR-derived trials: {stats['emitted']} passed the refusal rules "
+          f"of {stats['candidates']} candidates "
+          f"(held={stats['already_held']} no_design={stats['no_design']} "
+          f"no_direction={stats['no_direction']} "
+          f"conflict={stats['direction_conflict']}); "
+          f"{stats['scorable']} mapped to an outcome")
+    return records, stats
+
+
 def inherited_facts(s2_batch: list[dict], primary_and_syn_rows: list[dict]) -> dict:
     """
     {canonical_id: merged facts} across every review in the batch.
@@ -237,4 +317,4 @@ def build_syntheses_for_scoring(
         syn_rows, call=call, xml_for=xml_for,
         max_srs=max_srs, max_workers=max_workers,
     )
-    return to_score_inputs(batch, all_rows)
+    return to_score_inputs(batch, all_rows), batch, all_rows

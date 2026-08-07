@@ -53,9 +53,33 @@ Change → PR + `docs/SPEC.md`.
 
 Never infer a field you cannot see.
 
-### 6. Syntheses are data, not evidence
+### 6. A synthesis DOCUMENT adds no evidence mass — the trials it describes do
 
-Meta-analyses add no evidence mass; bounded multiplier only (ceiling 1.30).
+**Amended 2026-08-08 (founder). Supersedes "syntheses add no evidence mass."**
+
+The review is not evidence: a meta-analysis of 9 RCTs is not a 10th study, and
+30 meta-analyses of those 9 are not 30 corroborations. Both are still prevented,
+by canonical-id dedup and by `score_ecu` taking the **max** `cov` rather than a
+sum. The review's only contribution to `E′` remains the bounded multiplier,
+ceiling **1.30**.
+
+But the trials in its tables are real trials with real patients. If the table
+gives the facts S3/S4/S7 would have read off the paper, the trial is scored —
+**once**, at the `sr_table` tier: `OA_FACTOR["sr_table"]` 0.85 × `rob_inherited`
+0.85 = **0.72** of the weight of the same trial read directly.
+
+Five refusals, none optional (`synthesis.derived_studies`):
+
+| refusal | why |
+|---|---|
+| no direction → **discard** | `Study.direction` defaults to `null_effect` (−0.7). A missing result would silently become evidence *against* — the most dangerous default in the system |
+| `unclear` → **discard** | same |
+| no design → **discard** | `design_rank` spans a 250× weight range; assuming RCT because the review said it included RCTs is how a non-randomised trial gets full weight |
+| already in corpus → **discard** | we scored the real paper; a second unit is the double-count this invariant exists to stop |
+| reviews disagree on direction → **discard** | two teams read the same paper and reported different findings. This is the one fact that cannot be averaged or under-counted |
+
+S2 extracts a `results_table` for this (`PROMPT_VERSION` v1.6). A pooled estimate
+is **not** a per-study result and must never be distributed back onto the trials.
 
 ### 7. Nulls are negative
 

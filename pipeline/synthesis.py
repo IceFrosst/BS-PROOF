@@ -403,6 +403,7 @@ def merge_inherited(reviews: list[dict]) -> dict[str, dict]:
                 slot["sources"].append(rid)
             facts = {
                 "n": row.get("n"),
+                "design": row.get("design"),
                 "rob": rob_by_label.get(row.get("label")),
                 "form": row.get("form"),
                 "dose_text": row.get("dose_text"),
@@ -431,6 +432,157 @@ def merge_inherited(reviews: list[dict]) -> dict[str, dict]:
                 merged["conflicts"].append(field)
         out[cid] = merged
     return out
+
+
+# ------------------------------------------- trials we can only reach by table
+#
+# FOUNDER DECISION 2026-08-08 -- INVARIANT 6 AMENDED.
+#
+# Old: "syntheses add no evidence mass."
+# New: "a synthesis DOCUMENT adds no evidence mass. The primary trials it
+#       describes do -- once each, at the sr_table tier."
+#
+# The distinction is the whole point. A meta-analysis of 9 RCTs is not a 10th
+# study, and 30 meta-analyses of those 9 are not 30 corroborations -- both are
+# still prevented, by canonical-id dedup and by score_ecu's max-cov rule. But
+# the 9 trials are real trials with real patients, and if a review's table gives
+# us the same facts S3/S4/S7 would have read off the paper, refusing to count
+# them discards evidence for no reason other than where we read it.
+#
+# scoring.py has been ready for this since it was written and nothing ever used
+# it: OA_FACTOR["sr_table"] = 0.85 and Study.rob_inherited -> x0.85. Stacked, a
+# table-derived trial carries ~0.72 of the weight of the same trial read
+# directly. Second-hand facts, second-hand price.
+#
+# WHAT IS REFUSED, and why each refusal is not negotiable:
+#
+#   no direction      DISCARDED. Study.direction defaults to null_effect
+#                     (s = -0.7), so a missing result would silently become
+#                     evidence AGAINST. This is the single most dangerous
+#                     default in the system.
+#   'unclear'         DISCARDED, same reason.
+#   no design         DISCARDED. design_rank drives w_d across a 250x range;
+#                     assuming RCT because the review says it included RCTs is
+#                     how a non-randomised trial gets full weight.
+#   already held      DISCARDED. We scored the real paper. A second unit for the
+#                     same trial is the double-count invariant 6 exists to stop.
+#   reviews disagree  DISCARDED. Two teams read the same paper and reported
+#   on direction      different findings; picking one manufactures a result.
+_DESIGN_PATTERNS = (
+    # ORDER IS LOAD-BEARING: "randomis" is a substring of "non-randomis", so the
+    # negative case must be tested FIRST. Written the other way round it promoted
+    # every non-randomised trial from rank 5 to rank 4 (w_d 0.55 -> 1.00) and
+    # nothing downstream could have noticed. Caught by selftest, not by review.
+    (5, ("non-randomis", "non-randomiz", "nonrandomis", "nonrandomiz",
+         "quasi-experimental", "open-label trial")),
+    (4, ("randomis", "randomiz", "rct")),
+    (6, ("prospective cohort",)),
+    (7, ("retrospective cohort",)),
+    (8, ("case-control", "case control")),
+    (9, ("cross-sectional", "cross sectional")),
+)
+
+
+def design_rank_from_text(text: str | None) -> int | None:
+    """
+    Verbatim design text -> rank, or None when it does not clearly say.
+
+    Deterministic and deliberately narrow. "Non-randomised" is checked before
+    "randomised" because the second is a substring of the first -- an ordering
+    bug here would promote every non-randomised trial to rank 4 (w_d 0.55 ->
+    1.00) and nothing downstream would notice.
+    """
+    if not text:
+        return None
+    t = str(text).lower()
+    for rank, needles in _DESIGN_PATTERNS:
+        if any(n in t for n in needles):
+            return rank
+    return None
+
+
+def derived_studies(merged: dict[str, dict], *, held_ids: set[str],
+                    directions: dict[str, dict]) -> tuple[list[dict], dict]:
+    """
+    Trials known ONLY through review tables, as scorable study records.
+
+    merged     : output of merge_inherited -- facts per canonical id
+    held_ids   : canonical ids already in our corpus. These are SKIPPED.
+    directions : {canonical_id: {outcome_raw: {"direction", "magnitude"}}}
+                 built from the reviews' results_tables.
+
+    Returns (records, stats). Each record is shaped like a normalised study so
+    assemble.to_studies can consume it, plus `oa='sr_table'`, `rob_inherited`
+    and provenance. Nothing here invents a field.
+    """
+    out, stats = [], {"candidates": len(merged), "already_held": 0,
+                      "no_direction": 0, "no_design": 0, "direction_conflict": 0,
+                      "emitted": 0}
+    for cid, facts in merged.items():
+        if cid in held_ids:
+            stats["already_held"] += 1
+            continue
+        rank = design_rank_from_text(facts.get("design"))
+        if rank is None:
+            stats["no_design"] += 1
+            continue
+        per_outcome = directions.get(cid) or {}
+        usable = {k: v for k, v in per_outcome.items()
+                  if v.get("direction") in ("benefit", "null_effect", "harm")}
+        if not usable:
+            if any(v.get("_conflict") for v in per_outcome.values()):
+                stats["direction_conflict"] += 1
+            else:
+                stats["no_direction"] += 1
+            continue
+        out.append({
+            "_canonical": cid,
+            "canonical_id": cid,
+            "design_rank": rank,
+            "n": facts.get("n"),
+            "rob": facts.get("rob"),
+            "rob_inherited": True,
+            "oa": "sr_table",
+            "form_text": facts.get("form"),
+            "dose_text": facts.get("dose_text"),
+            "population_text": facts.get("population"),
+            "results": usable,
+            "from_reviews": facts.get("sources") or [],
+            "fact_conflicts": facts.get("conflicts") or [],
+        })
+        stats["emitted"] += 1
+    return out, stats
+
+
+def results_by_trial(reviews: list[dict]) -> dict[str, dict]:
+    """
+    {canonical_id: {outcome_raw: {"direction", "magnitude"}}} across all reviews.
+
+    Reviews that disagree about a trial's direction for the same outcome are
+    marked `_conflict` and yield nothing. That is a disagreement about what the
+    trial FOUND -- the one fact we cannot average, under-count or guess.
+    """
+    acc: dict[str, dict] = {}
+    for rev in reviews:
+        s2 = rev.get("s2") or {}
+        by_row = rev.get("included_ids_by_row") or {}
+        rows = s2.get("included_studies") or []
+        label_to_cid = {(rows[i].get("label") or ""): cid
+                        for i, cid in by_row.items() if i < len(rows)}
+        for res in (s2.get("results_table") or []):
+            cid = label_to_cid.get(res.get("study_label"))
+            direction = res.get("direction")
+            if not cid or direction not in ("benefit", "null_effect", "harm"):
+                continue
+            slot = acc.setdefault(cid, {}).setdefault(
+                res.get("outcome_raw") or "?", {})
+            if slot and slot.get("direction") not in (None, direction):
+                slot["_conflict"] = True
+                slot["direction"] = None
+            elif not slot.get("_conflict"):
+                slot["direction"] = direction
+                slot["magnitude"] = res.get("magnitude")
+    return acc
 
 
 def inherited_rob(s2: dict | None) -> dict[str, str]:

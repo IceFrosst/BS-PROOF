@@ -123,6 +123,13 @@ class Study:
     retracted: bool = False
     oa: str = "abstract_only"
     rob_inherited: bool = False
+    # A band taken straight from someone else's RoB table. Used INSTEAD of
+    # rob_items when set, because a review reports an overall judgement and not
+    # which six items it rested on. Synthesising six items to hit the right
+    # count would be inventing data (invariant 5) -- we know the verdict, not
+    # the working. rob_inherited must be True alongside it, so the 0.85 penalty
+    # for second-hand judgement still applies.
+    rob_band_direct: str | None = None
     form_match: str = "unspecified"
     dose_match: str = "in_band"
     # Default pessimistic: missing population match is not a free pass.
@@ -145,7 +152,8 @@ class Study:
         if self.retracted or not self.venue_ok: return 0.0
         wd = DESIGN_W.get(self.design_rank, 0.0)
         if wd == 0.0: return 0.0
-        band, _, _ = rob_band(self.rob_items)
+        band = (self.rob_band_direct if self.rob_band_direct in ROB_FACTOR
+                else rob_band(self.rob_items)[0])
         w = wd * ROB_FACTOR[band] * size_factor(self.n)
         w *= FUNDING_FACTOR.get(self.funding, 0.8)
         w *= OA_FACTOR.get(self.oa, 0.55)
