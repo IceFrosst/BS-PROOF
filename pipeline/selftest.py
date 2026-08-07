@@ -616,6 +616,30 @@ def main():
           and "http" not in donut_svg(strong).split("aria-label")[0].replace(
               "http://www.w3.org/2000/svg", ""))
 
+    print("\nSMALL-RUN PREVIEW (project, never rescale k)")
+    from pipeline import preview
+    big = score_ecu(rcts(60, oa="abstract_only", form_match="salt_family"), [])
+    small = score_ecu(rcts(6, oa="abstract_only", form_match="salt_family"), [])
+    ps = preview.project(small, 6, 60)
+    check("sample under 20 refuses to project",
+          ps["projected"] is None and "below" in ps["reason"],
+          "a 40-point error bar spans four bands; that is noise, not a preview")
+    mid = score_ecu(rcts(30, oa="abstract_only", form_match="salt_family"), [])
+    pm = preview.project(mid, 30, 60)
+    check("d is carried through unchanged, not rescaled",
+          abs(pm["d"] - big["d"]) < 1e-9,
+          "d is a weighted MEAN -- sample-size independent by construction")
+    check("projected c exceeds sample c", pm["c_projected"] > pm["c_sample"])
+    check("projection lands nearer the truth than the raw sample score",
+          abs(pm["projected"] - big["score"]) <= abs(pm["sample_score"] - big["score"]),
+          f"raw {pm['sample_score']:+d} -> projected {pm['projected']:+d} "
+          f"vs true {big['score']:+d}")
+    check("error bar shrinks with sample size",
+          preview._expected_error(5) > preview._expected_error(40) > preview._expected_error(200))
+    check("cheap evidence needs far more of it",
+          preview.studies_needed(0.023) > 10 * preview.studies_needed(0.56),
+          f"{preview.studies_needed(0.023)} vs {preview.studies_needed(0.56)} studies for c=0.9")
+
     print("\nTHREE-ARC DONUT (effect / form / dose)")
     from pipeline.donut import three_arc_svg, arc_fills
     full = {"score": 33, "band": "moderate support", "gate_fired": False,
