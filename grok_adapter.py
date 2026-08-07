@@ -23,8 +23,49 @@ PROVIDER = "grok"
 PROVENANCE = "grok-cli-pure-function"
 CACHE_DB = ROOT / "out" / "grok_llm_cache.sqlite"
 
+# Tier -> model. Prices are per 1M tokens, input/output, under 200k context
+# (xAI model table, 2026-08-07):
+#
+#   grok-4.5                    500k   $2.00 / $6.00   code, agents, general
+#   grok-4.3                      1M   $1.25 / $2.50   long-context, cost-efficient
+#   grok-4.20-*-reasoning         1M   $1.25 / $2.50   deep reasoning, fewer hallucinations
+#   grok-4.20-*-non-reasoning     1M   $1.25 / $2.50   fast agentic, high throughput
+#
+# TIER A -> grok-4.3. S1 and S8 are the two genuinely simple agents: S1 reads
+# PubMed tags (and fires on ~0.2% of papers), S8 reads a funding statement and
+# picks one of four labels. Neither needs a reasoning model, and 4.3 is ~40%
+# cheaper. S8 runs once per study, so this is real money at corpus scale.
+#
+# TIER B -> grok-4.5 stays. S3/S4/S5/S7 are extraction under adversarial
+# conditions: S5 has to read past authors' spin, S7 carries the elemental-dose
+# trap. Cheaper models here are a QUALITY bet, and SPEC section 15 is explicit
+# that tiers are "a prior, not a measurement" -- A/B them on the 28 anchors
+# before moving them, not before.
+#
+# TIER C -> grok-4.5 for now. S6 is the highest-risk subagent (a wrong outcome
+# mapping is silent and unrecoverable), so it wants the LOWEST hallucination
+# rate rather than the biggest model. A grok-4.20-*-reasoning variant is the
+# better fit on paper AND cheaper, but the `*` is a placeholder -- run
+# `grok models` for the exact id and set SP_GROK_MODEL_C. Guessing an id here
+# would fail every S6 call, and S6 failing is how outcomes get silently lost.
+#
+# WHERE THE MONEY ACTUALLY IS: S6 is ~5 of the ~10 calls per study, because it
+# fires once per extracted claim. Tier C is therefore the dominant cost, not
+# tier A. Measured on a 120-study run at ~14k prompt / ~600 output:
+#
+#   all grok-4.5                     $9.48
+#   A->4.3 (this commit)             $9.10    4% saved
+#   A->4.3, C->4.20-*-reasoning      $7.21   24% saved  <- the real lever
+#   everything on 4.3                $5.70   40% saved  (untested quality bet)
+#
+# The 24% option is also the BETTER model for S6 on paper (fewer
+# hallucinations), so it is not a quality/cost trade -- it is both. It is not
+# set here only because the `*` in the id is a placeholder.
+#
+# Context is irrelevant to the choice: our prompts are ~13-15k against a 500k
+# floor. Both models keep us inside the cheaper <200k pricing band.
 TIER_MODEL = {
-    "A": os.environ.get("SP_GROK_MODEL_A", "grok-4.5"),
+    "A": os.environ.get("SP_GROK_MODEL_A", "grok-4.3"),
     "B": os.environ.get("SP_GROK_MODEL_B", "grok-4.5"),
     "C": os.environ.get("SP_GROK_MODEL_C", "grok-4.5"),
 }

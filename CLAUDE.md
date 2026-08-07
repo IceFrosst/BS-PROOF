@@ -168,6 +168,21 @@ Retrieval uses `search_terms` from `vocab/outcome.json` — BROAD, deliberately
 different from `includes`, which is precise because S6 maps into it. Searching
 the precise phrases returned **0** trials for sleep_onset.
 
+### Grok model tiers
+
+| tier | agents | model | why |
+|---|---|---|---|
+| A | S1, S8 | `grok-4.3` | simple classification; ~40% cheaper |
+| B | S2, S3, S4, S5, S7 | `grok-4.5` | extraction under adversarial conditions |
+| C | S6 | `grok-4.5` | highest-risk agent; wants fewest hallucinations |
+
+Override with `SP_GROK_MODEL_A/B/C`. **S6 is ~5 of the ~10 calls per study**, so
+tier C is the dominant cost — moving it to a `grok-4.20-*-reasoning` variant
+saves ~24% *and* is the better model for it. Run `grok models` for the exact id.
+
+Do not move tier B on cost alone: SPEC §15 says tiers are "a prior, not a
+measurement" — A/B them on the 28 anchors first.
+
 ## Reports archive
 
 `reports/runs/` holds runs from the CURRENT `scoring.SCORING_MODEL` only;
