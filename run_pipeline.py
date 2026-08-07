@@ -4,7 +4,11 @@ End-to-end v1 run.
 
   python run_pipeline.py magnesium --form magnesium_glycinate --grok --limit 20
 
+Scores the FULL available corpus by default. `--limit N` opts into a sample,
+and a sampled run prints a projection saying so (pipeline/preview.py).
+
 Flags: --with-sr --demo --full-text-only --all-oa --broad-scope
+       --limit N        cap the studies extracted (default: no cap)
        --all-outcomes   (score full vocab; default is showcase top-5 by RCT count)
        --top-outcomes N (default 5)
 
@@ -232,7 +236,11 @@ def main(argv: list[str]) -> int:
         i = args.index("--dose")
         dose_mg = float(args[i + 1]); del args[i:i + 2]
 
-    limit = DEFAULT_GROK_LIMIT if grok else DEFAULT_PILOT_LIMIT
+    # Founder 2026-08-08: score the WHOLE available corpus by default. A capped
+    # run is a SAMPLE, and its score is not the full-corpus score -- c grows with
+    # n by construction (pipeline/preview.py). We want one supplement scored
+    # properly before we optimise anything, so the cap is now opt-IN.
+    limit = None
     if "--limit" in args:
         i = args.index("--limit")
         limit = int(args[i + 1]); del args[i:i + 2]
@@ -305,7 +313,9 @@ def main(argv: list[str]) -> int:
     with Store(db) as store:
         counts = store.counts()
         need_retrieve = counts["studies"] == 0 or (
-            grok and counts["studies"] < min(limit + 50, RETRIEVE_MAX_PRIMARIES)
+            # limit=None means score everything, so retrieve up to the cap.
+            grok and counts["studies"] < (RETRIEVE_MAX_PRIMARIES if limit is None
+                                          else min(limit + 50, RETRIEVE_MAX_PRIMARIES))
         )
         if need_retrieve:
             print(f"retrieving / expanding corpus in {db.name} "
@@ -377,13 +387,14 @@ def main(argv: list[str]) -> int:
                 if not primaries:
                     print("No RCTs left after relevance / OA filters.")
                     return 1
-                effective = min(limit, len(primaries))
+                effective = len(primaries) if limit is None else min(limit, len(primaries))
                 print("\n" + "-" * 68)
                 print("GROK MODE")
                 print(f"  scope: {scope}")
                 print(f"  studies in flight: {GROK_STUDIES_IN_FLIGHT}")
                 print(f"  concurrent grok CLI: {ga.MAX_CONCURRENCY}")
-                print(f"  batch size (extract): {effective}")
+                print(f"  batch size (extract): {effective}"
+                      + ("  (FULL corpus)" if limit is None else ""))
                 if outcome_allowlist:
                     print(f"  showcase top-{len(outcome_allowlist)} by RCT count: "
                           + ", ".join(outcome_allowlist))
@@ -394,7 +405,9 @@ def main(argv: list[str]) -> int:
                 prompt_version = f"{ga.PROMPT_VERSION}+{ga.PROVENANCE}"
                 tag = "GROK "
                 in_flight = GROK_STUDIES_IN_FLIGHT
-                limit = effective
+                # Do NOT collapse limit to a number here: None is what tells
+                # the run (and the report) that this was the FULL corpus and
+                # not a sample, which changes how the score may be read.
                 run_context["concurrency"] = ga.MAX_CONCURRENCY
                 run_context["studies_in_flight"] = in_flight
             else:
@@ -409,7 +422,18 @@ def main(argv: list[str]) -> int:
                 run_context["concurrency"] = 4
                 run_context["studies_in_flight"] = in_flight
 
-            targets = primaries[:limit]
+            targets = primaries if limit is None else primaries[:limit]
+            # Say what this will cost BEFORE spending it. ~10 model calls per
+            # study, and about half are S6, which fires once per extracted claim.
+            _calls = len(targets) * 10
+            print(f"\n  EXTRACTING {len(targets)} studies"
+                  + ("  (FULL corpus — no --limit)" if limit is None
+                     else f" of {len(primaries)} available  (--limit {limit})")
+                  + f"\n  ~{_calls} model calls at ~10/study; "
+                    f"S6 is about half of them (once per claim).")
+            if limit is None and len(targets) > 200:
+                print(f"  NOTE: {len(targets)} studies is a large run. "
+                      f"Cap it with --limit N if this is a smoke test.")
             run_context["studies_targeted"] = len(targets)
             print(f"extracting {len(targets)} studies "
                   f"(from {len(primaries)} relevance-filtered RCTs)...")
