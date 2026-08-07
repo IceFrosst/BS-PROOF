@@ -11,6 +11,8 @@ sweeps `runs/` whenever `scoring.SCORING_MODEL` changes.
 
 | When (UTC) | Mode | Ingredient | Form | Selftest | File |
 |---|---|---|---|---|---|
+| 2026-08-07 16:44 UTC | grok-sr-ft-per_o | `creatine` | `creatine_monohydrate` | summary | [runs/20260807_164410_creatine_creatine-monohydrate_grok-sr-ft-per-o_summary.md](runs/20260807_164410_creatine_creatine-monohydrate_grok-sr-ft-per-o_summary.md) |
+| 2026-08-07 16:44 UTC | grok-sr-ft-per_o | `creatine` | `creatine_monohydrate` | full | [runs/20260807_164410_creatine_creatine-monohydrate_grok-sr-ft-per-o_full.md](runs/20260807_164410_creatine_creatine-monohydrate_grok-sr-ft-per-o_full.md) |
 | 2026-08-07 15:41 UTC | grok-sr-ft-per_o | `magnesium` | `magnesium_glycinate` | summary | [runs/20260807_154144_magnesium_magnesium-glycinate_grok-sr-ft-per-o_summary.md](runs/20260807_154144_magnesium_magnesium-glycinate_grok-sr-ft-per-o_summary.md) |
 | 2026-08-07 15:41 UTC | grok-sr-ft-per_o | `magnesium` | `magnesium_glycinate` | full | [runs/20260807_154144_magnesium_magnesium-glycinate_grok-sr-ft-per-o_full.md](runs/20260807_154144_magnesium_magnesium-glycinate_grok-sr-ft-per-o_full.md) |
 | 2026-08-07 14:59 UTC | grok-sr-ft-inter | `magnesium` | `magnesium_glycinate` | summary | [runs/20260807_145913_magnesium_magnesium-glycinate_grok-sr-ft-inter_summary.md](runs/20260807_145913_magnesium_magnesium-glycinate_grok-sr-ft-inter_summary.md) |
