@@ -392,7 +392,30 @@ def git_push_reports() -> int:
             ["git", "-C", str(ROOT), "commit", "-m", f"Auto-report {_now()}"],
             check=True,
         )
-        subprocess.run(["git", "-C", str(ROOT), "push"], check=True)
+        # Two agents share this repo, so the remote has almost certainly moved
+        # since this run started. Rebase before pushing rather than failing --
+        # the 14:59 run committed a report, was rejected, and the reports sat
+        # unpushed until someone noticed.
+        #
+        # --autostash because a Windows checkout carries line-ending churn that
+        # would otherwise block the rebase. Report commits never conflict with
+        # code: they only add files under reports/.
+        pull = subprocess.run(
+            ["git", "-C", str(ROOT), "pull", "--rebase", "--autostash"],
+            capture_output=True, text=True)
+        if pull.returncode != 0:
+            # Do NOT retry destructively. Leave the commit local and say so.
+            print("Pull --rebase failed; reports are committed locally but NOT pushed.")
+            print((pull.stderr or pull.stdout or "")[-400:])
+            print("Resolve by hand, then: git push")
+            return 1
+
+        push = subprocess.run(["git", "-C", str(ROOT), "push"],
+                              capture_output=True, text=True)
+        if push.returncode != 0:
+            print("Push failed after a successful rebase — reports are local only.")
+            print((push.stderr or push.stdout or "")[-400:])
+            return 1
         print("Pushed reports/ to GitHub.")
         return 0
     except subprocess.CalledProcessError as e:

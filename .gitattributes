@@ -1,0 +1,18 @@
+# Normalise line endings in the repo.
+#
+# This repo is worked on from WSL (LF) and Windows (CRLF) at the same time. With
+# no policy, a Windows checkout rewrites every line of every file and each commit
+# from that side arrives as a 98-file, 17000-line diff that buries the actual
+# change. Measured 2026-08-07 on a report commit that touched 6 files.
+#
+# text=auto: store LF in git, check out native. Nothing changes for readers;
+# it stops the churn at commit time.
+* text=auto
+
+# Binary / generated — never touch these.
+*.sqlite  binary
+*.png     binary
+*.jpg     binary
+*.pdf     binary
+*.xml     text eol=lf
+*.excalidraw text eol=lf
