@@ -1,8 +1,1 @@
-# Predatory / questionable publishers — research-layer flag list
-# Human reference: https://www.predatoryjournals.org/the-list/publishers
-#
-# This file is auto-filled on first pipeline run (or run):
-#   python scripts/refresh_predatory_list.py
-# Machine source: open Beall-derived publisher CSV (Google Sites page is not scrapable).
-# One publisher name per line after refresh (~1100 entries).
-#
+# PLACEHOLDER_WILL_REPLACE
