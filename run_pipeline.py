@@ -177,12 +177,19 @@ def main(argv: list[str]) -> int:
     demo = "--demo" in args
     if demo:
         args.remove("--demo")
+    # Full-text-only. Default ON for the pilot/grok demo backends: an
+    # abstract-only study carries OA_FACTOR 0.55 AND cannot verify most RoB
+    # items, so it lands near w=0.02 and needs ~300 of its kind to reach c=0.9.
+    # A full-text study needs ~50. Extracting them is the same token cost, so
+    # spending the budget on readable papers is strictly better value.
+    full_text_only = grok or pilot
+    if "--all-oa" in args:
+        args.remove("--all-oa"); full_text_only = False
+    if "--full-text-only" in args:
+        args.remove("--full-text-only"); full_text_only = True
     with_sr = "--with-sr" in args
     if with_sr:
         args.remove("--with-sr")
-    full_text_only = "--full-text-only" in args
-    if full_text_only:
-        args.remove("--full-text-only")
     if sum([wiring, pilot, grok]) > 1:
         print("Pick only one of --wiring, --pilot, --grok")
         return 1
