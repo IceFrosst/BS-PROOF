@@ -23,49 +23,20 @@ PROVIDER = "grok"
 PROVENANCE = "grok-cli-pure-function"
 CACHE_DB = ROOT / "out" / "grok_llm_cache.sqlite"
 
-# Tier -> model. Prices are per 1M tokens, input/output, under 200k context
-# (xAI model table, 2026-08-07):
+# Tier -> model.
 #
-#   grok-4.5                    500k   $2.00 / $6.00   code, agents, general
-#   grok-4.3                      1M   $1.25 / $2.50   long-context, cost-efficient
-#   grok-4.20-*-reasoning         1M   $1.25 / $2.50   deep reasoning, fewer hallucinations
-#   grok-4.20-*-non-reasoning     1M   $1.25 / $2.50   fast agentic, high throughput
+# CRITICAL (2026-08-07 creatine run): SP_GROK_MODEL_A was "grok-4.3".
+# The CLI rejected every S8 call with:
+#   Couldn't set model 'grok-4.3': Invalid params: "unknow...
+# That made S8 0/80 OK and every study "partial fail", even though S3–S7 were fine.
+# Default A to grok-4.5 (known-good on this CLI) until `grok models` confirms
+# a cheaper valid id. Override with SP_GROK_MODEL_A after you verify.
 #
-# TIER A -> grok-4.3. S1 and S8 are the two genuinely simple agents: S1 reads
-# PubMed tags (and fires on ~0.2% of papers), S8 reads a funding statement and
-# picks one of four labels. Neither needs a reasoning model, and 4.3 is ~40%
-# cheaper. S8 runs once per study, so this is real money at corpus scale.
-#
-# TIER B -> grok-4.5 stays. S3/S4/S5/S7 are extraction under adversarial
-# conditions: S5 has to read past authors' spin, S7 carries the elemental-dose
-# trap. Cheaper models here are a QUALITY bet, and SPEC section 15 is explicit
-# that tiers are "a prior, not a measurement" -- A/B them on the 28 anchors
-# before moving them, not before.
-#
-# TIER C -> grok-4.5 for now. S6 is the highest-risk subagent (a wrong outcome
-# mapping is silent and unrecoverable), so it wants the LOWEST hallucination
-# rate rather than the biggest model. A grok-4.20-*-reasoning variant is the
-# better fit on paper AND cheaper, but the `*` is a placeholder -- run
-# `grok models` for the exact id and set SP_GROK_MODEL_C. Guessing an id here
-# would fail every S6 call, and S6 failing is how outcomes get silently lost.
-#
-# WHERE THE MONEY ACTUALLY IS: S6 is ~5 of the ~10 calls per study, because it
-# fires once per extracted claim. Tier C is therefore the dominant cost, not
-# tier A. Measured on a 120-study run at ~14k prompt / ~600 output:
-#
-#   all grok-4.5                     $9.48
-#   A->4.3 (this commit)             $9.10    4% saved
-#   A->4.3, C->4.20-*-reasoning      $7.21   24% saved  <- the real lever
-#   everything on 4.3                $5.70   40% saved  (untested quality bet)
-#
-# The 24% option is also the BETTER model for S6 on paper (fewer
-# hallucinations), so it is not a quality/cost trade -- it is both. It is not
-# set here only because the `*` in the id is a placeholder.
-#
-# Context is irrelevant to the choice: our prompts are ~13-15k against a 500k
-# floor. Both models keep us inside the cheaper <200k pricing band.
+# TIER A (S1, S8): simple classifiers — cheaper model OK once validated.
+# TIER B (S2–S5, S7): extraction under spin / dose traps — keep quality.
+# TIER C (S6): highest-risk silent-failure agent — lowest hallucination rate.
 TIER_MODEL = {
-    "A": os.environ.get("SP_GROK_MODEL_A", "grok-4.3"),
+    "A": os.environ.get("SP_GROK_MODEL_A", "grok-4.5"),
     "B": os.environ.get("SP_GROK_MODEL_B", "grok-4.5"),
     "C": os.environ.get("SP_GROK_MODEL_C", "grok-4.5"),
 }
@@ -204,33 +175,14 @@ def _run_variants(grok_bin: str, system: str, user: str, model: str,
                   timeout: int) -> tuple[int, str, str, list[str]]:
     cwd = Path(tempfile.mkdtemp(prefix="bsproof-grok-"))
     full_prompt = system.rstrip() + "\n\n---\n\n" + user
-    # Written for debugging only -- it is NOT passed to the CLI. Keeping it
-    # means a failed call can be reproduced by hand from the exact prompt sent.
     (cwd / "prompt.txt").write_text(full_prompt, encoding="utf-8")
-    # Flags below are the DOCUMENTED headless interface (docs.x.ai/build/cli).
-    # `-p "<prompt>"` is the only documented way to pass a prompt: there is no
-    # --prompt-file and no `-p @file`. Both were invented here, so every call
-    # fell through to the third variant, which truncated the prompt to 6000
-    # characters. That single self-inflicted cap explains the entire S3 failure
-    # pattern:
-    #
-    #   agent   system prompt   room left for schema + study text
-    #   S8            3311                                   2689   0 failures
-    #   S4            3678                                   2322   0 failures
-    #   S7            3413                                   2587   1 failure
-    #   S3            5015                                    985   12 failures
-    #
-    # At 985 characters S3's SCHEMA was being cut and no study text survived at
-    # all, which is exactly what Grok reported back: "the schema and study input
-    # look truncated". Nothing about S3 was special except its longer prompt.
-    #
-    # The real ceiling is the OS command line (~32k on Windows), and
-    # workers.PROMPT_BUDGET_CHARS keeps us at 14k, well under it.
+    # Documented headless interface only: -p "<prompt>", no invented --prompt-file.
+    # workers.PROMPT_BUDGET_CHARS keeps total ~14k under OS command-line limits.
     _pure = [
         "--output-format", "json",
         "--max-turns", "1",
         "--no-memory", "--no-subagents", "--no-plan",
-        "--disable-web-search",   # a pure function does not browse
+        "--disable-web-search",
         "-m", model,
         "--cwd", str(cwd),
     ]
@@ -331,6 +283,13 @@ def preflight() -> bool:
     print(f"  concurrency={MAX_CONCURRENCY}  timeout={CALL_TIMEOUT_S}s")
     for t in ("A", "B", "C"):
         print(f"  tier {t}: {TIER_MODEL[t]}")
+    # Catch the exact failure mode of the 2026-08-07 creatine run early.
+    if any(m in ("grok-4.3", "grok-4.20-*-reasoning", "grok-4.20-*-non-reasoning")
+           for m in TIER_MODEL.values()):
+        print("BLOCKED: a tier still uses an invalid/placeholder model id.")
+        print("  Run `grok models` and set SP_GROK_MODEL_A/B/C to a real id.")
+        print("  Default is grok-4.5 for all tiers until cheaper ids are verified.")
+        return False
     grok_bin = _which_grok()
     if not grok_bin:
         print("BLOCKED: grok not on PATH"); return False
