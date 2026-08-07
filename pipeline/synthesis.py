@@ -501,6 +501,50 @@ def design_rank_from_text(text: str | None) -> int | None:
     return None
 
 
+# A ratio is null at 1, a difference is null at 0. Getting this backwards turns
+# every "RR 1.02 (0.88-1.18)" into a benefit.
+_RATIO_MEASURES = ("rr", "or", "hr", "risk ratio", "odds ratio", "hazard ratio",
+                   "relative risk", "irr", "rate ratio")
+_CI = re.compile(
+    r"(-?\d+(?:\.\d+)?)\s*(?:to|,|;|–|—|-)\s*(-?\d+(?:\.\d+)?)\s*\)?\s*$")
+_CI_ANY = re.compile(
+    r"(?:95\s*%?\s*ci|confidence interval)\s*[:=]?\s*[\[\(]?\s*"
+    r"(-?\d+(?:\.\d+)?)\s*(?:to|,|;|–|—)\s*(-?\d+(?:\.\d+)?)", re.I)
+
+
+def direction_from_effect_text(text: str | None) -> str | None:
+    """
+    "MD -0.30 (95% CI -1.10 to 0.50)" -> "null_effect". Otherwise None.
+
+    RECOVERS ONE HALF OF A REAL GAP. A review often gives a trial's effect
+    estimate without ever saying in words whether it worked, and S2 is forbidden
+    to judge. But "the confidence interval spans the null" is arithmetic, not
+    judgement, so the deterministic layer can answer it -- and a null IS a
+    result (invariant 7: s = -0.7), so recovering it recovers real evidence.
+
+    THE OTHER HALF STAYS UNANSWERED ON PURPOSE. When the interval excludes the
+    null, the SIGN tells you benefit vs harm only if you know which way is good
+    for that outcome -- lower is better for sleep_onset, higher for
+    muscle_strength. `vocab/outcome.json` records no polarity, so this returns
+    None rather than guessing, and the trial is discarded. Add `polarity` to the
+    outcome vocabulary and the other half opens up. See docs/SPEC.md 13.
+    """
+    if not text:
+        return None
+    t = " ".join(str(text).split())
+    m = _CI_ANY.search(t) or _CI.search(t)
+    if not m:
+        return None
+    try:
+        lo, hi = float(m.group(1)), float(m.group(2))
+    except (TypeError, ValueError):
+        return None
+    if lo > hi:
+        lo, hi = hi, lo
+    null_value = 1.0 if any(k in t.lower() for k in _RATIO_MEASURES) else 0.0
+    return "null_effect" if lo <= null_value <= hi else None
+
+
 def derived_studies(merged: dict[str, dict], *, held_ids: set[str],
                     directions: dict[str, dict]) -> tuple[list[dict], dict]:
     """
@@ -572,6 +616,11 @@ def results_by_trial(reviews: list[dict]) -> dict[str, dict]:
         for res in (s2.get("results_table") or []):
             cid = label_to_cid.get(res.get("study_label"))
             direction = res.get("direction")
+            if direction not in ("benefit", "null_effect", "harm"):
+                # S2 could not read a verdict in words. If it copied an effect
+                # estimate, a CI spanning the null is still a real finding, and
+                # arithmetic may answer what prose did not.
+                direction = direction_from_effect_text(res.get("effect_text"))
             if not cid or direction not in ("benefit", "null_effect", "harm"):
                 continue
             slot = acc.setdefault(cid, {}).setdefault(

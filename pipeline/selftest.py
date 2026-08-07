@@ -849,6 +849,24 @@ def main():
           r2t["t1"]["PSQI"]["_conflict"] and r2t["t1"]["PSQI"]["direction"] is None,
           "picking one would manufacture a result for a trial nobody can check")
 
+    # A review often gives a trial's numbers without ever saying in words
+    # whether it worked. "The CI spans the null" is arithmetic, not judgement.
+    check("a CI spanning zero is a NULL RESULT, recovered from the numbers",
+          syn.direction_from_effect_text("MD -0.30 (95% CI -1.10 to 0.50)")
+          == "null_effect")
+    check("a ratio is null at 1, not at 0",
+          syn.direction_from_effect_text("RR 1.02 (95% CI 0.88 to 1.18)")
+          == "null_effect"
+          and syn.direction_from_effect_text("RR 1.60 (95% CI 1.20 to 2.10)") is None,
+          "reading a ratio against 0 makes every RR a benefit")
+    check("a CI excluding the null returns None, NOT a guessed sign",
+          syn.direction_from_effect_text("MD -1.40 (95% CI -2.20 to -0.60)") is None,
+          "lower is better for sleep_onset and worse for muscle_strength; "
+          "vocab/outcome.json records no polarity, so the sign is unknowable")
+    check("no numbers -> no invented direction",
+          syn.direction_from_effect_text("favoured the intervention") is None
+          and syn.direction_from_effect_text(None) is None)
+
     check("free-text form resolves to the right arc",
           vocab.form_id_for_text("magnesium", "magnesium bisglycinate 400mg")
           == "magnesium_glycinate"
