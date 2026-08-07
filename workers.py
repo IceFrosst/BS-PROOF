@@ -4,6 +4,7 @@ Per-study workers. This file MAY call a model; `pipeline/` may not.
 from __future__ import annotations
 
 import time
+import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import claude_adapter
@@ -13,11 +14,47 @@ from pipeline.relevance import relevance_check
 PER_STUDY = ("S3", "S4", "S5", "S7", "S8")
 MIN_TEXT_CHARS = 200
 
+# Total prompt budget per call: system + schema + payload.
+#
+# Measured 2026-08-07 against the Grok CLI. Failures track TOTAL PROMPT SIZE and
+# nothing else:
+#     S8 12.8k -> 0 fails      S4 13.4k -> 0 fails
+#     S5 14.8k -> 0 fails      S7 15.5k -> 1 fail (a timeout)
+#     S3 18.1k -> 12 fails, all "the schema and study input look truncated"
+# The wall sits near 16k, so the fix is to keep every call under it rather than
+# to bound one agent's output (which is what v1.4 tried, and it did not help --
+# the truncation was on the INPUT).
+PROMPT_BUDGET_CHARS = int(os.environ.get("SP_PROMPT_BUDGET", "14000"))
+
+
+def _fit_text(agent: str, text: str, fixed_chars: int) -> str:
+    """
+    Trim the study text so system + schema + payload stays under budget.
+
+    Trimming the TEXT is the right lever: the schema and the instructions are
+    load-bearing, and a truncated schema produces a malformed extraction rather
+    than a shorter one. Methods and results lead the text, so the head is the
+    part worth keeping.
+    """
+    room = PROMPT_BUDGET_CHARS - fixed_chars
+    if room <= 0 or len(text) <= room:
+        return text
+    return text[:room]
+
 
 def _payload(agent: str, record: dict, text: str, registry: dict | None) -> dict:
-    base = {"title": record.get("title"), "text": text}
+    from claude_adapter import SCHEMAS, _system_prompt
+    _, _schema_f, _prompt_f = claude_adapter.AGENTS[agent]
+    # +400 for JSON scaffolding and the fixed keys around the text.
+    _fixed = (len(_system_prompt(_prompt_f))
+              + len((SCHEMAS / _schema_f).read_text()) + 400)
+    base = {"title": record.get("title"), "text": _fit_text(agent, text, _fixed)}
     if agent == "S3":
-        return {**base, "population_vocabulary": vocab.load("population")["axes"]}
+        # The population vocabulary is deliberately NOT sent. S3's prompt already
+        # lists all four axes and every allowed value verbatim, so shipping the
+        # JSON duplicated ~1.9k characters and pushed the one agent with the
+        # longest prompt over the CLI's input wall.
+        return base
     if agent == "S4":
         return {**base,
                 "registry_item3_prospective": (registry or {}).get("item3_prospective"),
@@ -73,19 +110,28 @@ def extract_study(record: dict, text: str, registry: dict | None = None, *,
                 out.setdefault("_failed", []).append(
                     {"agent": agent, "error": meta.get("error")})
 
-    out["outcomes"] = []
+    # S6 runs after S5 because it consumes S5's raw outcome strings, but the
+    # claims are independent of each other -- they were being fired one at a
+    # time, so a study reporting 8 outcomes serialised 8 round trips and became
+    # the slowest thing in the batch. Fan them out.
     claims = ((out.get("S5") or {}).get("claims")) or []
-    for claim in claims:
-        mapped, _ = call("S6", {"outcome_raw": claim.get("outcome_raw"),
-                                "measure": claim.get("measure"),
-                                "vocabulary": vocab.load("outcome")["outcomes"]})
-        vocab_id = (mapped or {}).get("outcome_vocab_id")
-        out["outcomes"].append({
-            "claim": claim,
-            "outcome_vocab_id": vocab_id,
-            "discarded": vocab_id is None,
-            "rationale": (mapped or {}).get("rationale"),
-        })
+    out["outcomes"] = []
+    if claims:
+        vocabulary = vocab.load("outcome")["outcomes"]
+        with ThreadPoolExecutor(max_workers=min(len(claims), 6)) as pool:
+            mapped = list(pool.map(
+                lambda cl: (cl, call("S6", {"outcome_raw": cl.get("outcome_raw"),
+                                            "measure": cl.get("measure"),
+                                            "vocabulary": vocabulary})),
+                claims))
+        for claim, (result, _meta) in mapped:
+            vid = (result or {}).get("outcome_vocab_id")
+            out["outcomes"].append({
+                "claim": claim,
+                "outcome_vocab_id": vid,
+                "discarded": vid is None,
+                "rationale": (result or {}).get("rationale"),
+            })
     return out
 
 
