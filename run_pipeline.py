@@ -430,10 +430,16 @@ def main(argv: list[str]) -> int:
         for row in rows:
             store.upsert_ecu(row)
 
+        # The report renders every arc and derives its verdict label from c, so
+        # both must travel with the row. Projecting them away made every arc read
+        # "not tested" and every verdict "does not work" -- including for ECUs
+        # that were simply barely studied. Keep this in sync with the report.
         run_context["ecu_rows"] = [{
             "outcome_vocab_id": r["outcome_vocab_id"],
             "score": r["score"],
             "composite": r.get("composite"),
+            "arcs": r.get("arcs"),
+            "components": r.get("components"),
             "band": r["band"],
             "n_primaries": r["evidence"]["n_primaries"],
             "prompt_version": prompt_version,

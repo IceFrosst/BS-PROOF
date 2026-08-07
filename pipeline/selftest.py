@@ -1,5 +1,5 @@
 """Zero-model regression test for the deterministic layer. python -m pipeline.selftest"""
-import sys, os
+import sys, os, pathlib
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from pipeline.scoring import Study, score_ecu, band_for
 from pipeline.dedup import dedup, canonical_id, registry_id
@@ -742,6 +742,24 @@ def main():
           works["signed"] is not None and nulls["signed"] < 0,
           "bands and the anchor set depend on it; only the DISPLAY is 0-100")
     check("four rings render", four_arc_svg(works).count("<circle") == 12)
+
+    check("a row missing c cannot claim a verdict",
+          A.label(16, None) == "confidence unknown",
+          "a Grok report rendered 16/100 as 'does not work' because the "
+          "projection dropped components; silence must not become a verdict")
+
+    # Guard the plumbing itself: whatever the runner hands the report must carry
+    # everything the report renders from.
+    import re as _re
+    _rp = (pathlib.Path(__file__).parent.parent / "run_pipeline.py").read_text()
+    _proj = _rp[_rp.index('run_context["ecu_rows"]'):]
+    _proj = _proj[:_proj.index("} for r in rows]")]
+    _have = set(_re.findall(r'"(\w+)":', _proj))
+    _need = {"outcome_vocab_id", "composite", "arcs", "components", "band",
+             "n_primaries"}
+    _missing = sorted(_need - _have)
+    check("runner projects every field the report renders", not _missing,
+          f"missing: {_missing}" if _missing else f"{len(_need)} fields present")
 
     print("\nTHREE-ARC DONUT (effect / form / dose)")
     from pipeline.donut import three_arc_svg, arc_fills, TRACK

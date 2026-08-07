@@ -132,7 +132,11 @@ def label(composite_score: int | None, c: float | None) -> str:
     """
     if composite_score is None:
         return "not enough human evidence"
-    if c is not None and c < 0.15:
+    if c is None:
+        # Confidence missing means the caller lost it in transit, not that the
+        # evidence is strong. Never upgrade that silence into a verdict.
+        return "confidence unknown"
+    if c < 0.15:
         return "barely studied"
     if composite_score >= 70:
         return "works"
