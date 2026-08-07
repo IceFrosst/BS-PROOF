@@ -1,3 +1,25 @@
+## Layout
+
+```
+runs/              runs from the CURRENT scoring model only
+archive/<model>/   runs from an earlier model — readable, never deleted
+INDEX.md           both, listed separately
+latest*.md         regenerated pointers to the newest run
+```
+
+Every report carries a machine-readable `scoring_model:` line. When
+`scoring.SCORING_MODEL` changes, run:
+
+```bash
+python3 scripts/archive_reports.py --apply
+```
+
+**Never compare numbers across models.** The same corpus scores +30 under
+`v1-transfer-in-weight` and 46/100 under `v2-four-arc` — the formula moved,
+not the evidence.
+
+---
+
 # Reports — all test runs on GitHub
 
 ```text

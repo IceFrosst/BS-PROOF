@@ -29,6 +29,8 @@ sys.path.insert(0, str(ROOT))
 
 REPORTS = ROOT / "reports"
 RUNS = REPORTS / "runs"
+from pipeline.scoring import SCORING_MODEL as _SCORING_MODEL
+
 OUT = ROOT / "out"
 
 
@@ -304,6 +306,7 @@ def write_report(ingredient: str, form: str, mode: str,
     summary_parts = [
         f"# BS-PROOF summary report ({mode})\n",
         f"Generated: **{_now()}**\n",
+        f"\nscoring_model: {_SCORING_MODEL}\n",
         f"Ingredient: `{ingredient}` · Form: `{form}` · Mode: **{mode}**\n",
         "Auto-written after every extraction (no extra steps).\n",
         "Full audit: matching `*_full.md` in `reports/runs/`.\n",
@@ -317,6 +320,7 @@ def write_report(ingredient: str, form: str, mode: str,
     full_parts = [
         f"# BS-PROOF full audit report ({mode})\n",
         f"Generated: **{_now()}**\n",
+        f"\nscoring_model: {_SCORING_MODEL}\n",
         f"Ingredient: `{ingredient}` · Form: `{form}` · Mode: **{mode}**\n",
         "Auto-written with the summary after every extraction.\n",
         _formula(),

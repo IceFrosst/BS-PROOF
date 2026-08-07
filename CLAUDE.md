@@ -151,6 +151,12 @@ python3 scripts/write_demo_report.py --wiring --ingredient creatine --form creat
 
 ## Reports archive
 
+`reports/runs/` holds runs from the CURRENT `scoring.SCORING_MODEL` only;
+`reports/archive/<model>/` holds earlier ones. Every report is stamped with a
+`scoring_model:` line. After changing the scoring model, run
+`python3 scripts/archive_reports.py --apply` — comparing runs across models is
+reading a formula change as an evidence change.
+
 Every human-facing demo goes under `reports/runs/` + `INDEX.md` + `latest.md`.
 Commit and push. Never overwrite an old run file. Label provider in the report.
 

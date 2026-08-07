@@ -65,6 +65,29 @@ APPLY_POP_IN_WEIGHT = False
 APPLY_DOSE_IN_WEIGHT = False
 
 
+# The scoring MODEL, not the code version. Bump this whenever a change makes
+# today's numbers incomparable with yesterday's -- a factor entering or leaving
+# w_study, the composite formula, the arc definitions.
+#
+# Reports are filed under it. Two runs carrying different SCORING_MODEL values
+# must never be read side by side as if the numbers meant the same thing, and
+# scripts/archive_reports.py enforces that by sweeping old-model runs out of
+# reports/runs/ into reports/archive/<model>/.
+SCORING_MODEL = "v2-four-arc"
+
+# What each model meant, so an archived report can still be understood:
+SCORING_MODEL_HISTORY = {
+    "v1-transfer-in-weight":
+        "signed -100..100 only. form x dose x population multiplied into "
+        "w_study. No arcs. Superseded 2026-08-07.",
+    "v2-four-arc":
+        "w_study = design x RoB x size x funding x OA (quality only). Form, "
+        "dose and population are ARCS, each carrying a verdict and its "
+        "coverage. Displayed number is 0-100 = 100 x c x mean(effect, form, "
+        "dose); the signed score is retained internally.",
+}
+
+
 def band_for(score: int) -> str:
     """SPEC §9 bands, inclusive on both ends of each range."""
     if score >= 70:  return "strong support"
