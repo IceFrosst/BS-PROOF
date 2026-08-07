@@ -5,11 +5,15 @@ End-to-end v1 run.
   python run_pipeline.py magnesium --form magnesium_glycinate --grok --limit 20
 
 Flags: --with-sr --demo --full-text-only --all-oa --broad-scope
-Predatory list: vocab/predatory_journals.txt (auto-expanded after git pull)
+       --all-outcomes   (score full vocab; default is showcase top-5)
+       --top-outcomes N (default 5)
 
 Default demo scope is **intervention**: ingredient in TITLE/ABSTRACT as the
 thing being tested (not a whole-record keyword match). Relevance gate also
 skips IV/surgical noise before any agent spend.
+
+Default showcase: only the top-5 product outcomes are mapped by S6 and shown
+in the report (muscle strength etc. for creatine — not 30 biomarkers).
 """
 from __future__ import annotations
 import os
@@ -17,6 +21,7 @@ import sys
 
 from pipeline import vocab
 from pipeline import predatory as pred
+from pipeline import showcase as show
 from pipeline.assemble import build_ecus
 from pipeline import arcs as arcsmod
 from pipeline.donut import four_arc_lines
@@ -29,6 +34,7 @@ WIRING_DB = DEFAULT_DB.parent / "wiring_demo.sqlite"
 DEFAULT_PILOT_LIMIT = 40
 DEFAULT_GROK_LIMIT = 100
 DEFAULT_WIRING_SCORE_CAP = 40
+DEFAULT_TOP_OUTCOMES = 5
 RETRIEVE_MAX_PRIMARIES = int(os.environ.get("SP_RETRIEVE_MAX_PRIMARIES", "600"))
 RETRIEVE_MAX_SYNTHESES = int(os.environ.get("SP_RETRIEVE_MAX_SYNTHESES", "120"))
 SYNTHETIC_VERSION = "SYNTHETIC-NOT-REAL"
@@ -68,15 +74,6 @@ def _prioritize_primaries(primaries: list[dict], *,
         oa = (s.get("oa") or "abstract_only").lower()
         return (_OA_RANK.get(oa, 6), -(s.get("year") or 0))
     def readable(s: dict) -> bool:
-        """
-        In PubMed Central, OR carrying a reachable OA copy found off-PMC.
-
-        The second half matters: the filter used to run on `oa` alone, which
-        reflects PMC membership. Records recovered by the green-OA rungs were
-        being dropped BEFORE best_text could read them, so the whole ladder was
-        dead weight. If extraction then fails at read time, best_text returns
-        abstract_only and the score reflects that honestly.
-        """
         if _OA_RANK.get((s.get("oa") or "").lower(), 9) <= 1:
             return True
         return bool(s.get("oa_location") or s.get("full_text_urls"))
@@ -142,8 +139,6 @@ def _agent_stats(raw: list[dict]) -> dict:
                                               "errors": {}})
             if agent in failed_agents or m.get("error"):
                 bucket["fail"] += 1
-                # Record WHY, deduplicated. "3 failures" told us nothing; the
-                # reason is what identifies the agent and the fix.
                 why = str(m.get("error") or "")[:90] or "unknown"
                 bucket["errors"][why] = bucket["errors"].get(why, 0) + 1
             else:
@@ -212,6 +207,13 @@ def main(argv: list[str]) -> int:
     with_sr = "--with-sr" in args
     if with_sr:
         args.remove("--with-sr")
+    all_outcomes = "--all-outcomes" in args
+    if all_outcomes:
+        args.remove("--all-outcomes")
+    top_n = DEFAULT_TOP_OUTCOMES
+    if "--top-outcomes" in args:
+        i = args.index("--top-outcomes")
+        top_n = int(args[i + 1]); del args[i:i + 2]
     if sum([wiring, pilot, grok]) > 1:
         print("Pick only one of --wiring, --pilot, --grok")
         return 1
@@ -225,13 +227,8 @@ def main(argv: list[str]) -> int:
     if "--intervention-scope" in args:
         args.remove("--intervention-scope"); scope = "intervention"
     if "--per-outcome" in args:
-        # One query per outcome, each with its own quota. A single ranked query
-        # starves whole outcomes: 62 magnesium sleep RCTs exist and a run off
-        # one generic query surfaced sleep_quality n=1.
         args.remove("--per-outcome"); scope = "per_outcome"
 
-    # The product's elemental dose. Without it the dose axis CANNOT be judged --
-    # that is a missing input, not a default, and the arc must say so.
     dose_mg = None
     if "--dose" in args:
         i = args.index("--dose")
@@ -260,11 +257,14 @@ def main(argv: list[str]) -> int:
             print("   ", f["id"])
         return 1
 
+    # Showcase: top-N product outcomes only (default). Saves S6 tokens and
+    # keeps the report to what a buyer actually cares about.
+    outcome_allowlist = show.outcomes_for(
+        ingredient, top_n=top_n, all_outcomes=all_outcomes)
+
     pv = vocab.population_variants()[0]
     product = {"ingredient": ingredient, "form_vocab_id": form,
                "population": {"id": pv["id"], **{a: pv[a] for a in vocab.AXES}},
-               # Without a dose the dose axis CANNOT be judged -- it is not a
-               # default, it is a missing input, and the arc says so.
                "dose_low_mg": dose_mg, "dose_high_mg": dose_mg}
     if dose_mg is None:
         print("\nNOTE: no --dose given, so the dose arc will read 'not tested'.")
@@ -284,6 +284,7 @@ def main(argv: list[str]) -> int:
         "ingredient": ingredient,
         "form": form,
         "scope": scope,
+        "showcase_outcomes": outcome_allowlist,
         "studies_targeted": 0,
         "studies_ok": 0,
         "studies_skipped": 0,
@@ -325,7 +326,6 @@ def main(argv: list[str]) -> int:
             full_text_only=full_text_only,
         )
 
-        # Pre-filter with relevance gate so --limit is spent on real candidates.
         relevant = []
         rejected = 0
         for s in primaries:
@@ -372,6 +372,11 @@ def main(argv: list[str]) -> int:
                 print(f"  studies in flight: {GROK_STUDIES_IN_FLIGHT}")
                 print(f"  concurrent grok CLI: {ga.MAX_CONCURRENCY}")
                 print(f"  batch size (extract): {effective}")
+                if outcome_allowlist:
+                    print(f"  showcase top-{len(outcome_allowlist)}: "
+                          + ", ".join(outcome_allowlist))
+                else:
+                    print("  showcase: OFF (full outcome vocabulary)")
                 print("-" * 68)
                 call_fn = ga.call
                 prompt_version = f"{ga.PROMPT_VERSION}+{ga.PROVENANCE}"
@@ -404,6 +409,7 @@ def main(argv: list[str]) -> int:
                                        if r.get("registration_id") else None,
                 call=call_fn,
                 max_studies_in_flight=in_flight,
+                outcome_allowlist=outcome_allowlist,
             )
             _report_failures(raw)
             run_context["studies_skipped"] = sum(
@@ -450,6 +456,7 @@ def main(argv: list[str]) -> int:
                 [{**p, "_canonical": p["canonical_id"], "ingredient": ingredient}
                  for p in primaries[:DEFAULT_WIRING_SCORE_CAP]],
                 text_for=lambda r: texts.get(r["_canonical"], ""),
+                outcome_allowlist=outcome_allowlist,
             )
             extractions = [{
                 "record": r["record"],
@@ -462,25 +469,27 @@ def main(argv: list[str]) -> int:
 
         run_context["prompt_version"] = prompt_version
 
-        # Under per-outcome retrieval we searched for EVERY outcome, so every
-        # outcome owes an answer -- including "we looked and found nothing
-        # usable". Without this, sleep disappeared from the magnesium table
-        # entirely, which reads as "never considered" rather than "considered
-        # and came up empty".
-        searched = sorted(vocab.outcome_ids()) if scope == "per_outcome" else None
+        # Searched outcomes for "we looked, found nothing": showcase list, or
+        # full vocab under --all-outcomes / per-outcome retrieval.
+        if outcome_allowlist:
+            searched = list(outcome_allowlist)
+        elif scope == "per_outcome":
+            searched = sorted(vocab.outcome_ids())
+        else:
+            searched = None
+
         rows = build_ecus(
             extractions, product, syntheses=syntheses_for_score,
             prompt_version=prompt_version,
             exact_form_only=demo, ignore_population=True,
             searched_outcomes=searched,
         )
+        # Hard filter report rows to showcase order (build_ecus may still emit
+        # only mapped outcomes; this keeps the table to top-N even if S6 leaks).
+        rows = show.filter_ecu_rows(rows, outcome_allowlist)
         for row in rows:
             store.upsert_ecu(row)
 
-        # The report renders every arc and derives its verdict label from c, so
-        # both must travel with the row. Projecting them away made every arc read
-        # "not tested" and every verdict "does not work" -- including for ECUs
-        # that were simply barely studied. Keep this in sync with the report.
         run_context["ecu_rows"] = [{
             "outcome_vocab_id": r["outcome_vocab_id"],
             "score": r["score"],
@@ -493,10 +502,11 @@ def main(argv: list[str]) -> int:
         } for r in rows]
 
         print(f"\n{tag}ECU ROWS — {ingredient}, form={form}, scope={scope}")
+        if outcome_allowlist:
+            print(f"  showcase top-{len(outcome_allowlist)} only")
         print("  0-100 = 100 x c x mean(effect, form, dose)")
         print("-" * 74)
-        for row in sorted(rows, key=lambda r: -(r.get("composite")
-                                                if r.get("composite") is not None else -999)):
+        for row in rows:
             o = vocab.outcome(row["outcome_vocab_id"]) or {}
             comp = row.get("composite")
             shown = "gated" if comp is None else f"{comp:>3}/100"
@@ -515,8 +525,6 @@ def main(argv: list[str]) -> int:
                 pass
         print("-" * 74)
 
-        # A run must END with the numbers. Burying them above a wall of logs is
-        # why the last Grok run's scores went unread.
         scored = [r for r in rows if r.get("composite") is not None]
         print("\n" + "=" * 74)
         print(f"{tag}RESULT — {ingredient} / {form}")
@@ -546,7 +554,8 @@ def main(argv: list[str]) -> int:
             print(f"  SCORE          : {top['composite']}/100   {_lab}")
             print(f"  arcs           : effect {_a('effect')} | form {_a('form')} "
                   f"| dose {_a('dose')} | evidence {_a('evidence')}")
-            print(f"  outcomes scored: {len(scored)}   range "
+            print(f"  outcomes shown : {len(rows)} showcase  "
+                  f"scored {len(scored)}  range "
                   f"{min(r['composite'] for r in scored)}-"
                   f"{max(r['composite'] for r in scored)}/100")
         print("=" * 74)
@@ -559,6 +568,8 @@ def main(argv: list[str]) -> int:
         mode += "-sr"
     if full_text_only:
         mode += "-ft"
+    if outcome_allowlist:
+        mode += f"-top{len(outcome_allowlist)}"
     mode += f"-{scope[:5]}"
     if grok:
         _auto_push_report(ingredient, form, mode, run_context=run_context)
