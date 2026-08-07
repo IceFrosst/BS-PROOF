@@ -126,6 +126,7 @@ grok_adapter.py            Grok pure-function boundary (separate tests)
 workers.py                 fan-out; `call=` injectable per backend
 run_pipeline.py            --wiring / --pilot (default limit 40)
 scripts/write_demo_report.py
+scripts/write_demo_diagram.py  regenerates pipeline_v2_demo.excalidraw
 reports/runs/              immutable human-readable run archive
 pipeline/arcs.py           4 arcs + the 0-100 composite            [NO MODEL]
 pipeline/donut.py          arc rendering (SVG + terminal)          [NO MODEL]
@@ -144,6 +145,7 @@ python3 run_pipeline.py magnesium --form magnesium_glycinate --grok --per-outcom
 python3 grok_adapter.py                                               # preflight
 python3 -m pipeline.arcs        # (import-only module; see selftest for behaviour)
 python3 scripts/write_demo_report.py --wiring --ingredient creatine --form creatine_monohydrate
+python3 scripts/write_demo_diagram.py    # teammate-facing diagram of a run
 ```
 
 **Run `pipeline.selftest` after any change to `pipeline/`.**
