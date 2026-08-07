@@ -14,6 +14,7 @@ import sys
 
 from pipeline import vocab
 from pipeline.assemble import build_ecus
+from pipeline.donut import donut_line
 from pipeline.storage import Store, DEFAULT_DB
 from pipeline.retrieve import retrieve
 

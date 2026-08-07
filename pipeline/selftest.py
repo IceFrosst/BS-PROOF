@@ -559,6 +559,33 @@ def main():
           pay2["table_filter_hit"] is False and len(pay2["tables"]) == 1,
           "the heuristic filters; S2 decides")
 
+    print("\nDONUT (score in the centre, arc = confidence)")
+    from pipeline.donut import donut_svg, donut_line, confidence_label
+    strong = {"score": 86, "band": "strong support", "gate_fired": False,
+              "components": {"c": 0.91}}
+    thin   = {"score": 4, "band": "inconclusive", "gate_fired": False,
+              "components": {"c": 0.05}}
+    conflict = {"score": 4, "band": "inconclusive", "gate_fired": False,
+                "components": {"c": 0.88}}
+    gated  = {"score": None, "band": "insufficient human evidence",
+              "gate_fired": True, "components": {}}
+    check("arc length tracks c, not the score",
+          donut_line(thin).count("#") < donut_line(conflict).count("#"),
+          "same +4 -- one is genuine conflict, one is nobody-has-looked")
+    check("gated row draws an EMPTY ring", donut_line(gated).count("#") == 0
+          and "gated" in donut_line(gated),
+          "'no number' must not look like 'zero'")
+    check("gated centre is not a number", "--" in donut_svg(gated))
+    check("sign is shown explicitly", "+86" in donut_svg(strong))
+    check("band drives colour",
+          donut_svg(strong).count("#0f7b4f") and donut_svg(thin).count("#8a8f98"),
+          "inconclusive is grey, never pale green")
+    check("confidence has plain-words labels",
+          confidence_label(0.01) != confidence_label(0.9))
+    check("svg is self-contained", donut_svg(strong).startswith("<svg")
+          and "http" not in donut_svg(strong).split("aria-label")[0].replace(
+              "http://www.w3.org/2000/svg", ""))
+
     print("\nSTORAGE (SQLite on a Postgres-shaped schema)")
     import tempfile
     from pipeline.storage import Store, now_iso

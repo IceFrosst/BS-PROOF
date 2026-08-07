@@ -1,14 +1,89 @@
-{"type":"object","required":["claims"],"additionalProperties":false,
-"properties":{"claims":{"type":"array","items":{"type":"object",
-"required":["outcome_raw","direction","is_primary_outcome","evidence_span"],"additionalProperties":false,
-"properties":{
-"outcome_raw":{"type":"string"},
-"measure":{"type":["string","null"]},
-"direction":{"type":"string","enum":["benefit","null_effect","harm","unclear"]},
-"magnitude":{"type":["string","null"]},
-"effect_size":{"type":["number","null"]},
-"effect_unit":{"type":["string","null"]},
-"ci_low":{"type":["number","null"]},"ci_high":{"type":["number","null"]},
-"p_value":{"type":["number","null"]},
-"is_primary_outcome":{"type":"boolean"},
-"evidence_span":{"type":"string"}}}}}}
+{
+ "type": "object",
+ "required": [
+  "claims"
+ ],
+ "additionalProperties": false,
+ "properties": {
+  "claims": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "outcome_raw",
+     "direction",
+     "is_primary_outcome",
+     "evidence_span"
+    ],
+    "additionalProperties": false,
+    "properties": {
+     "outcome_raw": {
+      "type": "string",
+      "maxLength": 120
+     },
+     "measure": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "maxLength": 80
+     },
+     "direction": {
+      "type": "string",
+      "enum": [
+       "benefit",
+       "null_effect",
+       "harm",
+       "unclear"
+      ]
+     },
+     "magnitude": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "effect_size": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "effect_unit": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "maxLength": 40
+     },
+     "ci_low": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "ci_high": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "p_value": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "is_primary_outcome": {
+      "type": "boolean"
+     },
+     "evidence_span": {
+      "type": "string",
+      "maxLength": 200
+     }
+    }
+   },
+   "maxItems": 20
+  }
+ }
+}

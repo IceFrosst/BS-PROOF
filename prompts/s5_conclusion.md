@@ -39,3 +39,18 @@ downstream.
 outcome_raw: the endpoint exactly as the paper names it, e.g. "PSQI global
 score" or "sleep onset latency (min)". Do not normalise it -- S6 does that,
 and it needs your raw string.
+
+KEEP THE OUTPUT SHORT. You are a pure function with ONE turn; a response that
+runs long is cut off mid-flight and the whole extraction is discarded, so a
+verbose answer is worth less than a terse one.
+
+  evidence_span   the SHORTEST quote that establishes direction -- normally one
+                  clause with the number in it, 200 characters maximum. Do not
+                  quote a whole paragraph, a table, or the methods.
+  outcome_raw     the endpoint name only, 120 characters maximum. Not a sentence.
+  measure         the instrument or unit, if named. 80 characters maximum.
+
+Report at most 20 claims. If a paper reports more, keep every PRIMARY outcome
+first, then the secondary outcomes with the largest reported effects. Never drop
+a null_effect to make room for a benefit -- that would bias the score upward,
+which is the exact failure this subagent exists to prevent.

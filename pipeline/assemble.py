@@ -100,12 +100,14 @@ def build_ecus(extractions: list[dict], product: dict, *,
     buckets: dict[str, list[tuple[Study, dict]]] = {}
     dropped_form = 0
     kept = 0
+    form_mix: dict[str, int] = {}
     for item in extractions:
         rec, ext = item["record"], item["extraction"]
         for outcome_id, study in to_studies(
             rec, ext, product, item.get("registry"),
             ignore_population=ignore_population,
         ):
+            form_mix[study.form_match] = form_mix.get(study.form_match, 0) + 1
             if exact_form_only and study.form_match != "exact":
                 dropped_form += 1
                 continue
@@ -114,10 +116,23 @@ def build_ecus(extractions: list[dict], product: dict, *,
                                 else product.get("dose_band"), outcome_id, pop["id"])
             buckets.setdefault(key, []).append((study, {"outcome_id": outcome_id}))
 
+    # Always show which forms contributed and at what discount. The product's
+    # whole claim is that evidence TRANSFERS between forms at a stated price --
+    # so a run must make it visible that e.g. a citrate trial counted toward a
+    # glycinate product at 0.50, rather than leaving the reader to assume only
+    # exact-form studies were used.
+    if form_mix:
+        from pipeline.scoring import FORM_FACTOR
+        total = sum(form_mix.values())
+        print(f"  form transfer mix ({total} claims -> {form_id}):")
+        for tier, count in sorted(form_mix.items(), key=lambda kv: -kv[1]):
+            print(f"    {tier:<12} x{FORM_FACTOR.get(tier, 0.30):<5} {count:>4} claims"
+                  f"  ({100 * count / total:.0f}%)")
     if exact_form_only or ignore_population:
-        print(f"  demo assemble: exact_form_only={exact_form_only} "
+        print(f"  !! DEMO MODE: exact_form_only={exact_form_only} "
               f"ignore_population={ignore_population} "
               f"kept_claims={kept} dropped_nonexact_form={dropped_form}")
+        print("     Demo flags suspend scoring rules. NOT a production claim.")
 
     rows = []
     for key, pairs in sorted(buckets.items()):
