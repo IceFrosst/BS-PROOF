@@ -462,10 +462,17 @@ def main(argv: list[str]) -> int:
 
         run_context["prompt_version"] = prompt_version
 
+        # Under per-outcome retrieval we searched for EVERY outcome, so every
+        # outcome owes an answer -- including "we looked and found nothing
+        # usable". Without this, sleep disappeared from the magnesium table
+        # entirely, which reads as "never considered" rather than "considered
+        # and came up empty".
+        searched = sorted(vocab.outcome_ids()) if scope == "per_outcome" else None
         rows = build_ecus(
             extractions, product, syntheses=syntheses_for_score,
             prompt_version=prompt_version,
             exact_form_only=demo, ignore_population=True,
+            searched_outcomes=searched,
         )
         for row in rows:
             store.upsert_ecu(row)

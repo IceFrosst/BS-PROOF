@@ -165,15 +165,27 @@ def _run_variants(grok_bin: str, system: str, user: str, model: str,
     full_prompt = system.rstrip() + "\n\n---\n\n" + user
     prompt_path = cwd / "prompt.txt"
     prompt_path.write_text(full_prompt, encoding="utf-8")
+    # PURITY FLAGS BELONG ON EVERY VARIANT. Only the first carried
+    # --no-memory/--no-subagents/--no-plan, so when it failed the fallbacks let
+    # Grok behave like an agent: the 15:41 run's S3 failures are all Grok saying
+    # "Checking the workspace for study input" instead of answering. A subagent
+    # with tools is not a pure function (invariant 2).
+    _pure = ["--output-format", "json", "--max-turns", "1",
+             "--no-memory", "--no-subagents", "--no-plan", "-m", model,
+             "--cwd", str(cwd)]
+
     variants = [
-        [grok_bin, "--no-auto-update", "--prompt-file", str(prompt_path),
-         "--output-format", "json", "--max-turns", "1",
-         "--no-memory", "--no-subagents", "--no-plan", "-m", model, "--cwd", str(cwd)],
-        [grok_bin, "--no-auto-update", "-p", "@" + str(prompt_path),
-         "--output-format", "json", "--max-turns", "1", "-m", model, "--cwd", str(cwd)],
-        [grok_bin, "--no-auto-update", "-p", full_prompt[:6000],
-         "--output-format", "json", "--max-turns", "1", "-m", model, "--cwd", str(cwd)],
+        [grok_bin, "--no-auto-update", "--prompt-file", str(prompt_path), *_pure],
+        [grok_bin, "--no-auto-update", "-p", "@" + str(prompt_path), *_pure],
     ]
+    # NEVER send a truncated prompt. The old third variant passed
+    # full_prompt[:6000], which for S3 (system prompt alone is ~5k, plus schema
+    # and the population vocabulary) cut off the study text entirely -- Grok
+    # then correctly reported "the schema and study input look truncated".
+    # A mutilated prompt cannot produce a valid extraction, so an inline
+    # fallback is only offered when the whole prompt genuinely fits.
+    if len(full_prompt) <= 6000:
+        variants.append([grok_bin, "--no-auto-update", "-p", full_prompt, *_pure])
     last_code, last_out, last_err, used = 1, "", "", []
     try:
         for cmd in variants:

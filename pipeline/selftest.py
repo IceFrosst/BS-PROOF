@@ -523,6 +523,30 @@ def main():
           trapped["E_prime"] / trapped["E"] <= 1.31,
           f"E'/E = {trapped['E_prime']/trapped['E']:.2f}")
 
+    print("\nSEARCHED-BUT-UNSCORABLE OUTCOMES")
+    empty = build_ecus([], product, prompt_version="t",
+                       searched_outcomes=["sleep_quality", "anxiety"])
+    check("an outcome we searched for still gets a row", len(empty) == 2,
+          "sleep vanished from the magnesium table entirely -- indistinguishable "
+          "from an outcome nobody had ever asked about")
+    check("it reports no evidence rather than a score",
+          all(r["composite"] is None and r["gate_fired"] for r in empty))
+    check("its arcs are empty, not zero",
+          all(a["verdict"] is None and a["coverage"] == 0.0
+              for r in empty for a in r["arcs"].values()),
+          "'looked and found nothing' must not render as 'scored zero'")
+    check("it is flagged for the reader",
+          all("searched_no_usable_evidence" in r["flags"] for r in empty))
+    mixed = build_ecus(corpus, product, prompt_version="t",
+                       searched_outcomes=["sleep_onset", "muscle_cramps"])
+    by_id = {r["outcome_vocab_id"]: r for r in mixed}
+    check("a searched outcome that WAS scored is not duplicated",
+          by_id["sleep_onset"]["composite"] is not None,
+          "already scored -- must not be overwritten by an empty row")
+    check("a searched outcome with no evidence is added alongside",
+          by_id["muscle_cramps"]["composite"] is None
+          and "searched_no_usable_evidence" in by_id["muscle_cramps"]["flags"])
+
     print("\nGREEN OA RESOLUTION")
     from sources import oa as oamod
     oa_work = {"best_oa_location": {"is_oa": True, "pdf_url": "http://x/y.pdf",

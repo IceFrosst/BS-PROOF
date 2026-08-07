@@ -137,7 +137,8 @@ def build_ecus(extractions: list[dict], product: dict, *,
                prompt_version: str = "unknown",
                band_version: int = 0,
                exact_form_only: bool = False,
-               ignore_population: bool = False) -> list[dict]:
+               ignore_population: bool = False,
+               searched_outcomes: list[str] | None = None) -> list[dict]:
     ingredient = product["ingredient"]
     form_id = product["form_vocab_id"]
     pop = product["population"]
@@ -189,7 +190,36 @@ def build_ecus(extractions: list[dict], product: dict, *,
               f"kept_claims={kept} dropped_nonexact_form={dropped_form}")
         print("     Demo flags suspend scoring rules. NOT a production claim.")
 
+    # An outcome we SEARCHED FOR but could not score must still appear. The
+    # 15:41 run retrieved four magnesium sleep trials, none of which yielded a
+    # scorable magnesium-only claim, and sleep simply VANISHED from the table --
+    # indistinguishable from an outcome nobody had ever asked about.
+    #
+    # "We looked and found nothing usable" and "we never looked" are the two
+    # states this whole system exists to keep apart. Dropping the row collapses
+    # them, at the outcome level, silently.
+    scored_ids = {pairs[0][1]["outcome_id"] for pairs in buckets.values()}
+    missing = [o for o in (searched_outcomes or []) if o not in scored_ids]
+
     rows = []
+    for oid in missing:
+        rows.append({
+            "ecu_key": vocab.ecu_key(ingredient, form_id, None, oid, pop["id"]),
+            "ingredient": ingredient, "form_vocab_id": form_id,
+            "dose_band": None, "band_version": band_version,
+            "outcome_vocab_id": oid,
+            "population": {"id": pop["id"], **{a: pop[a] for a in vocab.AXES}},
+            "score": None, "composite": None,
+            "band": "no usable evidence retrieved", "gate_fired": True,
+            "components": {}, "arcs": {k: {"verdict": None, "coverage": 0.0}
+                                       for k in ("effect", "form", "dose", "evidence")},
+            "evidence": {"n_primaries": 0, "n_syntheses": 0, "study_ids": []},
+            "form_mix": {}, "flags": ["searched_no_usable_evidence"],
+            "provenance": {"prompt_version": prompt_version,
+                           "vocab_versions": vocab.versions(),
+                           "scorer_version": SCORER_VERSION, "computed_at": _now()},
+        })
+
     for key, pairs in sorted(buckets.items()):
         studies = [s for s, _ in pairs]
         outcome_id = pairs[0][1]["outcome_id"]
