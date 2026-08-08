@@ -1,31 +1,52 @@
-# Predatory journal list (founder)
+# Predatory / questionable publisher list
 
-**Source:** The Predatory Journals List 2025  
-**Site:** https://www.predatoryjournals.org/the-list/publishers
+**Human reference:** https://www.predatoryjournals.org/the-list/publishers
+**Machine source:** `stop-predatory-journals` `publishers.csv` (Beall-derived, open)
 
-## After `git pull` (preferred)
+## Refresh it
 
-The list is embedded as compressed chunks under `pipeline/predatory_b64/`.
-On first import of `pipeline.predatory` it expands automatically to
-`vocab/predatory_journals.txt`. **No download, no extra command.**
-
-## One-time fallback (only if expand fails)
-
-If the b64 chunks are incomplete, copy the founder xlsx once:
-
-```cmd
-copy "path\to\The Predatory Journals List 2025.xlsx" vocab\
+```bash
+python3 scripts/refresh_predatory_list.py
 ```
 
-Then either run the pipeline (it will auto-expand) or:
+Writes `vocab/predatory_journals.txt` — one publisher per line, ~1160 entries.
+The file is COMMITTED. There is no expand-on-import step any more; the
+gzip+base64 chunks that used to do that were truncated in every commit they
+ever appeared in, and the expander swallowed its own failure so each run
+printed `list entries loaded: 0` beside `flagged: 0`.
 
-```cmd
-pip install openpyxl
-python scripts\import_predatory_xlsx.py
-```
+`pipeline.predatory` now refuses quietly-broken states: under
+`MIN_PLAUSIBLE_ENTRIES` (200) the run says **LIST BROKEN — "0 flagged" means
+NOT CHECKED, not clean.**
 
-## Policy (2026-08-07)
+## How matching works, and why it flags so little
 
-- **Flag + count only** in each run console: how many studies in *this batch* matched.
-- **Does not change the score** yet (`pipeline.predatory.ZERO_WEIGHT = False`).
-- Later we can set `ZERO_WEIGHT = True` to zero those weights.
+The list is **publishers**. Europe PMC gives us a **journal title**. Matching one
+inside the other is a category error:
+
+| rule | flagged, on a 2076-study corpus |
+|---|---|
+| raw substring | **274 (13.2%)** — incl. *American Journal of Obstetrics and Gynecology*, *Alzheimer\'s & Dementia*, *Acta oto-laryngologica* |
+| word-bounded, ≥12 chars | 47 (2.3%) — still flagged the *American Journal of…* family |
+| **exact title / ISSN only (current)** | **0** |
+
+The 13.2% run matched `'lar'` (3 characters) inside *Acta oto-**lar**yngologica*
+and `'e journal'` inside *Th**e journal** of…*.
+
+Flagging a real journal as predatory is not a scoring error — it is a
+defamation-shaped error that would appear in a published report next to the
+journal's real name, and `ZERO_WEIGHT = True` would eventually delete that
+journal's evidence. So:
+
+- **journal title** → exact normalised equality only
+- **publisher field** → containment allowed (publisher vs publisher is what the
+  list is for)
+- **ISSN** → exact
+
+Most true positives are therefore unreachable until records carry a publisher
+field. That is a coverage gap, recorded in `docs/SPEC.md` §13 — not a bug.
+
+## Policy
+
+Flag + count only. `pipeline.predatory.ZERO_WEIGHT = False`; venue does not
+change any score.

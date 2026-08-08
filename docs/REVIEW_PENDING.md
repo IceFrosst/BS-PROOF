@@ -15,25 +15,24 @@ Last swept: **2026-08-08**.
 
 ## OPEN
 
-### 1. Predatory-journal list is empty, and every run reports a clean bill
+### 1. Predatory list flags nothing, and that is now deliberate
 
-`vocab/predatory_journals.txt` contains `# PLACEHOLDER_WILL_REPLACE` (26 bytes).
-`pipeline/predatory_b64/00.b64` and `01.b64` are 40 bytes each — truncated by a
-bad push on 2026-08-07, and the two "restore" commits that followed restored
-nothing.
+**Fixed 2026-08-08, but read the second half.**
 
-Consequence, from the 2026-08-07 creatine run:
+The list is real again — 1162 publishers, fetched by
+`scripts/refresh_predatory_list.py` and committed. The old gzip+base64 chunks
+were truncated in every commit they ever appeared in (4400 → 1988 → 0 → 40
+bytes, each described as "the full list"), so the list had never once loaded.
 
-```
-list entries loaded: 0 · studies checked: 262 · flagged: 0
-```
+The bigger defect was hiding behind that. With the list present, the substring
+matcher flagged **274 of 2076 studies (13.2%)** including *American Journal of
+Obstetrics and Gynecology* and *Acta oto-laryngologica* — on entries like
+`'lar'` and `'e journal'`. Matching is now exact-only on journal titles.
 
-No score is wrong — predatory is flag-only (`predatory.ZERO_WEIGHT = False`) —
-but the report prints a clean bill of health it never earned, which is worse
-than printing nothing.
-
-**Blocked on the founder:** the source list is an xlsx that is not in the repo.
-Drop it in `vocab/` and run `python3 -m pipeline.predatory_data`.
+**Open question for the founder:** matching a PUBLISHER list against a JOURNAL
+title reaches almost nothing, so the current honest answer is 0 flagged. To make
+this useful we need a publisher field on each record. Crossref returns one per
+DOI. Worth a resolver call, or worth dropping the feature?
 
 ### 2. Venue factor has nowhere to go
 

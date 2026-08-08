@@ -1,1 +1,1169 @@
-# PLACEHOLDER_WILL_REPLACE
+# Predatory / questionable publishers — research-layer flag list
+# Human reference: https://www.predatoryjournals.org/the-list/publishers
+# Machine source: stop-predatory-journals publishers.csv (Beall-derived open data)
+# One name per line. Case-insensitive substring match on journal/publisher fields.
+# Refresh: python scripts/refresh_predatory_list.py
+# Entries: 1162
+#
+1088 Email Press
+2425 Publishers
+A M Publishers
+ABC Journals
+Abhinav
+Academe Research Journals
+Academia Publishing
+Academia Research
+Academia Scholarly Journals
+Academic and Business Research Institute
+Academic and Scientific Publishing
+Academic Direct Publishing House
+Academic Journals
+Academic Journals and Research
+Academic Journals Online
+Academic Journals, Inc.
+Academic Knowledge and Research Publishing
+Academic Organization for Advancement of Strategic and International Studies
+Academic Publications, Ltd.
+Academic Research in Science, Engineering, Art and Management
+Academic Research Journals
+Academic Research Publishers
+Academic Research Publishing Agency
+Academic Research Publishing Group
+Academic Research Publishing House
+Academic Scholars Publishing House
+Academic Sciences
+Academic Star Publishing Company
+Academic Star Publishing Company [alt]
+Academic Web Publishers
+Academic World Education & Research Center
+AcademicDirect Publishing House
+Academicians’ Research Center/ARC Journals
+Academics World
+Academy for Environment and Life Sciences
+Academy Journals
+Academy of Business & Retail Management
+Academy of Business & Scientific Research
+Academy of International Research in Management and Business Realities
+Academy of Knowledge Process
+Academy of Science and Engineering
+Academy of Science and Social Science
+Academy of Scientific and Applied Research
+Academy Publish
+Access International Journals
+Access Journals
+Access Publishers
+ACT Publishing
+Acta Scientifica
+AD Publication
+AD Publications
+Ada Lovelace Publications
+Advance Educational Institute & Research Centre
+Advance Journals
+Advanced Institute of Convergence Information Technology
+Advanced Journals
+Advanced Research Journals
+Advanced Research Publications
+Advanced Scholars Journals
+Advanced Science and Engineering Technology Institute
+Advanced Science Research Journals
+Advanced Technology & Science
+Advancement and Development in Technology International
+Advancements in Science
+Adyan Academic Press
+African Research Review
+AgiAl Publishing House
+Agropub
+AINSTIN Knowledge Hub
+AIRCC Publishing Corporation
+Aizeon Publishers
+Albert Science International Organization
+Allied Academies
+Allied Journals
+Ambit Journals
+AME Publishing Company
+American Academic & Scholarly Research Center
+American Association for Science and Technology
+American Journal
+American Research Institute for Policy Development
+American Research Journals
+American Research Publications
+American Scholarly Research Association
+American Scientific Publishers
+American Scientific Research Journals
+American Society of Registered Nurses
+American Society of Science and Engineering
+American V-King Scientific Publishing
+American-Eurasian Network for Scientific Information
+Amoghsiddhi Education Society/AES/AES Journals in Engineering Technology, Management, and Sciences/AES E-JOURNALS
+Amoghsiddhi Education Society/AES/AES Journals in Engineering Technology, Management, and Sciences/AES E-JOURNALS [alt]
+Andrew John Publishing Inc.
+Annex Publishers
+Antarctic Journals
+Aperito Online Publishing
+Apex Journal
+Applied Science Innovations
+APST Publication
+Arabian Group of Journals
+Aradhya International Publication
+ARC Journals
+Archers & Elevators Publishing House
+Archyworld
+ARPN Journals
+AS Publishers
+ASD Publisher
+Ashdin Publishing
+AshEse Visionary
+Asia Pacific Institute of Advanced Research
+Asia-Pacific Association of Medical Research
+Asian Academic Research Associates
+Asian and American Research Publishing Group
+Asian Economic and Social Society
+Asian Network for Scientific Information
+Asian Online Journal Publishing Group
+Asian Online Journals
+Asian Pharma Press
+Asian Publication Corporation
+Asian Research Consortium
+Asian Transactions
+Associated Asia Research Foundation
+Association for Sustainable Education, Research and Science
+Association of Computer Electronics and Electrical Engineers
+Association of North America Higher Education International
+Aster Publications
+AstonJournals
+Athal Press & Media
+Atharva Scientific Publications
+Athens Institute for Education and Research
+Atlas Publishing, LP
+Aufau Periodicals
+Austin Publishing Group
+Australasian Centre for Research and Development
+Australian Academy of Business and Social Sciences
+Australian Academy of Business Leadership
+Australian International Academic Centre Pty. Ltd.
+Australian International Research Consortium
+Australian Society for Commerce Industry & Engineering
+Austrian E-Journals of Universal Scientific Organization
+Austrian Scientific Publication House
+Avanti Publishers.com
+Avens Publishing Group
+Avestia Publishing
+Avicena Publisher
+Avid Science
+Axis Journals
+Baishideng Publishing Group
+Basha Research Corporation
+Basic Research Journals
+Bell Press
+Bentham Open
+Best Journals
+Better Advances Press
+Betty Jones & Sisters Publishing
+Binary Information Press
+Bio Accent/Bioaccent
+Bio Core/Biocore
+Bioflux Society
+Biohelikon
+Biohouse Publishing Group
+BioInfo Publications
+BioIT international Journals
+Biological and Chemical Publishing
+BioMed Press
+BioMed Research
+BioMedSciDirect Publications
+BioPublisher
+Bioscience Research & Educational Institute [Link dead as of 2012-11-14]
+Blaze Journals
+Blue Apple Publications
+Blue Eyes Intelligence Engineering & Sciences Publication
+Blue Ocean Research Journals
+BluePen Journals
+Bonfring
+Bowen Publishing
+Brainy Buzz
+Bret Research Journals
+British Association of Academic Research
+British Journal
+British Open Research Publications
+BRNSS Publication Hub
+Business Journalz
+Business Management Centre
+Business Perspectives
+Cafet Innova Technical Society
+Cairo Center for Development Benchmarking
+Canadian Center of Science and Education
+Canadian Research Publication
+Canadian Science and Research Group
+Canadian Science and Technology Press Inc.
+Cardiology Academic Press
+CARI Journals
+Cenetri Publishing Group
+Center for Enhancing Knowledge
+Center for Global Research Development
+Center for Natural Science & Engineering Research
+Center for Promoting Ideas
+Center for the Development and Dissemination of Knowledge
+Center of Advanced Scientific Research and Publications
+Central Bohemia University Publishing
+Central Research Insight
+Centre For Info Bio Technology
+Centre for Multidisciplinary Research, Innovation and Collaboration
+Centre for Promoting Knowledge
+Centre of Excellence for Scientific & Research Journalism
+Centre of Promoting Research Excellence
+CESER Publications
+Chitkara University Publications
+CIRWORLD
+CIRWORLD [alt]
+Clerisy Publishers
+ClinMed International Library
+Cloud Journals
+Cloud Publications
+Clyto Access
+Coltharp Institute
+Columbia International Publishing
+Comparative Journals
+Comprehensive Research Journals
+Computer Science Journals
+CONFAB Journals
+Congress Press
+CONSORTIUM Intellectual Consortium of Drug Discovery and Technology Development, Inc.
+Contemporary Research Center
+Convergence Information Society
+Cosmic Journals
+Cosmos Scholars Publishing House
+Council for Innovative Research
+CRDEEP International Journals
+Cresco Online Publishing
+Cresco Online Publishing [alt]
+CREST Journals
+Crown Journals
+CSCanada
+CTR Publications
+Current Research Web
+Cyber Journals
+DAMA International
+Darsgah-e-Ahlebait
+Darshan Publishers
+David Publishing
+David Publishing [alt]
+Deccan Pharma Journals
+DeNovo Scientific Publishing
+Dentamed Publishing
+Design for Scientific Renaissance
+DEStech Publications, Inc.
+Developing Country Think Tank Institute
+Dhan Med Publishers
+Didactic Journals
+Digital Information Research Foundation
+Digital Science Press
+Direct Research Journals
+DISA Publication Group
+Discourse Journals
+Discovery Publication
+DJ Publications
+Donnish Journals
+Dorma Journals
+Dr.BGR Publications
+DRUNPP Sarajevo
+Dynamic Publishers
+e-Century Publishing Corporation
+E-Cronicon
+E-International Journals of Academic & Scientific Research
+E-International Scientific Research Journal Consortium
+e-journal
+e-journal [alt]
+e-Science Central
+e3Journals
+Eagle Publishing Group
+Earth Journals
+East West Association For Advanced Studies and Higher Education
+Ebioscholar
+Ebu Press
+eCanadian Journals
+Econjournals
+Edelweiss Publications
+EDUGAIT Press
+Eighth Sense Research Group
+Einstein International Journal Organization
+EISRJC Journals
+eJM Science, eJManager
+eJournals of Academic Research & Reviews
+Eko Journal
+eLearning Institute
+Electronic Center for International Scientific Information
+Elewa Bio Sciences
+Elite Hall Publishing House
+Elite Research Journals
+ELK Asia Pacific Journals
+ElmCore Journals
+Elmer Press
+ELVEDIT.COM
+Elyns Publishing Group
+Emerging Academy Resources
+Engineering and Technology Publishing
+Engineering Journals/Engg Journals Publications
+Engineering Publication House
+Engineering Research Publication
+Enhanced Research Publications
+Enliven Archive
+Enriched Science Publication
+Enviro Publishers
+Enviro Research Publishers [alt]
+EPH Journal/Engineers Publication House
+EPIX PUB
+EPRA Journals
+EPRA Wisdom
+ERM Publications/Educational Research Multimedia & Publications
+Erudite Journals Limited
+ESci Journals Publishing
+eScience Publisher
+ESRSA Publication — Engineering and Science Research Support Academy
+ETA Maths Journals
+Ethan Publishing Company
+Eurasian Academy of Sciences
+Eurasian Publications
+Eurasian Research Publishing
+Eurasian Union of Scientists
+Euro Asia Research and Development Association
+EuroJournals
+European Center for Science Education and Research
+European Journals of Business Management
+European Journals of Education Studies
+European Union Research Publishing
+European-American Journals
+Everant
+EverScience Publications
+ExcelingTech Publishing Company, Ltd.
+Excellent Publishers
+Excellent Word Journals
+Excelytics Publishers
+Expert Journals
+Far East Research Centre
+Ficus Publishers
+Finlogy
+Focus in Research & Education/Firepubs
+Foundation for Promotion of Basic & Applied Science
+Friends Science Publishers
+Frontiers
+Frontiers in Bioscience
+FSSH Scholarly Journals
+Fundamental Journals
+Fundamental Research and Development International
+Future Academy
+Galore Knowledge Publication Pvt. Ltd.
+Gatha Cognition
+Gavin Publishers
+GBS Publishers & Distributors
+Genexcellence Publication/G Publications
+German Science and Technology Press
+Gexin Publications
+Global Academic Institute
+Global Advanced Research Journals
+Global Business Research Journals
+Global Institute for Research and Education
+Global Journals, Inc.
+Global Open Journals
+Global Openaccess
+Global Publishing Corporation
+Global Research Journals
+Global Research Online
+Global Research Publishing
+Global Researchers Journals
+Global Scholars Journals
+Global Science Center LP
+Global Science Publishing Group
+Global Science Research Journals
+Global Scientific Research Journals
+Global Scientific, Inc.
+Global Society of Scientific Research and Researchers
+Global Technocrats & Intellectual’s Association
+GlobalSkope Publishing Society
+Gnosis Open Access Publishers [Link dead; re-branded as
+Gopalax
+GRABS Educational Charitable Trust
+Grant Medical Journals
+Graphy Publications
+Gratis Open Access Publishers
+GRDS Publishing
+Green Earth Research Network
+Green Global Foundation
+Greener Journals
+Greenfield Advanced Research Publishing House
+Growing Science Publishing Company
+GS Publishers
+GSB Life Sciences
+Gurpukur Research Institute
+Gyancity Research Lab Private Limited
+Halmac Research [Link dead as of 2016-05-23]
+Hans Publishers, Inc.
+Har Krishan Bhalla & Sons
+Heighten Science Publications
+Helics Scientific Network
+Hendun Research Access
+Henry Publishing Group
+Herald International Research Journals
+Herald Scholarly Open Access
+Herbert Open Access Journals
+Hikari Ltd.
+Hilaris
+Hind Agri-Horticultural Society
+Horizon Journals
+Horizon Research Publishing
+Human and Sciences Publications
+Human Resource Management Academic Research Society
+IAMURE Multidisciplinary Research
+ibai-publishing
+IBIMA Publishing
+ICGST
+iConcept Press Ltd.
+ICTACT Journal
+Id Press / ID Design
+IERI & PRESS
+iExplore International Research Journals Consortium
+IGM Publication
+IIARD Publication Company
+iJARS Group
+Ijbsse.org
+ijManager – Online Journal Management
+IJRCM
+IMED Research Publications
+iMed.pub
+iMedPharm
+Impact Journals
+Imperial Journals
+Imprints Open Access
+Indian Academicians and Researchers Association
+Indian Society for Education and Environment
+IndianResearchJournals.Com
+Indus Foundation for Education, Research & Social Welfare
+Infinity Press
+infofacility
+Infonomics Society
+Inforesights Publishing
+Informatics Journals
+Information Engineering Research Institute
+Ingenious Enterprises International
+Innovare Academic Sciences
+Innovational Publishers
+Innovative Journals
+Innovative Publication
+Innovative Space of Scientific Research
+Innovinc
+INREWI
+Insight Core
+Insight Knowledge
+Insight Medical Publishing
+Instaci
+Institute for Research and Development India
+Institute of Advanced Scientific Research
+Institute of Doctors Engineers and Scientists
+Institute of Electronic & Information Technology
+Institute of Integrative Omics and Applied Biotechnology
+Institute of Language and Communication Studies
+Institute of Research Advances
+Institute of Research and Journals
+Institute of Research Engineers and Doctors
+Institute of Research Engineers and Scientists
+Institute of Research In Engineering and Technology
+Institute of Science Publishing
+Institute of Strategic and International Studies
+InTech Open Access Publisher
+InTech Open Access Publisher [alt]
+Integrated Academic Journals
+Integrated Intelligent Research
+Integrated Publishing Association
+Integrated Science Publications
+Intellectual Archive
+Intercontinental Management Research Review
+Interlink Continental Journals
+Intermedcentral
+International Academic Journals
+International Academic Publishing House
+International Academy for Advancement of Business Research
+International Academy for Science & Technology Education and Research
+International Academy of Arts, Science & Technology
+International Academy of Business
+International Academy of Business & Economics
+International Academy of Computer & IT Engineering
+International Academy of Ecology and Environmental Sciences
+International Academy of Science and Higher Education
+International Academy of Science, Engineering and Technology
+International Academy of Science, Technology, Engineering and Management
+International Academy Publishing
+International Advances for Research
+International Agency for Development of Culture, Education and Science
+International Association for Academians
+International Association for Engineering & Technology
+International Association for Engineering and Management Education
+International Association for Information, Culture, Human and Industry Technology
+International Association of Advances in Engineering and Technology
+International Association of Computer Science and Information Technology
+International Association of Engineering & Technology Researchers
+International Association of Journals & Conferences
+International Association of Scientific Innovation and Research
+International Association of Technology Education & Industry
+International Bauhaus Science Press
+International Center for Business Research
+International Centre for Integrated Development Research
+International Centre of Culture Inventory
+International Computer Science and Engineering Society
+International Conference on Computer Science and Engineering
+International Digital Organization for Scientific Information
+International Economics Development and Research Center
+International Education Research Foundation
+International Educative Research Foundation And Publisher
+International eJournals
+International Formulae Group
+International Forum of Researchers Students and Academician
+International Foundation for Modern Education and Scientific Research
+International Foundation for Research and Development
+International House for Academic Scientific Research [Link dead as of 2013-01-02]
+International Indexed Refereed Research Journal
+International Information Institute
+International Institute for Private, Commercial and Competition Law
+International Institute for Science, Technology and Education
+International Institute of Engineers
+International Institute of Engineers & Researchers
+International Institute of Informatics and Systemics
+International Institute of Science & Industry Research
+International Invention Journals
+International Journal of Academic Research
+International Journal of College & University
+International Journal of Research & Development Organisation
+International Journal Publishers Group
+International Journals
+International Journals for Research
+International Journals for Researchers
+International Journals of Engineering & Sciences
+International Journals of Multi Dimensional Research
+International Journals of Multidisciplinary Research Academy
+International Journals of N&N Global Technology
+International Journals of Research
+International Journals of Research Papers
+International Journals of Sciences and High Technologies
+International Journals of Scientific Knowledge
+International Journals of Scientific Research
+International Journals of Scientific Research Publications
+International Journals.co.in
+International Knowledge Press
+International Network for Applied Sciences and Technology
+International Network for Natural Sciences
+International Network for Scientific & Industrial Information
+International Online Knowledge Services Provider
+International Online Medical Council
+International Organization Center of Academic Research
+International Organization of Scientific Invention
+International Organization of Scientific Research
+International Organization of Scientific Research and Development
+International Postgraduate Network
+International Publisher & C.O
+International Publisher for Advanced Scientific Journals
+International Recognition Multidisciplinary Research Journals, Monthly Publish
+International Recognition Research Journals
+International Research Association of Computer Science, & Technology
+International Research E-Journals
+International Research Group
+International Research Journals
+International Research Organization of Computer Science
+International Research Organization of Sciences and Social Sciences
+International Research Publication House
+International Research Society For Promotion of Science
+International Scholarly Open Access Research
+International Scholars Journals
+International Science & Research Journals
+International Science and Medical Journals
+International Science Community Association
+International Scientific Academic Corporation
+International Scientific Academy of Engineering & Technology
+International Scientific Engineering and Research Publications
+International Scientific Invention Journals
+International Scientific Publications
+International Scientific Publications and Consulting Services
+International Scientific Research Organization for Science, Engineering and Technology
+International Scientific Research Organization Journals
+International Skill Research Journals
+International Society for Engineering Research and Development
+International Society for Engineers and Researchers
+International Society for green.sustainable engineering and management
+International Society for Zoological Research
+International Society of Thesis Publication
+International Society of Universal Research in Sciences
+International Technology Innovation
+International Union of Scence and Education
+InternationalJournals.co.in
+Internet Scientific Publications
+Interscience Journals
+Interscience Open Access Journals
+Intuition Journals
+Invention Journals
+IORE International
+iProbe Group
+Ira Publications
+IRED International Journals
+IRO Journals
+Isaac Scientific Publishing
+iSER Publications
+Ishaan Publishing House
+Ishitv Technologies
+ISISnet
+Islamic World Network for Environmental Science and Technology
+Ivy Union Publishing
+Jabalpur Management Association
+Jacobs Publishers
+JACS Directory
+Jaypee Journals
+JET Publishing
+Joseph Publishing Group
+Journal Dynamics
+Journal Issues
+Journal Network
+Journal of Comprehensive Research
+Journal of Harmonized Research Publications
+Journal of The International Association of Advanced Technology and Science
+Journals Club & Co.
+Journals of Scientifics R&D
+Journals Pub
+JournalsBank
+JScholar Journals
+JSciMed Central
+July Press
+Juniper Publishers
+Jyoti Academic Press
+KAAV Publications
+Kaleidoscope Journals
+KambohWell Publisher Enterprises
+Kamla Raj Enterprises
+KEI Journals
+KEJA Publications
+Kenkyu Group
+Key Research Journals
+Kiban Research Publications
+Kindi Publication
+Knowledge Publishing Printing & Distribution House
+Knowledgebase Publishers
+KnowledgeCuddle Publication
+KnowledgesPublisher
+Knowledgia Scientific
+Kogaion Publishing Center
+Kowsar Publishing
+Kozmenko Science Publishing
+Krishi Sanskriti
+KSP Journals
+KY Publications
+Ladder Publishing House
+Landmark Research Journals
+LAR
+Lawarence Press
+Lecolink Research Journals
+Lectito Journals
+Leena & Luna International
+Lexis Publisher
+Library of Academic Resources
+Lifescience Global
+LifeSciFeed Ventures
+Lighthouse Journal Publication
+Literati Scientific and Publishers
+London Journals Press
+Longbridge Publishing Company
+Look Academic Publishers
+Lorem Journals
+Macoctagon Journals
+macroJournals
+Macrothink Institute
+MacroWorld
+Madridge Publishers
+Mainspringer
+Management Journals
+Marsland Press
+Mary and Sam Research Academia
+Maryland Institute of Research
+MASAUM Network
+Mathews Open Access Journals
+Maxwell Scientific Organization
+MAYFEB Technology Development
+McMed International
+Meas Publishing Ltd
+MedCrave
+Medical science
+Medical Science Journals [Link dead as of 2012-11-14]
+Medip Academy
+Mediterranean Center of Social and Educational Research
+MEDNANO Publications
+Medwell Journals
+Medwin Publishers
+Meghana Publications
+Mehta Press
+Merit Research Journals
+Meta Research Press
+MNK Publication
+Modern Education and Computer Science Press
+Modern Research Publishers
+Modern Scientific Press
+Mr. Scholar
+Muhammadon Centre for Research and Development
+MuK Publications & Distributions
+Multidisciplinary Journals
+Mustang Journals
+N&N Global Technology
+Narain Publishers Pvt. Ltd
+National Association of Scholars
+National College of Physicians
+Natural Sciences Publishing Corporation
+Naturepub
+Nauk Publication
+Nemis Journals
+Nessa Publishers
+Net Journals
+New Century Publishing Group
+New Century Science Press
+New Delhi Publisher
+New Ground Research Journals
+New Science Series Journals
+New Scientist Publishers
+New World Publishing
+New World Sciences Academy
+Newpubli
+Nexus Academic Publishers
+nhsJournal
+Nobel International Journals
+Noble Academic Publisher
+NobleResearch
+Non Olympic Times
+North American Research Publishing
+North Asian International Research Journal Consortium
+North Atlantic University Union
+Noto-are
+Nova Explore Publications
+Novel Science
+Novelty Journals
+Novus Scientia Journals
+Nuclei Online
+OA Publishing London
+OAE Publishing, Inc.
+Oak-Fortress Journals
+OASP Journals
+Oceanic Journals
+Ology Science
+OMICS International
+Ommega Publishers
+OneCentral Press
+Online Journals Management System
+Online Research Journals
+Online Science Publishing
+OPAST
+Open Academic Press
+Open Access eBooks
+Open Access Journal Limited
+Open Access Journals
+Open Access Journals Publishing Company
+Open Access Library
+Open Access Pub
+Open Access Pub [alt]
+Open Access Publishing Group
+Open Access Science Research Publisher
+Open Access Text
+Open BioMedical Publishing Corporation
+Open Journal Systems
+Open Knowledge Journals
+Open Research and Science Library
+Open Research Network
+Open Research Society
+Open Science
+Open Science Publications
+Openventio Publishsers
+OPR Science
+ORB Academic Publisher
+Orbit Research and Development
+ORIC Publications
+Ozean Publications
+Pacesetter Online Publishers
+Pacific Group of e-Journals
+Pak Publishing Group
+Pakistan Science Mission
+Palgo Journals
+Panacea Research Library
+Paper Publications
+PaperSciences Research Publisher
+Paramount Journals
+PBS Journals
+Peak Journals
+Pearl Publication
+Pearl Research Journals
+Peertechz
+Pelagia Research Library
+Pencil Academic Press
+Pezzottaite Journals
+Pharma Intelligence
+Pharma Publisher
+Pharma Research Library
+Pharmaceutical Research Foundation
+PharmaInfo
+PharmaInterScience Publishers
+Pharmascope Publications
+Philippine Association of Institutions for Research
+Photon Foundation
+Pinnacle Journal Publication
+Pinnacle Research Journals
+Pioneer Scientific Publisher
+PiscoMed Publishing
+Planetary Scientific Research Center
+Platinum Global Journals
+Premier Publishers
+PressAcademia
+Prime Journals
+Pristine Research Journal Publications
+Priyanka Research Journal Publication
+Professional Journals
+Progressive Academic Publishing
+Progressive Science Publications
+Project Innovation
+Project Innovation [alt]
+Proscience Journals
+Prudence Journals
+Prudent Journals
+Pubicon International Publications
+Public Science Framework
+Publishing House of Sciences
+Pulsus Group
+Purple Journals
+Pushpa Publishing House
+Pyrex Journals
+Qingres
+Quazzy Journals
+Quest Journals
+R & S Publications [Link dead as of 2013-07-04]
+R&D Modern Research Publication
+RAJ Group
+Rating Academy
+Readers Insight Publishers
+Recent Science
+Red Flower Publication Private Limited
+RedFame Publishing
+Remedy Publications
+Renu Publishers
+Research & Analysis Journals
+Research & Reviews
+Research Academy of Social Sciences
+Research Alert Journals
+Research and Educational Society
+Research and Information Organization
+Research and Knowledge Publication
+Research and Scientific Innovation Society
+Research Centre for Management and Social Studies
+Research Consultants and Publisher
+Research Foundation for Humanity
+Research India Publications
+Research Institute for Progression of Knowledge
+Research Institute for Science, Technology, and Society
+Research Journal
+Research Open
+Research Publish Journals
+Research Publisher
+Research Publishing Group
+Research Script
+Research Trend
+Research WebPub
+Research, Science, and Technology Publishers
+Researchjournali
+ResearchLEAP
+ResearchWorld
+Revistas Academicas
+Revotech Press
+RG Education Society
+Rising Vision
+Ross Science Publishers
+RS Publication
+Rutveg Publishing, Inc.
+Sacha And Diamond Academic Publishers
+Sadguru Publications
+Sageya Publishers
+Sai Om Publications
+Sai Scientific Communications
+Sakun Publishing House
+SAMANM Group of Research Publications
+Sanford Inter Science Press
+Sans Publishing Group
+Sapient Press
+Savant Journals
+SAVAP International
+Savvy Science Publisher
+Scholar Journals [Link dead as of 2013-04-20]
+Scholar People
+Scholar Publications
+Scholar Science Journals
+ScholArena
+Scholarlink Resource Centre Limited
+Scholarly and Academic Research Journals
+Scholarly Journals
+Scholarly Research Journal’s
+Scholarly Research Publisher
+Scholars Academic and Scientific Publishers
+Scholars Middle East Publishers
+Scholars Research Library
+Scholars Scitech Research
+ScholarsHub.net
+Scholedge R&D Center
+Scholink
+Scholoxy Publications
+Sci Forschen
+Sci-Afric Publishers
+Sci-Edit Publications
+SciDoc Publishers
+Sciedu Press
+Science & Engineering Research Support soCiety
+Science & Knowledge Publishing Corporation Limited
+Science Academy Publisher
+Science Alert
+Science and Education
+Science and Education Centre of North America
+Science and Engineering Publishing Company
+Science and Knowledge Research Society
+Science and Technology Central
+Science and Technology Publishing
+Science Arena Publications
+Science Education Foundation
+Science Explorer Publications
+Science Fair Open Library
+Science Huβ
+Science Instinct Publications
+Science Journal Publication
+Science Park Journals
+Science Park Research Organization and Counseling
+Science Publications
+Science Publishers
+Science Publishing Corporation
+Science Publishing Group
+Science Q Publishing Group
+Science Record Journals
+Science Research Association
+Science Research Library
+Science Sights
+Science Signpost Publishing Inc.
+Science Target
+Science Web Publishing
+ScienceDomain International
+ScienceDomain International [alt]
+ScienceFlora
+Scienceline Publications
+Sciences & Engineering Research Publication
+ScienceScript
+ScienceSolve
+Sciencevier
+Scienpress Ltd.
+Scient Open Access
+ScienTech Publisher
+Scientia Ricerca
+Scientia Socialis
+Scientific & Academic Publishing
+Scientific Advances Publishers
+Scientific Cooperations
+Scientific Federation
+Scientific Future
+Scientific Institute For Advanced Training and Studies
+Scientific Journals
+Scientific Journals International
+Scientific Literature
+Scientific Online Publishing
+Scientific Open Access Journals
+Scientific Perspectives Publishing
+Scientific Planet
+Scientific Platform Online Journals
+Scientific Research Gate
+Scientific Research Publishing
+Scientific Times
+Scientific Viewers
+ScientificWebJournals
+Scigmoid
+Sciknow
+Scinzer Scientific Publications
+SciPress Ltd
+SciRes Literature
+SciRex
+SCITECH
+SciTech Publishers
+SciTechnol
+Scitechz
+ScottishGroup Education and Testing Services
+Scribes Guild
+SEAHI Publications & Academic Journals
+Segment Journals
+Seitejournals
+Serials Publications Pvt Ltd
+SETScholars
+Seventh Sense Research Group Journals
+Shri Param Hans Education & Research Foundation Trust
+Sift Desk
+Significs Online Publishing
+Signpost e Journals
+Silicon Valley Publishers
+Singaporean Journals
+SJournals
+Sky Journals
+Slovakia Academic Publishing
+SM Group
+Smart Science & Technology
+SmatPub
+Smile Nation – Lets Smile Together
+Smith & Franklin Academic Publishing Corporation
+Society for Advancement of Sciences
+Society for Science and Education
+Society for Science and Education United Kingdom
+Society for Science and Nature
+Society of Business Research
+Society of Digital Information and Wireless Communications
+Society of Education
+Society of Engineering Science and Technology
+Sons and Daughters Publishing House/SDPHI/E-JOURNALDIRECT
+Source Journals
+Source,
+South Asian Academic Research Journals
+Southern Cross Publishing Group
+Speak Foundation
+SPIRI The Global Research
+Spring City Culture International Group Pte Ltd.
+Spring City Culture International Group Pte Ltd. [alt]
+Spring International S&T Publishing Media Co.
+Spring Journals
+Springwood Publishing Corporation
+Sprint Journals
+SRD International Journals
+Sri Krishna International Research & Educational Consortium
+SS Publications
+St. Anne Mary Publication
+Standard Global Journals
+Standard Research Journals
+Statperson Publishing Corporation
+STM Connect
+Streem Journal
+Stringer Open
+Suryansh Publications
+Sustainable Scientific Publisher
+SV Publication
+Swan Open
+Swedish Scientific Publications
+Swift Journals
+Swiss Journals
+Symbiosis
+Synchro Publisher
+Synergy Publishers
+T&S Journal PUblications
+TAF Publishing
+Takayama Publishing Group
+Takshila
+Taraksh Journals
+Techmind Research
+Technical Journals Online
+Techno Science Academy
+Technopark Publications
+Terminal Journals
+Textroad Journals
+Thales Academic Publisher
+Thavan E ACT International Journals
+The 5th Publisher
+The Center for Innovations in Business & Management Practice
+The Clute Institute
+The Economics and Social Development Organization
+The European Scientific Community
+The Global Journals
+The Institute for Business and Finance Research
+The International Academy, Research and Industry Association
+The International Journal Research Publications
+The Science and Information Organization
+The Scientific Pages
+The Standard International Journals
+Thetic Journals
+Thomson & Ryberg Publications
+TI Journals
+Time Journals
+Timeline Publication Pvt. Ltd.
+TLEP Journals
+Tomas Publishing
+Topclass Global Journals
+Trade Science, Inc
+Trans Stellar
+Transaction Series on Engineering Sciences and Technologies
+Transcontinental Publishers
+Transnational Research Journals
+TSPublications [Link dead as of 2013-08-23]
+Tulpar Academic Publishing
+U.S. Science Press
+Ulster Press
+Uluslararası Hakemli İletişim ve Edebiyat Araştırmaları Dergisi [alt] UHIVE
+Unified Journals
+Unique Journals Communication
+Unique Research Journals
+United Scholars Publications
+United Scientific Group
+Universal Association of Computer and Electronics Engineers
+Universal Association of Mechanical and Aeronautical Engineers
+Universal Publishing & Research Organization
+Universal Research Group
+Universal Research Publications
+Universe Scientific Publishing
+UniversityPublications.net
+Universum Scientific Journals
+Uptodate Research Publication
+URO Journals
+USN Scientific Journal
+Valley International Journals
+VBRI Press
+Verizona Publisher
+Vernon Innovative Publishers
+VIBGYOR Online Publishers
+Victorquest Publications [company dissolved]
+Vidya Publications
+Virtual Foundation for Advancement of Science and Technology
+VNMPublication
+Vow Scientific Quest
+VRJ Publishers
+Watch Plus
+We-Together to Save Yourself Society
+Webcrawler Journals
+Wesley & Eber Publishing
+West East Institute
+WFL Publisher
+Whioce Publishing Pte. Ltd.
+Whites Science
+Wilolud Journals
+Wireilla Scientific Publications
+WIT Press
+WOAR Journals
+World Academic Journal of Business & Applied Sciences
+World Academic Publishing
+World Academic Research Journals
+World Academic Union
+World Academy of Research and Publication
+World Academy of Research in Science and Engineering
+World Academy of Science and Technology
+World Academy of Science, Engineering and Technology
+World Business Institute
+World Business Institute [alt]
+World Journal of Publisher
+World Journals of Academic Advances
+World Open Access Journals
+World Research Journals
+World Research Library
+World Research Publications
+World Scholars
+World Science and Research Publishing
+World Science Publisher
+World Science Research Journals
+World Scientific and Engineering Academy and Society
+World Standard Organization
+World Wide Journals
+Wudpecker Research Journals
+Wyno Academic Journals
+Wyvern Publishing Group
+Xia & He Publishing
+Xia & He Publishing [alt]
+Yellow Loop Journal
+Zant World Press
+Zeal Scienza Realm of Erudition
+ZealSci Journals
+Zeetarz Group Publishing
+Zenith International Research and Academic Foundation
+Zia World Press
+ZolCat Academic House
+Zt-Journals
+Zygoscient
