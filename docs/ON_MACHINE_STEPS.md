@@ -71,7 +71,7 @@ grok version
 grok login
 ```
 
-(Optional API key instead / in addition: `export XAI_API_KEY=xai-...` from console.x.ai.)
+Browser login is the whole step. Confirm with `grok models` before a batch.
 
 ---
 
@@ -128,9 +128,9 @@ git push
 | Command | AI | Store |
 |---------|----|-------|
 | `--wiring` | No (fake) | `out/wiring_demo.sqlite` |
-| `--pilot` | Claude Pro | `out/pilot_<ingredient>.sqlite` |
+| `--pilot` | Claude subscription (superseded) | `out/pilot_<ingredient>.sqlite` |
 | `--grok` | Grok CLI | `out/grok_<ingredient>.sqlite` |
-| production | Claude API key | `out/bsproof.sqlite` |
+| production (no flag) | Claude subscription | `out/bsproof.sqlite` |
 
 ---
 
@@ -139,7 +139,7 @@ git push
 | Symptom | Fix |
 |---------|-----|
 | `grok: command not found` | PATH + reinstall CLI |
-| auth / not logged in | `grok login` or `XAI_API_KEY` |
+| auth / not logged in | `grok login` (Grok) · `claude auth status` then `/login` (Claude) |
 | smoke unparseable JSON | Share stdout; adapter flag variants may need a tweak |
 | selftest red | Fix pipeline before extraction |
 | rate limit | Lower `--limit` or wait for weekly reset |

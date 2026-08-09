@@ -375,9 +375,9 @@ qx, qw = 2120, 620
 qy = 40
 
 qy = panel(qx, qy, qw, "THREE EXTRACTION BACKENDS", """
-  claude_adapter   API key + --bare      production
-  pilot_adapter    Pro/Max subscription  NOT for claims
-  grok_adapter     XAI_API_KEY           after anchor eval
+  claude_adapter   subscription + safe   production
+  pilot_adapter    subscription          superseded
+  grok_adapter     grok CLI, signed in   after anchor eval
 
 Same prompts, same schemas, same PROMPT_VERSION.
 Separate stores, separate report labels.
@@ -439,8 +439,10 @@ qy = panel(qx, qy, qw, "KNOWN LIMITS  -  SAY THESE OUT LOUD", """
    have vocabulary; running them needs extraction.
    Trust no constant until it has.
 
-4  Production extraction is blocked on one thing:
-   ANTHROPIC_API_KEY. --bare never reads OAuth.
+4  Production extraction runs on the Claude
+   subscription. The ceiling is throughput, not
+   access: the limit is time-based, so a batch
+   that hits it must wait, not retry.
 
 5  Every Grok extraction before commit eb3491d ran
    on a truncated prompt. Treat those tables as

@@ -186,7 +186,8 @@ def main() -> int:
             print(f"    {ing}")
     else:
         print("blocked:        none -- every in-scope anchor has a vocabulary entry.")
-        print("                Running them needs extraction, i.e. ANTHROPIC_API_KEY.")
+        print("                Running them needs extraction, i.e. a signed-in")
+        print("                Claude subscription (`claude auth status`).")
 
     print("\nmechanisms exercised:")
     for t, n in rep["by_test"].items():

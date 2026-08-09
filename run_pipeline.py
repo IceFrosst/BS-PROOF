@@ -253,9 +253,14 @@ def main(argv: list[str]) -> int:
     ingredients = args or ["magnesium"]
     ingredient = ingredients[0]
 
-    if not wiring and not pilot and not grok and not os.environ.get("ANTHROPIC_API_KEY"):
-        print("No extraction backend selected / configured.")
-        return 1
+    if not wiring and not pilot and not grok:
+        # Imported here, not at module scope: a --wiring run must not load the
+        # model boundary at all. preflight() checks the subscription is signed
+        # in, which is the whole configuration story now.
+        import claude_adapter
+        if not claude_adapter.preflight():
+            print("No extraction backend selected / configured.")
+            return 1
 
     if vocab.form(ingredient, form) is None:
         print(f"unknown form {form!r} for {ingredient}. Known forms:")

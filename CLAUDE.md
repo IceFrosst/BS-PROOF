@@ -23,7 +23,7 @@ Allowed model boundaries (nothing else):
 
 | File | Role |
 |------|------|
-| `claude_adapter.py` | Claude production (`--bare` + API key) |
+| `claude_adapter.py` | Claude production (subscription + `--safe-mode`) |
 | `pilot_adapter.py` | Claude subscription pilot (not production) |
 | `grok_adapter.py` | Grok pure-function path (separate backend) |
 
@@ -120,15 +120,24 @@ must be **run and evaluated separately**.
 
 | Path | Auth | Reproducibility | Use for public claims? |
 |------|------|-----------------|------------------------|
-| **Claude production** `claude_adapter` | `ANTHROPIC_API_KEY` + `--bare` | Strongest (hermetic CLI) | Yes, when ready |
-| **Claude pilot** `pilot_adapter` | Claude Pro/Max subscription | Weaker (no `--bare`) | **No** |
-| **Grok pure** `grok_adapter` | `XAI_API_KEY` | Strong if API is pure + pinned model | Only after anchor eval |
+| **Claude production** `claude_adapter` | Claude subscription + `--safe-mode` | Strongest (hermetic CLI) | Yes |
+| **Claude pilot** `pilot_adapter` | Claude subscription | Weaker (empty-cwd trick) | **No** — superseded |
+| **Grok pure** `grok_adapter` | Grok CLI, signed in | Strong if pure + pinned model | Only after anchor eval |
+
+**Everything runs on subscriptions. There is no metered model spend anywhere in
+this pipeline, and no key to provision — the only auth question is whether the
+machine is signed in.** `--safe-mode` is what makes that legitimate: it disables
+CLAUDE.md, skills, plugins, hooks, MCP and custom agents while leaving auth
+working, so a subscription call is now as hermetic as `--bare` was. Measured
+2026-08-09 with the canary experiment `pilot_adapter` documents — see the
+`claude_adapter` module docstring for the before/after and the residual
+differences.
 
 ```bash
-# Claude pilot (subscription)
-python3 run_pipeline.py creatine --form creatine_monohydrate --pilot
+# Claude production (subscription)
+python3 run_pipeline.py creatine --form creatine_monohydrate
 
-# Grok preflight (scaffold until XAI_API_KEY set)
+# Grok preflight
 python3 grok_adapter.py
 
 # Wiring / no model
@@ -146,8 +155,8 @@ Archive each backend’s run under `reports/runs/` with mode in the filename.
 **Three model boundaries. Everything else is deterministic.**
 
 ```
-claude_adapter.py     Claude production      --bare + ANTHROPIC_API_KEY
-pilot_adapter.py      Claude subscription    development only, never a claim
+claude_adapter.py     Claude production      subscription + --safe-mode
+pilot_adapter.py      Claude subscription    superseded; kept for --pilot
 grok_adapter.py       Grok CLI               separate store, separate report
 workers.py            fan-out; `call=` injectable per backend      [MODEL via injection]
 ```
@@ -461,11 +470,23 @@ IV/procedural magnesium; the supplement-scoped variant trades that for
 wrong-ingredient noise (Astragalus, whey protein). Neither scope is right — the
 ingredient must be constrained to the INTERVENTION, not the document.
 
-**Model layer proven, production blocked.** S1–S8 all return schema-valid output
-with evidence spans via `pilot_adapter` (subscription, non-production). `--bare`
-reads only `ANTHROPIC_API_KEY`, never OAuth, so production extraction is blocked
-on that key. The subscription has a hard throughput ceiling: a 10-study batch
-burned 43 calls against the session limit.
+**Model layer proven and UNBLOCKED (2026-08-09).** S1–S8 all return schema-valid
+output with evidence spans. `claude_adapter` now runs production extraction on
+the **Claude subscription** via `--safe-mode`, which disables CLAUDE.md, plugins,
+hooks, MCP and custom agents while auth keeps working — the two leaks
+`pilot_adapter` measured on 2026-08-06 and could not close. Re-ran that canary
+from a poisoned directory: plain `-p` leaked, `--safe-mode` was clean, and a
+full schema-constrained call returned valid JSON with no key in the environment.
+
+Also measured, and it is the reason this is affordable: replacing
+`--append-system-prompt` with `--system-prompt` and adding `--tools ""` cut one
+S1 call from **29 059 to 755 input tokens (38×)** for an identical answer. The
+default prompt is coding-assistant scaffolding a pure function never uses.
+
+**The remaining ceiling is throughput, not access.** A subscription is
+rate-limited by time: a 10-study batch burned 43 calls against the session
+limit. Retrying a limit error cannot help — it is in `_FATAL` for that reason.
+Tune `MAX_CONCURRENCY` and batch size, not auth.
 
 **Population gained a fifth axis, `health_status` (2026-08-08).** Measured: 15
 of 80 studies (19%) in the creatine corpus were disease trials — Huntington's,
@@ -497,16 +518,23 @@ thresholds, OA penalty. See `docs/SPEC.md` §13.
 
 ## Next
 
-**Handoff:** consistent as of **2026-08-08**. Anything describing the score
+**Handoff:** consistent as of **2026-08-09**. Anything describing the score
 differently is stale — trust `pipeline/scoring.py`, `pipeline/arcs.py`,
 `pipeline/synthesis.py` and this section.
+
+Changed 2026-08-09: production extraction moved to the **Claude subscription**
+via `--safe-mode` (`claude_adapter`); `--bare` and the API-key gate are gone,
+`pilot_adapter` is superseded but kept. Anything saying production needs a key
+is stale.
 
 Changed 2026-08-08: invariant 6 amended (SR-table trials enter `E`),
 `PROMPT_VERSION` v1.6 (S2 `results_table` + per-study `design`), outcome
 polarity added, SR retrieval scaled with marginal-yield stopping, file
 ownership table added under Multi-agent workflow.
 
-1. **`ANTHROPIC_API_KEY`** — the only unblock for production extraction.
+1. **Run production extraction end to end.** The auth block is gone, so the
+   first real `claude_adapter` batch is now the gating step for items 3–6
+   below. Start small and watch the session limit, not the cost.
 2. **Constrain retrieval to the intervention**, not the document. Gates
    extraction cost, coverage and outcome mapping simultaneously.
 3. **SR inheritance uplift is still UNMEASURED** — and it is now the biggest

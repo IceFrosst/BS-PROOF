@@ -98,12 +98,12 @@ Then a real run. Pick exactly one backend:
 # no model at all — proves the plumbing end to end
 python3 run_pipeline.py creatine --form creatine_monohydrate --wiring
 
-# Grok backend (XAI_API_KEY + grok CLI)
+# Grok backend (grok CLI, signed in)
 python3 run_pipeline.py magnesium --form magnesium_glycinate --grok \
         --per-outcome --dose 400 --limit 120
 
-# Claude subscription pilot — development only, never a public claim
-python3 run_pipeline.py creatine --form creatine_monohydrate --pilot
+# Claude production — your Claude subscription, no key to provision
+python3 run_pipeline.py creatine --form creatine_monohydrate
 ```
 
 `--dose` is your product's **elemental** mg. Without it the dose arc reads
@@ -142,9 +142,11 @@ python3 run_pipeline.py creatine --form creatine_monohydrate --pilot
 **Deterministic core: built and tested.** Retrieval, dedup, full-text ladder,
 scoring, arcs, storage, reports — 236 selftest checks, no network required.
 
-**Model layer: proven, production blocked.** S1–S8 all return schema-valid
-output with evidence spans. Production extraction needs `ANTHROPIC_API_KEY`
-(`--bare` never reads a subscription); the Grok backend runs today.
+**Model layer: proven and runnable.** S1–S8 all return schema-valid output with
+evidence spans. Both backends run on a signed-in subscription — nothing to
+provision, no metered spend. The remaining ceiling is throughput, not access: a
+subscription is rate-limited by time, so batch size and concurrency are the
+things to tune.
 
 **Not yet true, and load-bearing:**
 

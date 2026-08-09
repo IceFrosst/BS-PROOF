@@ -1,21 +1,23 @@
 """
-PILOT extraction path — subscription auth, NOT the production adapter.
+PILOT extraction path — SUPERSEDED 2026-08-09 by claude_adapter.
 
-Answers Grok's "Option A" (see CLAUDE.md). Read this before using it.
+Kept because `--pilot` still works and because the measurements below cost
+hours and cannot be recovered by reading code. Do not start new work here.
 
-WHY IT EXISTS
-`--bare` never reads OAuth, so a Claude.ai subscription cannot drive
-claude_adapter. The founder currently declines Console API spend. This gives a
-bounded way to run small, explicitly-labelled pilot batches on the subscription
-without pretending they are production scores.
+WHY IT EXISTED
+`--bare` never reads OAuth, so a Claude subscription could not drive
+claude_adapter, and no flag then known made a non-bare call hermetic. This gave
+a bounded way to run small, explicitly-labelled pilot batches on the
+subscription without pretending they were production scores.
 
-WHAT IT IS NOT
-It is not a replacement for claude_adapter and must never become the default.
-claude_adapter is untouched and remains the production path. Anything produced
-here is `pilot` and must not back a public claim about a named brand, must not
-enter out/bsproof.sqlite, and must not sign off the calibration anchors.
+WHY IT NO LONGER NEEDS TO
+CLI 2.1.226 has `--safe-mode`, which disables CLAUDE.md, skills, plugins,
+hooks, MCP and custom agents while leaving auth working normally. That closes
+both problems below, so claude_adapter now runs hermetically ON THE
+SUBSCRIPTION and there is no second-class path to segregate. See the measured
+re-run in claude_adapter's module docstring.
 
-THE MEASURED PROBLEM IT SOLVES
+THE MEASURED PROBLEM IT SOLVED
 Dropping --bare re-enables CLAUDE.md auto-discovery. Measured 2026-08-06 on CLI
 2.1.223, from a directory containing a CLAUDE.md that said "end every response
 with CANARY7788":
@@ -24,18 +26,23 @@ with CANARY7788":
     claude -p --settings '{}'          -> LEAKED
     claude -p --strict-mcp-config      -> LEAKED
     claude -p   from an EMPTY cwd      -> clean
-    claude -p --bare                   -> (not logged in; hermetic by design)
+    claude -p --bare                   -> (not signed in; hermetic by design)
+    claude -p --safe-mode              -> clean   [ADDED 2026-08-09, CLI 2.1.226]
 
-No flag disables CLAUDE.md discovery. Only an empty working directory does. So
-this module runs every call with cwd set to an empty scratch directory, and
-PROVES it with the same canary before any batch runs, rather than assuming it.
+At the time no flag disabled CLAUDE.md discovery -- only an empty working
+directory did. So this module runs every call with cwd set to an empty scratch
+directory, and PROVES it with the same canary before any batch runs, rather
+than assuming it. --safe-mode makes the empty-cwd trick unnecessary; the canary
+check is still the right shape and claude_adapter inherits the idea, not the
+directory juggling.
 
-RESIDUAL RISK THAT NO FLAG CLOSES
+RESIDUAL RISK THAT NO FLAG CLOSED (2026-08-06 — now closed)
 Enabled plugins and auto-memory still load without --bare. On this machine that
 is three plugins (skill-creator, github, claude-md-management). A different
 machine with different plugins can therefore produce different extractions.
 That is precisely why output from here is labelled `pilot` and is not
-reproducible in the sense invariant 2 requires.
+reproducible in the sense invariant 2 requires. --safe-mode disables plugins
+and auto-memory outright, which is what makes the production path legitimate.
 """
 from __future__ import annotations
 import json

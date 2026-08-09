@@ -22,13 +22,13 @@ grok login
 # browser or device auth
 ```
 
-Optional (CI / if login fails in headless):
+Browser login is the supported path and the only one this project uses — the
+Grok backend runs on the subscription, same as Claude. There is no metered
+model spend in this pipeline.
 
-```bash
-export XAI_API_KEY='xai-...'   # from console.x.ai
-```
-
-API key **overrides** browser login when both are present.
+If `grok login` cannot complete on a headless box, fix it there (device auth,
+or run the login on a machine with a browser and copy the credential) rather
+than introducing a billed credential into the run.
 
 ## 3. Preflight + smoke
 
