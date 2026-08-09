@@ -87,12 +87,65 @@ def _fit_text(agent: str, text: str, fixed_chars: int) -> str:
     return text[:head] + ELISION + text[-(room - head):]
 
 
-def _payload(agent: str, record: dict, text: str, registry: dict | None) -> dict:
+# Which sections each agent actually needs. Sending one combined blob to all
+# five per-study agents cost ~10 000 input tokens per study in duplication --
+# the same ~7 900 chars, five times -- and, worse, gave S8 text that could not
+# contain the answer: best_text returns METHODS ++ RESULTS and funding is stated
+# in neither. Measured 2026-08-09: 0/7 of the texts S8 received held any of
+# fund|grant|sponsor|conflict of interest|acknowledg|disclosure, so every study
+# defaulted to funding='undisclosed' (0.80) while S8 burned the largest output
+# token count of any agent.
+# ONLY S8. Routing all five was measured and it BACKFIRED -- see below.
+AGENT_SECTIONS = {
+    "S8": ("funding",),                 # the ONLY section that states it
+}
+
+# WHY NOT S3/S4/S5/S7, measured 2026-08-09 on the same 7 studies:
+#
+#   arm D  shared text, no routing    199 323 in-tok  $1.067   81s
+#   arm G  all five routed            178 801 in-tok  $1.350  117s
+#
+# 10% FEWER tokens and 27% MORE money. The token count is not the price. When
+# every per-study agent gets the SAME text, the first call writes the prompt
+# cache and the other four read it:
+#
+#   arm D   cache_write  10 001   cache_read  181 327
+#   arm G   cache_write  66 638   cache_read   96 161
+#
+# Giving each agent a different slice means each one writes its own cache entry,
+# and a cache WRITE costs roughly 12x a cache READ per token. S3/S4/S5/S7 all
+# read the methods-and-results blob happily, so slicing them buys a little input
+# and pays for it many times over in lost sharing.
+#
+# S8 is the exception and the reason this exists at all: it went the other way,
+# -49% input AND cheaper ($0.138 -> $0.118), because its slice is tiny and it
+# was never able to answer from the shared text anyway.
+
+
+def _agent_text(agent: str, text: str, sections: dict | None) -> str:
+    """
+    The slice this agent needs, or the combined text when we cannot slice.
+
+    The fallback is not a nicety. Unstructured JATS parses to no sections at
+    all, and handing a subagent an empty payload reads exactly like a paper
+    that reports nothing -- the failure mode invariant 7 makes expensive,
+    because a missing result is scored as evidence AGAINST.
+    """
+    want = AGENT_SECTIONS.get(agent)
+    if not want or not sections:
+        return text
+    parts = [sections[k] for k in want if sections.get(k)]
+    return "\n\n".join(parts) if parts else text
+
+
+def _payload(agent: str, record: dict, text: str, registry: dict | None,
+             sections: dict | None = None) -> dict:
     from claude_adapter import SCHEMAS, _system_prompt
     _, _schema_f, _prompt_f = claude_adapter.AGENTS[agent]
     # +400 for JSON scaffolding and the fixed keys around the text.
     _fixed = (len(_system_prompt(_prompt_f))
               + len((SCHEMAS / _schema_f).read_text()) + 400)
+    text = _agent_text(agent, text, sections)
     base = {"title": record.get("title"), "text": _fit_text(agent, text, _fixed)}
     if agent == "S3":
         # Population vocabulary is NOT sent. S3's prompt lists the four axes and
@@ -122,7 +175,8 @@ def _payload(agent: str, record: dict, text: str, registry: dict | None) -> dict
 
 def extract_study(record: dict, text: str, registry: dict | None = None, *,
                   call=None, max_workers: int = 5,
-                  outcome_allowlist: list[str] | None = None) -> dict:
+                  outcome_allowlist: list[str] | None = None,
+                  sections: dict | None = None) -> dict:
     call = call or claude_adapter.call
 
     # Cheap gate BEFORE any model call: is this actually an oral/supplement
@@ -142,7 +196,9 @@ def extract_study(record: dict, text: str, registry: dict | None = None, *,
     out: dict = {}
 
     with ThreadPoolExecutor(max_workers=max_workers) as pool:
-        futures = {agent: pool.submit(call, agent, _payload(agent, record, text, registry))
+        futures = {agent: pool.submit(
+                       call, agent,
+                       _payload(agent, record, text, registry, sections))
                    for agent in PER_STUDY}
         for agent, fut in futures.items():
             result, meta = fut.result()
@@ -214,7 +270,8 @@ def extract_study(record: dict, text: str, registry: dict | None = None, *,
 
 def extract_corpus(records: list[dict], text_for, registry_for=None, *,
                    call=None, max_studies_in_flight: int = 4,
-                   outcome_allowlist: list[str] | None = None) -> list[dict]:
+                   outcome_allowlist: list[str] | None = None,
+                   sections_for=None) -> list[dict]:
     """
     Fan out across studies. Prints live progress so you can judge concurrency.
     """
@@ -241,6 +298,7 @@ def extract_corpus(records: list[dict], text_for, registry_for=None, *,
                 extract_study, r, text_for(r),
                 registry_for(r) if registry_for else None, call=call,
                 outcome_allowlist=outcome_allowlist,
+                sections=sections_for(r) if sections_for else None,
             ): i
             for i, r in enumerate(records)
         }

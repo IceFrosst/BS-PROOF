@@ -62,6 +62,18 @@ def _grok_db(ingredient: str, scope: str):
     return DEFAULT_DB.parent / f"grok_{ingredient}{suffix}.sqlite"
 
 
+def _sections(record: dict) -> dict:
+    """
+    Parsed sections for per-agent routing. fetch_xml is disk-cached, so this
+    costs nothing beyond the fetch best_text already did.
+    """
+    from sources import fulltext as ft
+    try:
+        return ft.sections(ft.fetch_xml(record.get("pmcid"))) or {}
+    except Exception:
+        return {}
+
+
 def _best_text(record: dict) -> str:
     from sources import fulltext as ft
     try:
@@ -471,6 +483,7 @@ def main(argv: list[str]) -> int:
                 [{**p, "_canonical": p["canonical_id"], "ingredient": ingredient}
                  for p in targets],
                 text_for=lambda r: _best_text(r),
+                sections_for=lambda r: _sections(r),
                 registry_for=lambda r: store.registry_facts(r["registration_id"])
                                        if r.get("registration_id") else None,
                 call=call_fn,

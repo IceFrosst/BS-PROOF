@@ -36,8 +36,14 @@ One shot, no tools, no loop, no ambient project memory when possible. Input JSON
 output JSON matching the schema, exit. If a subagent needs a second turn, the
 **prompt** is wrong — do not raise turn limits to paper over it.
 
-Claude production uses `--bare`. Grok path must be equivalently pure (no chat
-memory, fixed prompt version, temperature 0).
+Claude production uses `--safe-mode` (not `--bare` — see the backends table).
+Grok path must be equivalently pure (no chat memory, fixed prompt version,
+temperature 0).
+
+**One call per STUDY is still a pure function; one call per CLAIM was just
+expensive.** S6B maps every claim in a study in a single call under the same
+rules and the same bar for null, and matches results back BY INDEX so a
+reordered or short response cannot shift a mapping onto the wrong claim.
 
 ### 3. Bump `PROMPT_VERSION` when you edit any prompt
 
@@ -360,11 +366,15 @@ arbitrary insertion-order slice — measured on a 462-synthesis store, the first
 | S3 | study facts | B |
 | S4 | RoB | B |
 | S5 | conclusions | B |
-| S6 | outcome → vocab | C |
+| S6 | outcome → vocab (per claim; legacy) | C |
+| S6B | outcome → vocab, WHOLE STUDY in one call (default) | C |
 | S7 | form / dose | B |
 | S8 | funding | A |
 
-Claude tiers: see `claude_adapter.TIER_MODEL`. Grok tiers: `grok_adapter.TIER_MODEL`.
+Claude tiers: see `claude_adapter.TIER_MODEL` and `TIER_EFFORT`. Tier C is
+`claude-sonnet-5` at `--effort high` since 2026-08-09 — measured against
+opus-5 and opus-4-8 on 7 studies, same mappings, zero conflicts, −36% on the
+agent that dominates cost. `SP_MODEL_C=claude-opus-5` reverts. Grok tiers: `grok_adapter.TIER_MODEL`.
 
 ---
 

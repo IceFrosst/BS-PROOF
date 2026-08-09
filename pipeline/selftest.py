@@ -1211,6 +1211,46 @@ def main():
         check("re-scoring updates in place, no duplicate row",
               st_db.counts()["ecus"] == 1 and st_db.ecu(key)["score"] == 42)
 
+    # Each agent gets the section it needs. S8 was handed METHODS ++ RESULTS,
+    # which cannot state who paid: 0/7 real texts contained a funding word.
+    print("\nPER-AGENT SECTION ROUTING")
+    import workers as _w2
+    from sources import fulltext as _ft
+    _secs = {"methods": "METHODS n=40 randomised",
+             "results": "RESULTS strength rose, p=0.01",
+             "discussion": "DISCUSSION consistent with prior work",
+             "funding": "FUNDING supplied by AlzChem GmbH"}
+    check("S8 gets the funding section, not the methods",
+          _w2._agent_text("S8", "COMBINED", _secs) == _secs["funding"])
+    check("S3/S4/S5/S7 keep the SHARED text, so the prompt cache keeps sharing",
+          all(_w2._agent_text(a, "COMBINED", _secs) == "COMBINED"
+              for a in ("S3", "S4", "S5", "S7")),
+          "routing all five was -10% tokens but +27% cost: writes replaced reads")
+    check("a missing section falls back to the combined text, never empty",
+          _w2._agent_text("S8", "COMBINED", {"methods": "m"}) == "COMBINED",
+          "an empty payload reads as a paper that reports nothing (invariant 7)")
+    check("no sections at all falls back too",
+          _w2._agent_text("S8", "COMBINED", None) == "COMBINED")
+    check("only S8 is routed",
+          set(_w2.AGENT_SECTIONS) == {"S8"}, str(set(_w2.AGENT_SECTIONS)))
+
+    _jats = ("<article><body>"
+             "<sec><title>Methods</title><p>n=40</p></sec>"
+             "<sec><title>Results</title><p>p=0.01</p></sec>"
+             "</body><back>"
+             "<funding-group><funding-statement>Grant NIH-123"
+             "</funding-statement></funding-group>"
+             "<ack><title>Acknowledgments</title><p>Creapure by AlzChem</p></ack>"
+             "</back></article>")
+    _s = _ft.sections(_jats)
+    check("JATS <funding-group> becomes a funding section",
+          "NIH-123" in (_s.get("funding") or ""),
+          "funding is usually NOT in a <sec>, which is why S8 was blind")
+    check("JATS <ack> is folded into funding too",
+          "AlzChem" in (_s.get("funding") or ""))
+    check("methods and results still parse unchanged",
+          "n=40" in _s.get("methods", "") and "p=0.01" in _s.get("results", ""))
+
     # Effort changes what comes back, so it must change the cache key. Without
     # this an A/B arm at a different effort silently reads the previous arm's
     # answers and reports them as its own.

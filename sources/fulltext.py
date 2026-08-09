@@ -38,7 +38,24 @@ SECTION_PATTERNS = {
                 r"^study\s+design"),
     "results": (r"^results?$", r"^findings?$", r"^results?\s+and\s+discussion$"),
     "discussion": (r"^discussion$", r"^conclusions?$"),
+    # FUNDING / COI. Added 2026-08-09 because S8 could not possibly have been
+    # working: best_text returns METHODS ++ RESULTS, neither of which states who
+    # paid. Measured on 7 creatine RCTs -- 0/7 of the texts sent to S8 contained
+    # any of fund|grant|sponsor|conflict of interest|acknowledg|disclosure, so
+    # every study fell through to funding='undisclosed' (0.80 weight) while S8
+    # burned the largest output-token count of any agent to get there.
+    "funding": (r"^funding$", r"^financial support", r"^funding sources?$",
+                r"^acknowledge?ments?$", r"^conflicts? of interest",
+                r"^declarations? of (competing|conflicting) interest",
+                r"^competing interests?$", r"^disclosures?$",
+                r"^role of the funding source"),
 }
+
+# JATS keeps funding OUT of <sec> far more often than in it. These are the
+# elements that actually carry it, and missing them is why adding the section
+# titles alone would not have been enough.
+_FUNDING_ELEMENTS = ("funding-group", "funding-statement", "ack",
+                     "conflict", "author-notes")
 
 
 def fetch_xml(pmcid: str, *, timeout: int = 60, use_cache: bool = True) -> str | None:
@@ -119,6 +136,15 @@ def sections(xml: str | None) -> dict[str, str]:
         name = _match_section(_text(title_el))
         if name:
             out.setdefault(name, []).append(_text(sec))
+
+    # Funding again, from the elements JATS actually uses for it. A paper can
+    # carry a <funding-group> and no Funding <sec> at all, which is the common
+    # case and the reason S8 was blind.
+    for tag in _FUNDING_ELEMENTS:
+        for el in root.iter(tag):
+            t = _text(el)
+            if t and t not in out.get("funding", []):
+                out.setdefault("funding", []).append(t)
     return {k: "\n\n".join(v) for k, v in out.items() if v}
 
 
