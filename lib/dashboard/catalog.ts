@@ -85,7 +85,13 @@ function matchingLegacyContext(run: DashboardRun): string | null {
 function loadDashboardArtifact(filePath: string): DashboardRun {
   const raw = readJson(filePath);
   assertDashboardRunV1(raw);
-  DashboardRunSchema.parse(raw);
+  const shapeCheck = DashboardRunSchema.safeParse(raw);
+  if (!shapeCheck.success) {
+    const details = shapeCheck.error.issues
+      .map((item) => `${item.path.map(String).join(".") || "/"}: ${item.message}`)
+      .join("; ");
+    throw new Error(`Dashboard artifact failed shape validation (${posixRelative(filePath)}): ${details}`);
+  }
   let run = normalizeRun(raw, posixRelative(filePath));
   const contractCheck = reconcileRun(run);
   if (!contractCheck.ok) {
@@ -135,13 +141,121 @@ function loadLegacyContext(filePath: string): DashboardRun {
   return enrichOutcomes(normalizeRun(augmented, posixRelative(filePath)));
 }
 
-/** Load immutable DashboardRunV1 artifacts; use context JSON only as a legacy fallback. */
+/** An artifact that failed its contract. Excluded from the catalog, never rendered as a run. */
+export interface QuarantinedRun {
+  runId: string;
+  artifactPath: string;
+  reason: string;
+}
+
+interface RunArtifacts {
+  runId: string;
+  dashboardPath: string | null;
+  contextPath: string | null;
+}
+
+interface CatalogLoad {
+  runs: DashboardRun[];
+  quarantined: QuarantinedRun[];
+}
+
+function runIdFromArtifact(filePath: string): string {
+  return path.basename(filePath).replace(/_(dashboard|context)\.json$/i, "");
+}
+
+/** Pair each run's artifacts by filename stem so a run holding both is loaded once. */
+function runArtifacts(): RunArtifacts[] {
+  const entries = new Map<string, RunArtifacts>();
+  const add = (filePath: string, kind: "dashboard" | "context"): void => {
+    const runId = runIdFromArtifact(filePath);
+    const existing = entries.get(runId) ?? { runId, dashboardPath: null, contextPath: null };
+    entries.set(
+      runId,
+      kind === "dashboard"
+        ? { ...existing, dashboardPath: filePath }
+        : { ...existing, contextPath: filePath },
+    );
+  };
+  for (const filePath of filesWithSuffix("_dashboard.json")) add(filePath, "dashboard");
+  for (const filePath of filesWithSuffix("_context.json")) add(filePath, "context");
+  return [...entries.values()].sort((left, right) => left.runId.localeCompare(right.runId));
+}
+
+function failureReason(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+/**
+ * Reported once per (artifact, reason) per process: a static build calls the
+ * catalog once per page, and sixty copies of one break read as noise, not a break.
+ */
+const reportedQuarantines = new Set<string>();
+
+function quarantine(
+  quarantined: QuarantinedRun[],
+  runId: string,
+  filePath: string,
+  reason: string,
+): void {
+  const entry: QuarantinedRun = { runId, artifactPath: posixRelative(filePath), reason };
+  quarantined.push(entry);
+  const key = JSON.stringify([entry.artifactPath, entry.reason]);
+  if (reportedQuarantines.has(key)) return;
+  reportedQuarantines.add(key);
+  console.error(
+    `[dashboard] QUARANTINED run "${entry.runId}" (${entry.artifactPath}): ${entry.reason} ` +
+      "This run is excluded from the catalog; the rest of the site still builds.",
+  );
+}
+
+/**
+ * Load immutable DashboardRunV1 artifacts, falling back per run to legacy context
+ * JSON. One unreadable artifact quarantines its own run, not the whole catalog.
+ */
+function loadCatalog(): CatalogLoad {
+  const runs: DashboardRun[] = [];
+  const quarantined: QuarantinedRun[] = [];
+  const loadedIds = new Set<string>();
+
+  for (const artifacts of runArtifacts()) {
+    const source = artifacts.dashboardPath ?? artifacts.contextPath;
+    if (!source) continue;
+    let run: DashboardRun;
+    try {
+      // A dashboard artifact that fails its contract is quarantined outright. Falling
+      // back to its context JSON would render a run whose two sources disagree as if
+      // it were fine, which is the substitution the reconciliation exists to refuse.
+      run = artifacts.dashboardPath !== null
+        ? loadDashboardArtifact(artifacts.dashboardPath)
+        : loadLegacyContext(source);
+    } catch (error) {
+      quarantine(quarantined, artifacts.runId, source, failureReason(error));
+      continue;
+    }
+    if (loadedIds.has(run.run.id)) {
+      quarantine(
+        quarantined,
+        artifacts.runId,
+        source,
+        `Run id "${run.run.id}" was already loaded from another artifact; the duplicate is refused rather than merged.`,
+      );
+      continue;
+    }
+    loadedIds.add(run.run.id);
+    runs.push(run);
+  }
+
+  runs.sort((left, right) => (right.run.timestamp ?? "").localeCompare(left.run.timestamp ?? ""));
+  return { runs, quarantined };
+}
+
 export function loadDashboardCatalog(): DashboardRun[] {
-  const dashboardFiles = filesWithSuffix("_dashboard.json");
-  const runs = dashboardFiles.length
-    ? dashboardFiles.map(loadDashboardArtifact)
-    : filesWithSuffix("_context.json").map(loadLegacyContext);
-  return runs.sort((left, right) => (right.run.timestamp ?? "").localeCompare(left.run.timestamp ?? ""));
+  return loadCatalog().runs;
+}
+
+/** Artifacts kept out of the catalog. Absent is not zero: these have no run row at all. */
+export function loadQuarantinedRuns(): QuarantinedRun[] {
+  return loadCatalog().quarantined;
 }
 
 export const loadRetainedRuns = loadDashboardCatalog;

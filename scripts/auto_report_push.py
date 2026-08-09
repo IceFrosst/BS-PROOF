@@ -467,25 +467,52 @@ def write_report(ingredient: str, form: str, mode: str,
     (REPORTS / "latest.md").write_text(summary, encoding="utf-8")
     (REPORTS / "latest_full.md").write_text(full, encoding="utf-8")
 
+    # THE MARKDOWN REPORTS ARE NOW ON DISK AND MUST STAY THERE.
+    #
+    # Everything below is derived: a JSON copy of the context and the deployable
+    # dashboard artifact. Both can fail on data the reports themselves render
+    # fine -- a non-serialisable object in the context, a telemetry
+    # inconsistency the artifact contract refuses, a run id that already has an
+    # immutable artifact. A multi-hour extraction must not lose its INDEX entry
+    # and its push because a derived file could not be built, so each derived
+    # write degrades on its own and says so loudly. Nothing here is swallowed
+    # silently: the reason is printed with the name of what failed.
+    written = [path_sum, path_full]
+
     # Machine-readable run context for later tooling
     ctx_path = RUNS / f"{base}_context.json"
-    ctx_path.write_text(json.dumps(ctx, indent=2, default=str), encoding="utf-8")
+    try:
+        ctx_path.write_text(json.dumps(ctx, indent=2, default=str),
+                            encoding="utf-8")
+    except Exception as exc:
+        print(f"!! WARNING: run context {ctx_path.name} NOT written: "
+              f"{type(exc).__name__}: {exc}")
+        print("!! The markdown reports above are complete; only the machine-"
+              "readable copy is missing.")
 
     # Deployable data contract. It is deliberately produced from the in-memory
     # full ECU rows, not reconstructed later from the lossy SQLite projection.
-    from scripts.dashboard_artifact import write_dashboard_artifact
-    dashboard_path = write_dashboard_artifact(
-        ctx,
-        run_id=base,
-        mode=mode,
-        source_commit=ctx.get("source_commit"),
-        reports={
-            "summary": f"reports/runs/{path_sum.name}",
-            "full": f"reports/runs/{path_full.name}",
-            "context": f"reports/runs/{ctx_path.name}",
-            "dashboard": f"reports/runs/{base}_dashboard.json",
-        },
-    )
+    dashboard_path = None
+    try:
+        from scripts.dashboard_artifact import write_dashboard_artifact
+        dashboard_path = write_dashboard_artifact(
+            ctx,
+            run_id=base,
+            mode=mode,
+            source_commit=ctx.get("source_commit"),
+            reports={
+                "summary": f"reports/runs/{path_sum.name}",
+                "full": f"reports/runs/{path_full.name}",
+                "context": f"reports/runs/{ctx_path.name}",
+                "dashboard": f"reports/runs/{base}_dashboard.json",
+            },
+        )
+        written.append(dashboard_path)
+    except Exception as exc:
+        print(f"!! WARNING: dashboard artifact {base}_dashboard.json NOT "
+              f"written: {type(exc).__name__}: {exc}")
+        print("!! This run cannot be deployed to the dashboard until that is "
+              "fixed. The markdown reports above are complete and unaffected.")
 
     meta_base = {"when": _now(), "mode": mode,
                  "ingredient": ingredient, "form": form}
@@ -495,10 +522,11 @@ def write_report(ingredient: str, form: str, mode: str,
     ])
     print(f"Wrote reports/runs/{path_sum.name}")
     print(f"Wrote reports/runs/{path_full.name}")
-    print(f"Wrote reports/runs/{dashboard_path.name}")
+    if dashboard_path is not None:
+        print(f"Wrote reports/runs/{dashboard_path.name}")
     print("Wrote reports/latest.md (summary)")
     print("Wrote reports/latest_full.md (full)")
-    return [path_sum, path_full, dashboard_path]
+    return written
 
 
 def git_push_reports() -> int:

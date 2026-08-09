@@ -30,7 +30,13 @@ export function formatPercent(value: number | null, digits = 1): string {
 
 export function formatSigned(value: number | null, digits = 3): string {
   if (value === null) return "—";
-  const formatted = Math.abs(value).toFixed(digits).replace(/\.?0+$/, "");
+  // Strip trailing zeros from the FRACTION only. The old regex was
+  // /\.?0+$/ on the whole string, so at digits=0 it ate significant digits:
+  // a signed score of -20 rendered as "-2", -70 as "-7", 100 as "1".
+  const fixed = Math.abs(value).toFixed(digits);
+  const formatted = fixed.includes(".")
+    ? fixed.replace(/0+$/, "").replace(/\.$/, "")
+    : fixed;
   if (value > 0) return `+${formatted}`;
   if (value < 0) return `−${formatted}`;
   return "0";

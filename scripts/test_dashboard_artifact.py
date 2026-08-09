@@ -1,15 +1,21 @@
 from __future__ import annotations
 
+import copy
 import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
+import claude_adapter
+from scripts import dashboard_artifact
 from scripts.dashboard_artifact import (
     ROOT,
     SCHEMA_PATH,
     build_dashboard_run,
+    dashboard_schema,
     normalize_usage,
+    validate_against_schema,
     validate_dashboard_run,
     write_dashboard_artifact,
 )
@@ -229,6 +235,126 @@ class DashboardArtifactTests(unittest.TestCase):
         })
         with self.assertRaisesRegex(ValueError, "by_agent sum"):
             validate_dashboard_run(artifact)
+
+    def test_partial_claude_envelope_reports_no_total_it_cannot_measure(self) -> None:
+        """A subtotal is not a total.
+
+        The Claude CLI does not always return usage metadata. When it is missing
+        for even one live call, the run-level token and cost figures are
+        UNKNOWABLE -- the recorded calls sum to a subtotal, and publishing that
+        subtotal as "tokens for this run" understates the run by exactly the
+        amount nobody measured. ``Usage.as_dict`` answers null there; this
+        proves the dashboard projection keeps the null instead of quietly
+        adopting the subtotal, and flags the breakdown as partial.
+        """
+        usage_state = claude_adapter.Usage()
+        # S3: complete telemetry -- tokens and an API-equivalent price.
+        usage_state.add("S3", 0.25, model="claude-test", tier="B",
+                        tokens={"input": 100, "cache_write": 10,
+                                "cache_read": 20, "output": 30},
+                        latency_s=1.0)
+        # S6: the CLI returned no usage block at all for this call.
+        started = usage_state.begin_attempt("S6", model="claude-test", tier="C")
+        usage_state.finish_attempt("S6", started, cost=None, tokens=None,
+                                   model="claude-test", tier="C")
+        envelope = usage_state.as_dict()
+
+        # The adapter itself must already be refusing to guess.
+        self.assertEqual("partial", envelope["telemetry_status"])
+        self.assertEqual(1, envelope["usage_records_missing_tokens"])
+        self.assertEqual(1, envelope["usage_records_missing_cost"])
+        self.assertIsNone(envelope["tokens"]["total"])
+        self.assertIsNone(envelope["api_equivalent_cost"])
+
+        usage = normalize_usage(envelope, context={"studies_ok": 2},
+                                provider="claude")
+
+        # No run-level total may be reconstructed from the half that was seen.
+        self.assertEqual("partial", usage["telemetry_status"])
+        for key in ("fresh_input", "cache_write", "cache_read", "output", "total"):
+            self.assertIsNone(usage["tokens"][key],
+                              f"tokens.{key} must stay null, not fall back to S3")
+        self.assertIsNone(usage["api_equivalent_cost"])
+        self.assertEqual(1, usage["usage_records_missing_tokens"])
+        self.assertEqual(1, usage["usage_records_missing_cost"])
+
+        # Breakdowns exist but are not a complete measurement, so nothing
+        # downstream may treat their sums as the run total.
+        self.assertEqual("partial", usage["breakdown_status"])
+        by_agent = {row["agent"]: row for row in usage["by_agent"]}
+        self.assertEqual(160, by_agent["S3"]["tokens"]["total"])
+        self.assertIsNone(by_agent["S6"]["tokens"]["total"])
+        self.assertIsNone(by_agent["S6"]["api_equivalent_cost"])
+
+        # Efficiency is a ratio of unknown over known, which is still unknown.
+        per_study = usage["efficiency"]["per_successful_study"]
+        self.assertEqual(2, per_study["denominator"])
+        self.assertEqual(1.0, per_study["calls"])
+        self.assertIsNone(per_study["tokens"])
+        self.assertIsNone(per_study["api_equivalent_cost"])
+
+        # And the artifact carrying those nulls is still a valid deploy payload.
+        artifact = build_dashboard_run(
+            {"ingredient": "x", "form": "x", "ecu_rows": [], "usage": envelope},
+            run_id="20990101_000003_x_x_claude",
+            mode="claude",
+        )
+        self.assertIsNone(artifact["usage"]["tokens"]["total"])
+        self.assertEqual("partial", artifact["usage"]["breakdown_status"])
+
+    def test_agent_tiers_land_where_the_reader_looks(self) -> None:
+        """``run_pipeline`` writes the map at top level; the reader reads usage.
+
+        ``lib/dashboard/normalize.ts`` resolves ``agentTiers`` from
+        ``agent_tiers`` INSIDE the usage object and nowhere else, so a top-level
+        map never reaches the dashboard. The projection has to move it.
+
+        The deploy schema currently closes ``usage`` with
+        ``additionalProperties: false`` and does not list ``agent_tiers``, so
+        the writer withholds it rather than emitting a field Ajv would reject.
+        This exercises the plumbing against a contract that accepts the field.
+        """
+        widened = copy.deepcopy(dashboard_schema())
+        widened["$defs"]["usage"]["properties"]["agent_tiers"] = {
+            "type": "object", "additionalProperties": {"type": "string"},
+        }
+        context = {
+            "ingredient": "x", "form": "x", "ecu_rows": [],
+            "agent_tiers": {"S1": "A", "S6": "C"},
+        }
+        with mock.patch.object(dashboard_artifact, "_SCHEMA_CACHE", widened):
+            artifact = build_dashboard_run(
+                context, run_id="20990101_000004_x_x_claude", mode="claude")
+        self.assertEqual({"S1": "A", "S6": "C"},
+                         artifact["usage"]["agent_tiers"])
+
+    def test_writer_refuses_a_field_the_deploy_schema_rejects(self) -> None:
+        """The Python writer and the Ajv reader enforce the same file."""
+        artifact = build_dashboard_run(
+            {"ingredient": "x", "form": "x", "ecu_rows": []},
+            run_id="20990101_000005_x_x_claude",
+            mode="claude",
+        )
+        # Valid as built -- the writer already validated it.
+        validate_against_schema(artifact)
+        leaked = copy.deepcopy(artifact)
+        leaked["usage"]["internal_cache_key"] = "DO-NOT-EXPORT"
+        with self.assertRaisesRegex(ValueError, "dashboard_run_v1.schema.json"):
+            validate_dashboard_run(leaked)
+
+        # And the failure is at WRITE time, before anything reaches disk --
+        # not at deploy time, hours after the run that produced it.
+        narrowed = copy.deepcopy(dashboard_schema())
+        narrowed["$defs"]["usage"]["required"].append("never_emitted")
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "run_dashboard.json"
+            with mock.patch.object(dashboard_artifact, "_SCHEMA_CACHE", narrowed):
+                with self.assertRaisesRegex(ValueError, "never_emitted"):
+                    write_dashboard_artifact(
+                        {"ingredient": "x", "form": "x", "ecu_rows": []},
+                        run_id="20990101_000006_x_x_claude", mode="claude",
+                        output=output)
+            self.assertFalse(output.exists())
 
     def test_schema_declares_exact_version_and_public_sections(self) -> None:
         schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))

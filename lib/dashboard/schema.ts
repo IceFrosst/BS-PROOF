@@ -71,6 +71,13 @@ const efficiencyMetric = z.object({
 const usage = z.object({
   version: nonEmpty,
   telemetry_status: z.enum(["complete", "partial", "unavailable"]),
+  // Both of these are read by normalize.ts from INSIDE usage, but the object is
+  // .strict() here and additionalProperties:false in the JSON schema, so the
+  // writer could never emit them -- agent_tiers rendered empty on every run and
+  // models only worked by accident (run.models is spread in first). Widening
+  // both contracts together is the only way either field can flow.
+  agent_tiers: stringMap.nullable().optional(),
+  models: stringMap.nullable().optional(),
   telemetry_explanation: z.string().nullable(),
   currency: z.string().nullable(),
   metered_run_spend: requiredMetric,

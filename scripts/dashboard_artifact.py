@@ -33,6 +33,9 @@ REPORTS = ROOT / "reports"
 RUNS = REPORTS / "runs"
 STATUS_REGISTRY = REPORTS / "run_statuses.json"
 SCHEMA_PATH = ROOT / "schemas" / "dashboard_run_v1.schema.json"
+# Read once per process by dashboard_schema(); tests patch it to try a
+# different contract without touching the file on disk.
+_SCHEMA_CACHE: dict | None = None
 
 SCHEMA_VERSION = "DashboardRunV1"
 USAGE_VERSION = "UsageV1"
@@ -178,6 +181,58 @@ def _normalise_breakdown(value: Any, identity_key: str) -> list[dict] | None:
                 rows.append({**safe(item), identity_key: key})
         return rows
     return None
+
+
+def _string_map(value: Any) -> dict:
+    """Only string->string pairs, because the reader types this as one."""
+    if not isinstance(value, dict):
+        return {}
+    result = {}
+    for key, item in sorted(value.items()):
+        if isinstance(item, str) and item:
+            result[str(key)] = item
+    return result
+
+
+def _usage_schema_accepts(field: str) -> bool:
+    """True when the deploy schema permits ``field`` inside ``usage``.
+
+    The JSON schema closes ``usage`` with ``additionalProperties: false`` and
+    the TypeScript Zod mirror closes it with ``.strict()``.  Emitting a field
+    those two reject does not produce a richer dashboard, it produces an
+    artifact that fails validation at write time and, if it ever got past that,
+    at ``lib/dashboard/catalog.ts`` load time.  The schema is therefore the
+    authority on what may be written, not this module.
+    """
+    try:
+        usage_schema = (dashboard_schema().get("$defs") or {}).get("usage") or {}
+    except Exception:
+        return False
+    if usage_schema.get("additionalProperties") is False:
+        return field in (usage_schema.get("properties") or {})
+    return True
+
+
+def _agent_tiers(raw: Any, context: dict | None) -> dict:
+    """The agent -> tier map, wherever the run put it.
+
+    ``run_pipeline`` writes ``run_context["agent_tiers"]`` at TOP LEVEL, while
+    ``lib/dashboard/normalize.ts`` reads ``agent_tiers`` from INSIDE the usage
+    object.  The two never met, so the mapping rendered empty for every run.
+    This reads either location and the artifact publishes the one the reader
+    looks at.
+    """
+    raw = raw if isinstance(raw, dict) else {}
+    context = context if isinstance(context, dict) else {}
+    return (_string_map(_present(raw, "agent_tiers", "agentTiers"))
+            or _string_map(_present(context, "agent_tiers", "agentTiers")))
+
+
+def _attach_agent_tiers(payload: dict, raw: Any, context: dict | None) -> dict:
+    tiers = _agent_tiers(raw, context)
+    if tiers and _usage_schema_accepts("agent_tiers"):
+        payload["agent_tiers"] = tiers
+    return payload
 
 
 def _safe_usage_records(value: Any) -> dict:
@@ -357,7 +412,7 @@ def _unavailable_usage(context: dict | None, provider: str | None) -> dict:
         },
     }
     payload["efficiency"] = _efficiency(payload, context)
-    return payload
+    return _attach_agent_tiers(payload, None, context)
 
 
 def normalize_usage(raw: Any, *, context: dict | None = None,
@@ -399,7 +454,9 @@ def normalize_usage(raw: Any, *, context: dict | None = None,
     full_run_wall = _number((context or {}).get("wall_time_s"))
     payload = {
         "version": raw.get("version") or USAGE_VERSION,
-        "telemetry_status": raw.get("telemetry_status"),
+        # Never null. Unknown completeness is "unavailable" -- the reader's enum
+        # has no null member, and "we do not know" must not render as complete.
+        "telemetry_status": raw.get("telemetry_status") or "unavailable",
         "telemetry_explanation": raw.get("telemetry_explanation"),
         "currency": raw.get("currency"),
         "metered_run_spend": metered_spend,
@@ -449,7 +506,7 @@ def normalize_usage(raw: Any, *, context: dict | None = None,
         "raw_structured_usage": _safe_usage_records(raw.get("raw_structured_usage")),
     }
     payload["efficiency"] = _efficiency(payload, context)
-    return payload
+    return _attach_agent_tiers(payload, raw, context)
 
 
 def _safe_study(study: Any) -> dict | None:
@@ -825,8 +882,56 @@ def _validate_usage_totals(usage: Any) -> None:
                     f"{breakdown_key} sum {actual}")
 
 
-def validate_dashboard_run(artifact: dict) -> None:
-    """Small dependency-free contract check used by writer and unit tests."""
+def dashboard_schema(path: Path = SCHEMA_PATH) -> dict:
+    """The one deploy contract, read from disk and cached for the process."""
+    global _SCHEMA_CACHE
+    if _SCHEMA_CACHE is None or path != SCHEMA_PATH:
+        schema = json.loads(path.read_text(encoding="utf-8"))
+        if path != SCHEMA_PATH:
+            return schema
+        _SCHEMA_CACHE = schema
+    return _SCHEMA_CACHE
+
+
+def validate_against_schema(artifact: dict, path: Path = SCHEMA_PATH) -> None:
+    """Enforce ``schemas/dashboard_run_v1.schema.json`` on the Python writer.
+
+    The TypeScript loader runs Ajv against this exact file, and the file closes
+    roughly thirty objects with ``additionalProperties: false``.  Without this
+    call the writer and the reader enforce different contracts: Python happily
+    emits a field the schema rejects and nothing notices until a deploy fails,
+    hours after the extraction run that produced it.  Failing here is the
+    point -- the run that wrote the artifact is still on screen.
+    """
+    try:
+        from jsonschema.validators import validator_for
+    except ImportError as exc:  # pragma: no cover - environment defect
+        raise ValueError(
+            "jsonschema is required to write a dashboard artifact "
+            "(pip install -r requirements.txt); refusing to emit an "
+            "unvalidated artifact"
+        ) from exc
+    schema = dashboard_schema(path)
+    validator = validator_for(schema)(schema)
+    errors = sorted(validator.iter_errors(artifact), key=lambda e: list(e.path))
+    if not errors:
+        return
+    details = "; ".join(
+        f"{'/' + '/'.join(str(p) for p in error.path) if error.path else '/'} "
+        f"{error.message}" for error in errors[:8]
+    )
+    more = f" (+{len(errors) - 8} more)" if len(errors) > 8 else ""
+    raise ValueError(f"dashboard artifact violates {path.name}: {details}{more}")
+
+
+def validate_dashboard_run(artifact: dict, *,
+                           schema_path: Path = SCHEMA_PATH) -> None:
+    """Contract check used by writer and unit tests.
+
+    Two layers, in order.  The hand-written invariants first, because they say
+    what is wrong in the pipeline's own language ("token total does not match
+    components").  Then the JSON schema, which is what actually ships.
+    """
     if artifact.get("schema_version") != SCHEMA_VERSION:
         raise ValueError("dashboard schema_version must be DashboardRunV1")
     for key in ("run", "validity", "product", "reports", "score_semantics",
@@ -845,6 +950,7 @@ def validate_dashboard_run(artifact: dict) -> None:
         if "verdict" not in row or "arcs" not in row:
             raise ValueError("every dashboard ECU must travel with verdict and arcs")
     _validate_usage_totals(artifact.get("usage"))
+    validate_against_schema(artifact, schema_path)
 
 
 def write_dashboard_artifact(context: dict, *, run_id: str,
