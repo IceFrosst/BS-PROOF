@@ -11,6 +11,7 @@ produced it. If a score changes, provenance says which input moved.
 """
 from __future__ import annotations
 import json
+import os
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
@@ -18,6 +19,10 @@ from pathlib import Path
 ROOT = Path(__file__).parent.parent
 SCHEMA_SQL = ROOT / "schemas" / "storage.sql"
 DEFAULT_DB = ROOT / "out" / "bsproof.sqlite"
+# Per-run override, so parallel ingredient runs can isolate their stores without
+# changing the documented default. Unset -> production still writes bsproof.sqlite.
+if os.environ.get("SP_DB"):
+    DEFAULT_DB = Path(os.environ["SP_DB"])
 
 
 def now_iso() -> str:
@@ -37,6 +42,22 @@ class Store:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.conn = sqlite3.connect(self.path, check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
+        # CONCURRENCY, added 2026-08-09. Default SQLite is journal_mode=delete
+        # with busy_timeout=0, so a second writer fails instantly with
+        # "database is locked". Three parallel ingredient runs against one store
+        # is a normal thing to want and used to be impossible.
+        #
+        # WAL gives one writer alongside many readers; busy_timeout makes a
+        # competing writer WAIT rather than raise. Both are SQLite-only and
+        # Postgres ignores them -- they configure the engine, not the schema, so
+        # the store stays postgres-shaped. This is not the "pragma-free" the
+        # note below means: that is about FK enforcement semantics differing
+        # between engines, which these two do not touch.
+        try:
+            self.conn.execute("PRAGMA journal_mode=WAL")
+        except sqlite3.DatabaseError:
+            pass          # network filesystems refuse WAL; fall back to default
+        self.conn.execute("PRAGMA busy_timeout=30000")
         # Portable pragma-free setup: foreign keys stay off because the schema
         # uses no FK constraints (Postgres would enforce them differently and
         # partial pipelines legitimately write children before parents).

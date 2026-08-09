@@ -1211,6 +1211,53 @@ def main():
         check("re-scoring updates in place, no duplicate row",
               st_db.counts()["ecus"] == 1 and st_db.ecu(key)["score"] == 42)
 
+    # A vocab ID is not a search term. 7 of 19 ingredients carry an underscore
+    # and were silently unretrievable until 2026-08-09; the symptom was
+    # "0 trials found", which reads as "this ingredient has no evidence".
+    print("\nINGREDIENT -> SEARCH TERM")
+    from sources import europepmc as _ep
+    check("underscore becomes a space", _ep.search_term("vitamin_d") == "vitamin d")
+    check("multi-underscore ids work", _ep.search_term("ginkgo_biloba") == "ginkgo biloba")
+    check("single-word ids are unchanged",
+          _ep.search_term("creatine") == "creatine",
+          "why creatine/magnesium runs never exposed this")
+    check("no underscore survives into a query",
+          "vitamin_d" not in _ep._query("vitamin_d", syntheses=False, scope="intervention")
+          and 'TITLE:"vitamin d"' in _ep._query("vitamin_d", syntheses=False,
+                                                scope="intervention"),
+          'TITLE:"vitamin_d" matched ~nothing; PUB_TYPE is a field name, not a term')
+    check("per-outcome queries are fixed too",
+          "_" not in _ep.outcome_query("vitamin_d", "sleep_quality").replace("PUB_TYPE", ""),
+          "outcome_query had its own copy of the bug")
+
+    # Three parallel ingredient runs share a store. Before 2026-08-09 the second
+    # writer failed instantly with "database is locked".
+    print("\nSTORE CONCURRENCY")
+    import threading as _th
+    with tempfile.TemporaryDirectory() as td:
+        p = pathlib.Path(td) / "conc.sqlite"
+        s0 = Store(p)
+        check("WAL is on (one writer + many readers)",
+              s0.conn.execute("PRAGMA journal_mode").fetchone()[0].lower() == "wal")
+        check("busy_timeout makes a competing writer wait, not raise",
+              s0.conn.execute("PRAGMA busy_timeout").fetchone()[0] >= 5000)
+        errs: list[str] = []
+
+        def _w(tag):
+            try:
+                u, _, _ = dedup([{"pmid": f"{tag}{i}", "title": "T",
+                                  "doi": f"10.1/{tag}{i}"} for i in range(60)])
+                Store(p).upsert_studies(u)
+            except Exception as exc:            # noqa: BLE001 - reporting it IS the test
+                errs.append(f"{tag}: {exc}")
+        threads = [_th.Thread(target=_w, args=(t,)) for t in ("a", "b", "c")]
+        [t.start() for t in threads]
+        [t.join() for t in threads]
+        check("3 concurrent writers all commit", not errs, str(errs))
+        check("no writer silently lost its rows",
+              Store(p).counts()["studies"] == 180,
+              "180 = 3 x 60, the parallel-run case")
+
     # The predatory check had ZERO coverage until 2026-08-09, in the one feature
     # where a false positive is a defamation-shaped error. Every case below is a
     # real string that a real run produced.
@@ -1271,6 +1318,20 @@ def main():
           "NOT CHECKED at publisher level" in
           pred.format_summary(pred.flag_records([{"journal": "Some Journal"}])),
           "the truncated-list bug read as a clean corpus for four commits")
+    # MEASURED ON REAL CROSSREF OUTPUT, 2026-08-09. Free-floating containment on
+    # the publisher field reproduced the 13.2% run's worst error on live data --
+    # these two strings came out of an actual creatine/magnesium retrieval.
+    check("real journal in a publisher field is not flagged: The Journal of Rheumatology",
+          not pred.is_predatory(publisher="The Journal of Rheumatology"),
+          "matched list entry 'e-journal' before anchoring — the libel-shaped error")
+    check("generic list fragment does not flag an unrelated imprint",
+          not pred.is_predatory(publisher="Bentham Science Publishers Ltd."),
+          "matched 'Science Publishers'; would hit any publisher with that phrase")
+    check("a genuine list entry still flags with a corporate suffix",
+          pred.is_predatory(publisher="Frontiers Media SA")
+          and pred.is_predatory(publisher="Bentham Open Ltd"),
+          "anchoring must not cost true positives")
+
     # KNOWN MISS, pinned deliberately. Crossref returns "OMICS Publishing Group"
     # for DOIs registered before the rename; the list carries "OMICS
     # International". Same operation, two names, no containment either way.

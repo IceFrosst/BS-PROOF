@@ -39,6 +39,31 @@ SUPPLEMENT_CONTEXT = (
 )
 
 
+def search_term(ingredient: str) -> str:
+    """
+    A vocab ID is not a search term.
+
+    MEASURED 2026-08-09. Vocab ids are snake_case and were passed verbatim into
+    quoted phrases like TITLE:"vitamin_d". Europe PMC treats the underscore as
+    part of the token, so it matches almost nothing:
+
+        discover("vitamin_d")      ->  1 record
+        discover("vitamin D")      ->  full page
+        discover("cholecalciferol")->  full page
+
+    SEVEN of the 19 ingredients in vocab/form.json carry an underscore --
+    beta_carotene, folic_acid, ginkgo_biloba, omega_3, vitamin_c, vitamin_d,
+    vitamin_e -- so 37% of the vocabulary was silently unretrievable. Every run
+    to date used creatine or magnesium, which are single words, and therefore
+    never exposed it. The failure mode is '0 trials found', which reads exactly
+    like 'this ingredient has no evidence'.
+
+    Only the QUERY TEXT changes. Records keep the vocab id as their ingredient,
+    so ECU keys and storage are untouched.
+    """
+    return " ".join(ingredient.strip().split("_")).strip()
+
+
 def _query(ingredient: str, *, syntheses: bool, scope: str = "broad") -> str:
     """
     scope 'broad'        ingredient anywhere + design. Legacy measurement baseline.
@@ -57,7 +82,7 @@ def _query(ingredient: str, *, syntheses: bool, scope: str = "broad") -> str:
     # single most valuable document for inheritance. Ask for it by title.
     kinds = (SYNTHESIS_KINDS if syntheses
              else 'PUB_TYPE:"Randomized Controlled Trial"')
-    ing = ingredient.strip()
+    ing = search_term(ingredient)
 
     if scope == "intervention":
         # Ingredient as intervention: title hit OR oral/supplement phrase in abstract.
@@ -122,7 +147,7 @@ def outcome_query(ingredient: str, outcome_id: str) -> str:
     terms = outcome_terms(outcome_id)
     if not terms:
         return _query(ingredient, syntheses=False, scope="intervention")
-    ing = ingredient.strip()
+    ing = search_term(ingredient)
     outcome_clause = " OR ".join(f'"{t}"' for t in terms)
     return (f'(TITLE:"{ing}" OR ABSTRACT:"{ing} supplementation" '
             f'OR ABSTRACT:"oral {ing}") '

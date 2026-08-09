@@ -175,7 +175,21 @@ def is_predatory(journal: str | None = None, issn: str | None = None,
         for e in entries:
             if e.startswith("title:"):
                 name = e[6:]
-                if len(name) >= MIN_PUBLISHER_CHARS and name in pub:
+                # ANCHORED at the start, on a word boundary. Free-floating
+                # containment was measured on 39 real Crossref publishers
+                # (2026-08-09) and reproduced the 13.2% run's worst error:
+                # "The Journal of Rheumatology" matched the list entry
+                # 'e-journal', because "thE JOURNAL of..." contains it. It also
+                # flagged "Bentham Science Publishers Ltd." on the generic
+                # fragment 'Science Publishers', which would hit any publisher
+                # carrying that phrase.
+                #
+                # A real imprint match is a PREFIX plus at most a corporate
+                # suffix -- "OMICS International" -> "OMICS International Ltd",
+                # "Frontiers" -> "Frontiers Media SA". Nothing legitimate BEGINS
+                # with 'e journal'. Anchoring keeps every true positive in that
+                # sample and drops both defamation-shaped ones.
+                if len(name) >= MIN_PUBLISHER_CHARS and pub.startswith(name + " "):
                     return True
     return False
 
@@ -258,7 +272,9 @@ def format_summary(summary: dict) -> str:
                      f"{MIN_PLAUSIBLE_ENTRIES}). '0 flagged' above means "
                      f"NOT CHECKED, not clean.")
         lines.append("     Fix: python3 scripts/refresh_predatory_list.py")
-    elif checked and resolved == 0:
+    elif not checked:
+        lines.append("  note: no studies in this run — nothing was checked.")
+    elif resolved == 0:
         lines.append("  !! NOT CHECKED at publisher level: 0 records carry a "
                      "publisher, and the list is PUBLISHERS.")
         lines.append("     '0 flagged' above is an absence of data, not a clean "
