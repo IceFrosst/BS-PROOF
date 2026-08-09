@@ -200,6 +200,60 @@ def to_studies(record: dict, extraction: dict, product: dict,
     return out
 
 
+def _one_study_one_vote(pairs: list[tuple]) -> tuple[list[tuple], int]:
+    """
+    Collapse an ECU bucket so ONE TRIAL IS ONE VOTE. Returns (pairs, n_collapsed).
+
+    `score_ecu` documents its own contract -- "primaries: UNIQUE primary studies
+    only. Dedup happens before this is called." -- and until 2026-08-10 nothing
+    did. `to_studies` emits one Study PER CLAIM, all carrying the same
+    `record["_canonical"]`, and this bucket appended every one of them.
+
+    WHY THAT WAS A SCORING BUG, NOT AN UNTIDINESS. A real cached S5 output
+    expanded ONE finding -- "creatine changed lean body mass" -- across a
+    sex x phase x body-region grid into 20 claims. All 20 landed in one bucket:
+
+      E = sum(weights)          -> that trial contributed 20x its evidence mass
+      c = 1 - e^(-E'/k)         -> one RCT at w=0.7 gives c ~ 0.21;
+                                   split three ways, c ~ 0.50
+      H                          -> a study became heterogeneous WITH ITSELF
+      GATE_MIN_HUMAN_WD          -> a sub-threshold study passed the "not enough
+                                   human evidence" gate by being split in two
+      n_primaries / study_ids    -> reported the inflated count
+
+    So the model's arbitrary choice of how finely to slice a paper set the
+    published score. `score_ecu` already used `P = {s.id for s in primaries}` --
+    a set -- for synthesis coverage, which is the one place duplicate ids were
+    collapsed and good evidence the duplication was never intended anywhere.
+
+    RESOLUTION RULE: keep the LOWEST s_value, i.e. the most conservative claim.
+
+    The plan called for preferring the `is_primary_outcome` claim first, and
+    that is wrong on inspection: a primary `benefit` alongside a secondary
+    `null_effect` would RAISE the score, which is exactly the direction this
+    function exists to prevent. Invariant 7 makes nulls evidence against, so
+    dropping a null in favour of a benefit is the one collapse that must never
+    happen. Lowest s_value is deterministic, never inflates, and needs nothing
+    threaded through `to_studies`.
+
+    SR-derived rows are collapsed on the same key. A trial reachable both
+    directly and through a review table is still one trial (invariant 6).
+    """
+    best: dict[str, tuple] = {}
+    order: list[str] = []
+    n_collapsed = 0
+    for study, meta in pairs:
+        k = study.id
+        if k not in best:
+            best[k] = (study, meta)
+            order.append(k)
+            continue
+        n_collapsed += 1
+        if study.s_value() < best[k][0].s_value():
+            best[k] = (study, meta)
+    return [best[k] for k in order], n_collapsed
+
+
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
@@ -341,7 +395,10 @@ def build_ecus(extractions: list[dict], product: dict, *,
                            "scorer_version": SCORER_VERSION, "computed_at": _now()},
         })
 
+    collapsed_claims = 0
     for key, pairs in sorted(buckets.items()):
+        pairs, n_collapsed = _one_study_one_vote(pairs)
+        collapsed_claims += n_collapsed
         studies = [s for s, _ in pairs]
         outcome_id = pairs[0][1]["outcome_id"]
         result = score_ecu(studies, syntheses or [])
@@ -399,6 +456,11 @@ def build_ecus(extractions: list[dict], product: dict, *,
                 "demo_ignore_population": ignore_population,
             },
         })
+    if collapsed_claims:
+        # Say it out loud. This number is how many extra votes one trial would
+        # have cast for itself under the pre-2026-08-10 scorer.
+        print(f"  one study = one vote: collapsed {collapsed_claims} duplicate "
+              f"claim(s) that shared a trial id within an outcome")
     return rows
 
 

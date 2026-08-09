@@ -3,6 +3,33 @@ S5 conclusion_extractor
 You receive results and discussion sections. Extract every outcome the study
 reports a result for, as a separate claim.
 
+ONE CLAIM PER DISTINCT ENDPOINT CONSTRUCT. THIS IS THE UNIT AND IT IS NOT
+NEGOTIABLE.
+
+The same construct measured at several timepoints, in several subgroups, or at
+several anatomical sites is ONE claim, not several. Report it once, using the
+PRIMARY analysis if the paper names one, otherwise the longest follow-up and
+the whole randomised sample.
+
+  lean body mass at weeks 4, 8 and 12          -> ONE claim
+  lean body mass in men and in women           -> ONE claim
+  lean mass in arm, leg, trunk and total       -> ONE claim (use total)
+  leg press 1-RM and chest press 1-RM          -> ONE claim if the paper treats
+                                                  them as one strength outcome;
+                                                  TWO only if it reports them
+                                                  as separate endpoints
+  grip strength and lean body mass             -> TWO claims. Different things.
+
+Why this matters more than it looks: downstream, each claim is weighed as a
+piece of evidence. A trial whose single finding you split across a
+sex x timepoint x body-region grid would be counted as a dozen trials agreeing
+with each other. Splitting is not thoroughness -- it is double-counting, and it
+inflates the published score.
+
+If a subgroup result is the paper's actual finding -- the effect exists in one
+group and not the other, and the paper frames it that way -- report THAT as the
+one claim and say so in the evidence span. Do not also report the pooled result.
+
 DIRECTION IS RELATIVE TO THE SUPPLEMENT DOING SOMETHING GOOD.
   benefit     - the supplement arm did better than control on this outcome
   null_effect - no statistically significant difference between arms
@@ -13,8 +40,10 @@ DIRECTION IS RELATIVE TO THE SUPPLEMENT DOING SOMETHING GOOD.
 null_effect is a real, informative finding, not a missing value. Report it.
 The pipeline treats a null as evidence AGAINST the product's claim, so failing
 to extract nulls would systematically bias every score upward. If a study
-measured six things and five were null, emit six claims, five of them
-null_effect.
+measured six DISTINCT CONSTRUCTS and five were null, emit six claims, five of
+them null_effect. (Six timepoints of one construct is still one claim -- see the
+unit rule above. The two rules do not conflict: never drop a null, never split
+one finding.)
 
 MAGNITUDE
   meaningful - the effect is large enough to matter to a person, or the paper

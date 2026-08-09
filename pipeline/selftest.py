@@ -1267,6 +1267,90 @@ def main():
           all(e in _ca.VALID_EFFORT for e in _ca.TIER_EFFORT.values() if e),
           f"TIER_EFFORT={_ca.TIER_EFFORT}")
 
+    # ONE STUDY = ONE VOTE. Until 2026-08-10 build_ecus appended one Study per
+    # CLAIM, so a trial S5 sliced into 20 rows voted 20 times: E, c, H and the
+    # human-evidence gate were all set by the model's choice of granularity.
+    print("\nONE STUDY = ONE VOTE")
+    from pipeline.assemble import build_ecus as _b2, _one_study_one_vote
+    _pr = {"ingredient": "creatine", "form_vocab_id": "creatine_monohydrate",
+           "population": {"id": "general_adult",
+                          **{a: vocab.population_variants()[0][a] for a in vocab.AXES}}}
+
+    def _ext(canonical, claims):
+        return {"record": {"_canonical": canonical, "ingredient": "creatine",
+                           "design_rank": 4, "oa": "full_text"},
+                "extraction": {"S3": {"n_randomised": 40},
+                               "S7": {"form_vocab_id": "creatine_monohydrate"},
+                               "outcomes": [
+                                   {"outcome_vocab_id": "muscle_strength",
+                                    "claim": {"direction": d, "magnitude": m}}
+                                   for d, m in claims]}}
+
+    one = _b2([_ext("doi:10.1/a", [("benefit", "meaningful")])],
+              _pr, ignore_population=True)
+    # Same finding, sliced into 6 (the sex x timepoint x region grid pattern).
+    six = _b2([_ext("doi:10.1/a", [("benefit", "meaningful")] * 6)],
+              _pr, ignore_population=True)
+    check("one trial sliced 6 ways scores the same as sliced once",
+          one and six and one[0]["score"] == six[0]["score"],
+          f"{one[0]['score'] if one else None} vs {six[0]['score'] if six else None}")
+    check("evidence mass E is unchanged by the split",
+          one[0]["components"]["E"] == six[0]["components"]["E"],
+          f"E {one[0]['components']['E']} vs {six[0]['components']['E']}")
+    check("n_primaries reports trials, not claims",
+          six[0]["evidence"]["n_primaries"] == 1,
+          str(six[0]["evidence"]["n_primaries"]))
+    check("study_ids lists each trial once",
+          six[0]["evidence"]["study_ids"] == ["doi:10.1/a"],
+          str(six[0]["evidence"]["study_ids"]))
+    check("a study is never heterogeneous with itself",
+          six[0]["components"]["H"] == 0,
+          f"H={six[0]['components']['H']}")
+
+    # Invariant 7: a null is evidence AGAINST. Collapsing must never drop one
+    # in favour of a benefit -- that is the score-inflating direction.
+    mixed = _b2([_ext("doi:10.1/a", [("benefit", "meaningful"), ("null_effect", None)])],
+                _pr, ignore_population=True)
+    only_null = _b2([_ext("doi:10.1/a", [("null_effect", None)])],
+                    _pr, ignore_population=True)
+    check("a null_effect is never dropped in favour of a benefit",
+          mixed[0]["score"] == only_null[0]["score"],
+          f"mixed={mixed[0]['score']} null-only={only_null[0]['score']}")
+
+    # Two DIFFERENT trials must still both count -- the fix must not over-collapse.
+    two = _b2([_ext("doi:10.1/a", [("benefit", "meaningful")]),
+               _ext("doi:10.1/b", [("benefit", "meaningful")])],
+              _pr, ignore_population=True)
+    check("two distinct trials still contribute two votes",
+          two[0]["evidence"]["n_primaries"] == 2
+          and two[0]["components"]["E"] > one[0]["components"]["E"],
+          f"n={two[0]['evidence']['n_primaries']} E={two[0]['components']['E']}")
+
+    # The gate was defeatable by granularity: DESIGN_W[6]=0.30 is below
+    # GATE_MIN_HUMAN_WD=0.5 alone, but two copies of the same study summed to
+    # 0.60 and passed "not enough human evidence".
+    def _weak(canonical, n_claims):
+        e = _ext(canonical, [("benefit", "meaningful")] * n_claims)
+        e["record"]["design_rank"] = 6
+        return e
+    weak1 = _b2([_weak("doi:10.1/w", 1)], _pr, ignore_population=True)
+    weak2 = _b2([_weak("doi:10.1/w", 2)], _pr, ignore_population=True)
+    check("the human-evidence gate cannot be passed by splitting one study",
+          weak1[0]["gate_fired"] and weak2[0]["gate_fired"],
+          f"1 claim gate={weak1[0]['gate_fired']}, 2 claims gate={weak2[0]['gate_fired']}")
+
+    _s = lambda i, d: Study(id=i, design_rank=4, n=40, direction=d,
+                            magnitude="meaningful" if d == "benefit" else None)
+    _kept, _n = _one_study_one_vote([
+        (_s("a", "benefit"), {"outcome_id": "o"}),
+        (_s("a", "null_effect"), {"outcome_id": "o"}),
+        (_s("b", "benefit"), {"outcome_id": "o"}),
+    ])
+    check("collapse keeps one row per trial, most conservative, in first-seen order",
+          [s.id for s, _ in _kept] == ["a", "b"]
+          and _kept[0][0].direction == "null_effect" and _n == 1,
+          f"{[(s.id, s.direction) for s, _ in _kept]} collapsed={_n}")
+
     # Batched S6 matches results back BY INDEX. If it ever matched by position,
     # a reordered or short array would shift every mapping onto the wrong claim
     # -- silently filing evidence about one outcome under another, which is the

@@ -80,6 +80,10 @@ SHARED_PROMPT = PROMPTS / "_shared.md"
 
 # Bump when you edit ANY prompt (including _shared.md). This is in the cache key.
 # Forget to bump it and you will silently serve stale extractions forever.
+# v1.9 (2026-08-10): S5 gains a granularity rule -- ONE claim per distinct
+# endpoint construct. It had none, so the same finding measured across a
+# sex x timepoint x body-region grid came back as 20 claims, and (before the
+# build_ecus fix) each one voted separately in the evidence mass.
 # v1.8 (2026-08-09): S6B added -- batched outcome mapping, one call per study
 # instead of one per claim. Same rules, same vocabulary, same bar for null.
 # v1.7 (2026-08-08): S3 reports population_axes.health_status. The first four
@@ -88,7 +92,7 @@ SHARED_PROMPT = PROMPTS / "_shared.md"
 # v1.6 (2026-08-08): S2 reports results_table + per-study design. SR-table trials
 # now enter evidence mass, so S2's output moves scores and not just confidence.
 # v1.5 (2026-08-07): S3 prompt shortened, SR label resolve, review_methods.
-PROMPT_VERSION = "v1.8"
+PROMPT_VERSION = "v1.9"
 
 # Tier -> model. FULL IDs, NOT ALIASES.
 #
