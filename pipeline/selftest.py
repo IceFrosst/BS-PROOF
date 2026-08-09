@@ -626,11 +626,20 @@ def main():
           "free answer wins")
     check("no DOI -> nothing to resolve against",
           oamod.resolve({"oa": "abstract_only", "doi": None})["checked"] == [])
+    # Force the unconfigured state. Reading it from the ambient environment made
+    # this check pass only on machines with no BSPROOF_CONTACT_EMAIL set -- it
+    # failed for anyone who had actually configured OA resolution, which is
+    # backwards. The selftest must not depend on the shell it is run from.
+    _saved = oamod.CONTACT_EMAIL
     try:
-        oamod.unpaywall("10.1/x")
-        gated = False
-    except oamod.ContactEmailMissing:
-        gated = True
+        oamod.CONTACT_EMAIL = None
+        try:
+            oamod.unpaywall("10.1/x")
+            gated = False
+        except oamod.ContactEmailMissing:
+            gated = True
+    finally:
+        oamod.CONTACT_EMAIL = _saved
     check("Unpaywall RAISES without an email, never returns 'no OA'", gated,
           "a silent miss is indistinguishable from a paywalled paper")
 

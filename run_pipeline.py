@@ -17,6 +17,7 @@ thing being tested. Showcase top-N outcomes are chosen by Europe PMC RCT
 hit counts (most-studied first), not a fixed marketing list.
 """
 from __future__ import annotations
+import json
 import os
 import sys
 import time
@@ -516,6 +517,21 @@ def main(argv: list[str]) -> int:
             if not extractions:
                 print("No study passed relevance + text checks.")
                 return 1
+
+            # Claim-level audit trail. The run report carries scores; it does not
+            # carry the claims those scores were computed from, and "why is this
+            # ECU negative" is unanswerable without them -- anchor #1 took a
+            # re-run to diagnose for exactly this reason. Off by default; the
+            # dump is the whole extraction, so it is written where asked, not
+            # into reports/.
+            _dump = os.environ.get("SP_DUMP_EXTRACTIONS")
+            if _dump:
+                try:
+                    with open(_dump, "w") as fh:
+                        json.dump(extractions, fh, indent=1, default=str)
+                    print(f"  extractions dumped -> {_dump}")
+                except Exception as e:
+                    print(f"  extraction dump failed: {e}")
 
             if with_sr and call_fn is not None:
                 from pipeline.synthesis_bridge import build_syntheses_for_scoring
