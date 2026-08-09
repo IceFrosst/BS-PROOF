@@ -1,0 +1,15 @@
+.git
+.github
+.env*
+.next
+node_modules
+out
+__pycache__
+*.py[cod]
+*.sqlite
+*.sqlite-*
+reports/archive
+docs/history
+pipeline_v1.excalidraw
+pipeline_v2_demo.excalidraw
+

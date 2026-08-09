@@ -19,6 +19,7 @@ hit counts (most-studied first), not a fixed marketing list.
 from __future__ import annotations
 import os
 import sys
+import time
 from collections import Counter as _Counter
 
 from pipeline import vocab
@@ -201,6 +202,7 @@ def _auto_push_report(ingredient: str, form: str, mode: str,
 
 
 def main(argv: list[str]) -> int:
+    _run_started = time.monotonic()
     args = list(argv)
     wiring = "--wiring" in args
     if wiring:
@@ -308,6 +310,7 @@ def main(argv: list[str]) -> int:
     run_context: dict = {
         "ingredient": ingredient,
         "form": form,
+        "product": product,
         "scope": scope,
         "showcase_outcomes": outcome_allowlist,
         "showcase_study_counts": {k: v for k, v in showcase_counts.items()
@@ -628,16 +631,12 @@ def main(argv: list[str]) -> int:
         for row in rows:
             store.upsert_ecu(row)
 
-        run_context["ecu_rows"] = [{
-            "outcome_vocab_id": r["outcome_vocab_id"],
-            "score": r["score"],
-            "composite": r.get("composite"),
-            "arcs": r.get("arcs"),
-            "components": r.get("components"),
-            "band": r["band"],
-            "n_primaries": r["evidence"]["n_primaries"],
-            "prompt_version": prompt_version,
-        } for r in rows]
+        # The immutable DashboardRunV1 export needs the complete deterministic
+        # ECU result: dose, applicability, study ids, flags and provenance are
+        # all required to explain the centre number and its arcs.  The old
+        # abbreviated projection made those facts unrecoverable after the
+        # gitignored SQLite store was gone.
+        run_context["ecu_rows"] = rows
 
         print(f"\n{tag}ECU ROWS — {ingredient}, form={form}, scope={scope}")
         if outcome_allowlist:
@@ -733,6 +732,11 @@ def main(argv: list[str]) -> int:
     mode += f"-{scope[:5]}"
     # Wiring is synthetic and never a claim, so it stays out of reports/runs/.
     if not wiring:
+        run_context["mode"] = mode
+        run_context["provider"] = (
+            "grok" if grok else "claude-pilot" if pilot else "claude"
+        )
+        run_context["wall_time_s"] = round(time.monotonic() - _run_started, 4)
         _auto_push_report(ingredient, form, mode, run_context=run_context)
 
     return 0

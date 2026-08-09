@@ -1,0 +1,1195 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://bs-proof.local/schemas/dashboard_run_v1.schema.json",
+  "title": "BS-PROOF immutable dashboard run",
+  "description": "Safe dashboard projection of one run. Display scores never travel without their four arcs.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run",
+    "validity",
+    "product",
+    "reports",
+    "score_semantics",
+    "corpus",
+    "stats",
+    "usage",
+    "ecu_rows"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "DashboardRunV1"
+    },
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "generated_at",
+        "provider",
+        "mode",
+        "scope",
+        "scoring_model",
+        "prompt_version",
+        "source_commit",
+        "models"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$"
+        },
+        "generated_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "provider": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "mode": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "scope": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "scoring_model": {
+          "type": "string"
+        },
+        "prompt_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_commit": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "models": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    "validity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "public_claims_allowed",
+        "reason_codes",
+        "limitations",
+        "note",
+        "registry_key"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "experimental",
+            "validated",
+            "invalid",
+            "superseded"
+          ]
+        },
+        "public_claims_allowed": {
+          "type": "boolean"
+        },
+        "reason_codes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "registry_key": {
+          "type": "string"
+        }
+      }
+    },
+    "product": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ingredient",
+        "form",
+        "dose",
+        "population"
+      ],
+      "properties": {
+        "ingredient": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "form": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "dose": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "low_mg",
+                "high_mg"
+              ],
+              "properties": {
+                "low_mg": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "high_mg": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "population": {
+          "$ref": "#/$defs/nullablePopulation"
+        }
+      }
+    },
+    "reports": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "summary",
+        "full",
+        "context",
+        "dashboard"
+      ],
+      "properties": {
+        "summary": {
+          "type": "string",
+          "pattern": "^reports/runs/"
+        },
+        "full": {
+          "type": "string",
+          "pattern": "^reports/runs/"
+        },
+        "context": {
+          "type": "string",
+          "pattern": "^reports/runs/"
+        },
+        "dashboard": {
+          "type": "string",
+          "pattern": "^reports/runs/"
+        }
+      }
+    },
+    "score_semantics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "display_field",
+        "display_range",
+        "internal_signed_field",
+        "internal_signed_range",
+        "verdict_field",
+        "requires_arcs",
+        "gated_value"
+      ],
+      "properties": {
+        "display_field": {
+          "const": "composite"
+        },
+        "display_range": {
+          "type": "array",
+          "items": [
+            {
+              "const": 0
+            },
+            {
+              "const": 100
+            }
+          ],
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "internal_signed_field": {
+          "const": "score"
+        },
+        "internal_signed_range": {
+          "type": "array",
+          "items": [
+            {
+              "const": -100
+            },
+            {
+              "const": 100
+            }
+          ],
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "verdict_field": {
+          "const": "verdict"
+        },
+        "requires_arcs": {
+          "const": true
+        },
+        "gated_value": {
+          "type": "null"
+        }
+      }
+    },
+    "corpus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "study_count",
+        "studies",
+        "systematic_reviews",
+        "predatory_screen"
+      ],
+      "properties": {
+        "study_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "studies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/study"
+          }
+        },
+        "systematic_reviews": {
+          "type": "object"
+        },
+        "predatory_screen": {
+          "type": "object"
+        }
+      }
+    },
+    "stats": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "studies",
+        "ecus",
+        "agents",
+        "execution"
+      ],
+      "properties": {
+        "studies": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "targeted",
+            "usable",
+            "skipped",
+            "partial_failures"
+          ],
+          "properties": {
+            "targeted": {
+              "$ref": "#/$defs/nullableCount"
+            },
+            "usable": {
+              "$ref": "#/$defs/nullableCount"
+            },
+            "skipped": {
+              "$ref": "#/$defs/nullableCount"
+            },
+            "partial_failures": {
+              "$ref": "#/$defs/nullableCount"
+            }
+          }
+        },
+        "ecus": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "total",
+            "scored",
+            "gated"
+          ],
+          "properties": {
+            "total": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "scored": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "gated": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "agents": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "ok",
+              "fail",
+              "cache"
+            ],
+            "properties": {
+              "ok": {
+                "$ref": "#/$defs/nullableCount"
+              },
+              "fail": {
+                "$ref": "#/$defs/nullableCount"
+              },
+              "cache": {
+                "$ref": "#/$defs/nullableCount"
+              }
+            }
+          }
+        },
+        "execution": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "concurrency",
+            "studies_in_flight"
+          ],
+          "properties": {
+            "concurrency": {
+              "$ref": "#/$defs/nullableCount"
+            },
+            "studies_in_flight": {
+              "$ref": "#/$defs/nullableCount"
+            }
+          }
+        }
+      }
+    },
+    "usage": {
+      "$ref": "#/$defs/usage"
+    },
+    "ecu_rows": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ecu"
+      }
+    }
+  },
+  "$defs": {
+    "nullableCount": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "nullableNumber": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "nullablePopulation": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "age_band": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "sex": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "deficiency_status": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "pregnancy": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "health_status": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "study": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "year": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "doi": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "pmid": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "pmcid": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "nct_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "canonical_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "journal": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "publisher": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "oa": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "predatory_venue": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "skipped": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "failed_partial": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      }
+    },
+    "arc": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "verdict": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "coverage": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "is_quantity": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      }
+    },
+    "arcs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "effect": {
+          "$ref": "#/$defs/arc"
+        },
+        "form": {
+          "$ref": "#/$defs/arc"
+        },
+        "dose": {
+          "$ref": "#/$defs/arc"
+        },
+        "evidence": {
+          "$ref": "#/$defs/arc"
+        }
+      }
+    },
+    "outcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label",
+        "kind",
+        "definition",
+        "polarity"
+      ],
+      "properties": {
+        "id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "label": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "kind": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "definition": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "polarity": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "ecu": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ecu_key",
+        "ingredient",
+        "form_vocab_id",
+        "dose_band",
+        "band_version",
+        "outcome_vocab_id",
+        "outcome",
+        "population",
+        "score",
+        "composite",
+        "verdict",
+        "band",
+        "gate_fired",
+        "components",
+        "arcs",
+        "dose",
+        "dose_range_mg",
+        "evidence",
+        "n_primaries",
+        "form_mix",
+        "applicability",
+        "flags",
+        "provenance"
+      ],
+      "properties": {
+        "ecu_key": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ingredient": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "form_vocab_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "dose_band": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "band_version": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "outcome_vocab_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "outcome": {
+          "$ref": "#/$defs/outcome"
+        },
+        "population": {
+          "$ref": "#/$defs/nullablePopulation"
+        },
+        "score": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": -100,
+          "maximum": 100
+        },
+        "composite": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 100
+        },
+        "verdict": {
+          "type": "string"
+        },
+        "band": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "gate_fired": {
+          "type": "boolean"
+        },
+        "components": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "d": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "c": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "H": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "E": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "E_prime": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "coverage": {
+              "$ref": "#/$defs/nullableNumber"
+            }
+          }
+        },
+        "arcs": {
+          "$ref": "#/$defs/arcs"
+        },
+        "dose": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "dose_range_mg": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "evidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "n_primaries": {
+              "$ref": "#/$defs/nullableCount"
+            },
+            "n_syntheses": {
+              "$ref": "#/$defs/nullableCount"
+            },
+            "study_ids": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "n_primaries": {
+          "$ref": "#/$defs/nullableCount"
+        },
+        "form_mix": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "applicability": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "flags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "provenance": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "prompt_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "usage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "telemetry_status",
+        "currency",
+        "metered_run_spend",
+        "metered_spend_basis",
+        "api_equivalent_cost",
+        "live_calls",
+        "cache_hits",
+        "retries",
+        "failures",
+        "terminal_failures",
+        "usage_records_missing_tokens",
+        "usage_records_missing_cost",
+        "telemetry_explanation",
+        "tokens",
+        "latency",
+        "operations",
+        "breakdown_status",
+        "by_agent",
+        "by_tier",
+        "by_model",
+        "model_routing",
+        "raw_structured_usage",
+        "efficiency"
+      ],
+      "properties": {
+        "version": {
+          "type": "string"
+        },
+        "telemetry_status": {
+          "enum": [
+            "complete",
+            "partial",
+            "unavailable"
+          ],
+          "description": "Never null: unknown completeness is 'unavailable'."
+        },
+        "telemetry_explanation": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "currency": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "metered_run_spend": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "metered_spend_basis": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "api_equivalent_cost": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "live_calls": {
+          "$ref": "#/$defs/nullableCount"
+        },
+        "cache_hits": {
+          "$ref": "#/$defs/nullableCount"
+        },
+        "retries": {
+          "$ref": "#/$defs/nullableCount"
+        },
+        "failures": {
+          "$ref": "#/$defs/nullableCount"
+        },
+        "terminal_failures": {
+          "$ref": "#/$defs/nullableCount"
+        },
+        "usage_records_missing_tokens": {
+          "$ref": "#/$defs/nullableCount"
+        },
+        "usage_records_missing_cost": {
+          "$ref": "#/$defs/nullableCount"
+        },
+        "tokens": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "fresh_input",
+            "cache_write",
+            "cache_read",
+            "output",
+            "total"
+          ],
+          "properties": {
+            "fresh_input": {
+              "$ref": "#/$defs/nullableCount"
+            },
+            "cache_write": {
+              "$ref": "#/$defs/nullableCount"
+            },
+            "cache_read": {
+              "$ref": "#/$defs/nullableCount"
+            },
+            "output": {
+              "$ref": "#/$defs/nullableCount"
+            },
+            "total": {
+              "$ref": "#/$defs/nullableCount"
+            }
+          }
+        },
+        "latency": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "wall_time_s",
+            "average_s",
+            "p95_s",
+            "peak_concurrency",
+            "basis"
+          ],
+          "properties": {
+            "wall_time_s": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "average_s": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "p95_s": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "peak_concurrency": {
+              "$ref": "#/$defs/nullableCount"
+            },
+            "basis": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        "operations": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "successful_calls",
+            "failed_calls",
+            "cache_hits",
+            "timeouts",
+            "auth_failures",
+            "fail_rate",
+            "concurrency_limit"
+          ],
+          "properties": {
+            "successful_calls": {
+              "$ref": "#/$defs/nullableCount"
+            },
+            "failed_calls": {
+              "$ref": "#/$defs/nullableCount"
+            },
+            "cache_hits": {
+              "$ref": "#/$defs/nullableCount"
+            },
+            "timeouts": {
+              "$ref": "#/$defs/nullableCount"
+            },
+            "auth_failures": {
+              "$ref": "#/$defs/nullableCount"
+            },
+            "fail_rate": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "concurrency_limit": {
+              "$ref": "#/$defs/nullableCount"
+            }
+          }
+        },
+        "breakdown_status": {
+          "type": "string",
+          "enum": [
+            "complete",
+            "partial",
+            "unavailable"
+          ]
+        },
+        "by_agent": {
+          "$ref": "#/$defs/nullableBreakdown"
+        },
+        "by_tier": {
+          "$ref": "#/$defs/nullableBreakdown"
+        },
+        "by_model": {
+          "$ref": "#/$defs/nullableBreakdown"
+        },
+        "model_routing": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "agent",
+              "tier",
+              "configured_model",
+              "attempts",
+              "failures",
+              "status",
+              "aggregate_complete"
+            ],
+            "properties": {
+              "agent": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "tier": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "configured_model": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "attempts": {
+                "$ref": "#/$defs/nullableCount"
+              },
+              "failures": {
+                "$ref": "#/$defs/nullableCount"
+              },
+              "status": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "aggregate_complete": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "raw_structured_usage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "source",
+            "records",
+            "redactions"
+          ],
+          "properties": {
+            "source": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "records": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "redactions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "efficiency": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "per_successful_study",
+            "per_outcome"
+          ],
+          "properties": {
+            "per_successful_study": {
+              "$ref": "#/$defs/efficiencyMetric"
+            },
+            "per_outcome": {
+              "$ref": "#/$defs/efficiencyMetric"
+            }
+          }
+        },
+        "agent_tiers": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Agent id -> tier letter. Emitted by run_pipeline; read by lib/dashboard/normalize.ts from inside usage."
+        },
+        "models": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Tier letter -> pinned model id, as resolved for this run."
+        }
+      }
+    },
+    "efficiencyMetric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "denominator",
+        "calls",
+        "tokens",
+        "api_equivalent_cost"
+      ],
+      "properties": {
+        "denominator": {
+          "$ref": "#/$defs/nullableCount"
+        },
+        "calls": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "tokens": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "api_equivalent_cost": {
+          "$ref": "#/$defs/nullableNumber"
+        }
+      }
+    },
+    "nullableBreakdown": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      ]
+    }
+  }
+}

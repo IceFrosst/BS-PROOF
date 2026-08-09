@@ -7,4 +7,14 @@ venv/
 .env
 *.sqlite
 .DS_Store
+.vs/
+.vercel/
 .claude/settings.local.json
+.next/
+node_modules/
+out-web/
+playwright-report/
+test-results/
+*.tsbuildinfo
+.vercel
+.env*

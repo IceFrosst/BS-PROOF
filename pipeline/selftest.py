@@ -1071,18 +1071,13 @@ def main():
           "a Grok report rendered 16/100 as 'does not work' because the "
           "projection dropped components; silence must not become a verdict")
 
-    # Guard the plumbing itself: whatever the runner hands the report must carry
-    # everything the report renders from.
-    import re as _re
+    # Guard the plumbing itself: the immutable dashboard exporter must receive
+    # the complete deterministic ECU rows.  The old hand-written projection
+    # dropped applicability, dose, evidence ids, flags and provenance.
     _rp = (pathlib.Path(__file__).parent.parent / "run_pipeline.py").read_text()
-    _proj = _rp[_rp.index('run_context["ecu_rows"]'):]
-    _proj = _proj[:_proj.index("} for r in rows]")]
-    _have = set(_re.findall(r'"(\w+)":', _proj))
-    _need = {"outcome_vocab_id", "composite", "arcs", "components", "band",
-             "n_primaries"}
-    _missing = sorted(_need - _have)
-    check("runner projects every field the report renders", not _missing,
-          f"missing: {_missing}" if _missing else f"{len(_need)} fields present")
+    _full_handoff = 'run_context["ecu_rows"] = rows' in _rp
+    check("runner retains complete ECU rows for report artifacts", _full_handoff,
+          "run_context must receive the full build_ecus rows without projection")
 
     print("\nSAFETY OUTCOMES + APPLICABILITY LABELS")
     from pipeline.assemble import to_studies as _ts
@@ -1548,27 +1543,29 @@ def main():
     import threading as _th
     with tempfile.TemporaryDirectory() as td:
         p = pathlib.Path(td) / "conc.sqlite"
-        s0 = Store(p)
-        check("WAL is on (one writer + many readers)",
-              s0.conn.execute("PRAGMA journal_mode").fetchone()[0].lower() == "wal")
-        check("busy_timeout makes a competing writer wait, not raise",
-              s0.conn.execute("PRAGMA busy_timeout").fetchone()[0] >= 5000)
+        with Store(p) as s0:
+            check("WAL is on (one writer + many readers)",
+                  s0.conn.execute("PRAGMA journal_mode").fetchone()[0].lower() == "wal")
+            check("busy_timeout makes a competing writer wait, not raise",
+                  s0.conn.execute("PRAGMA busy_timeout").fetchone()[0] >= 5000)
         errs: list[str] = []
 
         def _w(tag):
             try:
                 u, _, _ = dedup([{"pmid": f"{tag}{i}", "title": "T",
                                   "doi": f"10.1/{tag}{i}"} for i in range(60)])
-                Store(p).upsert_studies(u)
+                with Store(p) as writer:
+                    writer.upsert_studies(u)
             except Exception as exc:            # noqa: BLE001 - reporting it IS the test
                 errs.append(f"{tag}: {exc}")
         threads = [_th.Thread(target=_w, args=(t,)) for t in ("a", "b", "c")]
         [t.start() for t in threads]
         [t.join() for t in threads]
         check("3 concurrent writers all commit", not errs, str(errs))
-        check("no writer silently lost its rows",
-              Store(p).counts()["studies"] == 180,
-              "180 = 3 x 60, the parallel-run case")
+        with Store(p) as reader:
+            check("no writer silently lost its rows",
+                  reader.counts()["studies"] == 180,
+                  "180 = 3 x 60, the parallel-run case")
 
     # The predatory check had ZERO coverage until 2026-08-09, in the one feature
     # where a false positive is a defamation-shaped error. Every case below is a

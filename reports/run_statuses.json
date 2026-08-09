@@ -1,0 +1,34 @@
+{
+  "schema_version": "DashboardRunStatusesV1",
+  "default": {
+    "status": "experimental",
+    "public_claims_allowed": false,
+    "reason_codes": [
+      "not_explicitly_validated"
+    ],
+    "limitations": [
+      "This run has not passed explicit validation for public claims."
+    ],
+    "note": "Not approved for public claims; explicit registry review is required."
+  },
+  "runs": {
+    "20260807_164410_creatine_creatine-monohydrate_grok-sr-ft-per-o": {
+      "status": "invalid",
+      "public_claims_allowed": false,
+      "reason_codes": [
+        "all_studies_had_partial_agent_failure",
+        "invalid_s8_model_configuration",
+        "predates_health_status_population_axis",
+        "not_anchor_validated"
+      ],
+      "limitations": [
+        "All 80 extracted studies had at least one partial agent failure.",
+        "S8 failed for all 80 studies because grok-4.3 was not a valid CLI model id.",
+        "The run predates the health-status population axis, so disease trials were not separated from healthy-adult questions.",
+        "Token counts and API-equivalent cost were not retained; only aggregate call and latency measurements remain.",
+        "The scoring constants had not passed anchor calibration."
+      ],
+      "note": "Historical extraction artifact only. All 80 studies were partial failures, including 80 S8 failures from an invalid Grok model id, and the run predates the health-status population axis. Do not use its scores as product claims."
+    }
+  }
+}

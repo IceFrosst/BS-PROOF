@@ -1,2 +1,6 @@
 httpx>=0.27
 pypdf>=5.0        # PDF full text; optional at runtime, see sources/fulltext.py
+# NOT optional: scripts/dashboard_artifact.py validates every artifact against
+# schemas/dashboard_run_v1.schema.json before writing it -- the same file
+# lib/dashboard/schema.ts hands to Ajv. Without it the writer refuses to emit.
+jsonschema>=4.0
