@@ -104,8 +104,46 @@ PROMPT_VERSION = "v1.8"
 TIER_MODEL = {
     "A": os.environ.get("SP_MODEL_A", "claude-haiku-4-5-20251001"),
     "B": os.environ.get("SP_MODEL_B", "claude-sonnet-5"),
-    "C": os.environ.get("SP_MODEL_C", "claude-opus-5"),
+    # Tier C moved opus-5 -> sonnet-5 on 2026-08-09, WITH effort=high below.
+    # MEASURED, same 7 creatine RCTs, batched S6B, each arm cold:
+    #
+    #   B  opus-5   default   S6B $0.276  5 non-null mappings  0 conflicts  112s
+    #   D  sonnet-5 high      S6B $0.176  5 non-null mappings  0 conflicts   81s
+    #   E  sonnet-5 xhigh     S6B $0.206  4 non-null mappings  0 conflicts   88s
+    #   F  opus-4-8 default   S6B $0.277  5 non-null mappings  0 conflicts   86s
+    #
+    # D is -36% on the agent that dominates cost, with the SAME five mappings
+    # and no disagreement with opus on any non-null mapping. F buys nothing over
+    # opus-5. E is the interesting one: MORE effort mapped LESS -- it nulled the
+    # single ambiguous claim ("dACI association with leg/back strength"), which
+    # is defensible under S6's own "prefer null when unsure" rule but is lost
+    # evidence, and it cost 36% more output tokens to get there.
+    #
+    # SAMPLE IS 7 STUDIES and the 28 calibration anchors have still never been
+    # run. SPEC 15 calls tiers "a prior, not a measurement"; this is a small
+    # measurement, not the anchor eval. Revert with SP_MODEL_C=claude-opus-5.
+    "C": os.environ.get("SP_MODEL_C", "claude-sonnet-5"),
 }
+
+# Tier -> reasoning effort, or None to omit the flag and take the CLI default.
+#
+# Unset by default ON PURPOSE. Effort is a quality lever, not a token lever:
+# measured 2026-08-09 on an S8-shaped call, --effort low produced 745 output
+# tokens and --effort high 672, both correct. It earns its place only where a
+# CHEAPER MODEL would otherwise be unsafe -- raise effort to buy back the
+# quality, and pocket the difference in model price.
+#
+# Valid levels: low, medium, high, xhigh, max. Verified working with
+# `-p --safe-mode` returning schema-valid output.
+TIER_EFFORT = {
+    "A": os.environ.get("SP_EFFORT_A") or None,
+    "B": os.environ.get("SP_EFFORT_B") or None,
+    # C is 'high' and it is NOT optional: it is what pays for tier C running on
+    # sonnet instead of opus. Dropping to sonnet at default effort is arm C of
+    # the earlier per-claim test, which was the only arm to fail a study.
+    "C": os.environ.get("SP_EFFORT_C", "high") or None,
+}
+VALID_EFFORT = ("low", "medium", "high", "xhigh", "max")
 
 # Hard ceiling per subagent call, in USD. The CLI enforces it, so a runaway
 # retry loop or a pathologically long full text cannot silently spend a fortune
@@ -221,12 +259,19 @@ def _cache():
 _CONN = _cache()
 
 
-def _key(agent: str, model: str, payload: str) -> str:
-    # content + prompt_version + model. All three matter.
+def _key(agent: str, model: str, payload: str, effort: str | None = None) -> str:
+    # content + prompt_version + model + effort. All four matter.
+    #
+    # EFFORT IS IN THE KEY for the same reason the model id is: it changes what
+    # comes back. Leave it out and an A/B arm at --effort xhigh silently reads
+    # the previous arm's answers from cache and reports them as its own, which
+    # is the PROMPT_VERSION failure mode (invariant 3) reached through a flag
+    # instead of a prompt. Added 2026-08-09 with TIER_EFFORT.
     h = hashlib.sha256()
     h.update(agent.encode()); h.update(b"\0")
     h.update(PROMPT_VERSION.encode()); h.update(b"\0")
     h.update(model.encode()); h.update(b"\0")
+    h.update((effort or "").encode()); h.update(b"\0")
     h.update(payload.encode())
     return h.hexdigest()
 
@@ -344,17 +389,24 @@ def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
         raise KeyError(f"unknown subagent {agent}")
     tier, schema_f, prompt_f = AGENTS[agent]
     model = TIER_MODEL[tier]
+    effort = TIER_EFFORT.get(tier)
+    if effort and effort not in VALID_EFFORT:
+        # Fail loudly. An unrecognised level is how grok-4.3 made S8 fail 0/80:
+        # a bad flag value that the CLI rejects turns every call into a partial
+        # failure that reads as "this study reported nothing".
+        raise ValueError(f"SP_EFFORT_{tier}={effort!r} is not one of {VALID_EFFORT}")
 
     schema = (SCHEMAS / schema_f).read_text()
     system = _system_prompt(prompt_f)
     body = json.dumps(payload, ensure_ascii=False, sort_keys=True)
 
-    k = _key(agent, model, body)
+    k = _key(agent, model, body, effort)
     with _lock:
         row = _CONN.execute("SELECT v FROM c WHERE k=?", (k,)).fetchone()
     if row:
         USAGE.add(agent, 0.0, cached=True)
-        return json.loads(row[0]), {"cached": True, "model": model}
+        return json.loads(row[0]), {"cached": True, "model": model,
+                                    "effort": effort}
 
     cmd = [
         "claude", "-p", "--safe-mode",
@@ -374,6 +426,8 @@ def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
         "--max-turns", "1",
         "--max-budget-usd", str(MAX_BUDGET_USD),
     ]
+    if effort:
+        cmd += ["--effort", effort]
 
     last_err, timeouts = None, 0
     for attempt in range(retries + 1):
@@ -415,7 +469,8 @@ def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
             _CONN.execute("INSERT OR REPLACE INTO c VALUES (?,?,?)",
                           (k, json.dumps(result), cost))
             _CONN.commit()
-        return result, {"cached": False, "model": model, "cost": cost}
+        return result, {"cached": False, "model": model, "cost": cost,
+                        "effort": effort}
 
     USAGE.add(agent, 0.0, failed=True)
     return None, {"error": last_err, "model": model, "flagged": True}

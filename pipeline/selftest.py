@@ -1211,6 +1211,22 @@ def main():
         check("re-scoring updates in place, no duplicate row",
               st_db.counts()["ecus"] == 1 and st_db.ecu(key)["score"] == 42)
 
+    # Effort changes what comes back, so it must change the cache key. Without
+    # this an A/B arm at a different effort silently reads the previous arm's
+    # answers and reports them as its own.
+    print("\nEFFORT IN THE CACHE KEY")
+    import claude_adapter as _ca
+    _k = lambda eff: _ca._key("S6", "claude-sonnet-5", '{"a":1}', eff)
+    check("two effort levels give two cache keys", _k("high") != _k("xhigh"))
+    check("no effort is its own key, not an alias of one",
+          _k(None) != _k("high") and _k(None) == _k(""))
+    check("same effort is stable", _k("high") == _k("high"))
+    check("model still separates keys at equal effort",
+          _ca._key("S6", "claude-opus-5", '{"a":1}', "high") != _k("high"))
+    check("every declared effort level is one the CLI accepts",
+          all(e in _ca.VALID_EFFORT for e in _ca.TIER_EFFORT.values() if e),
+          f"TIER_EFFORT={_ca.TIER_EFFORT}")
+
     # Batched S6 matches results back BY INDEX. If it ever matched by position,
     # a reordered or short array would shift every mapping onto the wrong claim
     # -- silently filing evidence about one outcome under another, which is the
