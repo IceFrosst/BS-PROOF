@@ -11,6 +11,10 @@ sweeps `runs/` whenever `scoring.SCORING_MODEL` changes.
 
 | When (UTC) | Mode | Ingredient | Form | Selftest | File |
 |---|---|---|---|---|---|
+| 2026-08-09 23:31 UTC | claude-top5-per_o | `creatine` | `creatine_monohydrate` | summary | [runs/20260809_233120_creatine_creatine-monohydrate_claude-top5-per-o_summary.md](runs/20260809_233120_creatine_creatine-monohydrate_claude-top5-per-o_summary.md) |
+| 2026-08-09 23:31 UTC | claude-top5-per_o | `creatine` | `creatine_monohydrate` | full | [runs/20260809_233120_creatine_creatine-monohydrate_claude-top5-per-o_full.md](runs/20260809_233120_creatine_creatine-monohydrate_claude-top5-per-o_full.md) |
+| 2026-08-09 23:22 UTC | claude-top5-per_o | `creatine` | `creatine_monohydrate` | summary | [runs/20260809_232219_creatine_creatine-monohydrate_claude-top5-per-o_summary.md](runs/20260809_232219_creatine_creatine-monohydrate_claude-top5-per-o_summary.md) |
+| 2026-08-09 23:22 UTC | claude-top5-per_o | `creatine` | `creatine_monohydrate` | full | [runs/20260809_232219_creatine_creatine-monohydrate_claude-top5-per-o_full.md](runs/20260809_232219_creatine_creatine-monohydrate_claude-top5-per-o_full.md) |
 | 2026-08-07 16:44 UTC | grok-sr-ft-per_o | `creatine` | `creatine_monohydrate` | summary | [runs/20260807_164410_creatine_creatine-monohydrate_grok-sr-ft-per-o_summary.md](runs/20260807_164410_creatine_creatine-monohydrate_grok-sr-ft-per-o_summary.md) |
 | 2026-08-07 16:44 UTC | grok-sr-ft-per_o | `creatine` | `creatine_monohydrate` | full | [runs/20260807_164410_creatine_creatine-monohydrate_grok-sr-ft-per-o_full.md](runs/20260807_164410_creatine_creatine-monohydrate_grok-sr-ft-per-o_full.md) |
 

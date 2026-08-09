@@ -278,7 +278,7 @@ tier C is the dominant cost, not tier A — a cheaper reasoning variant there is
 worth ~24% *and* is the better model for the job.
 
 Do not move tier B on cost alone: SPEC §15 says tiers are "a prior, not a
-measurement" — A/B them on the 28 anchors first.
+measurement" — A/B them on the 35 anchors first.
 
 ## Reports archive
 
@@ -755,7 +755,7 @@ ownership table added under Multi-agent workflow.
    table filter, `q_s`, arbitrary cap slice, backend lock-in, missing direction);
    nothing has yet been run end to end on a live backend. Do this before
    trusting any number from a `--with-sr` run.
-4. **Anchor eval** — 34/34 in-scope anchors have vocabulary; running them needs
+4. **Anchor eval** — 35 anchors in `docs/anchors.csv` (NOT 28; the doc said 28 until 2026-08-06); running them needs
    extraction. Do this before trusting any constant.
 5. **Derive dose bands at scale** and bump `band_version` 0 → 1.
 6. **Grok/Claude agreement table** on a fixed paper set. Never merge scores.

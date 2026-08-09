@@ -104,7 +104,7 @@ PROMPT_VERSION = "v1.9"
 # version to bump, and it silently breaks "the same bottle scores the same
 # tomorrow". Pinning is not an optimisation here; it is the invariant.
 #
-# Change these after you A/B on the 28 anchors, not before. SPEC.md section 15.
+# Change these after you A/B on the 35 anchors, not before. SPEC.md section 15.
 TIER_MODEL = {
     "A": os.environ.get("SP_MODEL_A", "claude-haiku-4-5-20251001"),
     "B": os.environ.get("SP_MODEL_B", "claude-sonnet-5"),
@@ -123,7 +123,7 @@ TIER_MODEL = {
     # is defensible under S6's own "prefer null when unsure" rule but is lost
     # evidence, and it cost 36% more output tokens to get there.
     #
-    # SAMPLE IS 7 STUDIES and the 28 calibration anchors have still never been
+    # SAMPLE IS 7 STUDIES and the 35 calibration anchors have still never been
     # run. SPEC 15 calls tiers "a prior, not a measurement"; this is a small
     # measurement, not the anchor eval. Revert with SP_MODEL_C=claude-opus-5.
     "C": os.environ.get("SP_MODEL_C", "claude-sonnet-5"),

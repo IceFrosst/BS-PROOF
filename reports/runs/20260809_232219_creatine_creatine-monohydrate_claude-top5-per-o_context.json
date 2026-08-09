@@ -1,0 +1,1435 @@
+{
+  "ingredient": "creatine",
+  "form": "creatine_monohydrate",
+  "scope": "per_outcome",
+  "showcase_outcomes": [
+    "energy_levels",
+    "muscle_strength",
+    "lean_body_mass",
+    "exercise_endurance",
+    "muscle_power"
+  ],
+  "showcase_study_counts": {
+    "energy_levels": 200,
+    "muscle_strength": 144,
+    "lean_body_mass": 136,
+    "exercise_endurance": 122,
+    "muscle_power": 104
+  },
+  "studies_targeted": 80,
+  "studies_ok": 80,
+  "studies_skipped": 0,
+  "studies_failed_partial": 5,
+  "predatory": {
+    "list_entries": 1162,
+    "studies_checked": 144,
+    "studies_predatory": 1,
+    "publishers_resolved": 136,
+    "journals_predatory": [],
+    "journals_predatory_n": 0,
+    "publishers_predatory": [
+      "Frontiers Media SA"
+    ],
+    "publishers_predatory_n": 1,
+    "zero_weight": false,
+    "source": "The Predatory Journals List 2025 (in-repo)"
+  },
+  "studies_list": [
+    {
+      "title": "Single-Dose Creatine Reduces Sleep Deprivation-Induced Deterioration in Cognitive Performance.",
+      "year": 2026,
+      "doi": "10.3390/nu18081192",
+      "pmid": "42075005",
+      "canonical_id": "doi:103390nu18081192",
+      "journal": "Nutrients",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Synergistic effects of creatine, carbs, protein on repeated sprint performance.",
+      "year": 2026,
+      "doi": "10.1038/s41598-026-44278-x",
+      "pmid": "41888192",
+      "canonical_id": "doi:101038s4159802644278x",
+      "journal": "Scientific reports",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Combined creatine and \u03b2-hydroxy-\u03b2-methylbutyrate supplementation with integral conditioning exercise enhances functional performance and metabolic health in physically active older adults: A randomized controlled crossover trial.",
+      "year": 2026,
+      "doi": "10.1007/s40520-025-03312-0",
+      "pmid": "41511610",
+      "canonical_id": "doi:101007s40520025033120",
+      "journal": "Aging clinical and experimental research",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Creatine plus \u03b2-Hydroxy-\u03b2-Methylbutyrate supplementation is associated with preserved glutathione redox-balance and redox-function associations in older adults: a secondary analysis of a randomized crossover trial.",
+      "year": 2026,
+      "doi": "10.1007/s10522-026-10407-2",
+      "pmid": "41712056",
+      "canonical_id": "doi:101007s10522026104072",
+      "journal": "Biogerontology",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Effectiveness of a soccer injury prevention program based on creatine supplementation and internal load monitoring: a randomized controlled pilot study.",
+      "year": 2025,
+      "doi": "10.1080/15502783.2026.2633251",
+      "pmid": "41704196",
+      "canonical_id": "doi:1010801550278320262633251",
+      "journal": "Journal of the International Society of Sports Nutrition",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Acute creatine supplementation enhances technical performance in adolescent basketball players under cognitive-motor dual-task condition.",
+      "year": 2025,
+      "doi": "10.1080/15502783.2025.2542369",
+      "pmid": "40758095",
+      "canonical_id": "doi:1010801550278320252542369",
+      "journal": "Journal of the International Society of Sports Nutrition",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Effects of Creatine Monohydrate Loading on Sleep Metrics, Physical Performance, Cognitive Function, and Recovery in Physically Active Men: A Randomized, Double-Blind, Placebo-Controlled, Crossover Trial.",
+      "year": 2025,
+      "doi": "10.3390/nu17243831",
+      "pmid": "41470776",
+      "canonical_id": "doi:103390nu17243831",
+      "journal": "Nutrients",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Short-term creatine supplementation enhances strength, reduces fatigue, and accelerates recovery in resistance-trained athletes: a double-blind, randomized, crossover trial.",
+      "year": 2025,
+      "doi": "10.1080/15502783.2026.2617283",
+      "pmid": "41579075",
+      "canonical_id": "doi:1010801550278320262617283",
+      "journal": "Journal of the International Society of Sports Nutrition",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Effect of Taurine Combined With Creatine on Repeated Sprinting Ability After Exhaustive Exercise Under Hot and Humid Conditions.",
+      "year": 2025,
+      "doi": "10.1177/19417381251320095",
+      "pmid": "39972259",
+      "canonical_id": "doi:10117719417381251320095",
+      "journal": "Sports health",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "The Effect of Creatine Supplementation on Lean Body Mass with and Without Resistance Training.",
+      "year": 2025,
+      "doi": "10.3390/nu17061081",
+      "pmid": "40292479",
+      "canonical_id": "doi:103390nu17061081",
+      "journal": "Nutrients",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Metabolic Signature of Arsenic Exposure and Metabolism: The Folic Acid and Creatine Trial.",
+      "year": 2025,
+      "doi": "10.1021/acs.est.5c01597",
+      "pmid": "40668877",
+      "canonical_id": "registry:nct01050556",
+      "journal": "Environmental science & technology",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Effect of creatine monohydrate on motor function in children with facioscapulohumeral muscular dystrophy: A multicenter, randomized, double-blind placebo-controlled crossover trial.",
+      "year": 2025,
+      "doi": "10.1002/phar.70025",
+      "pmid": "40366059",
+      "canonical_id": "doi:101002phar70025",
+      "journal": "Pharmacotherapy",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Does creatine cause hair loss? A 12-week randomized controlled trial.",
+      "year": 2025,
+      "doi": "10.1080/15502783.2025.2495229",
+      "pmid": "40265319",
+      "canonical_id": "doi:1010801550278320252495229",
+      "journal": "Journal of the International Society of Sports Nutrition",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "The Effect of Vitamin D3 on Serum Creatine Phosphokinase Level in Patients with Multiple Trauma: A Pilot Randomized Clinical Trial.",
+      "year": 2025,
+      "doi": "10.30476/ijms.2024.99691.3182",
+      "pmid": "39957812",
+      "canonical_id": "doi:1030476ijms2024996913182",
+      "journal": "Iranian journal of medical sciences",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "High-dose short-term creatine supplementation without beneficial effects in professional cyclists: a randomized controlled trial.",
+      "year": 2024,
+      "doi": "10.1080/15502783.2024.2340574",
+      "pmid": "38606895",
+      "canonical_id": "doi:1010801550278320242340574",
+      "journal": "Journal of the International Society of Sports Nutrition",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Creatine Improves Total Sleep Duration Following Resistance Training Days versus Non-Resistance Training Days among Naturally Menstruating Females.",
+      "year": 2024,
+      "doi": "10.3390/nu16162772",
+      "pmid": "39203908",
+      "canonical_id": "doi:103390nu16162772",
+      "journal": "Nutrients",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Combined Impact of Creatine, Caffeine, and Variable Resistance on Repeated Sprint Ability in Young Soccer Players.",
+      "year": 2024,
+      "doi": "10.3390/nu16152437",
+      "pmid": "39125317",
+      "canonical_id": "doi:103390nu16152437",
+      "journal": "Nutrients",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Effect of Creatine Supplementation on Body Composition and Malnutrition-Inflammation Score in Hemodialysis Patients: An Exploratory 1-Year, Balanced, Double-Blind Design.",
+      "year": 2024,
+      "doi": "10.3390/nu16050615",
+      "pmid": "38474743",
+      "canonical_id": "doi:103390nu16050615",
+      "journal": "Nutrients",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Effects of a Low Dose of Orally Administered Creatine Monohydrate on Post-Fatigue Muscle Power in Young Soccer Players.",
+      "year": 2024,
+      "doi": "10.3390/nu16091324",
+      "pmid": "38732571",
+      "canonical_id": "doi:103390nu16091324",
+      "journal": "Nutrients",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": true
+    },
+    {
+      "title": "The Effect of Creatine Nitrate and Caffeine Individually or Combined on Exercise Performance and Cognitive Function: A Randomized, Crossover, Double-Blind, Placebo-Controlled Trial.",
+      "year": 2024,
+      "doi": "10.3390/nu16060766",
+      "pmid": "38542677",
+      "canonical_id": "doi:103390nu16060766",
+      "journal": "Nutrients",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Effect of Creatine Monohydrate Supplementation on Macro- and Microvascular Endothelial Function in Older Adults: A Pilot Study.",
+      "year": 2024,
+      "doi": "10.3390/nu17010058",
+      "pmid": "39796490",
+      "canonical_id": "doi:103390nu17010058",
+      "journal": "Nutrients",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Supplementing With Which Form of Creatine (Hydrochloride or Monohydrate) Alongside Resistance Training Can Have More Impacts on Anabolic/Catabolic Hormones, Strength and Body Composition?",
+      "year": 2024,
+      "doi": "10.33549/physiolres.935323",
+      "pmid": "39545789",
+      "canonical_id": "doi:1033549physiolres935323",
+      "journal": "Physiological research",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "The Effect of Prior Creatine Intake for 28 Days on Accelerated Recovery from Exercise-Induced Muscle Damage: A Double-Blind, Randomized, Placebo-Controlled Trial.",
+      "year": 2024,
+      "doi": "10.3390/nu16060896",
+      "pmid": "38542807",
+      "canonical_id": "doi:103390nu16060896",
+      "journal": "Nutrients",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "No additive effect of creatine, caffeine, and sodium bicarbonate on intense exercise performance in endurance-trained individuals.",
+      "year": 2024,
+      "doi": "10.1111/sms.14629",
+      "pmid": "38646853",
+      "canonical_id": "doi:101111sms14629",
+      "journal": "Scandinavian journal of medicine & science in sports",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "The Effects of Creatine Monohydrate Loading on Exercise Recovery in Active Women throughout the Menstrual Cycle.",
+      "year": 2023,
+      "doi": "10.3390/nu15163567",
+      "pmid": "37630756",
+      "canonical_id": "doi:103390nu15163567",
+      "journal": "Nutrients",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "The effects of creatine supplementation on cognitive performance-a randomised controlled study.",
+      "year": 2023,
+      "doi": "10.1186/s12916-023-03146-5",
+      "pmid": "37968687",
+      "canonical_id": "doi:101186s12916023031465",
+      "journal": "BMC medicine",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "A 2-yr Randomized Controlled Trial on Creatine Supplementation during Exercise for Postmenopausal Bone Health.",
+      "year": 2023,
+      "doi": "10.1249/mss.0000000000003202",
+      "pmid": "37144634",
+      "canonical_id": "doi:101249mss0000000000003202",
+      "journal": "Medicine and science in sports and exercise",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Creatine monohydrate supplementation changes total body water and DXA lean mass estimates in female collegiate dancers.",
+      "year": 2023,
+      "doi": "10.1080/15502783.2023.2193556",
+      "pmid": "36960692",
+      "canonical_id": "doi:1010801550278320232193556",
+      "journal": "Journal of the International Society of Sports Nutrition",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "The Effects of Protein and Carbohydrate Supplementation, with and without Creatine, on Occupational Performance in Firefighters.",
+      "year": 2023,
+      "doi": "10.3390/nu15245134",
+      "pmid": "38140393",
+      "canonical_id": "doi:103390nu15245134",
+      "journal": "Nutrients",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "The Folic Acid and Creatine Trial: Treatment Effects of Supplementation on Arsenic Methylation Indices and Metabolite Concentrations in Blood in a Bangladeshi Population.",
+      "year": 2023,
+      "doi": "10.1289/ehp11270",
+      "pmid": "36976258",
+      "canonical_id": "doi:101289ehp11270",
+      "journal": "Environmental health perspectives",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Application of the D&lt;sub&gt;3&lt;/sub&gt; -creatine muscle mass assessment tool to a geriatric weight loss trial: A pilot study.",
+      "year": 2023,
+      "doi": "10.1002/jcsm.13322",
+      "pmid": "37668075",
+      "canonical_id": "registry:nct04076618",
+      "journal": "Journal of cachexia, sarcopenia and muscle",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "A Randomized Controlled Trial of Changes in Fluid Distribution across Menstrual Phases with Creatine Supplementation.",
+      "year": 2023,
+      "doi": "10.3390/nu15020429",
+      "pmid": "36678300",
+      "canonical_id": "doi:103390nu15020429",
+      "journal": "Nutrients",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Comparing D3-Creatine Dilution and Dual-Energy X-ray Absorptiometry Muscle Mass Responses to Strength Training in Low-Functioning Older Adults.",
+      "year": 2023,
+      "doi": "10.1093/gerona/glad047",
+      "pmid": "36752568",
+      "canonical_id": "doi:101093geronaglad047",
+      "journal": "The journals of gerontology. Series A, Biological sciences and medical sciences",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "The role of resistance training and creatine supplementation on oxidative stress, antioxidant defense, muscle strength, and quality of life in older adults.",
+      "year": 2023,
+      "doi": "10.3389/fpubh.2023.1062832",
+      "pmid": "37206869",
+      "canonical_id": "doi:103389fpubh20231062832",
+      "journal": "Frontiers in public health",
+      "oa": "full_text",
+      "predatory_venue": true,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Effects of Oral Creatine Supplementation on Power Output during Repeated Treadmill Sprinting.",
+      "year": 2022,
+      "doi": "10.3390/nu14061140",
+      "pmid": "35334797",
+      "canonical_id": "doi:103390nu14061140",
+      "journal": "Nutrients",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Effects of Four Weeks of Beta-Alanine Supplementation Combined with One Week of Creatine Loading on Physical and Cognitive Performance in Military Personnel.",
+      "year": 2022,
+      "doi": "10.3390/ijerph19137992",
+      "pmid": "35805647",
+      "canonical_id": "doi:103390ijerph19137992",
+      "journal": "International journal of environmental research and public health",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": true
+    },
+    {
+      "title": "A randomized open-labeled study to examine the effects of creatine monohydrate and combined training on jump and scoring performance in young basketball players.",
+      "year": 2022,
+      "doi": "10.1080/15502783.2022.2108683",
+      "pmid": "35966022",
+      "canonical_id": "doi:1010801550278320222108683",
+      "journal": "Journal of the International Society of Sports Nutrition",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": true
+    },
+    {
+      "title": "Morning versus Evening Intake of Creatine in Elite Female Handball Players.",
+      "year": 2021,
+      "doi": "10.3390/ijerph19010393",
+      "pmid": "35010653",
+      "canonical_id": "doi:103390ijerph19010393",
+      "journal": "International journal of environmental research and public health",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Short-Term Creatine Loading Improves Total Work and Repetitions to Failure but Not Load-Velocity Characteristics in Strength-Trained Men.",
+      "year": 2021,
+      "doi": "10.3390/nu13030826",
+      "pmid": "33802283",
+      "canonical_id": "doi:103390nu13030826",
+      "journal": "Nutrients",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "The effects of phosphocreatine disodium salts plus blueberry extract supplementation on muscular strength, power, and endurance.",
+      "year": 2021,
+      "doi": "10.1186/s12970-021-00456-y",
+      "pmid": "34503541",
+      "canonical_id": "doi:101186s1297002100456y",
+      "journal": "Journal of the International Society of Sports Nutrition",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Short-term co-ingestion of creatine and sodium bicarbonate improves anaerobic performance in trained taekwondo athletes.",
+      "year": 2021,
+      "doi": "10.1186/s12970-021-00407-7",
+      "pmid": "33478522",
+      "canonical_id": "doi:101186s12970021004077",
+      "journal": "Journal of the International Society of Sports Nutrition",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Creatine Enhances the Effects of Cluster-Set Resistance Training on Lower-Limb Body Composition and Strength in Resistance-Trained Men: A Pilot Study.",
+      "year": 2021,
+      "doi": "10.3390/nu13072303",
+      "pmid": "34371813",
+      "canonical_id": "doi:103390nu13072303",
+      "journal": "Nutrients",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Effects of Combined Creatine and Sodium Bicarbonate Supplementation on Soccer-Specific Performance in Elite Soccer Players: A Randomized Controlled Trial.",
+      "year": 2021,
+      "doi": "10.3390/ijerph18136919",
+      "pmid": "34203286",
+      "canonical_id": "doi:103390ijerph18136919",
+      "journal": "International journal of environmental research and public health",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Effect of Creatine Supplementation on Functional Capacity and Muscle Oxygen Saturation in Patients with Symptomatic Peripheral Arterial Disease: A Pilot Study of a Randomized, Double-Blind Placebo-Controlled Clinical Trial.",
+      "year": 2021,
+      "doi": "10.3390/nu13010149",
+      "pmid": "33466233",
+      "canonical_id": "doi:103390nu13010149",
+      "journal": "Nutrients",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Effects of Creatine Supplementation during Resistance Training Sessions in Physically Active Young Adults.",
+      "year": 2020,
+      "doi": "10.3390/nu12061880",
+      "pmid": "32599716",
+      "canonical_id": "doi:103390nu12061880",
+      "journal": "Nutrients",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Effect of Ten Weeks of Creatine Monohydrate Plus HMB Supplementation on Athletic Performance Tests in Elite Male Endurance Athletes.",
+      "year": 2020,
+      "doi": "10.3390/nu12010193",
+      "pmid": "31936727",
+      "canonical_id": "doi:103390nu12010193",
+      "journal": "Nutrients",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "The Effects of Long-Term Magnesium Creatine Chelate Supplementation on Repeated Sprint Ability (RAST) in Elite Soccer Players.",
+      "year": 2020,
+      "doi": "10.3390/nu12102961",
+      "pmid": "32998206",
+      "canonical_id": "doi:103390nu12102961",
+      "journal": "Nutrients",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "The addition of \u03b2-Hydroxy \u03b2-Methylbutyrate (HMB) to creatine monohydrate supplementation does not improve anthropometric and performance maintenance across a collegiate rugby season.",
+      "year": 2020,
+      "doi": "10.1186/s12970-020-00359-4",
+      "pmid": "32460801",
+      "canonical_id": "doi:101186s12970020003594",
+      "journal": "Journal of the International Society of Sports Nutrition",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Examining the effects of creatine supplementation in augmenting adaptations to resistance training in patients with prostate cancer undergoing androgen deprivation therapy: a randomised, double-blind, placebo-controlled trial.",
+      "year": 2019,
+      "doi": "10.1136/bmjopen-2019-030080",
+      "pmid": "31542747",
+      "canonical_id": "doi:101136bmjopen2019030080",
+      "journal": "BMJ open",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Effect of Creatine Supplementation Dosing Strategies on Aging Muscle Performance.",
+      "year": 2019,
+      "doi": "10.1007/s12603-018-1148-8",
+      "pmid": "30820517",
+      "canonical_id": "doi:101007s1260301811488",
+      "journal": "The journal of nutrition, health & aging",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": true
+    },
+    {
+      "title": "Creatine electrolyte supplement improves anaerobic power and strength: a randomized double-blind control study.",
+      "year": 2019,
+      "doi": "10.1186/s12970-019-0291-x",
+      "pmid": "31126306",
+      "canonical_id": "doi:101186s129700190291x",
+      "journal": "Journal of the International Society of Sports Nutrition",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Effects of 4-Week Creatine Supplementation Combined with Complex Training on Muscle Damage and Sport Performance.",
+      "year": 2018,
+      "doi": "10.3390/nu10111640",
+      "pmid": "30400221",
+      "canonical_id": "doi:103390nu10111640",
+      "journal": "Nutrients",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Creatine-electrolyte supplementation improves repeated sprint cycling performance: A double blind randomized control study.",
+      "year": 2018,
+      "doi": "10.1186/s12970-018-0226-y",
+      "pmid": "29743825",
+      "canonical_id": "doi:101186s129700180226y",
+      "journal": "Journal of the International Society of Sports Nutrition",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Creatine Supplementation Supports the Rehabilitation of Adolescent Fin Swimmers in Tendon Overuse Injury Cases.",
+      "year": 2018,
+      "doi": null,
+      "pmid": "29769829",
+      "canonical_id": "pmid:29769829",
+      "journal": "Journal of sports science & medicine",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Effects of Creatine Supplementation on Muscle Strength and Optimal Individual Post-Activation Potentiation Time of the Upper Body in Canoeists.",
+      "year": 2017,
+      "doi": "10.3390/nu9111169",
+      "pmid": "29077022",
+      "canonical_id": "doi:103390nu9111169",
+      "journal": "Nutrients",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": true
+    },
+    {
+      "title": "Hematological and Hemodynamic Responses to Acute and Short-Term Creatine Nitrate Supplementation.",
+      "year": 2017,
+      "doi": "10.3390/nu9121359",
+      "pmid": "29244743",
+      "canonical_id": "doi:103390nu9121359",
+      "journal": "Nutrients",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Effect of low dose, short-term creatine supplementation on muscle power output in elite youth soccer players.",
+      "year": 2017,
+      "doi": "10.1186/s12970-017-0162-2",
+      "pmid": "28190980",
+      "canonical_id": "doi:101186s1297001701622",
+      "journal": "Journal of the International Society of Sports Nutrition",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "The Effects of Creatine Supplementation on Explosive Performance and Optimal Individual Postactivation Potentiation Time.",
+      "year": 2016,
+      "doi": "10.3390/nu8030143",
+      "pmid": "26959056",
+      "canonical_id": "doi:103390nu8030143",
+      "journal": "Nutrients",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Effects of Coffee and Caffeine Anhydrous Intake During Creatine Loading.",
+      "year": 2016,
+      "doi": "10.1519/jsc.0000000000001223",
+      "pmid": "26439785",
+      "canonical_id": "doi:101519jsc0000000000001223",
+      "journal": "Journal of strength and conditioning research",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Creatine supplementation enhances corticomotor excitability and cognitive performance during oxygen deprivation.",
+      "year": 2015,
+      "doi": "10.1523/jneurosci.3113-14.2015",
+      "pmid": "25632150",
+      "canonical_id": "doi:101523jneurosci3113142015",
+      "journal": "The Journal of neuroscience : the official journal of the Society for Neuroscience",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "The acute effect of beta-guanidinopropionic acid versus creatine or placebo in healthy men (ABC Trial): study protocol for a randomized controlled trial.",
+      "year": 2015,
+      "doi": "10.1186/s13063-015-0581-9",
+      "pmid": "25888414",
+      "canonical_id": "doi:101186s1306301505819",
+      "journal": "Trials",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Creatine supplementation associated or not with strength training upon emotional and cognitive measures in older women: a randomized double-blind study.",
+      "year": 2013,
+      "doi": "10.1371/journal.pone.0076301",
+      "pmid": "24098469",
+      "canonical_id": "registry:nct01164020",
+      "journal": "PloS one",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Creatine fails to augment the benefits from resistance training in patients with HIV infection: a randomized, double-blind, placebo-controlled study.",
+      "year": 2009,
+      "doi": "10.1371/journal.pone.0004605",
+      "pmid": "19242554",
+      "canonical_id": "registry:nct00484627",
+      "journal": "PloS one",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Creatine supplementation and physical training in patients with COPD: a double blind, placebo-controlled study.",
+      "year": 2006,
+      "doi": "10.2147/copd.2006.1.4.445",
+      "pmid": "18044100",
+      "canonical_id": "doi:102147copd200614445",
+      "journal": "International journal of chronic obstructive pulmonary disease",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "The effects of creatine supplementation on selected factors of tennis specific training.",
+      "year": 2006,
+      "doi": "10.1136/bjsm.2005.022558",
+      "pmid": "16720886",
+      "canonical_id": "doi:101136bjsm2005022558",
+      "journal": "British journal of sports medicine",
+      "oa": "full_text",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Creatine supplementation modifies fat deposition in arm and leg tissues in individuals with Down syndrome.",
+      "year": 2026,
+      "doi": "10.1016/j.nut.2026.113175",
+      "pmid": "41903346",
+      "canonical_id": "doi:101016jnut2026113175",
+      "journal": "Nutrition (Burbank, Los Angeles County, Calif.)",
+      "oa": "abstract_only",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Combined creatine and HMB co-supplementation improves functional strength independent of muscle mass in physically active older adults: a randomized crossover trial.",
+      "year": 2026,
+      "doi": "10.1007/s11357-025-01889-y",
+      "pmid": "41073834",
+      "canonical_id": "doi:101007s1135702501889y",
+      "journal": "GeroScience",
+      "oa": "abstract_only",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Examining the feasibility and preliminary effects of resistance exercise training and creatine supplementation in individuals treated for colorectal cancer.",
+      "year": 2026,
+      "doi": "10.1371/journal.pone.0353630",
+      "pmid": "42455839",
+      "canonical_id": "registry:nct06420726",
+      "journal": "PloS one",
+      "oa": "abstract_only",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Effects of high-load, velocity-intentional variable resistance training combined with creatine supplementation on neuroplasticity, oxidative stress, inflammation, physical function, cognitive performance and quality of life in older adults: A randomized, double-blind, placebo-controlled trial.",
+      "year": 2026,
+      "doi": "10.1016/j.exger.2026.113122",
+      "pmid": "41941966",
+      "canonical_id": "registry:nct06620666",
+      "journal": "Experimental gerontology",
+      "oa": "abstract_only",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Beetroot juice or creatine: which yields greater short-term benefits for resistance training capacity, performance and key physiological responses?",
+      "year": 2026,
+      "doi": "10.1080/09637486.2026.2625827",
+      "pmid": "41702723",
+      "canonical_id": "doi:1010800963748620262625827",
+      "journal": "International journal of food sciences and nutrition",
+      "oa": "abstract_only",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Effects of a Blend of Trisodium Citrate, Creatine Monohydrate, Leucine, and Blueberry Extract on Training-Induced Changes in Leg Extension Strength, Endurance, and Muscle Size.",
+      "year": 2025,
+      "doi": "10.1080/19390211.2025.2518408",
+      "pmid": "40537085",
+      "canonical_id": "doi:1010801939021120252518408",
+      "journal": "Journal of dietary supplements",
+      "oa": "abstract_only",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Effects of Combined Versus Single Supplementation of Creatine, Beta-Alanine, and L-Citrulline During Short Sprint Interval Training on Basketball Players' Performance: A Double-Blind Randomized Placebo-Controlled Trial.",
+      "year": 2025,
+      "doi": "10.1123/ijspp.2024-0310",
+      "pmid": "40010353",
+      "canonical_id": "doi:101123ijspp20240310",
+      "journal": "International journal of sports physiology and performance",
+      "oa": "abstract_only",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Short term creatine loading improves strength endurance even without changing maximal strength, RPE, fatigue index, blood lactate, and mode state.",
+      "year": 2024,
+      "doi": "10.1590/0001-3765202420230559",
+      "pmid": "38747788",
+      "canonical_id": "doi:10159000013765202420230559",
+      "journal": "Anais da Academia Brasileira de Ciencias",
+      "oa": "abstract_only",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Creatine supplementation combined with breathing exercises reduces respiratory discomfort and improves creatine status in patients with long-COVID.",
+      "year": 2024,
+      "doi": "10.4103/jpgm.jpgm_650_23",
+      "pmid": "38099612",
+      "canonical_id": "doi:104103jpgmjpgm65023",
+      "journal": "Journal of postgraduate medicine",
+      "oa": "abstract_only",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Eight-Week Creatine-Glucose Supplementation Alleviates Clinical Features of Long COVID.",
+      "year": 2024,
+      "doi": "10.3177/jnsv.70.174",
+      "pmid": "38684388",
+      "canonical_id": "doi:103177jnsv70174",
+      "journal": "Journal of nutritional science and vitaminology",
+      "oa": "abstract_only",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Does creatine supplementation affect recovery speed of impulse above critical torque?",
+      "year": 2023,
+      "doi": "10.1080/17461391.2022.2159539",
+      "pmid": "36519333",
+      "canonical_id": "doi:1010801746139120222159539",
+      "journal": "European journal of sport science",
+      "oa": "abstract_only",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Creatine supplementation combined with blood flow restriction training enhances muscle thickness and performance: a randomized, placebo-controlled, and double-blind study.",
+      "year": 2023,
+      "doi": "10.1139/apnm-2022-0209",
+      "pmid": "36812477",
+      "canonical_id": "doi:101139apnm20220209",
+      "journal": "Applied physiology, nutrition, and metabolism = Physiologie appliquee, nutrition et metabolisme",
+      "oa": "abstract_only",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Effects of Creatine and Caffeine Supplementation During Resistance Training on Body Composition, Strength, Endurance, Rating of Perceived Exertion and Fatigue in Trained Young Adults.",
+      "year": 2022,
+      "doi": "10.1080/19390211.2021.1904085",
+      "pmid": "33759701",
+      "canonical_id": "doi:1010801939021120211904085",
+      "journal": "Journal of dietary supplements",
+      "oa": "abstract_only",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "Creatine Monohydrate Supplementation, but not Creatyl-L-Leucine, Increased Muscle Creatine Content in Healthy Young Adults: A Double-Blind Randomized Controlled Trial.",
+      "year": 2022,
+      "doi": "10.1123/ijsnem.2022-0074",
+      "pmid": "36007881",
+      "canonical_id": "doi:101123ijsnem20220074",
+      "journal": "International journal of sport nutrition and exercise metabolism",
+      "oa": "abstract_only",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    },
+    {
+      "title": "No evidence for brown adipose tissue activation after creatine supplementation in adult vegetarians.",
+      "year": 2021,
+      "doi": "10.1038/s42255-020-00332-0",
+      "pmid": "33462512",
+      "canonical_id": "registry:nct04086381",
+      "journal": "Nature metabolism",
+      "oa": "abstract_only",
+      "predatory_venue": false,
+      "skipped": false,
+      "skip_reason": null,
+      "failed_partial": false
+    }
+  ],
+  "sr": {
+    "requested": 0,
+    "s2_ok": 0,
+    "resolved": 0
+  },
+  "agent_stats": {
+    "S3": {
+      "ok": 80,
+      "fail": 0,
+      "cache": 0,
+      "errors": {}
+    },
+    "S4": {
+      "ok": 79,
+      "fail": 1,
+      "cache": 0,
+      "errors": {
+        "exit 1: max_turns": 1
+      }
+    },
+    "S5": {
+      "ok": 80,
+      "fail": 0,
+      "cache": 0,
+      "errors": {}
+    },
+    "S7": {
+      "ok": 76,
+      "fail": 4,
+      "cache": 0,
+      "errors": {
+        "exit 1: max_turns": 4
+      }
+    },
+    "S8": {
+      "ok": 80,
+      "fail": 0,
+      "cache": 0,
+      "errors": {}
+    }
+  },
+  "speed_report": "",
+  "ecu_rows": [
+    {
+      "outcome_vocab_id": "energy_levels",
+      "score": -3,
+      "composite": 0,
+      "arcs": {
+        "effect": {
+          "verdict": -0.7,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": -0.7,
+          "coverage": 1.0
+        },
+        "dose": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.047,
+          "is_quantity": true
+        }
+      },
+      "components": {
+        "d": -0.7,
+        "c": 0.047,
+        "H": 0.0,
+        "E": 0.143,
+        "E_prime": 0.143,
+        "coverage": 0.0
+      },
+      "band": "inconclusive",
+      "n_primaries": 1,
+      "prompt_version": "v1.9"
+    },
+    {
+      "outcome_vocab_id": "muscle_strength",
+      "score": -14,
+      "composite": 20,
+      "arcs": {
+        "effect": {
+          "verdict": -0.265,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": -0.36,
+          "coverage": 0.583
+        },
+        "dose": {
+          "verdict": -0.265,
+          "coverage": 1.0
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.581,
+          "is_quantity": true
+        }
+      },
+      "components": {
+        "d": -0.265,
+        "c": 0.581,
+        "H": 0.155,
+        "E": 2.609,
+        "E_prime": 2.609,
+        "coverage": 0.0
+      },
+      "band": "weak evidence against",
+      "n_primaries": 18,
+      "prompt_version": "v1.9"
+    },
+    {
+      "outcome_vocab_id": "lean_body_mass",
+      "score": -12,
+      "composite": 6,
+      "arcs": {
+        "effect": {
+          "verdict": -0.37,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": -0.7,
+          "coverage": 0.518
+        },
+        "dose": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.345,
+          "is_quantity": true
+        }
+      },
+      "components": {
+        "d": -0.37,
+        "c": 0.345,
+        "H": 0.147,
+        "E": 1.267,
+        "E_prime": 1.267,
+        "coverage": 0.0
+      },
+      "band": "weak evidence against",
+      "n_primaries": 13,
+      "prompt_version": "v1.9"
+    },
+    {
+      "outcome_vocab_id": "exercise_endurance",
+      "score": -9,
+      "composite": 11,
+      "arcs": {
+        "effect": {
+          "verdict": -0.304,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": -0.383,
+          "coverage": 0.827
+        },
+        "dose": {
+          "verdict": -0.304,
+          "coverage": 1.0
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.324,
+          "is_quantity": true
+        }
+      },
+      "components": {
+        "d": -0.304,
+        "c": 0.324,
+        "H": 0.282,
+        "E": 1.174,
+        "E_prime": 1.174,
+        "coverage": 0.0
+      },
+      "band": "inconclusive",
+      "n_primaries": 7,
+      "prompt_version": "v1.9"
+    },
+    {
+      "outcome_vocab_id": "muscle_power",
+      "score": -17,
+      "composite": 21,
+      "arcs": {
+        "effect": {
+          "verdict": -0.309,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": -0.284,
+          "coverage": 0.458
+        },
+        "dose": {
+          "verdict": -0.309,
+          "coverage": 1.0
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.613,
+          "is_quantity": true
+        }
+      },
+      "components": {
+        "d": -0.309,
+        "c": 0.613,
+        "H": 0.207,
+        "E": 2.846,
+        "E_prime": 2.846,
+        "coverage": 0.0
+      },
+      "band": "weak evidence against",
+      "n_primaries": 21,
+      "prompt_version": "v1.9"
+    }
+  ],
+  "prompt_version": "v1.9",
+  "concurrency": 40,
+  "studies_in_flight": 40,
+  "usage": {
+    "calls": 474,
+    "cache_hits": 0,
+    "failures": 5,
+    "api_equivalent_usd": 10.1665,
+    "subscription_spend_usd": 0.0,
+    "tokens": {
+      "input": 159558,
+      "cache_write": 800244,
+      "cache_read": 1016102,
+      "output": 383921
+    },
+    "by_agent": {
+      "S7": {
+        "calls": 80,
+        "cost": 2.291127499999999,
+        "hits": 0,
+        "fail": 4,
+        "model": "claude-sonnet-5",
+        "input": 152,
+        "cache_write": 249883,
+        "cache_read": 191675,
+        "output": 31268
+      },
+      "S4": {
+        "calls": 80,
+        "cost": 1.8454308000000006,
+        "hits": 0,
+        "fail": 1,
+        "model": "claude-sonnet-5",
+        "input": 158,
+        "cache_write": 185906,
+        "cache_read": 197616,
+        "output": 31458
+      },
+      "S5": {
+        "calls": 80,
+        "cost": 1.6397946,
+        "hits": 0,
+        "fail": 0,
+        "model": "claude-sonnet-5",
+        "input": 160,
+        "cache_write": 122007,
+        "cache_read": 251482,
+        "output": 46197
+      },
+      "S8": {
+        "calls": 80,
+        "cost": 1.128657,
+        "hits": 0,
+        "fail": 0,
+        "model": "claude-haiku-4-5-20251001",
+        "input": 158780,
+        "cache_write": 24575,
+        "cache_read": 0,
+        "output": 166508
+      },
+      "S3": {
+        "calls": 80,
+        "cost": 1.6073515000000005,
+        "hits": 0,
+        "fail": 0,
+        "model": "claude-sonnet-5",
+        "input": 160,
+        "cache_write": 123409,
+        "cache_read": 213545,
+        "output": 45523
+      },
+      "S6B": {
+        "calls": 74,
+        "cost": 1.6541082,
+        "hits": 0,
+        "fail": 0,
+        "model": "claude-sonnet-5",
+        "input": 148,
+        "cache_write": 94464,
+        "cache_read": 161784,
+        "output": 62967
+      }
+    }
+  },
+  "models": {
+    "A": "claude-haiku-4-5-20251001",
+    "B": "claude-sonnet-5",
+    "C": "claude-sonnet-5"
+  },
+  "agent_tiers": {
+    "S1": "A",
+    "S2": "B",
+    "S3": "B",
+    "S4": "B",
+    "S5": "B",
+    "S6": "C",
+    "S6B": "C",
+    "S7": "B",
+    "S8": "A"
+  },
+  "population_ab": [
+    {
+      "outcome": "energy_levels",
+      "a": 0,
+      "b": 0,
+      "n_a": 1,
+      "n_b": 1
+    },
+    {
+      "outcome": "exercise_endurance",
+      "a": 11,
+      "b": 10,
+      "n_a": 7,
+      "n_b": 6
+    },
+    {
+      "outcome": "lean_body_mass",
+      "a": 6,
+      "b": 5,
+      "n_a": 13,
+      "n_b": 11
+    },
+    {
+      "outcome": "muscle_power",
+      "a": 21,
+      "b": 21,
+      "n_a": 21,
+      "n_b": 21
+    },
+    {
+      "outcome": "muscle_strength",
+      "a": 20,
+      "b": 19,
+      "n_a": 18,
+      "n_b": 15
+    }
+  ]
+}

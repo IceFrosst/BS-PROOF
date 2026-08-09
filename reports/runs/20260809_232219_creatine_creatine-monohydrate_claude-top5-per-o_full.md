@@ -1,6 +1,6 @@
 # BS-PROOF full audit report (claude-top5-per_o)
 
-Generated: **2026-08-09 23:31 UTC**
+Generated: **2026-08-09 23:22 UTC**
 
 
 scoring_model: v2-four-arc
@@ -93,28 +93,28 @@ FAILURES: Unpaywall RAISES without an email, never returns 'no OA'
 - Targeted studies: **80**
 - Succeeded (usable): **80**
 - Skipped (no text): **0**
-- Partial agent failures: **3**
+- Partial agent failures: **5**
 - Prompt version: `v1.9`
 - Concurrency: 40  |  studies in flight: 40
 
 ## Token + cost accounting
 
 - Extraction backend: **Claude subscription** (`--safe-mode`, `--max-turns 1`, one shot per call)
-- Model calls: **5** (cache hits 469, failures 3)
-- Input tokens: **9,454** (fresh 4 · cache-write 0 · cache-read 9,450)
-- Output tokens: **844**
+- Model calls: **474** (cache hits 0, failures 5)
+- Input tokens: **1,975,904** (fresh 159,558 · cache-write 800,244 · cache-read 1,016,102)
+- Output tokens: **383,921**
 - **Spent on this run: $0.00** — subscription, not metered.
-- **API-equivalent cost: $0.021** — what the same work would cost billed per token.
-- Per study: **0.1 calls**, **$0.0003** API-equivalent across 80 scored studies.
+- **API-equivalent cost: $10.166** — what the same work would cost billed per token.
+- Per study: **5.9 calls**, **$0.1271** API-equivalent across 80 scored studies.
 
 | Agent | Tier | Model | Calls | Cache hits | Fail | In | Out | API-equiv |
 |---|---|---|--:|--:|--:|--:|--:|--:|
-| S3 | B | `-` | 0 | 80 | 0 | 0 | 0 | $0.000 |
-| S4 | B | `claude-sonnet-5` | 1 | 79 | 0 | 3,305 | 299 | $0.007 |
-| S5 | B | `-` | 0 | 80 | 0 | 0 | 0 | $0.000 |
-| S6B | C | `-` | 0 | 74 | 0 | 0 | 0 | $0.000 |
-| S7 | B | `claude-sonnet-5` | 4 | 76 | 3 | 6,149 | 545 | $0.014 |
-| S8 | A | `-` | 0 | 80 | 0 | 0 | 0 | $0.000 |
+| S3 | B | `claude-sonnet-5` | 80 | 0 | 0 | 337,114 | 45,523 | $1.607 |
+| S4 | B | `claude-sonnet-5` | 80 | 0 | 1 | 383,680 | 31,458 | $1.845 |
+| S5 | B | `claude-sonnet-5` | 80 | 0 | 0 | 373,649 | 46,197 | $1.640 |
+| S6B | C | `claude-sonnet-5` | 74 | 0 | 0 | 256,396 | 62,967 | $1.654 |
+| S7 | B | `claude-sonnet-5` | 80 | 0 | 4 | 441,710 | 31,268 | $2.291 |
+| S8 | A | `claude-haiku-4-5-20251001` | 80 | 0 | 0 | 183,355 | 166,508 | $1.129 |
 
 Tier → model is pinned in `claude_adapter.TIER_MODEL` (full ids, never aliases: an alias floats to a new model while the cache key does not change). Tier A = classification, B = extraction, C = the highest-risk agent.
 
@@ -140,11 +140,11 @@ _SRs never add patients; only a capped confidence boost (≤ +30%)._
 
 | Agent | OK | Fail | Cache | Why it failed |
 |---|---:|---:|---:|---|
-| S3 | 80 | 0 | 80 | — |
-| S4 | 80 | 0 | 79 | — |
-| S5 | 80 | 0 | 80 | — |
-| S7 | 77 | 3 | 76 | exit 1: max_turns (x3) |
-| S8 | 80 | 0 | 80 | — |
+| S3 | 80 | 0 | 0 | — |
+| S4 | 79 | 1 | 0 | exit 1: max_turns (x1) |
+| S5 | 80 | 0 | 0 | — |
+| S7 | 76 | 4 | 0 | exit 1: max_turns (x4) |
+| S8 | 80 | 0 | 0 | — |
 
 ## SPEED REPORT
 _Not available._
@@ -238,9 +238,9 @@ _Not available._
 
 | Outcome | 0–100 | Verdict | effect | in your form | at your dose | evidence | n |
 |---|---:|---|---|---|---|---|---:|
-| muscle_strength | 26 | probably does not work | -0.11 @ 100% | -0.09 @ 58% | -0.11 @ 100% | 58% | 18 |
 | muscle_power | 21 | does not work | -0.31 @ 100% | -0.28 @ 46% | -0.31 @ 100% | 61% | 21 |
-| exercise_endurance | 11 | does not work | -0.28 @ 100% | -0.38 @ 83% | -0.28 @ 100% | 32% | 7 |
+| muscle_strength | 20 | does not work | -0.27 @ 100% | -0.36 @ 58% | -0.27 @ 100% | 58% | 18 |
+| exercise_endurance | 11 | does not work | -0.30 @ 100% | -0.38 @ 83% | -0.30 @ 100% | 32% | 7 |
 | lean_body_mass | 6 | does not work | -0.37 @ 100% | -0.70 @ 52% | not tested | 34% | 13 |
 | energy_levels | 0 | barely studied | -0.70 @ 100% | -0.70 @ 100% | not tested | 5% | 1 |
 
