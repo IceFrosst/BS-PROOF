@@ -1211,6 +1211,84 @@ def main():
         check("re-scoring updates in place, no duplicate row",
               st_db.counts()["ecus"] == 1 and st_db.ecu(key)["score"] == 42)
 
+    # The single defect that zeroed every score: a head-only text trim deleted
+    # the Results section, so S5 truthfully reported no claims.
+    print("\nPROMPT TEXT FITTING")
+    import workers as _w
+    _body = ("METHODS " + "m" * 30000 + " RESULTS the group improved, p = 0.001 "
+             + "CONCLUSION creatine increased strength.")
+    _fitted = _w._fit_text("S5", _body, 2000)
+    check("long text is trimmed at all", len(_fitted) < len(_body))
+    check("the RESULTS tail survives the trim",
+          "p = 0.001" in _fitted and "CONCLUSION" in _fitted,
+          "head-only trimming cost S5 every claim it should have made")
+    check("the METHODS head also survives",
+          _fitted.startswith("METHODS"),
+          "S3 reads n / population / design from the head")
+    check("the elision is explicit, not a silent cut",
+          _w.ELISION.strip() in _fitted,
+          "a model must not read a truncation as a finished sentence")
+    check("short text is passed through untouched",
+          _w._fit_text("S5", "short study text", 2000) == "short study text")
+
+    # build_ecus read `outcome_id` inside the argument list of the generator that
+    # BINDS it. Crashed outright when nothing mapped; silently reused the last
+    # outcome's dose band for every study when something did.
+    print("\nDOSE BAND IS PER OUTCOME")
+    from pipeline.assemble import build_ecus as _build, to_studies as _to_studies
+    _prod = {"ingredient": "creatine", "form_vocab_id": "creatine_monohydrate",
+             "dose_low_mg": 3000, "dose_high_mg": 3000,
+             "population": {"id": "general_adult",
+                            **{a: vocab.population_variants()[0][a] for a in vocab.AXES}}}
+
+    def _extraction(outcome_id, direction, dose_mg):
+        return {"record": {"_canonical": f"doi:10.1/{outcome_id}{dose_mg}",
+                           "ingredient": "creatine", "design_rank": 4,
+                           "oa": "full_text"},
+                "extraction": {
+                    "S3": {"n_randomised": 40},
+                    "S7": {"form_vocab_id": "creatine_monohydrate",
+                           "elemental_dose_mg": dose_mg},
+                    "outcomes": [{"outcome_vocab_id": outcome_id,
+                                  "claim": {"direction": direction,
+                                            "magnitude": "moderate"}}]}}
+
+    # The exact shape that crashed: no outcome ever mapped, so the loop variable
+    # was never bound at all.
+    no_outcomes = [{"record": {"_canonical": "doi:10.1/none", "ingredient": "creatine",
+                               "design_rank": 4, "oa": "full_text"},
+                    "extraction": {"S3": {"n_randomised": 40}, "outcomes": []}}]
+    try:
+        _build(no_outcomes, _prod, ignore_population=True)
+        crashed = False
+    except UnboundLocalError:
+        crashed = True
+    check("a corpus where nothing mapped does not crash the scorer", not crashed,
+          "UnboundLocalError: local variable 'outcome_id' referenced before assignment")
+
+    # Two outcomes, wildly different doses. If one band leaks onto the other,
+    # the low-dose outcome's study reads in_band against the high-dose band.
+    mixed = [_extraction("muscle_strength", "benefit", 3000),
+             _extraction("muscle_strength", "benefit", 3000),
+             _extraction("cognitive_function", "benefit", 20000)]
+    per_outcome_match = {}
+    for item in mixed:
+        for oid, st, _d in _to_studies(
+                item["record"], item["extraction"], _prod, None,
+                ignore_population=True,
+                dose_bands={"muscle_strength": {"low": 3000, "high": 3000},
+                            "cognitive_function": {"low": 20000, "high": 20000}}):
+            per_outcome_match[(oid, item["extraction"]["S7"]["elemental_dose_mg"])] = st.dose_match
+    check("each outcome is matched against ITS OWN band",
+          per_outcome_match.get(("muscle_strength", 3000)) == "in_band"
+          and per_outcome_match.get(("cognitive_function", 20000)) != "in_band",
+          f"{per_outcome_match} — product is dosed 3000mg")
+    check("no band for an outcome means unassessable, never in_band",
+          _to_studies(mixed[0]["record"], mixed[0]["extraction"], _prod, None,
+                      ignore_population=True, dose_bands={})[0][1].dose_match
+          == "unspecified",
+          "in_band here read +1.00 @ 100% exactly where nothing was known")
+
     # A vocab ID is not a search term. 7 of 19 ingredients carry an underscore
     # and were silently unretrievable until 2026-08-09; the symptom was
     # "0 trials found", which reads as "this ingredient has no evidence".

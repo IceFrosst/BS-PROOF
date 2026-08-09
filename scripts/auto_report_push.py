@@ -136,6 +136,58 @@ def _section_predatory(ctx: dict) -> str:
     return "\n".join(lines)
 
 
+def _section_cost(ctx: dict) -> str:
+    """
+    Tokens and price, per subagent, with the model that produced them.
+
+    The two numbers are NOT the same claim and are never merged. This pipeline
+    runs on a Claude subscription, so the metered spend for the run is $0. What
+    the CLI reports as `total_cost_usd` is the API-EQUIVALENT price -- what the
+    identical work would have cost billed per token. That is the number worth
+    publishing, because it is what someone reproducing this on metered access
+    would pay, and it is the only honest basis for "what does a score cost".
+    """
+    u = ctx.get("usage") or {}
+    if not u or not u.get("calls"):
+        return ""
+    t = u.get("tokens") or {}
+    tiers = ctx.get("agent_tiers") or {}
+    total_in = t.get("input", 0) + t.get("cache_write", 0) + t.get("cache_read", 0)
+    lines = ["## Token + cost accounting\n"]
+    lines.append(f"- Extraction backend: **Claude subscription** "
+                 f"(`--safe-mode`, `--max-turns 1`, one shot per call)")
+    lines.append(f"- Model calls: **{u.get('calls', 0)}** "
+                 f"(cache hits {u.get('cache_hits', 0)}, failures {u.get('failures', 0)})")
+    lines.append(f"- Input tokens: **{total_in:,}** "
+                 f"(fresh {t.get('input', 0):,} · cache-write {t.get('cache_write', 0):,} "
+                 f"· cache-read {t.get('cache_read', 0):,})")
+    lines.append(f"- Output tokens: **{t.get('output', 0):,}**")
+    lines.append(f"- **Spent on this run: $0.00** — subscription, not metered.")
+    lines.append(f"- **API-equivalent cost: ${u.get('api_equivalent_usd', 0):.3f}** "
+                 f"— what the same work would cost billed per token.")
+    n_ok = ctx.get("studies_ok") or 0
+    if n_ok:
+        lines.append(f"- Per study: **{u['calls'] / n_ok:.1f} calls**, "
+                     f"**${u.get('api_equivalent_usd', 0) / n_ok:.4f}** API-equivalent "
+                     f"across {n_ok} scored studies.")
+    lines.append("")
+    lines.append("| Agent | Tier | Model | Calls | Cache hits | Fail | In | Out | API-equiv |")
+    lines.append("|---|---|---|--:|--:|--:|--:|--:|--:|")
+    for a, v in sorted((u.get("by_agent") or {}).items()):
+        a_in = v.get("input", 0) + v.get("cache_write", 0) + v.get("cache_read", 0)
+        lines.append(
+            f"| {a} | {tiers.get(a, '-')} | `{v.get('model') or '-'}` | {v.get('calls', 0)} "
+            f"| {v.get('hits', 0)} | {v.get('fail', 0)} | {a_in:,} | {v.get('output', 0):,} "
+            f"| ${v.get('cost', 0):.3f} |")
+    lines.append("")
+    lines.append("Tier → model is pinned in `claude_adapter.TIER_MODEL` (full ids, never "
+                 "aliases: an alias floats to a new model while the cache key does not "
+                 "change). Tier A = classification, B = extraction, C = the "
+                 "highest-risk agent.")
+    lines.append("")
+    return "\n".join(lines)
+
+
 def _section_studies(ctx: dict) -> str:
     studies = ctx.get("studies_list") or []
     lines = [f"## Studies extracted this run ({len(studies)})\n"]
@@ -332,6 +384,7 @@ def write_report(ingredient: str, form: str, mode: str,
         "Auto-written after every extraction (no extra steps).\n",
         "Full audit: matching `*_full.md` in `reports/runs/`.\n",
         _section_run_stats(ctx),
+        _section_cost(ctx),
         _section_predatory(ctx),
         _section_sr(ctx),
         _section_ecu_this_run(ctx),
@@ -347,6 +400,7 @@ def write_report(ingredient: str, form: str, mode: str,
         _formula(),
         _selftest_tail(),
         _section_run_stats(ctx),
+        _section_cost(ctx),
         _section_predatory(ctx),
         _section_sr(ctx),
         _section_agents(ctx),

@@ -30,20 +30,40 @@ AGENT_BUDGET_TRIM = {
 }
 
 
+ELISION = "\n\n[... middle of paper elided to fit the input budget ...]\n\n"
+
+
 def _fit_text(agent: str, text: str, fixed_chars: int) -> str:
     """
     Trim the study text so system + schema + payload stays under budget.
 
     Trimming the TEXT is the right lever: the schema and the instructions are
     load-bearing, and a truncated schema produces a malformed extraction rather
-    than a shorter one. Methods and results lead the text, so the head is the
-    part worth keeping.
+    than a shorter one.
+
+    TRIM FROM THE MIDDLE, NOT THE TAIL. `fulltext.best_text` returns
+    METHODS ++ RESULTS in that order, so a head-only cut deletes precisely the
+    section that carries the finding. Measured 2026-08-09 on a 13 924-char
+    creatine RCT: S5 received 5 871 chars, stopped mid-Methods describing
+    dynamometer placement, and never saw the word "Results" or a single p-value
+    that WAS present in the full text. It returned {"claims": []} -- the correct
+    answer to what it had been shown -- and with no claims there are no
+    outcomes, no ECU rows and no score. Every run reported "no scored outcomes
+    (every ECU gated, or extraction failed)" and the cause was upstream of the
+    model entirely.
+
+    Half head, half tail: S3 needs the methods (n, population, design), S5 needs
+    the results. Neither is served by keeping only one end.
     """
     extra = AGENT_BUDGET_TRIM.get(agent, 0)
     room = PROMPT_BUDGET_CHARS - fixed_chars - extra
     if room <= 0 or len(text) <= room:
         return text
-    return text[:room]
+    room -= len(ELISION)
+    if room <= 0:
+        return text[:max(0, PROMPT_BUDGET_CHARS - fixed_chars - extra)]
+    head = room // 2
+    return text[:head] + ELISION + text[-(room - head):]
 
 
 def _payload(agent: str, record: dict, text: str, registry: dict | None) -> dict:

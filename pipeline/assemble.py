@@ -112,7 +112,7 @@ def sr_derived_to_studies(rec: dict, product: dict, *,
 def to_studies(record: dict, extraction: dict, product: dict,
                registry: dict | None = None, *,
                ignore_population: bool = False,
-               dose_band: dict | None = None) -> list[tuple[str, Study]]:
+               dose_bands: dict[str, dict] | None = None) -> list[tuple[str, Study]]:
     s3, s4, s7, s8 = (extraction.get(k) for k in ("S3", "S4", "S7", "S8"))
     ingredient = record["ingredient"]
 
@@ -128,15 +128,29 @@ def to_studies(record: dict, extraction: dict, product: dict,
     funding = (s8 or {}).get("funding_class") or "undisclosed"
 
     dose = study_dose(ingredient, s7)
-    if dose_band and dose_band.get("low") is not None:
-        dose_match = dosemod.dose_match_for(
-            product.get("dose_low_mg"), product.get("dose_high_mg"), dose_band)
-    else:
+
+    def _dose_match_for(outcome_id: str) -> str:
+        """
+        The band is derived PER OUTCOME, so the lookup has to happen per
+        outcome. It used to be computed once per record from a single band
+        passed by the caller -- as `dose_band=bands.get(outcome_id)`, reading a
+        loop variable of the generator being called, before it was bound.
+
+        Two failures, one line. With no outcomes in the first pass the name was
+        never bound at all and build_ecus raised UnboundLocalError; with any
+        outcomes it silently reused the LAST outcome's band for every study, so
+        a creatine strength band could decide whether a cognition trial was
+        in-band. Fixed 2026-08-09.
+        """
+        band = (dose_bands or {}).get(outcome_id)
+        if band and band.get("low") is not None:
+            return dosemod.dose_match_for(
+                product.get("dose_low_mg"), product.get("dose_high_mg"), band)
         # No band could be derived. The axis is UNASSESSABLE, which is not the
         # same as matching. Marking it "in_band" made the dose arc read
         # +1.00 @ 100% precisely when no dose had been extracted at all --
         # most confident exactly where we knew least.
-        dose_match = "unspecified"
+        return "unspecified"
 
     rob = _rob_items(s4, registry)
     n = (s3 or {}).get("n_randomised")
@@ -178,7 +192,7 @@ def to_studies(record: dict, extraction: dict, product: dict,
             oa=record.get("oa") or "abstract_only",
             rob_inherited=bool(record.get("rob_inherited")),
             form_match=form_match,
-            dose_match=dose_match,
+            dose_match=_dose_match_for(entry["outcome_vocab_id"]),
             pop_match=pop_match,
             direction=direction,
             magnitude=magnitude,
@@ -247,7 +261,7 @@ def build_ecus(extractions: list[dict], product: dict, *,
         for outcome_id, study, dose in to_studies(
             rec, ext, product, item.get("registry"),
             ignore_population=ignore_population,
-            dose_band=bands.get(outcome_id),
+            dose_bands=bands,
         ):
             form_mix[study.form_match] = form_mix.get(study.form_match, 0) + 1
             if exact_form_only and study.form_match != "exact":

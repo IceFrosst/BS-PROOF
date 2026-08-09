@@ -530,6 +530,22 @@ def main(argv: list[str]) -> int:
 
         run_context["prompt_version"] = prompt_version
 
+        # Token + cost accounting for the run report. On a subscription the
+        # per-call spend is 0, so what the adapter reports is the API-EQUIVALENT
+        # price of the same work -- the number that tells a reader what this
+        # pipeline would cost metered. Both are carried; neither is called
+        # "spent". Backends other than Claude leave this absent rather than
+        # reporting a zero that looks measured.
+        if not wiring and not grok:
+            try:
+                import claude_adapter as _ca
+                run_context["usage"] = _ca.USAGE.as_dict()
+                run_context["models"] = dict(_ca.TIER_MODEL)
+                run_context["agent_tiers"] = {a: t for a, (t, _s, _p)
+                                              in _ca.AGENTS.items()}
+            except Exception:
+                pass
+
         if outcome_allowlist:
             searched = list(outcome_allowlist)
         elif scope == "per_outcome":
@@ -681,7 +697,14 @@ def main(argv: list[str]) -> int:
         print("=" * 74)
         print(f"\nWritten to {db}")
 
-    mode = "grok"
+    # The label is the BACKEND that produced the numbers. It was hardcoded to
+    # "grok" for every run, and only --grok and --pilot wrote a report at all --
+    # so the production path, the one backend allowed to back a public claim,
+    # silently produced no report. Invariant 9 requires the provider on every
+    # report; a run labelled by the wrong backend is worse than an unlabelled
+    # one, because it invites exactly the cross-provider comparison that
+    # invariant forbids. Fixed 2026-08-09.
+    mode = "grok" if grok else "pilot" if pilot else "claude"
     if demo:
         mode += "-demo"
     if with_sr:
@@ -691,10 +714,9 @@ def main(argv: list[str]) -> int:
     if outcome_allowlist:
         mode += f"-top{len(outcome_allowlist)}"
     mode += f"-{scope[:5]}"
-    if grok:
+    # Wiring is synthetic and never a claim, so it stays out of reports/runs/.
+    if not wiring:
         _auto_push_report(ingredient, form, mode, run_context=run_context)
-    elif pilot:
-        _auto_push_report(ingredient, form, "pilot", run_context=run_context)
 
     return 0
 

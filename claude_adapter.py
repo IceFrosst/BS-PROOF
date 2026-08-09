@@ -135,22 +135,51 @@ class Usage:
     failures: int = 0
     by_agent: dict = field(default_factory=dict)
 
-    def add(self, agent, cost, cached=False, failed=False):
-        a = self.by_agent.setdefault(agent, {"calls": 0, "cost": 0.0, "hits": 0, "fail": 0})
+    tokens: dict = field(default_factory=lambda: {"input": 0, "cache_write": 0,
+                                                  "cache_read": 0, "output": 0})
+
+    def add(self, agent, cost, cached=False, failed=False, tokens=None, model=None):
+        a = self.by_agent.setdefault(agent, {
+            "calls": 0, "cost": 0.0, "hits": 0, "fail": 0, "model": None,
+            "input": 0, "cache_write": 0, "cache_read": 0, "output": 0})
+        if model:
+            a["model"] = model
         if cached:
             self.cache_hits += 1; a["hits"] += 1; return
         self.calls += 1; a["calls"] += 1
         self.cost_usd += cost; a["cost"] += cost
+        for k, v in (tokens or {}).items():
+            if k in self.tokens:
+                self.tokens[k] += v; a[k] += v
         if failed:
             self.failures += 1; a["fail"] += 1
 
     def report(self):
+        t = self.tokens
+        # "API-equivalent", not "spent": a subscription bills nothing per call.
         lines = [f"calls={self.calls} cache_hits={self.cache_hits} "
-                 f"failures={self.failures} cost=EUR~{self.cost_usd:.3f}"]
+                 f"failures={self.failures} "
+                 f"tokens in={t['input']} cache_w={t['cache_write']} "
+                 f"cache_r={t['cache_read']} out={t['output']} "
+                 f"API-equivalent=${self.cost_usd:.3f} (subscription spend $0)"]
         for k, v in sorted(self.by_agent.items()):
-            lines.append(f"  {k}: calls={v['calls']} hits={v['hits']} "
-                         f"fail={v['fail']} cost={v['cost']:.3f}")
+            lines.append(f"  {k}: model={v.get('model') or '-'} calls={v['calls']} "
+                         f"hits={v['hits']} fail={v['fail']} "
+                         f"in={v['input']} cache_w={v['cache_write']} "
+                         f"cache_r={v['cache_read']} out={v['output']} "
+                         f"${v['cost']:.3f}")
         return "\n".join(lines)
+
+    def as_dict(self) -> dict:
+        """Structured form for run_context, so reports render the same numbers."""
+        return {
+            "calls": self.calls, "cache_hits": self.cache_hits,
+            "failures": self.failures,
+            "api_equivalent_usd": round(self.cost_usd, 4),
+            "subscription_spend_usd": 0.0,
+            "tokens": dict(self.tokens),
+            "by_agent": {k: dict(v) for k, v in self.by_agent.items()},
+        }
 
 
 USAGE = Usage()
@@ -211,6 +240,34 @@ _FATAL = ("not logged in", "please run /login", "invalid api key",
 def _is_fatal(detail: str) -> bool:
     d = (detail or "").lower()
     return any(f in d for f in _FATAL)
+
+
+def _envelope_tokens(raw: str) -> dict:
+    """
+    Token counts from the CLI envelope. Separate from _extract_payload so that
+    function keeps its two-value contract (pilot_adapter unpacks it).
+
+    WHY BOTH NUMBERS MATTER. On a subscription the per-call spend is zero, so
+    `total_cost_usd` is not what this run cost -- it is what the SAME work would
+    have cost metered through the API. That is the only honest way to state the
+    price of this pipeline to someone deciding whether to run it, and it is why
+    the run report carries "API-equivalent" rather than "spent".
+
+    Cache-read tokens are counted apart from fresh input because they are the
+    cheap ones; a run whose input is mostly cache_read is far cheaper per study
+    than the raw input total suggests.
+    """
+    try:
+        env = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return {}
+    u = env.get("usage") or {}
+    return {
+        "input": int(u.get("input_tokens") or 0),
+        "cache_write": int(u.get("cache_creation_input_tokens") or 0),
+        "cache_read": int(u.get("cache_read_input_tokens") or 0),
+        "output": int(u.get("output_tokens") or 0),
+    }
 
 
 def _extract_payload(raw: str):
@@ -322,12 +379,13 @@ def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
             time.sleep(2 ** attempt); continue
 
         result, cost = _extract_payload(proc.stdout)
+        toks = _envelope_tokens(proc.stdout)
         if result is None:
             last_err = "schema violation / unparseable envelope"
-            USAGE.add(agent, cost, failed=True)
+            USAGE.add(agent, cost, failed=True, tokens=toks, model=model)
             time.sleep(2 ** attempt); continue
 
-        USAGE.add(agent, cost)
+        USAGE.add(agent, cost, tokens=toks, model=model)
         with _lock:
             _CONN.execute("INSERT OR REPLACE INTO c VALUES (?,?,?)",
                           (k, json.dumps(result), cost))
