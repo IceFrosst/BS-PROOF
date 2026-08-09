@@ -39,6 +39,7 @@ from sources.http import SourceError
 def retrieve(ingredient: str, store: Store, *, max_syntheses: int = 200,
              max_primaries: int = 800, registry_lookups: int = 50,
              scope: str = "broad", oa_lookups: int = 250,
+             publisher_lookups: int = 400,
              outcome_ids: list[str] | None = None,
              verbose: bool = True) -> dict:
     """
@@ -130,6 +131,25 @@ def retrieve(ingredient: str, store: Store, *, max_syntheses: int = 200,
         log(f"  green OA    {upgraded}/{min(len(closed), oa_lookups)} closed records "
             f"have a reachable copy (text extracted at read time)")
 
+    # PUBLISHER, from Crossref. The predatory list is a list of publishers, and
+    # until a record carries one the venue check has nothing it can honestly
+    # match against -- see sources/crossref.py and vocab/README_PREDATORY.md.
+    if publisher_lookups:
+        from sources import crossref
+        with_doi = [r for r in unique_pri + unique_syn
+                    if r.get("doi") and not r.get("publisher")]
+        n_pub = 0
+        for rec in with_doi[:publisher_lookups]:
+            try:
+                pub = crossref.publisher_for_doi(rec["doi"])
+            except SourceError:
+                continue
+            if pub:
+                rec["publisher"] = pub
+                n_pub += 1
+        log(f"  publisher   {n_pub}/{min(len(with_doi), publisher_lookups)} "
+            f"records resolved via Crossref (feeds the predatory venue check)")
+
     stored = store.upsert_studies(unique_pri + unique_syn)
     log(f"  stored      {stored} unique records")
 
@@ -190,7 +210,7 @@ def main(ingredients: list[str]) -> int:
         print("-" * 66)
         print("db:", store.counts())
         print("\nZero model calls. Everything above is deterministic and replayable.")
-        print("Next boundary is the per-study workers, which need ANTHROPIC_API_KEY.")
+        print("Next boundary is the per-study workers, which need a signed-in Claude subscription.")
     return 0
 
 

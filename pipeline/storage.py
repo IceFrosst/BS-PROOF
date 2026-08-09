@@ -54,7 +54,12 @@ class Store:
         have = {r[1] for r in self.conn.execute("PRAGMA table_info(study)")}
         for col, ddl in (("abstract", "ALTER TABLE study ADD COLUMN abstract TEXT"),
                          ("oa_location",
-                          "ALTER TABLE study ADD COLUMN oa_location TEXT")):
+                          "ALTER TABLE study ADD COLUMN oa_location TEXT"),
+                         # Crossref publisher, 2026-08-08. The predatory list is
+                         # PUBLISHERS; matching it against a journal title was a
+                         # category error that flagged 13.2% of a real corpus.
+                         ("publisher",
+                          "ALTER TABLE study ADD COLUMN publisher TEXT")):
             if col not in have:
                 self.conn.execute(ddl)
         # ECU gained the 0-100 composite and the per-arc detail on 2026-08-07.
@@ -99,13 +104,14 @@ class Store:
                 1 if r.get("retracted") else 0,
                 json.dumps(r.get("_merged_from") or []),
                 r.get("source") or "unknown", now_iso(),
+                r.get("publisher"),
             ))
         self.conn.executemany(
             "INSERT INTO study (canonical_id, id_kind, pmid, pmcid, doi,"
             " registration_id, title, abstract, journal, year, first_author, is_synthesis,"
             " design_rank, design_basis, oa, oa_location, retracted, merged_from,"
-            " source, fetched_at)"
-            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+            " source, fetched_at, publisher)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
             " ON CONFLICT(canonical_id) DO UPDATE SET"
             "   design_rank=excluded.design_rank, design_basis=excluded.design_basis,"
             "   oa=excluded.oa, merged_from=excluded.merged_from,"
@@ -113,6 +119,7 @@ class Store:
             # Never overwrite a stored abstract with a null from a later,
             # thinner record -- that is how the text vanished in the first place.
             "   abstract=COALESCE(excluded.abstract, study.abstract),"
+            "   publisher=COALESCE(excluded.publisher, study.publisher),"
             "   fetched_at=excluded.fetched_at",
             rows)
         self.conn.commit()

@@ -114,12 +114,24 @@ def _section_predatory(ctx: dict) -> str:
     p = ctx.get("predatory") or {}
     lines = ["## Predatory journal check (flag only — not in score)\n"]
     lines.append(f"- List entries loaded: **{p.get('list_entries', 0)}**")
-    lines.append(f"- Studies checked: **{p.get('studies_checked', 0)}**")
+    checked = p.get("studies_checked", 0)
+    resolved = p.get("publishers_resolved", 0)
+    lines.append(f"- Studies checked: **{checked}**")
+    # Coverage beside the verdict. Without it "0 flagged" is unreadable: it
+    # means "clean" or "never asked" and the reader cannot tell which.
+    lines.append(f"- Publisher resolved for: **{resolved}/{checked}** "
+                 f"(the list is PUBLISHERS, so this is the real coverage)")
     lines.append(f"- Studies flagged predatory: **{p.get('studies_predatory', 0)}**")
+    lines.append(f"- Distinct publishers flagged: **{p.get('publishers_predatory_n', 0)}**")
     lines.append(f"- Distinct journals flagged: **{p.get('journals_predatory_n', 0)}**")
     lines.append(f"- Affects score: **{'YES' if p.get('zero_weight') else 'NO (count only)'}**")
+    if checked and not resolved:
+        lines.append("- **NOT CHECKED at publisher level** — 0 flagged above is "
+                     "an absence of data, not a clean corpus.")
+    for pub in (p.get("publishers_predatory") or [])[:30]:
+        lines.append(f"  - [publisher] {pub}")
     for j in (p.get("journals_predatory") or [])[:30]:
-        lines.append(f"  - {j}")
+        lines.append(f"  - [journal] {j}")
     lines.append("")
     return "\n".join(lines)
 

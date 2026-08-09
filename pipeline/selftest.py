@@ -1211,6 +1211,85 @@ def main():
         check("re-scoring updates in place, no duplicate row",
               st_db.counts()["ecus"] == 1 and st_db.ecu(key)["score"] == 42)
 
+    # The predatory check had ZERO coverage until 2026-08-09, in the one feature
+    # where a false positive is a defamation-shaped error. Every case below is a
+    # real string that a real run produced.
+    print("\nPREDATORY VENUE (publisher, not journal title)")
+    import pipeline.predatory as pred
+    from sources import crossref
+
+    check("crossref.venue reads publisher, journal and ISSNs apart",
+          crossref.venue({"publisher": "OMICS International",
+                          "container-title": ["J Fake Sci"],
+                          "ISSN": ["1234-5678"]}) ==
+          {"publisher": "OMICS International", "journal": "J Fake Sci",
+           "issns": ["1234-5678"]})
+    check("crossref.venue on a missing record stays null, never guesses",
+          crossref.venue(None) == {"publisher": None, "journal": None, "issns": []})
+
+    check("known predatory publisher is flagged",
+          pred.is_predatory(publisher="OMICS International"))
+    check("publisher containment tolerates a legal suffix",
+          pred.is_predatory(publisher="OMICS International Ltd"),
+          "imprints appear as 'X Ltd' / 'X BV' in Crossref")
+    for legit in ("Elsevier BV", "Springer Nature", "MDPI AG",
+                  "Wolters Kluwer Health"):
+        check(f"legitimate publisher stays clean: {legit}",
+              not pred.is_predatory(publisher=legit))
+
+    # The three defamation-shaped false positives from the 13.2% run. Each is a
+    # real journal that a substring matcher named as predatory.
+    for jrn, entry in (("American Journal of Obstetrics and Gynecology", "american journal"),
+                       ("Acta oto-laryngologica", "lar"),
+                       ("The Journal of Clinical Investigation", "e journal")):
+        check(f"real journal not flagged: {jrn[:44]}",
+              not pred.is_predatory(journal=jrn), f"list entry {entry!r}")
+
+    check(f"MIN_PUBLISHER_CHARS={pred.MIN_PUBLISHER_CHARS} excludes every sub-6 acronym",
+          all(len(pred._norm_title(e)) >= pred.MIN_PUBLISHER_CHARS
+              or not pred.is_predatory(publisher="Acta oto-laryngologica")
+              for e in (pred._raw_lines or [])),
+          "'LAR' is why the floor exists")
+
+    # A verdict without its coverage is a false claim -- invariant 8, applied to
+    # a flag rather than an arc.
+    summ = pred.flag_records([
+        {"journal": "J Fake Sci", "publisher": "OMICS International"},
+        {"journal": "Lancet", "publisher": "Elsevier BV"},
+        {"journal": "Some Journal"},                       # no publisher resolved
+    ])
+    check("flag counts the studies, not the venues",
+          summ["studies_predatory"] == 1, str(summ["studies_predatory"]))
+    check("publisher coverage is reported beside the verdict",
+          summ["publishers_resolved"] == 2,
+          "0 flagged @ 0 resolved != 0 flagged @ 240 resolved")
+    check("a publisher hit is never reported as a journal",
+          summ["publishers_predatory"] == ["OMICS International"]
+          and summ["journals_predatory"] == [],
+          "naming an imprint as a journal is the libel-shaped error")
+    check("'not checked' is distinguishable from 'clean' in the summary",
+          "NOT CHECKED at publisher level" in
+          pred.format_summary(pred.flag_records([{"journal": "Some Journal"}])),
+          "the truncated-list bug read as a clean corpus for four commits")
+    # KNOWN MISS, pinned deliberately. Crossref returns "OMICS Publishing Group"
+    # for DOIs registered before the rename; the list carries "OMICS
+    # International". Same operation, two names, no containment either way.
+    # Do NOT fix this by matching tokens: 'omics' is a substring of ECONomics
+    # and INFONomics, and the list holds "International Academy of Business &
+    # Economics" and "Infonomics Society". Token matching would flag every
+    # publisher with 'Economics' in its name -- the 'LAR' error again.
+    check("name drift is under-flagged, not force-matched",
+          not pred.is_predatory(publisher="OMICS Publishing Group")
+          and pred.is_predatory(publisher="OMICS International"),
+          "measured live 2026-08-09 on doi 10.4172/2157-7633.1000345")
+
+    clean = pred.flag_records([{"journal": "Lancet", "publisher": "Elsevier BV"},
+                               {"journal": "BMJ", "publisher": "BMJ"}])
+    check("a resolved-publisher run with no hits reads as a real answer",
+          clean["studies_predatory"] == 0 and clean["publishers_resolved"] == 2
+          and "is a real answer" in pred.format_summary(clean),
+          "0 flagged @ 2 resolved is data, not a gap")
+
     print(f"\n{'ALL PASSED' if not fails else 'FAILURES: ' + ', '.join(fails)}\n")
     return 1 if fails else 0
 

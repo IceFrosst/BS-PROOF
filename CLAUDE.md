@@ -188,7 +188,7 @@ synthesis_bridge.py  S2 batching, marginal-yield stopping    [MODEL via injectio
 dose.py          effective dose band from BENEFIT trials
 preview.py       small-run projection; refuses below n=20, never rescales k
 relevance.py     pre-model gate: is this oral supplementation at all
-predatory.py     venue flag (flag-only; the list is currently EMPTY)
+predatory.py     venue flag (flag-only; 1162 PUBLISHERS, matched publisher-side)
 showcase.py      top-N outcomes by published RCT count
 storage.py       SQLite, postgres-shaped
 vocab.py         forms, outcomes, populations, ECU key, polarity

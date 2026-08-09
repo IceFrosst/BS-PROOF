@@ -129,9 +129,32 @@ def list_size() -> int:
 #                      what the list is actually for
 #   ISSN           ->  exact
 #
-# Consequence, stated plainly: most true positives are unreachable until the
-# retrieval layer carries a publisher field. That is a coverage gap, not a
-# correctness problem, and it is recorded in docs/SPEC.md 13.
+# CLOSED 2026-08-09: the retrieval layer now carries a publisher. sources/
+# crossref.py resolves one per DOI and pipeline/retrieve.py stores it, so
+# publisher-to-publisher containment -- the comparison the list is actually for
+# -- reaches real records. A run that resolves 0 publishers is still reported
+# as NOT CHECKED rather than clean; see flag_records.
+#
+# THE REMAINING LIMIT IS NAME DRIFT, and it is a recall limit, not a defect.
+# Measured live 2026-08-09: doi 10.4172/2157-7633.1000345 resolves to publisher
+# "OMICS Publishing Group"; the list carries "OMICS International". Same
+# operation, renamed, and neither string contains the other -- so it is missed.
+#
+# Do NOT close that gap with token matching. 'omics' is a substring of ECONomics
+# and INFONomics, and this same list contains "International Academy of Business
+# & Economics" and "Infonomics Society". Matching on the distinguishing token
+# would flag every publisher with 'Economics' in its name: the 'LAR' error with
+# a different three letters. Under-flagging remains the correct direction, and
+# the miss is pinned by a selftest so nobody "fixes" it.
+
+# WHY 6. Measured 2026-08-09 against the 1162-entry list: exactly FOUR entries
+# normalise shorter than 6 characters -- ICGST, IJRCM, LAR, OPAST -- and 'LAR'
+# is the entry that flagged "Acta oto-LARyngologica" in the 13.2% run above.
+# The floor is not a round number; it is the smallest value that excludes every
+# acronym short enough to appear inside an unrelated imprint name. Raising it
+# to 9 would additionally drop 29 real predatory publishers (Abhinav, Agropub,
+# Bonfring, Everant, Hilaris, ...), so it is a floor, not a safety margin to
+# inflate.
 MIN_PUBLISHER_CHARS = 6
 
 
@@ -158,53 +181,91 @@ def is_predatory(journal: str | None = None, issn: str | None = None,
 
 
 def flag_records(records: list[dict], path: Path | None = None) -> dict:
+    """
+    Flag each record and report WHAT WAS CHECKED alongside what was found.
+
+    `publishers_resolved` is not decoration. A flag count is a verdict, and a
+    verdict without its coverage is a false claim -- the same rule the arcs
+    live by. "0 flagged over 0 publishers" means NOT CHECKED at the level the
+    list is expressed in; "0 flagged over 240 publishers" is a real answer.
+    Rendering them identically is how the truncated-list bug read as a clean
+    corpus for four commits.
+
+    Journal hits and publisher hits are also counted SEPARATELY. The previous
+    version fell back to the publisher string when a record had no journal
+    title and then reported it under `journals_predatory`, so a report could
+    name an imprint as though it were a journal -- in the one feature where
+    naming the wrong venue is a defamation-shaped error.
+    """
     load_list(path)
     n_flagged = 0
+    n_publishers = 0
     journals_flagged: set[str] = set()
+    publishers_flagged: set[str] = set()
     for r in records:
-        j = (r.get("journal") or r.get("journal_name") or
-             r.get("publisher") or "")
+        j = r.get("journal") or r.get("journal_name") or ""
         issn = r.get("issn") or r.get("issn_print") or r.get("issn_electronic")
-        hit = is_predatory(j, issn, path=path,
-                           publisher=r.get("publisher"))
+        pub = r.get("publisher")
+        if pub:
+            n_publishers += 1
+        hit_pub = bool(pub) and is_predatory(publisher=pub, path=path)
+        hit_ven = is_predatory(journal=j, issn=issn, path=path)
+        hit = hit_pub or hit_ven
         r["predatory_venue"] = hit
         if ZERO_WEIGHT:
             r["venue_ok"] = not hit
         if hit:
             n_flagged += 1
-            if j:
+            if hit_pub and pub:
+                publishers_flagged.add(str(pub).strip())
+            if hit_ven and j:
                 journals_flagged.add(str(j).strip())
     return {
         "list_entries": list_size(),
         "studies_checked": len(records),
         "studies_predatory": n_flagged,
+        "publishers_resolved": n_publishers,
         "journals_predatory": sorted(journals_flagged),
         "journals_predatory_n": len(journals_flagged),
+        "publishers_predatory": sorted(publishers_flagged),
+        "publishers_predatory_n": len(publishers_flagged),
         "zero_weight": ZERO_WEIGHT,
         "source": "The Predatory Journals List 2025 (in-repo)",
     }
 
 
 def format_summary(summary: dict) -> str:
+    checked = summary.get("studies_checked", 0)
+    resolved = summary.get("publishers_resolved", 0)
+    pct = f"{100.0 * resolved / checked:.0f}%" if checked else "n/a"
     lines = [
         "PREDATORY VENUE CHECK (flag only — not in score)",
         f"  list entries loaded:       {summary.get('list_entries', 0)}",
-        f"  studies in this run:       {summary.get('studies_checked', 0)}",
+        f"  studies in this run:       {checked}",
+        f"  publisher resolved for:    {resolved}/{checked} ({pct})  <- the field the list is in",
         f"  studies flagged predatory: {summary.get('studies_predatory', 0)}",
-        f"  distinct journals flagged: {summary.get('journals_predatory_n', 0)}",
+        f"  distinct publishers flagged: {summary.get('publishers_predatory_n', 0)}",
+        f"  distinct journals flagged:   {summary.get('journals_predatory_n', 0)}",
         f"  affects score:             {'YES' if summary.get('zero_weight') else 'NO (count only)'}",
     ]
+    for p in (summary.get("publishers_predatory") or [])[:20]:
+        lines.append(f"    - [publisher] {p}")
     for j in (summary.get("journals_predatory") or [])[:20]:
-        lines.append(f"    - {j}")
+        lines.append(f"    - [journal]   {j}")
     n = summary.get("list_entries", 0)
     if n < MIN_PLAUSIBLE_ENTRIES:
         lines.append(f"  !! LIST BROKEN ({n} entries, expected >= "
                      f"{MIN_PLAUSIBLE_ENTRIES}). '0 flagged' above means "
                      f"NOT CHECKED, not clean.")
         lines.append("     Fix: python3 scripts/refresh_predatory_list.py")
+    elif checked and resolved == 0:
+        lines.append("  !! NOT CHECKED at publisher level: 0 records carry a "
+                     "publisher, and the list is PUBLISHERS.")
+        lines.append("     '0 flagged' above is an absence of data, not a clean "
+                     "corpus. Re-run retrieval so Crossref resolves publishers.")
     elif summary.get("studies_predatory", 0) == 0:
-        lines.append("  note: the list is PUBLISHERS and Europe PMC gives a "
-                     "JOURNAL title, so most true positives are unreachable")
-        lines.append("        until records carry a publisher field. "
-                     "Under-flagging is deliberate — see pipeline/predatory.py.")
+        lines.append(f"  note: 0 flagged across {resolved} resolved publishers is a "
+                     f"real answer, not a gap.")
+        lines.append("        Journal titles still match EXACTLY only — "
+                     "under-flagging is deliberate, see pipeline/predatory.py.")
     return "\n".join(lines)
