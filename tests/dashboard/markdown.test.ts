@@ -25,7 +25,11 @@ describe("renderSafeMarkdown", () => {
     expect(html).toContain("<table");
     const host = document.createElement("div");
     host.innerHTML = html;
-    expect(host.querySelector("h1")?.textContent).toBe("Full report");
+    // The embedded report is a DOCUMENT INSIDE the run page, which already
+    // owns the page's <h1>. Its headings are demoted one level so a page
+    // never ships two competing <h1> titles. No h1 must survive here.
+    expect(host.querySelector("h1")).toBeNull();
+    expect(host.querySelector("h2")?.textContent).toBe("Full report");
     expect(host.querySelector('a[href^="https://pubmed.ncbi.nlm.nih.gov/"]')).not.toBeNull();
     expect(host.querySelector("script, iframe, img")).toBeNull();
     expect(host.querySelector('[onerror], [onclick], a[href^="javascript:"]')).toBeNull();

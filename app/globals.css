@@ -52,6 +52,13 @@ p { margin-block: 0 1rem; }
 .section-tint { background: var(--paper-2); }
 .section-dark { background: var(--night); color: var(--white); }
 .section-dark .eyebrow { color: var(--lime); }
+/* ...but that is a DESCENDANT selector, so it also painted the eyebrows inside
+   the WHITE cards nested in a dark section. Lime (#d9ef73) on --white (#fffdf8)
+   is 1.24 contrast -- the text is effectively invisible, and axe rated it
+   serious. Reset those back to the accessible teal (5.81 on white). The lime
+   stays where it belongs: directly on the dark ground. */
+.section-dark .telemetry-heading .eyebrow,
+.section-dark .model-card > .eyebrow { color: var(--teal-text); }
 .section-dark .section-heading > p { color: #bdc9c2; }
 .eyebrow { margin: 0 0 0.8rem; color: var(--teal-text); font-size: 0.75rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
@@ -101,6 +108,10 @@ p { margin-block: 0 1rem; }
 .run-group-heading h3 { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.95rem; letter-spacing: -0.02em; overflow-wrap: anywhere; }
 .run-card { display: flex; min-height: 500px; flex-direction: column; justify-content: space-between; gap: 28px; padding: clamp(24px, 4vw, 38px); background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
 .run-card-topline, .hero-status-row { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; color: var(--ink-soft); font-size: 0.82rem; }
+/* .hero-status-row lives on the DARK run hero, so --ink-soft (a dark-on-light
+   value) gave 2.40 contrast there. #bdc9c2 is the muted-on-dark colour already
+   used by .section-dark and .run-hero-grid; it scores 9.89 on --night. */
+.run-hero .hero-status-row { color: #bdc9c2; }
 .run-card h2 { font-size: clamp(2.5rem, 5vw, 4.2rem); }
 .run-deck { color: var(--ink-soft); }
 .compact-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0; padding: 18px 0; border-block: 1px solid var(--line); }
