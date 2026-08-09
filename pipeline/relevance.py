@@ -55,7 +55,17 @@ def relevance_check(record: dict, ingredient: str) -> tuple[bool, str]:
     Returns (ok, reason).
     ok=False → workers should skip S3–S8 for this study.
     """
-    ingredient = (ingredient or "").strip().lower()
+    # A vocab ID is not text a paper contains. Same defect as the Europe PMC
+    # query builders (sources.europepmc.search_term): ids are snake_case, and
+    # "vitamin_d" appears in no abstract ever written. MEASURED 2026-08-09:
+    # after the retrieval fix, vitamin_d found 179 primaries and 175 RCT-rank
+    # records, and this gate dropped ALL 175 as "ingredient not in
+    # title/abstract" -- reported as "dropped 175 noise", which reads like the
+    # gate working rather than the gate being broken.
+    #
+    # Fixed here rather than at the call site because every caller holds a vocab
+    # id, so every caller would otherwise need to remember the same conversion.
+    ingredient = " ".join((ingredient or "").strip().lower().split("_"))
     if not ingredient:
         return False, "no ingredient"
 

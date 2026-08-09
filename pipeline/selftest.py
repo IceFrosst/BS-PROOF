@@ -1299,6 +1299,18 @@ def main():
     check("single-word ids are unchanged",
           _ep.search_term("creatine") == "creatine",
           "why creatine/magnesium runs never exposed this")
+    # The gate holds a vocab id too, and dropped 175/175 vitamin D RCTs as
+    # "noise" -- a message that reads like the gate working.
+    from pipeline.relevance import relevance_check as _rc
+    _vd = {"title": "Effect of vitamin D supplementation on muscle strength: an RCT",
+           "abstract": "Participants received oral vitamin D3 4000 IU daily."}
+    check("relevance gate matches a snake_case id against real prose",
+          _rc(_vd, "vitamin_d")[0], "dropped 175/175 vitamin D RCTs before this")
+    check("relevance gate still rejects the wrong ingredient",
+          not _rc({"title": "Zinc and immunity", "abstract": "oral zinc"},
+                  "vitamin_d")[0],
+          "the fix must not make the gate permissive")
+
     check("no underscore survives into a query",
           "vitamin_d" not in _ep._query("vitamin_d", syntheses=False, scope="intervention")
           and 'TITLE:"vitamin d"' in _ep._query("vitamin_d", syntheses=False,
