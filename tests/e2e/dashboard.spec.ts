@@ -146,10 +146,18 @@ function expectedSigned(value: number | null, digits = 3): string {
   return "0";
 }
 
-/** The value of the <dd> whose sibling <dt> is exactly `term`. */
+/**
+ * The value of the <dd> whose sibling <dt> is exactly `term`.
+ *
+ * descendant-or-self, not the CSS "dl > div". A nested Playwright locator is
+ * resolved as a DESCENDANT query, so `page.locator("dl.x").locator("dl > div")`
+ * asks for a <dl> INSIDE the <dl> and matches nothing -- verified against a
+ * fixture, 0 matches. Callers pass either the <dl> itself (dl.run-hero-stats,
+ * dl.telemetry-metrics) or a card that contains one, and both must work.
+ */
 function definitionValue(page: Page, scope: Locator, term: string): Locator {
   return scope
-    .locator("dl > div")
+    .locator("xpath=descendant-or-self::dl/div")
     .filter({ has: page.locator("dt", { hasText: new RegExp(`^${term}$`) }) })
     .locator("dd");
 }

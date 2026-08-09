@@ -26,7 +26,13 @@ export function EffectConfidenceScatter({ outcomes, runId }: ScatterProps) {
         </div>
         <p>Circle area reflects evidence mass. Select a point to inspect it.</p>
       </div>
-      <svg className="scatter" viewBox="0 0 760 370" role="img" aria-labelledby="scatter-title scatter-desc">
+      {/* role="group", NOT role="img". Roles whose children are presentational
+          -- img is one -- must contain nothing focusable, and this chart's
+          points ARE links. axe calls that nested-interactive (serious): the
+          img role tells assistive tech to flatten the subtree to one label,
+          so 19 keyboard-reachable point links become unannounceable. group
+          keeps the name from title + desc and leaves the links intact. */}
+      <svg className="scatter" viewBox="0 0 760 370" role="group" aria-labelledby="scatter-title scatter-desc">
         <title id="scatter-title">Effect direction versus confidence by scored outcome</title>
         <desc id="scatter-desc">Horizontal position is effect direction from minus one to plus one. Vertical position is confidence from zero to one. Circle size reflects evidence mass.</desc>
         {[0, 0.25, 0.5, 0.75, 1].map((tick) => (

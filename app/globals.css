@@ -252,6 +252,10 @@ p { margin-block: 0 1rem; }
 .detail-list > div { display: grid; grid-template-columns: minmax(110px, 0.45fr) 1fr; gap: 16px; padding: 10px 0; border-top: 1px solid var(--line); }
 .detail-list dt { color: var(--ink-soft); font-size: 0.76rem; }
 .detail-list dd { margin: 0; font-weight: 750; overflow-wrap: anywhere; }
+/* overflow-x: auto makes this a scroll container, and a scroll container that
+   cannot take focus is unreachable without a mouse. Every .table-card in the
+   JSX therefore carries tabIndex={0} + role="group" + a label; do not add a
+   .table-card without them. */
 .table-card { margin-top: 24px; overflow-x: auto; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); }
 table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
 caption { padding: 20px; font-size: 1.1rem; font-weight: 850; text-align: left; }
@@ -353,12 +357,19 @@ thead th { color: var(--ink-soft); font-size: 0.7rem; text-transform: uppercase;
 .outcome-verdict-large { display: inline-block; margin-top: 20px; padding: 9px 14px; color: var(--white); background: var(--night); font-weight: 850; }
 .outcome-detail-body { padding-bottom: 120px; }
 .outcome-detail-body > section { padding-block: 65px; border-top: 1px solid var(--line); }
-.component-grid { display: grid; grid-template-columns: repeat(3, 1fr); margin: 30px 0 0; border: 1px solid var(--line); }
+/* minmax(0, 1fr), not 1fr, and a wrappable dd. A bare 1fr track refuses to
+   shrink below its content's min-content width, and these dd values are 2rem
+   850-weight text: a GATED outcome renders the single word "Unavailable" at
+   ~212px, which forced a 504px-wide two-column grid inside a 412px Pixel 7
+   viewport and pushed the whole document sideways. Scored outcomes render
+   short numbers and never showed it. Every sibling grid here already uses
+   minmax(0, 1fr); this one was the exception. */
+.component-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 30px 0 0; border: 1px solid var(--line); }
 .component-grid > div { min-height: 125px; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .component-grid > div:nth-child(3n) { border-right: 0; }
 .component-grid > div:nth-last-child(-n+3) { border-bottom: 0; }
 .component-grid dt { color: var(--ink-soft); font-size: 0.73rem; text-transform: uppercase; letter-spacing: 0.08em; }
-.component-grid dd { margin: 0; font-size: 2rem; font-weight: 850; }
+.component-grid dd { margin: 0; font-size: 2rem; font-weight: 850; overflow-wrap: anywhere; }
 .audit-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 28px 0 0; border-top: 1px solid var(--line); }
 .audit-grid > div { display: grid; grid-template-columns: minmax(120px, 0.4fr) 1fr; gap: 16px; min-width: 0; padding: 14px 18px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .audit-grid > div:nth-child(2n) { border-right: 0; }
@@ -422,11 +433,12 @@ thead th { color: var(--ink-soft); font-size: 0.7rem; text-transform: uppercase;
   .metric-grid > div:last-child { border-bottom: 0; }
   .model-card .detail-list { grid-template-columns: 1fr; }
   .arc-method-grid { grid-template-columns: 1fr; }
-  .component-grid { grid-template-columns: 1fr 1fr; }
-  .component-grid > div:nth-child(3n) { border-right: 1px solid var(--line); }
-  .component-grid > div:nth-child(2n) { border-right: 0; }
-  .component-grid > div:nth-last-child(-n+3) { border-bottom: 1px solid var(--line); }
-  .component-grid > div:nth-last-child(-n+2) { border-bottom: 0; }
+  /* One column, like .metric-grid above. Two 206px tracks cannot hold
+     "Unavailable" at 2rem without breaking it mid-word, and a broken
+     "Unavailabl / e" reads worse than a tall list. */
+  .component-grid { grid-template-columns: 1fr; }
+  .component-grid > div, .component-grid > div:nth-child(3n) { border-right: 0; border-bottom: 1px solid var(--line); }
+  .component-grid > div:last-child { border-bottom: 0; }
   .outcome-footer { align-items: start; flex-direction: column; }
   .cost-pair, .telemetry-notes { grid-template-columns: 1fr; }
   .sr-stages { grid-template-columns: 1fr; }

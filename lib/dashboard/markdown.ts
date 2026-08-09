@@ -40,10 +40,27 @@ export function renderSafeMarkdown(markdown: string): string {
       h1: () => ({ tagName: "h2", attribs: {} }),
       h2: () => ({ tagName: "h3", attribs: {} }),
       h3: () => ({ tagName: "h4", attribs: {} }),
+      // MAKE THE REPORT'S OWN SCROLL BOXES KEYBOARD-REACHABLE.
+      // .markdown-report table and pre are overflow-x: auto in globals.css, so
+      // on a narrow viewport they scroll. A region that scrolls but cannot take
+      // focus is unreachable without a mouse -- axe reports it as
+      // scrollable-region-focusable (serious), and it fired on the summary
+      // report's tables at the Pixel 7 width. These tags are produced by
+      // Markdown, not by JSX, so the tabindex has to be attached here.
+      table: (_tagName, attribs) => ({
+        tagName: "table",
+        attribs: { ...attribs, tabindex: "0" },
+      }),
+      pre: (_tagName, attribs) => ({
+        tagName: "pre",
+        attribs: { ...attribs, tabindex: "0" },
+      }),
     },
     allowedAttributes: {
       a: ["href", "rel"],
       code: ["class"],
+      table: ["tabindex"],
+      pre: ["tabindex"],
     },
   });
 }

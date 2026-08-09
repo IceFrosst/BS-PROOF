@@ -6,7 +6,11 @@ export function SiteHeader() {
       <a className="skip-link" href="#main-content">Skip to main content</a>
       <header className="site-header">
         <div className="shell header-inner">
-          <Link className="wordmark" href="/" aria-label="BS Proof dashboard home">
+          {/* "BS Proof home", not "...dashboard home". The 404 page's only
+              recovery control is "Back to dashboard"; a wordmark whose
+              accessible name also contained "dashboard" made that link
+              ambiguous on every page. */}
+          <Link className="wordmark" href="/" aria-label="BS Proof home">
             <span aria-hidden="true" className="wordmark-mark">B·S</span>
             <span>Proof</span>
           </Link>
