@@ -1,0 +1,2844 @@
+{
+  "schema_version": "DashboardRunV1",
+  "run": {
+    "id": "20260807_164410_creatine_creatine-monohydrate_grok-sr-ft-per-o",
+    "generated_at": "2026-08-07T16:44:10Z",
+    "provider": "grok",
+    "mode": "grok-sr-ft-per_o",
+    "scope": "per_outcome",
+    "scoring_model": "v2-four-arc",
+    "prompt_version": "v1.4+grok-cli-pure-function",
+    "source_commit": "c29c570f7139bd1b3e3816b5e19213af193089a0",
+    "models": null
+  },
+  "validity": {
+    "status": "invalid",
+    "public_claims_allowed": false,
+    "reason_codes": [
+      "all_studies_had_partial_agent_failure",
+      "invalid_s8_model_configuration",
+      "predates_health_status_population_axis",
+      "not_anchor_validated"
+    ],
+    "limitations": [
+      "All 80 extracted studies had at least one partial agent failure.",
+      "S8 failed for all 80 studies because grok-4.3 was not a valid CLI model id.",
+      "The run predates the health-status population axis, so disease trials were not separated from healthy-adult questions.",
+      "Token counts and API-equivalent cost were not retained; only aggregate call and latency measurements remain.",
+      "The scoring constants had not passed anchor calibration."
+    ],
+    "note": "Historical extraction artifact only. All 80 studies were partial failures, including 80 S8 failures from an invalid Grok model id, and the run predates the health-status population axis. Do not use its scores as product claims.",
+    "registry_key": "20260807_164410_creatine_creatine-monohydrate_grok-sr-ft-per-o"
+  },
+  "product": {
+    "ingredient": "creatine",
+    "form": "creatine_monohydrate",
+    "dose": null,
+    "population": null
+  },
+  "reports": {
+    "summary": "reports/runs/20260807_164410_creatine_creatine-monohydrate_grok-sr-ft-per-o_summary.md",
+    "full": "reports/runs/20260807_164410_creatine_creatine-monohydrate_grok-sr-ft-per-o_full.md",
+    "context": "reports/runs/20260807_164410_creatine_creatine-monohydrate_grok-sr-ft-per-o_context.json",
+    "dashboard": "reports/runs/20260807_164410_creatine_creatine-monohydrate_grok-sr-ft-per-o_dashboard.json"
+  },
+  "score_semantics": {
+    "display_field": "composite",
+    "display_range": [
+      0,
+      100
+    ],
+    "internal_signed_field": "score",
+    "internal_signed_range": [
+      -100,
+      100
+    ],
+    "verdict_field": "verdict",
+    "requires_arcs": true,
+    "gated_value": null
+  },
+  "corpus": {
+    "study_count": 80,
+    "studies": [
+      {
+        "title": "Combined creatine and β-hydroxy-β-methylbutyrate supplementation with integral conditioning exercise enhances functional performance and metabolic health in physically active older adults: A randomized controlled crossover trial.",
+        "year": 2026,
+        "doi": "10.1007/s40520-025-03312-0",
+        "pmid": "41511610",
+        "canonical_id": "doi:101007s40520025033120",
+        "journal": "Aging clinical and experimental research",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Creatine plus β-Hydroxy-β-Methylbutyrate supplementation is associated with preserved glutathione redox-balance and redox-function associations in older adults: a secondary analysis of a randomized crossover trial.",
+        "year": 2026,
+        "doi": "10.1007/s10522-026-10407-2",
+        "pmid": "41712056",
+        "canonical_id": "doi:101007s10522026104072",
+        "journal": "Biogerontology",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Single-Dose Creatine Reduces Sleep Deprivation-Induced Deterioration in Cognitive Performance.",
+        "year": 2026,
+        "doi": "10.3390/nu18081192",
+        "pmid": "42075005",
+        "canonical_id": "doi:103390nu18081192",
+        "journal": "Nutrients",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Synergistic effects of creatine, carbs, protein on repeated sprint performance.",
+        "year": 2026,
+        "doi": "10.1038/s41598-026-44278-x",
+        "pmid": "41888192",
+        "canonical_id": "doi:101038s4159802644278x",
+        "journal": "Scientific reports",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Acute creatine supplementation enhances technical performance in adolescent basketball players under cognitive-motor dual-task condition.",
+        "year": 2025,
+        "doi": "10.1080/15502783.2025.2542369",
+        "pmid": "40758095",
+        "canonical_id": "doi:1010801550278320252542369",
+        "journal": "Journal of the International Society of Sports Nutrition",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Effectiveness of a soccer injury prevention program based on creatine supplementation and internal load monitoring: a randomized controlled pilot study.",
+        "year": 2025,
+        "doi": "10.1080/15502783.2026.2633251",
+        "pmid": "41704196",
+        "canonical_id": "doi:1010801550278320262633251",
+        "journal": "Journal of the International Society of Sports Nutrition",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Effect of creatine monohydrate on motor function in children with facioscapulohumeral muscular dystrophy: A multicenter, randomized, double-blind placebo-controlled crossover trial.",
+        "year": 2025,
+        "doi": "10.1002/phar.70025",
+        "pmid": "40366059",
+        "canonical_id": "doi:101002phar70025",
+        "journal": "Pharmacotherapy",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "The Effect of Creatine Supplementation on Lean Body Mass with and Without Resistance Training.",
+        "year": 2025,
+        "doi": "10.3390/nu17061081",
+        "pmid": "40292479",
+        "canonical_id": "doi:103390nu17061081",
+        "journal": "Nutrients",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Short-term creatine supplementation enhances strength, reduces fatigue, and accelerates recovery in resistance-trained athletes: a double-blind, randomized, crossover trial.",
+        "year": 2025,
+        "doi": "10.1080/15502783.2026.2617283",
+        "pmid": "41579075",
+        "canonical_id": "doi:1010801550278320262617283",
+        "journal": "Journal of the International Society of Sports Nutrition",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Effects of Creatine Monohydrate Loading on Sleep Metrics, Physical Performance, Cognitive Function, and Recovery in Physically Active Men: A Randomized, Double-Blind, Placebo-Controlled, Crossover Trial.",
+        "year": 2025,
+        "doi": "10.3390/nu17243831",
+        "pmid": "41470776",
+        "canonical_id": "doi:103390nu17243831",
+        "journal": "Nutrients",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Effect of Taurine Combined With Creatine on Repeated Sprinting Ability After Exhaustive Exercise Under Hot and Humid Conditions.",
+        "year": 2025,
+        "doi": "10.1177/19417381251320095",
+        "pmid": "39972259",
+        "canonical_id": "doi:10117719417381251320095",
+        "journal": "Sports health",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "The Effect of Vitamin D3 on Serum Creatine Phosphokinase Level in Patients with Multiple Trauma: A Pilot Randomized Clinical Trial.",
+        "year": 2025,
+        "doi": "10.30476/ijms.2024.99691.3182",
+        "pmid": "39957812",
+        "canonical_id": "doi:1030476ijms2024996913182",
+        "journal": "Iranian journal of medical sciences",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Does creatine cause hair loss? A 12-week randomized controlled trial.",
+        "year": 2025,
+        "doi": "10.1080/15502783.2025.2495229",
+        "pmid": "40265319",
+        "canonical_id": "doi:1010801550278320252495229",
+        "journal": "Journal of the International Society of Sports Nutrition",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Creatine Improves Total Sleep Duration Following Resistance Training Days versus Non-Resistance Training Days among Naturally Menstruating Females.",
+        "year": 2024,
+        "doi": "10.3390/nu16162772",
+        "pmid": "39203908",
+        "canonical_id": "doi:103390nu16162772",
+        "journal": "Nutrients",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Effect of Creatine Monohydrate Supplementation on Macro- and Microvascular Endothelial Function in Older Adults: A Pilot Study.",
+        "year": 2024,
+        "doi": "10.3390/nu17010058",
+        "pmid": "39796490",
+        "canonical_id": "doi:103390nu17010058",
+        "journal": "Nutrients",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "The Effect of Creatine Nitrate and Caffeine Individually or Combined on Exercise Performance and Cognitive Function: A Randomized, Crossover, Double-Blind, Placebo-Controlled Trial.",
+        "year": 2024,
+        "doi": "10.3390/nu16060766",
+        "pmid": "38542677",
+        "canonical_id": "doi:103390nu16060766",
+        "journal": "Nutrients",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "No additive effect of creatine, caffeine, and sodium bicarbonate on intense exercise performance in endurance-trained individuals.",
+        "year": 2024,
+        "doi": "10.1111/sms.14629",
+        "pmid": "38646853",
+        "canonical_id": "doi:101111sms14629",
+        "journal": "Scandinavian journal of medicine & science in sports",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Effect of Creatine Supplementation on Body Composition and Malnutrition-Inflammation Score in Hemodialysis Patients: An Exploratory 1-Year, Balanced, Double-Blind Design.",
+        "year": 2024,
+        "doi": "10.3390/nu16050615",
+        "pmid": "38474743",
+        "canonical_id": "doi:103390nu16050615",
+        "journal": "Nutrients",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Supplementing With Which Form of Creatine (Hydrochloride or Monohydrate) Alongside Resistance Training Can Have More Impacts on Anabolic/Catabolic Hormones, Strength and Body Composition?",
+        "year": 2024,
+        "doi": "10.33549/physiolres.935323",
+        "pmid": "39545789",
+        "canonical_id": "doi:1033549physiolres935323",
+        "journal": "Physiological research",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "High-dose short-term creatine supplementation without beneficial effects in professional cyclists: a randomized controlled trial.",
+        "year": 2024,
+        "doi": "10.1080/15502783.2024.2340574",
+        "pmid": "38606895",
+        "canonical_id": "doi:1010801550278320242340574",
+        "journal": "Journal of the International Society of Sports Nutrition",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Combined Impact of Creatine, Caffeine, and Variable Resistance on Repeated Sprint Ability in Young Soccer Players.",
+        "year": 2024,
+        "doi": "10.3390/nu16152437",
+        "pmid": "39125317",
+        "canonical_id": "doi:103390nu16152437",
+        "journal": "Nutrients",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Effects of a Low Dose of Orally Administered Creatine Monohydrate on Post-Fatigue Muscle Power in Young Soccer Players.",
+        "year": 2024,
+        "doi": "10.3390/nu16091324",
+        "pmid": "38732571",
+        "canonical_id": "doi:103390nu16091324",
+        "journal": "Nutrients",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "The Effect of Prior Creatine Intake for 28 Days on Accelerated Recovery from Exercise-Induced Muscle Damage: A Double-Blind, Randomized, Placebo-Controlled Trial.",
+        "year": 2024,
+        "doi": "10.3390/nu16060896",
+        "pmid": "38542807",
+        "canonical_id": "doi:103390nu16060896",
+        "journal": "Nutrients",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "A 2-yr Randomized Controlled Trial on Creatine Supplementation during Exercise for Postmenopausal Bone Health.",
+        "year": 2023,
+        "doi": "10.1249/mss.0000000000003202",
+        "pmid": "37144634",
+        "canonical_id": "doi:101249mss0000000000003202",
+        "journal": "Medicine and science in sports and exercise",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "The effects of creatine supplementation on cognitive performance-a randomised controlled study.",
+        "year": 2023,
+        "doi": "10.1186/s12916-023-03146-5",
+        "pmid": "37968687",
+        "canonical_id": "doi:101186s12916023031465",
+        "journal": "BMC medicine",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "The Effects of Protein and Carbohydrate Supplementation, with and without Creatine, on Occupational Performance in Firefighters.",
+        "year": 2023,
+        "doi": "10.3390/nu15245134",
+        "pmid": "38140393",
+        "canonical_id": "doi:103390nu15245134",
+        "journal": "Nutrients",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "The Folic Acid and Creatine Trial: Treatment Effects of Supplementation on Arsenic Methylation Indices and Metabolite Concentrations in Blood in a Bangladeshi Population.",
+        "year": 2023,
+        "doi": "10.1289/ehp11270",
+        "pmid": "36976258",
+        "canonical_id": "doi:101289ehp11270",
+        "journal": "Environmental health perspectives",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Creatine monohydrate supplementation changes total body water and DXA lean mass estimates in female collegiate dancers.",
+        "year": 2023,
+        "doi": "10.1080/15502783.2023.2193556",
+        "pmid": "36960692",
+        "canonical_id": "doi:1010801550278320232193556",
+        "journal": "Journal of the International Society of Sports Nutrition",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Comparing D3-Creatine Dilution and Dual-Energy X-ray Absorptiometry Muscle Mass Responses to Strength Training in Low-Functioning Older Adults.",
+        "year": 2023,
+        "doi": "10.1093/gerona/glad047",
+        "pmid": "36752568",
+        "canonical_id": "doi:101093geronaglad047",
+        "journal": "The journals of gerontology. Series A, Biological sciences and medical sciences",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "A Randomized Controlled Trial of Changes in Fluid Distribution across Menstrual Phases with Creatine Supplementation.",
+        "year": 2023,
+        "doi": "10.3390/nu15020429",
+        "pmid": "36678300",
+        "canonical_id": "doi:103390nu15020429",
+        "journal": "Nutrients",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "The role of resistance training and creatine supplementation on oxidative stress, antioxidant defense, muscle strength, and quality of life in older adults.",
+        "year": 2023,
+        "doi": "10.3389/fpubh.2023.1062832",
+        "pmid": "37206869",
+        "canonical_id": "doi:103389fpubh20231062832",
+        "journal": "Frontiers in public health",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "The Effects of Creatine Monohydrate Loading on Exercise Recovery in Active Women throughout the Menstrual Cycle.",
+        "year": 2023,
+        "doi": "10.3390/nu15163567",
+        "pmid": "37630756",
+        "canonical_id": "doi:103390nu15163567",
+        "journal": "Nutrients",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Application of the D&lt;sub&gt;3&lt;/sub&gt; -creatine muscle mass assessment tool to a geriatric weight loss trial: A pilot study.",
+        "year": 2023,
+        "doi": "10.1002/jcsm.13322",
+        "pmid": "37668075",
+        "canonical_id": "registry:nct04076618",
+        "journal": "Journal of cachexia, sarcopenia and muscle",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "A randomized open-labeled study to examine the effects of creatine monohydrate and combined training on jump and scoring performance in young basketball players.",
+        "year": 2022,
+        "doi": "10.1080/15502783.2022.2108683",
+        "pmid": "35966022",
+        "canonical_id": "doi:1010801550278320222108683",
+        "journal": "Journal of the International Society of Sports Nutrition",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Effects of Four Weeks of Beta-Alanine Supplementation Combined with One Week of Creatine Loading on Physical and Cognitive Performance in Military Personnel.",
+        "year": 2022,
+        "doi": "10.3390/ijerph19137992",
+        "pmid": "35805647",
+        "canonical_id": "doi:103390ijerph19137992",
+        "journal": "International journal of environmental research and public health",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Effects of Oral Creatine Supplementation on Power Output during Repeated Treadmill Sprinting.",
+        "year": 2022,
+        "doi": "10.3390/nu14061140",
+        "pmid": "35334797",
+        "canonical_id": "doi:103390nu14061140",
+        "journal": "Nutrients",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Betaine and choline status modify the effects of folic acid and creatine supplementation on arsenic methylation in a randomized controlled trial of Bangladeshi adults.",
+        "year": 2021,
+        "doi": "10.1007/s00394-020-02377-z",
+        "pmid": "32918135",
+        "canonical_id": "registry:nct01050556",
+        "journal": "European journal of nutrition",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "The effects of phosphocreatine disodium salts plus blueberry extract supplementation on muscular strength, power, and endurance.",
+        "year": 2021,
+        "doi": "10.1186/s12970-021-00456-y",
+        "pmid": "34503541",
+        "canonical_id": "doi:101186s1297002100456y",
+        "journal": "Journal of the International Society of Sports Nutrition",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Characterization of Creatine Kinase Levels in Tofacitinib-Treated Patients with Ulcerative Colitis: Results from Clinical Trials.",
+        "year": 2021,
+        "doi": "10.1007/s10620-020-06560-4",
+        "pmid": "32816215",
+        "canonical_id": "registry:nct00787202",
+        "journal": "Digestive diseases and sciences",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Creatine Enhances the Effects of Cluster-Set Resistance Training on Lower-Limb Body Composition and Strength in Resistance-Trained Men: A Pilot Study.",
+        "year": 2021,
+        "doi": "10.3390/nu13072303",
+        "pmid": "34371813",
+        "canonical_id": "doi:103390nu13072303",
+        "journal": "Nutrients",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Effects of Combined Creatine and Sodium Bicarbonate Supplementation on Soccer-Specific Performance in Elite Soccer Players: A Randomized Controlled Trial.",
+        "year": 2021,
+        "doi": "10.3390/ijerph18136919",
+        "pmid": "34203286",
+        "canonical_id": "doi:103390ijerph18136919",
+        "journal": "International journal of environmental research and public health",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Short-Term Creatine Loading Improves Total Work and Repetitions to Failure but Not Load-Velocity Characteristics in Strength-Trained Men.",
+        "year": 2021,
+        "doi": "10.3390/nu13030826",
+        "pmid": "33802283",
+        "canonical_id": "doi:103390nu13030826",
+        "journal": "Nutrients",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Morning versus Evening Intake of Creatine in Elite Female Handball Players.",
+        "year": 2021,
+        "doi": "10.3390/ijerph19010393",
+        "pmid": "35010653",
+        "canonical_id": "doi:103390ijerph19010393",
+        "journal": "International journal of environmental research and public health",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Effect of Creatine Supplementation on Functional Capacity and Muscle Oxygen Saturation in Patients with Symptomatic Peripheral Arterial Disease: A Pilot Study of a Randomized, Double-Blind Placebo-Controlled Clinical Trial.",
+        "year": 2021,
+        "doi": "10.3390/nu13010149",
+        "pmid": "33466233",
+        "canonical_id": "doi:103390nu13010149",
+        "journal": "Nutrients",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Short-term co-ingestion of creatine and sodium bicarbonate improves anaerobic performance in trained taekwondo athletes.",
+        "year": 2021,
+        "doi": "10.1186/s12970-021-00407-7",
+        "pmid": "33478522",
+        "canonical_id": "doi:101186s12970021004077",
+        "journal": "Journal of the International Society of Sports Nutrition",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Effects of Creatine Supplementation during Resistance Training Sessions in Physically Active Young Adults.",
+        "year": 2020,
+        "doi": "10.3390/nu12061880",
+        "pmid": "32599716",
+        "canonical_id": "doi:103390nu12061880",
+        "journal": "Nutrients",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Effect of Ten Weeks of Creatine Monohydrate Plus HMB Supplementation on Athletic Performance Tests in Elite Male Endurance Athletes.",
+        "year": 2020,
+        "doi": "10.3390/nu12010193",
+        "pmid": "31936727",
+        "canonical_id": "doi:103390nu12010193",
+        "journal": "Nutrients",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "The addition of β-Hydroxy β-Methylbutyrate (HMB) to creatine monohydrate supplementation does not improve anthropometric and performance maintenance across a collegiate rugby season.",
+        "year": 2020,
+        "doi": "10.1186/s12970-020-00359-4",
+        "pmid": "32460801",
+        "canonical_id": "doi:101186s12970020003594",
+        "journal": "Journal of the International Society of Sports Nutrition",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "The Effects of Long-Term Magnesium Creatine Chelate Supplementation on Repeated Sprint Ability (RAST) in Elite Soccer Players.",
+        "year": 2020,
+        "doi": "10.3390/nu12102961",
+        "pmid": "32998206",
+        "canonical_id": "doi:103390nu12102961",
+        "journal": "Nutrients",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Examining the effects of creatine supplementation in augmenting adaptations to resistance training in patients with prostate cancer undergoing androgen deprivation therapy: a randomised, double-blind, placebo-controlled trial.",
+        "year": 2019,
+        "doi": "10.1136/bmjopen-2019-030080",
+        "pmid": "31542747",
+        "canonical_id": "doi:101136bmjopen2019030080",
+        "journal": "BMJ open",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Effect of Creatine Supplementation Dosing Strategies on Aging Muscle Performance.",
+        "year": 2019,
+        "doi": "10.1007/s12603-018-1148-8",
+        "pmid": "30820517",
+        "canonical_id": "doi:101007s1260301811488",
+        "journal": "The journal of nutrition, health & aging",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Creatine electrolyte supplement improves anaerobic power and strength: a randomized double-blind control study.",
+        "year": 2019,
+        "doi": "10.1186/s12970-019-0291-x",
+        "pmid": "31126306",
+        "canonical_id": "doi:101186s129700190291x",
+        "journal": "Journal of the International Society of Sports Nutrition",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "A randomized, double-blind, placebo-controlled, proof-of-concept trial of creatine monohydrate as adjunctive treatment for bipolar depression.",
+        "year": 2018,
+        "doi": "10.1007/s00702-017-1817-5",
+        "pmid": "29177955",
+        "canonical_id": "doi:101007s0070201718175",
+        "journal": "Journal of neural transmission (Vienna, Austria : 1996)",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Effects of 4-Week Creatine Supplementation Combined with Complex Training on Muscle Damage and Sport Performance.",
+        "year": 2018,
+        "doi": "10.3390/nu10111640",
+        "pmid": "30400221",
+        "canonical_id": "doi:103390nu10111640",
+        "journal": "Nutrients",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Creatine or vitamin D supplementation in individuals with a spinal cord injury undergoing resistance training: A double-blinded, randomized pilot trial.",
+        "year": 2018,
+        "doi": "10.1080/10790268.2017.1372058",
+        "pmid": "28901216",
+        "canonical_id": "doi:1010801079026820171372058",
+        "journal": "The journal of spinal cord medicine",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Creatine-electrolyte supplementation improves repeated sprint cycling performance: A double blind randomized control study.",
+        "year": 2018,
+        "doi": "10.1186/s12970-018-0226-y",
+        "pmid": "29743825",
+        "canonical_id": "doi:101186s129700180226y",
+        "journal": "Journal of the International Society of Sports Nutrition",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Creatine Supplementation Supports the Rehabilitation of Adolescent Fin Swimmers in Tendon Overuse Injury Cases.",
+        "year": 2018,
+        "doi": null,
+        "pmid": "29769829",
+        "canonical_id": "pmid:29769829",
+        "journal": "Journal of sports science & medicine",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "The CREST-E study of creatine for Huntington disease: A randomized controlled trial.",
+        "year": 2017,
+        "doi": "10.1212/wnl.0000000000004209",
+        "pmid": "28701493",
+        "canonical_id": "registry:nct00712426",
+        "journal": "Neurology",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "The acute effect of beta-guanidinopropionic acid versus creatine or placebo in healthy men (ABC-Trial): A randomized controlled first-in-human trial.",
+        "year": 2017,
+        "doi": "10.1111/bcp.13390",
+        "pmid": "28795416",
+        "canonical_id": "doi:101111bcp13390",
+        "journal": "British journal of clinical pharmacology",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "A double-blind, placebo-controlled randomized trial of creatine for the cancer anorexia/weight loss syndrome (N02C4): an Alliance trial.",
+        "year": 2017,
+        "doi": "10.1093/annonc/mdx232",
+        "pmid": "28475678",
+        "canonical_id": "doi:101093annoncmdx232",
+        "journal": "Annals of oncology : official journal of the European Society for Medical Oncology",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Hematological and Hemodynamic Responses to Acute and Short-Term Creatine Nitrate Supplementation.",
+        "year": 2017,
+        "doi": "10.3390/nu9121359",
+        "pmid": "29244743",
+        "canonical_id": "doi:103390nu9121359",
+        "journal": "Nutrients",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Effect of low dose, short-term creatine supplementation on muscle power output in elite youth soccer players.",
+        "year": 2017,
+        "doi": "10.1186/s12970-017-0162-2",
+        "pmid": "28190980",
+        "canonical_id": "doi:101186s1297001701622",
+        "journal": "Journal of the International Society of Sports Nutrition",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Effects of Creatine Supplementation on Muscle Strength and Optimal Individual Post-Activation Potentiation Time of the Upper Body in Canoeists.",
+        "year": 2017,
+        "doi": "10.3390/nu9111169",
+        "pmid": "29077022",
+        "canonical_id": "doi:103390nu9111169",
+        "journal": "Nutrients",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "The Effects of Creatine Supplementation on Explosive Performance and Optimal Individual Postactivation Potentiation Time.",
+        "year": 2016,
+        "doi": "10.3390/nu8030143",
+        "pmid": "26959056",
+        "canonical_id": "doi:103390nu8030143",
+        "journal": "Nutrients",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Effects of Coffee and Caffeine Anhydrous Intake During Creatine Loading.",
+        "year": 2016,
+        "doi": "10.1519/jsc.0000000000001223",
+        "pmid": "26439785",
+        "canonical_id": "doi:101519jsc0000000000001223",
+        "journal": "Journal of strength and conditioning research",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "The acute effect of beta-guanidinopropionic acid versus creatine or placebo in healthy men (ABC Trial): study protocol for a randomized controlled trial.",
+        "year": 2015,
+        "doi": "10.1186/s13063-015-0581-9",
+        "pmid": "25888414",
+        "canonical_id": "doi:101186s1306301505819",
+        "journal": "Trials",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Creatine supplementation enhances corticomotor excitability and cognitive performance during oxygen deprivation.",
+        "year": 2015,
+        "doi": "10.1523/jneurosci.3113-14.2015",
+        "pmid": "25632150",
+        "canonical_id": "doi:101523jneurosci3113142015",
+        "journal": "The Journal of neuroscience : the official journal of the Society for Neuroscience",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Folic Acid and Creatine as Therapeutic Approaches to Lower Blood Arsenic: A Randomized Controlled Trial.",
+        "year": 2015,
+        "doi": "10.1289/ehp.1409396",
+        "pmid": "25978852",
+        "canonical_id": "doi:101289ehp1409396",
+        "journal": "Environmental health perspectives",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Sex Differences in Clinical Features of Early, Treated Parkinson's Disease.",
+        "year": 2015,
+        "doi": "10.1371/journal.pone.0133002",
+        "pmid": "26171861",
+        "canonical_id": "doi:101371journalpone0133002",
+        "journal": "PloS one",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Caffeine and Progression of Parkinson Disease: A Deleterious Interaction With Creatine.",
+        "year": 2015,
+        "doi": "10.1097/wnf.0000000000000102",
+        "pmid": "26366971",
+        "canonical_id": "doi:101097wnf0000000000000102",
+        "journal": "Clinical neuropharmacology",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "PRECREST: a phase II prevention and biomarker trial of creatine in at-risk Huntington disease.",
+        "year": 2014,
+        "doi": "10.1212/wnl.0000000000000187",
+        "pmid": "24510496",
+        "canonical_id": "doi:101212wnl0000000000000187",
+        "journal": "Neurology",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Creatine supplementation associated or not with strength training upon emotional and cognitive measures in older women: a randomized double-blind study.",
+        "year": 2013,
+        "doi": "10.1371/journal.pone.0076301",
+        "pmid": "24098469",
+        "canonical_id": "registry:nct01164020",
+        "journal": "PloS one",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Creatine metabolism and safety profiles after six-week oral guanidinoacetic acid administration in healthy humans.",
+        "year": 2013,
+        "doi": "10.7150/ijms.5125",
+        "pmid": "23329885",
+        "canonical_id": "registry:nct01133899",
+        "journal": "International journal of medical sciences",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Increases in creatine kinase with atorvastatin treatment are not associated with decreases in muscular performance.",
+        "year": 2013,
+        "doi": "10.1016/j.atherosclerosis.2013.07.001",
+        "pmid": "23958263",
+        "canonical_id": "registry:nct00609063",
+        "journal": "Atherosclerosis",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "A randomized, double-blind placebo-controlled trial of oral creatine monohydrate augmentation for enhanced response to a selective serotonin reuptake inhibitor in women with major depressive disorder.",
+        "year": 2012,
+        "doi": "10.1176/appi.ajp.2012.12010009",
+        "pmid": "22864465",
+        "canonical_id": "doi:101176appiajp201212010009",
+        "journal": "The American journal of psychiatry",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "N-acetylcysteine supplementation controls total antioxidant capacity, creatine kinase, lactate, and tumor necrotic factor-alpha against oxidative stress induced by graded exercise in sedentary men.",
+        "year": 2011,
+        "doi": "10.1155/2011/329643",
+        "pmid": "21904641",
+        "canonical_id": "doi:1011552011329643",
+        "journal": "Oxidative medicine and cellular longevity",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "The effects of supplementation with creatine and protein on muscle strength following a traditional resistance training program in middle-aged and older men.",
+        "year": 2010,
+        "doi": "10.1007/s12603-009-0124-8",
+        "pmid": "20126965",
+        "canonical_id": "doi:101007s1260300901248",
+        "journal": "The journal of nutrition, health & aging",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "Creatine fails to augment the benefits from resistance training in patients with HIV infection: a randomized, double-blind, placebo-controlled study.",
+        "year": 2009,
+        "doi": "10.1371/journal.pone.0004605",
+        "pmid": "19242554",
+        "canonical_id": "registry:nct00484627",
+        "journal": "PloS one",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "The effect of L-arginine and creatine on vascular function and homocysteine metabolism.",
+        "year": 2009,
+        "doi": "10.1177/1358863x08100834",
+        "pmid": "19651674",
+        "canonical_id": "doi:1011771358863x08100834",
+        "journal": "Vascular medicine (London, England)",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      },
+      {
+        "title": "A pilot clinical trial of creatine and minocycline in early Parkinson disease: 18-month results.",
+        "year": 2008,
+        "doi": "10.1097/wnf.0b013e3181342f32",
+        "pmid": "18520981",
+        "canonical_id": "doi:101097wnf0b013e3181342f32",
+        "journal": "Clinical neuropharmacology",
+        "oa": "full_text",
+        "predatory_venue": false,
+        "skipped": false,
+        "failed_partial": true
+      }
+    ],
+    "systematic_reviews": {
+      "requested": 12,
+      "s2_ok": 12,
+      "resolved": 0
+    },
+    "predatory_screen": {
+      "list_entries": 0,
+      "studies_checked": 262,
+      "studies_predatory": 0,
+      "journals_predatory_n": 0,
+      "journals_predatory": [],
+      "zero_weight": false,
+      "source": "The Predatory Journals List 2025 (in-repo)"
+    }
+  },
+  "stats": {
+    "studies": {
+      "targeted": 80,
+      "usable": 80,
+      "skipped": 0,
+      "partial_failures": 80
+    },
+    "ecus": {
+      "total": 30,
+      "scored": 19,
+      "gated": 11
+    },
+    "agents": {
+      "S3": {
+        "ok": 80,
+        "fail": 0,
+        "cache": 0
+      },
+      "S4": {
+        "ok": 80,
+        "fail": 0,
+        "cache": 0
+      },
+      "S5": {
+        "ok": 79,
+        "fail": 1,
+        "cache": 0
+      },
+      "S7": {
+        "ok": 80,
+        "fail": 0,
+        "cache": 0
+      },
+      "S8": {
+        "ok": 0,
+        "fail": 80,
+        "cache": 0
+      }
+    },
+    "execution": {
+      "concurrency": 43,
+      "studies_in_flight": 32
+    }
+  },
+  "usage": {
+    "version": "1",
+    "telemetry_status": "partial",
+    "telemetry_explanation": "Aggregate calls and latency were retained, but token and price fields were not recorded for this run. Unknown fields remain null.",
+    "currency": "USD",
+    "metered_run_spend": 0.0,
+    "metered_spend_basis": "Grok subscription; no marginal per-call metered charge",
+    "api_equivalent_cost": null,
+    "live_calls": 797,
+    "cache_hits": 6,
+    "retries": null,
+    "failures": 86,
+    "terminal_failures": null,
+    "usage_records_missing_tokens": 797,
+    "usage_records_missing_cost": 797,
+    "tokens": {
+      "fresh_input": null,
+      "cache_write": null,
+      "cache_read": null,
+      "output": null,
+      "total": null
+    },
+    "latency": {
+      "wall_time_s": null,
+      "average_s": 113.6,
+      "p95_s": 146.9,
+      "peak_concurrency": 43,
+      "basis": "retained Grok speed report; latency covers successful live calls"
+    },
+    "operations": {
+      "successful_calls": 711,
+      "failed_calls": 86,
+      "cache_hits": 6,
+      "timeouts": 5,
+      "auth_failures": 0,
+      "fail_rate": 0.108,
+      "concurrency_limit": 43
+    },
+    "breakdown_status": "unavailable",
+    "by_agent": [],
+    "by_tier": [],
+    "by_model": [],
+    "model_routing": [
+      {
+        "agent": "S8",
+        "tier": "A",
+        "configured_model": "grok-4.3",
+        "attempts": 80,
+        "failures": 80,
+        "status": "invalid_model_id",
+        "aggregate_complete": false
+      }
+    ],
+    "raw_structured_usage": {
+      "source": "retained Grok speed report",
+      "records": [],
+      "redactions": [
+        "prompts",
+        "cache_keys",
+        "authentication"
+      ]
+    },
+    "efficiency": {
+      "per_successful_study": {
+        "denominator": 80,
+        "calls": 9.9625,
+        "tokens": null,
+        "api_equivalent_cost": null
+      },
+      "per_outcome": {
+        "denominator": 30,
+        "calls": 26.5667,
+        "tokens": null,
+        "api_equivalent_cost": null
+      }
+    }
+  },
+  "ecu_rows": [
+    {
+      "ecu_key": null,
+      "ingredient": null,
+      "form_vocab_id": null,
+      "dose_band": null,
+      "band_version": null,
+      "outcome_vocab_id": "adverse_events_gi",
+      "outcome": {
+        "id": "adverse_events_gi",
+        "label": "Digestive side effects",
+        "kind": "adverse_event",
+        "definition": "GI adverse events CAUSED by the supplement.",
+        "polarity": "lower_better"
+      },
+      "population": null,
+      "score": null,
+      "composite": null,
+      "verdict": "not enough human evidence",
+      "band": "no usable evidence retrieved",
+      "gate_fired": true,
+      "components": {},
+      "arcs": {
+        "effect": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "form": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "dose": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.0
+        }
+      },
+      "dose": null,
+      "dose_range_mg": null,
+      "evidence": {
+        "n_primaries": 0
+      },
+      "n_primaries": 0,
+      "form_mix": null,
+      "applicability": null,
+      "flags": [],
+      "provenance": null,
+      "prompt_version": "v1.4+grok-cli-pure-function"
+    },
+    {
+      "ecu_key": null,
+      "ingredient": null,
+      "form_vocab_id": null,
+      "dose_band": null,
+      "band_version": null,
+      "outcome_vocab_id": "anxiety",
+      "outcome": {
+        "id": "anxiety",
+        "label": "Anxiety",
+        "kind": "clinical",
+        "definition": "Anxiety symptom severity on a validated instrument.",
+        "polarity": "lower_better"
+      },
+      "population": null,
+      "score": null,
+      "composite": null,
+      "verdict": "not enough human evidence",
+      "band": "no usable evidence retrieved",
+      "gate_fired": true,
+      "components": {},
+      "arcs": {
+        "effect": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "form": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "dose": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.0
+        }
+      },
+      "dose": null,
+      "dose_range_mg": null,
+      "evidence": {
+        "n_primaries": 0
+      },
+      "n_primaries": 0,
+      "form_mix": null,
+      "applicability": null,
+      "flags": [],
+      "provenance": null,
+      "prompt_version": "v1.4+grok-cli-pure-function"
+    },
+    {
+      "ecu_key": null,
+      "ingredient": null,
+      "form_vocab_id": null,
+      "dose_band": null,
+      "band_version": null,
+      "outcome_vocab_id": "cold_duration",
+      "outcome": {
+        "id": "cold_duration",
+        "label": "Cold duration and severity (treatment)",
+        "kind": "clinical",
+        "definition": "How long or how badly an infection runs once it has started. A TREATMENT outcome.",
+        "polarity": "lower_better"
+      },
+      "population": null,
+      "score": null,
+      "composite": null,
+      "verdict": "not enough human evidence",
+      "band": "no usable evidence retrieved",
+      "gate_fired": true,
+      "components": {},
+      "arcs": {
+        "effect": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "form": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "dose": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.0
+        }
+      },
+      "dose": null,
+      "dose_range_mg": null,
+      "evidence": {
+        "n_primaries": 0
+      },
+      "n_primaries": 0,
+      "form_mix": null,
+      "applicability": null,
+      "flags": [],
+      "provenance": null,
+      "prompt_version": "v1.4+grok-cli-pure-function"
+    },
+    {
+      "ecu_key": null,
+      "ingredient": null,
+      "form_vocab_id": null,
+      "dose_band": null,
+      "band_version": null,
+      "outcome_vocab_id": "cold_incidence",
+      "outcome": {
+        "id": "cold_incidence",
+        "label": "Catching colds (prevention)",
+        "kind": "clinical",
+        "definition": "Whether an infection occurs. A PREVENTION outcome.",
+        "polarity": "lower_better"
+      },
+      "population": null,
+      "score": null,
+      "composite": null,
+      "verdict": "not enough human evidence",
+      "band": "no usable evidence retrieved",
+      "gate_fired": true,
+      "components": {},
+      "arcs": {
+        "effect": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "form": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "dose": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.0
+        }
+      },
+      "dose": null,
+      "dose_range_mg": null,
+      "evidence": {
+        "n_primaries": 0
+      },
+      "n_primaries": 0,
+      "form_mix": null,
+      "applicability": null,
+      "flags": [],
+      "provenance": null,
+      "prompt_version": "v1.4+grok-cli-pure-function"
+    },
+    {
+      "ecu_key": null,
+      "ingredient": null,
+      "form_vocab_id": null,
+      "dose_band": null,
+      "band_version": null,
+      "outcome_vocab_id": "digestive_comfort",
+      "outcome": {
+        "id": "digestive_comfort",
+        "label": "Digestive comfort",
+        "kind": "clinical",
+        "definition": "Bowel habit and GI comfort as an EFFICACY outcome (e.g. constipation treatment).",
+        "polarity": "higher_better"
+      },
+      "population": null,
+      "score": null,
+      "composite": null,
+      "verdict": "not enough human evidence",
+      "band": "no usable evidence retrieved",
+      "gate_fired": true,
+      "components": {},
+      "arcs": {
+        "effect": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "form": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "dose": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.0
+        }
+      },
+      "dose": null,
+      "dose_range_mg": null,
+      "evidence": {
+        "n_primaries": 0
+      },
+      "n_primaries": 0,
+      "form_mix": null,
+      "applicability": null,
+      "flags": [],
+      "provenance": null,
+      "prompt_version": "v1.4+grok-cli-pure-function"
+    },
+    {
+      "ecu_key": null,
+      "ingredient": null,
+      "form_vocab_id": null,
+      "dose_band": null,
+      "band_version": null,
+      "outcome_vocab_id": "inflammation_crp",
+      "outcome": {
+        "id": "inflammation_crp",
+        "label": "Inflammation markers",
+        "kind": "biomarker",
+        "definition": "Circulating inflammatory markers.",
+        "polarity": "lower_better"
+      },
+      "population": null,
+      "score": null,
+      "composite": null,
+      "verdict": "not enough human evidence",
+      "band": "no usable evidence retrieved",
+      "gate_fired": true,
+      "components": {},
+      "arcs": {
+        "effect": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "form": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "dose": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.0
+        }
+      },
+      "dose": null,
+      "dose_range_mg": null,
+      "evidence": {
+        "n_primaries": 0
+      },
+      "n_primaries": 0,
+      "form_mix": null,
+      "applicability": null,
+      "flags": [],
+      "provenance": null,
+      "prompt_version": "v1.4+grok-cli-pure-function"
+    },
+    {
+      "ecu_key": null,
+      "ingredient": null,
+      "form_vocab_id": null,
+      "dose_band": null,
+      "band_version": null,
+      "outcome_vocab_id": "joint_pain",
+      "outcome": {
+        "id": "joint_pain",
+        "label": "Joint pain",
+        "kind": "clinical",
+        "definition": "Joint pain severity or function.",
+        "polarity": "lower_better"
+      },
+      "population": null,
+      "score": null,
+      "composite": null,
+      "verdict": "not enough human evidence",
+      "band": "no usable evidence retrieved",
+      "gate_fired": true,
+      "components": {},
+      "arcs": {
+        "effect": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "form": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "dose": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.0
+        }
+      },
+      "dose": null,
+      "dose_range_mg": null,
+      "evidence": {
+        "n_primaries": 0
+      },
+      "n_primaries": 0,
+      "form_mix": null,
+      "applicability": null,
+      "flags": [],
+      "provenance": null,
+      "prompt_version": "v1.4+grok-cli-pure-function"
+    },
+    {
+      "ecu_key": null,
+      "ingredient": null,
+      "form_vocab_id": null,
+      "dose_band": null,
+      "band_version": null,
+      "outcome_vocab_id": "muscle_cramps",
+      "outcome": {
+        "id": "muscle_cramps",
+        "label": "Muscle cramps",
+        "kind": "clinical",
+        "definition": "Frequency, severity or duration of cramping.",
+        "polarity": "lower_better"
+      },
+      "population": null,
+      "score": null,
+      "composite": null,
+      "verdict": "not enough human evidence",
+      "band": "no usable evidence retrieved",
+      "gate_fired": true,
+      "components": {},
+      "arcs": {
+        "effect": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "form": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "dose": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.0
+        }
+      },
+      "dose": null,
+      "dose_range_mg": null,
+      "evidence": {
+        "n_primaries": 0
+      },
+      "n_primaries": 0,
+      "form_mix": null,
+      "applicability": null,
+      "flags": [],
+      "provenance": null,
+      "prompt_version": "v1.4+grok-cli-pure-function"
+    },
+    {
+      "ecu_key": null,
+      "ingredient": null,
+      "form_vocab_id": null,
+      "dose_band": null,
+      "band_version": null,
+      "outcome_vocab_id": "perceived_stress",
+      "outcome": {
+        "id": "perceived_stress",
+        "label": "Perceived stress",
+        "kind": "clinical",
+        "definition": "Self-reported stress load. Distinct from anxiety as a clinical construct.",
+        "polarity": "lower_better"
+      },
+      "population": null,
+      "score": null,
+      "composite": null,
+      "verdict": "not enough human evidence",
+      "band": "no usable evidence retrieved",
+      "gate_fired": true,
+      "components": {},
+      "arcs": {
+        "effect": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "form": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "dose": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.0
+        }
+      },
+      "dose": null,
+      "dose_range_mg": null,
+      "evidence": {
+        "n_primaries": 0
+      },
+      "n_primaries": 0,
+      "form_mix": null,
+      "applicability": null,
+      "flags": [],
+      "provenance": null,
+      "prompt_version": "v1.4+grok-cli-pure-function"
+    },
+    {
+      "ecu_key": null,
+      "ingredient": null,
+      "form_vocab_id": null,
+      "dose_band": null,
+      "band_version": null,
+      "outcome_vocab_id": "serum_magnesium",
+      "outcome": {
+        "id": "serum_magnesium",
+        "label": "Blood magnesium level",
+        "kind": "biomarker",
+        "definition": "Circulating or intracellular magnesium status.",
+        "polarity": "higher_better"
+      },
+      "population": null,
+      "score": null,
+      "composite": null,
+      "verdict": "not enough human evidence",
+      "band": "no usable evidence retrieved",
+      "gate_fired": true,
+      "components": {},
+      "arcs": {
+        "effect": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "form": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "dose": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.0
+        }
+      },
+      "dose": null,
+      "dose_range_mg": null,
+      "evidence": {
+        "n_primaries": 0
+      },
+      "n_primaries": 0,
+      "form_mix": null,
+      "applicability": null,
+      "flags": [],
+      "provenance": null,
+      "prompt_version": "v1.4+grok-cli-pure-function"
+    },
+    {
+      "ecu_key": null,
+      "ingredient": null,
+      "form_vocab_id": null,
+      "dose_band": null,
+      "band_version": null,
+      "outcome_vocab_id": "sleep_wake_after_onset",
+      "outcome": {
+        "id": "sleep_wake_after_onset",
+        "label": "Night-time waking",
+        "kind": "clinical",
+        "definition": "Wakefulness after sleep onset; night-time awakenings.",
+        "polarity": "lower_better"
+      },
+      "population": null,
+      "score": null,
+      "composite": null,
+      "verdict": "not enough human evidence",
+      "band": "no usable evidence retrieved",
+      "gate_fired": true,
+      "components": {},
+      "arcs": {
+        "effect": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "form": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "dose": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.0
+        }
+      },
+      "dose": null,
+      "dose_range_mg": null,
+      "evidence": {
+        "n_primaries": 0
+      },
+      "n_primaries": 0,
+      "form_mix": null,
+      "applicability": null,
+      "flags": [],
+      "provenance": null,
+      "prompt_version": "v1.4+grok-cli-pure-function"
+    },
+    {
+      "ecu_key": null,
+      "ingredient": null,
+      "form_vocab_id": null,
+      "dose_band": null,
+      "band_version": null,
+      "outcome_vocab_id": "adverse_events_any",
+      "outcome": {
+        "id": "adverse_events_any",
+        "label": "Side effects (any)",
+        "kind": "adverse_event",
+        "definition": "Any adverse event, withdrawal due to adverse events, or tolerability.",
+        "polarity": "lower_better"
+      },
+      "population": null,
+      "score": 1,
+      "composite": 23,
+      "verdict": "does not work",
+      "band": "inconclusive",
+      "gate_fired": false,
+      "components": {
+        "d": 0.024,
+        "c": 0.483,
+        "H": 0.189,
+        "E": 1.979,
+        "E_prime": 1.979,
+        "coverage": 0.0
+      },
+      "arcs": {
+        "effect": {
+          "verdict": 0.024,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": 0.006,
+          "coverage": 0.404
+        },
+        "dose": {
+          "verdict": -0.22,
+          "coverage": 0.303
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.483,
+          "is_quantity": true
+        }
+      },
+      "dose": null,
+      "dose_range_mg": null,
+      "evidence": {
+        "n_primaries": 15
+      },
+      "n_primaries": 15,
+      "form_mix": null,
+      "applicability": null,
+      "flags": [],
+      "provenance": null,
+      "prompt_version": "v1.4+grok-cli-pure-function"
+    },
+    {
+      "ecu_key": null,
+      "ingredient": null,
+      "form_vocab_id": null,
+      "dose_band": null,
+      "band_version": null,
+      "outcome_vocab_id": "attention_focus",
+      "outcome": {
+        "id": "attention_focus",
+        "label": "Attention and focus",
+        "kind": "clinical",
+        "definition": "Sustained attention, vigilance, reaction time on attention tasks.",
+        "polarity": "higher_better"
+      },
+      "population": null,
+      "score": 7,
+      "composite": 8,
+      "verdict": "works, but not tested for your product",
+      "band": "inconclusive",
+      "gate_fired": false,
+      "components": {
+        "d": 0.462,
+        "c": 0.152,
+        "H": 0.058,
+        "E": 0.496,
+        "E_prime": 0.496,
+        "coverage": 0.0
+      },
+      "arcs": {
+        "effect": {
+          "verdict": 0.462,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": 0.462,
+          "coverage": 1.0
+        },
+        "dose": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.152,
+          "is_quantity": true
+        }
+      },
+      "dose": null,
+      "dose_range_mg": null,
+      "evidence": {
+        "n_primaries": 4
+      },
+      "n_primaries": 4,
+      "form_mix": null,
+      "applicability": null,
+      "flags": [],
+      "provenance": null,
+      "prompt_version": "v1.4+grok-cli-pure-function"
+    },
+    {
+      "ecu_key": null,
+      "ingredient": null,
+      "form_vocab_id": null,
+      "dose_band": null,
+      "band_version": null,
+      "outcome_vocab_id": "blood_pressure",
+      "outcome": {
+        "id": "blood_pressure",
+        "label": "Blood pressure",
+        "kind": "biomarker",
+        "definition": "Systolic or diastolic blood pressure. Surrogate, not a cardiovascular event.",
+        "polarity": null
+      },
+      "population": null,
+      "score": 0,
+      "composite": 1,
+      "verdict": "barely studied",
+      "band": "inconclusive",
+      "gate_fired": false,
+      "components": {
+        "d": 0.0,
+        "c": 0.013,
+        "H": 0.0,
+        "E": 0.04,
+        "E_prime": 0.04,
+        "coverage": 0.0
+      },
+      "arcs": {
+        "effect": {
+          "verdict": 0.0,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": 0.0,
+          "coverage": 1.0
+        },
+        "dose": {
+          "verdict": 0.0,
+          "coverage": 1.0
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.013,
+          "is_quantity": true
+        }
+      },
+      "dose": null,
+      "dose_range_mg": null,
+      "evidence": {
+        "n_primaries": 1
+      },
+      "n_primaries": 1,
+      "form_mix": null,
+      "applicability": null,
+      "flags": [],
+      "provenance": null,
+      "prompt_version": "v1.4+grok-cli-pure-function"
+    },
+    {
+      "ecu_key": null,
+      "ingredient": null,
+      "form_vocab_id": null,
+      "dose_band": null,
+      "band_version": null,
+      "outcome_vocab_id": "cognitive_function",
+      "outcome": {
+        "id": "cognitive_function",
+        "label": "Overall thinking and cognition",
+        "kind": "clinical",
+        "definition": "Global or composite cognitive performance.",
+        "polarity": "higher_better"
+      },
+      "population": null,
+      "score": 1,
+      "composite": 9,
+      "verdict": "does not work",
+      "band": "inconclusive",
+      "gate_fired": false,
+      "components": {
+        "d": 0.046,
+        "c": 0.159,
+        "H": 0.295,
+        "E": 0.521,
+        "E_prime": 0.521,
+        "coverage": 0.0
+      },
+      "arcs": {
+        "effect": {
+          "verdict": 0.046,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": 1.0,
+          "coverage": 0.281
+        },
+        "dose": {
+          "verdict": -0.7,
+          "coverage": 0.336
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.159,
+          "is_quantity": true
+        }
+      },
+      "dose": null,
+      "dose_range_mg": null,
+      "evidence": {
+        "n_primaries": 3
+      },
+      "n_primaries": 3,
+      "form_mix": null,
+      "applicability": null,
+      "flags": [],
+      "provenance": null,
+      "prompt_version": "v1.4+grok-cli-pure-function"
+    },
+    {
+      "ecu_key": null,
+      "ingredient": null,
+      "form_vocab_id": null,
+      "dose_band": null,
+      "band_version": null,
+      "outcome_vocab_id": "cortisol",
+      "outcome": {
+        "id": "cortisol",
+        "label": "Cortisol",
+        "kind": "biomarker",
+        "definition": "Cortisol in serum, saliva or hair.",
+        "polarity": null
+      },
+      "population": null,
+      "score": -1,
+      "composite": 3,
+      "verdict": "barely studied",
+      "band": "inconclusive",
+      "gate_fired": false,
+      "components": {
+        "d": -0.129,
+        "c": 0.089,
+        "H": 0.163,
+        "E": 0.281,
+        "E_prime": 0.281,
+        "coverage": 0.0
+      },
+      "arcs": {
+        "effect": {
+          "verdict": -0.129,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": -0.7,
+          "coverage": 0.429
+        },
+        "dose": {
+          "verdict": -0.129,
+          "coverage": 1.0
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.089,
+          "is_quantity": true
+        }
+      },
+      "dose": null,
+      "dose_range_mg": null,
+      "evidence": {
+        "n_primaries": 2
+      },
+      "n_primaries": 2,
+      "form_mix": null,
+      "applicability": null,
+      "flags": [],
+      "provenance": null,
+      "prompt_version": "v1.4+grok-cli-pure-function"
+    },
+    {
+      "ecu_key": null,
+      "ingredient": null,
+      "form_vocab_id": null,
+      "dose_band": null,
+      "band_version": null,
+      "outcome_vocab_id": "depressive_symptoms",
+      "outcome": {
+        "id": "depressive_symptoms",
+        "label": "Low mood",
+        "kind": "clinical",
+        "definition": "Depressive symptom severity on a validated instrument.",
+        "polarity": "lower_better"
+      },
+      "population": null,
+      "score": 0,
+      "composite": 14,
+      "verdict": "does not work",
+      "band": "inconclusive",
+      "gate_fired": false,
+      "components": {
+        "d": 0.008,
+        "c": 0.28,
+        "H": 0.387,
+        "E": 0.984,
+        "E_prime": 0.984,
+        "coverage": 0.0
+      },
+      "arcs": {
+        "effect": {
+          "verdict": 0.008,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": 0.397,
+          "coverage": 0.645
+        },
+        "dose": {
+          "verdict": -0.371,
+          "coverage": 0.529
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.28,
+          "is_quantity": true
+        }
+      },
+      "dose": null,
+      "dose_range_mg": null,
+      "evidence": {
+        "n_primaries": 6
+      },
+      "n_primaries": 6,
+      "form_mix": null,
+      "applicability": null,
+      "flags": [],
+      "provenance": null,
+      "prompt_version": "v1.4+grok-cli-pure-function"
+    },
+    {
+      "ecu_key": null,
+      "ingredient": null,
+      "form_vocab_id": null,
+      "dose_band": null,
+      "band_version": null,
+      "outcome_vocab_id": "energy_levels",
+      "outcome": {
+        "id": "energy_levels",
+        "label": "Energy and fatigue",
+        "kind": "clinical",
+        "definition": "SUBJECTIVE fatigue or energy. One construct, both names â€” there is deliberately no separate 'fatigue' id.",
+        "polarity": "higher_better"
+      },
+      "population": null,
+      "score": -3,
+      "composite": 0,
+      "verdict": "barely studied",
+      "band": "inconclusive",
+      "gate_fired": false,
+      "components": {
+        "d": -0.7,
+        "c": 0.044,
+        "H": 0.0,
+        "E": 0.136,
+        "E_prime": 0.136,
+        "coverage": 0.0
+      },
+      "arcs": {
+        "effect": {
+          "verdict": -0.7,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "dose": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.044,
+          "is_quantity": true
+        }
+      },
+      "dose": null,
+      "dose_range_mg": null,
+      "evidence": {
+        "n_primaries": 1
+      },
+      "n_primaries": 1,
+      "form_mix": null,
+      "applicability": null,
+      "flags": [],
+      "provenance": null,
+      "prompt_version": "v1.4+grok-cli-pure-function"
+    },
+    {
+      "ecu_key": null,
+      "ingredient": null,
+      "form_vocab_id": null,
+      "dose_band": null,
+      "band_version": null,
+      "outcome_vocab_id": "exercise_endurance",
+      "outcome": {
+        "id": "exercise_endurance",
+        "label": "Endurance performance",
+        "kind": "clinical",
+        "definition": "Sustained submaximal or aerobic performance.",
+        "polarity": "higher_better"
+      },
+      "population": null,
+      "score": -12,
+      "composite": 15,
+      "verdict": "does not work",
+      "band": "weak evidence against",
+      "gate_fired": false,
+      "components": {
+        "d": -0.311,
+        "c": 0.415,
+        "H": 0.23,
+        "E": 1.61,
+        "E_prime": 1.61,
+        "coverage": 0.0
+      },
+      "arcs": {
+        "effect": {
+          "verdict": -0.311,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": -0.152,
+          "coverage": 0.587
+        },
+        "dose": {
+          "verdict": -0.307,
+          "coverage": 0.43
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.415,
+          "is_quantity": true
+        }
+      },
+      "dose": null,
+      "dose_range_mg": null,
+      "evidence": {
+        "n_primaries": 12
+      },
+      "n_primaries": 12,
+      "form_mix": null,
+      "applicability": null,
+      "flags": [],
+      "provenance": null,
+      "prompt_version": "v1.4+grok-cli-pure-function"
+    },
+    {
+      "ecu_key": null,
+      "ingredient": null,
+      "form_vocab_id": null,
+      "dose_band": null,
+      "band_version": null,
+      "outcome_vocab_id": "exercise_recovery",
+      "outcome": {
+        "id": "exercise_recovery",
+        "label": "Recovery after exercise",
+        "kind": "clinical",
+        "definition": "Restoration of function after exercise.",
+        "polarity": "higher_better"
+      },
+      "population": null,
+      "score": 3,
+      "composite": 3,
+      "verdict": "barely studied",
+      "band": "inconclusive",
+      "gate_fired": false,
+      "components": {
+        "d": 1.0,
+        "c": 0.034,
+        "H": 0.0,
+        "E": 0.104,
+        "E_prime": 0.104,
+        "coverage": 0.0
+      },
+      "arcs": {
+        "effect": {
+          "verdict": 1.0,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": 1.0,
+          "coverage": 1.0
+        },
+        "dose": {
+          "verdict": 1.0,
+          "coverage": 1.0
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.034,
+          "is_quantity": true
+        }
+      },
+      "dose": null,
+      "dose_range_mg": null,
+      "evidence": {
+        "n_primaries": 1
+      },
+      "n_primaries": 1,
+      "form_mix": null,
+      "applicability": null,
+      "flags": [],
+      "provenance": null,
+      "prompt_version": "v1.4+grok-cli-pure-function"
+    },
+    {
+      "ecu_key": null,
+      "ingredient": null,
+      "form_vocab_id": null,
+      "dose_band": null,
+      "band_version": null,
+      "outcome_vocab_id": "glycaemic_control",
+      "outcome": {
+        "id": "glycaemic_control",
+        "label": "Blood sugar control",
+        "kind": "biomarker",
+        "definition": "Glucose regulation markers.",
+        "polarity": null
+      },
+      "population": null,
+      "score": 1,
+      "composite": 2,
+      "verdict": "barely studied",
+      "band": "inconclusive",
+      "gate_fired": false,
+      "components": {
+        "d": 0.3,
+        "c": 0.035,
+        "H": 0.0,
+        "E": 0.108,
+        "E_prime": 0.108,
+        "coverage": 0.0
+      },
+      "arcs": {
+        "effect": {
+          "verdict": 0.3,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": 0.3,
+          "coverage": 1.0
+        },
+        "dose": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.035,
+          "is_quantity": true
+        }
+      },
+      "dose": null,
+      "dose_range_mg": null,
+      "evidence": {
+        "n_primaries": 1
+      },
+      "n_primaries": 1,
+      "form_mix": null,
+      "applicability": null,
+      "flags": [],
+      "provenance": null,
+      "prompt_version": "v1.4+grok-cli-pure-function"
+    },
+    {
+      "ecu_key": null,
+      "ingredient": null,
+      "form_vocab_id": null,
+      "dose_band": null,
+      "band_version": null,
+      "outcome_vocab_id": "lean_body_mass",
+      "outcome": {
+        "id": "lean_body_mass",
+        "label": "Lean body mass",
+        "kind": "clinical",
+        "definition": "Fat-free or lean tissue mass.",
+        "polarity": "higher_better"
+      },
+      "population": null,
+      "score": -20,
+      "composite": 29,
+      "verdict": "probably does not work",
+      "band": "weak evidence against",
+      "gate_fired": false,
+      "components": {
+        "d": -0.29,
+        "c": 0.765,
+        "H": 0.209,
+        "E": 4.342,
+        "E_prime": 4.342,
+        "coverage": 0.0
+      },
+      "arcs": {
+        "effect": {
+          "verdict": -0.29,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": -0.284,
+          "coverage": 0.505
+        },
+        "dose": {
+          "verdict": -0.181,
+          "coverage": 0.562
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.765,
+          "is_quantity": true
+        }
+      },
+      "dose": null,
+      "dose_range_mg": null,
+      "evidence": {
+        "n_primaries": 29
+      },
+      "n_primaries": 29,
+      "form_mix": null,
+      "applicability": null,
+      "flags": [],
+      "provenance": null,
+      "prompt_version": "v1.4+grok-cli-pure-function"
+    },
+    {
+      "ecu_key": null,
+      "ingredient": null,
+      "form_vocab_id": null,
+      "dose_band": null,
+      "band_version": null,
+      "outcome_vocab_id": "memory",
+      "outcome": {
+        "id": "memory",
+        "label": "Memory",
+        "kind": "clinical",
+        "definition": "Recall or recognition performance.",
+        "polarity": "higher_better"
+      },
+      "population": null,
+      "score": -5,
+      "composite": 1,
+      "verdict": "barely studied",
+      "band": "inconclusive",
+      "gate_fired": false,
+      "components": {
+        "d": -0.7,
+        "c": 0.064,
+        "H": 0.0,
+        "E": 0.2,
+        "E_prime": 0.2,
+        "coverage": 0.0
+      },
+      "arcs": {
+        "effect": {
+          "verdict": -0.7,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "dose": {
+          "verdict": -0.7,
+          "coverage": 1.0
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.064,
+          "is_quantity": true
+        }
+      },
+      "dose": null,
+      "dose_range_mg": null,
+      "evidence": {
+        "n_primaries": 1
+      },
+      "n_primaries": 1,
+      "form_mix": null,
+      "applicability": null,
+      "flags": [],
+      "provenance": null,
+      "prompt_version": "v1.4+grok-cli-pure-function"
+    },
+    {
+      "ecu_key": null,
+      "ingredient": null,
+      "form_vocab_id": null,
+      "dose_band": null,
+      "band_version": null,
+      "outcome_vocab_id": "muscle_power",
+      "outcome": {
+        "id": "muscle_power",
+        "label": "Power and sprint performance",
+        "kind": "clinical",
+        "definition": "Rate of force production; short maximal efforts.",
+        "polarity": "higher_better"
+      },
+      "population": null,
+      "score": -14,
+      "composite": 32,
+      "verdict": "probably does not work",
+      "band": "weak evidence against",
+      "gate_fired": false,
+      "components": {
+        "d": -0.194,
+        "c": 0.807,
+        "H": 0.251,
+        "E": 4.928,
+        "E_prime": 4.928,
+        "coverage": 0.0
+      },
+      "arcs": {
+        "effect": {
+          "verdict": -0.194,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": -0.134,
+          "coverage": 0.664
+        },
+        "dose": {
+          "verdict": -0.269,
+          "coverage": 0.288
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.807,
+          "is_quantity": true
+        }
+      },
+      "dose": null,
+      "dose_range_mg": null,
+      "evidence": {
+        "n_primaries": 39
+      },
+      "n_primaries": 39,
+      "form_mix": null,
+      "applicability": null,
+      "flags": [],
+      "provenance": null,
+      "prompt_version": "v1.4+grok-cli-pure-function"
+    },
+    {
+      "ecu_key": null,
+      "ingredient": null,
+      "form_vocab_id": null,
+      "dose_band": null,
+      "band_version": null,
+      "outcome_vocab_id": "muscle_soreness",
+      "outcome": {
+        "id": "muscle_soreness",
+        "label": "Muscle soreness",
+        "kind": "clinical",
+        "definition": "Delayed-onset muscle soreness, self-reported.",
+        "polarity": "lower_better"
+      },
+      "population": null,
+      "score": 3,
+      "composite": 10,
+      "verdict": "barely studied",
+      "band": "inconclusive",
+      "gate_fired": false,
+      "components": {
+        "d": 0.348,
+        "c": 0.112,
+        "H": 0.456,
+        "E": 0.355,
+        "E_prime": 0.355,
+        "coverage": 0.0
+      },
+      "arcs": {
+        "effect": {
+          "verdict": 0.348,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": 1.0,
+          "coverage": 0.616
+        },
+        "dose": {
+          "verdict": 1.0,
+          "coverage": 0.293
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.112,
+          "is_quantity": true
+        }
+      },
+      "dose": null,
+      "dose_range_mg": null,
+      "evidence": {
+        "n_primaries": 3
+      },
+      "n_primaries": 3,
+      "form_mix": null,
+      "applicability": null,
+      "flags": [],
+      "provenance": null,
+      "prompt_version": "v1.4+grok-cli-pure-function"
+    },
+    {
+      "ecu_key": null,
+      "ingredient": null,
+      "form_vocab_id": null,
+      "dose_band": null,
+      "band_version": null,
+      "outcome_vocab_id": "muscle_strength",
+      "outcome": {
+        "id": "muscle_strength",
+        "label": "Muscle strength",
+        "kind": "clinical",
+        "definition": "Maximal force production.",
+        "polarity": "higher_better"
+      },
+      "population": null,
+      "score": -12,
+      "composite": 22,
+      "verdict": "does not work",
+      "band": "weak evidence against",
+      "gate_fired": false,
+      "components": {
+        "d": -0.203,
+        "c": 0.656,
+        "H": 0.181,
+        "E": 3.199,
+        "E_prime": 3.199,
+        "coverage": 0.0
+      },
+      "arcs": {
+        "effect": {
+          "verdict": -0.203,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": -0.403,
+          "coverage": 0.433
+        },
+        "dose": {
+          "verdict": -0.381,
+          "coverage": 0.35
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.656,
+          "is_quantity": true
+        }
+      },
+      "dose": null,
+      "dose_range_mg": null,
+      "evidence": {
+        "n_primaries": 24
+      },
+      "n_primaries": 24,
+      "form_mix": null,
+      "applicability": null,
+      "flags": [],
+      "provenance": null,
+      "prompt_version": "v1.4+grok-cli-pure-function"
+    },
+    {
+      "ecu_key": null,
+      "ingredient": null,
+      "form_vocab_id": null,
+      "dose_band": null,
+      "band_version": null,
+      "outcome_vocab_id": "sleep_duration",
+      "outcome": {
+        "id": "sleep_duration",
+        "label": "Sleep duration",
+        "kind": "clinical",
+        "definition": "Total sleep time per night.",
+        "polarity": "higher_better"
+      },
+      "population": null,
+      "score": -1,
+      "composite": 2,
+      "verdict": "barely studied",
+      "band": "inconclusive",
+      "gate_fired": false,
+      "components": {
+        "d": -0.164,
+        "c": 0.079,
+        "H": 0.166,
+        "E": 0.247,
+        "E_prime": 0.247,
+        "coverage": 0.0
+      },
+      "arcs": {
+        "effect": {
+          "verdict": -0.164,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": -0.7,
+          "coverage": 0.464
+        },
+        "dose": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.079,
+          "is_quantity": true
+        }
+      },
+      "dose": null,
+      "dose_range_mg": null,
+      "evidence": {
+        "n_primaries": 2
+      },
+      "n_primaries": 2,
+      "form_mix": null,
+      "applicability": null,
+      "flags": [],
+      "provenance": null,
+      "prompt_version": "v1.4+grok-cli-pure-function"
+    },
+    {
+      "ecu_key": null,
+      "ingredient": null,
+      "form_vocab_id": null,
+      "dose_band": null,
+      "band_version": null,
+      "outcome_vocab_id": "sleep_onset",
+      "outcome": {
+        "id": "sleep_onset",
+        "label": "Time to fall asleep",
+        "kind": "clinical",
+        "definition": "Latency from lights-out to sleep onset.",
+        "polarity": "lower_better"
+      },
+      "population": null,
+      "score": -3,
+      "composite": 0,
+      "verdict": "barely studied",
+      "band": "inconclusive",
+      "gate_fired": false,
+      "components": {
+        "d": -0.7,
+        "c": 0.037,
+        "H": 0.0,
+        "E": 0.115,
+        "E_prime": 0.115,
+        "coverage": 0.0
+      },
+      "arcs": {
+        "effect": {
+          "verdict": -0.7,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": -0.7,
+          "coverage": 1.0
+        },
+        "dose": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.037,
+          "is_quantity": true
+        }
+      },
+      "dose": null,
+      "dose_range_mg": null,
+      "evidence": {
+        "n_primaries": 1
+      },
+      "n_primaries": 1,
+      "form_mix": null,
+      "applicability": null,
+      "flags": [],
+      "provenance": null,
+      "prompt_version": "v1.4+grok-cli-pure-function"
+    },
+    {
+      "ecu_key": null,
+      "ingredient": null,
+      "form_vocab_id": null,
+      "dose_band": null,
+      "band_version": null,
+      "outcome_vocab_id": "sleep_quality",
+      "outcome": {
+        "id": "sleep_quality",
+        "label": "Sleep quality",
+        "kind": "clinical",
+        "definition": "Subjective global sleep quality, including composite sleep questionnaires.",
+        "polarity": "higher_better"
+      },
+      "population": null,
+      "score": 1,
+      "composite": 4,
+      "verdict": "barely studied",
+      "band": "inconclusive",
+      "gate_fired": false,
+      "components": {
+        "d": 0.089,
+        "c": 0.079,
+        "H": 0.479,
+        "E": 0.247,
+        "E_prime": 0.247,
+        "coverage": 0.0
+      },
+      "arcs": {
+        "effect": {
+          "verdict": 0.089,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": 1.0,
+          "coverage": 0.464
+        },
+        "dose": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.079,
+          "is_quantity": true
+        }
+      },
+      "dose": null,
+      "dose_range_mg": null,
+      "evidence": {
+        "n_primaries": 2
+      },
+      "n_primaries": 2,
+      "form_mix": null,
+      "applicability": null,
+      "flags": [],
+      "provenance": null,
+      "prompt_version": "v1.4+grok-cli-pure-function"
+    },
+    {
+      "ecu_key": null,
+      "ingredient": null,
+      "form_vocab_id": null,
+      "dose_band": null,
+      "band_version": null,
+      "outcome_vocab_id": "testosterone",
+      "outcome": {
+        "id": "testosterone",
+        "label": "Testosterone",
+        "kind": "biomarker",
+        "definition": "Total or free testosterone.",
+        "polarity": null
+      },
+      "population": null,
+      "score": -7,
+      "composite": 1,
+      "verdict": "barely studied",
+      "band": "inconclusive",
+      "gate_fired": false,
+      "components": {
+        "d": -0.7,
+        "c": 0.104,
+        "H": 0.0,
+        "E": 0.331,
+        "E_prime": 0.331,
+        "coverage": 0.0
+      },
+      "arcs": {
+        "effect": {
+          "verdict": -0.7,
+          "coverage": 1.0
+        },
+        "form": {
+          "verdict": -0.7,
+          "coverage": 1.0
+        },
+        "dose": {
+          "verdict": null,
+          "coverage": 0.0
+        },
+        "evidence": {
+          "verdict": null,
+          "coverage": 0.104,
+          "is_quantity": true
+        }
+      },
+      "dose": null,
+      "dose_range_mg": null,
+      "evidence": {
+        "n_primaries": 2
+      },
+      "n_primaries": 2,
+      "form_mix": null,
+      "applicability": null,
+      "flags": [],
+      "provenance": null,
+      "prompt_version": "v1.4+grok-cli-pure-function"
+    }
+  ]
+}

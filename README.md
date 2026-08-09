@@ -109,6 +109,40 @@ python3 run_pipeline.py creatine --form creatine_monohydrate
 `--dose` is your product's **elemental** mg. Without it the dose arc reads
 "not assessable" and means it.
 
+## Private evidence dashboard
+
+The root Next.js app is a read-only dashboard over immutable
+`reports/runs/*_dashboard.json` artifacts. It exposes no pipeline controls,
+uploads, runtime API, or database connection. A new run is `experimental` until
+`reports/run_statuses.json` explicitly changes its status; the retained 2026-08-07
+creatine/Grok run is shown only in the invalid Lab archive.
+
+```bash
+npm ci
+npm run dev          # local dashboard
+npm run typecheck
+npm run lint
+npm run test:unit
+npm run build
+npm run test:e2e
+```
+
+Every numeric outcome travels with effect, form, dose, and evidence arcs. Gated
+outcomes render as unavailable rather than zero. Full reports are rendered from
+Markdown with raw HTML disabled. `scripts/dashboard_artifact.py` emits the
+versioned, deploy-safe `DashboardRunV1` projection and rejects inconsistent ECU
+or usage totals before writing it.
+
+Cost terminology is deliberately strict: **recorded marginal spend** is what the
+run actually added to the bill, while **API-equivalent cost** is a counterfactual
+price from retained model telemetry. Subscription runs may therefore show `$0`
+marginal spend beside a nonzero API-equivalent cost. Missing token, price, or
+latency fields stay null and display as unavailable. Vercel hosting is separate,
+Supabase is unused in v1, and free literature APIs are not counted as model cost.
+
+The dashboard is intended for a protected Vercel preview. A public release needs
+a clean validated run and separate approval.
+
 ## What is actually verified
 
 `python3 -m pipeline.selftest` — zero cost, no network:

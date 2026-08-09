@@ -1,0 +1,59 @@
+name: dashboard
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dashboard-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deterministic-pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Pipeline selftest
+        env:
+          PYTHONUTF8: "1"
+        run: python -m pipeline.selftest
+
+  dashboard:
+    runs-on: ubuntu-latest
+    needs: deterministic-pipeline
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Unit and contract tests
+        run: npm run test:unit
+      - name: Production build
+        run: npm run build
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+      - name: Browser and accessibility tests
+        run: npm run test:e2e
+      - name: Upload browser test artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-playwright-${{ github.run_attempt }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7

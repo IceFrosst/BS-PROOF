@@ -192,57 +192,366 @@ AGENTS = {
 
 @dataclass
 class Usage:
+    """Thread-safe, audit-friendly model usage for one pipeline process.
+
+    ``total_cost_usd`` in the Claude CLI envelope is an API-equivalent price.
+    The extraction path uses a Claude subscription, so the marginal metered
+    spend for these calls is zero.  Keeping both concepts in this object makes
+    it much harder for a report or dashboard to accidentally merge them.
+    """
+
     calls: int = 0
     cache_hits: int = 0
     cost_usd: float = 0.0
     failures: int = 0
+    terminal_failures: int = 0
+    retries: int = 0
     by_agent: dict = field(default_factory=dict)
-
     tokens: dict = field(default_factory=lambda: {"input": 0, "cache_write": 0,
                                                   "cache_read": 0, "output": 0})
+    latencies: list[float] = field(default_factory=list)
+    peak_concurrency: int = 0
+    _in_flight: int = 0
+    _activity_started: float | None = None
+    _activity_finished: float | None = None
+    _records: list[dict] = field(default_factory=list, repr=False)
+    _usage_lock: threading.Lock = field(default_factory=threading.Lock,
+                                        repr=False, compare=False)
 
-    def add(self, agent, cost, cached=False, failed=False, tokens=None, model=None):
-        a = self.by_agent.setdefault(agent, {
-            "calls": 0, "cost": 0.0, "hits": 0, "fail": 0, "model": None,
-            "input": 0, "cache_write": 0, "cache_read": 0, "output": 0})
+    @staticmethod
+    def _new_agent_row(model=None, tier=None, effort=None) -> dict:
+        return {
+            "calls": 0, "cost": 0.0, "hits": 0, "fail": 0,
+            "terminal_failures": 0, "retries": 0,
+            "model": model, "tier": tier, "effort": effort,
+            "input": 0, "cache_write": 0, "cache_read": 0, "output": 0,
+            "latencies": [],
+        }
+
+    def _agent_row(self, agent, model=None, tier=None, effort=None) -> dict:
+        row = self.by_agent.setdefault(
+            agent, self._new_agent_row(model=model, tier=tier, effort=effort))
         if model:
-            a["model"] = model
+            row["model"] = model
+        if tier:
+            row["tier"] = tier
+        if effort:
+            row["effort"] = effort
+        return row
+
+    def add_cache_hit(self, agent, *, model=None, tier=None, effort=None) -> None:
+        now = time.perf_counter()
+        with self._usage_lock:
+            if self._activity_started is None:
+                self._activity_started = now
+            self._activity_finished = now
+            self.cache_hits += 1
+            row = self._agent_row(agent, model, tier, effort)
+            row["hits"] += 1
+            self._records.append({
+                "agent": agent, "tier": tier, "provider": "anthropic",
+                "model": model, "reasoning_effort": effort,
+                "prompt_version": PROMPT_VERSION, "cached": True,
+                "outcome": "cache_hit", "latency_s": None,
+                "api_equivalent_cost": 0.0, "tokens": None,
+            })
+
+    def begin_attempt(self, agent, *, model=None, tier=None, effort=None,
+                      retry=False) -> float:
+        now = time.perf_counter()
+        with self._usage_lock:
+            if self._activity_started is None:
+                self._activity_started = now
+            self.calls += 1
+            self._in_flight += 1
+            self.peak_concurrency = max(self.peak_concurrency, self._in_flight)
+            row = self._agent_row(agent, model, tier, effort)
+            row["calls"] += 1
+            if retry:
+                self.retries += 1
+                row["retries"] += 1
+        return now
+
+    def finish_attempt(self, agent, started: float, *, cost=None, failed=False,
+                       tokens=None, model=None, tier=None, effort=None,
+                       outcome=None) -> None:
+        now = time.perf_counter()
+        latency = max(0.0, now - started)
+        clean_tokens = {
+            key: int((tokens or {}).get(key) or 0)
+            for key in ("input", "cache_write", "cache_read", "output")
+        } if tokens else None
+        cost_amount = float(cost or 0.0)
+        with self._usage_lock:
+            self._in_flight = max(0, self._in_flight - 1)
+            self._activity_finished = now
+            self.cost_usd += cost_amount
+            self.latencies.append(latency)
+            row = self._agent_row(agent, model, tier, effort)
+            row["cost"] += cost_amount
+            row["latencies"].append(latency)
+            if clean_tokens is not None:
+                for key, value in clean_tokens.items():
+                    self.tokens[key] += value
+                    row[key] += value
+            if failed:
+                self.failures += 1
+                row["fail"] += 1
+            self._records.append({
+                "agent": agent, "tier": tier, "provider": "anthropic",
+                "model": model, "reasoning_effort": effort,
+                "prompt_version": PROMPT_VERSION, "cached": False,
+                "outcome": outcome or ("failed" if failed else "success"),
+                "latency_s": round(latency, 4),
+                "api_equivalent_cost": (
+                    round(cost_amount, 8) if cost is not None else None),
+                "tokens": {
+                    "fresh_input": clean_tokens["input"],
+                    "cache_write": clean_tokens["cache_write"],
+                    "cache_read": clean_tokens["cache_read"],
+                    "output": clean_tokens["output"],
+                } if clean_tokens is not None else None,
+            })
+
+    def record_terminal_failure(self, agent, *, model=None, tier=None,
+                                effort=None) -> None:
+        with self._usage_lock:
+            self.terminal_failures += 1
+            self._agent_row(agent, model, tier, effort)["terminal_failures"] += 1
+
+    def add(self, agent, cost, cached=False, failed=False, tokens=None, model=None,
+            tier=None, effort=None, latency_s=None, retry=False):
+        """Backward-compatible helper retained for local callers and tests."""
         if cached:
-            self.cache_hits += 1; a["hits"] += 1; return
-        self.calls += 1; a["calls"] += 1
-        self.cost_usd += cost; a["cost"] += cost
-        for k, v in (tokens or {}).items():
-            if k in self.tokens:
-                self.tokens[k] += v; a[k] += v
+            self.add_cache_hit(agent, model=model, tier=tier, effort=effort)
+            return
+        started = self.begin_attempt(agent, model=model, tier=tier,
+                                     effort=effort, retry=retry)
+        if latency_s is not None:
+            started = time.perf_counter() - max(0.0, float(latency_s))
+        self.finish_attempt(agent, started, cost=cost, failed=failed,
+                            tokens=tokens, model=model, tier=tier, effort=effort)
         if failed:
-            self.failures += 1; a["fail"] += 1
+            self.record_terminal_failure(agent, model=model, tier=tier,
+                                         effort=effort)
+
+    @staticmethod
+    def _percentile_95(values: list[float]) -> float | None:
+        if not values:
+            return None
+        ordered = sorted(values)
+        return ordered[int(0.95 * (len(ordered) - 1))]
+
+    @staticmethod
+    def _aggregate(rows: list[dict], key: str) -> list[dict]:
+        aggregates: dict[str, dict] = {}
+        for row in rows:
+            name = row.get(key)
+            if not name:
+                continue
+            bucket = aggregates.setdefault(name, {
+                key: name, "calls": 0, "cache_hits": 0, "retries": 0,
+                "failures": 0, "terminal_failures": 0,
+                "api_equivalent_cost": 0.0,
+                "tokens": {"fresh_input": 0, "cache_write": 0,
+                           "cache_read": 0, "output": 0},
+                "cost_complete": True, "tokens_complete": True,
+                "latencies": [],
+            })
+            bucket["calls"] += row["calls"]
+            bucket["cache_hits"] += row["hits"]
+            bucket["retries"] += row["retries"]
+            bucket["failures"] += row["fail"]
+            bucket["terminal_failures"] += row["terminal_failures"]
+            row_cost = row.get("api_equivalent_cost")
+            if row_cost is None:
+                bucket["cost_complete"] = False
+            else:
+                bucket["api_equivalent_cost"] += row_cost
+            row_tokens = row.get("tokens")
+            if not isinstance(row_tokens, dict) or any(
+                    row_tokens.get(token_key) is None for token_key in
+                    ("fresh_input", "cache_write", "cache_read", "output")):
+                bucket["tokens_complete"] = False
+            else:
+                for token_key in ("fresh_input", "cache_write", "cache_read", "output"):
+                    bucket["tokens"][token_key] += row_tokens[token_key]
+            bucket["latencies"].extend(row.get("latencies_s") or [])
+        output = []
+        for bucket in aggregates.values():
+            latencies = bucket.pop("latencies")
+            cost_complete = bucket.pop("cost_complete")
+            tokens_complete = bucket.pop("tokens_complete")
+            bucket["api_equivalent_cost"] = (
+                round(bucket["api_equivalent_cost"], 8) if cost_complete else None)
+            if tokens_complete:
+                bucket["tokens"]["total"] = sum(bucket["tokens"].values())
+            else:
+                bucket["tokens"] = {
+                    "fresh_input": None, "cache_write": None,
+                    "cache_read": None, "output": None, "total": None,
+                }
+            bucket["average_latency_s"] = (
+                round(sum(latencies) / len(latencies), 4) if latencies else None)
+            p95 = Usage._percentile_95(latencies)
+            bucket["p95_latency_s"] = round(p95, 4) if p95 is not None else None
+            output.append(bucket)
+        return sorted(output, key=lambda item: str(item.get(key)))
 
     def report(self):
-        t = self.tokens
+        snapshot = self.as_dict()
+        t = snapshot["tokens"]
+        token_text = (
+            f"in={t['input']} cache_w={t['cache_write']} "
+            f"cache_r={t['cache_read']} out={t['output']}"
+            if all(t.get(k) is not None for k in
+                   ("input", "cache_write", "cache_read", "output"))
+            else "tokens=unavailable")
+        cost_text = (
+            f"${snapshot['api_equivalent_usd']:.3f}"
+            if snapshot.get("api_equivalent_usd") is not None else "unavailable")
         # "API-equivalent", not "spent": a subscription bills nothing per call.
-        lines = [f"calls={self.calls} cache_hits={self.cache_hits} "
-                 f"failures={self.failures} "
-                 f"tokens in={t['input']} cache_w={t['cache_write']} "
-                 f"cache_r={t['cache_read']} out={t['output']} "
-                 f"API-equivalent=${self.cost_usd:.3f} (subscription spend $0)"]
-        for k, v in sorted(self.by_agent.items()):
+        lines = [f"calls={snapshot['calls']} cache_hits={snapshot['cache_hits']} "
+                 f"retries={snapshot['retries']} failures={snapshot['failures']} "
+                 f"{token_text} API-equivalent={cost_text} "
+                 "(subscription spend $0)"]
+        for k, v in sorted(snapshot["by_agent"].items()):
+            agent_tokens = v.get("tokens") or {}
+            agent_token_text = (
+                f"in={agent_tokens['fresh_input']} "
+                f"cache_w={agent_tokens['cache_write']} "
+                f"cache_r={agent_tokens['cache_read']} "
+                f"out={agent_tokens['output']}"
+                if agent_tokens.get("total") is not None
+                else "tokens=unavailable")
+            agent_cost = (
+                f"${v['api_equivalent_cost']:.3f}"
+                if v.get("api_equivalent_cost") is not None else "unavailable")
             lines.append(f"  {k}: model={v.get('model') or '-'} calls={v['calls']} "
                          f"hits={v['hits']} fail={v['fail']} "
-                         f"in={v['input']} cache_w={v['cache_write']} "
-                         f"cache_r={v['cache_read']} out={v['output']} "
-                         f"${v['cost']:.3f}")
+                         f"{agent_token_text} {agent_cost}")
         return "\n".join(lines)
 
     def as_dict(self) -> dict:
         """Structured form for run_context, so reports render the same numbers."""
-        return {
-            "calls": self.calls, "cache_hits": self.cache_hits,
-            "failures": self.failures,
-            "api_equivalent_usd": round(self.cost_usd, 4),
-            "subscription_spend_usd": 0.0,
-            "tokens": dict(self.tokens),
-            "by_agent": {k: dict(v) for k, v in self.by_agent.items()},
-        }
+        with self._usage_lock:
+            live_records = [r for r in self._records if not r.get("cached")]
+            missing_tokens = sum(r.get("tokens") is None for r in live_records)
+            missing_cost = sum(
+                r.get("api_equivalent_cost") is None for r in live_records)
+            missing_tokens_by_agent: dict[str, int] = {}
+            missing_cost_by_agent: dict[str, int] = {}
+            for record in live_records:
+                agent_name = str(record.get("agent") or "unknown")
+                if record.get("tokens") is None:
+                    missing_tokens_by_agent[agent_name] = (
+                        missing_tokens_by_agent.get(agent_name, 0) + 1)
+                if record.get("api_equivalent_cost") is None:
+                    missing_cost_by_agent[agent_name] = (
+                        missing_cost_by_agent.get(agent_name, 0) + 1)
+            rows = []
+            legacy_by_agent = {}
+            for agent, value in sorted(self.by_agent.items()):
+                row = {k: v for k, v in value.items() if k != "latencies"}
+                latencies = list(value.get("latencies") or [])
+                row["agent"] = agent
+                row["average_latency_s"] = (
+                    round(sum(latencies) / len(latencies), 4) if latencies else None)
+                p95 = self._percentile_95(latencies)
+                row["p95_latency_s"] = round(p95, 4) if p95 is not None else None
+                row["latencies_s"] = [round(value, 4) for value in latencies]
+                row["api_equivalent_cost"] = (
+                    None if missing_cost_by_agent.get(agent)
+                    else round(row["cost"], 8))
+                row["cache_hits"] = row["hits"]
+                row["failures"] = row["fail"]
+                row["reasoning_effort"] = row.get("effort")
+                row["prompt_version"] = PROMPT_VERSION
+                row["provider"] = "anthropic"
+                if missing_tokens_by_agent.get(agent):
+                    row["tokens"] = {
+                        "fresh_input": None, "cache_write": None,
+                        "cache_read": None, "output": None, "total": None,
+                    }
+                else:
+                    row["tokens"] = {
+                        "fresh_input": row["input"],
+                        "cache_write": row["cache_write"],
+                        "cache_read": row["cache_read"],
+                        "output": row["output"],
+                    }
+                    row["tokens"]["total"] = sum(row["tokens"].values())
+                rows.append(row)
+                legacy_by_agent[agent] = {
+                    key: value for key, value in row.items()
+                    if key != "agent"
+                }
+
+            if missing_tokens:
+                token_snapshot = {
+                    "input": None, "fresh_input": None, "cache_write": None,
+                    "cache_read": None, "output": None, "total": None,
+                }
+            else:
+                token_snapshot = dict(self.tokens)
+                token_snapshot["fresh_input"] = token_snapshot["input"]
+                token_snapshot["total"] = sum(self.tokens.values())
+            latencies = list(self.latencies)
+            activity_wall = None
+            if self._activity_started is not None and self._activity_finished is not None:
+                activity_wall = max(0.0, self._activity_finished - self._activity_started)
+            cost = None if missing_cost else round(self.cost_usd, 8)
+            telemetry_status = (
+                "complete" if not missing_tokens and not missing_cost else "partial")
+            telemetry_explanation = None
+            if telemetry_status == "partial":
+                telemetry_explanation = (
+                    f"CLI usage metadata was missing for {missing_tokens} token "
+                    f"record(s) and {missing_cost} cost record(s); affected totals "
+                    "are unavailable rather than fabricated zeros.")
+            payload = {
+                "version": "UsageV1",
+                "telemetry_status": telemetry_status,
+                "telemetry_explanation": telemetry_explanation,
+                "currency": "USD",
+                "metered_run_spend": 0.0,
+                "metered_spend_basis": (
+                    "Claude subscription; no marginal per-call metered charge"),
+                "api_equivalent_cost": cost,
+                "live_calls": self.calls,
+                "cache_hits": self.cache_hits,
+                "retries": self.retries,
+                "failures": self.failures,
+                "terminal_failures": self.terminal_failures,
+                "usage_records_missing_tokens": missing_tokens,
+                "usage_records_missing_cost": missing_cost,
+                "tokens": token_snapshot,
+                "latency": {
+                    "wall_time_s": round(activity_wall, 4)
+                    if activity_wall is not None else None,
+                    "average_s": round(sum(latencies) / len(latencies), 4)
+                    if latencies else None,
+                    "p95_s": round(self._percentile_95(latencies), 4)
+                    if latencies else None,
+                    "peak_concurrency": self.peak_concurrency,
+                    "basis": "model activity window, excluding retrieval and scoring",
+                },
+                "by_agent_rows": rows,
+                "by_tier": self._aggregate(rows, "tier"),
+                "by_model": self._aggregate(rows, "model"),
+                "raw_structured_usage": {
+                    "source": "Claude CLI JSON envelope",
+                    "records": [dict(record) for record in self._records],
+                    "redactions": ["prompts", "cache_keys", "authentication"],
+                },
+                # Compatibility keys used by the existing Markdown report.
+                "calls": self.calls,
+                "api_equivalent_usd": (
+                    None if missing_cost else round(self.cost_usd, 4)),
+                "subscription_spend_usd": 0.0,
+                "by_agent": legacy_by_agent,
+            }
+        return payload
 
 
 USAGE = Usage()
@@ -331,7 +640,9 @@ def _envelope_tokens(raw: str) -> dict:
         env = json.loads(raw)
     except (json.JSONDecodeError, TypeError):
         return {}
-    u = env.get("usage") or {}
+    u = env.get("usage")
+    if not isinstance(u, dict) or not u:
+        return {}
     return {
         "input": int(u.get("input_tokens") or 0),
         "cache_write": int(u.get("cache_creation_input_tokens") or 0),
@@ -404,9 +715,11 @@ def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
     with _lock:
         row = _CONN.execute("SELECT v FROM c WHERE k=?", (k,)).fetchone()
     if row:
-        USAGE.add(agent, 0.0, cached=True)
-        return json.loads(row[0]), {"cached": True, "model": model,
-                                    "effort": effort}
+        USAGE.add_cache_hit(agent, model=model, tier=tier, effort=effort)
+        return json.loads(row[0]), {
+            "cached": True, "provider": "anthropic", "model": model,
+            "tier": tier, "effort": effort, "prompt_version": PROMPT_VERSION,
+        }
 
     cmd = [
         "claude", "-p", "--safe-mode",
@@ -431,11 +744,30 @@ def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
 
     last_err, timeouts = None, 0
     for attempt in range(retries + 1):
-        try:
-            with _slots:
+        with _slots:
+            started = USAGE.begin_attempt(
+                agent, model=model, tier=tier, effort=effort, retry=attempt > 0)
+            attempt_error = None
+            try:
                 proc = subprocess.run(cmd, input=body, capture_output=True,
                                       text=True, timeout=timeout)
-        except subprocess.TimeoutExpired:
+            except subprocess.TimeoutExpired:
+                USAGE.finish_attempt(
+                    agent, started, failed=True, model=model, tier=tier,
+                    effort=effort, outcome="timeout")
+                proc = None
+                attempt_error = "timeout"
+            except OSError as exc:
+                USAGE.finish_attempt(
+                    agent, started, failed=True, model=model, tier=tier,
+                    effort=effort, outcome="cli_unavailable")
+                proc = None
+                attempt_error = f"could not start Claude CLI: {exc}"
+
+        if proc is None:
+            if attempt_error != "timeout":
+                last_err = attempt_error
+                break
             timeouts += 1
             last_err = f"timeout after {timeout}s (attempt {attempt + 1})"
             # A broken auth state makes the CLI hang rather than error, so
@@ -453,6 +785,10 @@ def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
             # Reading only stderr gives the operator "exit 1: " and nothing else.
             detail = _envelope_error(proc.stdout) or proc.stderr.strip()
             last_err = f"exit {proc.returncode}: {detail[:300]}"
+            USAGE.finish_attempt(
+                agent, started, cost=_envelope_cost(proc.stdout), failed=True,
+                tokens=_envelope_tokens(proc.stdout), model=model, tier=tier,
+                effort=effort, outcome="cli_error")
             if _is_fatal(detail):
                 break            # auth/config failure -- retrying cannot fix it
             time.sleep(2 ** attempt); continue
@@ -461,19 +797,56 @@ def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
         toks = _envelope_tokens(proc.stdout)
         if result is None:
             last_err = "schema violation / unparseable envelope"
-            USAGE.add(agent, cost, failed=True, tokens=toks, model=model)
+            USAGE.finish_attempt(
+                agent, started, cost=_envelope_cost(proc.stdout), failed=True,
+                tokens=toks,
+                model=model, tier=tier, effort=effort,
+                outcome="schema_violation")
             time.sleep(2 ** attempt); continue
 
-        USAGE.add(agent, cost, tokens=toks, model=model)
+        USAGE.finish_attempt(
+            agent, started, cost=_envelope_cost(proc.stdout), tokens=toks,
+            model=model, tier=tier,
+            effort=effort, outcome="success")
         with _lock:
             _CONN.execute("INSERT OR REPLACE INTO c VALUES (?,?,?)",
                           (k, json.dumps(result), cost))
             _CONN.commit()
-        return result, {"cached": False, "model": model, "cost": cost,
-                        "effort": effort}
+        return result, {
+            "cached": False, "provider": "anthropic", "model": model,
+            "tier": tier, "cost": cost, "effort": effort,
+            "prompt_version": PROMPT_VERSION,
+            "latency_s": round(max(0.0, time.perf_counter() - started), 4),
+            "tokens": {
+                "fresh_input": toks.get("input", 0),
+                "cache_write": toks.get("cache_write", 0),
+                "cache_read": toks.get("cache_read", 0),
+                "output": toks.get("output", 0),
+            },
+        }
 
-    USAGE.add(agent, 0.0, failed=True)
-    return None, {"error": last_err, "model": model, "flagged": True}
+    USAGE.record_terminal_failure(
+        agent, model=model, tier=tier, effort=effort)
+    return None, {
+        "error": last_err, "provider": "anthropic", "model": model,
+        "tier": tier, "effort": effort, "prompt_version": PROMPT_VERSION,
+        "flagged": True,
+    }
+
+
+def _envelope_cost(raw: str) -> float | None:
+    """Return a recorded CLI cost, or ``None`` when the envelope omitted it."""
+    try:
+        env = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return None
+    value = env.get("total_cost_usd")
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def preflight() -> bool:

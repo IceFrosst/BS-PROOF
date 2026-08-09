@@ -1,0 +1,191 @@
+export const RETAINED_RUN_ID =
+  "20260807_164410_creatine_creatine-monohydrate_grok-sr-ft-per-o";
+
+export const RETAINED_CONTEXT_PATH =
+  "reports/runs/20260807_164410_creatine_creatine-monohydrate_grok-sr-ft-per-o_context.json";
+
+const completeArcs = {
+  effect: { verdict: 0.6, coverage: 1 },
+  form: { verdict: 0.4, coverage: 0.75 },
+  dose: { verdict: null, coverage: 0 },
+  evidence: { verdict: null, coverage: 0.8, is_quantity: true },
+};
+
+export const modernRunFixture = {
+  schema_version: 1,
+  run_id: "20260809_120000_creatine_creatine-monohydrate_claude-ft",
+  generated_at: "2026-08-09T12:00:00Z",
+  scoring_model: "v2-four-arc",
+  provider: "claude",
+  mode: "claude-ft",
+  ingredient: "creatine",
+  form: "creatine_monohydrate",
+  scope: "per_outcome",
+  studies_targeted: 12,
+  studies_ok: 12,
+  studies_skipped: 0,
+  studies_failed_partial: 0,
+  usage: {
+    calls: 96,
+    spent_usd: 0,
+    api_equivalent_usd: 8.75,
+    telemetry_status: "available",
+  },
+  ecu_rows: [
+    {
+      outcome_vocab_id: "muscle_strength",
+      score: 41,
+      composite: 68,
+      arcs: completeArcs,
+      components: { d: 0.6, c: 0.8, H: 0.1, E: 4, E_prime: 4.5 },
+      band: "moderate support",
+      n_primaries: 12,
+      prompt_version: "v1.7",
+    },
+    {
+      outcome_vocab_id: "sleep_onset",
+      score: null,
+      composite: null,
+      arcs: {
+        effect: { verdict: null, coverage: 0 },
+        form: { verdict: null, coverage: 0 },
+        dose: { verdict: null, coverage: 0 },
+        evidence: { verdict: null, coverage: 0, is_quantity: true },
+      },
+      components: {},
+      band: "no usable evidence retrieved",
+      n_primaries: 0,
+      prompt_version: "v1.7",
+    },
+  ],
+  studies_list: [],
+};
+
+export const canonicalArtifactFixture = {
+  schema_version: "DashboardRunV1",
+  run: {
+    id: "20260809_120000_creatine_creatine-monohydrate_claude-ft",
+    generated_at: "2026-08-09T12:00:00Z",
+    provider: "claude",
+    mode: "claude-ft",
+    scope: "per_outcome",
+    scoring_model: "v2-four-arc",
+    prompt_version: "v1.7",
+    models: {},
+  },
+  validity: {
+    status: "internal_validated",
+    public_claims_allowed: false,
+    reason_codes: ["uncalibrated_constants"],
+  },
+  product: {
+    ingredient: "creatine",
+    form: "creatine_monohydrate",
+    dose: null,
+    population: null,
+  },
+  reports: {},
+  corpus: { studies: [] },
+  stats: {},
+  usage: {
+    version: "1",
+    telemetry_status: "partial",
+    telemetry_explanation: "Token fields were not recorded.",
+    currency: "USD",
+    metered_run_spend: 0,
+    metered_spend_basis: "Claude subscription",
+    api_equivalent_cost: 8.75,
+    live_calls: 2,
+    cache_hits: 0,
+    retries: 0,
+    failures: 0,
+    terminal_failures: 0,
+    usage_records_missing_tokens: 2,
+    usage_records_missing_cost: 0,
+    tokens: {
+      fresh_input: null,
+      cache_write: null,
+      cache_read: null,
+      output: null,
+      total: null,
+    },
+    latency: {
+      wall_time_s: null,
+      average_s: null,
+      p95_s: null,
+      peak_concurrency: null,
+      basis: null,
+    },
+    operations: {
+      successful_calls: 2,
+      failed_calls: 0,
+      cache_hits: 0,
+      timeouts: null,
+      auth_failures: null,
+      fail_rate: 0,
+      concurrency_limit: null,
+    },
+    breakdown_status: "unavailable",
+    by_agent: [],
+    by_tier: [],
+    by_model: [],
+    model_routing: [],
+    raw_structured_usage: {
+      source: "test fixture",
+      records: [],
+      redactions: ["prompts", "cache_keys", "authentication"],
+    },
+    efficiency: {
+      per_successful_study: {
+        denominator: null,
+        calls: null,
+        tokens: null,
+        api_equivalent_cost: null,
+      },
+      per_outcome: {
+        denominator: 2,
+        calls: 1,
+        tokens: null,
+        api_equivalent_cost: 4.375,
+      },
+    },
+  },
+  ecu_rows: modernRunFixture.ecu_rows,
+};
+
+export const legacyAliasFixture = {
+  ingredient: "creatine",
+  form: "creatine_monohydrate",
+  scope: "per_outcome",
+  studies_targeted: 2,
+  studies_ok: 2,
+  studies_skipped: 0,
+  studies_failed_partial: 1,
+  prompt_version: "v1.4+grok-cli-pure-function",
+  ecu_rows: [
+    {
+      outcome_vocab_id: "muscle_power",
+      score: -14,
+      composite: 32,
+      arcs: completeArcs,
+      components: { d: -0.194, c: 0.807, H: 0.1, E: 2, E_prime: 2 },
+      band: "weak evidence against",
+      n_primaries: 2,
+    },
+    {
+      outcome_vocab_id: "cold_incidence",
+      score: null,
+      composite: null,
+      arcs: {
+        effect: { verdict: null, coverage: 0 },
+        form: { verdict: null, coverage: 0 },
+        dose: { verdict: null, coverage: 0 },
+        evidence: { verdict: null, coverage: 0 },
+      },
+      components: {},
+      band: "no usable evidence retrieved",
+      n_primaries: 0,
+    },
+  ],
+  studies_list: [],
+};

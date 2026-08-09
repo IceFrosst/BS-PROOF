@@ -42,6 +42,18 @@ def _stamp() -> str:
     return datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
 
 
+def _source_commit() -> str | None:
+    """Commit containing the code that produced this run, when available."""
+    try:
+        value = subprocess.run(
+            ["git", "-C", str(ROOT), "rev-parse", "HEAD"],
+            capture_output=True, text=True, check=True,
+        ).stdout.strip().lower()
+        return value if re.fullmatch(r"[0-9a-f]{40}", value) else None
+    except Exception:
+        return None
+
+
 def _slug(s: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", s.lower()).strip("-") or "x"
 
@@ -152,33 +164,53 @@ def _section_cost(ctx: dict) -> str:
         return ""
     t = u.get("tokens") or {}
     tiers = ctx.get("agent_tiers") or {}
-    total_in = t.get("input", 0) + t.get("cache_write", 0) + t.get("cache_read", 0)
+    token_parts = [t.get("input"), t.get("cache_write"), t.get("cache_read")]
+    tokens_complete = all(isinstance(value, (int, float)) for value in
+                          (*token_parts, t.get("output")))
+    total_in = sum(token_parts) if tokens_complete else None
+    api_equivalent = u.get("api_equivalent_cost", u.get("api_equivalent_usd"))
     lines = ["## Token + cost accounting\n"]
     lines.append(f"- Extraction backend: **Claude subscription** "
                  f"(`--safe-mode`, `--max-turns 1`, one shot per call)")
     lines.append(f"- Model calls: **{u.get('calls', 0)}** "
                  f"(cache hits {u.get('cache_hits', 0)}, failures {u.get('failures', 0)})")
-    lines.append(f"- Input tokens: **{total_in:,}** "
-                 f"(fresh {t.get('input', 0):,} · cache-write {t.get('cache_write', 0):,} "
-                 f"· cache-read {t.get('cache_read', 0):,})")
-    lines.append(f"- Output tokens: **{t.get('output', 0):,}**")
+    if tokens_complete:
+        lines.append(f"- Input tokens: **{total_in:,}** "
+                     f"(fresh {t['input']:,} · cache-write {t['cache_write']:,} "
+                     f"· cache-read {t['cache_read']:,})")
+        lines.append(f"- Output tokens: **{t['output']:,}**")
+    else:
+        lines.append("- Input tokens: **unavailable** (not recorded for every call)")
+        lines.append("- Output tokens: **unavailable** (not recorded for every call)")
     lines.append(f"- **Spent on this run: $0.00** — subscription, not metered.")
-    lines.append(f"- **API-equivalent cost: ${u.get('api_equivalent_usd', 0):.3f}** "
+    api_text = (f"${api_equivalent:.3f}"
+                if isinstance(api_equivalent, (int, float)) else "unavailable")
+    lines.append(f"- **API-equivalent cost: {api_text}** "
                  f"— what the same work would cost billed per token.")
     n_ok = ctx.get("studies_ok") or 0
     if n_ok:
+        per_study_cost = (
+            f"${api_equivalent / n_ok:.4f}"
+            if isinstance(api_equivalent, (int, float)) else "unavailable")
         lines.append(f"- Per study: **{u['calls'] / n_ok:.1f} calls**, "
-                     f"**${u.get('api_equivalent_usd', 0) / n_ok:.4f}** API-equivalent "
-                     f"across {n_ok} scored studies.")
+                     f"**{per_study_cost}** API-equivalent across {n_ok} scored studies.")
     lines.append("")
     lines.append("| Agent | Tier | Model | Calls | Cache hits | Fail | In | Out | API-equiv |")
     lines.append("|---|---|---|--:|--:|--:|--:|--:|--:|")
     for a, v in sorted((u.get("by_agent") or {}).items()):
-        a_in = v.get("input", 0) + v.get("cache_write", 0) + v.get("cache_read", 0)
+        agent_tokens = v.get("tokens") if isinstance(v.get("tokens"), dict) else {}
+        complete = agent_tokens.get("total") is not None
+        a_in = (agent_tokens.get("fresh_input", 0)
+                + agent_tokens.get("cache_write", 0)
+                + agent_tokens.get("cache_read", 0)) if complete else None
+        agent_out = agent_tokens.get("output") if complete else None
+        agent_cost = v.get("api_equivalent_cost")
         lines.append(
             f"| {a} | {tiers.get(a, '-')} | `{v.get('model') or '-'}` | {v.get('calls', 0)} "
-            f"| {v.get('hits', 0)} | {v.get('fail', 0)} | {a_in:,} | {v.get('output', 0):,} "
-            f"| ${v.get('cost', 0):.3f} |")
+            f"| {v.get('hits', 0)} | {v.get('fail', 0)} "
+            f"| {'unavailable' if a_in is None else format(a_in, ',')} "
+            f"| {'unavailable' if agent_out is None else format(agent_out, ',')} "
+            f"| {'unavailable' if not isinstance(agent_cost, (int, float)) else '$' + format(agent_cost, '.3f')} |")
     lines.append("")
     lines.append("Tier → model is pinned in `claude_adapter.TIER_MODEL` (full ids, never "
                  "aliases: an alias floats to a new model while the cache key does not "
@@ -369,12 +401,21 @@ def _update_index(rows: list[tuple[str, dict]]) -> None:
 
 def write_report(ingredient: str, form: str, mode: str,
                  run_context: dict | None = None) -> list[Path]:
-    """Write summary + full for THIS run only; update latest*; index both."""
+    """Write summary, full and DashboardRunV1 for this immutable run."""
     REPORTS.mkdir(parents=True, exist_ok=True)
     RUNS.mkdir(parents=True, exist_ok=True)
     stamp = _stamp()
     base = f"{stamp}_{_slug(ingredient)}_{_slug(form)}_{_slug(mode)}"
-    ctx = run_context or {}
+    # Copy so report-only provenance does not mutate the caller's live object.
+    ctx = dict(run_context or {})
+    ctx.setdefault("mode", mode)
+    ctx.setdefault("provider", (
+        "grok" if "grok" in mode else
+        "claude-pilot" if "pilot" in mode else
+        "claude" if "claude" in mode else None
+    ))
+    ctx.setdefault("scoring_model", _SCORING_MODEL)
+    ctx.setdefault("source_commit", _source_commit())
 
     summary_parts = [
         f"# BS-PROOF summary report ({mode})\n",
@@ -428,10 +469,23 @@ def write_report(ingredient: str, form: str, mode: str,
 
     # Machine-readable run context for later tooling
     ctx_path = RUNS / f"{base}_context.json"
-    try:
-        ctx_path.write_text(json.dumps(ctx, indent=2, default=str), encoding="utf-8")
-    except Exception:
-        pass
+    ctx_path.write_text(json.dumps(ctx, indent=2, default=str), encoding="utf-8")
+
+    # Deployable data contract. It is deliberately produced from the in-memory
+    # full ECU rows, not reconstructed later from the lossy SQLite projection.
+    from scripts.dashboard_artifact import write_dashboard_artifact
+    dashboard_path = write_dashboard_artifact(
+        ctx,
+        run_id=base,
+        mode=mode,
+        source_commit=ctx.get("source_commit"),
+        reports={
+            "summary": f"reports/runs/{path_sum.name}",
+            "full": f"reports/runs/{path_full.name}",
+            "context": f"reports/runs/{ctx_path.name}",
+            "dashboard": f"reports/runs/{base}_dashboard.json",
+        },
+    )
 
     meta_base = {"when": _now(), "mode": mode,
                  "ingredient": ingredient, "form": form}
@@ -441,9 +495,10 @@ def write_report(ingredient: str, form: str, mode: str,
     ])
     print(f"Wrote reports/runs/{path_sum.name}")
     print(f"Wrote reports/runs/{path_full.name}")
+    print(f"Wrote reports/runs/{dashboard_path.name}")
     print("Wrote reports/latest.md (summary)")
     print("Wrote reports/latest_full.md (full)")
-    return [path_sum, path_full]
+    return [path_sum, path_full, dashboard_path]
 
 
 def git_push_reports() -> int:

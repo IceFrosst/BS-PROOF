@@ -526,16 +526,218 @@ real corpus, which is why it is an A/B and not a switch.
 **Open constants awaiting Tier-3 calibration:** `k`, transfer factors, RoB
 thresholds, OA penalty. See `docs/SPEC.md` §13.
 
+**Private evidence dashboard built (2026-08-09).** The root Next.js App Router
+application statically renders immutable `DashboardRunV1` artifacts from
+`reports/runs/`. It has no runtime API, uploads, pipeline controls, Supabase, or
+public release path. Validated runs and the Lab archive are separated; the only
+retained creatine/Grok run is explicitly invalid and cannot support product
+claims. Full Markdown reports render with raw HTML disabled.
+
+`scripts/dashboard_artifact.py` is the deploy boundary. It preserves complete
+ECU audit fields, canonical Python verdict labels, corpus and extraction facts,
+and a versioned usage ledger while allowlisting deployable fields. New runs
+default to `experimental`. ECU counts, token components, call outcomes, and
+complete agent/tier/model breakdowns must reconcile or artifact generation and
+the dashboard build fail.
+
+Telemetry keeps two different facts separate: `metered_run_spend` is recorded
+marginal spend; `api_equivalent_cost` is the retained CLI/API-rate equivalent.
+Subscription model calls have zero marginal metered spend without erasing their
+API-equivalent cost. Unknown tokens, prices, and latency stay null. Vercel
+hosting, free literature APIs, and any future database are outside model-run
+cost. The current historical Grok artifact proves 797 live attempts and retained
+latency, but it did not retain token or API-equivalent price fields.
+
 ## Next
 
-**Handoff:** consistent as of **2026-08-09**. Anything describing the score
-differently is stale — trust `pipeline/scoring.py`, `pipeline/arcs.py`,
+**Handoff:** active dashboard completion handoff to **Claude Code**,
+**2026-08-10**, on branch `codex/bs-proof-dashboard`. Anything describing the
+score differently is stale — trust `pipeline/scoring.py`, `pipeline/arcs.py`,
 `pipeline/synthesis.py` and this section.
+
+### Active handoff — finish, publish, and deploy the private dashboard
+
+The user approved the full **BS PROOF Private Evidence and Cost Dashboard** and
+asked Claude Code to finish this in-flight branch. Continue the current worktree;
+do not recreate the app, discard changes, or push `main`.
+
+#### Repository and release target
+
+- Local/GitHub branch: `codex/bs-proof-dashboard`. This handoff snapshot is the
+  initial branch commit; continue with follow-up commits on the same branch.
+- GitHub: private `IceFrosst/BS-PROOF`; open a **draft PR** to `main` after all
+  gates pass. Do not merge it.
+- Vercel team: `team_kIvQLqbrh2Qk9d9gYQcCDA98`
+  (`ign3107s-4758s-projects`). Create `bs-proof-dashboard` and deploy **preview
+  only**, with Vercel Authentication / Standard Protection. No production alias,
+  custom domain, or public release.
+- Supabase is deliberately unused. Do not attach the unrelated existing project.
+
+#### Completed implementation — preserve it
+
+- Root Next.js 16 App Router dashboard with static run/outcome pages,
+  methodology, no runtime API, no uploads, `noindex`, responsive styling, and
+  protected-preview configuration (`app/`, `components/`, `lib/dashboard/`,
+  `next.config.ts`, `vercel.json`, `.vercelignore`).
+- Home separates validated runs from the Lab archive and groups each by scoring
+  model. The run page contains Outcomes, Evidence, Quality, Cost & models, and
+  sanitized Full report sections. Outcome details retain full ECU identity,
+  dose/form/population/applicability, study IDs, flags, and provenance.
+- Four-ring graphic carries signed verdict direction/magnitude separately from
+  coverage. Gated outcomes use an em dash / unavailable state, never numeric
+  zero. Effect-confidence scatter, agent success bars, SR progression,
+  searchable corpus table/year histogram, and accessible 44 px controls exist.
+- Usage UI keeps marginal subscription spend separate from API-equivalent cost;
+  includes calls/cache/retry/failure/latency, token composition, agent/tier/model
+  tables, model routing, efficiency, infrastructure boundary, and safe JSON
+  download. Raw prompts, secrets, cache keys, and auth data are allowlisted out.
+- `scripts/dashboard_artifact.py`,
+  `schemas/dashboard_run_v1.schema.json`, and `reports/run_statuses.json` define
+  the immutable deploy artifact. `run_pipeline.py` now hands over complete ECU
+  rows; `scripts/auto_report_push.py` emits the dashboard artifact beside every
+  report. New runs default to `experimental`.
+- The retained historical artifact is
+  `reports/runs/20260807_164410_creatine_creatine-monohydrate_grok-sr-ft-per-o_dashboard.json`.
+  It is explicitly `invalid`: 80 studies, 30 outcomes, 19 scored, 11 gated,
+  797 live attempts (711 success / 86 fail), 6 cache hits, average 113.6 s,
+  p95 146.9 s, and invalid S8 route `grok-4.3`. Tokens and API-equivalent cost
+  were not recorded and must stay null. Source commit is
+  `c29c570f7139bd1b3e3816b5e19213af193089a0`.
+- Claude usage collection now retains full model IDs, tier, reasoning effort,
+  prompt version, tokens, API-equivalent price, cache/retries/failures, latency,
+  concurrency, safe raw records, and separate zero marginal subscription spend.
+- Unit, golden, schema, privacy, reconciliation, CI, Playwright, and axe tests
+  exist under `tests/` and `.github/workflows/dashboard.yml`.
+
+#### Last known verification state
+
+- `PYTHONUTF8=1 python -m pipeline.selftest` previously reached `ALL PASSED`.
+- Python dashboard artifact tests previously passed 7/7.
+- After explicit `@emnapi/core@1.11.3` and `@emnapi/runtime@1.11.3` pins, a clean
+  Node 22/npm 10 install, typecheck, lint, unit suite, and production build passed;
+  the build generated 36 static pages.
+- Playwright was aborted twice for orchestration reasons (first its worker PIDs
+  were mistaken for stale build workers; second it was intentionally stopped
+  when the final data-contract patches began). No browser assertion had failed,
+  but **the complete E2E/axe suite has not yet produced a green final run**.
+- No Node/Next worker process was alive at this handoff.
+- After the final contract patches, `python -m unittest
+  scripts.test_dashboard_artifact` passed 7/7, Python compilation passed,
+  TypeScript and ESLint passed, and the unit suite passed 16/16. The production
+  build and Playwright suite still require one final rerun.
+
+#### Final patches made after the last green build — verify carefully
+
+1. Added `ajv@8.17.1` and exact `DashboardRunV1` JSON-schema enforcement in
+   `lib/dashboard/schema.ts` / `catalog.ts`, in addition to Zod normalization.
+2. Tightened canonical UsageV1 requirements and added malformed/secret-bearing
+   artifact tests.
+3. Added hard reconciliation for ECU/study sets, token components, operations,
+   and complete agent/tier/model breakdown totals.
+4. Changed partial Claude telemetry so any unrecorded call makes the affected
+   token/cost total null instead of presenting a known subtotal as a total.
+   Updated aggregation and Markdown cost rendering accordingly.
+5. Changed dashboard token tables to sum components only when all four canonical
+   token fields are present; partial breakdowns should be `partial`, not
+   `complete`.
+
+These five items were not run through the complete production-build/browser gate
+before the user requested this handoff. Inspect especially `claude_adapter.Usage.as_dict`,
+`Usage._aggregate`, `scripts/auto_report_push._section_cost`, the Ajv JSON import,
+and `scripts/dashboard_artifact.normalize_usage`. Add a focused Python test that
+proves a partially missing Claude envelope yields null token/API totals and
+`breakdown_status=partial`.
+
+`npm install ajv` reported one moderate audit finding. Run `npm audit` and record
+the package/path; do not use `npm audit fix --force` or take an unrelated major
+upgrade just to clear it.
+
+#### Required completion sequence
+
+1. Inspect the current diff and preserve all existing work:
+
+   ```powershell
+   git status --short --branch
+   git diff --check
+   git diff --stat
+   ```
+
+2. Run the deterministic/data gates (UTF-8 is required on Windows):
+
+   ```powershell
+   $env:PYTHONUTF8='1'
+   python -m unittest scripts.test_dashboard_artifact
+   python -m pipeline.selftest
+   ```
+
+3. Reproduce CI from a clean dependency tree with Node 22/npm 10 semantics:
+
+   ```powershell
+   npm ci
+   npm run typecheck
+   npm run lint
+   npm run test:unit
+   npm run build
+   npm audit
+   ```
+
+4. Run the browser/accessibility gate at desktop and mobile widths:
+
+   ```powershell
+   npx playwright install chromium
+   npm run test:e2e
+   ```
+
+   Inspect `/`, `/methodology`, the retained run, one scored outcome, one gated
+   outcome, and the Cost & models section. Verify keyboard navigation, no console
+   errors, no raw HTML, 19/11 score split, partial telemetry, 797 calls, p95
+   146.9 s, `$0` marginal spend, and unavailable token/API cost. Capture and
+   visually inspect desktop/mobile screenshots if the suite does not already.
+
+5. Re-run `git diff --check`, review every changed file, and ensure `.vs/`,
+   `.next/`, `node_modules/`, Playwright output, SQLite, caches, prompts, and
+   secrets are not staged.
+
+6. Commit all in-scope work. Because `run_pipeline.py` is shared, the **first
+   commit-body line must be exactly an ownership announcement**, for example:
+
+   ```text
+   Add private evidence and cost dashboard
+
+   SHARED FILE NOTICE: run_pipeline.py now exports complete immutable dashboard rows and run metadata.
+   ```
+
+7. Push only `codex/bs-proof-dashboard`, then open a draft PR to `main`. Include
+   the exact test results, invalid historical-run boundary, no-Supabase decision,
+   two cost concepts, and the Grok-owner limitation below.
+
+8. Deploy a Vercel **preview**, not production. The local Vercel CLI was not
+   authenticated; use the connected Vercel integration/API. Create
+   `bs-proof-dashboard`, enable Vercel Authentication / Standard Protection,
+   then verify unauthenticated access is blocked and authenticated access works.
+   Inspect build logs, runtime errors, and runtime logs before returning the URL.
+
+9. Add the protected preview URL to the draft PR and update this handoff with the
+   final PR/deployment/check status. Public release remains a separate approval.
+
+#### Deliberate unresolved owner boundary
+
+`grok_adapter.py` is owned by Grok under the file-ownership table above and was
+not edited. `DashboardRunV1` can preserve token/price fields once a Grok context
+contains them, but the live Grok CLI envelope parser still does not capture those
+fields. Do not invent them or edit the owned adapter silently. Coordinate the
+change with the Grok owner (or open a clearly scoped issue) and disclose it in
+the draft PR; the historical run must continue to say “not recorded.”
 
 Changed 2026-08-09: production extraction moved to the **Claude subscription**
 via `--safe-mode` (`claude_adapter`); `--bare` and the API-key gate are gone,
 `pilot_adapter` is superseded but kept. Anything saying production needs a key
 is stale.
+
+Changed 2026-08-09: the protected, Git-backed evidence/cost dashboard and
+`DashboardRunV1` export contract were added. The 2026-08-07 creatine/Grok run is
+an invalid historical Lab artifact, not a current score. Future committed run
+artifacts appear on the next preview deployment.
 
 Changed 2026-08-08: invariant 6 amended (SR-table trials enter `E`),
 `PROMPT_VERSION` v1.6 (S2 `results_table` + per-study `design`), outcome
@@ -557,7 +759,11 @@ ownership table added under Multi-agent workflow.
    extraction. Do this before trusting any constant.
 5. **Derive dose bands at scale** and bump `band_version` 0 → 1.
 6. **Grok/Claude agreement table** on a fixed paper set. Never merge scores.
-7. Venue factor (`Study.venue_ok` is still a boolean; SJR quartiles have nowhere
+7. **Grok-owned telemetry follow-up.** `DashboardRunV1` already preserves token
+   and price fields when a Grok context contains them, but `grok_adapter.py` still
+   needs its owner to capture those fields from the CLI envelope. Do not infer
+   them for historical runs.
+8. Venue factor (`Study.venue_ok` is still a boolean; SJR quartiles have nowhere
    to go until a real factor exists — new constant, so SPEC §13 first).
 
 ---
