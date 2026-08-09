@@ -1211,6 +1211,58 @@ def main():
         check("re-scoring updates in place, no duplicate row",
               st_db.counts()["ecus"] == 1 and st_db.ecu(key)["score"] == 42)
 
+    # Batched S6 matches results back BY INDEX. If it ever matched by position,
+    # a reordered or short array would shift every mapping onto the wrong claim
+    # -- silently filing evidence about one outcome under another, which is the
+    # exact failure S6's prompt calls unrecoverable.
+    print("\nBATCHED S6 INDEX MATCHING")
+    import workers as _wk
+    _claims = [{"outcome_raw": "hand grip strength"},
+               {"outcome_raw": "leg press 1-RM"},
+               {"outcome_raw": "serum creatinine"}]
+    _rec = {"_canonical": "doi:10.1/b", "ingredient": "creatine", "title": "t",
+            "abstract": "oral creatine supplementation 3 g/day", "design_rank": 4}
+
+    def _fake_call(shuffled, drop=()):
+        def _c(agent, payload):
+            if agent == "S5":
+                return {"claims": _claims}, {}
+            if agent == "S6B":
+                m = [{"index": 0, "outcome_vocab_id": "muscle_strength",
+                      "confidence": 0.9, "rationale": "grip"},
+                     {"index": 1, "outcome_vocab_id": "muscle_strength",
+                      "confidence": 0.9, "rationale": "1rm"},
+                     {"index": 2, "outcome_vocab_id": None,
+                      "confidence": 0.2, "rationale": "biomarker"}]
+                m = [x for x in m if x["index"] not in drop]
+                return {"mappings": list(reversed(m)) if shuffled else m}, {}
+            return {}, {}
+        return _c
+
+    _saved = _wk.S6_BATCH
+    _wk.S6_BATCH = True
+    try:
+        out = _wk.extract_study(_rec, "x" * 500, call=_fake_call(shuffled=True))
+        got = [(o["claim"]["outcome_raw"], o["outcome_vocab_id"])
+               for o in out["outcomes"]]
+        check("a REORDERED batch response still lands on the right claim",
+              got == [("hand grip strength", "muscle_strength"),
+                      ("leg press 1-RM", "muscle_strength"),
+                      ("serum creatinine", None)],
+              str(got))
+        out2 = _wk.extract_study(_rec, "x" * 500, call=_fake_call(False, drop=(1,)))
+        got2 = [(o["claim"]["outcome_raw"], o["outcome_vocab_id"])
+                for o in out2["outcomes"]]
+        check("a MISSING index is discarded, never shifted onto its neighbour",
+              got2 == [("hand grip strength", "muscle_strength"),
+                       ("leg press 1-RM", None),
+                       ("serum creatinine", None)],
+              str(got2))
+        check("every claim still yields exactly one outcome row",
+              len(out["outcomes"]) == len(_claims))
+    finally:
+        _wk.S6_BATCH = _saved
+
     # The single defect that zeroed every score: a head-only text trim deleted
     # the Results section, so S5 truthfully reported no claims.
     print("\nPROMPT TEXT FITTING")

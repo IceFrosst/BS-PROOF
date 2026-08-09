@@ -23,6 +23,27 @@ MIN_TEXT_CHARS = 200
 # Wall ~16k. Default tightened 14k -> 12k after magnesium still showed 12 S3 fails.
 PROMPT_BUDGET_CHARS = int(os.environ.get("SP_PROMPT_BUDGET", "12000"))
 
+# Batched outcome mapping (S6B): one call per STUDY instead of one per claim.
+#
+# A/B/C MEASURED 2026-08-09 on the same 7 creatine RCTs, each arm run cold with
+# its own LLM cache:
+#
+#   A  per-claim S6, opus-5     91 calls  326 095 in-tok  $1.856  0 fail   78s
+#   B  batched  S6B, opus-5     42 calls  204 644 in-tok  $1.182  0 fail  112s
+#   C  per-claim S6, sonnet-5   86 calls  312 446 in-tok  $1.351  1 fail  146s
+#
+# B: -54% calls, -37% input tokens, -36% cost. S6 itself went 56 calls ->
+# 7 and 144 393 -> 22 942 input tokens (-84%).
+#
+# AND THE RESULTS ARE THE SAME, which is the only reason this is on. All three
+# arms produced the SAME five non-null vocabulary mappings, and no two arms ever
+# disagreed on a non-null mapping. C is not adopted: it saves cost but almost no
+# tokens, and it was the only arm with a failure.
+#
+# Sample is 7 studies. SP_S6_BATCH=0 returns to per-claim if a larger corpus
+# ever shows the batch drifting.
+S6_BATCH = os.environ.get("SP_S6_BATCH", "1") == "1"
+
 # S3 is the longest system prompt + schema among per-study agents. Give it a
 # stricter text headroom so full-text papers do not re-hit the wall.
 AGENT_BUDGET_TRIM = {
@@ -146,12 +167,36 @@ def extract_study(record: dict, text: str, registry: dict | None = None, *,
         from pipeline.showcase import restrict_outcome_vocab
         full = vocab.load("outcome")["outcomes"]
         vocabulary = restrict_outcome_vocab(full, outcome_allowlist)
-        with ThreadPoolExecutor(max_workers=min(len(claims), 6)) as pool:
-            mapped = list(pool.map(
-                lambda cl: (cl, call("S6", {"outcome_raw": cl.get("outcome_raw"),
-                                            "measure": cl.get("measure"),
-                                            "vocabulary": vocabulary})),
-                claims))
+        if S6_BATCH:
+            # ONE call for the whole study instead of one per claim. The fixed
+            # part of an S6 call -- shared rules + S6 rules + schema +
+            # vocabulary, ~1 300 tokens -- is identical for every claim, while
+            # the variable part is one short string. Paying it per claim is the
+            # single largest avoidable token cost in the pipeline: S6 was 44 of
+            # 64 calls on a 5-study run.
+            #
+            # Results are matched back BY INDEX, never by position in the
+            # returned array: a model that reorders or omits an entry must not
+            # silently shift every mapping onto the wrong claim. A claim with no
+            # returned index keeps result None and is discarded, which is the
+            # same under-count the per-claim path produces on failure.
+            res, _meta = call("S6B", {
+                "claims": [{"index": i,
+                            "outcome_raw": cl.get("outcome_raw"),
+                            "measure": cl.get("measure")}
+                           for i, cl in enumerate(claims)],
+                "vocabulary": vocabulary})
+            by_index = {m.get("index"): m
+                        for m in ((res or {}).get("mappings") or [])
+                        if isinstance(m, dict)}
+            mapped = [(cl, (by_index.get(i), None)) for i, cl in enumerate(claims)]
+        else:
+            with ThreadPoolExecutor(max_workers=min(len(claims), 6)) as pool:
+                mapped = list(pool.map(
+                    lambda cl: (cl, call("S6", {"outcome_raw": cl.get("outcome_raw"),
+                                                "measure": cl.get("measure"),
+                                                "vocabulary": vocabulary})),
+                    claims))
         for claim, (result, _meta) in mapped:
             vid = (result or {}).get("outcome_vocab_id")
             # If allowlist is active and S6 still returned something outside it

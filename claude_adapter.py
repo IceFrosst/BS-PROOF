@@ -72,18 +72,23 @@ from dataclasses import dataclass, field
 ROOT = Path(__file__).parent
 SCHEMAS = ROOT / "schemas"
 PROMPTS = ROOT / "prompts"
-CACHE_DB = ROOT / "out" / "llm_cache.sqlite"
+# SP_LLM_CACHE points this at a scratch file so an A/B arm can be measured COLD.
+# Without it every arm after the first reads the shared agents from cache and
+# reports near-zero tokens, which makes the arms incomparable.
+CACHE_DB = Path(os.environ.get("SP_LLM_CACHE") or (ROOT / "out" / "llm_cache.sqlite"))
 SHARED_PROMPT = PROMPTS / "_shared.md"
 
 # Bump when you edit ANY prompt (including _shared.md). This is in the cache key.
 # Forget to bump it and you will silently serve stale extractions forever.
+# v1.8 (2026-08-09): S6B added -- batched outcome mapping, one call per study
+# instead of one per claim. Same rules, same vocabulary, same bar for null.
 # v1.7 (2026-08-08): S3 reports population_axes.health_status. The first four
 # axes could not express "this trial was in patients", so a Huntington's trial
 # matched a general-adult product exactly.
 # v1.6 (2026-08-08): S2 reports results_table + per-study design. SR-table trials
 # now enter evidence mass, so S2's output moves scores and not just confidence.
 # v1.5 (2026-08-07): S3 prompt shortened, SR label resolve, review_methods.
-PROMPT_VERSION = "v1.7"
+PROMPT_VERSION = "v1.8"
 
 # Tier -> model. FULL IDs, NOT ALIASES.
 #
@@ -110,7 +115,22 @@ MAX_BUDGET_USD = float(os.environ.get("SP_MAX_BUDGET_USD", "0.50"))
 # Concurrency is a fetch-side property (Amdahl -- the bottleneck is retrieval,
 # not tokens), but the model boundary needs its own ceiling so a wide fan-out
 # cannot open 200 CLI subprocesses at once.
-MAX_CONCURRENCY = int(os.environ.get("SP_MAX_CONCURRENCY", "6"))
+# 40, to sit just under grok_adapter's 43. MEASURED 2026-08-09, and the old
+# default of 6 was costing an order of magnitude of wall-clock for no reason:
+#
+#   Grok  2026-08-07: concurrency 43, avg latency 113.6s/call, 10.8% fail
+#   Claude          : concurrency  6, avg latency ~15s/call,   0% fail
+#
+# Claude calls are ~8x FASTER per call and the run was still slower, purely on
+# width. 80 studies is ~35 min at Grok's settings and ~6 min at these.
+#
+# Safe to raise now for a reason that did not hold when 6 was chosen: since the
+# --safe-mode switch a call carries 38x fewer input tokens, so the subscription's
+# time-based ceiling is much further away. And a limit hit is in _FATAL -- it
+# fails loudly on the first call, it does not silently return nulls that read as
+# "this study reported nothing". Lower it if failures appear; do not raise it to
+# make a slow run finish.
+MAX_CONCURRENCY = int(os.environ.get("SP_MAX_CONCURRENCY", "40"))
 _slots = threading.Semaphore(MAX_CONCURRENCY)
 
 # S-id -> (tier, schema file, prompt file)
@@ -122,6 +142,11 @@ AGENTS = {
     "S4": ("B", "s4_rob.json",        "s4_rob.md"),
     "S5": ("B", "s5_conclusion.json", "s5_conclusion.md"),
     "S6": ("C", "s6_outcome.json",    "s6_outcome.md"),
+    # Batched S6: same rules, whole study in one call. Opt in with SP_S6_BATCH=1.
+    # S6 fires once per CLAIM, so the ~1 300-token fixed overhead (shared rules
+    # + S6 rules + schema + vocabulary) is paid ~8.8x per study while the
+    # variable part is one short string. See workers._map_outcomes.
+    "S6B": ("C", "s6b_outcome_batch.json", "s6b_outcome_batch.md"),
     "S7": ("B", "s7_form.json",       "s7_form.md"),
     "S8": ("A", "s8_funding.json",    "s8_funding.md"),
 }
