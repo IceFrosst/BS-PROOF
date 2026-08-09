@@ -18,9 +18,11 @@ import { compositeOf, outcomeIdOf, rowsOf } from "./helpers";
  *
  * NOTE: two expectations here — "one unreadable artifact does not take the rest
  * of the catalog down" and "a legacy context run is retained alongside runs that
- * do have artifacts" — are written against a change to lib/dashboard/catalog.ts
- * that is being made concurrently by another author. They describe the intended
- * behaviour, not the behaviour at the time this file was written.
+ * do have artifacts" — were written against intended behaviour while
+ * lib/dashboard/catalog.ts was being changed by another author. That change has
+ * since landed (quarantine of unreadable artifacts, per-run legacy fallback);
+ * these two tests now pin it. Before that commit they described the goal, not
+ * the code.
  */
 
 type Json = Record<string, unknown>;

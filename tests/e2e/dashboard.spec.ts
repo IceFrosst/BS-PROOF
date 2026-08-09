@@ -368,7 +368,7 @@ for (const artifact of artifacts) {
       await expect(telemetry).toContainText(/tokens unavailable/i);
       await expect(telemetry).toContainText(/not recorded/i);
     } else {
-      const total = tokenParts.reduce((sum, part) => sum + (part ?? 0), 0);
+      const total = tokenParts.reduce<number>((sum, part) => sum + (part ?? 0), 0);
       await expect(telemetry).toContainText(`${expectedNumber(total)} tokens`);
     }
   });
@@ -400,14 +400,14 @@ for (const artifact of sample) {
   });
 
   test("dashboard routes do not overflow at their configured viewport", async ({ page }) => {
-    const scoredId = outcomeId(scoredRows(artifact)[0] ?? artifact.ecu_rows[0]);
-    const gatedId = outcomeId(gatedRows(artifact)[0] ?? artifact.ecu_rows[0]);
+    const probes = [scoredRows(artifact)[0], gatedRows(artifact)[0]].filter(
+      (row): row is ArtifactRow => Boolean(row),
+    );
     for (const route of [
       "/",
       "/methodology",
       `/runs/${runId}`,
-      `/runs/${runId}/outcomes/${scoredId}`,
-      `/runs/${runId}/outcomes/${gatedId}`,
+      ...probes.map((row) => `/runs/${runId}/outcomes/${outcomeId(row)}`),
       "/runs/not-a-real-run",
     ]) {
       await page.goto(route);

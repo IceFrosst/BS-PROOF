@@ -11,6 +11,15 @@
   --teal: #087769;
   --blue: #315ca8;
   --gold: #a06a00;
+  /* TEXT-ONLY variants. axe flagged three serious WCAG 2 AA colour-contrast
+     failures on small bold text: .eyebrow on the tint (4.26), .arc-effect
+     .arc-label (3.31) and .arc-evidence .arc-label (4.05), all against a 4.5
+     requirement. The vivid values above are kept for GRAPHICS -- rings, dots,
+     chart marks -- where the contrast rule does not apply; only text switches
+     to these. Each clears 4.5 against BOTH page tints (#e9e3d6 and #f4f0e7). */
+  --teal-text: #087164;
+  --coral-text: #a44732;
+  --gold-text: #885a00;
   --lime: #d9ef73;
   --danger: #a92f24;
   --radius: 18px;
@@ -44,7 +53,7 @@ p { margin-block: 0 1rem; }
 .section-dark { background: var(--night); color: var(--white); }
 .section-dark .eyebrow { color: var(--lime); }
 .section-dark .section-heading > p { color: #bdc9c2; }
-.eyebrow { margin: 0 0 0.8rem; color: var(--teal); font-size: 0.75rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; }
+.eyebrow { margin: 0 0 0.8rem; color: var(--teal-text); font-size: 0.75rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .skip-link { position: fixed; z-index: 100; top: 12px; left: 12px; padding: 11px 16px; color: var(--white); background: var(--danger); border-radius: 8px; transform: translateY(-160%); }
 .skip-link:focus { transform: translateY(0); }
@@ -192,10 +201,10 @@ p { margin-block: 0 1rem; }
 .arc-line small { display: block; color: var(--ink-soft); font-size: 0.66rem; font-weight: 650; }
 .arc-label { display: inline-flex; align-items: center; gap: 7px; }
 .arc-label i { width: 8px; height: 8px; background: currentColor; border-radius: 50%; }
-.arc-effect .arc-label { color: var(--coral); }
-.arc-form .arc-label { color: var(--teal); }
+.arc-effect .arc-label { color: var(--coral-text); }
+.arc-form .arc-label { color: var(--teal-text); }
 .arc-dose .arc-label { color: var(--blue); }
-.arc-evidence .arc-label { color: var(--gold); }
+.arc-evidence .arc-label { color: var(--gold-text); }
 .gated-caption { color: var(--ink-soft); font-size: 0.8rem; }
 
 .evidence-summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); margin-bottom: 24px; background: var(--night); color: var(--white); border-radius: var(--radius); overflow: hidden; }
