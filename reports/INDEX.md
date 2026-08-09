@@ -13,18 +13,18 @@ sweeps `runs/` whenever `scoring.SCORING_MODEL` changes.
 |---|---|---|---|---|---|
 | 2026-08-07 16:44 UTC | grok-sr-ft-per_o | `creatine` | `creatine_monohydrate` | summary | [runs/20260807_164410_creatine_creatine-monohydrate_grok-sr-ft-per-o_summary.md](runs/20260807_164410_creatine_creatine-monohydrate_grok-sr-ft-per-o_summary.md) |
 | 2026-08-07 16:44 UTC | grok-sr-ft-per_o | `creatine` | `creatine_monohydrate` | full | [runs/20260807_164410_creatine_creatine-monohydrate_grok-sr-ft-per-o_full.md](runs/20260807_164410_creatine_creatine-monohydrate_grok-sr-ft-per-o_full.md) |
-| 2026-08-07 15:41 UTC | grok-sr-ft-per_o | `magnesium` | `magnesium_glycinate` | summary | [runs/20260807_154144_magnesium_magnesium-glycinate_grok-sr-ft-per-o_summary.md](runs/20260807_154144_magnesium_magnesium-glycinate_grok-sr-ft-per-o_summary.md) |
-| 2026-08-07 15:41 UTC | grok-sr-ft-per_o | `magnesium` | `magnesium_glycinate` | full | [runs/20260807_154144_magnesium_magnesium-glycinate_grok-sr-ft-per-o_full.md](runs/20260807_154144_magnesium_magnesium-glycinate_grok-sr-ft-per-o_full.md) |
-| 2026-08-07 14:59 UTC | grok-sr-ft-inter | `magnesium` | `magnesium_glycinate` | summary | [runs/20260807_145913_magnesium_magnesium-glycinate_grok-sr-ft-inter_summary.md](runs/20260807_145913_magnesium_magnesium-glycinate_grok-sr-ft-inter_summary.md) |
-| 2026-08-07 14:59 UTC | grok-sr-ft-inter | `magnesium` | `magnesium_glycinate` | full | [runs/20260807_145913_magnesium_magnesium-glycinate_grok-sr-ft-inter_full.md](runs/20260807_145913_magnesium_magnesium-glycinate_grok-sr-ft-inter_full.md) |
-| 2026-08-07 14:36 UTC | grok-sr-ft-inter | `magnesium` | `magnesium_glycinate` | summary | [runs/20260807_143607_magnesium_magnesium-glycinate_grok-sr-ft-inter_summary.md](runs/20260807_143607_magnesium_magnesium-glycinate_grok-sr-ft-inter_summary.md) |
-| 2026-08-07 14:36 UTC | grok-sr-ft-inter | `magnesium` | `magnesium_glycinate` | full | [runs/20260807_143607_magnesium_magnesium-glycinate_grok-sr-ft-inter_full.md](runs/20260807_143607_magnesium_magnesium-glycinate_grok-sr-ft-inter_full.md) |
-| 2026-08-07 14:15 UTC | grok-sr-ft | `magnesium` | `magnesium_glycinate` | summary | [runs/20260807_141550_magnesium_magnesium-glycinate_grok-sr-ft_summary.md](runs/20260807_141550_magnesium_magnesium-glycinate_grok-sr-ft_summary.md) |
-| 2026-08-07 14:15 UTC | grok-sr-ft | `magnesium` | `magnesium_glycinate` | full | [runs/20260807_141550_magnesium_magnesium-glycinate_grok-sr-ft_full.md](runs/20260807_141550_magnesium_magnesium-glycinate_grok-sr-ft_full.md) |
-| — | — | — | — | — | _No runs yet under this model._ |
+
+Pruned 2026-08-09 (founder): four earlier `v2-four-arc` magnesium runs deleted
+— three 20-study and one 54-study, all superseded by the 80-study creatine run
+above. Recoverable from git history if a comparison ever needs them.
 
 ## Archived
 
 | Model | Runs | What it was |
 |---|---:|---|
-| [`v1-transfer-in-weight`](archive/v1-transfer-in-weight/) | 5 | Signed −100…+100 only; form × dose × population multiplied into `w_study`; no arcs. Superseded 2026-08-07. |
+| [`v1-transfer-in-weight`](archive/v1-transfer-in-weight/) | 0 | Signed −100…+100 only; form × dose × population multiplied into `w_study`; no arcs. Superseded 2026-08-07. Run files pruned 2026-08-09; the build report below is kept for its measurements. |
+
+Retained from the archive: [`20260807_creatine_pilot_build_report.md`](archive/v1-transfer-in-weight/20260807_creatine_pilot_build_report.md)
+— a build report, not a scored run. It records measured facts (subscription
+call costs, the `--bare` auth finding) that cannot be recovered by re-running
+anything.
