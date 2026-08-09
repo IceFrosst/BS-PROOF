@@ -105,7 +105,7 @@ def sr_derived_to_studies(rec: dict, product: dict, *,
             pop_match="exact",
             direction=direction,
             magnitude=magnitude,
-        ), dose))
+        ), dose, False))
     return out
 
 
@@ -196,7 +196,7 @@ def to_studies(record: dict, extraction: dict, product: dict,
             pop_match=pop_match,
             direction=direction,
             magnitude=magnitude,
-        ), dose))
+        ), dose, bool((claim or {}).get("is_primary_outcome"))))
     return out
 
 
@@ -207,51 +207,80 @@ def _one_study_one_vote(pairs: list[tuple]) -> tuple[list[tuple], int]:
     `score_ecu` documents its own contract -- "primaries: UNIQUE primary studies
     only. Dedup happens before this is called." -- and until 2026-08-10 nothing
     did. `to_studies` emits one Study PER CLAIM, all carrying the same
-    `record["_canonical"]`, and this bucket appended every one of them.
+    `record["_canonical"]`, and this bucket appended every one of them. One real
+    S5 output expanded ONE finding across a sex x phase x body-region grid into
+    20 claims, so E, c, H and the human-evidence gate were all set by how finely
+    the model happened to slice the paper.
 
-    WHY THAT WAS A SCORING BUG, NOT AN UNTIDINESS. A real cached S5 output
-    expanded ONE finding -- "creatine changed lean body mass" -- across a
-    sex x phase x body-region grid into 20 claims. All 20 landed in one bucket:
+    WHICH CLAIM SURVIVES -- and the first answer here was wrong.
 
-      E = sum(weights)          -> that trial contributed 20x its evidence mass
-      c = 1 - e^(-E'/k)         -> one RCT at w=0.7 gives c ~ 0.21;
-                                   split three ways, c ~ 0.50
-      H                          -> a study became heterogeneous WITH ITSELF
-      GATE_MIN_HUMAN_WD          -> a sub-threshold study passed the "not enough
-                                   human evidence" gate by being split in two
-      n_primaries / study_ids    -> reported the inflated count
+    v1 kept the LOWEST s_value, on the reasoning that a collapse must never
+    inflate. MEASURED on 158 cached S5 extractions, that rule contradicted the
+    trial's OWN PRIMARY OUTCOME in 31 of the 87 that declare one (36%):
 
-    So the model's arbitrary choice of how finely to slice a paper set the
-    published score. `score_ecu` already used `P = {s.id for s in primaries}` --
-    a set -- for synthesis coverage, which is the one place duplicate ids were
-    collapsed and good evidence the duplication was never intended anywhere.
+        primary said benefit -> recorded null_effect   20
+        primary said benefit -> recorded harm           4
+        primary said benefit -> recorded unclear        4
+        primary said unclear/null -> recorded harm      3
 
-    RESOLUTION RULE: keep the LOWEST s_value, i.e. the most conservative claim.
+    So 28 of 87 trials that found an effect on the endpoint they were DESIGNED
+    AND POWERED to test were filed as evidence against. That is a systematic
+    score-lowering bias, and it is most of why an 80-study creatine corpus
+    returned d = -0.265 for muscle strength -- a result that contradicts one of
+    the most replicated findings in sports nutrition.
 
-    The plan called for preferring the `is_primary_outcome` claim first, and
-    that is wrong on inspection: a primary `benefit` alongside a secondary
-    `null_effect` would RAISE the score, which is exactly the direction this
-    function exists to prevent. Invariant 7 makes nulls evidence against, so
-    dropping a null in favour of a benefit is the one collapse that must never
-    happen. Lowest s_value is deterministic, never inflates, and needs nothing
-    threaded through `to_studies`.
+    The rule now, in order:
 
-    SR-derived rows are collapsed on the same key. A trial reachable both
-    directly and through a review table is still one trial (invariant 6).
+    1. A claim flagged `is_primary_outcome` wins. That is the question the trial
+       was built to answer; secondary endpoints are hypothesis-generating and
+       usually underpowered. If several claims are primary, take the most
+       conservative among THEM.
+    2. No primary declared (71 of 158 extractions) -> MAJORITY direction, ties
+       broken conservatively. Not "any benefit wins": measure twenty endpoints
+       at p<0.05 and one turns up by chance, so letting a lone positive override
+       nine nulls is the multiple-comparisons trap this pipeline exists to
+       resist. Not "lowest wins" either, because that penalises a trial for
+       measuring more things.
+
+    Nulls are still never silently dropped -- a null that is the primary, or the
+    majority, still wins. Invariant 7 is intact; what changed is that a null is
+    no longer allowed to overrule the trial's own designed answer.
+
+    SR-derived rows carry is_primary=False (a review table designates no
+    endpoint) and are collapsed on the same key: a trial reachable both directly
+    and through a review is still one trial (invariant 6).
     """
-    best: dict[str, tuple] = {}
+    _CONS = {"harm": 0, "null_effect": 1, "unclear": 1, "benefit": 2}
+
+    def _rank(pair):
+        return _CONS.get(pair[0].direction, 1)
+
+    by_id: dict[str, list[tuple]] = {}
     order: list[str] = []
-    n_collapsed = 0
-    for study, meta in pairs:
-        k = study.id
-        if k not in best:
-            best[k] = (study, meta)
-            order.append(k)
-            continue
-        n_collapsed += 1
-        if study.s_value() < best[k][0].s_value():
-            best[k] = (study, meta)
-    return [best[k] for k in order], n_collapsed
+    for pair in pairs:
+        sid = pair[0].id
+        if sid not in by_id:
+            by_id[sid] = []
+            order.append(sid)
+        by_id[sid].append(pair)
+
+    kept, n_collapsed = [], 0
+    for sid in order:
+        group = by_id[sid]
+        n_collapsed += len(group) - 1
+        if len(group) == 1:
+            kept.append(group[0]); continue
+        primaries = [g for g in group if (g[1] or {}).get("is_primary")]
+        if primaries:
+            kept.append(min(primaries, key=_rank)); continue
+        counts: dict[str, int] = {}
+        for g in group:
+            counts[g[0].direction] = counts.get(g[0].direction, 0) + 1
+        top = max(counts.values())
+        winners = [d for d, c in counts.items() if c == top]
+        winner = min(winners, key=lambda d: _CONS.get(d, 1))
+        kept.append(next(g for g in group if g[0].direction == winner))
+    return kept, n_collapsed
 
 
 def _now() -> str:
@@ -290,7 +319,7 @@ def build_ecus(extractions: list[dict], product: dict, *,
     per_outcome: dict[str, list[dict]] = {}
     for item in extractions:
         rec, ext = item["record"], item["extraction"]
-        for outcome_id, study, dose in to_studies(
+        for outcome_id, study, dose, is_primary in to_studies(
             rec, ext, product, item.get("registry"),
             ignore_population=ignore_population,
         ):
@@ -312,7 +341,7 @@ def build_ecus(extractions: list[dict], product: dict, *,
     form_mix: dict[str, int] = {}
     for item in extractions:
         rec, ext = item["record"], item["extraction"]
-        for outcome_id, study, dose in to_studies(
+        for outcome_id, study, dose, is_primary in to_studies(
             rec, ext, product, item.get("registry"),
             ignore_population=ignore_population,
             dose_bands=bands,
@@ -328,11 +357,12 @@ def build_ecus(extractions: list[dict], product: dict, *,
             key = vocab.ecu_key(ingredient, form_id, None if band_version == 0
                                 else product.get("dose_band"), outcome_id, pop["id"])
             buckets.setdefault(key, []).append(
-                (study, {"outcome_id": outcome_id, "dose": dose}))
+                (study, {"outcome_id": outcome_id, "dose": dose,
+                         "is_primary": is_primary}))
 
     n_sr_derived = 0
     for rec in (sr_derived or []):
-        for outcome_id, study, dose in sr_derived_to_studies(
+        for outcome_id, study, dose, is_primary in sr_derived_to_studies(
                 rec, product, bands=bands):
             form_mix[study.form_match] = form_mix.get(study.form_match, 0) + 1
             if exact_form_only and study.form_match != "exact":
@@ -342,6 +372,7 @@ def build_ecus(extractions: list[dict], product: dict, *,
                                 else product.get("dose_band"), outcome_id, pop["id"])
             buckets.setdefault(key, []).append(
                 (study, {"outcome_id": outcome_id, "dose": dose,
+                         "is_primary": is_primary,
                          "sr_derived": True, "from_reviews": rec.get("from_reviews")}))
             n_sr_derived += 1
     if n_sr_derived:

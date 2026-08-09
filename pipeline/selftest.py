@@ -397,15 +397,15 @@ def main():
         e["extraction"]["S3"]["population_axes"] = pop
         return e
     deficient = {**axes, "deficiency_status": "deficient"}
-    _, st_def, _ = to_studies(with_pop(deficient)["record"] | {"ingredient": "magnesium"},
+    _, st_def, _, _ = to_studies(with_pop(deficient)["record"] | {"ingredient": "magnesium"},
                            with_pop(deficient)["extraction"], product)[0]
-    _, st_match, _ = to_studies(with_pop(axes)["record"] | {"ingredient": "magnesium"},
+    _, st_match, _, _ = to_studies(with_pop(axes)["record"] | {"ingredient": "magnesium"},
                              with_pop(axes)["extraction"], product)[0]
     check("population axes are still EXTRACTED and recorded",
           st_def.pop_match != st_match.pop_match,
           f"deficient vs general-adult: {st_def.pop_match} — recorded even though "
           f"APPLY_POP_IN_WEIGHT is off, so re-enabling costs one line")
-    _, st_unknown, _ = to_studies(
+    _, st_unknown, _, _ = to_studies(
         {"_canonical": "x", "ingredient": "magnesium", "design_rank": 4},
         {"S3": None, "outcomes": [{"claim": {"direction": "benefit"},
                                    "outcome_vocab_id": "sleep_onset",
@@ -1341,15 +1341,45 @@ def main():
 
     _s = lambda i, d: Study(id=i, design_rank=4, n=40, direction=d,
                             magnitude="meaningful" if d == "benefit" else None)
+    # No primary declared -> MAJORITY wins, ties broken conservatively.
     _kept, _n = _one_study_one_vote([
         (_s("a", "benefit"), {"outcome_id": "o"}),
         (_s("a", "null_effect"), {"outcome_id": "o"}),
         (_s("b", "benefit"), {"outcome_id": "o"}),
     ])
-    check("collapse keeps one row per trial, most conservative, in first-seen order",
+    check("no primary + 1-1 tie collapses conservatively",
           [s.id for s, _ in _kept] == ["a", "b"]
           and _kept[0][0].direction == "null_effect" and _n == 1,
           f"{[(s.id, s.direction) for s, _ in _kept]} collapsed={_n}")
+
+    # THE FIX: the trial's own primary endpoint outranks a secondary null.
+    _kept2, _ = _one_study_one_vote([
+        (_s("a", "null_effect"), {"outcome_id": "o", "is_primary": False}),
+        (_s("a", "benefit"), {"outcome_id": "o", "is_primary": True}),
+    ])
+    check("a PRIMARY benefit is not overruled by a secondary null",
+          _kept2[0][0].direction == "benefit",
+          "measured: 28 of 87 trials had their primary benefit filed as null/harm")
+
+    # ...but a primary NULL still wins over a secondary benefit. Invariant 7.
+    _kept3, _ = _one_study_one_vote([
+        (_s("a", "benefit"), {"outcome_id": "o", "is_primary": False}),
+        (_s("a", "null_effect"), {"outcome_id": "o", "is_primary": True}),
+    ])
+    check("a PRIMARY null is not overruled by a secondary benefit",
+          _kept3[0][0].direction == "null_effect",
+          "the fix must not become 'any benefit wins'")
+
+    # Majority: 3 nulls vs 1 benefit, no primary -> null. Resists cherry-picking.
+    _kept4, _ = _one_study_one_vote([
+        (_s("a", "benefit"), {"outcome_id": "o"}),
+        (_s("a", "null_effect"), {"outcome_id": "o"}),
+        (_s("a", "null_effect"), {"outcome_id": "o"}),
+        (_s("a", "null_effect"), {"outcome_id": "o"}),
+    ])
+    check("one positive among many nulls does not win without a primary",
+          _kept4[0][0].direction == "null_effect",
+          "multiple-comparisons guard")
 
     # Batched S6 matches results back BY INDEX. If it ever matched by position,
     # a reordered or short array would shift every mapping onto the wrong claim
@@ -1465,7 +1495,7 @@ def main():
              _extraction("cognitive_function", "benefit", 20000)]
     per_outcome_match = {}
     for item in mixed:
-        for oid, st, _d in _to_studies(
+        for oid, st, _d, _p in _to_studies(
                 item["record"], item["extraction"], _prod, None,
                 ignore_population=True,
                 dose_bands={"muscle_strength": {"low": 3000, "high": 3000},
