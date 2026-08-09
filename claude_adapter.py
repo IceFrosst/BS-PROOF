@@ -140,8 +140,35 @@ TIER_MODEL = {
 # Valid levels: low, medium, high, xhigh, max. Verified working with
 # `-p --safe-mode` returning schema-valid output.
 TIER_EFFORT = {
+    # A stays UNSET, and that is a measurement, not an oversight. S8 isolated,
+    # 7 studies: output was 16,068 (default) / 19,393 (low) / 19,000 (default).
+    # Tier A output does not respond to effort at all -- the spread is noise, and
+    # 'low' was the highest of the three. Setting it would buy nothing and cost a
+    # cache partition (see the one-time 81k cache_write when B switched levels).
     "A": os.environ.get("SP_EFFORT_A") or None,
-    "B": os.environ.get("SP_EFFORT_B") or None,
+    # B is 'low'. MEASURED 2026-08-10, S5 isolated, 3 reps per level, same 7 RCTs:
+    #
+    #   default   null-share 80/76/71%   out_tok mean 16,619   $0.271
+    #   low       null-share 68/66/68%   out_tok mean  4,372   $0.089
+    #
+    # -73% output tokens, -67% cost on the agent with the largest output in the
+    # pipeline. Whole-pipeline arms: $0.922 -> $0.460, exactly half.
+    #
+    # THE QUALITY CHECK THAT MATTERED. Claim-level null share IS consistently
+    # ~8pt lower at low effort, with no overlap between the two sets of three
+    # reps -- and that is the score-INFLATING direction, so it was worth
+    # chasing. It turned out not to be mislabelling: on 15 endpoints both levels
+    # extracted, they agreed on direction 15/15 with ZERO null->benefit flips.
+    # The difference is WHICH endpoints get picked, which varies run to run at
+    # both levels.
+    #
+    # And after the one-study-one-vote collapse (assemble._one_study_one_vote)
+    # it does not reach the score at all: every scored (study, outcome) unit
+    # resolves to the same direction at both levels, because the collapse keeps
+    # the most conservative claim. Doing that fix first is what made this safe.
+    #
+    # Sample is 7 studies. SP_EFFORT_B= (empty) reverts.
+    "B": os.environ.get("SP_EFFORT_B", "low") or None,
     # C is 'high' and it is NOT optional: it is what pays for tier C running on
     # sonnet instead of opus. Dropping to sonnet at default effort is arm C of
     # the earlier per-claim test, which was the only arm to fail a study.
