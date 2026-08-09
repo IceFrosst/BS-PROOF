@@ -382,7 +382,7 @@ def main(argv: list[str]) -> int:
             tag = "SYNTHETIC "
             run_context["studies_targeted"] = len(extractions)
             run_context["studies_ok"] = len(extractions)
-        elif pilot or grok:
+        else:
             import workers
             if grok:
                 import grok_adapter as ga
@@ -415,7 +415,7 @@ def main(argv: list[str]) -> int:
                 # not a sample, which changes how the score may be read.
                 run_context["concurrency"] = ga.MAX_CONCURRENCY
                 run_context["studies_in_flight"] = in_flight
-            else:
+            elif pilot:
                 import pilot_adapter as pa
                 if not pa.preflight():
                     return 1
@@ -425,6 +425,31 @@ def main(argv: list[str]) -> int:
                 in_flight = 4
                 ga = None
                 run_context["concurrency"] = 4
+                run_context["studies_in_flight"] = in_flight
+            else:
+                # PRODUCTION. This branch used to live below in an `else:` of
+                # its own, and it was a wiring-shaped stub rather than an
+                # implementation: it passed `text_for=lambda r: title`, so every
+                # subagent read the TITLE of the paper and nothing else. S5 was
+                # asked what a trial concluded from its title, and correctly
+                # answered {"claims": []}. It also ignored --limit, used
+                # DEFAULT_WIRING_SCORE_CAP, and set none of the run_context keys
+                # the report renders -- which is why production reports came out
+                # empty and every run said "no scored outcomes".
+                #
+                # The pilot/grok path was the only real implementation. There is
+                # no reason for a second one: the backends differ ONLY in which
+                # `call` they inject, which is exactly what call_fn is for.
+                # Merged 2026-08-09.
+                import claude_adapter as ca
+                if not ca.preflight():
+                    return 1
+                call_fn = None                  # workers default = claude_adapter
+                prompt_version = ca.PROMPT_VERSION
+                tag = ""
+                in_flight = ca.MAX_CONCURRENCY
+                ga = None
+                run_context["concurrency"] = ca.MAX_CONCURRENCY
                 run_context["studies_in_flight"] = in_flight
 
             targets = primaries if limit is None else primaries[:limit]
@@ -507,27 +532,6 @@ def main(argv: list[str]) -> int:
                      "in_corpus": (s.get("_resolution") or {}).get("n_resolved"),
                      "q_s": s.get("q_s")}
                     for s in syntheses_for_score if s.get("resolved")]
-        else:
-            import workers
-            import claude_adapter
-            if not claude_adapter.preflight():
-                return 1
-            texts = {p["canonical_id"]: (p.get("title") or "") for p in primaries}
-            raw = workers.extract_corpus(
-                [{**p, "_canonical": p["canonical_id"], "ingredient": ingredient}
-                 for p in primaries[:DEFAULT_WIRING_SCORE_CAP]],
-                text_for=lambda r: texts.get(r["_canonical"], ""),
-                outcome_allowlist=outcome_allowlist,
-            )
-            extractions = [{
-                "record": r["record"],
-                "extraction": r["extraction"],
-                "registry": store.registry_facts(r["record"].get("registration_id"))
-                            if r["record"].get("registration_id") else None,
-            } for r in raw]
-            prompt_version = claude_adapter.PROMPT_VERSION
-            tag = ""
-
         run_context["prompt_version"] = prompt_version
 
         # Token + cost accounting for the run report. On a subscription the
