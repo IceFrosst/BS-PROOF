@@ -34,6 +34,49 @@ none of the things that make this product different from a lookup table.
 
 ---
 
+## FIRST RESULT — anchor #1 FAILS, 2026-08-10
+
+Run against the 80-study creatine corpus
+(`reports/runs/20260809_233120_creatine_creatine-monohydrate_claude-top5-per-o`),
+Claude production backend, `PROMPT_VERSION` v1.9:
+
+| anchor | expected | measured | verdict |
+|---|---|---|---|
+| #1 creatine / monohydrate / 3–5 g/d / muscle strength+power / healthy trained adults | **+80 … +95** (conf A) | muscle_strength **−6**, muscle_power **−17** | **SIGN ERROR** |
+
+`pipeline.calibration.evaluate({"1": -6})` returns `face_valid: false` with a
+`sign_errors` entry. That class is documented in `calibration.py` as *FATAL —
+the system is broken*, and this is exactly the job this set exists to do: put a
+result on the wrong side of zero and say so without needing a scientist.
+
+**Reproduce:**
+
+```python
+from pipeline import calibration as cal
+cal.evaluate({"1": -6})     # -> face_valid: False, sign_errors: [...]
+```
+
+**What is NOT the cause** (each measured, not assumed):
+
+- *Claim double-counting* — fixed 2026-08-10 (`_one_study_one_vote`). On this
+  corpus it collapsed 31 duplicate claims; the score moved, the sign did not.
+- *The collapse overruling primary endpoints* — fixed the same day. It had
+  contradicted the trial's own primary in 31 of 87 extractions, 28 of them
+  benefit→null. Fixing it moved muscle_strength −14 → −6. Still negative.
+- *Population contamination* — the A/B (disease trials excluded) moves every
+  outcome by ≤1 point.
+
+**The leading remaining hypothesis:** S5 extracts **73–80% `null_effect` claims**
+(measured, three reps per effort level). Invariant 7 prices a null at −0.7, so a
+null-dominated claim set drives `d` negative regardless of what the trials
+found. Whether that reflects the literature (creatine trials genuinely carry
+many null secondary endpoints) or an over-null-calling extractor is the open
+question, and it is the next thing to measure.
+
+Until anchor #1 passes, **no score from this pipeline should be published.**
+
+---
+
 ## Confidence key
 
 - **A** — policy-level consensus, large RCTs, Cochrane. Sign is not seriously disputed.
