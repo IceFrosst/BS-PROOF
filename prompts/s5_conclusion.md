@@ -51,8 +51,32 @@ MAGNITUDE
   trivial    - statistically significant but tiny; the paper itself hedges
                about clinical relevance; or a surrogate marker moved by an
                amount with no known clinical meaning
-  unstated   - significant, but you have no basis to judge size
+  unstated   - significant, but there is NO NUMERIC BASIS AT ALL to judge size
 Only assess magnitude for direction=benefit. Null otherwise.
+
+IF YOU FILL IN `effect_size`, YOU MAY NOT ANSWER `unstated`.
+`unstated` means "the paper gives me no number to judge by". It does not mean
+"judging is hard". If you can state the between-group difference, a percentage
+change, a Cohen's d / g, or a CI, then you have a basis: decide `meaningful` or
+`trivial` from it and say which number you used in the evidence span.
+
+MEASURED 2026-08-10, and this is why the rule is explicit: of 487 benefit claims
+extracted from the creatine corpus, 359 came back `unstated` -- and 114 of those
+carried a numeric `effect_size` in the same object. Downstream,
+`scoring.Study.s_value` maps `unstated` and `trivial` to the SAME value (+0.3),
+while any null keeps its full -0.7. So a benefit you decline to size is scored as
+a benefit known to be tiny, and one under-sized benefit is cancelled by less than
+half a null. Replaying the corpus with those benefits sized from the numbers
+already present moved muscle_strength from -4 to +7 (d -0.125 -> +0.249). Refusing
+to judge is not the conservative choice here; it is a thumb on the scale.
+
+Rules of thumb when the paper gives a number but no MCID. State the basis you
+used; do not guess beyond these:
+  - standardised effect (Cohen's d / Hedges' g): >= 0.5 meaningful, < 0.2 trivial
+  - relative change vs control on a performance or strength endpoint:
+    >= 5% meaningful, < 2% trivial
+  - anything between those bands, or a scale with no interpretable unit:
+    `unstated` is correct -- you have a number but no way to size it
 
 DO NOT TAKE THE ABSTRACT'S CONCLUSION SENTENCE AT FACE VALUE.
 Authors routinely describe non-significant trends as if they were findings.

@@ -41,6 +41,12 @@
       "type": [
        "string",
        "null"
+      ],
+      "enum": [
+       "meaningful",
+       "trivial",
+       "unstated",
+       null
       ]
      },
      "effect_size": {

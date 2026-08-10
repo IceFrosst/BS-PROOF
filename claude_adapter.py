@@ -80,6 +80,18 @@ SHARED_PROMPT = PROMPTS / "_shared.md"
 
 # Bump when you edit ANY prompt (including _shared.md). This is in the cache key.
 # Forget to bump it and you will silently serve stale extractions forever.
+# v1.11 (2026-08-10): S5 may not answer magnitude=`unstated` when it also filled in
+# `effect_size`. MEASURED on the 150-study creatine corpus: 359 of 487 benefit
+# claims came back `unstated`, and 114 of those carried a number in the same
+# object. `scoring.Study.s_value` maps `unstated` and `trivial` to the SAME +0.3
+# while any null keeps its full -0.7, so declining to size a benefit scores it as a
+# benefit known to be tiny, and it takes 2.33 sized benefits to cancel one null.
+# Replaying the dumped extractions with those benefits sized from the numbers
+# already present moved muscle_strength from -4 to +7 (d -0.125 -> +0.249) -- the
+# largest single lever measured, larger than either scope refusal in
+# docs/REVIEW_PENDING.md #4. The prompt now carries explicit thresholds (d>=0.5 or
+# >=5% relative = meaningful; d<0.2 or <2% = trivial) so the judgement is not
+# re-invented per call, and `unstated` is reserved for genuinely no numeric basis.
 # v1.10 (2026-08-10): S3 reports `comparator` and `self_declared_underpowered`.
 # Measured on the 80-study creatine corpus: of the 23 null verdicts driving
 # muscle_strength and muscle_power negative, 3 came from trials where EVERY arm
@@ -99,7 +111,7 @@ SHARED_PROMPT = PROMPTS / "_shared.md"
 # v1.6 (2026-08-08): S2 reports results_table + per-study design. SR-table trials
 # now enter evidence mass, so S2's output moves scores and not just confidence.
 # v1.5 (2026-08-07): S3 prompt shortened, SR label resolve, review_methods.
-PROMPT_VERSION = "v1.10"
+PROMPT_VERSION = "v1.11"
 
 # Tier -> model. FULL IDs, NOT ALIASES.
 #
