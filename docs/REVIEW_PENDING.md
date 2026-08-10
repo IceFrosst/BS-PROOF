@@ -104,7 +104,17 @@ recovery-construct rule, Limitations in `best_text`. Verified on a cold-cache
 Still open from this thread, in order:
 1. **muscle_power is the new outlier** (−11, d=−0.253) and its nulls were never
    audited — the audit covered muscle_strength only. Audit before touching it.
-2. **Confidence recalibration, measured on the v1.12 dump** — with d clean it now
+2. DONE 2026-08-11: SCORING_MODEL v3 shipped (unknown-neutral RoB banding,
+   ROB_KNOWN_LOW/SOME + ROB_MIN_KNOWN_LOW in scoring.py; K unchanged at 3.0).
+   muscle_power audit (12 verifiers): ~5 legitimate nulls, ~5 wrong (topical
+   cream — relevance gate now rejects topical routes; creatine+bicarb null that
+   compared creatine TO creatine while creatine beat placebo ES 0.37–0.83; two
+   post-fatigue/recovery construct mappings that survived the v1.12 rule — S6B
+   needs post-fatigue-power examples), 2 mixed. v3 run: strength +4 (POSITIVE),
+   LBM +12, power −4, endurance −6. Remaining claim-level gap: a claim comparing
+   two ingredient arms inside an otherwise-controlled trial (bicarb case) is
+   invisible to the study-level comparator field.
+   Old item follows: **Confidence recalibration, measured on the v1.12 dump** — with d clean it now
    helps instead of amplifying noise: unknown-neutral RoB banding moves
    strength 0→+2, power −11→−6, LBM +5→+11; adding K=1.5 gives +3/−8/+19.
    Unknown-neutral banding is a CORRECTNESS fix (scoring an unknowable registry

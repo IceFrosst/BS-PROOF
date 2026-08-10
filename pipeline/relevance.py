@@ -102,6 +102,17 @@ def relevance_check(record: dict, ingredient: str) -> tuple[bool, str]:
     if n_mentions and n_mentions == n_marker:
         return False, "marker mention only (e.g. creatine kinase)"
 
+    # 1c) Topical route in the TITLE. Audited 2026-08-11: "Repeated Application
+    # of a Novel Creatine CREAM" voted -0.7 against ORAL creatine's muscle_power
+    # claim -- and its abstract reports no oral-arm result at all, so the null
+    # was not just wrong-route, it was unsupported by any text. This pipeline
+    # scores oral supplementation (SPEC section 1); a cream answers a different
+    # question. Title-only, like the clinical gate: a trial that merely MENTIONS
+    # topical delivery in the abstract still passes.
+    if re.search(r"\b(cream|topical|transdermal|ointment|gel applied|dermal)\b",
+                 title_l):
+        return False, "topical/transdermal route in title"
+
     # 2) Hard reject: clinical/IV framing in the TITLE.
     if _CLINICAL.search(title):
         return False, "clinical/IV context in title"

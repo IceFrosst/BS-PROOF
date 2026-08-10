@@ -1899,6 +1899,14 @@ def main():
                      "Level in Patients", "abstract": "CPK levels..."}
     check("phosphokinase counts as the marker too",
           _rc(_cpk, "creatine")[0] is False)
+    check("a topical cream is not evidence about oral supplementation",
+          _rc({"title": "Repeated Application of a Novel Creatine Cream Improves "
+                        "Muscular Peak and Average Power",
+               "abstract": "creatine cream applied to the leg"}, "creatine")
+          == (False, "topical/transdermal route in title"))
+    check("mentioning topical delivery in the abstract does not reject",
+          _rc({"title": "Oral creatine supplementation and resistance training",
+               "abstract": "unlike topical routes, oral creatine..."}, "creatine")[0] is True)
     check("other ingredients are untouched by the marker rule",
           _rc({"title": "Oral magnesium supplementation for sleep",
                "abstract": "magnesium glycinate 300 mg"}, "magnesium")[0] is True)

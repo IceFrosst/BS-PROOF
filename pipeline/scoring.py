@@ -81,7 +81,7 @@ APPLY_DOSE_IN_WEIGHT = False
 # must never be read side by side as if the numbers meant the same thing, and
 # scripts/archive_reports.py enforces that by sweeping old-model runs out of
 # reports/runs/ into reports/archive/<model>/.
-SCORING_MODEL = "v2-four-arc"
+SCORING_MODEL = "v3-rob-known"
 
 # What each model meant, so an archived report can still be understood:
 SCORING_MODEL_HISTORY = {
@@ -92,7 +92,13 @@ SCORING_MODEL_HISTORY = {
         "w_study = design x RoB x size x funding x OA (quality only). Form, "
         "dose and population are ARCS, each carrying a verdict and its "
         "coverage. Displayed number is 0-100 = 100 x c x mean(effect, form, "
-        "dose); the signed score is retained internally.",
+        "dose); the signed score is retained internally. RoB banded on raw "
+        "hit COUNTS (>=5 low, >=3 some_concerns), so an item nobody could "
+        "know counted as a miss. Superseded 2026-08-10.",
+    "v3-rob-known":
+        "identical to v2 except RoB is banded on the RATIO of hits among "
+        "KNOWN items, so an unknowable item no longer counts as evidence of "
+        "bias. Everything else -- arcs, composite, K, S_VALUE -- unchanged.",
 }
 
 
@@ -107,11 +113,34 @@ def band_for(score: int) -> str:
     return "strong evidence against / harm"
 
 
+# RoB banding thresholds (SCORING_MODEL v3, 2026-08-10; decision delegated by
+# the founder). Banded on the RATIO of hits among KNOWN items, not raw counts.
+#
+# Why: measured on the 143-study creatine corpus, items 3-6 (registration,
+# registry match, attrition, ITT) were UNKNOWN on 117-132 of 143 studies --
+# most of this literature predates trial registries -- so under count-based
+# banding a study with 4 unknowable items had a ceiling of 2 hits and was
+# structurally locked into "high" (0.25x) no matter how well it was run:
+# 136/143 banded high, zero low. Scoring an unknowable item as evidence of
+# bias is inferring a field we cannot see (invariant 5), and it was the third
+# unknown-punished-as-failure defect of the same shape (invariant 7's fields,
+# magnitude=unstated). Values below are the ones measured in the 2026-08-10
+# counterfactual before shipping; SPEC 13 owns them like every constant.
+ROB_KNOWN_LOW = 0.8     # >=80% of known items clean, and at least 2 known
+ROB_KNOWN_SOME = 0.5    # >=50% of known items clean
+ROB_MIN_KNOWN_LOW = 2   # "low" needs at least this many items actually known
+
+
 def rob_band(items: dict) -> tuple[str, int, int]:
     scored = [v for v in items.values() if v in (0, 1)]
     n_known = len(scored); hits = sum(scored)
-    if hits >= 5: return "low", hits, n_known
-    if hits >= 3: return "some_concerns", hits, n_known
+    if n_known == 0:
+        return "high", 0, 0   # nothing known at all is still not reassuring
+    ratio = hits / n_known
+    if ratio >= ROB_KNOWN_LOW and n_known >= ROB_MIN_KNOWN_LOW:
+        return "low", hits, n_known
+    if ratio >= ROB_KNOWN_SOME:
+        return "some_concerns", hits, n_known
     return "high", hits, n_known
 
 
