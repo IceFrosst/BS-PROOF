@@ -598,7 +598,7 @@ def main(argv: list[str]) -> int:
         #
         # A is what gets STORED. B is computed, printed and reported, never
         # blended into A -- same discipline as invariant 9 for backends.
-        def _score(variant_b: bool):
+        def _score(variant_b: bool, stats: dict | None = None):
             return build_ecus(
                 extractions, product, syntheses=syntheses_for_score,
                 prompt_version=prompt_version,
@@ -606,9 +606,12 @@ def main(argv: list[str]) -> int:
                 ignore_population=not variant_b,
                 exclude_offtarget_population=variant_b,
                 searched_outcomes=searched, sr_derived=sr_derived,
+                stats=stats,
             )
 
-        rows = _score(False)
+        _elig: dict = {}
+        rows = _score(False, stats=_elig)
+        run_context["eligibility"] = _elig
         try:
             rows_b = _score(True)
         except Exception as e:

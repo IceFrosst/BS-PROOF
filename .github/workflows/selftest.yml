@@ -12,28 +12,21 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      # See dashboard.yml: selftest needs httpx transitively. Missing until
+      # 2026-08-10; this workflow had never been green.
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
       - name: Validate schemas parse
         run: python -c "import json,glob,sys; [json.load(open(f)) for f in glob.glob('schemas/*.json')]; print('8 schemas ok')"
-      - name: Assert no model in deterministic layer
-        run: |
-          if grep -rn "claude_adapter" pipeline/ sources/; then
-            echo "::error::a model boundary leaked into the deterministic layer"
-            exit 1
-          fi
-          echo "deterministic layer clean"
-      - name: Assert every prompt has a schema
-        run: |
-          python - <<'PY'
-          import re, pathlib, sys
-          src = pathlib.Path("claude_adapter.py").read_text()
-          agents = re.findall(r'"(S\d)":\s*\("([ABC/]+)",\s*"([^"]+)",\s*"([^"]+)"', src)
-          missing = [f for _,_,s,p in agents
-                     for f in (pathlib.Path("schemas")/s, pathlib.Path("prompts")/p)
-                     if not f.exists()]
-          if missing:
-              print("missing:", *missing, sep="\n  "); sys.exit(1)
-          print(f"{len(agents)} subagents wired")
-          PY
+      # Replaces two text-matching gates that both failed for the same reason:
+      # a grep for "claude_adapter" in pipeline/ (which flagged the legitimate
+      # test-only import at pipeline/selftest.py:1262 and so was red on every
+      # push after 30b768f), and a re.findall over the AGENTS dict (which broke
+      # if anyone reformatted it). pipeline/invariants.py reads the AST, so
+      # aliasing, line wrapping and nesting cannot hide an import, and its
+      # allowlist requires a reason and fails when it goes stale.
+      - name: Structural invariants (model boundary, agent wiring)
+        run: python -m pipeline.invariants
       - name: Deterministic regression
         run: |
           set -o pipefail

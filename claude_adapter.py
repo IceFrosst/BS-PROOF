@@ -80,6 +80,13 @@ SHARED_PROMPT = PROMPTS / "_shared.md"
 
 # Bump when you edit ANY prompt (including _shared.md). This is in the cache key.
 # Forget to bump it and you will silently serve stale extractions forever.
+# v1.10 (2026-08-10): S3 reports `comparator` and `self_declared_underpowered`.
+# Measured on the 80-study creatine corpus: of the 23 null verdicts driving
+# muscle_strength and muscle_power negative, 3 came from trials where EVERY arm
+# received creatine (timing, schedule, or creatine+X vs creatine) and 6 from
+# trials the authors themselves called pilots or reported as under-recruited
+# against their own power calculation. Neither is evidence that creatine does
+# not work, and both were entering the score at the full -0.7.
 # v1.9 (2026-08-10): S5 gains a granularity rule -- ONE claim per distinct
 # endpoint construct. It had none, so the same finding measured across a
 # sex x timepoint x body-region grid came back as 20 claims, and (before the
@@ -92,7 +99,7 @@ SHARED_PROMPT = PROMPTS / "_shared.md"
 # v1.6 (2026-08-08): S2 reports results_table + per-study design. SR-table trials
 # now enter evidence mass, so S2's output moves scores and not just confidence.
 # v1.5 (2026-08-07): S3 prompt shortened, SR label resolve, review_methods.
-PROMPT_VERSION = "v1.9"
+PROMPT_VERSION = "v1.10"
 
 # Tier -> model. FULL IDs, NOT ALIASES.
 #

@@ -11,8 +11,20 @@ from __future__ import annotations
 import hashlib, json, os, time
 from pathlib import Path
 
-import httpx
-
+# httpx is imported INSIDE get_json, not here. Measured 2026-08-10: a module-level
+# import made `python3 -m pipeline.selftest` exit 1 on any interpreter without the
+# dependency installed -- it died at EUROPE PMC NORMALISATION, because
+# sources.europepmc imports this module for get_json while the checks themselves
+# only exercise pure normalisation functions. That is a zero-network, zero-model
+# suite failing on a network library it never calls.
+#
+# The cost was not the crash, it was WHO hit it: CLAUDE.md's command block told
+# every agent to run exactly that command, so an agent following the docs got a
+# traceback and started debugging a regression that did not exist. The 2026-08-05
+# audit flagged the python/python3 mismatch and it was still live five days later.
+#
+# sources/fulltext.py already did it this way in two places (its PDF and HTML
+# fetchers), so this is the file matching the pattern, not inventing one.
 from sources.ratelimit import throttle
 
 CACHE_DIR = Path(__file__).parent.parent / "out" / "http_cache"
@@ -62,6 +74,10 @@ def get_json(url: str, params: dict | None = None, *, timeout: int = 60,
     cache_file = CACHE_DIR / f"{_key(url, params)}.json"
     if use_cache and cache_file.exists():
         return json.loads(cache_file.read_text())
+
+    # Deliberately after the cache read: a cached run stays fully offline and
+    # needs no transport library at all.
+    import httpx
 
     last = None
     for attempt in range(retries):

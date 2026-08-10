@@ -19,6 +19,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      # pipeline.selftest imports sources.europepmc -> sources.http -> httpx.
+      # Without this the suite dies on ModuleNotFoundError partway through, which
+      # is why this workflow was red on every push from its creation until
+      # 2026-08-10 and never once ran the 319 checks it claims to gate on.
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
       - name: Pipeline selftest
         env:
           PYTHONUTF8: "1"

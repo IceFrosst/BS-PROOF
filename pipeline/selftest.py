@@ -1311,15 +1311,73 @@ def main():
           six[0]["components"]["H"] == 0,
           f"H={six[0]['components']['H']}")
 
-    # Invariant 7: a null is evidence AGAINST. Collapsing must never drop one
-    # in favour of a benefit -- that is the score-inflating direction.
+    # Invariant 7: a null is evidence AGAINST, and collapsing must never let a
+    # benefit simply overwrite one. A 1-1 tie with no primary is not a win for
+    # either -- it reads as `unclear`, s = 0.0. Verified 2026-08-10 against
+    # PMC6534934, where the old conservative tiebreak filed a significant
+    # +17.9% between-group power benefit as evidence against creatine.
     mixed = _b2([_ext("doi:10.1/a", [("benefit", "meaningful"), ("null_effect", None)])],
                 _pr, ignore_population=True)
     only_null = _b2([_ext("doi:10.1/a", [("null_effect", None)])],
                     _pr, ignore_population=True)
-    check("a null_effect is never dropped in favour of a benefit",
-          mixed[0]["score"] == only_null[0]["score"],
-          f"mixed={mixed[0]['score']} null-only={only_null[0]['score']}")
+    only_ben = _b2([_ext("doi:10.1/a", [("benefit", "meaningful")])],
+                   _pr, ignore_population=True)
+    check("a benefit/null tie is neither side's win",
+          only_null[0]["score"] < mixed[0]["score"] < only_ben[0]["score"],
+          f"null={only_null[0]['score']} tie={mixed[0]['score']} benefit={only_ben[0]['score']}")
+    check("a benefit/null tie adds no evidence in either direction",
+          mixed[0]["components"]["d"] == 0.0,
+          f"d={mixed[0]['components']['d']}")
+
+    # ELIGIBILITY (2026-08-10). A trial with no ingredient-free arm, or one its
+    # own authors call a pilot, cannot vote on whether the ingredient works.
+    def _flagged(canonical, direction, **s3):
+        e = _ext(canonical, [(direction, "meaningful" if direction == "benefit" else None)])
+        e["extraction"]["S3"].update(s3)
+        return e
+    _base = _b2([_flagged("doi:10.1/e1", "null_effect"),
+                 _flagged("doi:10.1/e2", "null_effect")], _pr, ignore_population=True)
+    _st = {}
+    _gated = _b2([_flagged("doi:10.1/e1", "null_effect"),
+                  _flagged("doi:10.1/e2", "null_effect",
+                           comparator="all_arms_get_ingredient")],
+                 _pr, ignore_population=True, stats=_st)
+    check("a trial where every arm gets the ingredient does not vote",
+          _gated[0]["evidence"]["n_primaries"] == 1
+          and _base[0]["evidence"]["n_primaries"] == 2
+          and _st["ineligible_by_reason"] == {"no_ingredient_free_arm": 1},
+          f"n={_gated[0]['evidence']['n_primaries']} stats={_st}")
+
+    _st2 = {}
+    _pilot = _b2([_flagged("doi:10.1/e1", "null_effect"),
+                  _flagged("doi:10.1/e2", "null_effect",
+                           self_declared_underpowered=True)],
+                 _pr, ignore_population=True, stats=_st2)
+    check("a self-declared pilot's null does not vote",
+          _pilot[0]["evidence"]["n_primaries"] == 1
+          and _st2["ineligible_by_reason"] == {"self_declared_underpowered": 1})
+
+    # ...and SYMMETRICALLY: a pilot's BENEFIT is dropped too. Keeping pilot
+    # benefits while dropping pilot nulls is the one-way handling of uncertainty
+    # this gate exists to remove.
+    _st3 = {}
+    _pb = _b2([_flagged("doi:10.1/e1", "benefit"),
+               _flagged("doi:10.1/e2", "benefit", self_declared_underpowered=True)],
+              _pr, ignore_population=True, stats=_st3)
+    check("a self-declared pilot's BENEFIT is dropped too",
+          _pb[0]["evidence"]["n_primaries"] == 1 and _st3["ineligible_total"] == 1,
+          "the gate must not be a one-way ratchet")
+
+    # A silent or hesitant extractor must never cost us a study.
+    for _val in ({}, {"comparator": None}, {"comparator": "unknown"},
+                 {"self_declared_underpowered": None},
+                 {"self_declared_underpowered": False}):
+        _keep = _b2([_flagged("doi:10.1/e1", "null_effect"),
+                     _flagged("doi:10.1/e2", "null_effect", **_val)],
+                    _pr, ignore_population=True)
+        check(f"eligibility defaults to KEEP for {_val or 'a missing field'}",
+              _keep[0]["evidence"]["n_primaries"] == 2,
+              f"n={_keep[0]['evidence']['n_primaries']}")
 
     # Two DIFFERENT trials must still both count -- the fix must not over-collapse.
     two = _b2([_ext("doi:10.1/a", [("benefit", "meaningful")]),
@@ -1345,16 +1403,29 @@ def main():
 
     _s = lambda i, d: Study(id=i, design_rank=4, n=40, direction=d,
                             magnitude="meaningful" if d == "benefit" else None)
-    # No primary declared -> MAJORITY wins, ties broken conservatively.
+    # No primary declared -> MAJORITY wins; a benefit/null tie reads `unclear`.
     _kept, _n = _one_study_one_vote([
         (_s("a", "benefit"), {"outcome_id": "o"}),
         (_s("a", "null_effect"), {"outcome_id": "o"}),
         (_s("b", "benefit"), {"outcome_id": "o"}),
     ])
-    check("no primary + 1-1 tie collapses conservatively",
+    check("no primary + 1-1 tie reads as unclear, not as a null",
           [s.id for s, _ in _kept] == ["a", "b"]
-          and _kept[0][0].direction == "null_effect" and _n == 1,
+          and _kept[0][0].direction == "unclear" and _n == 1,
           f"{[(s.id, s.direction) for s, _ in _kept]} collapsed={_n}")
+
+    # ...but a harm signal is never averaged away by a tie.
+    _keptH, _ = _one_study_one_vote([
+        (_s("a", "harm"), {"outcome_id": "o"}),
+        (_s("a", "benefit"), {"outcome_id": "o"}),
+    ])
+    check("harm wins any tie it is in", _keptH[0][0].direction == "harm",
+          "a safety signal must not be averaged away")
+    _keptH2, _ = _one_study_one_vote([
+        (_s("a", "harm"), {"outcome_id": "o"}),
+        (_s("a", "null_effect"), {"outcome_id": "o"}),
+    ])
+    check("harm beats a tied null too", _keptH2[0][0].direction == "harm")
 
     # THE FIX: the trial's own primary endpoint outranks a secondary null.
     _kept2, _ = _one_study_one_vote([
@@ -1669,8 +1740,137 @@ def main():
           and "is a real answer" in pred.format_summary(clean),
           "0 flagged @ 2 resolved is data, not a gap")
 
+    # Invariant 1 was a CI grep until 2026-08-10. It flagged the legitimate
+    # test-only import at line 1262 of this file, so the gate was red on every
+    # push from 30b768f onward and both workflows were ignored instead (measured:
+    # selftest 14/14 red, dashboard 11/11 red). A grep cannot tell a checker from
+    # a violation. These checks pin the AST replacement -- and crucially they feed
+    # it FABRICATED sources, because a repo scanner that returns [] due to its own
+    # bug passes forever.
+    print("\nSTRUCTURAL INVARIANTS")
+    from pipeline import invariants as _inv
+    check("the real deterministic layer reaches no model boundary",
+          not _inv.import_problems(), "; ".join(_inv.import_problems()))
+    check("no allowlist entry is stale or reasonless",
+          not _inv.exception_problems(), "; ".join(_inv.exception_problems()))
+    check("every AGENTS entry has a schema, a prompt and a known tier",
+          not _inv.agent_wiring_problems(), "; ".join(_inv.agent_wiring_problems()))
+
+    _evasions = {
+        "function-level":  "def f():\n    import claude_adapter\n",
+        "aliased":         "import claude_adapter as _ca\n",
+        "from-import":     "from claude_adapter import _key\n",
+        "line-wrapped":    "from claude_adapter import (\n    _key,\n)\n",
+        "class method":    "class C:\n    def m(self):\n        from grok_adapter import call\n",
+        "importlib":       "import importlib\nimportlib.import_module('pilot_adapter')\n",
+        "__import__":      "m = __import__('claude_adapter')\n",
+        "try-guarded":     "try:\n    import claude_adapter\nexcept ImportError:\n    pass\n",
+    }
+    _missed = [k for k, s in _evasions.items() if not _inv.model_imports(s, "pipeline/x.py")]
+    check("no formatting trick hides a model import", not _missed,
+          f"missed: {_missed}" if _missed else f"{len(_evasions)} evasions all caught")
+
+    # False positives would make the gate get switched off again, which is the
+    # actual historical failure -- so they are pinned too.
+    _clean = {"unrelated": "import json\n",
+              "similar name": "import claude_adapters_helper\n",
+              "relative": "from . import scoring\n",
+              "in a string": "x = 'claude_adapter'\n",
+              "in a comment": "# see claude_adapter.py:102\n"}
+    _false = [k for k, s in _clean.items() if _inv.model_imports(s, "pipeline/x.py")]
+    check("innocent source does not trip the check", not _false, f"false positives: {_false}")
+
+    check("a reasonless allowlist entry is itself a failure",
+          any("no reason" in p for p in _reasonless_probe(_inv)),
+          "an unexplained exception is an undocumented hole in invariant 1")
+
+    # This suite claims zero-network and zero-model, so it must import on an
+    # interpreter with nothing installed. Until 2026-08-10 it did not: httpx at
+    # sources/http.py module level killed `python3 -m pipeline.selftest` at EUROPE
+    # PMC NORMALISATION, which is the exact command CLAUDE.md gave every agent.
+    check("the deterministic layer imports on a bare interpreter",
+          not _inv.dependency_problems(), "; ".join(_inv.dependency_problems()))
+    check("a module-level third-party import is caught",
+          _inv.module_level_third_party("import httpx\n", "sources/x.py") == [("httpx", 1)])
+    check("the same import inside a function is fine",
+          not _inv.module_level_third_party("def f():\n    import httpx\n", "sources/x.py"),
+          "lazy is the fix, so it must not be reported as the problem")
+    check("stdlib and local imports are not third-party",
+          not _inv.module_level_third_party(
+              "import json, hashlib\nfrom pathlib import Path\n"
+              "from sources.ratelimit import throttle\nfrom pipeline import vocab\n",
+              "sources/x.py"))
+
+    # ANCHOR BAND FEASIBILITY. evaluate() grades a miss but cannot tell you the
+    # band was never reachable, so a contradiction between the anchor set and the
+    # constants reads as "uncalibrated pipeline". calibration.ceiling_score answers
+    # that -- and because it re-derives score_ecu's arithmetic, it must be pinned
+    # AGAINST score_ecu or the two drift and the report starts lying.
+    print("\nANCHOR BAND FEASIBILITY")
+    from pipeline import calibration as _cal
+    import pipeline.scoring as _sc
+
+    def _mixed(n_total, n_null):
+        base = dict(design_rank=4, n=120, rob_items=ROB_CLEAN, funding="independent",
+                    oa="full_text", form_match="exact", dose_match="in_band",
+                    pop_match="exact")
+        out = [Study(id=f"b{i}", direction="benefit", magnitude="meaningful", **base)
+               for i in range(n_total - n_null)]
+        out += [Study(id=f"n{i}", direction="null_effect", magnitude="meaningful", **base)
+                for i in range(n_null)]
+        return out
+
+    _drift = []
+    for _p in (0.0, 0.05, 0.10, 0.25, 0.50):
+        _r = score_ecu(_mixed(200, int(200 * _p)))
+        # score_ecu's c-free part, which is exactly what ceiling_score models
+        _actual = 100 * _r["d"] * (1 - _sc.H_PENALTY * _r["H"])
+        if abs(_actual - _cal.ceiling_score(_p)) > 0.5:
+            _drift.append(f"p={_p}: score_ecu {_actual:.1f} vs ceiling {_cal.ceiling_score(_p):.1f}")
+    check("ceiling_score reproduces score_ecu's own arithmetic", not _drift,
+          "; ".join(_drift) or "checked at 0/5/10/25/50% null mass")
+
+    check("H rises with disagreement rather than being a free parameter",
+          score_ecu(_mixed(200, 0))["H"] == 0.0
+          and score_ecu(_mixed(200, 20))["H"] > 0.0,
+          "a unanimous corpus has no spread; varying H independently of the null "
+          "share overstates every reachable score")
+
+    # PINNED, not asserted as correct. These five tolerances are what the SHIPPED
+    # constants imply, and they are the open question in docs/REVIEW_PENDING.md:
+    # anchor #1 wants creatine >= +80, which needs >=91% of all extracted claims to
+    # be strongest-benefit on the most-studied sports supplement in existence.
+    # If S_VALUE, H_PENALTY, H_NORM or a band moves, this goes red ON PURPOSE --
+    # that is a founder decision and it must not land silently.
+    _feas = {f["id"]: f["max_null_share"] for f in _cal.feasibility()}
+    _pinned = {"1": 0.086, "2": 0.064, "3": 0.064, "4": 0.064, "5": 0.111}
+    _moved = [f"anchor {k}: {_feas.get(k)} != {v}" for k, v in _pinned.items()
+              if _feas.get(k) is None or abs(_feas[k] - v) > 0.002]
+    check("the five confidence-A anchor floors still imply their measured null "
+          "tolerances", not _moved,
+          "; ".join(_moved) or "6.4-11.1% null mass; see docs/REVIEW_PENDING.md")
+
+    check("no anchor floor is unreachable at zero nulls",
+          all(f["max_null_share"] is not None for f in _cal.feasibility()),
+          "a floor above +100 would be a typo, not a calibration question")
+
     print(f"\n{'ALL PASSED' if not fails else 'FAILURES: ' + ', '.join(fails)}\n")
     return 1 if fails else 0
+
+
+def _reasonless_probe(_inv):
+    """Temporarily plant an empty-reason exception and confirm it is reported.
+
+    Restores the real allowlist on the way out. Without this the 'reason
+    required' rule is untested and an entry could be added with '' forever.
+    """
+    real = dict(_inv.IMPORT_EXCEPTIONS)
+    try:
+        _inv.IMPORT_EXCEPTIONS[("pipeline/selftest.py", "claude_adapter")] = ""
+        return _inv.exception_problems()
+    finally:
+        _inv.IMPORT_EXCEPTIONS.clear()
+        _inv.IMPORT_EXCEPTIONS.update(real)
 
 if __name__ == "__main__":
     sys.exit(main())

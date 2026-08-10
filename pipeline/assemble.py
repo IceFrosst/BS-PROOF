@@ -9,6 +9,7 @@ Predatory venues: flagged on the record for reporting; do NOT zero weight yet
 (founder policy 2026-08-07). See pipeline/predatory.ZERO_WEIGHT.
 """
 from __future__ import annotations
+from dataclasses import replace
 from datetime import datetime, timezone
 
 from pipeline import vocab
@@ -235,12 +236,36 @@ def _one_study_one_vote(pairs: list[tuple]) -> tuple[list[tuple], int]:
        was built to answer; secondary endpoints are hypothesis-generating and
        usually underpowered. If several claims are primary, take the most
        conservative among THEM.
-    2. No primary declared (71 of 158 extractions) -> MAJORITY direction, ties
-       broken conservatively. Not "any benefit wins": measure twenty endpoints
-       at p<0.05 and one turns up by chance, so letting a lone positive override
-       nine nulls is the multiple-comparisons trap this pipeline exists to
-       resist. Not "lowest wins" either, because that penalises a trial for
-       measuring more things.
+    2. No primary declared (71 of 158 extractions) -> MAJORITY direction. Not
+       "any benefit wins": measure twenty endpoints at p<0.05 and one turns up
+       by chance, so letting a lone positive override nine nulls is the
+       multiple-comparisons trap this pipeline exists to resist. Not "lowest
+       wins" either, because that penalises a trial for measuring more things.
+
+    3. A benefit/null TIE resolves to `unclear` (s = 0.0). `harm` still wins any
+       tie it is in, because a safety signal must never be averaged away.
+
+       This was "ties broken conservatively" -- the null won -- until
+       2026-08-10, and it inverted a real trial. PMC6534934 reports bench-press
+       MEAN POWER up 17.9% vs placebo, interaction p = 0.003, AND bench-press
+       mRFD null at p = 0.101. S6 maps both constructs to muscle_power, neither
+       is flagged primary, so the bucket tied 1-1 and the conservative rule
+       filed a measured, significant, between-group effect as evidence AGAINST
+       creatine at s = -0.7.
+
+       Why `unclear` and not "benefit wins": that would be the same error
+       mirrored. The trial found an effect on one measure of this outcome and
+       not on another; it did not confirm and it did not disconfirm. s = 0.0 is
+       the reading that adds no evidence in either direction, and it is the only
+       tie rule that treats the two failure modes symmetrically -- which matters
+       here, because handling uncertainty asymmetrically is the defect this
+       whole investigation found.
+
+       The multiple-comparisons worry does not apply to a tie. It is the reason
+       a LONE positive must not override nine nulls, and the majority rule above
+       still enforces that. Nulls also still win outright whenever they are the
+       primary or the majority, so invariant 7 is untouched: what changed is
+       only that a null no longer wins a coin-flip against a measured effect.
 
     Nulls are still never silently dropped -- a null that is the primary, or the
     majority, still wins. Invariant 7 is intact; what changed is that a null is
@@ -250,10 +275,22 @@ def _one_study_one_vote(pairs: list[tuple]) -> tuple[list[tuple], int]:
     endpoint) and are collapsed on the same key: a trial reachable both directly
     and through a review is still one trial (invariant 6).
     """
+    # Conservatism order, used when SEVERAL claims are flagged primary.
     _CONS = {"harm": 0, "null_effect": 1, "unclear": 1, "benefit": 2}
 
     def _rank(pair):
         return _CONS.get(pair[0].direction, 1)
+
+    def _break_tie(winners: list[str], group: list[tuple]) -> tuple:
+        """Resolve a tied majority. See rule 3 in the docstring."""
+        if "harm" in winners:                       # safety is never averaged away
+            return next(g for g in group if g[0].direction == "harm")
+        if {"benefit", "null_effect"} <= set(winners):
+            pair = next(g for g in group if g[0].direction == "null_effect")
+            # Same Study, re-read as "this trial did not give one answer here".
+            return (replace(pair[0], direction="unclear", magnitude=None), pair[1])
+        return next(g for g in group
+                    if g[0].direction == min(winners, key=lambda d: _CONS.get(d, 1)))
 
     by_id: dict[str, list[tuple]] = {}
     order: list[str] = []
@@ -278,9 +315,55 @@ def _one_study_one_vote(pairs: list[tuple]) -> tuple[list[tuple], int]:
             counts[g[0].direction] = counts.get(g[0].direction, 0) + 1
         top = max(counts.values())
         winners = [d for d, c in counts.items() if c == top]
-        winner = min(winners, key=lambda d: _CONS.get(d, 1))
-        kept.append(next(g for g in group if g[0].direction == winner))
+        if len(winners) == 1:
+            kept.append(next(g for g in group if g[0].direction == winners[0]))
+        else:
+            kept.append(_break_tie(winners, group))
     return kept, n_collapsed
+
+
+def _ineligible(ext: dict) -> str | None:
+    """
+    Why this trial cannot vote on whether the ingredient works. None = it can.
+
+    Both refusals are SCOPE rules, not discounts, and both are the same shape as
+    invariant 6's five refusals: the trial is answering a different question, so
+    down-weighting it would still be counting the wrong answer, just quietly.
+
+    MEASURED 2026-08-10, 80-study creatine corpus. Of the 23 null verdicts
+    driving muscle_strength and muscle_power negative, 5 verifiers reading the
+    actual papers found 11 that are not evidence against creatine at all:
+
+      no ingredient-free arm   3   every arm took creatine and the trial compared
+                                   morning vs evening, one dosing schedule vs
+                                   another, or creatine+HMB vs creatine. One says
+                                   so outright -- "a control group that did not
+                                   consume the Cr supplement was not considered
+                                   necessary given the high level of scientific
+                                   evidence that exists on how Cr improves
+                                   performance." Its 1RM rose in BOTH creatine
+                                   arms. We scored it -0.7 against creatine.
+      self-declared underpowered 6  CONSORT pilot/feasibility designs (n=8 per
+                                   arm, no power calculation) and trials that
+                                   state they missed their own a priori target
+                                   -- 33 of 42, 28 of 48, 22 of 34.
+
+    The underpowered rule is applied SYMMETRICALLY -- a pilot's benefit is
+    dropped too. Keeping pilot benefits while dropping pilot nulls would be the
+    same one-way handling of uncertainty that this investigation was opened to
+    find. If the authors say the trial could not answer the question, it does
+    not answer it in either direction.
+
+    Both fields default to "keep": `unknown`/None/absent never excludes. S3 is
+    told to answer `unknown` when unsure, so a hesitant extractor loses no
+    evidence -- it only fails to gain the refusal.
+    """
+    s3 = ext.get("S3") or {}
+    if s3.get("comparator") == "all_arms_get_ingredient":
+        return "no_ingredient_free_arm"
+    if s3.get("self_declared_underpowered") is True:
+        return "self_declared_underpowered"
+    return None
 
 
 def _now() -> str:
@@ -295,7 +378,8 @@ def build_ecus(extractions: list[dict], product: dict, *,
                ignore_population: bool = False,
                exclude_offtarget_population: bool = False,
                searched_outcomes: list[str] | None = None,
-               sr_derived: list[dict] | None = None) -> list[dict]:
+               sr_derived: list[dict] | None = None,
+               stats: dict | None = None) -> list[dict]:
     """
     extractions -> scored ECU rows, one per outcome.
 
@@ -316,8 +400,17 @@ def build_ecus(extractions: list[dict], product: dict, *,
     form_id = product["form_vocab_id"]
     pop = product["population"]
 
-    per_outcome: dict[str, list[dict]] = {}
+    # Eligibility is decided ONCE, before the dose-band pass, so an ineligible
+    # trial cannot set the band the eligible ones are then scored against.
+    ineligible: dict[str, str] = {}
     for item in extractions:
+        why = _ineligible(item["extraction"])
+        if why:
+            ineligible[id(item)] = why
+    eligible = [i for i in extractions if id(i) not in ineligible]
+
+    per_outcome: dict[str, list[dict]] = {}
+    for item in eligible:
         rec, ext = item["record"], item["extraction"]
         for outcome_id, study, dose, is_primary in to_studies(
             rec, ext, product, item.get("registry"),
@@ -339,7 +432,7 @@ def build_ecus(extractions: list[dict], product: dict, *,
     dropped_population = 0
     kept = 0
     form_mix: dict[str, int] = {}
-    for item in extractions:
+    for item in eligible:
         rec, ext = item["record"], item["extraction"]
         for outcome_id, study, dose, is_primary in to_studies(
             rec, ext, product, item.get("registry"),
@@ -386,6 +479,20 @@ def build_ecus(extractions: list[dict], product: dict, *,
         for tier, count in sorted(form_mix.items(), key=lambda kv: -kv[1]):
             print(f"    {tier:<12} x{FORM_FACTOR.get(tier, 0.30):<5} {count:>4} claims"
                   f"  ({100 * count / total:.0f}%)")
+    if ineligible:
+        by_reason: dict[str, int] = {}
+        for why in ineligible.values():
+            by_reason[why] = by_reason.get(why, 0) + 1
+        print(f"  eligibility: {len(ineligible)} of {len(extractions)} trials "
+              f"cannot vote on whether the ingredient works")
+        for why, n in sorted(by_reason.items(), key=lambda kv: -kv[1]):
+            print(f"    {why:<28} {n:>3}")
+    if stats is not None:
+        stats["ineligible_total"] = len(ineligible)
+        stats["ineligible_by_reason"] = {
+            w: sum(1 for x in ineligible.values() if x == w)
+            for w in set(ineligible.values())}
+        stats["eligible"] = len(eligible)
     if dropped_population:
         print(f"  population routing: {dropped_population} claims excluded "
               f"(pop_match='different' — a different question, not weaker "

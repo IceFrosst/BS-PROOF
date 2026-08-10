@@ -37,6 +37,14 @@ S_VALUE = {"benefit_meaningful":1.0, "benefit_trivial":0.3,
 K = 3.0                 # confidence saturation. CALIBRATE ON TIER-3.
 LAMBDA = 0.3            # synthesis multiplier ceiling
 H_PENALTY = 0.4
+
+# Divisor that maps weighted variance of s_i onto 0..1 before H_PENALTY applies.
+# Named 2026-08-10, value unchanged: it was a bare `H / 1.5` inside score_ecu, and
+# pipeline.calibration.feasibility now needs the same number to compute what an
+# anchor band can reach. Two copies of an unnamed 1.5 is how the two disagree
+# later. NOT a new constant -- SPEC 13 owns it like the rest.
+H_NORM = 1.5
+
 GATE_MIN_HUMAN_WD = 0.5
 
 # Founder 2026-08-07: form is an applicability arc, not a center-score penalty.
@@ -204,7 +212,7 @@ def score_ecu(primaries: list[Study], syntheses: list[dict] | None = None,
     c_conf = 1 - math.exp(-E_prime / K)
     mean_s = d
     H = sum(w * (s.s_value() - mean_s) ** 2 for w, s in zip(weights, primaries)) / E
-    H = min(1.0, H / 1.5)
+    H = min(1.0, H / H_NORM)
 
     raw = 100 * d * c_conf * (1 - H_PENALTY * H)
     score = max(-100, min(100, round(raw)))

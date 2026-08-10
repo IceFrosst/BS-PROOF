@@ -9,6 +9,7 @@ from unittest import mock
 
 import claude_adapter
 from scripts import dashboard_artifact
+from scripts.auto_report_push import reconcile_agent_views
 from scripts.dashboard_artifact import (
     ROOT,
     SCHEMA_PATH,
@@ -25,6 +26,56 @@ HISTORICAL_RUN = (
     "20260807_164410_creatine_creatine-monohydrate_grok-sr-ft-per-o"
 )
 HISTORICAL_COMMIT = "c29c570f7139bd1b3e3816b5e19213af193089a0"
+
+
+class AgentTelemetryReconciliationTests(unittest.TestCase):
+    """The two per-agent views of a run count different denominators.
+
+    The cost table counts CLI ATTEMPTS (retries included); the success table
+    counts STUDIES. Comparing them for equality is wrong and briefly produced a
+    false alarm on the 2026-08-10 creatine run. What must hold is coverage and
+    direction, which is what these tests pin.
+    """
+
+    # The real 2026-08-10 creatine run, both views, verbatim.
+    REAL_COST = {"S3": {"calls": 83, "fail": 32}, "S4": {"calls": 97, "fail": 49},
+                 "S5": {"calls": 86, "fail": 34}, "S6B": {"calls": 50, "fail": 24},
+                 "S7": {"calls": 97, "fail": 49}, "S8": {"calls": 80, "fail": 26}}
+    REAL_STATS = {"S3": {"ok": 51, "fail": 29}, "S4": {"ok": 48, "fail": 32},
+                  "S5": {"ok": 52, "fail": 28}, "S7": {"ok": 48, "fail": 32},
+                  "S8": {"ok": 54, "fail": 26}}
+
+    def test_attempts_exceeding_studies_is_not_a_contradiction(self) -> None:
+        """493 attempts vs 400 study-outcomes is retries, not disagreement."""
+        stats = {k: v for k, v in self.REAL_STATS.items()}
+        cost = {k: v for k, v in self.REAL_COST.items() if k in stats}
+        self.assertEqual(reconcile_agent_views(cost, stats), [])
+        # and the excess really is the retry count
+        for agent, c in cost.items():
+            studies = stats[agent]["ok"] + stats[agent]["fail"]
+            self.assertEqual(studies, 80, f"{agent} should have one row per study")
+            self.assertGreaterEqual(c["calls"], studies)
+
+    def test_agent_missing_from_the_success_table_is_reported(self) -> None:
+        """S6B really was absent: 50 attempts and 24 failures invisible."""
+        problems = reconcile_agent_views(self.REAL_COST, self.REAL_STATS)
+        self.assertTrue(any("S6B" in p and "no row in the success table" in p
+                            for p in problems), problems)
+
+    def test_fewer_attempts_than_studies_is_impossible(self) -> None:
+        problems = reconcile_agent_views({"S3": {"calls": 10, "fail": 0}},
+                                         {"S3": {"ok": 40, "fail": 40}})
+        self.assertTrue(any("impossible" in p for p in problems), problems)
+
+    def test_failed_studies_cannot_exceed_failed_attempts(self) -> None:
+        problems = reconcile_agent_views({"S3": {"calls": 80, "fail": 2}},
+                                         {"S3": {"ok": 40, "fail": 40}})
+        self.assertTrue(any("failed studies" in p for p in problems), problems)
+
+    def test_missing_telemetry_is_silent_not_a_false_alarm(self) -> None:
+        """A wiring or grok run records no Usage; that is absence, not conflict."""
+        self.assertEqual(reconcile_agent_views(None, self.REAL_STATS), [])
+        self.assertEqual(reconcile_agent_views({}, {}), [])
 
 
 class DashboardArtifactTests(unittest.TestCase):

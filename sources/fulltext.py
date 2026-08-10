@@ -23,8 +23,6 @@ import json
 import re
 import xml.etree.ElementTree as ET
 
-import httpx
-
 from sources.http import CACHE_DIR, SourceError, _headers
 from sources.ratelimit import throttle
 
@@ -77,6 +75,10 @@ def fetch_xml(pmcid: str, *, timeout: int = 60, use_cache: bool = True) -> str |
     cache_file = CACHE_DIR / f"jats_{pmcid}.xml"
     if use_cache and cache_file.exists():
         return cache_file.read_text()
+
+    # Lazy, like the PDF and HTML fetchers below: JATS parsing is pure and must
+    # be testable without httpx installed. See the note in sources/http.py.
+    import httpx
 
     throttle(url)
     try:

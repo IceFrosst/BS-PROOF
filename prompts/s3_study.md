@@ -15,6 +15,36 @@ verbatim, e.g. "600 mg KSM-66 ashwagandha root extract twice daily".
 Mark the placebo or no-treatment arm is_control=true. In a crossover trial,
 list the conditions as arms and note the crossover in evidence_spans.
 
+comparator — WHAT DID THE CONTROL ARM ACTUALLY SWALLOW?
+  ingredient_free        at least one randomised arm did NOT receive the study
+                         ingredient (placebo, no-treatment, or a different
+                         active agent). This is the normal case.
+  all_arms_get_ingredient  EVERY arm received the study ingredient. The trial
+                         compares timing, dosing schedule, one form against
+                         another, or ingredient alone against ingredient+X.
+  unknown                you cannot tell.
+
+Read the arm descriptions, not the title. A "placebo-controlled" trial of
+HMB+creatine vs creatine+placebo is `all_arms_get_ingredient` for CREATINE --
+the placebo is the HMB placebo, and both arms take 5 g of creatine. Conversely,
+"dextrose placebo matched to the creatine" is `ingredient_free`: the word
+creatine appears, but that arm receives dextrose.
+
+This matters because a trial with no ingredient-free arm cannot say whether the
+ingredient works; it can only say whether the schedule mattered. Downstream such
+a trial is excluded, so `unknown` is the safe answer when you are unsure --
+`unknown` keeps the study in.
+
+self_declared_underpowered
+true ONLY when the paper itself says so, in one of these forms:
+  - it describes itself as a pilot, feasibility, proof-of-concept or
+    exploratory trial (including "CONSORT extension for pilot trials")
+  - it reports an a priori target sample size and states it did not reach it
+  - it attributes a non-significant result to insufficient sample size or power
+Otherwise false. Never infer it from a small n on your own -- a small trial is
+not automatically underpowered, and that judgement is not yours to make. Quote
+the sentence in evidence_spans when you set it true.
+
 deficiency_status
 One of: deficient / replete / mixed / unstated. This drives the population axis.
 - "deficient" only if baseline status was measured and used for inclusion

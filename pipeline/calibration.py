@@ -163,6 +163,94 @@ def evaluate(scores: dict[str, int | None], rows: list[dict] | None = None) -> d
     }
 
 
+def ceiling_score(p_null: float) -> float:
+    """
+    Best signed score reachable when `p_null` of the evidence mass is a well-run
+    null and every remaining study is the strongest available benefit, as
+    confidence saturates (c -> 1).
+
+    This is an upper bound on a perfect world: unlimited evidence, no risk of
+    bias, no funding penalty, every non-null study maximally positive. A real
+    corpus scores below it, never above.
+
+    H is NOT a free parameter. score_ecu derives it from the weighted variance of
+    the same s_i values that produce d, so a corpus cannot have a high mean and a
+    low spread -- disagreement is priced automatically. Any analysis that varies H
+    independently of the null share overstates what is reachable (it did here,
+    2026-08-10, before this function existed).
+    """
+    from pipeline.scoring import S_VALUE, H_PENALTY, H_NORM
+    s_pos = max(S_VALUE.values())
+    s_null = S_VALUE["null_effect"]
+    d = (1 - p_null) * s_pos + p_null * s_null
+    var = (1 - p_null) * (s_pos - d) ** 2 + p_null * (s_null - d) ** 2
+    H = min(1.0, var / H_NORM)
+    return 100 * d * (1 - H_PENALTY * H)
+
+
+def max_null_share(target: float, steps: int = 2000) -> float | None:
+    """
+    Largest share of null-effect evidence mass at which `target` is still
+    reachable. None means unreachable even with zero nulls.
+
+    A grid rather than a solved inverse: `ceiling_score` is not guaranteed
+    monotonic for an arbitrary S_VALUE table, and a grid stays obviously correct
+    if those values are recalibrated.
+    """
+    if ceiling_score(0.0) < target:
+        return None
+    best = 0.0
+    for i in range(steps + 1):
+        p = i / steps
+        if ceiling_score(p) >= target:
+            best = p
+    return best
+
+
+def feasibility(rows: list[dict] | None = None) -> list[dict]:
+    """
+    For every absolute-range anchor, the null-effect share its FLOOR can tolerate.
+
+    This is the question `evaluate()` cannot ask. `evaluate()` compares a produced
+    score against a band and grades the miss; it cannot tell you that the band was
+    never reachable under the current constants, so a range_miss reads as "the
+    pipeline is uncalibrated" when it may mean "these two numbers contradict each
+    other."
+
+    Measured 2026-08-10 on the shipped constants (S_VALUE null_effect -0.7,
+    H_PENALTY 0.4, H_NORM 1.5): the five confidence-A anchors expecting >= +70
+    tolerate roughly 6-12% null-effect mass. Creatine on muscle strength -- the
+    most-studied sports supplement there is -- must come back >= 91% strongest-
+    benefit claims to clear anchor #1's floor of +80.
+
+    That is a REAL TENSION and it is deliberately NOT resolved here. Three things
+    could be wrong and only the founder may choose: the null penalty (invariant 4,
+    SPEC 13), the H penalty, or the anchor bands themselves -- docs/ANCHORS.md
+    says outright that "every band boundary here was set by judgment, not
+    measurement, so a 'failure' may be a wrong anchor." Tuning any constant to
+    make an anchor pass is forbidden; see this module's own docstring.
+    """
+    rows = rows if rows is not None else load()
+    out = []
+    for r in rows:
+        if r["band"] in PAIR_BANDS:
+            continue
+        lo = r["expected_min"]
+        if lo is None or lo <= 0:
+            continue  # a negative or zero floor is not null-share limited
+        out.append({
+            "id": r["id"],
+            "ingredient": r["ingredient"],
+            "outcome": r["outcome"],
+            "expected_min": lo,
+            "confidence": r.get("confidence", ""),
+            "max_null_share": max_null_share(float(lo)),
+        })
+    out.sort(key=lambda x: (x["max_null_share"] is not None,
+                            x["max_null_share"] if x["max_null_share"] is not None else -1))
+    return out
+
+
 def main() -> int:
     rows = load()
     problems = validate(rows)
@@ -192,6 +280,23 @@ def main() -> int:
     print("\nmechanisms exercised:")
     for t, n in rep["by_test"].items():
         print(f"  {t:<34}{n}")
+
+    feas = feasibility(rows)
+    print("\nband feasibility -- max share of NULL-EFFECT evidence mass at which")
+    print("each anchor's FLOOR is still reachable, at perfect confidence:")
+    print(f"  {'id':<4}{'ingredient':<16}{'floor':>6}  {'conf':<5}max null share")
+    for f in feas[:10]:
+        share = ("UNREACHABLE at any null share" if f["max_null_share"] is None
+                 else f"{f['max_null_share'] * 100:.1f}%")
+        print(f"  {f['id']:<4}{f['ingredient'][:15]:<16}{f['expected_min']:>+6}  "
+              f"{f['confidence']:<5}{share}")
+    if len(feas) > 10:
+        print(f"  ... {len(feas) - 10} more with looser floors")
+    print("\n  A floor is not 'hard to hit', it is arithmetic: H is derived from the")
+    print("  same spread that produces d, so disagreement is already priced in.")
+    print("  If a tolerance here looks implausible for real literature, then the")
+    print("  band, the null penalty or the H penalty is wrong -- a FOUNDER call")
+    print("  (SPEC 13 + invariant 4). Never tune a constant to make an anchor pass.")
     return 1 if problems else 0
 
 

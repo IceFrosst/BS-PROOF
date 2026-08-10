@@ -260,22 +260,93 @@ def _section_sr(ctx: dict) -> str:
     return "\n".join(lines)
 
 
+def reconcile_agent_views(by_agent: dict | None, agent_stats: dict | None) -> list[str]:
+    """
+    Problems between the two per-agent views of one run. Empty means consistent.
+
+    The two views count DIFFERENT DENOMINATORS and must never be compared for
+    equality:
+
+        by_agent      claude_adapter.Usage   -> one row per CLI ATTEMPT (retries
+                                                included; `call()` retries twice,
+                                                so up to 3 attempts per study)
+        agent_stats   workers                -> one row per STUDY
+
+    Measured on the 2026-08-10 creatine run: the cost table reported 493 calls /
+    214 failures and the success table 253 ok / 147 failures. That looks like a
+    contradiction and was briefly read as one. It is not -- every agent's
+    ok+fail was exactly 80, the study count, and the excess in the cost table is
+    the retry count (S3 +3, S4 +17, S5 +6, S7 +17, S8 +0).
+
+    So equality is the wrong test. Two things must hold instead, and both did
+    catch something real:
+
+      * every agent in one view appears in the other. S6B did NOT: 50 attempts
+        and 24 failures were invisible in the success table, because agent_stats
+        is built from the per-study worker records and the batched S6 path did
+        not register there.
+      * attempts >= studies, and failed attempts >= failed studies. A study can
+        only fail after every attempt fails, so the reverse is impossible.
+    """
+    by_agent = by_agent or {}
+    agent_stats = agent_stats or {}
+    if not by_agent or not agent_stats:
+        return []  # nothing to reconcile; the report already says "not captured"
+
+    out: list[str] = []
+    for name in sorted(set(by_agent) - set(agent_stats)):
+        out.append(f"{name}: {by_agent[name].get('calls', 0)} attempts in the cost "
+                   f"table but no row in the success table -- its failures are "
+                   f"invisible to anyone reading success rates")
+    for name in sorted(set(agent_stats) - set(by_agent)):
+        out.append(f"{name}: has a success row but made no recorded model calls")
+    for name in sorted(set(by_agent) & set(agent_stats)):
+        attempts = by_agent[name].get("calls", 0)
+        st = agent_stats[name]
+        studies = st.get("ok", 0) + st.get("fail", 0)
+        if attempts < studies:
+            out.append(f"{name}: {attempts} attempts for {studies} studies -- "
+                       f"impossible, every study needs at least one attempt")
+        if by_agent[name].get("fail", 0) < st.get("fail", 0):
+            out.append(f"{name}: {by_agent[name].get('fail', 0)} failed attempts "
+                       f"but {st.get('fail', 0)} failed studies -- a study only "
+                       f"fails once all of its attempts have failed")
+    return out
+
+
 def _section_agents(ctx: dict) -> str:
     agents = ctx.get("agent_stats") or {}
+    by_agent = ((ctx.get("usage") or {}).get("by_agent")) or {}
     lines = ["## Per-agent success rates (this run)\n"]
     if not agents:
         lines.append("_Agent stats not captured._\n")
         return "\n".join(lines)
-    lines += ["| Agent | OK | Fail | Cache | Why it failed |",
-              "|---|---:|---:|---:|---|"]
+    # Column names say what they count. Both tables used to say "Fail" over
+    # different denominators (attempts here, studies there), which is how 214
+    # failed attempts get read as 214 unusable studies when 147 were.
+    lines += ["| Agent | Studies OK | Studies failed | Cache | Retries | Why it failed |",
+              "|---|---:|---:|---:|---:|---|"]
     for name in sorted(agents.keys()):
         a = agents[name]
+        studies = a.get("ok", 0) + a.get("fail", 0)
+        attempts = by_agent.get(name, {}).get("calls")
+        retries = "—" if attempts is None else max(0, attempts - studies)
         lines.append(
-            f"| {name} | {a.get('ok', 0)} | {a.get('fail', 0)} | {a.get('cache', 0)} | "
+            f"| {name} | {a.get('ok', 0)} | {a.get('fail', 0)} | {a.get('cache', 0)} "
+            f"| {retries} | "
             + ("; ".join(f"{k} (x{v})" for k, v in
                         sorted((a.get("errors") or {}).items(),
                                key=lambda kv: -kv[1])[:2]) or "—") + " |"
         )
+    lines.append("")
+    lines.append("_One row per STUDY. The cost table above counts CLI ATTEMPTS, so "
+                 "its totals are higher by exactly the retries column._")
+    problems = reconcile_agent_views(by_agent, agents)
+    if problems:
+        lines.append("")
+        lines.append("**Telemetry does not reconcile — do not quote these rates:**")
+        for p in problems:
+            lines.append(f"- {p}")
     lines.append("")
     return "\n".join(lines)
 

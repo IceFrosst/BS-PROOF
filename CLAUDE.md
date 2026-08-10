@@ -87,9 +87,38 @@ Five refusals, none optional (`synthesis.derived_studies`):
 S2 extracts a `results_table` for this (`PROMPT_VERSION` v1.6). A pooled estimate
 is **not** a per-study result and must never be distributed back onto the trials.
 
-### 7. Nulls are negative
+### 7. Nulls are negative — but only a WELL-RUN null, and only against a real control
 
 Well-run null trial → evidence against (`s_i = −0.7`), not “no data.”
+
+**Amended 2026-08-10.** "Well-run" was doing unenforced work. Two classes of
+trial were entering at the full −0.7 while answering a different question, and
+`pipeline.assemble._ineligible` now refuses both. Measured on the 80-study
+creatine corpus: of the 23 null verdicts driving `muscle_strength` and
+`muscle_power` negative, five verifiers reading the actual papers found **11
+that are not evidence against creatine at all**.
+
+| refusal | why |
+|---|---|
+| `comparator == "all_arms_get_ingredient"` | every arm took the ingredient. The trial compares morning vs evening, one dosing schedule vs another, or ingredient+X vs ingredient. One such paper states it outright — *"a control group that did not consume the Cr supplement was not considered necessary given the high level of scientific evidence that exists on how Cr improves performance"* — and 1RM rose in **both** creatine arms. We scored it −0.7 against creatine |
+| `self_declared_underpowered is True` | the AUTHORS say the trial could not answer the question: a CONSORT pilot/feasibility design (n=8 per arm, no power calculation), or a stated a priori target it missed — 33 of 42, 28 of 48, 22 of 34 |
+
+Both are **scope** rules, the same shape as invariant 6's five refusals, not
+discounts — down-weighting would still be counting the wrong answer, quietly.
+
+Two properties that are not optional:
+
+- **The underpowered refusal is SYMMETRIC.** A pilot's *benefit* is dropped too.
+  Dropping pilot nulls while keeping pilot benefits is the one-way handling of
+  uncertainty this whole investigation was opened to find.
+- **Both fields default to KEEP.** `unknown` / `null` / absent never excludes,
+  and S3 is told to answer `unknown` when unsure. A hesitant extractor loses no
+  evidence; it only fails to gain the refusal.
+
+Never infer either from the numbers. A small trial is not automatically
+underpowered, and "placebo-controlled" in a title does not mean the placebo arm
+was ingredient-free — *HMB + creatine vs creatine + placebo* is placebo-
+controlled and has no creatine-free arm.
 
 ### 8. The centre number never travels without its arcs
 
@@ -198,7 +227,9 @@ predatory.py     venue flag (flag-only; 1162 PUBLISHERS, matched publisher-side)
 showcase.py      top-N outcomes by published RCT count
 storage.py       SQLite, postgres-shaped
 vocab.py         forms, outcomes, populations, ECU key, polarity
-selftest.py      236 checks. Run after ANY pipeline/ change
+invariants.py    structural invariants: model boundary (AST, not grep), offline
+                 imports, agent wiring. Zero tokens. Run with selftest
+selftest.py      328 checks. Run after ANY pipeline/ change
 ```
 
 **`sources/` — deterministic, NO MODEL**
@@ -227,6 +258,7 @@ out/             sqlite stores + HTTP cache (gitignored)
 ## Commands
 
 ```bash
+python3 -m pipeline.invariants   # structural gate; pairs with selftest
 python3 -m pipeline.selftest
 python3 run_pipeline.py creatine --form creatine_monohydrate --wiring
 python3 run_pipeline.py creatine --form creatine_monohydrate --pilot   # limit 40
@@ -388,23 +420,43 @@ Rules: continue in-flight work; keep `Current state` / `Next` live; push complet
 units; selftest after `pipeline/` changes; archive reports; **never silent-merge
 Claude and Grok extractions.**
 
-### File ownership
+### File ownership — one owner, verify-after
 
-**Founder decision 2026-08-07**, after three agents edited `pipeline/synthesis.py`
-inside one hour and produced conflicts in four files plus two different fixes for
-the same bug.
+**Founder decision 2026-08-10. Supersedes the 2026-08-07 peer-ownership table.**
 
-| Area | Owner | Others may |
-|---|---|---|
-| `pipeline/synthesis*.py`, `sources/fulltext.py`, S2 schema + prompt | **Claude Code** | open an issue, not a commit |
-| `grok_adapter.py`, Grok tiers/models/CLI flags | **Grok** | read; Claude must not re-guess model ids |
-| `pipeline/showcase.py`, report/demo presentation | **Grok** | — |
-| `pipeline/scoring.py`, `arcs.py`, `dose.py`, SPEC §13 | **Claude Code** | propose in `docs/REVIEW_PENDING.md` |
-| `run_pipeline.py`, `workers.py` | shared — **announce in the commit body first line** | |
+**Claude Code owns every file in this repository.** Grok and Codex are helpers.
+They **may write** — no file is off limits to them — but every change they make is
+**verified by Claude Code afterwards**. Nothing a helper commits is production
+behaviour until it has been through that check.
 
-Not ownership of ideas — Grok found the invalid `grok-4.3` id and the label
-parser, both of which stood. It is ownership of the EDIT, so two agents stop
-writing two fixes for one bug.
+| | |
+|---|---|
+| **Owner of record** | Claude Code, all paths |
+| **Helpers** | Grok, Codex — write freely, no permission needed |
+| **The one duty** | Claude verifies every helper change after the fact |
+| **How** | `python3 scripts/verify_helpers.py` — lists unverified helper commits, flags the ones touching scoring or extraction, and runs the deterministic gates |
+
+Why this replaced the table rather than tightening it: the 2026-08-07 incident —
+three agents editing `pipeline/synthesis.py` in one hour, four conflicted files,
+two different fixes for one bug — was a **concurrency** failure, not an authority
+failure. A table of peers arbitrated *who may edit*, which is the wrong axis. One
+owner plus after-the-fact verification fixes the actual problem: there is always
+exactly one account of what the code should do, and it is checked.
+
+Two things carry over unchanged, because neither was about ownership:
+
+- **Grok model ids must be verified with `grok models` before being set.**
+  `grok-4.3` is not a valid CLI id; setting it failed S8 **0/80** on the
+  2026-08-07 run, and every study read as a partial failure. The pricing table is
+  not the CLI's id namespace. This is a measurement, not a courtesy.
+- **Constants still go through `docs/REVIEW_PENDING.md` and SPEC §13** (invariant
+  4). Sole ownership is not licence to change `k`, a transfer factor, the RoB
+  thresholds, `S_VALUE`, `H_PENALTY` or `H_NORM` — those are founder calls, and
+  owning the file does not make them Claude's to decide.
+
+Not ownership of ideas. Grok found the invalid `grok-4.3` id and the label parser,
+both of which stood; the verify-after duty exists to catch mistakes, not to
+discount contributions.
 
 **Do not delete a comment recording a MEASUREMENT.** Commit `db5e9b9` stripped 52
 lines from `sources/europepmc.py`, including the measured 25% clinical-context

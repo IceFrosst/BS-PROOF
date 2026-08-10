@@ -65,6 +65,24 @@
     "null"
    ]
   },
+  "comparator": {
+   "type": [
+    "string",
+    "null"
+   ],
+   "enum": [
+    "ingredient_free",
+    "all_arms_get_ingredient",
+    "unknown",
+    null
+   ]
+  },
+  "self_declared_underpowered": {
+   "type": [
+    "boolean",
+    "null"
+   ]
+  },
   "population_text": {
    "type": [
     "string",

@@ -39,6 +39,60 @@ DOI. Worth a resolver call, or worth dropping the feature?
 `Study.venue_ok` is a boolean. SJR quartiles cannot be used until a real venue
 factor exists, and that is a new constant — `docs/SPEC.md` §13 first.
 
+### 3. The anchor bands and the null penalty contradict each other — FOUNDER CALL
+
+**Raised 2026-08-10. This is the blocking question for anchor eval, and it is not
+a bug report — three things could be wrong and only the founder may pick.**
+
+Commit `333c0db` recorded "Anchor #1 fails: creatine scores −6 where the set
+expects +80..+95" and treated it as a probable sign error. It is not. Run
+`python3 -m pipeline.calibration` and read the new feasibility table:
+
+| anchor | floor | max null-effect share that still reaches it |
+|---|---:|---:|
+| #2 folic acid / NTD | +85 | **6.4%** |
+| #3 vitamin D / 25OHD | +85 | **6.4%** |
+| #4 iron / haemoglobin | +85 | **6.4%** |
+| #1 creatine / strength | +80 | **8.6%** |
+| #5 caffeine / endurance | +75 | **11.1%** |
+
+Those are ceilings at *perfect* confidence, no risk of bias, no funding penalty,
+every non-null study maximally positive. So anchor #1 requires **≥91% of every
+extracted claim across the creatine corpus to be `benefit_meaningful`** — on the
+most-studied sports supplement in existence. Real literature does not look like
+that at the individual-trial level.
+
+Why this was not visible before: `H` is not a free parameter. `score_ecu` derives
+it from the weighted variance of the same `s_i` that produce `d`, so a corpus
+cannot have a high mean and a low spread. Any back-of-envelope that holds `H`
+constant overstates every reachable score — including the first estimate made
+while investigating this, which read +91.5 at 5% nulls where the truth is +88.2.
+
+Three candidates, all legitimate, one founder decision:
+
+1. **`S_VALUE["null_effect"] = −0.7`** prices a well-run null at 70% of documented
+   *harm*. Invariant 4 constant, "awaiting Tier-3 calibration". If a null belongs
+   nearer 0 than −1, every ceiling above moves up sharply.
+2. **`H_PENALTY = 0.4`** punishes exactly the mixed literature any real ingredient
+   produces, and it is what pulls +83 down to +77 at a 10% null share.
+3. **The bands.** `docs/ANCHORS.md` says it plainly: *"Every band boundary here was
+   set by judgment, not measurement… a 'failure' may be a wrong anchor."* Five
+   confidence-A anchors were written expecting a textbook result to score like a
+   textbook, which may simply not be what this formula means.
+
+**Do not tune any of them to make an anchor pass** — `pipeline/calibration.py`'s
+docstring and invariant 4 both forbid it, and it would make the score meaningless
+while turning the harness green.
+
+Also unresolved and interacting: the run behind the −6 lost **~145 model calls to
+the subscription session limit** (S3 29, S4 32, S5 28, S7 32, S8 26). Since
+`Study.direction` defaults to `null_effect` = −0.7, a truncated corpus biases the
+score negative *by construction*, so −6 is not a clean measurement of anything.
+A clean re-run inside the session budget must precede any conclusion here.
+
+Pinned meanwhile by `pipeline/selftest.py` → `ANCHOR BAND FEASIBILITY`, so the
+five tolerances cannot move without turning the suite red.
+
 ---
 
 ## RESOLVED — kept only as pointers
