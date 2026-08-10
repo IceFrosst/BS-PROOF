@@ -34,7 +34,12 @@ OA_FACTOR   = {"full_text":1.00, "sr_table":0.85, "abstract_only":0.55}
 S_VALUE = {"benefit_meaningful":1.0, "benefit_trivial":0.3,
            "null_effect":-0.7, "harm":-1.0}
 
-K = 3.0                 # confidence saturation. CALIBRATE ON TIER-3.
+K = 1.5                 # confidence saturation. FOUNDER DECISION 2026-08-11
+                        # ("do k1.5 for now"), from the printed K A/B: at K=3.0
+                        # the ECU granularity fragments 143 studies into cells
+                        # of 4-17 while c=0.8 needed ~51 studies/cell, so
+                        # confidence -- not evidence -- capped every score.
+                        # Still awaiting external Tier-3 calibration.
 LAMBDA = 0.3            # synthesis multiplier ceiling
 H_PENALTY = 0.4
 
@@ -81,7 +86,7 @@ APPLY_DOSE_IN_WEIGHT = False
 # must never be read side by side as if the numbers meant the same thing, and
 # scripts/archive_reports.py enforces that by sweeping old-model runs out of
 # reports/runs/ into reports/archive/<model>/.
-SCORING_MODEL = "v3-rob-known"
+SCORING_MODEL = "v4-k15"
 
 # What each model meant, so an archived report can still be understood:
 SCORING_MODEL_HISTORY = {
@@ -99,6 +104,10 @@ SCORING_MODEL_HISTORY = {
         "identical to v2 except RoB is banded on the RATIO of hits among "
         "KNOWN items, so an unknowable item no longer counts as evidence of "
         "bias. Everything else -- arcs, composite, K, S_VALUE -- unchanged.",
+    "v4-k15":
+        "identical to v3 except K 3.0 -> 1.5 (founder, 2026-08-11): confidence "
+        "saturates at realistic per-cell corpus sizes instead of demanding "
+        "~51 studies per ECU cell for c=0.8.",
 }
 
 

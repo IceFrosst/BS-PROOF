@@ -698,7 +698,7 @@ def main(argv: list[str]) -> int:
         try:
             import pipeline.scoring as _sc
             _k0 = _sc.K
-            _sc.K = 1.5
+            _sc.K = 3.0   # the pre-2026-08-11 value, kept visible
             rows_k = _score(True)
         except Exception as e:
             print(f"  K sensitivity unavailable: {e}")
@@ -707,10 +707,10 @@ def main(argv: list[str]) -> int:
             _sc.K = _k0
         if rows_k:
             _kb = {r["outcome_vocab_id"]: r for r in rows_k}
-            print(f"\nCONFIDENCE A/B -- same evidence, K={_k0} (stored) vs K=1.5.")
+            print(f"\nCONFIDENCE A/B -- same evidence, K={_k0} (stored) vs K=3.0 (old).")
             print("  If these diverge wildly, fragmentation is the binding constraint,")
             print("  not the evidence. K change needs external calibration (SPEC 13).")
-            print(f"  {'outcome':<24}{'stored':>7}{'K=1.5':>7}   {'c':>6}{'c@1.5':>7}")
+            print(f"  {'outcome':<24}{'stored':>7}{'K=3.0':>7}   {'c':>6}{'c@1.5':>7}")
             for r in rows:
                 kk = _kb.get(r["outcome_vocab_id"])
                 if not kk: continue
@@ -721,7 +721,7 @@ def main(argv: list[str]) -> int:
                       f"{str(c0):>6}{str(c1):>7}")
             run_context["k_ab"] = [
                 {"outcome": r["outcome_vocab_id"], "stored": r.get("composite"),
-                 "k15": (_kb.get(r["outcome_vocab_id"]) or {}).get("composite")}
+                 "k_old": (_kb.get(r["outcome_vocab_id"]) or {}).get("composite")}
                 for r in rows if r["outcome_vocab_id"] in _kb]
 
         rows = show.filter_ecu_rows(rows, outcome_allowlist)
