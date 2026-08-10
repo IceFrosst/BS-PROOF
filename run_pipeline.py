@@ -110,6 +110,56 @@ def _prioritize_primaries(primaries: list[dict], *,
     return ordered
 
 
+def stratify_targets(primaries: list[dict], outcomes: list[str],
+                     limit: int) -> list[dict]:
+    """
+    Round-robin the --limit budget across the outcomes each record was
+    RETRIEVED FOR, preserving priority order within each outcome.
+
+    Why (measured 2026-08-11): plain `primaries[:limit]` takes by full-text
+    priority, so outcomes whose studies sit in the tail starve -- endurance
+    scored on n=4 and energy on n=1 while Europe PMC held 122 and 200 hits.
+    The per-outcome quota machinery upstream existed precisely to prevent
+    this and its work was being discarded at selection.
+
+    Records with no retrieved_for tag (older stores) keep priority order and
+    fill remaining budget, so the function degrades to [:limit] gracefully.
+    """
+    pools: dict[str, list[dict]] = {o: [] for o in outcomes}
+    rest: list[dict] = []
+    for r in primaries:
+        tags = set((r.get("retrieved_for") or "").split(","))
+        hit = [o for o in outcomes if o in tags]
+        if hit:
+            for o in hit:
+                pools[o].append(r)
+        else:
+            rest.append(r)
+    chosen, seen = [], set()
+    idx = {o: 0 for o in outcomes}
+    while len(chosen) < limit:
+        progressed = False
+        for o in outcomes:
+            pool = pools[o]
+            while idx[o] < len(pool):
+                r = pool[idx[o]]; idx[o] += 1
+                cid = r.get("canonical_id") or r.get("_canonical") or id(r)
+                if cid not in seen:
+                    seen.add(cid); chosen.append(r); progressed = True
+                    break
+            if len(chosen) >= limit:
+                break
+        if not progressed:
+            break
+    for r in rest:
+        if len(chosen) >= limit:
+            break
+        cid = r.get("canonical_id") or r.get("_canonical") or id(r)
+        if cid not in seen:
+            seen.add(cid); chosen.append(r)
+    return chosen
+
+
 def synthetic_extraction(record: dict, axes: dict) -> dict:
     return {
         "S3": {"n_randomised": 100, "population_axes": axes},
@@ -498,7 +548,16 @@ def main(argv: list[str]) -> int:
                 run_context["concurrency"] = ca.MAX_CONCURRENCY
                 run_context["studies_in_flight"] = in_flight
 
-            targets = primaries if limit is None else primaries[:limit]
+            if limit is None:
+                targets = primaries
+            elif scope == "per_outcome" and outcome_allowlist:
+                targets = stratify_targets(primaries, outcome_allowlist, limit)
+                _tagged = sum(1 for t in targets if t.get("retrieved_for"))
+                print(f"  stratified selection: {_tagged}/{len(targets)} carry "
+                      f"retrieved_for tags (round-robin across "
+                      f"{len(outcome_allowlist)} outcomes)")
+            else:
+                targets = primaries[:limit]
             # Say what this will cost BEFORE spending it. ~10 model calls per
             # study, and about half are S6, which fires once per extracted claim.
             _calls = len(targets) * 10

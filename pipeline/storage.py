@@ -80,7 +80,15 @@ class Store:
                          # PUBLISHERS; matching it against a journal title was a
                          # category error that flagged 13.2% of a real corpus.
                          ("publisher",
-                          "ALTER TABLE study ADD COLUMN publisher TEXT")):
+                          "ALTER TABLE study ADD COLUMN publisher TEXT"),
+                         # Which per-outcome queries found this record
+                         # (comma-joined outcome ids). 2026-08-11: the
+                         # per-outcome quota work was computed in retrieval and
+                         # then LOST here, so --limit selection could not
+                         # stratify and endurance/energy studies sat in the
+                         # priority tail. n=4 and n=1 while 122-200 hits existed.
+                         ("retrieved_for",
+                          "ALTER TABLE study ADD COLUMN retrieved_for TEXT")):
             if col not in have:
                 self.conn.execute(ddl)
         # ECU gained the 0-100 composite and the per-arc detail on 2026-08-07.
@@ -125,14 +133,14 @@ class Store:
                 1 if r.get("retracted") else 0,
                 json.dumps(r.get("_merged_from") or []),
                 r.get("source") or "unknown", now_iso(),
-                r.get("publisher"),
+                r.get("publisher"), r.get("retrieved_for"),
             ))
         self.conn.executemany(
             "INSERT INTO study (canonical_id, id_kind, pmid, pmcid, doi,"
             " registration_id, title, abstract, journal, year, first_author, is_synthesis,"
             " design_rank, design_basis, oa, oa_location, retracted, merged_from,"
-            " source, fetched_at, publisher)"
-            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+            " source, fetched_at, publisher, retrieved_for)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
             " ON CONFLICT(canonical_id) DO UPDATE SET"
             "   design_rank=excluded.design_rank, design_basis=excluded.design_basis,"
             "   oa=excluded.oa, merged_from=excluded.merged_from,"
@@ -141,6 +149,7 @@ class Store:
             # thinner record -- that is how the text vanished in the first place.
             "   abstract=COALESCE(excluded.abstract, study.abstract),"
             "   publisher=COALESCE(excluded.publisher, study.publisher),"
+            "   retrieved_for=COALESCE(excluded.retrieved_for, study.retrieved_for),"
             "   fetched_at=excluded.fetched_at",
             rows)
         self.conn.commit()

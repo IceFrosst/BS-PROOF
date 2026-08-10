@@ -1881,6 +1881,48 @@ def main():
           "tolerances", not _moved,
           "; ".join(_moved) or "6.4-11.1% null mass; see docs/REVIEW_PENDING.md")
 
+    # CLAIM-LEVEL CONTRAST (v1.13). A claim comparing two ingredient arms is
+    # about the co-ingredient, not the ingredient -- in either direction.
+    _st6 = {}
+    _c1 = _ext("doi:10.1/f1", [("null_effect", None)])
+    _c1["extraction"]["outcomes"][0]["claim"]["contrast"] = "vs_ingredient_arm"
+    _c2 = _ext("doi:10.1/f2", [("null_effect", None)])
+    _both_f = _b2([_c1, _c2], _pr, ignore_population=True, stats=_st6)
+    check("a vs_ingredient_arm claim does not vote",
+          _both_f[0]["evidence"]["n_primaries"] == 1,
+          "coingestion-vs-creatine is evidence about the co-ingredient")
+    _c3 = _ext("doi:10.1/f3", [("benefit", "meaningful")])
+    _c3["extraction"]["outcomes"][0]["claim"]["contrast"] = "vs_ingredient_arm"
+    _ben_f = _b2([_c3, _c2], _pr, ignore_population=True)
+    check("a vs_ingredient_arm BENEFIT is dropped too (symmetric)",
+          _ben_f[0]["evidence"]["n_primaries"] == 1)
+    for _cv in (None, "unclear", "vs_ingredient_free", "within_group"):
+        _c4 = _ext("doi:10.1/f4", [("null_effect", None)])
+        _c4["extraction"]["outcomes"][0]["claim"]["contrast"] = _cv
+        _keep_f = _b2([_c4, _c2], _pr, ignore_population=True)
+        check(f"contrast={_cv} keeps the claim",
+              _keep_f[0]["evidence"]["n_primaries"] == 2)
+
+    # STRATIFIED TARGET SELECTION (2026-08-11). primaries[:limit] starved
+    # tail outcomes: endurance n=4 / energy n=1 against 122-200 available hits.
+    print("\nSTRATIFIED SELECTION")
+    from run_pipeline import stratify_targets as _st
+    _mk = lambda i, tags: {"canonical_id": f"c{i}", "retrieved_for": tags}
+    _prims = ([_mk(i, "muscle_strength") for i in range(10)]
+              + [_mk(10 + i, "exercise_endurance") for i in range(10)])
+    _sel = _st(_prims, ["muscle_strength", "exercise_endurance"], 6)
+    _end = sum(1 for r in _sel if "endurance" in (r["retrieved_for"] or ""))
+    check("the budget is split across outcomes, not taken from the head",
+          _end == 3, f"endurance got {_end}/6")
+    _both = [_mk(0, "muscle_strength,exercise_endurance"), _mk(1, "muscle_strength")]
+    check("a record retrieved for two outcomes is selected once",
+          len(_st(_both, ["muscle_strength", "exercise_endurance"], 4)) == 2)
+    _untagged = [{"canonical_id": f"u{i}"} for i in range(5)]
+    check("untagged stores degrade to plain priority order",
+          [r["canonical_id"] for r in _st(_untagged, ["muscle_strength"], 3)]
+          == ["u0", "u1", "u2"])
+    check("limit is respected", len(_st(_prims, ["muscle_strength"], 7)) == 7)
+
     # MARKER-ONLY MENTIONS. The 1994 "repeated bout of eccentric exercise ...
     # creatine kinase" paper had no creatine arm at all, passed the gate on
     # "ingredient in title", and voted -0.7 against muscle_strength. Count-based:

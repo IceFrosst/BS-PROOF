@@ -169,6 +169,15 @@ def to_studies(record: dict, extraction: dict, product: dict,
         if entry.get("discarded") or not entry.get("outcome_vocab_id"):
             continue
         claim = entry["claim"]
+        # CLAIM-LEVEL CONTRAST (v1.13, 2026-08-11). A trial can hold a genuine
+        # placebo AND a claim that compares two ingredient arms: audited case --
+        # "coingestion vs creatine, ES -0.21..0.14" was filed as a creatine null
+        # while the same abstract shows creatine beating placebo ES 0.37-0.83.
+        # The study-level comparator cannot see this; only the claim can say
+        # which arms it compares. SYMMETRIC and default-KEEP like invariant 7:
+        # only an explicit vs_ingredient_arm is dropped, in either direction.
+        if claim.get("contrast") == "vs_ingredient_arm":
+            continue
         direction = claim.get("direction") or "unclear"
         magnitude = claim.get("magnitude")
         # SAFETY OUTCOMES INVERT. s_i is signed against the product's CLAIM, and

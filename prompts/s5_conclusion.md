@@ -45,6 +45,24 @@ them null_effect. (Six timepoints of one construct is still one claim -- see the
 unit rule above. The two rules do not conflict: never drop a null, never split
 one finding.)
 
+contrast — WHICH ARMS DOES THIS CLAIM COMPARE?
+  vs_ingredient_free  the claim compares against an arm that received NO study
+                      ingredient (placebo, no-treatment, different agent)
+  vs_ingredient_arm   the claim compares two arms that BOTH received the study
+                      ingredient — ingredient+X vs ingredient, high vs low dose,
+                      timing A vs timing B. Such a claim says something about X
+                      or the schedule, NOT about the ingredient, and downstream
+                      it is excluded from the ingredient's score in either
+                      direction.
+  within_group        a pre/post change inside one arm, no between-arm test
+  unclear             cannot tell — this keeps the claim in, so it is the safe
+                      answer when unsure
+Measured case for why this exists: a 4-arm crossover reported "coingestion
+provided improvements compared with sodium bicarbonate but NOT when compared
+with creatine". That claim compares creatine+bicarb TO creatine — filing it as
+a creatine null scored the trial against creatine while the same abstract shows
+creatine beating placebo (ES 0.37–0.83).
+
 MAGNITUDE
   meaningful - the effect is large enough to matter to a person, or the paper
                reports it exceeded a stated MCID / clinical threshold

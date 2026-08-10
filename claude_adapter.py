@@ -80,6 +80,13 @@ SHARED_PROMPT = PROMPTS / "_shared.md"
 
 # Bump when you edit ANY prompt (including _shared.md). This is in the cache key.
 # Forget to bump it and you will silently serve stale extractions forever.
+# v1.13 (2026-08-11): two fixes from the muscle_power audit (12 verifiers;
+# ~5 of 12 voting nulls wrong). S5 gains per-claim `contrast` -- a 4-arm trial
+# with a genuine placebo can still emit a claim comparing creatine+bicarb TO
+# creatine, which is evidence about bicarb, and the study-level comparator
+# cannot see it. vs_ingredient_arm claims are excluded symmetrically; unclear
+# keeps. S6B gains post-fatigue examples -- "RSA after a fatiguing protocol"
+# went to muscle_power despite the v1.12 recovery rule.
 # v1.12 (2026-08-10): three fixes from the null audit (docs/REVIEW_PENDING.md #4;
 # 5 of the 7 muscle_strength nulls that survived every gate were wrong).
 #   S3 gains `ingredient_isolated` -- a trial whose every ingredient arm
@@ -127,7 +134,7 @@ SHARED_PROMPT = PROMPTS / "_shared.md"
 # v1.6 (2026-08-08): S2 reports results_table + per-study design. SR-table trials
 # now enter evidence mass, so S2's output moves scores and not just confidence.
 # v1.5 (2026-08-07): S3 prompt shortened, SR label resolve, review_methods.
-PROMPT_VERSION = "v1.12"
+PROMPT_VERSION = "v1.13"
 
 # Tier -> model. FULL IDs, NOT ALIASES.
 #

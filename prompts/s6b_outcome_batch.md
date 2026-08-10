@@ -39,6 +39,12 @@ RECOVERY, not the strength:
 The tell is the study clock: an endpoint measured hours-to-days around one
 damaging bout is about recovery; an endpoint measured across a training program
 is about the capacity itself.
+Audited misses (2026-08-11) — these went to muscle_power and were wrong:
+  "RSA immediately after a fatiguing 21-rep protocol"  -> exercise_recovery
+  "post-fatigue half-squat power"                      -> exercise_recovery
+  "peak power across 10 sprints framed as recovery"    -> exercise_recovery
+A repeated-sprint battery measured FRESH, across a training program, is still
+muscle_power. The framing sentence of the paper decides, not the instrument.
 
 HARD RULES
 - Never map a biomarker to a clinical outcome or vice versa. If the vocabulary

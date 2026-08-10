@@ -86,6 +86,20 @@
      "evidence_span": {
       "type": "string",
       "maxLength": 200
+     },
+     "contrast": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "enum": [
+       "vs_ingredient_free",
+       "vs_ingredient_arm",
+       "within_group",
+       "unclear",
+       null
+      ],
+      "description": "Which comparison this claim reports: against an arm with no study ingredient (vs_ingredient_free), against another arm that ALSO received the ingredient (vs_ingredient_arm -- e.g. ingredient+X vs ingredient), a within-group pre/post change (within_group), or unclear."
      }
     }
    },

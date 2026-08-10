@@ -103,6 +103,19 @@ def retrieve(ingredient: str, store: Store, *, max_syntheses: int = 200,
     primaries = [r for r in classified if not r["is_synthesis"]]
 
     unique_pri, _, dstats = dedup(primaries)
+    # One trial legitimately arrives via several outcome queries; the unique
+    # record must carry the UNION so downstream selection can stratify.
+    from pipeline.dedup import canonical_id as _cid
+    _byc: dict[str, set] = {}
+    for _r in primaries:
+        _o = _r.get("retrieved_for")
+        if _o:
+            _k, _c = _cid(_r)
+            _byc.setdefault(f"{_k}:{_c}", set()).add(_o)
+    for _u in unique_pri:
+        _os = _byc.get(_u.get("_canonical") or "")
+        if _os:
+            _u["retrieved_for"] = ",".join(sorted(_os))
     unique_syn, _, sstats = dedup(syntheses)
     log(f"  deduped     {dstats['in']} -> {dstats['out']} primary units "
         f"({dstats['collapsed']} collapsed, by kind {dstats['by_kind']})")
