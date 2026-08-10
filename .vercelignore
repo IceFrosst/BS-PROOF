@@ -1,4 +1,7 @@
-.git
+# .git must NOT be ignored: the project's Ignored Build Step runs
+# `git diff HEAD^ HEAD` to decide whether a push touches the dashboard, and
+# removing .git made that command error in every deployment (2026-08-11:
+# every push to main -> Error in 2s -> a failure email). .github stays ignored.
 .github
 .env*
 .next
