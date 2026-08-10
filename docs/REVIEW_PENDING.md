@@ -189,6 +189,37 @@ no new invariant at all, which makes it the cheapest of the three to try.
 Also: the 80-study run cost **zero model calls** (475 cache hits), so re-testing a
 different cap is free.
 
+### The null audit — measured error rate on the nulls that actually vote
+
+2026-08-10: seven paper-verifiers read the actual sources for every
+`muscle_strength` null that survives the D-scope filter and invariant 7.
+**5 of 7 are wrong, 1 is legitimate, 1 is unverifiable** (its full text was
+never cached). Worse than the historical 11-of-23 (48%) — on the *voting*
+subset it is ~71%.
+
+| study | verdict | class |
+|---|---|---|
+| Dosing Strategies (aging) | wrong | authors state "only 33 of 42 … decreased our statistical power" — **the literal invariant-7 example**, but S3 returned `null` for the field, so the refusal never fired. Likely cause: the statement lives in the Limitations section, which the 12 000-char middle-elision trim can drop |
+| MIPS electrolyte | wrong ×2 | creatine + 4 electrolytes (co-ingestion), **and** the paper reports significant 1RM *benefits* (squat +13.4% vs −0.2%, p=0.047) that were never credited |
+| Eccentric 1994 | wrong | **not a creatine trial** — "creatine" is creatine *kinase*. FIXED deterministically: `relevance.py` now rejects marker-only mentions (16 such records in the store), selftest-pinned |
+| Critical power | wrong | S6B mapped fatigue-induced MVC *loss* onto `muscle_strength`; the trial found a significant endurance **benefit** (+11% TTF, p=0.017) |
+| Neuromuscular recovery | wrong | 48-h damage-recovery kinetics mapped onto strength gain — same construct error |
+| 12-month bone trial | **legitimate** | real control, honest secondary-endpoint null |
+| Tennis 2006 | unverifiable | JATS never cached; the −0.7 rests on an unverified extraction |
+
+Two v1.12 candidates that follow directly (mine, once #4 is decided, since each
+bump invalidates the cache):
+1. **S6B construct rule**: "recovery of X after induced damage/fatigue" is not
+   evidence about X itself — map to a recovery/fatigue outcome or discard.
+   Caused 2 of the 5 errors.
+2. **S3 must see the Limitations section** — that is where authors declare
+   underpowering, and the current head+tail elision can drop it. Caused 1 of 5.
+
+Also open: how "one study = one vote" collapses a study whose claims in the same
+outcome DISAGREE (MIPS had both a null and two significant benefits on strength;
+the null won). Worth a rule before the next run: primary endpoint wins, else the
+maximal-strength construct outranks a submaximal one.
+
 Trajectory of `muscle_strength` across 2026-08-10, for context on what moved it:
 
 | run | score | n | c | what changed |

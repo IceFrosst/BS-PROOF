@@ -81,6 +81,27 @@ def relevance_check(record: dict, ingredient: str) -> tuple[bool, str]:
     if ingredient not in title_l and ingredient not in abs_l:
         return False, "ingredient not in title/abstract"
 
+    # 1b) ...but not ONLY as part of a biomarker name. MEASURED 2026-08-10: 16
+    # records in the creatine store match "creatine" solely via "creatine kinase"
+    # / "creatine phosphokinase" -- the muscle-damage ENZYME, not the supplement.
+    # One of them ("The impact of a repeated bout of eccentric exercise on
+    # muscular strength, muscle soreness and creatine kinase", 1994, no arm
+    # ingested anything) survived every downstream gate and voted -0.7 against
+    # creatine's muscle_strength claim; a paper-verifier reading the abstract
+    # found the trial compared exercise BOUTS, not supplements. The rule is
+    # count-based, not a blocklist: a real creatine trial also measures CK, so
+    # "creatine supplementation ... serum creatine kinase" has more bare
+    # mentions than marker mentions and passes. Only when EVERY mention is the
+    # marker is there no supplement in the paper at all. Generic across
+    # ingredients -- "magnesium kinase" does not exist, so other ingredients
+    # simply never trigger it.
+    _marker = re.compile(rf"{re.escape(ingredient)}\s+(kinase|phosphokinase)", re.I)
+    blob_ta = f"{title_l} {abs_l}"
+    n_mentions = len(re.findall(re.escape(ingredient), blob_ta))
+    n_marker = len(_marker.findall(blob_ta))
+    if n_mentions and n_mentions == n_marker:
+        return False, "marker mention only (e.g. creatine kinase)"
+
     # 2) Hard reject: clinical/IV framing in the TITLE.
     if _CLINICAL.search(title):
         return False, "clinical/IV context in title"

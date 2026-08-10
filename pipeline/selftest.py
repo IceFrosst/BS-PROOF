@@ -1850,6 +1850,31 @@ def main():
           "tolerances", not _moved,
           "; ".join(_moved) or "6.4-11.1% null mass; see docs/REVIEW_PENDING.md")
 
+    # MARKER-ONLY MENTIONS. The 1994 "repeated bout of eccentric exercise ...
+    # creatine kinase" paper had no creatine arm at all, passed the gate on
+    # "ingredient in title", and voted -0.7 against muscle_strength. Count-based:
+    # a real trial that also MEASURES CK must keep passing.
+    print("\nRELEVANCE: BIOMARKER IS NOT THE SUPPLEMENT")
+    from pipeline.relevance import relevance_check as _rc
+    _kin = {"title": "The impact of a repeated bout of eccentric exercise on "
+                     "muscular strength, muscle soreness and creatine kinase.",
+            "abstract": "DOMS and serum creatine kinase (CK) were measured."}
+    check("kinase-only paper is rejected",
+          _rc(_kin, "creatine") == (False, "marker mention only (e.g. creatine kinase)"))
+    _real = {"title": "Creatine supplementation and resistance training",
+             "abstract": "creatine monohydrate 5 g/day; serum creatine kinase was "
+                         "measured as a damage marker."}
+    check("a real creatine trial that measures CK still passes",
+          _rc(_real, "creatine")[0] is True,
+          "bare mentions > marker mentions -> supplement is present")
+    _cpk = {"title": "The Effect of Vitamin D3 on Serum Creatine Phosphokinase "
+                     "Level in Patients", "abstract": "CPK levels..."}
+    check("phosphokinase counts as the marker too",
+          _rc(_cpk, "creatine")[0] is False)
+    check("other ingredients are untouched by the marker rule",
+          _rc({"title": "Oral magnesium supplementation for sleep",
+               "abstract": "magnesium glycinate 300 mg"}, "magnesium")[0] is True)
+
     check("no anchor floor is unreachable at zero nulls",
           all(f["max_null_share"] is not None for f in _cal.feasibility()),
           "a floor above +100 would be a typo, not a calibration question")
