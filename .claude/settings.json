@@ -24,9 +24,18 @@
       {
         "matcher": "Edit|Write|MultiEdit",
         "hooks": [
-          { "type": "command", "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/gates.sh" },
-          { "type": "command", "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/prompt_version.sh" },
-          { "type": "command", "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/constants.sh" }
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/gates.sh"
+          },
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/prompt_version.sh"
+          },
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/constants.sh"
+          }
         ]
       }
     ],
@@ -34,7 +43,10 @@
       {
         "matcher": "Bash",
         "hooks": [
-          { "type": "command", "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/venv_required.sh" }
+          {
+            "type": "command",
+            "command": "python3 $CLAUDE_PROJECT_DIR/.claude/hooks/venv_required.py"
+          }
         ]
       }
     ]

@@ -333,11 +333,41 @@ def main(argv: list[str]) -> int:
 
     with Store(db) as store:
         counts = store.counts()
-        need_retrieve = counts["studies"] == 0 or (
-            # limit=None means score everything, so retrieve up to the cap.
-            grok and counts["studies"] < (RETRIEVE_MAX_PRIMARIES if limit is None
-                                          else min(limit + 50, RETRIEVE_MAX_PRIMARIES))
-        )
+        # MEASURED 2026-08-10, and this one condition was costing ~5x the corpus.
+        #
+        # Two defects, both in this expression:
+        #
+        # 1. `grok and ...` meant that on the PRODUCTION CLAUDE PATH retrieval
+        #    fired only when the store was COMPLETELY EMPTY. So the corpus never
+        #    grew and never refreshed. Second-order effect, which is the one that
+        #    actually hurt: rows written before `resultType=core` was added left
+        #    `abstract` NULL on 100% of 1560 RCT rows, and since storage upserts
+        #    with COALESCE it can only be backfilled by a fresh retrieval that
+        #    never happened. A NULL abstract silently turns relevance_check into
+        #    title-only (see the vitamin_d note in pipeline/relevance.py, which is
+        #    the same failure) and leaves abstract-only studies with no text, which
+        #    is where "skipped: no text" on 23 of 69 studies came from.
+        #
+        # 2. `counts["studies"]` is the WHOLE store across every ingredient ever
+        #    run, so it answered a different question than the one that matters.
+        #    The 2076-row store held 1560 RCT-rank primaries of which only 69 were
+        #    creatine -- the rest were ashwagandha and magnesium from earlier runs
+        #    -- and 392 creatine RCTs existed upstream at intervention scope. The
+        #    run scored 69 and reported n=1..7 per outcome, which is why every
+        #    confidence arc sat at c=0.02..0.22 and every score rounded to ~0.
+        #
+        # So: count what is RELEVANT TO THIS INGREDIENT, and do it for every
+        # backend. Re-retrieval when already full is cheap -- sources/http.py
+        # caches every response to disk, so a repeat pass is offline and fast.
+        target = (RETRIEVE_MAX_PRIMARIES if limit is None
+                  else min(limit + 50, RETRIEVE_MAX_PRIMARIES))
+        _n_relevant = sum(1 for s in store.studies(syntheses=False)
+                          if s.get("design_rank") == 4
+                          and relevance_check(s, ingredient)[0])
+        need_retrieve = _n_relevant < target
+        if need_retrieve:
+            print(f"corpus: {_n_relevant} RCT-rank {ingredient} studies in store, "
+                  f"target {target} -- expanding")
         if need_retrieve:
             print(f"retrieving / expanding corpus in {db.name} "
                   f"(scope={scope}, max primaries={RETRIEVE_MAX_PRIMARIES})...")
