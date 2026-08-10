@@ -167,6 +167,28 @@ model calls, no constant changed. C–G are EXPERIMENTS; A is what ships today.
 `lean_body_mass` is already **positive under the shipped policy** (+2, d=+0.090) —
 the first outcome to cross zero. `muscle_power` sits at −9 and reaches +6 under G.
 
+**MORE STUDIES MADE `d` WORSE, and that is a finding, not noise.** Same code, same
+`PROMPT_VERSION`, same corpus, only `--limit` differs:
+
+| | n | d | c | signed |
+|---|---:|---:|---:|---:|
+| `--limit 80` | 13 | **+0.055** | 0.307 | **+2** |
+| `--limit 150` | 27 | −0.210 | 0.524 | −10 |
+
+`targets = primaries[:limit]` takes the first N after `_prioritize_primaries`
+(full-text/green first), so studies 81–150 are the lower-priority tail. They added
+14 `muscle_strength` studies and pulled `d` from +0.055 to −0.210. The
+prioritisation is working; the tail is where the contamination lives.
+
+Consequence worth stating plainly: **there is a real quality/quantity tradeoff and
+right now it is not monotonic.** Extending the corpus buys `c` and costs `d`, and
+past ~80 studies it costs more than it buys. That is a third option for the scope
+decision — cap the corpus by priority rather than filter it by rule — and it needs
+no new invariant at all, which makes it the cheapest of the three to try.
+
+Also: the 80-study run cost **zero model calls** (475 cache hits), so re-testing a
+different cap is free.
+
 Trajectory of `muscle_strength` across 2026-08-10, for context on what moved it:
 
 | run | score | n | c | what changed |
