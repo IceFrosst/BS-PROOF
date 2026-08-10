@@ -102,6 +102,7 @@ that are not evidence against creatine at all**.
 |---|---|
 | `comparator == "all_arms_get_ingredient"` | every arm took the ingredient. The trial compares morning vs evening, one dosing schedule vs another, or ingredient+X vs ingredient. One such paper states it outright — *"a control group that did not consume the Cr supplement was not considered necessary given the high level of scientific evidence that exists on how Cr improves performance"* — and 1RM rose in **both** creatine arms. We scored it −0.7 against creatine |
 | `self_declared_underpowered is True` | the AUTHORS say the trial could not answer the question: a CONSORT pilot/feasibility design (n=8 per arm, no power calculation), or a stated a priori target it missed — 33 of 42, 28 of 48, 22 of 34 |
+| `ingredient_isolated == "no"` | **added 2026-08-10 (decision delegated by the founder).** Every ingredient arm co-administers another active — creatine+HMB vs placebo, a MIPS blend vs placebo. The control is genuinely ingredient-free, so the first refusal cannot fire, but the trial tests a COMBINATION and says nothing about the ingredient alone in either direction. 21 of 143 audited studies were this shape; one carried significant strength benefits that were never credited while its null endpoint voted −0.7 |
 
 Both are **scope** rules, the same shape as invariant 6's five refusals, not
 discounts — down-weighting would still be counting the wrong answer, quietly.
@@ -597,7 +598,12 @@ general-adult product, so their nulls counted at FULL weight as evidence that
 creatine does not build muscle in healthy adults. S3 now reports it
 (`PROMPT_VERSION` v1.7).
 
-**Every scored run now prints a POPULATION A/B** and stores only variant A:
+**Every scored run now prints a POPULATION A/B** and — since 2026-08-10,
+decision delegated by the founder after the null audit — **stores variant B**.
+Disease trials (breast cancer, COPD, ALS, cancer anorexia) were voting at full
+weight on healthy-adult claims; `health_status` feeds `vocab.pop_match`, so B
+excludes `pop_match == "different"` as a different question. A is still computed
+and printed beside it, never blended:
 
 | | policy |
 |---|---|

@@ -35,6 +35,24 @@ ingredient works; it can only say whether the schedule mattered. Downstream such
 a trial is excluded, so `unknown` is the safe answer when you are unsure --
 `unknown` keeps the study in.
 
+ingredient_isolated — IS THE INGREDIENT EVER TESTED ALONE?
+  yes      at least one treatment arm receives the study ingredient WITHOUT
+           another active co-ingested ingredient
+  no       every arm that receives the ingredient co-administers another
+           active (ingredient+HMB, ingredient+caffeine, a multi-ingredient
+           blend, ingredient inside a "recovery drink" with protein/carbs)
+  unknown  you cannot tell from the arm descriptions
+
+Things that do NOT make it "no": a training program all arms perform, the
+capsule/carrier, flavouring, or a co-ingestant given identically to the
+control arm too. A 4-arm trial of placebo | creatine | creatine+caffeine is
+`yes` — the creatine-alone arm exists. MIPS-style blends (creatine + four
+electrolytes vs placebo) are `no`: the trial tests the blend, and its result
+— in either direction — is not evidence about the ingredient alone. Downstream
+a `no` is excluded symmetrically (a blend's benefit is dropped too), and
+`unknown` keeps the study in, so it is the safe answer when unsure. Quote the
+arm composition in evidence_spans when you answer `no`.
+
 self_declared_underpowered
 true ONLY when the paper itself says so, in one of these forms:
   - it describes itself as a pilot, feasibility, proof-of-concept or

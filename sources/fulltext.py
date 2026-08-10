@@ -36,6 +36,14 @@ SECTION_PATTERNS = {
                 r"^study\s+design"),
     "results": (r"^results?$", r"^findings?$", r"^results?\s+and\s+discussion$"),
     "discussion": (r"^discussion$", r"^conclusions?$"),
+    # LIMITATIONS. Added 2026-08-10 (v1.12). The self-declared-underpowered
+    # statement invariant 7 depends on lives here -- "only 33 participants
+    # completed the study which decreased our statistical power" -- and
+    # best_text was METHODS ++ RESULTS, so S3 could never see it. That exact
+    # paper (PMC12280466) is the literal "33 of 42" example cited in CLAUDE.md,
+    # and it voted -0.7 against creatine because the refusal never fired.
+    "limitations": (r"^(study\s+)?limitations?$", r"^strengths?\s+and\s+limitations",
+                    r"^limitations?\s+(and|of)\b"),
     # FUNDING / COI. Added 2026-08-09 because S8 could not possibly have been
     # working: best_text returns METHODS ++ RESULTS, neither of which states who
     # paid. Measured on 7 creatine RCTs -- 0/7 of the texts sent to S8 contained
@@ -239,7 +247,8 @@ def looks_like_included_studies(table: dict) -> bool:
     return sum(1 for s in HEADER_SIGNALS if s in header) >= 3
 
 
-def best_text(record: dict, *, prefer: tuple[str, ...] = ("methods", "results")) -> tuple[str, str]:
+def best_text(record: dict, *,
+              prefer: tuple[str, ...] = ("methods", "results", "limitations")) -> tuple[str, str]:
     """
     The best available text for one record, plus the OA tier it earned.
 
@@ -247,6 +256,13 @@ def best_text(record: dict, *, prefer: tuple[str, ...] = ("methods", "results"))
     is RETURNED rather than assumed because it multiplies w_study: a study read
     from its abstract must carry 0.55, and silently treating an abstract as full
     text would inflate every score built on it.
+
+    `limitations` joined `prefer` 2026-08-10 (v1.12), APPENDED to the shared
+    blob rather than routed per-agent -- the 2026-08-09 measurement in
+    workers.AGENT_SECTIONS stands: per-agent slices cost 27% more via lost
+    prompt-cache sharing, while one shared blob is written once and read by all
+    five agents. A limitations section is short; the underpowered statement it
+    carries decides invariant 7.
     """
     xml = fetch_xml(record.get("pmcid"))
     if xml:

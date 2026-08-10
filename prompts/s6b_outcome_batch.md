@@ -25,6 +25,21 @@ MAP ONLY WHEN THE CONSTRUCT IS THE SAME, NOT MERELY RELATED.
   "CRP"                        -> inflammation         Only if the vocabulary has
                                                        a biomarker-level id.
 
+RECOVERY IS NOT THE THING RECOVERED. Measured 2026-08-10: two audited trials
+measured strength LOSS after deliberately damaging or fatiguing exercise —
+"recovery of MVC 48h after eccentric exercise", "reduction in MVC at task
+failure" — and both were mapped to muscle_strength, filing "creatine did not
+speed recovery" as "creatine does not build strength". The construct is the
+RECOVERY, not the strength:
+  "MVC recovery after eccentric damage"    -> exercise_recovery   NOT muscle_strength
+  "strength loss at task failure"          -> exercise_recovery   NOT muscle_strength
+  "soreness 48h post-exercise"             -> muscle_soreness     NOT muscle_strength
+  "1RM gain after 8 weeks of training"     -> muscle_strength     YES — this one IS
+                                              the strength construct
+The tell is the study clock: an endpoint measured hours-to-days around one
+damaging bout is about recovery; an endpoint measured across a training program
+is about the capacity itself.
+
 HARD RULES
 - Never map a biomarker to a clinical outcome or vice versa. If the vocabulary
   distinguishes them, respect the distinction. If it does not, return null and

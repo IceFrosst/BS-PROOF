@@ -363,6 +363,18 @@ def _ineligible(ext: dict) -> str | None:
         return "no_ingredient_free_arm"
     if s3.get("self_declared_underpowered") is True:
         return "self_declared_underpowered"
+    # Third refusal, 2026-08-10 (decision delegated by the founder the same day;
+    # measured basis in docs/REVIEW_PENDING.md #4). A trial whose every treatment
+    # arm co-administers another active ingredient tests a COMBINATION --
+    # creatine+HMB vs placebo says nothing about creatine alone, in either
+    # direction. 21 of 143 studies in the audited corpus were this shape, every
+    # one had a genuine ingredient-free control (so the first refusal correctly
+    # did not fire), and the one read in full ALSO carried significant benefits
+    # that were never credited. SYMMETRIC like the others: a combination's
+    # benefit is dropped too. "yes"/unknown/None/absent all KEEP -- only S3's
+    # explicit "no" (no arm isolates the ingredient) refuses.
+    if s3.get("ingredient_isolated") == "no":
+        return "no_isolated_ingredient_arm"
     return None
 
 

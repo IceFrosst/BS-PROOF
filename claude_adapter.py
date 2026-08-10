@@ -80,6 +80,22 @@ SHARED_PROMPT = PROMPTS / "_shared.md"
 
 # Bump when you edit ANY prompt (including _shared.md). This is in the cache key.
 # Forget to bump it and you will silently serve stale extractions forever.
+# v1.12 (2026-08-10): three fixes from the null audit (docs/REVIEW_PENDING.md #4;
+# 5 of the 7 muscle_strength nulls that survived every gate were wrong).
+#   S3 gains `ingredient_isolated` -- a trial whose every ingredient arm
+#   co-administers another active tests a COMBINATION, and 21/143 studies were
+#   this shape with a genuine placebo, so the all_arms refusal could not catch
+#   them. Third invariant-7 refusal, symmetric, "no"-only, unknown keeps.
+#   S6B/S6 gain a construct rule -- "recovery of X after induced damage/fatigue"
+#   maps to exercise_recovery, NOT to X. Two audited nulls were damage-recovery
+#   kinetics filed as evidence creatine does not build strength, while one of
+#   those trials' actual endurance BENEFIT (+11% TTF, p=.017) was credited
+#   nowhere.
+#   best_text now appends the Limitations section -- the underpowered statement
+#   invariant 7 depends on lives there ("only 33 ... decreased our statistical
+#   power", PMC12280466, the literal CLAUDE.md example) and METHODS++RESULTS
+#   never contained it. Appended to the SHARED blob, not routed per-agent, so
+#   the 2026-08-09 cache-sharing measurement stands.
 # v1.11 (2026-08-10): S5 may not answer magnitude=`unstated` when it also filled in
 # `effect_size`. MEASURED on the 150-study creatine corpus: 359 of 487 benefit
 # claims came back `unstated`, and 114 of those carried a number in the same
@@ -111,7 +127,7 @@ SHARED_PROMPT = PROMPTS / "_shared.md"
 # v1.6 (2026-08-08): S2 reports results_table + per-study design. SR-table trials
 # now enter evidence mass, so S2's output moves scores and not just confidence.
 # v1.5 (2026-08-07): S3 prompt shortened, SR label resolve, review_methods.
-PROMPT_VERSION = "v1.11"
+PROMPT_VERSION = "v1.12"
 
 # Tier -> model. FULL IDs, NOT ALIASES.
 #

@@ -619,15 +619,21 @@ def main(argv: list[str]) -> int:
         else:
             searched = None
 
-        # A/B, founder 2026-08-08: score the SAME extractions twice and decide
-        # which population policy to keep. Extraction is the expensive part;
-        # build_ecus is deterministic and free, so the second pass costs nothing.
+        # A/B, founder 2026-08-08: score the SAME extractions twice. Extraction
+        # is the expensive part; build_ecus is deterministic and free, so the
+        # second pass costs nothing.
         #
-        #   A  everything counts   (current behaviour, ignore_population=True)
+        #   A  everything counts   (ignore_population=True)
         #   B  route on population (a disease trial is a DIFFERENT question)
         #
-        # A is what gets STORED. B is computed, printed and reported, never
-        # blended into A -- same discipline as invariant 9 for backends.
+        # DECIDED 2026-08-10 (delegated by the founder the same day): B is what
+        # gets STORED. The null audit (docs/REVIEW_PENDING.md #4) found disease
+        # trials -- breast cancer, COPD, ALS, cancer anorexia -- voting at full
+        # weight on healthy-adult claims; health_status feeds vocab.pop_match,
+        # so B excludes them as a different QUESTION, not weaker evidence
+        # (invariant 8: exclusion on an ECU axis, never a weight discount).
+        # A is still computed, printed and reported beside it, never blended --
+        # same discipline as invariant 9 for backends.
         def _score(variant_b: bool, stats: dict | None = None):
             return build_ecus(
                 extractions, product, syntheses=syntheses_for_score,
@@ -640,41 +646,47 @@ def main(argv: list[str]) -> int:
             )
 
         _elig: dict = {}
-        rows = _score(False, stats=_elig)
+        rows = _score(True, stats=_elig)     # B: STORED since 2026-08-10
         run_context["eligibility"] = _elig
+        run_context["population_policy"] = "B_exclude_offtarget"
         try:
-            rows_b = _score(True)
+            rows_b = _score(False)           # A: comparison only
         except Exception as e:
             print(f"  population A/B unavailable: {e}")
             rows_b = []
         if rows_b:
             _b = {r["outcome_vocab_id"]: r for r in rows_b}
             print("\n" + "=" * 74)
-            print("POPULATION A/B — same studies, two policies. Neither is stored as truth.")
-            print("  A = everything counts        B = disease-population trials excluded")
+            print("POPULATION A/B — same studies, two policies. B is STORED (2026-08-10).")
+            print("  B = off-target populations excluded (stored)   A = everything counts")
             print("-" * 74)
-            print(f"  {'outcome':<24}{'A':>5}{'B':>6}{'delta':>8}   {'n A':>4}{'n B':>5}")
+            # NOTE since 2026-08-10: `rows` is variant B (stored), `_b` holds
+            # variant A (comparison). Column names below say which is which so
+            # the swap cannot mislabel the table.
+            print(f"  {'outcome':<24}{'B*':>5}{'A':>6}{'B-A':>8}   {'n B':>4}{'n A':>5}")
             for r in rows:
                 b = _b.get(r["outcome_vocab_id"])
                 if not b:
                     continue
-                a_s, b_s = r.get("composite"), b.get("composite")
-                na = (r.get("evidence") or {}).get("n_primaries", 0)
-                nb = (b.get("evidence") or {}).get("n_primaries", 0)
-                d = ("" if a_s is None or b_s is None else f"{b_s - a_s:+d}")
+                stored_s, cmp_s = r.get("composite"), b.get("composite")
+                ns = (r.get("evidence") or {}).get("n_primaries", 0)
+                nc = (b.get("evidence") or {}).get("n_primaries", 0)
+                d = ("" if stored_s is None or cmp_s is None
+                     else f"{stored_s - cmp_s:+d}")
                 print(f"  {r['outcome_vocab_id']:<24}"
-                      f"{'--' if a_s is None else a_s:>5}"
-                      f"{'--' if b_s is None else b_s:>6}{d:>8}   {na:>4}{nb:>5}")
+                      f"{'--' if stored_s is None else stored_s:>5}"
+                      f"{'--' if cmp_s is None else cmp_s:>6}{d:>8}   {ns:>4}{nc:>5}")
             print("-" * 74)
-            print("  A big positive delta means A was being dragged down by trials")
-            print("  asking a different question. A big NEGATIVE n_B means B is")
+            print("  B* is stored. A positive B-A means A was dragged down by trials")
+            print("  asking a different question. n_B far below n_A means B is")
             print("  starving the row -- check S3 health_status before trusting it.")
             print("=" * 74)
             run_context["population_ab"] = [
                 {"outcome": r["outcome_vocab_id"],
-                 "a": r.get("composite"), "b": (_b.get(r["outcome_vocab_id"]) or {}).get("composite"),
-                 "n_a": (r.get("evidence") or {}).get("n_primaries", 0),
-                 "n_b": ((_b.get(r["outcome_vocab_id"]) or {}).get("evidence") or {}).get("n_primaries", 0)}
+                 "b_stored": r.get("composite"),
+                 "a": (_b.get(r["outcome_vocab_id"]) or {}).get("composite"),
+                 "n_b": (r.get("evidence") or {}).get("n_primaries", 0),
+                 "n_a": ((_b.get(r["outcome_vocab_id"]) or {}).get("evidence") or {}).get("n_primaries", 0)}
                 for r in rows if r["outcome_vocab_id"] in _b]
         rows = show.filter_ecu_rows(rows, outcome_allowlist)
         for row in rows:

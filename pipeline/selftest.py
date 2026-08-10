@@ -1368,10 +1368,38 @@ def main():
           _pb[0]["evidence"]["n_primaries"] == 1 and _st3["ineligible_total"] == 1,
           "the gate must not be a one-way ratchet")
 
+    # THIRD REFUSAL (2026-08-10, decision delegated by the founder): a trial
+    # whose every ingredient arm co-administers another active tests a
+    # COMBINATION. 21/143 audited studies were this shape with a genuine
+    # placebo, so the all_arms refusal correctly never fired on them.
+    _st4 = {}
+    _combo = _b2([_flagged("doi:10.1/e1", "null_effect"),
+                  _flagged("doi:10.1/e2", "null_effect", ingredient_isolated="no")],
+                 _pr, ignore_population=True, stats=_st4)
+    check("a combination-only trial does not vote",
+          _combo[0]["evidence"]["n_primaries"] == 1
+          and _st4["ineligible_by_reason"] == {"no_isolated_ingredient_arm": 1},
+          f"stats={_st4}")
+    _st5 = {}
+    _combo_b = _b2([_flagged("doi:10.1/e1", "benefit"),
+                    _flagged("doi:10.1/e2", "benefit", ingredient_isolated="no")],
+                   _pr, ignore_population=True, stats=_st5)
+    check("a combination's BENEFIT is dropped too (symmetric)",
+          _combo_b[0]["evidence"]["n_primaries"] == 1 and _st5["ineligible_total"] == 1,
+          "creatine+HMB improving strength is not evidence about creatine alone")
+    import json as _json, pathlib as _pl
+    _s3schema = _json.load(open(_pl.Path(__file__).parent.parent / "schemas" / "s3_study.json"))
+    _iso = (_s3schema.get("properties") or {}).get("ingredient_isolated") or {}
+    check("ingredient_isolated is in the S3 schema with 'no' in its enum",
+          "no" in (_iso.get("enum") or []),
+          "rename the enum and _ineligible silently never fires -- the "
+          "schema-drift trap invariant 7 already fell into once")
+
     # A silent or hesitant extractor must never cost us a study.
     for _val in ({}, {"comparator": None}, {"comparator": "unknown"},
-                 {"self_declared_underpowered": None},
-                 {"self_declared_underpowered": False}):
+                 {"self_declared_underpowered": None}, {"self_declared_underpowered": False},
+                 {"ingredient_isolated": None}, {"ingredient_isolated": "unknown"},
+                 {"ingredient_isolated": "yes"}):
         _keep = _b2([_flagged("doi:10.1/e1", "null_effect"),
                      _flagged("doi:10.1/e2", "null_effect", **_val)],
                     _pr, ignore_population=True)

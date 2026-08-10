@@ -170,6 +170,19 @@
      ]
     }
    }
+  },
+  "ingredient_isolated": {
+   "type": [
+    "string",
+    "null"
+   ],
+   "enum": [
+    "yes",
+    "no",
+    "unknown",
+    null
+   ],
+   "description": "Does at least one treatment arm receive the ingredient WITHOUT another active co-ingested ingredient? Training programs shared by all arms, carriers and flavouring do not count as co-ingestants. Answer 'no' ONLY when every ingredient arm co-administers another active. Unknown keeps the study."
   }
  }
 }
