@@ -150,18 +150,32 @@ Three options, none of which may be chosen by an agent:
 
 ### Measured sensitivity table — which lever actually flips the sign
 
-Replayed offline from the 143 dumped extractions of run `20260810_093323` through
-`build_ecus`. Zero model calls, no constant changed. C–G are EXPERIMENTS.
+Replayed offline from the 143 dumped extractions of run `20260810_095334` through
+`build_ecus`, **at `PROMPT_VERSION` v1.11** (magnitude fix already shipped). Zero
+model calls, no constant changed. C–G are EXPERIMENTS; A is what ships today.
 
 | policy | muscle_strength | d | c | n |
 |---|---:|---:|---:|---:|
-| **A** shipped (everything counts) | **−12** | −0.249 | 0.520 | 25 |
-| **B** population B (exclude `pop_match=different`) | −10 | −0.264 | 0.420 | 17 |
-| **C** refuse co-ingestion | −6 | −0.158 | 0.435 | 20 |
-| **D** refuse co-ingestion + disease | −4 | −0.125 | 0.339 | 13 |
-| **E** = D + benefit magnitudes sized from the numbers | **+7** | **+0.249** | 0.339 | 13 |
-| **F** = D + half the nulls removed (the 11-of-23 audit) | +2 | +0.074 | 0.264 | 10 |
-| **G** = D + both | **+13** | +0.578 | 0.264 | 10 |
+| **A** shipped today (v1.11, everything counts) | **−10** | −0.210 | 0.524 | 27 |
+| **B** population B (exclude `pop_match=different`) | −9 | −0.207 | 0.448 | 21 |
+| **C** refuse co-ingestion | **−4** | −0.103 | 0.457 | 23 |
+| **D** refuse co-ingestion + disease | **−2** | −0.067 | 0.370 | 17 |
+| **E** = D + remaining magnitude headroom | **+8** | +0.273 | 0.370 | 17 |
+| **F** = D + half the nulls removed (the 11-of-23 audit) | +1 | +0.043 | 0.326 | 15 |
+| **G** = D + both | **+12** | +0.441 | 0.326 | 15 |
+
+`lean_body_mass` is already **positive under the shipped policy** (+2, d=+0.090) —
+the first outcome to cross zero. `muscle_power` sits at −9 and reaches +6 under G.
+
+Trajectory of `muscle_strength` across 2026-08-10, for context on what moved it:
+
+| run | score | n | c | what changed |
+|---|---:|---:|---:|---|
+| 00:06 | +4 | 3 | 0.128 | — (but 214 of 493 calls failed; not a measurement) |
+| 09:06 | −2 | 4 | 0.135 | clean run, cache-served |
+| 09:33 | −12 | 25 | 0.520 | **retrieval gate fixed** — c quadrupled |
+| 09:53 | −10 | 27 | 0.524 | **v1.11 magnitude fix** |
+| + C/D | **−2** | 17 | 0.370 | scope refusals — **awaiting this decision** |
 
 **Correction to an earlier claim in this file:** it previously said the magnitude
 fix "only moves d from −0.38 to −0.18 and does not flip the sign on its own." That
