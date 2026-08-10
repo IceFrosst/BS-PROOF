@@ -104,8 +104,8 @@ that are not evidence against creatine at all**.
 | `self_declared_underpowered is True` | the AUTHORS say the trial could not answer the question: a CONSORT pilot/feasibility design (n=8 per arm, no power calculation), or a stated a priori target it missed — 33 of 42, 28 of 48, 22 of 34 |
 | `ingredient_isolated == "no"` | **added 2026-08-10 (decision delegated by the founder).** Every ingredient arm co-administers another active — creatine+HMB vs placebo, a MIPS blend vs placebo. The control is genuinely ingredient-free, so the first refusal cannot fire, but the trial tests a COMBINATION and says nothing about the ingredient alone in either direction. 21 of 143 audited studies were this shape; one carried significant strength benefits that were never credited while its null endpoint voted −0.7 |
 
-Both are **scope** rules, the same shape as invariant 6's five refusals, not
-discounts — down-weighting would still be counting the wrong answer, quietly.
+All three are **scope** rules, the same shape as invariant 6's five refusals,
+not discounts — down-weighting would still be counting the wrong answer, quietly.
 
 Two properties that are not optional:
 
@@ -607,8 +607,8 @@ and printed beside it, never blended:
 
 | | policy |
 |---|---|
-| **A** | everything counts (`ignore_population=True`) — current behaviour, STORED |
-| **B** | `pop_match == "different"` is excluded — a different question, not weaker evidence |
+| **A** | everything counts (`ignore_population=True`) — comparison only since 2026-08-10 |
+| **B** | `pop_match == "different"` is excluded — a different question, not weaker evidence. **STORED** |
 
 Exclusion, not a discount: invariant 8 keeps population out of `w_study`, and
 population is an ECU axis. Extraction is the expensive part and `build_ecus` is
