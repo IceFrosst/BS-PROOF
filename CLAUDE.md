@@ -420,6 +420,45 @@ Rules: continue in-flight work; keep `Current state` / `Next` live; push complet
 units; selftest after `pipeline/` changes; archive reports; **never silent-merge
 Claude and Grok extractions.**
 
+### Claude Code helper agents (`.claude/agents/`) — NOT the S1–S8 fleet
+
+"Subagent roster" above means S1–S8, the pure-function extractors. These are
+something else: five **read-only** Claude Code helpers. None has `Edit`, `Write` or
+`MultiEdit`, so the main session stays the only writer.
+
+A helper costs **~31.5k tokens** to exist, so delegate only when it reads far more
+than it reports back. That ratio is the whole test — not whether the role sounds
+useful.
+
+| helper | model | use it for |
+|---|---|---|
+| `run-triage` | haiku | a finished run's artifacts. `*_dashboard.json` is 311 KB and `*_context.json` 333 KB — it projects fields, never `Read`s them |
+| `node-gates` | haiku | typecheck → lint → vitest → build → e2e, stop on first failure |
+| `paper-verifier` | sonnet | one study vs its actual full text; fan out ~5 at a time |
+| `score-tracer` | sonnet | why one number is that number; the interpreter supplies every value |
+| `spec-drift` | sonnet | whether a claim in this file or SPEC.md still matches the code |
+
+**Do not delegate:** anything that edits a file, or any deterministic gate — the
+hooks in `.claude/settings.json` already run `pipeline.invariants` and
+`pipeline.selftest` after every `pipeline/`, `sources/` or `vocab/` edit, in ~0.5s
+for zero tokens. A subagent to run a 0.5s script costs 31.5k tokens to save 8k.
+
+Four hooks, all zero-token: the gates above; an invariant-3 warning when a prompt
+or schema is edited without a `PROMPT_VERSION` bump; an invariant-4 warning when a
+constant in `scoring.py` moves off its last verified value; and a block on running
+`run_pipeline.py` (or any network entry point) with bare `python3`, which lacks
+`httpx`. Note `python3 -m pipeline.selftest` and `-m pipeline.invariants` are
+correct on the bare interpreter — they are offline by design and a check keeps them
+that way.
+
+**Agent teams** are enabled (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`). One hard
+rule: **never run a team during a production extraction.** Teammates draw on the
+same subscription session limit that cost the 2026-08-10 00:06 run ~145 calls, and
+a truncated extraction is worthless. Also, a helper definition used as a *teammate*
+has its body appended rather than replacing the system prompt, so its "never edit"
+rule stops being the only instruction — `score-tracer` and `spec-drift` are
+therefore unsafe as teammate types. Use them as subagents.
+
 ### File ownership — one owner, verify-after
 
 **Founder decision 2026-08-10. Supersedes the 2026-08-07 peer-ownership table.**

@@ -13,8 +13,13 @@ Before changing this repository:
 Follow the multi-agent workflow in root `CLAUDE.md`. In the same change as the
 code, update `Current state` and `Next` (including the shared `Handoff:` line
 when work is in flight). Leave every pushed commit as a clean resume point for
-either of the other agents, and never push directly to `main` without
-confirmation.
+either of the other agents.
+
+**Push completed, verified work straight to `main`** (founder, 2026-08-10). This
+replaces the old "never push directly to `main` without confirmation" rule, which
+was making agents open branches and then sit waiting — unpushed work is invisible
+work, and three agents cannot coordinate on a tree they cannot see. "Verified"
+means both gates below are green; that is the only gate on a push.
 
 ## Ownership (changed 2026-08-10)
 

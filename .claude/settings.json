@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -m pipeline.selftest)",
+      "Bash(python3 -m pipeline.invariants)",
+      "Bash(python3 -m pipeline.calibration)",
+      "Bash(python3 scripts/verify_helpers.py)",
+      "Bash(python3 scripts/verify_helpers.py --accept)",
+      "Bash(./.venv/bin/python -m unittest scripts.test_dashboard_artifact)",
+      "Bash(npm run typecheck)",
+      "Bash(npm run lint)",
+      "Bash(npm run test:unit)",
+      "Bash(npm run build)",
+      "Bash(npm run test:e2e)",
+      "Bash(git log:*)",
+      "Bash(git diff:*)",
+      "Bash(git status:*)",
+      "Bash(git show:*)",
+      "Bash(git pull *)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          { "type": "command", "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/gates.sh" },
+          { "type": "command", "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/prompt_version.sh" },
+          { "type": "command", "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/constants.sh" }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/venv_required.sh" }
+        ]
+      }
+    ]
+  }
+}
