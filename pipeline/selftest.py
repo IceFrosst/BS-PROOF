@@ -1008,7 +1008,10 @@ def main():
     check("d is carried through unchanged, not rescaled",
           abs(pm["d"] - big["d"]) < 1e-9,
           "d is a weighted MEAN -- sample-size independent by construction")
-    check("projected c exceeds sample c", pm["c_projected"] > pm["c_sample"])
+    check("projected c never falls below sample c",
+          pm["c_projected"] >= pm["c_sample"],
+          "strict > held at K=3.0; at K=1.5 (v4) 30 studies already saturate "
+          "c to 1.0, so at the ceiling projection and sample legitimately tie")
     check("projection lands nearer the truth than the raw sample score",
           abs(pm["projected"] - big["score"]) <= abs(pm["sample_score"] - big["score"]),
           f"raw {pm['sample_score']:+d} -> projected {pm['projected']:+d} "
