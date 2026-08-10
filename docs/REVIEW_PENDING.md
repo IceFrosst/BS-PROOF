@@ -93,6 +93,72 @@ A clean re-run inside the session budget must precede any conclusion here.
 Pinned meanwhile by `pipeline/selftest.py` → `ANCHOR BAND FEASIBILITY`, so the
 five tolerances cannot move without turning the suite red.
 
+### 4. `d` is negative because ~39% of the corpus answers a different question
+
+**Raised 2026-08-10, after the retrieval fix. This is now the binding constraint on
+every score, and it needs one founder decision.**
+
+Fixing retrieval worked: `muscle_strength` went from n=4, c=0.135 to **n=25,
+c=0.520**, and studies landing in ECUs went 15 → 71. Confidence is no longer the
+bottleneck. But the signed score went from −2 to **−12**, because
+`score = 100 × d × c × (1 − 0.4H)` and `d` is still negative — a larger `c` makes a
+negative `d` worse. So `d` is the whole remaining question.
+
+`d = −0.249` on `muscle_strength` implies **~73% of the evidence mass reads as
+`null_effect`**. Across all 1665 cached claim mappings: **1005 null_effect, 487
+benefit, 93 unclear, 80 harm.** For creatine and strength, that is not a finding
+about creatine. Reading the 25 studies actually scoring `muscle_strength`, roughly
+**4** are "creatine alone + resistance training → strength in healthy adults". The
+rest are breast-cancer survivors, COPD, ALS, rheumatoid arthritis, cancer
+anorexia, eccentric-damage recovery, tendon overuse, cartilage markers,
+form-comparison trials, and co-ingestion trials.
+
+Measured over 145 cached S3 extractions:
+
+| class | n | % | currently refused? |
+|---|---:|---:|---|
+| `health_status = disease` | 34 | 23% | **no** — flagged, then counted at full weight under policy A |
+| co-ingestion treatment arm | 15 | 10% | **no** — nothing looks at this |
+| `comparator = all_arms_get_ingredient` | 9 | 6% | yes, invariant 7 |
+| `self_declared_underpowered = true` | 22 | 15% | yes, invariant 7 (symmetric) |
+
+The co-ingestion class is the gap with no rule at all. *Creatine + HMB vs placebo*,
+*beta-alanine + creatine loading*, *creatine + carbohydrate/protein recovery
+drink*, *taurine + creatine*, *creatine nitrate + caffeine* — every one has a
+genuine ingredient-free control, so invariant 7's `all_arms_get_ingredient` refusal
+correctly does **not** fire. But the trial tests a COMBINATION, and its result is
+not evidence about creatine alone in either direction.
+
+**Why the founder must decide, and it is not obvious.** Population policy B already
+exists and was measured on this run: excluding `pop_match = "different"` moved
+`muscle_strength` from composite **13 → 10** and n from 25 → 17. It made the score
+*worse*, because dropping 8 studies cost more `c` than it gained in `d`. That is
+exactly the A/B tension CLAUDE.md predicted — higher `d`, lower `c`, and which wins
+is a real question rather than a switch with an obvious setting.
+
+Three options, none of which may be chosen by an agent:
+
+1. **A co-ingestion scope refusal**, shaped like invariant 7's two: if a treatment
+   arm contains a second active ingredient and no arm isolates the ingredient under
+   test, discard. Symmetric — it drops combination *benefits* too. This is an
+   invariant amendment, so CLAUDE.md and SPEC §13.
+2. **Switch the stored policy to B** (exclude `pop_match = "different"`), accepting
+   lower `c` for higher `d`. Measured above: it currently lowers the composite.
+3. **Neither, and accept that `d` reports the mixed literature as it is** — in which
+   case the anchor bands in `docs/anchors.csv` are the thing that is wrong, which
+   loops back to open item 3.
+
+Secondary, smaller, and mine to fix once a direction is chosen: **114 of 487 benefit
+claims carry a numeric `effect_size` but still report `magnitude = "unstated"`**, so
+they score `benefit_trivial` (+0.3) instead of up to +1.0. `s_value()` maps
+`unstated` and `trivial` to the same number by design ("conservative; avoids
+over-crediting vague benefits") — but note the asymmetry that creates: a benefit of
+unknown size is discounted to +0.3 while a null of unknown size keeps its full
+−0.7, so a null outweighs a benefit 2.33:1. Sensitivity check on the real claim
+mix: making every benefit `meaningful` only moves `d` from −0.38 to −0.18. It does
+not flip the sign on its own. **The null share is the dominant term**, which is why
+the scope question above comes first.
+
 ---
 
 ## RESOLVED — kept only as pointers
