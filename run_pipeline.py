@@ -688,6 +688,42 @@ def main(argv: list[str]) -> int:
                  "n_b": (r.get("evidence") or {}).get("n_primaries", 0),
                  "n_a": ((_b.get(r["outcome_vocab_id"]) or {}).get("evidence") or {}).get("n_primaries", 0)}
                 for r in rows if r["outcome_vocab_id"] in _b]
+        # K SENSITIVITY A/B (founder ask 2026-08-11: "the algo may be too
+        # punishing by the amount of studies we get... we fragment so much").
+        # Measured: ECU granularity fragments 143 studies into cells of 4-17,
+        # while K=3.0 needs ~51 studies/cell for c=0.8 -- so confidence, not
+        # direction, caps every score. K is a SPEC 13 constant awaiting external
+        # calibration; until then every run PRINTS both, never blends (same
+        # discipline as the population A/B above).
+        try:
+            import pipeline.scoring as _sc
+            _k0 = _sc.K
+            _sc.K = 1.5
+            rows_k = _score(True)
+        except Exception as e:
+            print(f"  K sensitivity unavailable: {e}")
+            rows_k = []
+        finally:
+            _sc.K = _k0
+        if rows_k:
+            _kb = {r["outcome_vocab_id"]: r for r in rows_k}
+            print(f"\nCONFIDENCE A/B -- same evidence, K={_k0} (stored) vs K=1.5.")
+            print("  If these diverge wildly, fragmentation is the binding constraint,")
+            print("  not the evidence. K change needs external calibration (SPEC 13).")
+            print(f"  {'outcome':<24}{'stored':>7}{'K=1.5':>7}   {'c':>6}{'c@1.5':>7}")
+            for r in rows:
+                kk = _kb.get(r["outcome_vocab_id"])
+                if not kk: continue
+                c0 = (r.get("components") or {}).get("c")
+                c1 = (kk.get("components") or {}).get("c")
+                print(f"  {r['outcome_vocab_id']:<24}"
+                      f"{str(r.get('composite')):>7}{str(kk.get('composite')):>7}   "
+                      f"{str(c0):>6}{str(c1):>7}")
+            run_context["k_ab"] = [
+                {"outcome": r["outcome_vocab_id"], "stored": r.get("composite"),
+                 "k15": (_kb.get(r["outcome_vocab_id"]) or {}).get("composite")}
+                for r in rows if r["outcome_vocab_id"] in _kb]
+
         rows = show.filter_ecu_rows(rows, outcome_allowlist)
         for row in rows:
             store.upsert_ecu(row)
