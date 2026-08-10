@@ -93,7 +93,30 @@ A clean re-run inside the session budget must precede any conclusion here.
 Pinned meanwhile by `pipeline/selftest.py` → `ANCHOR BAND FEASIBILITY`, so the
 five tolerances cannot move without turning the suite red.
 
-### 4. `d` is negative because ~39% of the corpus answers a different question
+### 4. RESOLVED 2026-08-10 — decision delegated to Claude, shipped as v1.12
+
+Founder delegated the call ("I leave decision actually to you"). Shipped: third
+invariant-7 refusal (`ingredient_isolated == "no"`), population B stored, S6B
+recovery-construct rule, Limitations in `best_text`. Verified on a cold-cache
+150-study run: `muscle_strength` d −0.210 → **−0.004** (score −10 → **0**),
+`lean_body_mass` +5. 46 of 144 trials now refused for scope, each with a reason.
+
+Still open from this thread, in order:
+1. **muscle_power is the new outlier** (−11, d=−0.253) and its nulls were never
+   audited — the audit covered muscle_strength only. Audit before touching it.
+2. **Confidence recalibration, measured on the v1.12 dump** — with d clean it now
+   helps instead of amplifying noise: unknown-neutral RoB banding moves
+   strength 0→+2, power −11→−6, LBM +5→+11; adding K=1.5 gives +3/−8/+19.
+   Unknown-neutral banding is a CORRECTNESS fix (scoring an unknowable registry
+   item as evidence of bias violates invariant 5's spirit — most of this
+   literature predates registries) and ships next as SCORING_MODEL v3 with
+   report archiving. **K stays 3.0**: choosing K to fit our own corpus would be
+   tuning a constant toward the anchors, which invariant 4 exists to prevent —
+   it needs a calibration basis outside this corpus.
+
+Original analysis follows for the record.
+
+### 4-original. `d` is negative because ~39% of the corpus answers a different question
 
 **Raised 2026-08-10, after the retrieval fix. This is now the binding constraint on
 every score, and it needs one founder decision.**
