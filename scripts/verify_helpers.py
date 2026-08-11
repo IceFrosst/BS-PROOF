@@ -61,6 +61,12 @@ WATCHED_CONSTANTS = (
     "DESIGN_W", "ROB_FACTOR", "FUNDING_FACTOR", "FORM_FACTOR", "DOSE_FACTOR",
     "POP_FACTOR", "OA_FACTOR", "SCORING_MODEL",
     "APPLY_FORM_IN_WEIGHT", "APPLY_DOSE_IN_WEIGHT", "APPLY_POP_IN_WEIGHT",
+    # The effect-size scale (founder decision 2026-08-11, SCORING_MODEL v8).
+    # These reprice every score the same way S_VALUE does, and MID is doubly
+    # load-bearing: it is also the "trivial" threshold in
+    # prompts/s5_conclusion.md, so prompt and scoring must move together or they
+    # silently disagree about what counts as a meaningful effect.
+    "EFFECT_MID_SMD", "EFFECT_FULL_SMD", "EFFECT_MID_PCT", "EFFECT_FULL_PCT",
 )
 CONSTANTS_FILE = "pipeline/scoring.py"
 

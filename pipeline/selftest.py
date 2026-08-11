@@ -1,7 +1,8 @@
 """Zero-model regression test for the deterministic layer. python -m pipeline.selftest"""
 import sys, os, pathlib
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from pipeline.scoring import Study, score_ecu, band_for, S_VALUE
+from pipeline.scoring import (Study, score_ecu, band_for, S_VALUE,
+                             standardise_effect)
 from pipeline.dedup import dedup, canonical_id, registry_id
 from pipeline import vocab
 
@@ -74,6 +75,28 @@ def main():
     check("a null still scores well above outright harm",
           n["score"] > score_ecu(rcts(12, direction="harm", magnitude=None), [])["score"],
           "'we found no effect' is weaker evidence against than 'we found damage'")
+    # THE SAME PROPERTY FOR MEASURED ZEROS (SCORING_MODEL v8). The pin above uses
+    # unsized nulls, so it tests the LABEL path and would stay green even if the
+    # measured path lost the ability to return a negative verdict. This is its
+    # twin: 20 trials that each MEASURED an effect of zero must still land clearly
+    # negative, because "we looked carefully and found nothing" is evidence
+    # against a product, not an absence of evidence.
+    #
+    # It is what the recentred scale buys. Centred on zero instead, every one of
+    # these studies scores s = 0 and the corpus lands at exactly 0 =
+    # "inconclusive", indistinguishable from never having been studied -- measured
+    # in scripts/effect_size_experiment.py arm E, which exists as the control.
+    _measured_zero = score_ecu(
+        [Study(id=f"mz{i}", design_rank=4, n=200, rob_items=ROB_CLEAN,
+               funding="independent", oa="full_text", form_match="exact",
+               pop_match="exact", direction="null_effect",
+               effect_s=standardise_effect(0.0, "cohen's d")[0],
+               effect_route="smd") for i in range(20)], [])
+    check("20 trials that MEASURED zero are still clearly negative",
+          _measured_zero["score"] < _null_floor,
+          f"score {_measured_zero['score']} must be below {_null_floor:.0f}; a "
+          f"zero-centred scale would put it at 0 and the tool would lose its "
+          f"ability to say no")
     h = score_ecu(rcts(6, direction="harm", magnitude=None), [])
     check("harm -> strong negative", h["score"] <= -70, f"score {h['score']}")
 

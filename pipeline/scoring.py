@@ -520,6 +520,14 @@ def contributions(primaries: list, result: dict) -> list[dict]:
             "form_match": st.form_match,
             "d_share": round(w * sv / E, 4),
             "points": round(scale * w * sv / E, 2),
+            # WHERE s CAME FROM. "label" means the direction label decided it
+            # (vote counting); anything else names the measured route or the reason
+            # the number was refused. Surfaced per study on purpose: a run's
+            # headline can now be audited for how much of it rests on measured
+            # effects versus on labels, and that share is the single most useful
+            # number for judging how much to trust a score under SCORING_MODEL v8.
+            "effect_route": st.effect_route,
+            "effect_s": st.effect_s,
         })
     out.sort(key=lambda r: -abs(r["points"]))
     return out

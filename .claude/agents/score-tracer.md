@@ -43,8 +43,14 @@ parameter, and treating it as one overstates every reachable score.
 2. **The funnel**, via `run-triage` or the context JSON: retrieved → skipped →
    extracted → eligible → landed in this ECU. A score built on n=4 out of a
    69-study corpus is a retrieval finding, not a scoring finding.
-3. **`d`.** If `d` is exactly `S_VALUE["null_effect"]` then 100% of the evidence
-   is null and the question is which papers, which is `paper-verifier`'s job.
+3. **`d`.** Read `effect_route` in `evidence.contributions` FIRST. Under
+   `SCORING_MODEL` v8 a study's `s` comes from its measured effect size when the
+   route is `smd` or `percent`, and from its direction label otherwise, so the
+   share of the score resting on labels versus numbers is the first thing to
+   establish. The old shortcut -- "if `d` is exactly `S_VALUE['null_effect']`
+   then 100% of the evidence is well-run nulls" -- is DEAD: a measured effect of
+   zero also lands near -0.35 by construction, and any measured effect below
+   `EFFECT_MID_SMD` is negative too. Which papers is still `paper-verifier`'s job.
 4. **`w` composition.** Which factor is small — design rank, RoB, size, funding,
    or OA?
 5. **The band.** `python3 -m pipeline.calibration` prints band feasibility: the

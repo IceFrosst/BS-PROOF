@@ -8,9 +8,26 @@ Founder question 2026-08-11: "an a/b test if we removed any negative penalties".
 "Negative penalty" is ambiguous, so this sweeps both mechanisms that can actually
 make a score negative, and reports the one consequence a table of scores hides.
 
-Only TWO things in the whole system can push a signed score below zero:
+SUPERSEDED IN PART BY SCORING_MODEL v8 (2026-08-11). READ THIS BEFORE QUOTING IT.
 
-    S_VALUE["null_effect"] = -0.7    a well-run null counted as evidence AGAINST
+This script sweeps S_VALUE and H_PENALTY, which under v7 were the only two things
+that could push a signed score below zero. Under v8 they are not: `s` now comes
+from the measured effect size wherever S5 named the arm, and ANY measured effect
+below `EFFECT_MID_SMD` (0.20) is negative by construction. So the arms below
+control only the LABEL-FALLBACK share of a corpus, and `real_corpus` is a partial
+sweep -- accurate for the v1.14 dump, where 0 of 227 mapped claims take the
+measured path, and increasingly incomplete as v1.17 extractions land.
+
+The synthetic fixtures are unaffected and still correct: they set no effect size,
+so they exercise the label path deliberately. `scripts/effect_size_experiment.py`
+is the sweep for the measured path, and its arm E is the control showing why the
+effect-size scale is recentred rather than zero-centred.
+
+The two constants this script does sweep, and what they meant under v7:
+
+    S_VALUE["null_effect"] = -0.35   a well-run null counted as evidence AGAINST
+                                     (-0.7 until 2026-08-11; the "A SHIPPED"
+                                     label below is stale at -0.7)
     S_VALUE["harm"]        = -1.0    a harm signal
 
 H_PENALTY (0.4) and every weight discount (RoB 0.25, abstract-only OA 0.55,
