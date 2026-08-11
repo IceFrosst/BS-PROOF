@@ -130,6 +130,14 @@ _STANDARDISED = ("cohen", "hedge", "glass", "smd", "standardised", "standardized
 # and "d"/"g"/"r" match almost anything, so these must be whole tokens.
 _STANDARDISED_TOKENS = {"d", "g", "es", "smd"}
 _PERCENT = ("%", "percent")
+# ABSOLUTE percentage differences masquerading as relative ones. "percentage
+# points" and "% CID" (cumulative incidence difference) are differences in a RATE
+# on a 0-100 scale, not a relative change against control. Measured: values of
+# 53, 74.2 and 82 appear under these labels, and running 74.2 through a rule
+# where 5% is "meaningful" inflates it ~15x and saturates s at +1.0 on what may
+# be a modest absolute difference. Refused rather than rescaled, because the
+# correct denominator is not recoverable from the unit string.
+_ABSOLUTE_PCT = ("percentage point", "cid", "absolute risk", "risk difference")
 _NO_UNIT = {"", "none", "n/a", "na", "unknown", "unitless"}
 
 
@@ -167,6 +175,8 @@ def standardise_effect(value: float | None, unit: str | None) -> tuple[float | N
         return None, "unsigned_variance_explained"
     if tokens & _RATIO_TOKENS or any(p in u for p in _RATIO_PHRASES):
         return None, "ratio_null_is_one"
+    if any(p in u for p in _ABSOLUTE_PCT):
+        return None, "absolute_percentage_difference"
     if any(p in u for p in _PERCENT):
         return _rescale(v, EFFECT_MID_PCT, EFFECT_FULL_PCT), "percent"
     if any(p in u for p in _STANDARDISED) or (tokens & _STANDARDISED_TOKENS):
@@ -385,11 +395,21 @@ class Study:
         # meaningful threshold rather than on zero.
         if self.effect_s is not None:
             if self.direction == "harm":
-                # SAFETY ASYMMETRY. A harm label can be made more negative by the
-                # number but never positive. If the two disagree in sign that is a
-                # contradiction, not an average -- and invariant 9's rule for
-                # conflicting evidence is to under-count, never to pick the higher
-                # reading. A safety signal must not be cancelled by arithmetic.
+                # SAFETY ASYMMETRY. A harm label may be made MORE negative by its
+                # number, never less. On disagreement the LABEL wins and keeps the
+                # full harm value -- it does not get clamped to 0.
+                #
+                # The first version of this returned min(effect_s, 0.0), which
+                # looked conservative and was not. MEASURED on the v1.14 corpus: of
+                # 6 harm claims carrying a standardisable number, THREE standardise
+                # to +1.000 -- "elevated serum creatinine (rate) 74.2%",
+                # "drug-related adverse events 82%", "early drug discontinuation
+                # 50%". Those are harm RATES, where a bigger number is worse, so
+                # clamping turned a documented harm into 0.0 = "no evidence" and
+                # hid a safety signal. For a safety outcome the under-counting
+                # direction is to KEEP the harm, not to neutralise it.
+                if self.effect_s > 0:
+                    return S_VALUE["harm"]
                 return min(self.effect_s, 0.0)
             # SIGN AGREEMENT GUARD. The number is trusted only where it does not
             # contradict the label. `effect_s` is required by contract (S5 prompt,

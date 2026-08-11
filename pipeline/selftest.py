@@ -1397,12 +1397,23 @@ def main():
           "an inverted-direction measure (a sprint TIME under muscle_power, where "
           "faster is better but the number is smaller) must not read as harm; a "
           "wrong sign does not weaken a score, it inverts it")
-    check("a harm label can never be made POSITIVE by its number",
-          _es("harm", 0.9).s_value() <= 0,
-          "safety asymmetry: a contradiction is not an average, and invariant 9 "
-          "says under-count rather than take the higher reading")
+    check("a harm whose number DISAGREES keeps the FULL harm value, not 0.0",
+          _es("harm", 0.9).s_value() == S_VALUE["harm"],
+          "the first version clamped to min(effect_s, 0.0), which looked "
+          "conservative and hid safety signals: of 6 sized harm claims in the "
+          "v1.14 corpus, THREE standardise to +1.000 ('elevated serum creatinine "
+          "74.2%', 'drug-related adverse events 82%', 'early drug discontinuation "
+          "50%') because they are harm RATES where bigger is worse. Clamping made "
+          "each read 'no evidence'. For safety, under-counting means KEEPING the "
+          "harm")
     check("a harm label CAN be made more negative by its number",
           _es("harm", -1.0).s_value() == -1.0)
+    check("an ABSOLUTE percentage difference is refused, not read as relative",
+          _se(74.2, "% CID")[0] is None and _se(53.0, "percentage points")[0] is None,
+          "a cumulative-incidence difference of 74.2 points is not a 74.2% "
+          "relative change; through a rule where 5% is meaningful it inflates "
+          "~15x and saturates at +1.0. The correct denominator is not recoverable "
+          "from the unit string, so it is refused rather than rescaled")
     check("no number means the label still decides",
           _es("null_effect", None).s_value() == S_VALUE["null_effect"],
           "coverage is partial -- 44% of sized claims are standardisable -- so "
@@ -1677,6 +1688,31 @@ def main():
     check("a benefit/null tie adds no evidence in either direction",
           mixed[0]["components"]["d"] == 0.0,
           f"d={mixed[0]['components']['d']}")
+
+    # ...AND STILL NOT WHEN THE SURVIVING CLAIM CARRIES A NUMBER. The pin above
+    # passed either way, because its fixture sets no effect_size -- so it stopped
+    # testing the property the moment s_value started preferring a measured
+    # effect over the label. `_collapse` must clear effect_s alongside direction,
+    # or a tie silently picks a side.
+    def _ext_sized(canonical, claims):
+        return {"record": {"_canonical": canonical, "ingredient": "creatine",
+                           "design_rank": 4, "oa": "full_text"},
+                "extraction": {"S3": {"n_randomised": 40},
+                               "S7": {"form_vocab_id": "creatine_monohydrate"},
+                               "outcomes": [
+                                   {"outcome_vocab_id": "muscle_strength",
+                                    "claim": {"direction": d, "magnitude": m,
+                                              "effect_size": 0.75,
+                                              "effect_unit": "cohen's d",
+                                              "effect_favours": "ingredient"}}
+                                   for d, m in claims]}}
+    _tie_sized = _b2([_ext_sized("doi:10.1/t",
+                                 [("benefit", "meaningful"), ("null_effect", None)])],
+                     _pr, ignore_population=True)
+    check("a SIZED benefit/null tie still adds no evidence in either direction",
+          _tie_sized[0]["components"]["d"] == 0.0,
+          f"d={_tie_sized[0]['components']['d']} -- if this is non-zero, the tie "
+          f"rule is being overridden by a number it was supposed to set aside")
 
     # ELIGIBILITY (2026-08-10). A trial with no ingredient-free arm, or one its
     # own authors call a pilot, cannot vote on whether the ingredient works.

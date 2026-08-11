@@ -380,7 +380,15 @@ def _one_study_one_vote(pairs: list[tuple]) -> tuple[list[tuple], int]:
         if {"benefit", "null_effect"} <= set(winners):
             pair = next(g for g in group if g[0].direction == "null_effect")
             # Same Study, re-read as "this trial did not give one answer here".
-            return (replace(pair[0], direction="unclear", magnitude=None), pair[1])
+            # effect_s MUST be cleared alongside the direction. The tie rule's
+            # whole point is that the trial "did not confirm and did not
+            # disconfirm", which s = 0.0 expresses -- but s_value() prefers a
+            # measured effect over the label, so a surviving number would keep
+            # voting and the tie would silently pick a side. The selftest pin
+            # "a benefit/null tie adds no evidence in either direction" (d == 0.0)
+            # passes either way today only because its fixture carries no number.
+            return (replace(pair[0], direction="unclear", magnitude=None,
+                            effect_s=None, effect_route="tie_cleared"), pair[1])
         return next(g for g in group
                     if g[0].direction == min(winners, key=lambda d: _CONS.get(d, 1)))
 
