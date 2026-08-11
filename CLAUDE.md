@@ -660,6 +660,31 @@ mixture exists is built and selftested (`calibration.mixture_score`,
 **1 of 21** range anchors now cites a source. Three non-equivalent candidate
 fixes are in the script's verdict and in SPEC §13. Do not pick one in code.
 
+**PROMPT_VERSION v1.15 fixed half of what that decision needs (2026-08-11).** S5
+was describing `effect_size` / CI / `p_value` only as inputs to `magnitude`, and
+magnitude is benefit-only, so a null read as "no numbers needed" and the point
+estimate was discarded. Replaying S5 alone on 8 affected studies
+(`scripts/null_numbers_experiment.py` — surgical, because a version bump makes a
+full re-extraction ~900 cold calls):
+
+| | before | after |
+|---|---|---|
+| nulls carrying a number | 14% | **62%** |
+| nulls carrying a CI | 0% | **9%** |
+
+The CI ceiling is the **literature**, not us: **6 of those 8 papers mention a
+confidence interval zero times in their whole full text**, and the two that do
+are exactly the two S5 extracted CIs from (PMC2646129 reports 7, S5 returned 7).
+So candidate (i) is unblocked and candidate (ii) is not — refusing a
+*measured*-underpowered null needs the interval, and the interval is mostly
+unpublished. The route to (ii) is reconstructing it from the point estimate, the
+p-value and n (Altman & Bland): arithmetic on reported numbers, not invention of
+an unreported one — still a founder call.
+
+Watch on the next full run: claim counts churned per study (8→14, 12→8 nulls).
+v1.15 was meant to add numbers, not move direction or claim splitting, so the
+null share and the population A/B must be **re-measured, not assumed stable.**
+
 **Open constants awaiting Tier-3 calibration:** `k`, transfer factors, RoB
 thresholds, OA penalty. See `docs/SPEC.md` §13.
 

@@ -31,6 +31,19 @@ HONEST FAILURE MODE. If v1.15 shows no improvement, the numbers were never in th
 text we send S5 and the fix is in RETRIEVAL (the section slice, or full text we
 never resolved), not in the prompt. Either result is informative; do not retry
 the prompt until this says which.
+
+RESULT, 8 studies, 2026-08-11:
+
+    null claims          74      ->  78
+    ...with a number     10  14% ->  48  62%     v1.15 works
+    ...with a CI          0   0% ->   7   9%     ceiling is the LITERATURE
+
+The CI ceiling was checked directly rather than assumed: 6 of these 8 papers
+mention a confidence interval ZERO times in their whole full text, and the two
+that do are exactly the two S5 got CIs from (PMC2646129 reports 7, S5 returned
+7). So CI extraction is now near-exact and this field simply publishes means and
+p-values instead of intervals. That distinction decides which candidate fix to
+the aggregation rule is actually available -- see the verdict.
 """
 from __future__ import annotations
 
@@ -158,11 +171,35 @@ def main() -> int:
     print("\n=== VERDICT ===")
     before = tot["old_num"] / max(tot["old_nulls"], 1)
     after = tot["new_num"] / max(tot["new_nulls"], 1)
+    ci_after = tot["new_ci"] / max(tot["new_nulls"], 1)
     if after > before + 0.15:
         print(f"    v1.15 WORKS: nulls carrying a number went {before:.0%} -> {after:.0%}.")
         print("    The numbers were in the text all along and the prompt was")
-        print("    suppressing them. A full re-extraction is now worth its cost,")
-        print("    and it unblocks both candidate fixes to the aggregation rule.")
+        print("    suppressing them. A full re-extraction is now worth its cost.")
+        print(f"\n    BUT THE CI COLUMN BARELY MOVED ({ci_after:.0%}), AND THAT IS NOT OUR BUG.")
+        print("    MEASURED 2026-08-11 on these same 8 papers: 6 of 8 mention a")
+        print("    confidence interval ZERO times in their entire full text. The two")
+        print("    that do are exactly the two S5 extracted CIs from -- PMC2646129")
+        print("    reports 7 in its results and S5 returned 7. So CI extraction is now")
+        print("    close to exact, and the ceiling is the literature: this field")
+        print("    reports means and p-values, not intervals.")
+        print("\n    That splits the two candidate fixes apart -- they are NOT both")
+        print("    unblocked, which an earlier version of this verdict claimed:")
+        print(f"      (i)  effect-size-weighted s_value  -> UNBLOCKED to {after:.0%} coverage")
+        print("      (ii) refuse a MEASURED-underpowered null -> still blocked. It needs")
+        print("           the interval, and the interval is mostly unpublished. The way")
+        print("           through is to RECONSTRUCT it from the point estimate, the")
+        print("           p-value and n by standard meta-analytic arithmetic (Altman &")
+        print("           Bland), which the 62% point-estimate coverage now makes")
+        print("           possible. That is arithmetic on reported numbers, not")
+        print("           inference of an unreported one -- but it is a new derivation")
+        print("           in the scoring path, so it is a founder call, not a fix.")
+        print("\n    ALSO WATCH ON A FULL RE-RUN: claim counts churned per study")
+        print("    (8->14, 12->8 nulls). v1.15 was meant to add numbers, not to move")
+        print("    direction or claim splitting, so some of that is ordinary model")
+        print("    variance in how endpoints are grouped -- but it is large enough")
+        print("    that the population A/B and the null share must be re-measured")
+        print("    rather than assumed stable.")
     elif after < before - 0.15:
         print(f"    v1.15 made it WORSE ({before:.0%} -> {after:.0%}). Revert the prompt.")
     else:
