@@ -628,6 +628,32 @@ def main() -> int:
     print("  If a tolerance here looks implausible for real literature, then the")
     print("  band, the null penalty or the H penalty is wrong -- a FOUNDER call")
     print("  (SPEC 13 + invariant 4). Never tune a constant to make an anchor pass.")
+
+    prov = provenance(rows)
+    print(f"\nband provenance: {prov['n_cited']}/{prov['n_range_anchors']} range "
+          f"anchors cite a source, {prov['n_uncited']} are uncited judgement")
+    if prov["derived"]:
+        print(f"  {'id':<4}{'source':<16}{'trials':>7}{'pos':>5}{'null':>5}"
+              f"{'derived band':>16}{'written':>12}")
+        for d in prov["derived"]:
+            w = (f"{d['written_min']}..{d['written_max']}"
+                 if d["written_min"] is not None else "-")
+            derived = f"{d['min']}..{d['max']} (c {d['centre']})"
+            print(f"  {d['id']:<4}{(d['source_kind'] or '?')[:15]:<16}"
+                  f"{d['n_trials']:>7}{d['n_positive']:>5}{d['n_null']:>5}"
+                  f"{derived:>16}{w:>12}")
+    if prov["disagreements"]:
+        print(f"\n  {len(prov['disagreements'])} DISAGREEMENT(S): the derived centre")
+        print("  falls outside the hand-written range it replaces, so the pipeline")
+        print("  was being graded against a target the literature does not support:")
+        for d in prov["disagreements"]:
+            print(f"    anchor {d['id']}: written {d['written_min']}..{d['written_max']}, "
+                  f"published mixture implies {d['centre']} ({d['n_positive']} of "
+                  f"{d['n_trials']} positive), delta {d['delta']:+.0f}")
+    if prov["n_uncited"]:
+        print(f"\n  The {prov['n_uncited']} uncited rows are the live problem. A band with")
+        print("  no source cannot distinguish 'the pipeline is wrong' from 'the")
+        print("  target is wrong', which is exactly what a harness exists to do.")
     return 1 if problems else 0
 
 
