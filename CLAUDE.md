@@ -636,10 +636,12 @@ Two independent measurements:
   that carry a usable number, **24 of 27 (89%) have a point estimate FAVOURING
   creatine.** They failed to reach significance individually; they did not find
   nothing. Each is scored −0.35 — evidence AGAINST.
-- **8 published pooled estimates on muscle strength favour creatine with CIs
-  excluding zero** (SMD 0.28–0.46; verbatim-verified, and an adversarial pass
-  told to refute them refuted **0 of 24**). Our pipeline scores that outcome
-  **−15**.
+- **7 published pooled estimates on muscle strength favour creatine with 95%
+  CIs excluding zero** (SMD 0.28–0.46, or 4.4–11.9 kg as a WMD; verbatim-verified,
+  and an adversarial pass told to refute them refuted **0 of 24**). Our pipeline
+  scores that outcome **−15**. Counted separately, never folded in: one more
+  favours creatine at p = 0.001 but reports no CI, and one sits at SMD 0.20
+  [0.00, 0.39], whose lower bound touches zero.
 
 So the null share is REAL and the extraction is FAITHFUL — the labels are
 correct. What is wrong is reading "this trial alone did not reach significance"

@@ -41,10 +41,18 @@ THE TWO MEASUREMENTS BELOW, and they are independent of each other.
    unrestricted set are exactly that.
 
 2. THE PUBLISHED POOLED VERDICT ON THE SAME LITERATURE IS POSITIVE. 14 stored
-   creatine syntheses were read (see reports/ for the run); 8 pooled estimates on
-   muscle strength favour creatine with a CI excluding zero, SMD 0.28 to 0.46,
-   and every one survived an adversarial verification pass instructed to refute
-   it (0 of 24 refuted). Our pipeline scores the same outcome at -15.
+   creatine syntheses were read. On muscle strength, **7 pooled estimates favour
+   creatine with a 95% CI excluding zero** (SMD 0.28-0.46, or 4.4-11.9 kg where
+   reported as a WMD). Counted separately and NOT folded in: one more favours
+   creatine at p = 0.001 but publishes no CI, and one sits at SMD 0.20
+   [0.00, 0.39], whose lower bound touches zero and therefore does not exclude
+   it. Every direction claim survived an adversarial pass instructed to refute it
+   (0 of 24 refuted). Our pipeline scores the same outcome at -15.
+
+   The first version of this docstring said "8 ... with CIs excluding zero",
+   which merged the p-value-only row into the CI count. Corrected: a p-value and
+   a CI are not interchangeable evidence, which is the same distinction
+   `magnitude_investigation.sizeable()` had to be corrected for.
 
 WHAT THIS DOES NOT SHOW, stated because the temptation is to overclaim:
 
@@ -104,6 +112,9 @@ PUBLISHED = [
     ("10.3390/nu13061912", "muscle_strength", 0.28, "SMD", 0.09, 0.47, 17, "favours"),
     ("10.3390/nu13061912", "muscle_strength", 0.20, "SMD", 0.00, 0.39, 15, "borderline"),
     ("10.3390/nu13113757", "muscle_strength", 0.35, "SMD", 0.02, 0.69, 7, "favours"),
+    # No CI published for this one -- the review reports WMD and p only. Kept, but
+    # it is counted separately from the CI-excludes-zero rows, never folded in.
+    ("10.3390/nu17172748", "muscle_strength", 2.16, "WMD kg", None, None, None, "favours_p_only"),
     ("10.3390/nu16213665", "muscle_strength", 4.43, "WMD kg", 3.12, 5.75, 21, "favours"),
     ("10.3389/fnut.2026.1800546", "muscle_strength", 11.9, "MD kg", 7.6, 16.2, 16, "favours"),
     ("10.1080/15502783.2026.2668435", "muscle_strength", 7.5, "MD kg", 2.2, 12.8, 3, "favours"),
@@ -209,7 +220,7 @@ def main(dump_path: str) -> int:
     for doi, outcome, pooled, unit, lo, hi, n, verdict in PUBLISHED:
         if verdict != "favours":
             continue
-        ci = f"[{lo}, {hi}]"
+        ci = f"[{lo}, {hi}]"  # every `favours` row has a CI that excludes zero
         print(f"    {doi:<32}{outcome:<19}{pooled:>9} {ci:<18}{n if n else '-':>7}")
 
     # ------------------------------------------------------------------ 3
