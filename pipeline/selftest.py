@@ -503,6 +503,49 @@ def main():
           and cal.evaluate_pairs({"22a": None, "22b": 60}, anchors)["incomplete"],
           "a gate is already fatal in evaluate(); never count it twice")
 
+    # EXTERNAL BAND DERIVATION (2026-08-11). A band derived from a published
+    # mixture is the only non-circular kind: this module's docstring forbids
+    # tuning to make an anchor pass, and until today every range in anchors.csv
+    # was uncited judgement.
+    _m = [cal.mixture_score(p, 20 - p)["score"] for p in (0, 5, 10, 15, 20)]
+    check("a derived band rises monotonically with the positive share",
+          all(a < b for a, b in zip(_m, _m[1:])), str(_m))
+    check("a unanimous null mixture derives a NEGATIVE band",
+          cal.mixture_score(0, 20)["score"] < 0,
+          f"{cal.mixture_score(0, 20)['score']} -- if this ever goes >= 0 the "
+          f"score cannot say 'no' and the tool is not measuring")
+    check("unsized benefits derive a far lower band than sized ones",
+          cal.mixture_score(20, 0, magnitude="trivial")["score"]
+          < cal.mixture_score(20, 0)["score"] / 2,
+          f"{cal.mixture_score(20, 0, magnitude='trivial')['score']} vs "
+          f"{cal.mixture_score(20, 0)['score']} -- an all-positive corpus of "
+          f"UNSIZED benefits caps near +30, which is why anchors 1-5 look unreachable")
+    _row = {"id": "T", "band": "strong_positive", "expected_min": 80,
+            "expected_max": 95, "source_doi": "10.x/y", "source_kind": "cochrane"}
+    _big = cal.derived_band({**_row, "n_positive": 18, "n_null": 2})
+    _small = cal.derived_band({**_row, "n_positive": 3, "n_null": 1})
+    check("band WIDTH is derived from the evidence, not chosen",
+          (_big["max"] - _big["min"]) < (_small["max"] - _small["min"]),
+          f"20 trials -> {_big['min']}..{_big['max']}, "
+          f"4 trials -> {_small['min']}..{_small['max']}; one reclassified trial "
+          f"moves a small review much further, so precision follows the corpus")
+    check("an unfilled anchor row derives nothing rather than guessing",
+          cal.derived_band(_row) is None,
+          "a row with no recorded mixture must keep its hand-written range and "
+          "be reported as uncited")
+    _partial = cal.validate([{**_row, "tests": [], "pair_id": "", "pair_expect": "",
+                              "n_trials": "", "n_positive": "18", "n_null": ""}])
+    check("a HALF-FILLED mixture is a loud validation error",
+          any("partial mixture" in p for p in _partial),
+          "derived_band silently returns None on a partial row, so a row that "
+          "looks cited would keep grading against its uncited range")
+    _uncited = cal.validate([{**_row, "tests": [], "pair_id": "", "pair_expect": "",
+                              "n_trials": "20", "n_positive": "18", "n_null": "2",
+                              "source_doi": ""}])
+    check("a mixture with no source_doi is rejected",
+          any("no source_doi" in p for p in _uncited),
+          "an uncited mixture is judgement wearing a number's clothes")
+
     # ORDINAL STRATA. Replaces testing the numeric window, which ANCHORS.md:274 says
     # was judgement, and which measurement showed unsatisfiable for anchors 1-5.
     _st = cal.evaluate_strata({"1": 6}, anchors)

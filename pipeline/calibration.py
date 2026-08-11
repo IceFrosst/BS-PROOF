@@ -90,6 +90,38 @@ def validate(rows: list[dict] | None = None) -> list[str]:
         expects = {(m.get("pair_expect") or "").strip() for m in members}
         if len(expects) != 1:
             problems.append(f"pair {pid}: members disagree on pair_expect {expects}")
+
+    # PROVENANCE (2026-08-11). A HALF-FILLED mixture is worse than an empty one:
+    # `derived_band` silently returns None when n_positive or n_null is missing, so
+    # a row that looks cited would quietly keep grading against its uncited
+    # hand-written range. These checks make that state loud.
+    for r in rows:
+        aid = r["id"]
+        doi = (r.get("source_doi") or "").strip()
+        kind = (r.get("source_kind") or "").strip()
+        mix = {k: (r.get(k) or "").strip() for k in ("n_trials", "n_positive", "n_null")}
+        filled = {k: v for k, v in mix.items() if v}
+        if kind and kind not in SOURCE_KINDS:
+            problems.append(f"anchor {aid}: source_kind {kind!r} not in {list(SOURCE_KINDS)}")
+        if filled and not doi:
+            problems.append(f"anchor {aid}: has a mixture ({sorted(filled)}) but no "
+                            f"source_doi -- an uncited mixture is not evidence")
+        if doi and not kind:
+            problems.append(f"anchor {aid}: source_doi with no source_kind -- a "
+                            f"Cochrane review and a policy opinion are not "
+                            f"interchangeable ground truth")
+        for k, v in filled.items():
+            if not v.lstrip("-").isdigit() or int(v) < 0:
+                problems.append(f"anchor {aid}: {k}={v!r} is not a non-negative integer")
+        if filled and len(filled) != 3:
+            problems.append(f"anchor {aid}: partial mixture {sorted(filled)} -- "
+                            f"derived_band needs n_trials, n_positive AND n_null, "
+                            f"and returns None without them")
+        if len(filled) == 3 and all(v.isdigit() for v in filled.values()):
+            t, p, n = (int(mix[k]) for k in ("n_trials", "n_positive", "n_null"))
+            if p + n > t:
+                problems.append(f"anchor {aid}: n_positive+n_null ({p}+{n}) exceeds "
+                                f"n_trials ({t})")
     return problems
 
 
@@ -377,6 +409,128 @@ def max_null_share(target: float, steps: int = 2000) -> float | None:
         if ceiling_score(p) >= target:
             best = p
     return best
+
+
+SOURCE_KINDS = ("cochrane", "umbrella", "meta_analysis", "policy", "pooled_rct")
+
+# The quality profile every synthetic trial in a derived band is given. Held
+# CONSTANT on purpose: the band must test whether our extraction reproduces the
+# literature's DIRECTION MIXTURE, not whether our corpus happens to match the
+# literature's study quality. Mixing the two would make a failure unreadable --
+# you could not tell a misread direction from an abstract-only corpus.
+_DERIVE_PROFILE = dict(design_rank=4, n=60, funding="independent", oa="full_text",
+                       form_match="exact", dose_match="in_band", pop_match="exact")
+
+
+def mixture_score(n_positive: int, n_null: int, n_negative: int = 0,
+                  magnitude: str = "meaningful") -> dict:
+    """
+    Our own arithmetic applied to a PUBLISHED trial mixture.
+
+    This is the non-circular half of band derivation. `ceiling_score` answers
+    "what is reachable in a perfect world"; this answers "what does our formula
+    return for the composition a published synthesis actually reports". The band
+    becomes the second number, so the anchor tests our EXTRACTION against the
+    literature rather than testing our formula against our own judgement.
+
+    Deliberately routed through the production `score_ecu` with real `Study`
+    objects rather than reimplementing d/c/H here. A parallel implementation
+    would drift the moment a constant or a term changed, and a band derived from
+    stale arithmetic is worse than an uncited one because it looks measured.
+
+    `magnitude` matters more than it looks: a mixture of benefits our extraction
+    records as `trivial`/`unstated` scores +0.3 each, so an all-positive corpus
+    caps near +30 (measured 2026-08-11). Pass "trivial" to derive the band a
+    corpus of unsized benefits could actually reach.
+    """
+    from pipeline.scoring import Study, score_ecu
+    rob_clean = {f"i{i}": 1 for i in range(1, 7)}
+    studies = []
+    for direction, count in (("benefit", int(n_positive)),
+                             ("null_effect", int(n_null)),
+                             ("harm", int(n_negative))):
+        for i in range(max(0, count)):
+            studies.append(Study(
+                id=f"{direction}-{i}", rob_items=rob_clean, direction=direction,
+                magnitude=magnitude if direction == "benefit" else None,
+                **_DERIVE_PROFILE))
+    if not studies:
+        return {"score": None, "n": 0}
+    r = score_ecu(studies, [])
+    return {"score": r.get("score"), "d": r.get("d"), "c": r.get("c"),
+            "H": r.get("H"), "n": len(studies)}
+
+
+def derived_band(row: dict, magnitude: str = "meaningful") -> dict | None:
+    """
+    The band a recorded published mixture implies, with a DERIVED width.
+
+    Width is the sensitivity to reclassifying one trial: move a single trial from
+    positive to null and from null to positive, and the two resulting scores are
+    the band edges. So the width states how precisely the published mixture pins
+    the answer, instead of being a number someone chose. A review of 4 trials
+    yields a wide band and a review of 40 a narrow one, automatically.
+
+    Returns None when the row has no recorded mixture -- most rows, until the
+    provenance columns are filled. That is not a failure; an unfilled row simply
+    keeps its hand-written range and is reported as uncited.
+    """
+    n_pos, n_null = row.get("n_positive"), row.get("n_null")
+    if n_pos is None or n_null is None:
+        return None
+    try:
+        n_pos, n_null = int(n_pos), int(n_null)
+    except (TypeError, ValueError):
+        return None
+    if n_pos < 0 or n_null < 0 or (n_pos + n_null) == 0:
+        return None
+    centre = mixture_score(n_pos, n_null, magnitude=magnitude)
+    lo = mixture_score(max(0, n_pos - 1), n_null + 1, magnitude=magnitude)
+    hi = mixture_score(n_pos + 1, max(0, n_null - 1), magnitude=magnitude)
+    edges = [x["score"] for x in (lo, hi) if x.get("score") is not None]
+    return {
+        "id": row.get("id"),
+        "n_trials": n_pos + n_null,
+        "n_positive": n_pos,
+        "n_null": n_null,
+        "centre": centre.get("score"),
+        "min": min(edges) if edges else None,
+        "max": max(edges) if edges else None,
+        "d": centre.get("d"),
+        "source_doi": row.get("source_doi") or "",
+        "source_kind": row.get("source_kind") or "",
+        "written_min": row.get("expected_min"),
+        "written_max": row.get("expected_max"),
+    }
+
+
+def provenance(rows: list[dict] | None = None) -> dict:
+    """
+    How much of the anchor set is CITED, and where a filled row disagrees with
+    the hand-written band it replaces.
+
+    The disagreement column is the interesting one. A row whose derived centre
+    sits outside its own written range means the written range was wrong -- and
+    since the written ranges are what `evaluate()` grades against, every such row
+    was scoring the pipeline against a target the literature does not support.
+    """
+    rows = rows if rows is not None else load()
+    ranged = [r for r in rows if r["band"] not in PAIR_BANDS]
+    cited = [r for r in ranged if (r.get("source_doi") or "").strip()]
+    out = {"n_range_anchors": len(ranged), "n_cited": len(cited),
+           "n_uncited": len(ranged) - len(cited), "derived": [], "disagreements": []}
+    for r in ranged:
+        d = derived_band(r)
+        if not d:
+            continue
+        out["derived"].append(d)
+        wmin, wmax = r.get("expected_min"), r.get("expected_max")
+        if d["centre"] is not None and wmin is not None and wmax is not None:
+            if not (float(wmin) <= d["centre"] <= float(wmax)):
+                out["disagreements"].append(
+                    {**d, "written_min": wmin, "written_max": wmax,
+                     "delta": d["centre"] - (float(wmin) + float(wmax)) / 2})
+    return out
 
 
 def feasibility(rows: list[dict] | None = None) -> list[dict]:
