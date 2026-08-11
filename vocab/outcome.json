@@ -1,7 +1,7 @@
 {
  "vocab": "outcome",
- "version": "v1",
- "status": "PROVISIONAL — grown from S6 null-rationales, not designed up front. See vocab/README.md.",
+ "version": "v2",
+ "status": "PROVISIONAL \u2014 grown from S6 null-rationales, not designed up front. See vocab/README.md.",
  "policy": {
   "force_map_or_discard": "An extraction that cannot be mapped to exactly one id is DISCARDED, never approximated.",
   "kinds": {
@@ -226,7 +226,7 @@
    "id": "energy_levels",
    "label": "Energy and fatigue",
    "kind": "clinical",
-   "definition": "SUBJECTIVE fatigue or energy. One construct, both names — there is deliberately no separate 'fatigue' id.",
+   "definition": "SUBJECTIVE fatigue or energy. One construct, both names \u2014 there is deliberately no separate 'fatigue' id.",
    "includes": [
     "fatigue VAS",
     "FACIT-Fatigue",
@@ -299,12 +299,43 @@
    ],
    "excludes": [
     "peak power",
-    "maximal strength"
+    "maximal strength",
+    "repetitions to failure",
+    "reps at %1RM",
+    "muscular endurance",
+    "sets to failure"
    ],
    "search_terms": [
     "endurance",
     "VO2max",
     "time trial"
+   ],
+   "polarity": "higher_better"
+  },
+  {
+   "id": "muscular_endurance",
+   "label": "Muscular endurance",
+   "kind": "clinical",
+   "definition": "Repeated submaximal contractions of a specific muscle group to failure. LOCAL and resistance-based, not whole-body aerobic capacity. Added 2026-08-11 after an audit found 'leg extension repetitions-to-failure at 80% 1RM' force-fit into exercise_endurance, where its -0.7 null then voted against AEROBIC endurance.",
+   "includes": [
+    "repetitions to failure",
+    "reps at %1RM",
+    "muscular endurance",
+    "sets to failure",
+    "maximum repetitions",
+    "repetition maximum endurance"
+   ],
+   "excludes": [
+    "VO2max",
+    "time trial performance",
+    "time to exhaustion",
+    "peak power",
+    "maximal strength"
+   ],
+   "search_terms": [
+    "muscular endurance",
+    "repetitions to failure",
+    "reps to failure"
    ],
    "polarity": "higher_better"
   },
@@ -459,7 +490,7 @@
     "IBS symptom score"
    ],
    "excludes": [
-    "GI side effects of the supplement — that is adverse_events_gi"
+    "GI side effects of the supplement \u2014 that is adverse_events_gi"
    ],
    "search_terms": [
     "constipation",
@@ -621,7 +652,7 @@
     "GI upset"
    ],
    "excludes": [
-    "digestive_comfort — that is GI symptoms as the treatment target"
+    "digestive_comfort \u2014 that is GI symptoms as the treatment target"
    ],
    "search_terms": [
     "gastrointestinal adverse",

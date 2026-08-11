@@ -105,6 +105,27 @@ def _claude_bin() -> str:
 
 # Bump when you edit ANY prompt (including _shared.md). This is in the cache key.
 # Forget to bump it and you will silently serve stale extractions forever.
+# v1.14 (2026-08-11): three fixes from the 22-agent extraction audit
+# (docs/history/2026-08-11-extraction-accuracy-audit.md). Targets were chosen by
+# SCORE INFLUENCE -- the top 16 contributors by scoring.contributions -- and every
+# claimed error survived an adversarial refutation pass. 4 of 16 confirmed:
+#   S5: direction must be a BETWEEN-ARM contrast. A four-arm trial reported a
+#   significant TIME effect with no group effect and concluded "no additional
+#   benefits from creatine"; its creatine-only arm tracked placebo, and it was
+#   extracted as a benefit worth +5.06 points. A within-group pre/post sentence no
+#   longer establishes direction, and >2-arm trials must name the arm read.
+#   S7: `unspecified` means "the paper never says" and nothing else. An
+#   abbreviation defined once ("creatine monohydrate (CrM)") IS a stated form --
+#   missing that cost the largest single contributor (-15.7) its form credit. And a
+#   named form absent from the vocabulary (PEG-creatine) is a DIFFERENT form, not
+#   an unstated one; those are opposite messages. `unspecified` now needs its own
+#   evidence span.
+#   S6B: nearest-neighbour mapping is never the answer -- refuse instead. "Leg
+#   extension repetitions-to-failure at 80% 1RM" was filed under exercise_endurance
+#   ("sustained submaximal or AEROBIC performance"), so a local muscular-endurance
+#   null voted against aerobic endurance. vocab/outcome.json gains
+#   `muscular_endurance` (v1 -> v2) and exercise_endurance excludes those phrases,
+#   so the deterministic layer refuses the mis-map rather than the model's judgement.
 # v1.13 (2026-08-11): two fixes from the muscle_power audit (12 verifiers;
 # ~5 of 12 voting nulls wrong). S5 gains per-claim `contrast` -- a 4-arm trial
 # with a genuine placebo can still emit a claim comparing creatine+bicarb TO
@@ -159,7 +180,7 @@ def _claude_bin() -> str:
 # v1.6 (2026-08-08): S2 reports results_table + per-study design. SR-table trials
 # now enter evidence mass, so S2's output moves scores and not just confidence.
 # v1.5 (2026-08-07): S3 prompt shortened, SR label resolve, review_methods.
-PROMPT_VERSION = "v1.13"
+PROMPT_VERSION = "v1.14"
 
 # Tier -> model. FULL IDs, NOT ALIASES.
 #

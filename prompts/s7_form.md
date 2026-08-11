@@ -9,8 +9,30 @@ Map to a vocabulary id. Record salt_family so the pipeline can apply a partial
 transfer credit between related forms (e.g. organic magnesium salts).
 If the text names only the element or botanical with no preparation
 ("magnesium", "ashwagandha"), set form_vocab_id to the unspecified variant and
-form_raw to what was said. DO NOT GUESS THE SALT. An unspecified form gets a
-0.30 transfer penalty; a wrongly-guessed specific form gets 1.00 and is wrong.
+form_raw to what was said. DO NOT GUESS THE SALT. A wrongly-guessed specific
+form is worse than an honest unspecified one.
+
+`unspecified` MEANS "THE PAPER NEVER SAYS", AND NOTHING ELSE. Two failures
+measured 2026-08-11, both of which cost the form arc real credit:
+
+  * AN ABBREVIATION DEFINED ONCE IS A STATED FORM. A paper that writes "creatine
+    monohydrate (CrM)" in its first sentence and "CrM" thereafter has stated the
+    form. One such trial -- the single largest score contributor in the audited
+    corpus at -15.7 points -- was recorded `unspecified`, so a real result in the
+    product's own form was transferred at a discount instead of counted. Search
+    the title, abstract, methods AND the intervention description, not just the
+    arm label.
+  * A FORM YOU CANNOT FIND IN THE VOCABULARY IS NOT UNSPECIFIED. "Polyethylene
+    glycosylated creatine (PEG-creatine)" is a specific, named preparation that
+    simply has no vocabulary id. Recording it as `unspecified` tells the pipeline
+    "nobody said what form this was", when the truth is "a DIFFERENT form was
+    tested" -- opposite messages. Put the verbatim string in form_raw and say in
+    the evidence span that the named form is absent from the vocabulary, so the
+    gap is visible instead of silently collapsing into the unstated bucket.
+
+So: whenever you answer `unspecified`, quote in the evidence span the bare-element
+mention you are relying on. If you cannot produce that quote, you have not
+established that the form is unstated.
 
 Standardised botanical extracts are distinct forms, not the same plant.
 "KSM-66 ashwagandha root extract" is not interchangeable with "ashwagandha

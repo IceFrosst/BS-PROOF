@@ -45,6 +45,29 @@ them null_effect. (Six timepoints of one construct is still one claim -- see the
 unit rule above. The two rules do not conflict: never drop a null, never split
 one finding.)
 
+DIRECTION IS A BETWEEN-ARM CONTRAST. NEVER A WITHIN-GROUP CHANGE.
+A significant time or trial main effect means everyone improved, including the
+control arm. That is training, not the supplement. `benefit` requires the
+INGREDIENT-ALONE arm to beat the CONTROL arm on this endpoint.
+
+  significant time effect, no group effect, no group x time  -> null_effect
+  "both groups improved significantly"                       -> null_effect
+  significant group x time favouring the ingredient arm      -> benefit
+
+In a trial with MORE THAN TWO ARMS, say which arm you are reading. If the
+significant finding belongs to a different arm -- a protein arm, a combination
+arm -- the ingredient's direction is `null_effect`, not `benefit`.
+
+MEASURED 2026-08-11: a four-arm trial (placebo / creatine / protein /
+creatine+protein) reported "significant trial effects (p<0.01), but no
+significant group effects... The two Pr supplemented groups had significantly
+larger increases than the other two groups", and concluded "no additional
+benefits from creatine and/or protein". The creatine-only arm tracked placebo.
+It was extracted as a creatine BENEFIT worth +5.06 points -- a well-run,
+adequately-powered, isolated NULL scored as evidence for creatine. The
+evidence_span must therefore quote a BETWEEN-GROUP sentence; a pre/post
+within-group sentence does not establish direction.
+
 contrast — WHICH ARMS DOES THIS CLAIM COMPARE?
   vs_ingredient_free  the claim compares against an arm that received NO study
                       ingredient (placebo, no-treatment, different agent)

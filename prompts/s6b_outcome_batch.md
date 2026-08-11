@@ -46,6 +46,16 @@ Audited misses (2026-08-11) — these went to muscle_power and were wrong:
 A repeated-sprint battery measured FRESH, across a training program, is still
 muscle_power. The framing sentence of the paper decides, not the instrument.
 
+NEAREST NEIGHBOUR IS NEVER THE ANSWER. If an endpoint's construct is not covered
+by any outcome's `includes`, return null. Do not file it under the closest thing.
+MEASURED 2026-08-11: "leg extension repetitions-to-failure at 80% of 1RM" was
+mapped to exercise_endurance, whose own definition is "sustained submaximal or
+AEROBIC performance" -- so a local muscular-endurance null voted -0.7 against
+aerobic endurance. The vocabulary now has `muscular_endurance`; the point is that
+the model reached for a neighbour instead of refusing, and the neighbour was
+wrong. A null costs one extraction. A wrong map corrupts an outcome nobody can
+audit afterwards.
+
 HARD RULES
 - Never map a biomarker to a clinical outcome or vice versa. If the vocabulary
   distinguishes them, respect the distinction. If it does not, return null and
