@@ -1317,6 +1317,147 @@ def main():
     check("harm on a safety outcome is still negative",
           _one("adverse_events_any", "harm").s_value() < 0)
 
+    # ------------------------------------------------------------------
+    # EFFECT-SIZE s_value (founder decision 2026-08-11, "do i"). Replaces vote
+    # counting wherever a usable number exists. Every pin below is new code with
+    # no prior coverage: the existing 392 checks all passed unchanged because
+    # they set no effect_size and fall back to the label.
+    from pipeline.scoring import (standardise_effect as _se, EFFECT_MID_SMD,
+                                  EFFECT_FULL_SMD, EFFECT_MID_PCT, EFFECT_FULL_PCT)
+
+    # -- the refusals. Each of these OCCURS in the creatine corpus, and each one
+    # would invert or fabricate a sign if it were accepted.
+    for unit, why, n_claims in (
+            ("% change vs baseline", "within_group_not_between_arm", 10),
+            ("cohen's d (within-group crm)", "within_group_not_between_arm", 2),
+            ("kg cr post vs 13.5 kg placebo post", "within_group_not_between_arm", 1),
+            ("partial eta-squared", "unsigned_variance_explained", 12),
+            ("eta2p", "unsigned_variance_explained", 1),
+            ("or", "ratio_null_is_one", 3),
+            ("relative risk", "ratio_null_is_one", 1),
+            ("kg", "raw_unit_needs_sd", 15),
+            ("points", "raw_unit_needs_sd", 8),
+            ("beta", "raw_unit_needs_sd", 7),
+            ("none", "no_unit", 1)):
+        s, route = _se(0.5, unit)
+        check(f"unit {unit!r} is refused as {why}",
+              s is None and route == why,
+              f"{n_claims} such claim(s) in the creatine corpus; got {route}")
+    check("a within-group unit is refused even when it names a real effect size",
+          _se(0.7, "cohen's d (within-group)")[0] is None,
+          "a pre/post d is not a between-arm contrast, and it is the LARGER number")
+
+    # -- the accepted families
+    check("cohen's d is standardised", _se(0.43, "cohen's d")[1] == "smd")
+    check("hedges g is standardised", _se(0.43, "hedge's g")[1] == "smd")
+    check("a bare ES is standardised", _se(0.43, "es")[1] == "smd")
+    check("a percent difference is standardised", _se(5.0, "% difference")[1] == "percent")
+
+    # -- THE LOAD-BEARING PROPERTY. The scale is recentred on the MEANINGFUL
+    # threshold, not on zero, and that is what preserves invariant 7. Centring on
+    # zero would score a well-powered measured-zero trial at s=0 -- "inconclusive",
+    # indistinguishable from never studied, which is exactly what the founder
+    # rejected when choosing -0.35 over 0.0 for a null.
+    _zero = _se(0.0, "cohen's d")[0]
+    check("a measured-ZERO effect reproduces the founder's null value",
+          abs(_zero - S_VALUE["null_effect"]) < 0.02,
+          f"measured zero -> {_zero:+.3f} vs S_VALUE['null_effect']="
+          f"{S_VALUE['null_effect']}; the new scale DERIVES the old constant "
+          f"instead of asserting it, so invariant 7 survives the change")
+    check("a clear harm-sized effect reaches the founder's harm value",
+          _se(-0.5, "cohen's d")[0] <= S_VALUE["harm"],
+          f"-0.5 SMD -> {_se(-0.5, 'cohen d')[0]:+.3f}, clamped to "
+          f"{S_VALUE['harm']}")
+    check("the two unit families AGREE at their shared 'meaningful' anchor",
+          abs(_se(0.5, "cohen's d")[0] - _se(5.0, "% difference")[0]) < 1e-9,
+          "prompts/s5_conclusion.md calls 0.5 SMD and 5% both 'meaningful', so "
+          "the continuous scale must place them identically or the same paper "
+          "scores differently depending on which unit it happened to report")
+    check("the 'trivial' bound sits exactly at zero on both scales",
+          abs(_se(EFFECT_MID_SMD, "cohen's d")[0]) < 1e-9
+          and abs(_se(EFFECT_MID_PCT, "%")[0]) < 1e-9,
+          "below the threshold a person would notice, an effect is evidence "
+          "AGAINST a meaningful benefit, not for it")
+    check("s is clamped to [-1, +1]",
+          _se(99.0, "cohen's d")[0] == 1.0 and _se(-99.0, "cohen's d")[0] == -1.0)
+    check("a null that MEASURED a real effect stops voting against the product",
+          _se(0.43, "cohen's d")[0] > 0,
+          f"0.43 SMD -> {_se(0.43, 'cohen d')[0]:+.3f}, where vote counting scored "
+          f"the same trial {S_VALUE['null_effect']}. This is the defect being "
+          f"fixed: 24 of 27 sized nulls had a point estimate favouring creatine")
+
+    # -- the guards on Study.s_value
+    _es = lambda d, e, m=None: Study(id="e", design_rank=4, n=60, oa="full_text",
+                                     rob_items=ROB_CLEAN, funding="independent",
+                                     direction=d, magnitude=m, effect_s=e)
+    check("a measured effect overrides the direction label",
+          _es("null_effect", 0.38).s_value() == 0.38)
+    check("a benefit whose number DISAGREES in sign falls back to the label",
+          _es("benefit", -0.5, "meaningful").s_value() == S_VALUE["benefit_meaningful"],
+          "an inverted-direction measure (a sprint TIME under muscle_power, where "
+          "faster is better but the number is smaller) must not read as harm; a "
+          "wrong sign does not weaken a score, it inverts it")
+    check("a harm label can never be made POSITIVE by its number",
+          _es("harm", 0.9).s_value() <= 0,
+          "safety asymmetry: a contradiction is not an average, and invariant 9 "
+          "says under-count rather than take the higher reading")
+    check("a harm label CAN be made more negative by its number",
+          _es("harm", -1.0).s_value() == -1.0)
+    check("no number means the label still decides",
+          _es("null_effect", None).s_value() == S_VALUE["null_effect"],
+          "coverage is partial -- 44% of sized claims are standardisable -- so "
+          "the label path is not legacy, it is the majority path")
+
+    # -- adverse-event refusal, which needs the vocabulary and so lives in assemble
+    from pipeline.assemble import _effect_s as _aes
+    check("an adverse-event outcome refuses to standardise its number",
+          _aes({"effect_size": 12.8, "effect_unit": "%"}, "adverse_events_gi")[0] is None,
+          "on a safety outcome POSITIVE means MORE harm -- the opposite "
+          "orientation from every efficacy outcome. '12.8% more adverse events' "
+          "would otherwise read as strong positive evidence")
+    check("an efficacy outcome does standardise the same number",
+          _aes({"effect_size": 5.0, "effect_unit": "% difference"},
+               "muscle_strength")[0] is not None)
+
+    # -- SIGN CONVENTION (v1.16). The sign is STATED by S5, never inferred from the
+    # number's arithmetic sign, because this literature uses both conventions: a
+    # faster sprint TIME is a negative number and a good result, while the same
+    # finding is often reported pre-oriented toward the treatment. A wrong
+    # magnitude weakens a score; a wrong SIGN inverts it, undetectably.
+    #
+    # These pins are the ONLY coverage this logic will get for a while: all 85
+    # sized+mapped claims in the creatine corpus are on higher_better outcomes,
+    # where both conventions coincide, so a creatine run passes either way.
+    _claim = lambda **kw: {"effect_size": 0.6, "effect_unit": "cohen's d", **kw}
+    check("effect_favours=ingredient orients POSITIVE",
+          _aes(_claim(effect_favours="ingredient"), "muscle_strength")[0] > 0)
+    check("effect_favours=control orients NEGATIVE",
+          _aes(_claim(effect_favours="control"), "muscle_strength")[0] < 0)
+    check("a NEGATIVE raw value favouring the ingredient still scores positive",
+          _aes(_claim(effect_size=-0.6, effect_favours="ingredient"),
+               "muscle_strength")[0] > 0,
+          "a faster sprint TIME is a negative number and a BETTER result; taking "
+          "the reported sign at face value here would score a win as a loss")
+    check("orientation happens BEFORE recentring, so a trivial benefit stays trivial",
+          _aes(_claim(effect_size=0.05, effect_favours="ingredient"),
+               "muscle_strength")[0] < 0,
+          "0.05 SMD is below the meaningful threshold, so it is evidence against a "
+          "MEANINGFUL effect. abs()-ing the standardised value instead would have "
+          "promoted a trivial benefit into a strong one")
+    check("an unstated convention on a LOWER_BETTER outcome is refused",
+          _aes(_claim(), "sleep_onset")[1] == "sign_convention_unstated",
+          "pre-v1.16 data on a lower-better outcome cannot be oriented: a smaller "
+          "sleep-onset latency is better, so the raw sign is ambiguous. Refusing "
+          "costs one magnitude; accepting could invert it")
+    check("an unstated convention on a HIGHER_BETTER outcome is accepted",
+          _aes(_claim(), "muscle_strength")[0] is not None,
+          "reproduces pre-v1.16 behaviour exactly on the creatine corpus, where "
+          "all 85 sized+mapped claims are higher_better")
+    check("a stated convention works on a lower_better outcome where inference cannot",
+          _aes(_claim(effect_favours="ingredient"), "sleep_onset")[0] > 0,
+          "this is what the v1.16 field buys: magnesium/sleep becomes scoreable "
+          "from measured effects, and creatine could never have revealed the gap")
+
     check("an applicability penalty is not reported as a verdict",
           A.label(37, 0.51, effect_verdict=1.0, applicability_limited=True)
           == "works, but not tested for your product",

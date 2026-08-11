@@ -620,8 +620,11 @@ verdict from **+0.43 to +1.00** but dropped n from 12 to 8, and the composite
 moved **28 → 29**. Higher `d`, lower `c`. Which wins is a real question on a
 real corpus, which is why it is an A/B and not a switch.
 
-**THE SCORE VOTE-COUNTS, and that is now the primary known defect (measured
-2026-08-11, `scripts/vote_counting_investigation.py`). FOUNDER DECISION PENDING.**
+**THE SCORE NO LONGER VOTE-COUNTS. `SCORING_MODEL` v7 → v8-effect-size
+(founder decision 2026-08-11, "do i").** `s_i` now comes from the REPORTED
+EFFECT SIZE wherever a usable number exists, falling back to the direction label
+otherwise. What the defect was, measured with
+`scripts/vote_counting_investigation.py`:
 
 Each trial is reduced to a direction LABEL, the label to a number, and the score
 to a weighted mean of those numbers — so the effect SIZE we extract is discarded
@@ -658,7 +661,49 @@ literature does not produce.** The machinery to derive a band the moment a
 mixture exists is built and selftested (`calibration.mixture_score`,
 `derived_band`, `provenance`); `anchors.csv` has the provenance columns and
 **1 of 21** range anchors now cites a source. Three non-equivalent candidate
-fixes are in the script's verdict and in SPEC §13. Do not pick one in code.
+fixes are in the script's verdict and in SPEC §13.
+
+**How it works, and the one thing not to "simplify":**
+
+```
+s = clamp((effect - MID) / (FULL - MID), -1, +1)      MID 0.20 SMD, FULL 0.80
+```
+
+The scale is **recentred on the MEANINGFUL threshold, not on zero.** That is the
+whole design, because the product's claim is not "the effect differs from zero",
+it is "the effect is big enough to matter to you" — and recentring is what keeps
+invariant 7 true instead of destroying it:
+
+| measured effect | new `s` | old label `s` |
+|---|---|---|
+| zero effect | **−0.333** | `null_effect` −0.35 |
+| −0.5 SMD | **−1.000** (clamped) | `harm` −1.00 |
+| +0.43 SMD (published creatine) | **+0.383** | `null_effect` −0.35 |
+
+So both founder constants are now **derived rather than asserted**, and the
+trial that measured +0.43 stops voting against the product. Centring on zero
+instead — the obvious implementation — makes 20 measured-zero trials score
+**+0 "inconclusive"** where recentring gives **−33 "weak evidence against"**;
+`scripts/effect_size_experiment.py` runs that as a control arm (E) precisely so
+nobody re-derives it the wrong way.
+
+**Coverage is the limit, not the scale.** Only **40 of 227 (18%)** mapped claims
+on the v1.14 corpus carry a standardisable number, so the label path is still
+the majority path and `muscle_strength` moved only **−15 → −12**. The refusals
+are deliberate and each one occurs in the corpus: `% change vs baseline` is a
+within-group change (10 claims), `partial eta-squared` is unsigned (26), odds
+and risk ratios have a null of 1 not 0 (5), and `kg`/`W`/`points` cannot be
+standardised without an SD we never extract (89). Refusing costs a magnitude;
+accepting could invert a sign.
+
+**The SIGN is stated, never inferred** (`effect_favours`, PROMPT_VERSION v1.16).
+A design analysis found this literature uses BOTH conventions — a faster sprint
+TIME is a negative number and a better result, while the same finding is often
+reported pre-oriented toward the treatment. Untestable on creatine: all 85
+sized+mapped claims there are on `higher_better` outcomes where both conventions
+coincide, so a creatine run passes either way. It will first matter on magnesium
+(`sleep_onset`, `anxiety`), and pre-v1.16 data on a lower-better outcome is
+REFUSED rather than guessed.
 
 **PROMPT_VERSION v1.15 fixed half of what that decision needs (2026-08-11).** S5
 was describing `effect_size` / CI / `p_value` only as inputs to `magnitude`, and

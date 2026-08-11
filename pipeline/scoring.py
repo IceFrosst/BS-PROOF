@@ -17,6 +17,7 @@ Implements SPEC.md sections 7-9.
 """
 from __future__ import annotations
 import math
+import re
 from dataclasses import dataclass, field
 
 DESIGN_W = {4:1.00, 5:0.55, 6:0.30, 7:0.18, 8:0.12, 9:0.07,
@@ -51,6 +52,133 @@ OA_FACTOR   = {"full_text":1.00, "sr_table":0.85, "abstract_only":0.55}
 # never score like one that merely did nothing.
 S_VALUE = {"benefit_meaningful":1.0, "benefit_trivial":0.3,
            "null_effect":-0.35, "harm":-1.0}
+
+# ---------------------------------------------------------------------------
+# EFFECT-SIZE s_value. FOUNDER DECISION 2026-08-11 ("do i"), replacing the
+# vote-counting rule above wherever a usable number exists.
+#
+# WHY. The S_VALUE table maps a DIRECTION LABEL to a number, so the effect size
+# we extract is discarded before it reaches the score. Counting how many trials
+# individually cleared p<0.05 is VOTE COUNTING, whose power falls toward zero as
+# the trials shrink -- the failure meta-analysis exists to fix, and supplement
+# literature is exactly that small-trial regime. Measured 2026-08-11: 24 of 27
+# null_effect claims carrying a usable number had a point estimate FAVOURING the
+# supplement, each scored -0.35, while 7 published pooled estimates on the same
+# outcome favour it with CIs excluding zero and our pipeline returned -15.
+# Full evidence: scripts/vote_counting_investigation.py.
+#
+# THE SCALE IS RECENTRED ON THE MEANINGFUL THRESHOLD, NOT ON ZERO, and that is
+# the whole design. The product's claim is not "the effect differs from zero", it
+# is "the effect is big enough to matter to you". So s measures evidence for or
+# against a MEANINGFUL effect:
+#
+#     s = clamp((effect - MID) / (FULL - MID), -1, +1)
+#
+# Recentring is what preserves invariant 7 instead of destroying it. Centring on
+# zero would give a well-powered trial that measured a true zero effect s = 0 --
+# "inconclusive", indistinguishable from never studied, which is precisely what
+# the founder rejected when choosing -0.35 over 0.0. Recentred, a measured-zero
+# effect scores (0 - 0.2)/0.6 = -0.333, within rounding of the -0.35 chosen for a
+# well-run null, and a clear harm of -0.5 SMD clamps to -1.0, exactly the harm
+# value. So this DERIVES both founder constants from first principles rather than
+# asserting them -- while a "null" that actually measured +0.43 moves from -0.35
+# to +0.383, which is the defect being fixed.
+#
+# All four values are FOUNDER-OWNED (invariant 4, SPEC 13). They are not free
+# parameters: MID and the two 'meaningful' anchors are read off the thresholds
+# already in prompts/s5_conclusion.md, so the continuous scale agrees with the
+# discrete labels the same prompt produces.
+EFFECT_MID_SMD = 0.20   # prompts/s5_conclusion.md: "< 0.2 trivial". Below this an
+                        # effect is not worth buying, so it is evidence AGAINST.
+EFFECT_FULL_SMD = 0.80  # Cohen's "large". Cohen himself disclaimed these bands;
+                        # 0.8 is chosen over 0.5 so that the prompt's own
+                        # "meaningful" floor (0.5) lands mid-scale at +0.50
+                        # rather than saturating at +1.0 the moment it qualifies.
+EFFECT_MID_PCT = 2.0    # prompts/s5_conclusion.md: "< 2% trivial"
+EFFECT_FULL_PCT = 8.0   # set so 5% ("meaningful" in the same prompt) maps to
+                        # +0.50, identical to where 0.5 SMD lands. The two
+                        # families therefore agree at their shared anchors.
+
+# Unit strings whose effect is NOT a between-arm contrast, or cannot be signed.
+# Each entry is a substring test on the lowercased unit, and each is a REFUSAL --
+# the claim falls back to its direction label rather than being standardised.
+# Refusing is not conservatism for its own sake: a misread sign does not weaken a
+# score, it inverts it, and no downstream step can detect that.
+#
+# Measured on the 149-study creatine corpus (243 sized claims, 66 distinct unit
+# strings), these are the traps that actually occur:
+_WITHIN_GROUP = (
+    "vs baseline",      # 10 claims: "% change vs baseline" is a PRE/POST change
+    "within-group",     #  3 claims: "cohen's d (within-group crm)"
+    "within group",
+    "from baseline",
+    "post vs",          #  4 claims: "kg cr post vs 13.5 kg placebo post" -- raw
+                        #  arm values, not an effect at all
+)
+# Variance-explained measures. Always positive, so they cannot supply a
+# direction; 26 claims. Deliberately NOT rescued by taking the sign from the
+# direction label, because for a `null_effect` claim that would reintroduce the
+# exact vote-counting error this change exists to remove.
+_UNSIGNED = ("eta-squared", "eta squared", "eta2", "r-squared", "r2")
+# Null value is 1.0, not 0.0 -- 5 claims (or, rr, relative risk). Treating 1.05
+# as a positive effect on a zero-centred scale is a sign error waiting to happen.
+_RATIO_PHRASES = ("relative risk", "odds ratio", "risk ratio", "hazard ratio")
+_RATIO_TOKENS = {"or", "rr", "hr", "hazard"}
+# Substring tests are safe for these because each is a distinctive word.
+_STANDARDISED = ("cohen", "hedge", "glass", "smd", "standardised", "standardized")
+# Token tests, NOT substrings. "es" as a substring matches inside ordinary words
+# and "d"/"g"/"r" match almost anything, so these must be whole tokens.
+_STANDARDISED_TOKENS = {"d", "g", "es", "smd"}
+_PERCENT = ("%", "percent")
+_NO_UNIT = {"", "none", "n/a", "na", "unknown", "unitless"}
+
+
+def standardise_effect(value: float | None, unit: str | None) -> tuple[float | None, str]:
+    """
+    A reported effect -> s in [-1, +1], or (None, reason) if it cannot be trusted.
+
+    PURE and vocab-free by design: this module has no project imports (checked by
+    pipeline.invariants), so it cannot know an outcome's polarity. The caller
+    must hand in a value already oriented so that POSITIVE means "good for the
+    product" -- `assemble` does that, because it is the layer that knows the
+    outcome. Getting that wrong inverts a score, so the contract is stated here
+    and pinned in selftest.
+
+    Returns (s, route) where route is one of: "smd", "percent", or a refusal
+    reason. The route is recorded on every study so a run can be audited for how
+    much of its score came from measured effects versus from labels.
+    """
+    if value is None:
+        return None, "no_effect_size"
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return None, "unparseable_effect_size"
+    u = (unit or "").strip().lower()
+    if u in _NO_UNIT:
+        return None, "no_unit"          # a bare number could be kg or an SMD
+    tokens = set(re.findall(r"[a-z]+", u))
+    # Order matters. The within-group and unsigned refusals must run BEFORE any
+    # family match, because "% change vs baseline" and "cohen's d (within-group)"
+    # would otherwise be accepted by the percent and SMD branches respectively.
+    if any(bad in u for bad in _WITHIN_GROUP):
+        return None, "within_group_not_between_arm"
+    if any(bad in u for bad in _UNSIGNED):
+        return None, "unsigned_variance_explained"
+    if tokens & _RATIO_TOKENS or any(p in u for p in _RATIO_PHRASES):
+        return None, "ratio_null_is_one"
+    if any(p in u for p in _PERCENT):
+        return _rescale(v, EFFECT_MID_PCT, EFFECT_FULL_PCT), "percent"
+    if any(p in u for p in _STANDARDISED) or (tokens & _STANDARDISED_TOKENS):
+        return _rescale(v, EFFECT_MID_SMD, EFFECT_FULL_SMD), "smd"
+    return None, "raw_unit_needs_sd"    # kg, W, points, s, umol/L: not
+                                        # standardisable without an SD we never
+                                        # extract. 50 claims. Falls back to label.
+
+
+def _rescale(v: float, mid: float, full: float) -> float:
+    """Recentre on `mid` and clamp. `full - mid` is never 0 for shipped values."""
+    return max(-1.0, min(1.0, (v - mid) / (full - mid)))
 
 K = 1.5                 # confidence saturation. FOUNDER DECISION 2026-08-11
                         # ("do k1.5 for now"), from the printed K A/B: at K=3.0
@@ -104,10 +232,25 @@ APPLY_DOSE_IN_WEIGHT = False
 # must never be read side by side as if the numbers meant the same thing, and
 # scripts/archive_reports.py enforces that by sweeping old-model runs out of
 # reports/runs/ into reports/archive/<model>/.
-SCORING_MODEL = "v7-null-035"
+SCORING_MODEL = "v8-effect-size"
 
 # What each model meant, so an archived report can still be understood:
 SCORING_MODEL_HISTORY = {
+    "v8-effect-size":
+        "s_i comes from the REPORTED EFFECT SIZE, not from the direction label, "
+        "wherever a usable number exists -- founder decision 2026-08-11 ('do i'). "
+        "Vote counting (counting how many trials individually cleared p<0.05) has "
+        "power approaching zero as trials shrink, which is the regime supplement "
+        "literature lives in: 24 of 27 sized nulls had a point estimate FAVOURING "
+        "creatine while each scored -0.35, against 7 published pooled estimates "
+        "favouring it with CIs excluding zero. The scale is recentred on the "
+        "MEANINGFUL threshold rather than on zero, so a measured-zero effect "
+        "gives -0.333 (reproducing the -0.35 chosen for a well-run null) and a "
+        "harm-sized -0.5 SMD clamps to -1.0 (reproducing harm). Both founder "
+        "constants are therefore DERIVED, and invariant 7 survives. Falls back to "
+        "the label when no number is standardisable, which on the v1.14 corpus is "
+        "still 82% of mapped claims. Sign is STATED by S5 (effect_favours, "
+        "PROMPT_VERSION v1.16), never inferred.",
     "v1-transfer-in-weight":
         "signed -100..100 only. form x dose x population multiplied into "
         "w_study. No arcs. Superseded 2026-08-07.",
@@ -227,8 +370,46 @@ class Study:
     pop_match: str = "different"
     direction: str = "null_effect"
     magnitude: str | None = None
+    # A standardised effect already ORIENTED so that positive means "good for the
+    # product", in [-1, +1], or None when no usable number existed. `assemble`
+    # computes it (it is the layer that knows outcome polarity); this module
+    # cannot, because it has no project imports. `effect_route` records how it was
+    # obtained -- "smd", "percent", or the refusal reason -- so a run can be
+    # audited for how much of its score came from measured effects vs from labels.
+    effect_s: float | None = None
+    effect_route: str = "label"
 
     def s_value(self) -> float:
+        # FOUNDER DECISION 2026-08-11: a measured effect beats the label. See the
+        # EFFECT_MID_SMD block above for why the scale is recentred on the
+        # meaningful threshold rather than on zero.
+        if self.effect_s is not None:
+            if self.direction == "harm":
+                # SAFETY ASYMMETRY. A harm label can be made more negative by the
+                # number but never positive. If the two disagree in sign that is a
+                # contradiction, not an average -- and invariant 9's rule for
+                # conflicting evidence is to under-count, never to pick the higher
+                # reading. A safety signal must not be cancelled by arithmetic.
+                return min(self.effect_s, 0.0)
+            # SIGN AGREEMENT GUARD. The number is trusted only where it does not
+            # contradict the label. `effect_s` is required by contract (S5 prompt,
+            # v1.16) to be oriented so POSITIVE means the supplement did better,
+            # so a `benefit` claim with a negative effect means one of the two
+            # readings is wrong -- most likely a measure whose native direction is
+            # inverted, such as a sprint TIME filed under muscle_power where
+            # faster is better but the number is smaller.
+            #
+            # Falling back to the label here is the under-counting choice and it is
+            # the point: a wrong sign does not weaken a score, it inverts it, and
+            # nothing downstream can detect that. Untestable on the creatine
+            # corpus -- all 40 standardisable claims there are on higher_better
+            # outcomes, so orientation is a no-op and this guard never fires. It
+            # will first matter on a lower_better ingredient (magnesium ->
+            # sleep_onset, anxiety), which is exactly why it is here now.
+            if self.direction == "benefit" and self.effect_s < 0:
+                return (S_VALUE["benefit_meaningful"]
+                        if self.magnitude == "meaningful" else S_VALUE["benefit_trivial"])
+            return self.effect_s
         if self.direction == "harm": return S_VALUE["harm"]
         if self.direction == "null_effect": return S_VALUE["null_effect"]
         if self.direction == "benefit":

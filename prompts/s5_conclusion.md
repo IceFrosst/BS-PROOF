@@ -99,6 +99,24 @@ number at all. The numbers used to be described here only as inputs to
 `magnitude`, and `magnitude` is assessed for benefits alone -- so a null was
 being read as "no numbers needed" and the point estimate was thrown away.
 
+`effect_favours` — WHICH ARM DOES THE NUMBER FAVOUR? SAY IT, DO NOT LEAVE IT
+IMPLIED.
+  ingredient - the effect_size you reported favours the study ingredient
+  control    - it favours the placebo / comparator arm
+  neither    - no meaningful difference either way
+  null       - you cannot tell. Always a valid answer.
+
+The SIGN of a reported effect is not a reliable convention and must never be
+guessed downstream. Some papers report a raw measurement difference, where a
+faster sprint TIME is a NEGATIVE number and a BETTER result; others report the
+same finding already oriented toward the treatment, as a positive number. Both
+appear in this literature, sometimes in one paper.
+
+This matters more than any other numeric field, because the score now uses the
+effect SIZE rather than only your direction label. A magnitude that is too small
+makes a score weaker. A SIGN that is wrong makes the score say the OPPOSITE of
+the evidence, and no downstream step can detect it. So state the arm.
+
 A null's point estimate and interval are the most valuable thing on the claim,
 because they are what distinguishes the two kinds of null, which are opposites:
 

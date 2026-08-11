@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 from pipeline import vocab
 from pipeline import arcs as arcsmod
 from pipeline import dose as dosemod
+from pipeline import scoring
 from pipeline.scoring import Study, score_ecu, contributions
 
 SCORER_VERSION = "v1"
@@ -91,10 +92,13 @@ def sr_derived_to_studies(rec: dict, product: dict, *,
         magnitude = claim.get("magnitude")
         if vocab.outcome_kind(oid) == "adverse_event" and direction == "null_effect":
             direction, magnitude = "benefit", "trivial"
+        sr_eff_s, sr_eff_route = _effect_s(claim, oid)
         out.append((oid, Study(
             id=rec["_canonical"],
             design_rank=rec.get("design_rank") or 14,
             n=rec.get("n"),
+            effect_s=sr_eff_s,
+            effect_route=sr_eff_route,
             rob_items={},
             rob_band_direct=rec.get("rob"),
             rob_inherited=True,
@@ -191,10 +195,13 @@ def to_studies(record: dict, extraction: dict, product: dict,
                 direction, magnitude = "benefit", "trivial"   # reassuring, mild
             elif direction == "harm":
                 pass                                          # already negative
+        eff_s, eff_route = _effect_s(claim, entry["outcome_vocab_id"])
         out.append((entry["outcome_vocab_id"], Study(
             id=record["_canonical"],
             design_rank=record.get("design_rank") or 14,
             n=n,
+            effect_s=eff_s,
+            effect_route=eff_route,
             rob_items=rob,
             funding=funding,
             venue_ok=venue_ok,
@@ -208,6 +215,82 @@ def to_studies(record: dict, extraction: dict, product: dict,
             magnitude=magnitude,
         ), dose, bool((claim or {}).get("is_primary_outcome"))))
     return out
+
+
+def _effect_s(claim: dict, outcome_vocab_id: str) -> tuple[float | None, str]:
+    """
+    A claim's measured effect as a signed s in [-1, +1], or (None, refusal reason).
+
+    Lives here rather than in `scoring` because it needs the VOCABULARY, and
+    `pipeline/scoring.py` has no project imports by design (enforced by
+    pipeline.invariants). Everything unit-related is delegated to
+    `scoring.standardise_effect`; the only judgement added here is the one that
+    needs the outcome.
+
+    ADVERSE-EVENT OUTCOMES ARE REFUSED, and this is not incidental. Just above,
+    an adverse-event `null_effect` is deliberately rewritten to
+    `benefit`/`trivial`, because for a safety outcome "no difference in side
+    effects" CONFIRMS the claim "this is safe". The reported NUMBER on such a
+    claim is an adverse-event rate difference, where POSITIVE means MORE harm --
+    the opposite orientation from every efficacy outcome. Feeding it through the
+    same scale would read "12% more adverse events" as strong positive evidence.
+    Measured: the unrestricted null-sign count found exactly this shape
+    ("Self-reported adverse events (rate) +12.8", "Hyperhomocysteinemia +40.1").
+    """
+    if vocab.outcome_kind(outcome_vocab_id) == "adverse_event":
+        return None, "adverse_event_inverted_polarity"
+
+    raw = claim.get("effect_size")
+    if raw is None:
+        return None, "no_effect_size"
+
+    # WHICH WAY IS "GOOD"? Never inferred from the number's arithmetic sign.
+    #
+    # A design analysis of this corpus found effect_size does NOT follow a single
+    # sign convention: some papers report a raw measurement difference, where a
+    # faster sprint TIME is a NEGATIVE number and a BETTER result, and others
+    # report the same finding already oriented toward the treatment. Guessing is a
+    # coin flip, and a wrong sign does not weaken a score -- it inverts it, and no
+    # downstream step can detect that. So S5 states the arm outright
+    # (`effect_favours`, PROMPT_VERSION v1.16).
+    #
+    # The orientation is applied to the RAW value, BEFORE standardising. Doing it
+    # afterwards would be wrong: the scale is recentred on the meaningful
+    # threshold, so a genuine but TRIVIAL benefit standardises to a NEGATIVE s by
+    # construction, and taking abs() of that would promote a trivial effect into a
+    # strong one -- the opposite of conservative.
+    favours = claim.get("effect_favours")
+    try:
+        magnitude = abs(float(raw))
+    except (TypeError, ValueError):
+        return None, "unparseable_effect_size"
+
+    if favours == "ingredient":
+        oriented = magnitude
+    elif favours == "control":
+        oriented = -magnitude
+    elif favours == "neither":
+        # An explicit "no meaningful difference". Keep the magnitude rather than
+        # forcing 0.0: the recentred scale already reads a sub-threshold effect as
+        # evidence against, and a LARGE magnitude the model calls "neither" stays
+        # visible as the contradiction it is instead of being smoothed away.
+        oriented = magnitude
+    else:
+        # PRE-v1.16 DATA, or the model declined to say. Fall back on outcome
+        # polarity, and REFUSE unless "higher is better" makes the raw sign
+        # unambiguous.
+        #
+        # Measured: all 85 sized+mapped claims in the creatine corpus are on
+        # higher_better outcomes, so this branch reproduces earlier behaviour
+        # there exactly and the refusal never fires. It fires first on a
+        # lower_better ingredient -- magnesium/sleep_onset, anxiety -- which is
+        # precisely the case a creatine run can never validate. Refusing costs one
+        # study's magnitude; accepting could invert its sign.
+        if vocab.outcome_polarity(outcome_vocab_id) != "higher_better":
+            return None, "sign_convention_unstated"
+        oriented = float(raw)
+
+    return scoring.standardise_effect(oriented, claim.get("effect_unit"))
 
 
 def _one_study_one_vote(pairs: list[tuple]) -> tuple[list[tuple], int]:

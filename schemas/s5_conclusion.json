@@ -1,109 +1,122 @@
 {
- "type": "object",
- "required": [
-  "claims"
- ],
- "additionalProperties": false,
- "properties": {
-  "claims": {
-   "type": "array",
-   "items": {
-    "type": "object",
-    "required": [
-     "outcome_raw",
-     "direction",
-     "is_primary_outcome",
-     "evidence_span"
-    ],
-    "additionalProperties": false,
-    "properties": {
-     "outcome_raw": {
-      "type": "string",
-      "maxLength": 120
-     },
-     "measure": {
-      "type": [
-       "string",
-       "null"
-      ],
-      "maxLength": 80
-     },
-     "direction": {
-      "type": "string",
-      "enum": [
-       "benefit",
-       "null_effect",
-       "harm",
-       "unclear"
-      ]
-     },
-     "magnitude": {
-      "type": [
-       "string",
-       "null"
-      ],
-      "enum": [
-       "meaningful",
-       "trivial",
-       "unstated",
-       null
-      ]
-     },
-     "effect_size": {
-      "type": [
-       "number",
-       "null"
-      ]
-     },
-     "effect_unit": {
-      "type": [
-       "string",
-       "null"
-      ],
-      "maxLength": 40
-     },
-     "ci_low": {
-      "type": [
-       "number",
-       "null"
-      ]
-     },
-     "ci_high": {
-      "type": [
-       "number",
-       "null"
-      ]
-     },
-     "p_value": {
-      "type": [
-       "number",
-       "null"
-      ]
-     },
-     "is_primary_outcome": {
-      "type": "boolean"
-     },
-     "evidence_span": {
-      "type": "string",
-      "maxLength": 200
-     },
-     "contrast": {
-      "type": [
-       "string",
-       "null"
-      ],
-      "enum": [
-       "vs_ingredient_free",
-       "vs_ingredient_arm",
-       "within_group",
-       "unclear",
-       null
-      ],
-      "description": "Which comparison this claim reports: against an arm with no study ingredient (vs_ingredient_free), against another arm that ALSO received the ingredient (vs_ingredient_arm -- e.g. ingredient+X vs ingredient), a within-group pre/post change (within_group), or unclear."
-     }
+  "type": "object",
+  "required": [
+    "claims"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "claims": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "outcome_raw",
+          "direction",
+          "is_primary_outcome",
+          "evidence_span"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "outcome_raw": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "measure": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 80
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "benefit",
+              "null_effect",
+              "harm",
+              "unclear"
+            ]
+          },
+          "magnitude": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "meaningful",
+              "trivial",
+              "unstated",
+              null
+            ]
+          },
+          "effect_size": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "effect_unit": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 40
+          },
+          "effect_favours": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "ingredient",
+              "control",
+              "neither",
+              null
+            ],
+            "description": "WHICH ARM the reported effect_size favours. The SIGN of a reported effect is not a reliable convention -- some papers report a raw measurement difference (a faster sprint TIME is a NEGATIVE number and a GOOD result) and others report it already oriented toward the treatment. State it explicitly so downstream never has to guess: 'ingredient' = the effect favours the study ingredient, 'control' = it favours the comparator, 'neither' = no meaningful difference. null when you cannot tell, which is always a valid answer."
+          },
+          "ci_low": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "ci_high": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "p_value": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "is_primary_outcome": {
+            "type": "boolean"
+          },
+          "evidence_span": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "contrast": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "vs_ingredient_free",
+              "vs_ingredient_arm",
+              "within_group",
+              "unclear",
+              null
+            ],
+            "description": "Which comparison this claim reports: against an arm with no study ingredient (vs_ingredient_free), against another arm that ALSO received the ingredient (vs_ingredient_arm -- e.g. ingredient+X vs ingredient), a within-group pre/post change (within_group), or unclear."
+          }
+        }
+      },
+      "maxItems": 20
     }
-   },
-   "maxItems": 20
   }
- }
 }

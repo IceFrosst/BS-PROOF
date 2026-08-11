@@ -105,6 +105,18 @@ def _claude_bin() -> str:
 
 # Bump when you edit ANY prompt (including _shared.md). This is in the cache key.
 # Forget to bump it and you will silently serve stale extractions forever.
+# v1.16 (2026-08-11): S5 states `effect_favours` (ingredient | control | neither |
+# null) -- WHICH ARM the reported effect_size favours. New schema field.
+# Required because the founder chose effect-size-weighted s_value ("do i"), so the
+# SIGN of a reported effect now decides the sign of a study's contribution. A
+# design analysis found effect_size does NOT follow one sign convention in this
+# literature: some papers report a raw measurement difference (a faster sprint
+# TIME is a negative number and a good result), others report it pre-oriented
+# toward the treatment. Inferring which is a coin flip, and a wrong sign does not
+# weaken a score -- it inverts it, undetectably. So the model states the arm.
+# Untestable on creatine: all 85 sized+mapped claims there are on higher_better
+# outcomes, where raw and oriented signs coincide. It will first matter on
+# magnesium (sleep_onset, anxiety) -- see pipeline.assemble._effect_s.
 # v1.15 (2026-08-11): S5 must extract effect_size / CI / p_value on EVERY claim,
 # including nulls. Measured: of 139 null_effect claims on the four main
 # performance outcomes, only 27 carried any number. The numeric fields were
@@ -191,7 +203,7 @@ def _claude_bin() -> str:
 # v1.6 (2026-08-08): S2 reports results_table + per-study design. SR-table trials
 # now enter evidence mass, so S2's output moves scores and not just confidence.
 # v1.5 (2026-08-07): S3 prompt shortened, SR label resolve, review_methods.
-PROMPT_VERSION = "v1.15"
+PROMPT_VERSION = "v1.16"
 
 # Tier -> model. FULL IDs, NOT ALIASES.
 #
