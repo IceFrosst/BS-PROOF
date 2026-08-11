@@ -31,8 +31,26 @@ DOSE_FACTOR = {"in_band":1.00, "low_50_99":0.45, "below_50":0.10, "above_200":0.
 POP_FACTOR  = {"exact":1.00, "adjacent":0.70, "different":0.35}
 OA_FACTOR   = {"full_text":1.00, "sr_table":0.85, "abstract_only":0.55}
 
+# FOUNDER DECISION 2026-08-11: null_effect -0.7 -> -0.35, from the sweep in
+# scripts/penalty_experiment.py. Reasoning recorded because the value is a guess
+# either way: -0.7 priced a well-run null at 70% of documented HARM, and "we
+# looked and found no effect" is genuinely weaker evidence against a product than
+# "we found damage". -0.35 halves that while keeping the system able to return a
+# negative verdict -- the fixture that decided it is a synthetic product with 20
+# clean unanimous nulls, which still lands at -35 ("weak evidence against") where
+# null_effect=0.0 put it at exactly 0 ("inconclusive"), i.e. indistinguishable
+# from never having been studied. A tool that cannot say no is not measuring.
+#
+# NOT chosen to make an anchor pass, and it does not: the same sweep shows anchor
+# #1's +80 floor tolerates 8.6% nulls at -0.7 and only 11.7% at -0.35, while
+# removing the penalty ENTIRELY reaches just 20%. No value of this constant makes
+# those bands reachable -- which is the answer to REVIEW_PENDING open item 3: the
+# bands are what is wrong, not this number.
+#
+# harm stays at -1.0. It is a SAFETY signal; a supplement that hurt people must
+# never score like one that merely did nothing.
 S_VALUE = {"benefit_meaningful":1.0, "benefit_trivial":0.3,
-           "null_effect":-0.7, "harm":-1.0}
+           "null_effect":-0.35, "harm":-1.0}
 
 K = 1.5                 # confidence saturation. FOUNDER DECISION 2026-08-11
                         # ("do k1.5 for now"), from the printed K A/B: at K=3.0
@@ -86,7 +104,7 @@ APPLY_DOSE_IN_WEIGHT = False
 # must never be read side by side as if the numbers meant the same thing, and
 # scripts/archive_reports.py enforces that by sweeping old-model runs out of
 # reports/runs/ into reports/archive/<model>/.
-SCORING_MODEL = "v6-form-ladder-per-study"
+SCORING_MODEL = "v7-null-035"
 
 # What each model meant, so an archived report can still be understood:
 SCORING_MODEL_HISTORY = {
@@ -127,7 +145,14 @@ SCORING_MODEL_HISTORY = {
         "top-3, walking down the hierarchy when the highest ranks are negative. "
         "A negative pooled verdict no longer zeroes the arc; it stays in the "
         "verdict as the warning it is. Also adds per-study score contributions "
-        "(scoring.contributions) which sum exactly to the signed score.",
+        "(scoring.contributions) which sum exactly to the signed score. "
+        "S_VALUE null_effect was still -0.7. Superseded 2026-08-11.",
+    "v7-null-035":
+        "identical to v6 except S_VALUE['null_effect'] -0.7 -> -0.35 (founder, "
+        "2026-08-11, from scripts/penalty_experiment.py). A well-run null is no "
+        "longer priced at 70% of documented harm. harm stays -1.0. Every score "
+        "built on a corpus containing nulls moves UP; runs across this boundary "
+        "are not comparable.",
 }
 
 

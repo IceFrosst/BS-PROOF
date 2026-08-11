@@ -1,7 +1,7 @@
 """Zero-model regression test for the deterministic layer. python -m pipeline.selftest"""
 import sys, os, pathlib
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from pipeline.scoring import Study, score_ecu, band_for
+from pipeline.scoring import Study, score_ecu, band_for, S_VALUE
 from pipeline.dedup import dedup, canonical_id, registry_id
 from pipeline import vocab
 
@@ -63,7 +63,17 @@ def main():
     n = score_ecu([Study(id=f"n{i}", design_rank=4, n=200, rob_items=ROB_CLEAN,
                          funding="independent", oa="full_text", form_match="exact",
                          pop_match="exact", direction="null_effect") for i in range(12)], [])
-    check("12 null RCTs -> negative", n["score"] < -40, f"score {n['score']}")
+    # Threshold DERIVED from the constant, not hardcoded: this check exists to
+    # pin that a well-run null is evidence AGAINST, and it must keep meaning that
+    # when the founder retunes S_VALUE (-0.7 -> -0.35 on 2026-08-11) instead of
+    # failing on an arithmetic consequence of a deliberate decision.
+    _null_floor = 100 * S_VALUE["null_effect"] * 0.75
+    check("12 null RCTs -> clearly negative", n["score"] < _null_floor,
+          f"score {n['score']} must be below {_null_floor:.0f} "
+          f"(75% of 100 x S_VALUE['null_effect']={S_VALUE['null_effect']})")
+    check("a null still scores well above outright harm",
+          n["score"] > score_ecu(rcts(12, direction="harm", magnitude=None), [])["score"],
+          "'we found no effect' is weaker evidence against than 'we found damage'")
     h = score_ecu(rcts(6, direction="harm", magnitude=None), [])
     check("harm -> strong negative", h["score"] <= -70, f"score {h['score']}")
 
@@ -357,7 +367,7 @@ def main():
     check("benefit outcome scores positive", by_outcome["sleep_onset"]["score"] >= 70,
           f"score {by_outcome['sleep_onset']['score']}")
     check("nulls on a second outcome score NEGATIVE",
-          by_outcome["anxiety"]["score"] < -40,
+          by_outcome["anxiety"]["score"] < 100 * S_VALUE["null_effect"] * 0.6,
           f"score {by_outcome['anxiety']['score']} — dropping nulls would bias every score up")
     check("provenance stamped on every row",
           by_outcome["sleep_onset"]["provenance"]["vocab_versions"] == vocab.versions())
@@ -1971,7 +1981,11 @@ def main():
     # If S_VALUE, H_PENALTY, H_NORM or a band moves, this goes red ON PURPOSE --
     # that is a founder decision and it must not land silently.
     _feas = {f["id"]: f["max_null_share"] for f in _cal.feasibility()}
-    _pinned = {"1": 0.086, "2": 0.064, "3": 0.064, "4": 0.064, "5": 0.111}
+    # Re-measured 2026-08-11 after S_VALUE['null_effect'] -0.7 -> -0.35. The
+    # tolerances LOOSENED and the anchors are still unreachable, which is the
+    # finding: no value of this constant makes a +80 floor achievable (removing
+    # the penalty entirely reaches only 20%). See scripts/penalty_experiment.py.
+    _pinned = {"1": 0.1165, "2": 0.086, "3": 0.086, "4": 0.086, "5": 0.1485}
     _moved = [f"anchor {k}: {_feas.get(k)} != {v}" for k, v in _pinned.items()
               if _feas.get(k) is None or abs(_feas[k] - v) > 0.002]
     check("the five confidence-A anchor floors still imply their measured null "
