@@ -375,6 +375,18 @@ def _section_ecu_this_run(ctx: dict) -> str:
         v, cov = a.get("verdict"), a.get("coverage")
         if a.get("is_quantity"):
             return f"{cov:.0%}" if cov is not None else "—"
+        # FORM shows the ladder STRENGTH -- the number the composite uses since
+        # v5 -- with the signed verdict kept beside it as the caveat. Printing
+        # only the verdict made the table disagree with its own headline.
+        if key == "form" and "strength" in a:
+            st = a.get("strength") or 0.0
+            basis = a.get("basis")
+            if basis == "untested_in_form":
+                return "not tested in your form"
+            if basis == "all_negative_in_form":
+                return f"all negative ({v:+.2f} @ {cov:.0%})" if v is not None else "all negative"
+            tail = f" (pooled {v:+.2f} @ {cov:.0%})" if v is not None and cov is not None else ""
+            return f"{st:.2f}{tail}"
         if v is None:
             return "not tested"
         return f"{v:+.2f} @ {cov:.0%}" if cov is not None else f"{v:+.2f}"
@@ -403,6 +415,41 @@ def _section_ecu_this_run(ctx: dict) -> str:
                  "means 'barely studied'._\n")
     lines.append("")
     lines.append("_Old rows from previous runs are not shown here._\n")
+
+    # WHICH STUDIES MADE THE NUMBER. Exact decomposition, not an attribution
+    # guess: signed = 100 x d x c x (1 - 0.4H) and d = sum(w_i x s_i)/E, so each
+    # study owns `100 x c x (1-0.4H) x w_i x s_i / E` points and the column sums
+    # to the signed score. Founder ask 2026-08-11.
+    lines.append("## Which studies made each number\n")
+    any_contrib = False
+    for r in sorted(rows, key=lambda x: -(x.get("composite")
+                                          if x.get("composite") is not None else -999)):
+        cons = ((r.get("evidence") or {}).get("contributions")) or []
+        if not cons:
+            continue
+        any_contrib = True
+        signed = r.get("score")
+        lines.append(f"### {r.get('outcome_vocab_id')} — signed {signed:+d}"
+                     if isinstance(signed, int) else
+                     f"### {r.get('outcome_vocab_id')}")
+        lines.append("")
+        lines.append("| Study | points | w (quality) | s (direction) | rank | form |")
+        lines.append("|---|--:|--:|--:|--:|---|")
+        for csx in cons[:15]:
+            lines.append(f"| `{csx.get('id','?')}` | {csx.get('points'):+.2f} | "
+                         f"{csx.get('w')} | {csx.get('s')} | "
+                         f"{csx.get('design_rank')} | {csx.get('form_match')} |")
+        tot = sum(c.get("points") or 0 for c in cons)
+        lines.append(f"| **sum of all {len(cons)}** | **{tot:+.2f}** | | | | |")
+        lines.append("")
+    if not any_contrib:
+        lines.append("_No scored ECU had attributable contributions._\n")
+    lines.append("_`points` sum to the signed score. NEGATIVE points mean that "
+                 "study pushed the score down. `w` is quality (design × RoB × size "
+                 "× funding × OA); `s` is what it found (+1.0 meaningful benefit, "
+                 "+0.3 trivial/unsized, −0.7 null, −1.0 harm). The two are separate "
+                 "on purpose: how good a study is and what it found are different "
+                 "facts._\n")
     return "\n".join(lines)
 
 

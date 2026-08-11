@@ -1089,9 +1089,25 @@ def main():
     # INVARIANT 8: both score 0 strength, and they must STILL be distinguishable.
     _neg = A.build([_s("null_effect", "exact", "in_band", None) for _ in range(4)])
     _unt = A.build([_s("benefit", "different", "in_band", "meaningful") for _ in range(4)])
-    check("form tested-and-failed scores no ladder credit",
+    check("a form whose every study is negative earns no ladder credit",
           _neg["arcs"]["form"]["strength"] == 0.0
-          and _neg["arcs"]["form"]["basis"] == "negative_in_form")
+          and _neg["arcs"]["form"]["basis"] == "all_negative_in_form")
+
+    # THE v5 CORRECTION (founder, 2026-08-11). v5 short-circuited on the POOLED
+    # verdict, so one solid positive RCT plus three nulls in your form scored 0.0
+    # -- the nulls out-voted the RCT in `d` and the ladder never ran. Eligibility
+    # is per STUDY: walk DOWN the hierarchy until you find non-negative evidence.
+    _mixed_form = A.build(
+        [_s("null_effect", "exact", "in_band", None) for _ in range(3)]
+        + [_s("benefit", "exact", "in_band", "meaningful")])
+    check("one positive RCT in your form still earns ladder credit beside nulls",
+          _mixed_form["arcs"]["form"]["strength"] == 0.80
+          and _mixed_form["arcs"]["form"]["basis"] == "ladder",
+          "v5 scored this 0.0 on the pooled verdict; a negative pooled d is a "
+          "WARNING in the verdict, not a reason to discard positive evidence")
+    check("the pooled verdict still shows the warning",
+          _mixed_form["arcs"]["form"]["verdict"] < 0,
+          "strength and verdict answer different questions and both are shown")
     check("form untested scores no ladder credit either",
           _unt["arcs"]["form"]["strength"] == 0.0
           and _unt["arcs"]["form"]["basis"] == "untested_in_form")
@@ -1114,6 +1130,26 @@ def main():
     check("a confirmed exact form DOES earn ladder credit over an unreported one",
           A.build([_s("benefit", "exact", "in_band", "meaningful")
                    for _ in range(4)])["composite"] > _uns["composite"])
+
+    # PER-STUDY CONTRIBUTIONS (founder ask 2026-08-11). Exact, not heuristic:
+    # the points must sum to the signed score, or the report would be inventing
+    # an attribution instead of decomposing one.
+    from pipeline.scoring import contributions as _contrib
+    _mix = [_s("benefit", "exact", "in_band", "meaningful") for _ in range(3)] \
+         + [_s("null_effect", "exact", "in_band", None) for _ in range(2)]
+    _res = _score(_mix, [])
+    _cs = _contrib(_mix, _res)
+    check("per-study contributions sum to the signed score",
+          abs(sum(c["points"] for c in _cs) - _res["score"]) < 1.0,
+          f"sum={sum(c['points'] for c in _cs):.2f} score={_res['score']}")
+    check("a null study contributes NEGATIVE points",
+          any(c["points"] < 0 for c in _cs) and any(c["points"] > 0 for c in _cs),
+          "the sign says which way each study pushed the number")
+    check("contributions are ordered by absolute influence",
+          [abs(c["points"]) for c in _cs] == sorted((abs(c["points"]) for c in _cs),
+                                                   reverse=True))
+    check("a gated ECU has no contributions to attribute",
+          _contrib([], {"score": None}) == [])
 
     # The composite must not unit-map a strength. Passing 0.0 through _unit()
     # would read it as 0.5 -- "no effect" -- and hand an untested form half credit.

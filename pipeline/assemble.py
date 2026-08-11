@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from pipeline import vocab
 from pipeline import arcs as arcsmod
 from pipeline import dose as dosemod
-from pipeline.scoring import Study, score_ecu
+from pipeline.scoring import Study, score_ecu, contributions
 
 SCORER_VERSION = "v1"
 UNBANDED_DOSE_MATCH = "in_band"
@@ -594,6 +594,9 @@ def build_ecus(extractions: list[dict], product: dict, *,
                 "n_primaries": result["n_primaries"],
                 "n_syntheses": result["n_syntheses"],
                 "study_ids": [s.id for s in studies],
+                # Per-study score attribution, exact rather than heuristic: the
+                # points sum to the signed score. Founder ask 2026-08-11.
+                "contributions": contributions(studies, result),
             },
             "form_mix": {t: sum(1 for st in studies if st.form_match == t)
                          for t in {st.form_match for st in studies}},

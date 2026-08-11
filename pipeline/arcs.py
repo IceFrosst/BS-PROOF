@@ -120,38 +120,40 @@ def form_strength(exact_studies: list, form_d: float | None,
     """
     (strength 0..1, basis) -- the composite's form term.
 
-    Three cases, and keeping them distinct IS invariant 8:
+    Eligibility is PER STUDY, not pooled. Take the studies in your own form whose
+    OWN result is not negative, rank them by evidence hierarchy, and average the
+    top `top_n`. If the highest-ranked ones are negative you simply keep walking
+    DOWN the ladder until you find non-negative evidence.
 
-      no exact-form evidence at all   0.0, "untested_in_form"
-      exact-form evidence is NEGATIVE 0.0, "negative_in_form"
-      otherwise                       ladder score, "ladder"
+    FOUNDER CORRECTION 2026-08-11, and it fixed a real error in v5. v5 short-
+    circuited on the POOLED verdict: if the exact-form subset scored d < 0 the
+    whole arc collapsed to 0.0, so a form with one solid positive RCT and three
+    nulls got no form credit at all -- the nulls out-voted the RCT in `d` and the
+    ladder never ran. That is not what a hierarchy is for. A negative pooled
+    verdict is a WARNING, and it belongs in the verdict where the reader sees it;
+    it is not a reason to discard the positive evidence that exists in your form.
 
-    The first two share a strength of 0.0 because neither gives you a positive
-    reason to believe the product works in your form -- but they are NOT the same
-    message, and the arc keeps them apart: `untested` carries verdict None with
-    coverage 0.0, `negative` carries the signed verdict with real coverage. The
-    centre number never travels without its arcs, so the composite may collapse
-    them where the arcs never do.
+    Two remaining zero cases, still distinguishable in the arc:
 
-    A negative form verdict scores 0 rather than a scaled-down ladder value on
-    purpose. "Tested in your form and failed" is not weak positive evidence; it
-    is the absence of positive evidence plus a warning, and the warning belongs
-    in the verdict where a reader sees it, not smuggled into the headline.
+      no exact-form evidence at all       0.0, "untested_in_form"
+      exact-form evidence, none positive  0.0, "all_negative_in_form"
+
+    Invariant 8 is unaffected: the arc still carries the signed verdict and the
+    coverage beside the strength, so "nobody tested your form" (verdict None,
+    coverage 0) can never render as "your form was tested and failed" (signed
+    verdict, real coverage).
     """
-    if form_d is None and not (form_syntheses or []):
+    has_any = bool(exact_studies) or bool(form_syntheses or [])
+    if not has_any:
         return 0.0, "untested_in_form"
-    if form_d is not None and form_d < 0:
-        return 0.0, "negative_in_form"
     ranks = [s.design_rank for s in exact_studies
-             if s.direction not in ("harm", "null_effect")]
+             if s.direction not in ("harm", "null_effect") and s.design_rank is not None]
     ranks += [e.get("design_rank") for e in (form_syntheses or [])
-              if e.get("direction") not in ("harm", "null_effect")]
-    lad = form_ladder_score([r for r in ranks if r is not None], top_n)
+              if e.get("direction") not in ("harm", "null_effect")
+              and e.get("design_rank") is not None]
+    lad = form_ladder_score(ranks, top_n)
     if lad is None:
-        # Exact-form studies exist but every one of them is null/harm, and the
-        # pooled d was not itself negative (a null-only subset scores d = -0.7,
-        # so this is nearly unreachable -- kept because "nearly" is not "never").
-        return 0.0, "no_nonnegative_in_form"
+        return 0.0, "all_negative_in_form"
     return lad, "ladder"
 
 

@@ -356,8 +356,8 @@ def four_arc_lines(built: dict) -> str:
             basis = arc.get("basis")
             if basis == "untested_in_form":
                 tail = "nobody reported your form"
-            elif basis == "negative_in_form":
-                tail = f"TESTED AND FAILED in your form ({v:+.2f} @ {cov:.0%})"
+            elif basis == "all_negative_in_form":
+                tail = f"EVERY trial in your form was negative ({v:+.2f} @ {cov:.0%})"
             else:
                 tail = (f"best evidence in your form scores {st:.2f}"
                         + (f" ({v:+.2f} @ {cov:.0%})" if v is not None else ""))

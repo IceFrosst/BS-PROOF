@@ -86,7 +86,7 @@ APPLY_DOSE_IN_WEIGHT = False
 # must never be read side by side as if the numbers meant the same thing, and
 # scripts/archive_reports.py enforces that by sweeping old-model runs out of
 # reports/runs/ into reports/archive/<model>/.
-SCORING_MODEL = "v5-form-ladder"
+SCORING_MODEL = "v6-form-ladder-per-study"
 
 # What each model meant, so an archived report can still be understood:
 SCORING_MODEL_HISTORY = {
@@ -118,7 +118,16 @@ SCORING_MODEL_HISTORY = {
         "instead of effect x 0.15 when no exact-form trial existed. Negative "
         "exact-form evidence scores 0 strength and keeps its signed verdict, so "
         "'untested' and 'failed' stay distinguishable. Effect arc, dose arc, K and "
-        "S_VALUE unchanged.",
+        "S_VALUE unchanged. Eligibility was POOLED -- a negative subset d zeroed "
+        "the whole arc -- which discarded real positive form evidence. "
+        "Superseded 2026-08-11.",
+    "v6-form-ladder-per-study":
+        "identical to v5 except form-ladder eligibility is PER STUDY: rank the "
+        "studies in your form whose own result is non-negative and average the "
+        "top-3, walking down the hierarchy when the highest ranks are negative. "
+        "A negative pooled verdict no longer zeroes the arc; it stays in the "
+        "verdict as the warning it is. Also adds per-study score contributions "
+        "(scoring.contributions) which sum exactly to the signed score.",
 }
 
 
@@ -223,6 +232,49 @@ class Study:
         if APPLY_POP_IN_WEIGHT:
             w *= POP_FACTOR.get(self.pop_match, 0.35)
         return w
+
+
+def contributions(primaries: list, result: dict) -> list[dict]:
+    """
+    Per-study contribution to the SIGNED score. Sums (before rounding) to it.
+
+    Founder ask 2026-08-11: "in the report I want to see how much to the score
+    each study has contributed". It decomposes exactly, which is why this is a
+    fact rather than an attribution heuristic:
+
+        signed = 100 x d x c x (1 - H_PENALTY x H)
+        d      = sum(w_i x s_i) / E
+
+    so each study owns `100 x c x (1 - H_PENALTY x H) x w_i x s_i / E` points and
+    the parts add up to the whole. A study can therefore contribute NEGATIVE
+    points, and the sign tells you whether it pushed the score up or down.
+
+    `w_i` is the quality weight (design x RoB x size x funding x OA) and `s_i` the
+    direction value, so the two reasons a study matters -- how good it is and what
+    it found -- stay visible separately instead of collapsing into one number.
+    """
+    if result.get("score") is None:
+        return []
+    E = result.get("E") or 0.0
+    if not E:
+        return []
+    scale = 100.0 * (result.get("c") or 0.0) * (1 - H_PENALTY * (result.get("H") or 0.0))
+    out = []
+    for st in primaries:
+        w = st.weight()
+        sv = st.s_value()
+        out.append({
+            "id": st.id,
+            "w": round(w, 4),
+            "s": sv,
+            "design_rank": st.design_rank,
+            "direction": st.direction,
+            "form_match": st.form_match,
+            "d_share": round(w * sv / E, 4),
+            "points": round(scale * w * sv / E, 2),
+        })
+    out.sort(key=lambda r: -abs(r["points"]))
+    return out
 
 
 def score_ecu(primaries: list[Study], syntheses: list[dict] | None = None,
