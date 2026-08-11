@@ -237,6 +237,28 @@ class Study:
             if self.magnitude == "meaningful":
                 return S_VALUE["benefit_meaningful"]
             return S_VALUE["benefit_trivial"]
+        # `unclear` -> 0.0. DO NOT ALSO ZERO ITS weight(). Tried and reverted
+        # 2026-08-11, and the reasoning is worth keeping because the change looks
+        # obviously right and is not.
+        #
+        # The tie rule in `assemble._collapse` documents s = 0.0 as "adds no
+        # evidence in either direction", which is only literally true of d's
+        # NUMERATOR -- an unclear study still contributes full mass to E, so it
+        # raises c (lean_body_mass 0.848 -> 0.774 if removed) and it counts toward
+        # H. That reads like a bug: confidence earned from claims we could not
+        # read. It is not, because c is not certainty about DIRECTION -- it is
+        # pure evidence QUANTITY (CLAUDE.md, evidence arc). The trial was really
+        # run and really measured this outcome; only our extraction is ambiguous.
+        # "Well studied, no clear direction" is an honest reading and a different
+        # message from "nobody has looked", which is exactly the distinction
+        # invariant 8 requires the arcs to preserve.
+        #
+        # Zeroing the weight also breaks the tie rule outright: a corpus whose
+        # only study is a tie drops to E = 0 and gates to `score: None`, so the
+        # selftest pin "a benefit/null tie is neither side's win" (which requires
+        # only_null < tie < only_benefit) cannot hold. Measured cost of the
+        # reverted change was <= 1 point per outcome on the 149-study corpus --
+        # small, and in exchange for making a deliberate design incoherent.
         return 0.0
 
     def weight(self) -> float:
