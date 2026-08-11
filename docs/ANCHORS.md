@@ -200,6 +200,13 @@ is not wired up.
 These are the cleanest available tests of the moat. If #22 and #23 come out equal,
 the form factor is not being applied and the product's core differentiator is dead.
 
+**These relationships are now MACHINE-READABLE** (`pair_id` + `pair_expect` in
+`docs/anchors.csv`, scored by `calibration.evaluate_pairs`). Until 2026-08-11 they
+existed only as this prose and all 14 pair rows were silently `skipped`, so the
+tests this section calls the cleanest available had never once run. An inverted pair
+is now graded FATAL, the same class as a sign error — it means the transfer model is
+backwards, not imprecise. Edit the prose and the CSV together.
+
 ---
 
 ## Mechanism test B — Dose sensitivity

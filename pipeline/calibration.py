@@ -53,6 +53,13 @@ def validate(rows: list[dict] | None = None) -> list[str]:
         seen.add(aid)
         lo, hi = r["expected_min"], r["expected_max"]
         if r["band"] in PAIR_BANDS:
+            pe = (r.get("pair_expect") or "").strip()
+            if not (r.get("pair_id") or "").strip():
+                problems.append(f"anchor {aid}: pair band with no pair_id -- it would "
+                                f"be silently skipped, which is how 14 of 35 anchors "
+                                f"went unscored until 2026-08-11")
+            elif pe not in PAIR_EXPECT:
+                problems.append(f"anchor {aid}: pair_expect {pe!r} not in {sorted(PAIR_EXPECT)}")
             continue
         if lo is None or hi is None:
             problems.append(f"anchor {aid}: missing expected range")
@@ -66,6 +73,23 @@ def validate(rows: list[dict] | None = None) -> list[str]:
         if lo is not None and (r["band"].endswith("negative") or r["band"] == "harm") \
                 and lo >= 0:
             problems.append(f"anchor {aid}: band says negative, range does not")
+
+    # Each pair must be exactly one `a` and one `b` that AGREE on the relationship.
+    # Both rows carry pair_expect so either is self-describing; disagreement means
+    # the transcription from ANCHORS.md prose went wrong, and a half-pair can never
+    # be scored at all.
+    groups: dict[str, list[dict]] = {}
+    for r in rows:
+        pid = (r.get("pair_id") or "").strip()
+        if pid:
+            groups.setdefault(pid, []).append(r)
+    for pid, members in sorted(groups.items()):
+        ids = sorted(m["id"] for m in members)
+        if len(members) != 2 or not (ids[0].endswith("a") and ids[1].endswith("b")):
+            problems.append(f"pair {pid}: expected one 'a' and one 'b', got {ids}")
+        expects = {(m.get("pair_expect") or "").strip() for m in members}
+        if len(expects) != 1:
+            problems.append(f"pair {pid}: members disagree on pair_expect {expects}")
     return problems
 
 
@@ -116,6 +140,146 @@ def _count_tests(rows: list[dict]) -> dict:
     return dict(sorted(out.items()))
 
 
+# The expected RELATIONSHIP for a pair anchor, transcribed into docs/anchors.csv
+# 2026-08-11 from the prose at docs/ANCHORS.md:193-224. Until then 14 of 35 anchors
+# -- 40% of the set, and the only SCALE-FREE ones -- were merely `skipped`, so the
+# tests ANCHORS.md calls "the cleanest available tests of the moat" were never run.
+PAIR_EXPECT = frozenset({"a_gt_b", "b_gt_a", "approx_equal"})
+
+# Band order, most negative to most positive. The pair test is expressed in BANDS
+# rather than raw points on purpose: "D3 clearly higher than D2" is a claim about
+# verdicts, and comparing bands invents no new tolerance constant. The cost is
+# bluntness -- two scores inside one 40-point band read as equal -- which is why
+# `pair_margin` exists as an OPT-IN column and is empty everywhere. Putting a number
+# there is a founder decision (invariant 4), so the loose-but-honest test ships
+# rather than a tuned one.
+_BAND_ORDER = ("strong evidence against / harm", "does not work",
+               "weak evidence against", "inconclusive", "weak support",
+               "moderate support", "strong support")
+
+
+def band_rank(score: int) -> int:
+    """Ordinal position of a score's band. Higher = more positive."""
+    from pipeline.scoring import band_for
+    return _BAND_ORDER.index(band_for(score))
+
+
+def evaluate_pairs(scores: dict[str, int | None],
+                   rows: list[dict] | None = None) -> dict:
+    """
+    Score the RELATIONAL anchors. These survive any recalibration.
+
+    A pair anchor asserts an ordering, not a magnitude, so it stays valid when `k`,
+    `S_VALUE` or a band moves -- which is exactly why it is worth more than an
+    absolute range while the constants are uncalibrated. ANCHORS.md:203-204 states
+    the stake plainly: "If #22 and #23 come out equal, the form factor is not being
+    applied and the product's core differentiator is dead."
+
+    `pair_error` is FATAL, the same class as a sign error. Getting D3 below D2 does
+    not mean the magnitude is off; it means the transfer model is inverted.
+
+    #26 (creatine 3 g maintenance vs 20 g loading, `approx_equal`) is the
+    FALSE-POSITIVE guard and reads in the opposite direction from the others: if the
+    higher dose scores higher, the dose factor is behaving as a monotone function
+    instead of a band match, which would penalise correctly-dosed products.
+
+    A pair whose members are missing or gated is `incomplete`, not an error -- a
+    gate is already fatal in `evaluate()` and must not be counted twice.
+    """
+    rows = rows if rows is not None else load()
+    scores = scores or {}
+    groups: dict[str, list[dict]] = {}
+    for r in rows:
+        pid = (r.get("pair_id") or "").strip()
+        if pid and r.get("band") in PAIR_BANDS:
+            groups.setdefault(pid, []).append(r)
+
+    errors, passed, incomplete = [], [], []
+    for pid, members in sorted(groups.items()):
+        a = next((m for m in members if m["id"].endswith("a")), None)
+        b = next((m for m in members if m["id"].endswith("b")), None)
+        if not a or not b:
+            incomplete.append({"pair": pid, "why": "pair is not exactly one a and one b"})
+            continue
+        sa, sb = scores.get(a["id"]), scores.get(b["id"])
+        if sa is None or sb is None:
+            incomplete.append({"pair": pid, "why": "a member was gated or not scored",
+                               "a": sa, "b": sb})
+            continue
+        expect = (a.get("pair_expect") or "").strip()
+        ra, rb = band_rank(sa), band_rank(sb)
+        if expect == "a_gt_b":
+            ok = ra > rb
+        elif expect == "b_gt_a":
+            ok = rb > ra
+        elif expect == "approx_equal":
+            ok = ra == rb
+        else:
+            incomplete.append({"pair": pid, "why": f"unknown pair_expect {expect!r}"})
+            continue
+        rec = {"pair": pid, "expect": expect, "a": sa, "b": sb,
+               "a_id": a["id"], "b_id": b["id"]}
+        (passed if ok else errors).append(rec)
+
+    return {
+        "pairs": len(groups),
+        "passed": len(passed),
+        "pair_errors": errors,          # fatal
+        "incomplete": incomplete,
+        "relationally_valid": not errors,
+    }
+
+
+# band column -> the band_for() class that row is asserting. ANCHORS.md:274 says
+# every numeric boundary "was set by judgment, not measurement", and evaluate()
+# already grades a range miss as non-fatal, so the honest test of magnitude is the
+# CLASS, with one tier of slack while the constants are uncalibrated.
+STRATUM_OF_BAND = {
+    "strong_positive": "strong support",
+    "moderate_positive": "moderate support",
+    "weak_positive": "weak support",
+    "inconclusive": "inconclusive",
+    "moderate_negative": "does not work",
+    "strong_negative": "strong evidence against / harm",
+    "harm": "strong evidence against / harm",
+}
+
+
+def evaluate_strata(scores: dict[str, int | None],
+                    rows: list[dict] | None = None, *, slack: int = 1) -> dict:
+    """
+    Does each absolute anchor land in the BAND CLASS it claims, within `slack` tiers?
+
+    This is the replacement for testing the numeric window, and it is strictly
+    weaker on purpose. The windows are uncited judgement (ANCHORS.md:274), and
+    measured 2026-08-11 the +80..+95 window is only satisfiable when <11.8% of
+    weighted evidence is null -- so a numeric miss says more about the window than
+    about the pipeline. A CLASS miss of two or more tiers is a real signal: it means
+    the pipeline and the literature disagree about the kind of verdict, not the
+    decimal.
+
+    Phase 2 replaces these strata with bands derived from published trial mixtures.
+    Until then this is the honest test: ordinal, tolerant, and falsifiable.
+    """
+    rows = rows if rows is not None else load()
+    by_id = {r["id"]: r for r in rows}
+    off, ok, unscored = [], [], []
+    for aid, score in (scores or {}).items():
+        r = by_id.get(aid)
+        if not r or r["band"] in PAIR_BANDS:
+            continue
+        want = STRATUM_OF_BAND.get(r["band"])
+        if want is None or score is None:
+            unscored.append(aid)
+            continue
+        gap = band_rank(score) - _BAND_ORDER.index(want)
+        rec = {"id": aid, "score": score, "expected_stratum": want,
+               "got_stratum": _BAND_ORDER[band_rank(score)], "tiers_off": gap}
+        (ok if abs(gap) <= slack else off).append(rec)
+    return {"within_slack": len(ok), "off_by_more": off, "unscored": unscored,
+            "slack_tiers": slack}
+
+
 def evaluate(scores: dict[str, int | None], rows: list[dict] | None = None) -> dict:
     """
     Compare produced scores against the anchor set. `scores` maps anchor id ->
@@ -133,11 +297,18 @@ def evaluate(scores: dict[str, int | None], rows: list[dict] | None = None) -> d
     rows = rows if rows is not None else load()
     by_id = {r["id"]: r for r in rows}
     sign, gated, range_miss, passed, skipped = [], [], [], [], []
+    unknown: list[str] = []
 
     for aid, score in scores.items():
         r = by_id.get(aid)
-        if not r or r["band"] in PAIR_BANDS:
-            skipped.append(aid)
+        if not r:
+            # A typo used to take the same branch as a pair anchor, so a malformed
+            # id was indistinguishable from a deliberately-skipped one and vanished
+            # silently. Separated 2026-08-11.
+            unknown.append(aid)
+            continue
+        if r["band"] in PAIR_BANDS:
+            skipped.append(aid)   # scored by evaluate_pairs, not against a range
             continue
         lo, hi = r["expected_min"], r["expected_max"]
         if score is None:
@@ -159,6 +330,7 @@ def evaluate(scores: dict[str, int | None], rows: list[dict] | None = None) -> d
         "gate_errors": gated,       # fatal
         "range_misses": range_miss,  # expected pre-calibration
         "skipped_pair_anchors": skipped,
+        "unknown_ids": unknown,
         "face_valid": not sign and not gated,
     }
 
@@ -256,9 +428,14 @@ def main() -> int:
     problems = validate(rows)
     rep = readiness(rows)
 
+    pair_groups = len({(r.get("pair_id") or "").strip() for r in rows
+                       if (r.get("pair_id") or "").strip()})
     print(f"anchor set: {rep['total']} rows "
-          f"({rep['pair_anchors']} are relative pair tests, scored against each "
-          f"other rather than a range)")
+          f"({rep['pair_anchors']} rows = {pair_groups} relational pairs, scored "
+          f"against each other rather than a range)")
+    print(f"            {rep['total'] - rep['pair_anchors']} absolute-range rows")
+    print("  ALL 35 are now scoreable: the pairs go through evaluate_pairs(), which")
+    print("  did not exist until 2026-08-11 -- before that they were silently skipped.")
     for p in problems:
         print("  PROBLEM:", p)
 

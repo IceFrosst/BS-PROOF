@@ -464,8 +464,54 @@ def main():
     pair = next((a for a in anchors if a["band"] in cal.PAIR_BANDS), None)
     if pair:
         ev = cal.evaluate({pair["id"]: 0}, anchors)
-        check("relative pair anchors skipped, not judged on a range",
-              ev["skipped_pair_anchors"] == [pair["id"]])
+        check("a pair anchor is not judged against a range",
+              ev["skipped_pair_anchors"] == [pair["id"]],
+              "it is scored by evaluate_pairs instead")
+    # A TYPO used to take the same branch as a pair anchor, so a malformed id was
+    # indistinguishable from a deliberately-skipped one and disappeared silently.
+    ev = cal.evaluate({"not-an-anchor-id": 50}, anchors)
+    check("an unknown anchor id is reported, not silently skipped",
+          ev["unknown_ids"] == ["not-an-anchor-id"] and not ev["skipped_pair_anchors"])
+
+    # RELATIONAL ANCHORS (2026-08-11). 14 of 35 rows -- 40% of the set, and the only
+    # SCALE-FREE ones -- were merely skipped before this, so ANCHORS.md's "cleanest
+    # available tests of the moat" had never once run.
+    print("\nRELATIONAL ANCHORS (the moat tests)")
+    check("every pair row carries a machine-readable relationship",
+          all((a.get("pair_id") or "").strip()
+              and (a.get("pair_expect") or "").strip() in cal.PAIR_EXPECT
+              for a in anchors if a["band"] in cal.PAIR_BANDS),
+          "the expectation used to live only in ANCHORS.md prose")
+    check("all 7 pairs are complete and internally consistent",
+          not [p for p in cal.validate(anchors) if p.startswith("pair ")])
+    # D3 must beat D2. ANCHORS.md:203: if these come out equal "the form factor is
+    # not being applied and the product's core differentiator is dead."
+    check("a correct form pair passes",
+          cal.evaluate_pairs({"22a": 20, "22b": 60}, anchors)["relationally_valid"])
+    _inv = cal.evaluate_pairs({"22a": 60, "22b": 20}, anchors)
+    check("an INVERTED form pair is a fatal pair_error",
+          not _inv["relationally_valid"] and _inv["pair_errors"][0]["pair"] == "22",
+          "D3 below D2 means the transfer model is backwards, not imprecise")
+    # #26 reads the OPPOSITE way: it fires when the higher dose scores higher.
+    check("the dose false-positive guard passes when doses score alike",
+          cal.evaluate_pairs({"26a": 40, "26b": 45}, anchors)["relationally_valid"])
+    check("the dose false-positive guard FIRES when the loading dose scores higher",
+          not cal.evaluate_pairs({"26a": 20, "26b": 80}, anchors)["relationally_valid"],
+          "a monotone dose factor would penalise correctly-dosed products")
+    check("a gated pair member is incomplete, not an error",
+          cal.evaluate_pairs({"22a": None, "22b": 60}, anchors)["relationally_valid"]
+          and cal.evaluate_pairs({"22a": None, "22b": 60}, anchors)["incomplete"],
+          "a gate is already fatal in evaluate(); never count it twice")
+
+    # ORDINAL STRATA. Replaces testing the numeric window, which ANCHORS.md:274 says
+    # was judgement, and which measurement showed unsatisfiable for anchors 1-5.
+    _st = cal.evaluate_strata({"1": 6}, anchors)
+    check("a 3-tier stratum miss is reported",
+          _st["off_by_more"] and _st["off_by_more"][0]["tiers_off"] == -3,
+          "anchor 1 claims 'strong support'; +6 is 'inconclusive'")
+    check("one tier of slack is tolerated while constants are uncalibrated",
+          cal.evaluate_strata({"6": 75}, anchors)["off_by_more"] == [],
+          "anchor 6 claims moderate support; strong support is one tier off")
 
     print("\nSYNTHESIS RESOLUTION (the dedup trap, from the SR side)")
     from pipeline import synthesis as syn
