@@ -1060,6 +1060,67 @@ def main():
           untested["arcs"]["form"]["verdict"] is None
           and untested["arcs"]["form"]["coverage"] == 0.0)
 
+    # FORM LADDER (SCORING_MODEL v5, founder design 2026-08-11). The form arc no
+    # longer re-scores the effect verdict over a subset; it scores the EVIDENCE
+    # HIERARCHY of non-negative evidence in your own form. These pin the design,
+    # the A/B/C width choice, and the invariant-8 separation the ladder must keep.
+    print("\nFORM LADDER")
+    _fl, _fs = A.form_ladder_score, A.form_strength
+    check("an umbrella review in your form scores 100",
+          _fs([], None, [{"design_rank": 1, "direction": "benefit"}]) == (1.0, "ladder"),
+          "the founder's flagship case")
+    check("only animal evidence in your form scores 10, not 0 and not full credit",
+          _fl([12]) == 0.10)
+    check("only cell evidence scores 5", _fl([13]) == 0.05)
+    check("an RCT in your form scores 80", _fl([4]) == 0.80)
+    check("the ladder is ordered by hierarchy",
+          _fl([1]) > _fl([2]) > _fl([3]) > _fl([4]) > _fl([5]) > _fl([12]) > _fl([13]))
+    # The measured A/B/C decision. top-1 scored "1 RCT + 9 animal" identical to
+    # ten RCTs (no corroboration required); top-10 dragged a real RCT to 0.170.
+    check("top-3 requires corroboration without diluting a real RCT",
+          abs(_fl([4] + [12] * 9, 3) - 0.3333) < 0.001
+          and _fl([4] + [12] * 9, 1) == 0.80
+          and abs(_fl([4] + [12] * 9, 10) - 0.170) < 0.001,
+          "pins scripts/form_experiment.py's conclusion; changing FORM_LADDER_TOP "
+          "must be a deliberate, measured decision")
+    check("a lone weak paper cannot be inflated by the window",
+          _fl([12], 1) == _fl([12], 10) == 0.10)
+
+    # INVARIANT 8: both score 0 strength, and they must STILL be distinguishable.
+    _neg = A.build([_s("null_effect", "exact", "in_band", None) for _ in range(4)])
+    _unt = A.build([_s("benefit", "different", "in_band", "meaningful") for _ in range(4)])
+    check("form tested-and-failed scores no ladder credit",
+          _neg["arcs"]["form"]["strength"] == 0.0
+          and _neg["arcs"]["form"]["basis"] == "negative_in_form")
+    check("form untested scores no ladder credit either",
+          _unt["arcs"]["form"]["strength"] == 0.0
+          and _unt["arcs"]["form"]["basis"] == "untested_in_form")
+    check("...but failed and untested are still TOLD APART by the arc",
+          _neg["arcs"]["form"]["verdict"] is not None
+          and _neg["arcs"]["form"]["coverage"] > 0.0
+          and _unt["arcs"]["form"]["verdict"] is None
+          and _unt["arcs"]["form"]["coverage"] == 0.0,
+          "invariant 8: '0.00 @ 0%' and '-0.70 @ 100%' are opposite messages")
+
+    # THE PREVIOUSLY UNTESTED CORNER. Every arc fixture used exact/different, so
+    # nothing pinned how an UNSPECIFIED form behaves -- and 54% of the real
+    # creatine corpus is unspecified.
+    _uns = A.build([_s("benefit", "unspecified", "in_band", "meaningful") for _ in range(4)])
+    check("an unreported form earns no form credit and is not read as a match",
+          _uns["arcs"]["form"]["strength"] == 0.0
+          and _uns["arcs"]["form"]["basis"] == "untested_in_form"
+          and _uns["arcs"]["form"]["verdict"] is None,
+          "silence is not a pass -- but it no longer drags via effect x 0.15")
+    check("a confirmed exact form DOES earn ladder credit over an unreported one",
+          A.build([_s("benefit", "exact", "in_band", "meaningful")
+                   for _ in range(4)])["composite"] > _uns["composite"])
+
+    # The composite must not unit-map a strength. Passing 0.0 through _unit()
+    # would read it as 0.5 -- "no effect" -- and hand an untested form half credit.
+    check("composite treats the form term as a strength, not a signed verdict",
+          A.composite(1.0, 0.0, None, 1.0) == 37,
+          "eff 1.0 + form 0.0 + dose 0.1 over 3; unit-mapping form would give 53")
+
     thin = A.build([_s("benefit", "exact", "in_band", "meaningful", n=20,
                        oa="abstract_only", rob={f"i{i}": 0 for i in range(1, 7)})])
     nulls = A.build([_s("null_effect", "exact", "in_band") for _ in range(20)])

@@ -78,6 +78,31 @@ PROMPTS = ROOT / "prompts"
 CACHE_DB = Path(os.environ.get("SP_LLM_CACHE") or (ROOT / "out" / "llm_cache.sqlite"))
 SHARED_PROMPT = PROMPTS / "_shared.md"
 
+
+def _claude_bin() -> str:
+    """
+    Path to the Claude CLI, resolved rather than assumed.
+
+    MEASURED 2026-08-11: a run died with "claude CLI not found. npm install -g
+    @anthropic-ai/claude-code" while the CLI was installed, executable and
+    working -- `~/.local/bin` simply was not on PATH in that shell, because the
+    profile adds it only for interactive sessions. The install advice sent the
+    reader to reinstall a binary they already had, which is the worst kind of
+    error message: confidently wrong about the cause.
+
+    So: PATH first (respects a deliberate override), then the standard user
+    install dir. `SP_CLAUDE_BIN` overrides both for an unusual install.
+    """
+    import shutil
+    override = os.environ.get("SP_CLAUDE_BIN")
+    if override:
+        return override
+    found = shutil.which("claude")
+    if found:
+        return found
+    fallback = Path.home() / ".local" / "bin" / "claude"
+    return str(fallback) if fallback.exists() else "claude"
+
 # Bump when you edit ANY prompt (including _shared.md). This is in the cache key.
 # Forget to bump it and you will silently serve stale extractions forever.
 # v1.13 (2026-08-11): two fixes from the muscle_power audit (12 verifiers;
@@ -795,7 +820,7 @@ def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
         }
 
     cmd = [
-        "claude", "-p", "--safe-mode",
+        _claude_bin(), "-p", "--safe-mode",
         "--output-format", "json",
         "--json-schema", schema,
         # REPLACE the default system prompt, do not append to it. Measured
@@ -925,10 +950,13 @@ def _envelope_cost(raw: str) -> float | None:
 def preflight() -> bool:
     """Fail loudly and early rather than 500 confusing errors deep in a run."""
     try:
-        p = subprocess.run(["claude", "--version"], capture_output=True,
+        p = subprocess.run([_claude_bin(), "--version"], capture_output=True,
                            text=True, timeout=30)
     except FileNotFoundError:
-        print("claude CLI not found. npm install -g @anthropic-ai/claude-code")
+        print(f"claude CLI not runnable at {_claude_bin()!r}.\n"
+              f"  If the binary exists, this is a PATH problem, not a missing\n"
+              f"  install -- ~/.local/bin is absent from non-interactive shells.\n"
+              f"  Fix: export PATH=\"$HOME/.local/bin:$PATH\"  (or set SP_CLAUDE_BIN)")
         return False
     except subprocess.TimeoutExpired:
         print("claude --version timed out")
@@ -942,7 +970,7 @@ def preflight() -> bool:
     # answers it in one call -- cheaper than discovering it 200 calls into a
     # run, which is what the old key check existed to prevent.
     try:
-        a = subprocess.run(["claude", "auth", "status"], capture_output=True,
+        a = subprocess.run([_claude_bin(), "auth", "status"], capture_output=True,
                            text=True, timeout=30)
         signed_in = a.returncode == 0 and "not logged in" not in a.stdout.lower()
     except (FileNotFoundError, subprocess.TimeoutExpired):

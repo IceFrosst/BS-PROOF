@@ -33,11 +33,126 @@ ARC_ORDER = ("effect", "form", "dose", "evidence")
 
 # A subset nobody studied is not neutral. Falling back to the transfer tier the
 # scorer already uses for that situation keeps the penalty consistent with SPEC
-# section 8 rather than inventing a new number: no exact-form evidence means you
-# are relying on a different form (0.15); no in-band dose evidence means the
-# dose relationship is unestablished (0.10).
-MISSING_FORM_PENALTY = FORM_FACTOR["different"]
+# section 8 rather than inventing a new number: no in-band dose evidence means
+# the dose relationship is unestablished (0.10).
 MISSING_DOSE_PENALTY = DOSE_FACTOR["below_50"]
+
+# Retained for the archive: what the form term used to be before the ladder
+# (SCORING_MODEL v4 and earlier). No exact-form trial meant the composite's form
+# term became `effect x 0.15`, so a corpus that simply never printed which form
+# it used dragged every score down in proportion to how well the ingredient
+# worked. Measured 2026-08-11 on 149 creatine studies: 80 of them (54%) said only
+# "creatine", so muscle_strength's form arc read +0.02 @ 61% while 61 trials had
+# confirmed monohydrate.
+LEGACY_MISSING_FORM_PENALTY = FORM_FACTOR["different"]
+
+# ------------------------------------------------------------------ FORM LADDER
+#
+# FOUNDER DESIGN 2026-08-11. The form arc answers a DIFFERENT question from the
+# effect arc and must not be computed from it:
+#
+#     "How strong is the best evidence that YOUR form was tested and did not
+#      fail?"
+#
+# Before this, the form term was a re-scoring of the same signed `d` over the
+# exact-form subset, then blended into the composite -- so an ingredient with
+# excellent monohydrate RCTs still lost points because most of the literature
+# omits the form, and the arc could not express that an umbrella review in your
+# exact form is worth more than one animal study in it.
+#
+# The ladder scores by EVIDENCE HIERARCHY instead. Ranks are pipeline.classify's
+# design_rank (1 umbrella, 2 SR+meta-analysis, 3 SR, 4 RCT, 5-11 observational,
+# 12-13 animal/cell, 14 none), so this table needs no new taxonomy.
+#
+# EVERY VALUE HERE IS A FOUNDER-INITIALISED GUESS awaiting calibration, exactly
+# like `k` and the transfer factors -- invariant 4 applies and SPEC 13 owns them.
+FORM_LADDER = {
+    1: 1.00,   # umbrella review conducted in your form
+    2: 0.95,   # systematic review with meta-analysis
+    3: 0.90,   # systematic review
+    4: 0.80,   # RCT
+    5: 0.55, 6: 0.45, 7: 0.35,          # quasi-experimental / cohort / case-control
+    8: 0.25, 9: 0.20, 10: 0.18, 11: 0.15,  # cross-sectional ... case report
+    12: 0.10, 13: 0.05,                 # animal, cell
+    14: 0.00,                           # in-silico / none
+}
+
+# How many of the highest-ranked eligible studies are averaged. A/B/C/D MEASURED
+# 2026-08-11 via scripts/form_experiment.py. The creatine corpus could not decide
+# this on its own -- every exact-form primary is design_rank 4, so all widths are
+# arithmetically identical there -- so the decision rests on rank-varied fixtures:
+#
+#   evidence in your form        top-1   top-3   top-5   top-10
+#   1 RCT + 9 animal studies     0.800   0.333   0.240   0.170
+#   umbrella + 4 RCTs            1.000   0.867   0.840   0.840
+#   meta-analysis + 9 RCTs       0.950   0.850   0.830   0.815
+#   one animal study only        0.100   0.100   0.100   0.100
+#   10 RCTs                      0.800   0.800   0.800   0.800
+#
+# top-1 fails the corroboration test: "1 RCT + 9 animal" scores 0.800, IDENTICAL
+# to ten RCTs, so one paper in your form buys the same credit as a replicated
+# literature. top-10 fails the opposite way: it drags a real RCT down to 0.170,
+# animal tier, for the crime of having weak company. top-3 credits the top rank
+# while still requiring some corroboration, and it is the only width that
+# separates all five fixtures monotonically. A founder guess, calibratable like
+# every other constant -- SPEC 13.
+FORM_LADDER_TOP = 3
+
+
+def form_ladder_score(design_ranks, top_n: int = FORM_LADDER_TOP) -> float | None:
+    """
+    Mean ladder score of the top `top_n` highest-ranked entries. None when empty.
+
+    `design_ranks` must already be filtered to NON-NEGATIVE evidence in the
+    product's own form -- this function deliberately knows nothing about
+    direction, so the eligibility rule stays in one place (`form_strength`).
+    """
+    scores = sorted((FORM_LADDER.get(r, 0.0) for r in design_ranks), reverse=True)
+    if not scores:
+        return None
+    top = scores[:max(1, top_n)]
+    return sum(top) / len(top)
+
+
+def form_strength(exact_studies: list, form_d: float | None,
+                  form_syntheses: list | None = None,
+                  top_n: int = FORM_LADDER_TOP) -> tuple[float, str]:
+    """
+    (strength 0..1, basis) -- the composite's form term.
+
+    Three cases, and keeping them distinct IS invariant 8:
+
+      no exact-form evidence at all   0.0, "untested_in_form"
+      exact-form evidence is NEGATIVE 0.0, "negative_in_form"
+      otherwise                       ladder score, "ladder"
+
+    The first two share a strength of 0.0 because neither gives you a positive
+    reason to believe the product works in your form -- but they are NOT the same
+    message, and the arc keeps them apart: `untested` carries verdict None with
+    coverage 0.0, `negative` carries the signed verdict with real coverage. The
+    centre number never travels without its arcs, so the composite may collapse
+    them where the arcs never do.
+
+    A negative form verdict scores 0 rather than a scaled-down ladder value on
+    purpose. "Tested in your form and failed" is not weak positive evidence; it
+    is the absence of positive evidence plus a warning, and the warning belongs
+    in the verdict where a reader sees it, not smuggled into the headline.
+    """
+    if form_d is None and not (form_syntheses or []):
+        return 0.0, "untested_in_form"
+    if form_d is not None and form_d < 0:
+        return 0.0, "negative_in_form"
+    ranks = [s.design_rank for s in exact_studies
+             if s.direction not in ("harm", "null_effect")]
+    ranks += [e.get("design_rank") for e in (form_syntheses or [])
+              if e.get("direction") not in ("harm", "null_effect")]
+    lad = form_ladder_score([r for r in ranks if r is not None], top_n)
+    if lad is None:
+        # Exact-form studies exist but every one of them is null/harm, and the
+        # pooled d was not itself negative (a null-only subset scores d = -0.7,
+        # so this is nearly unreachable -- kept because "nearly" is not "never").
+        return 0.0, "no_nonnegative_in_form"
+    return lad, "ladder"
 
 
 def _verdict(studies: list) -> tuple[float | None, float]:
@@ -56,7 +171,8 @@ def _unit(d: float) -> float:
     return (d + 1.0) / 2.0
 
 
-def build(studies: list, syntheses: list | None = None) -> dict:
+def build(studies: list, syntheses: list | None = None, *,
+          form_syntheses: list | None = None, form_top: int | None = None) -> dict:
     """
     studies: the Study objects for one ECU.
 
@@ -72,13 +188,24 @@ def build(studies: list, syntheses: list | None = None) -> dict:
 
     total_w = sum(s.weight() for s in studies) or 1.0
     eff_d, _ = _verdict(studies)
-    form_d, form_w = _verdict([s for s in studies if s.form_match == "exact"])
+    exact = [s for s in studies if s.form_match == "exact"]
+    form_d, form_w = _verdict(exact)
     dose_d, dose_w = _verdict([s for s in studies if s.dose_match == "in_band"])
     c = overall["c"]
 
+    # The form arc carries THREE facts since the ladder (v5): the signed verdict
+    # and coverage exactly as before, plus `strength` -- the evidence-hierarchy
+    # score that the composite actually uses. verdict/coverage are what stop
+    # "nobody tested your form" and "your form failed" from ever rendering the
+    # same; strength is what stops an unreported form from dragging the headline.
+    form_s, form_basis = form_strength(exact, form_d, form_syntheses,
+                                       top_n=form_top or FORM_LADDER_TOP)
+
     arcs = {
         "effect": {"verdict": eff_d, "coverage": 1.0},
-        "form": {"verdict": form_d, "coverage": round(form_w / total_w, 3)},
+        "form": {"verdict": form_d, "coverage": round(form_w / total_w, 3),
+                 "strength": round(form_s, 3), "basis": form_basis,
+                 "n_in_form": len(exact)},
         "dose": {"verdict": dose_d, "coverage": round(dose_w / total_w, 3)},
         # The evidence arc has no direction -- it is pure quantity, so its fill
         # IS its coverage. Drawn last (innermost) because it qualifies the rest.
@@ -86,7 +213,7 @@ def build(studies: list, syntheses: list | None = None) -> dict:
     }
     return {
         "arcs": arcs,
-        "composite": composite(eff_d, form_d, dose_d, c),
+        "composite": composite(eff_d, form_s, dose_d, c),
         "signed": overall["score"],
         "band": overall["band"],
         "gate_fired": False,
@@ -94,7 +221,7 @@ def build(studies: list, syntheses: list | None = None) -> dict:
     }
 
 
-def composite(effect_d: float | None, form_d: float | None,
+def composite(effect_d: float | None, form_strength_score: float | None,
               dose_d: float | None, c: float) -> int | None:
     """
     The 0-100 headline.
@@ -119,7 +246,14 @@ def composite(effect_d: float | None, form_d: float | None,
     if effect_d is None:
         return None
     eff = _unit(effect_d)
-    form = _unit(form_d) if form_d is not None else eff * MISSING_FORM_PENALTY
+    # The form term arrives ALREADY on 0..1 from form_strength() -- it is an
+    # evidence-strength score, not a signed verdict, so it must NOT be _unit()ed.
+    # Passing a strength of 0.0 through _unit() would read it as 0.5, "no effect",
+    # and hand an untested form half credit. Scales differ deliberately: 0.5 means
+    # "neutral" on the effect and dose terms and "moderately strong form evidence"
+    # on this one. Both are monotone in the direction a reader expects, and the arc
+    # reports strength separately so the mixture is never the published claim.
+    form = 0.0 if form_strength_score is None else form_strength_score
     dose = _unit(dose_d) if dose_d is not None else eff * MISSING_DOSE_PENALTY
     return round(100 * c * (eff + form + dose) / 3)
 

@@ -400,6 +400,7 @@ def build_ecus(extractions: list[dict], product: dict, *,
                exclude_offtarget_population: bool = False,
                searched_outcomes: list[str] | None = None,
                sr_derived: list[dict] | None = None,
+               form_top: int | None = None,
                stats: dict | None = None) -> list[dict]:
     """
     extractions -> scored ECU rows, one per outcome.
@@ -603,7 +604,13 @@ def build_ecus(extractions: list[dict], product: dict, *,
             # The four arcs and the 0-100 headline. Each arc carries a verdict
             # AND the coverage behind it, so "your form failed" and "nobody
             # tested your form" never collapse into the same picture.
-            **{k: v for k, v in arcsmod.build(studies, syntheses or []).items()
+            # form_syntheses stays empty until the SR path runs: a review only
+            # counts as FORM evidence once its own direction is extracted, and an
+            # unread review must never be credited as non-negative. The ladder
+            # therefore caps at rank 4 (0.80) on a primaries-only corpus, which is
+            # honest rather than convenient -- see arcs.FORM_LADDER.
+            **{k: v for k, v in arcsmod.build(studies, syntheses or [],
+                                              form_top=form_top).items()
                if k in ("arcs", "composite")},
             "flags": sorted({f for s in studies for f in _flags(s, rec=None)}),
             "provenance": {

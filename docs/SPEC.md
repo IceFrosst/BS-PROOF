@@ -689,7 +689,10 @@ it's the most common trick in the industry and no consumer can currently detect 
 
 | Item | Status |
 |---|---|
-| `k` value | Guess until Tier-3 calibration |
+| `k` value | **1.5 since 2026-08-11** (founder). Was 3.0. Measured basis: ECU granularity fragments a 143-study corpus into cells of 4–17, while c=0.8 at K=3.0 needed ~51 studies per cell — confidence, not evidence, capped every score. Every run now prints a K A/B (stored vs 3.0). Still a guess until Tier-3 |
+| `FORM_LADDER` (13 values) | **New 2026-08-11**, founder design. The form arc's composite term is the mean of the top-3 ladder scores among NON-NEGATIVE evidence in the product's own form: umbrella 1.00, SR+MA 0.95, SR 0.90, RCT 0.80, observational 0.55→0.15, animal 0.10, cell 0.05. Replaces `effect × 0.15` when no exact-form trial existed, which punished a literature for omitting the form: 54% of 149 creatine studies said only "creatine". Ranks are `pipeline.classify` design_rank, so no new taxonomy. All 13 values are founder-initialised guesses |
+| `FORM_LADDER_TOP` = 3 | **New 2026-08-11.** Aggregation width, chosen by measurement (`scripts/form_experiment.py`), not preference. top-1 scored "1 RCT + 9 animal studies" at 0.800 — identical to ten RCTs, so one paper bought a replicated literature's credit. top-10 dragged that same real RCT to 0.170, animal tier. top-3 (0.333) is the only width separating all five fixtures monotonically. Pinned by selftest so it cannot move silently |
+| Form-ladder synthesis tier | **Known cap.** Ranks 1–3 (umbrella/MA/SR *conducted in your form*) are implemented and selftested, but `form_syntheses` is empty until the SR path runs: a review counts as form evidence only once its own direction is extracted, and an unread review must never be credited as non-negative. So on a primaries-only corpus the ladder caps at 0.80. The 13 form-specific creatine syntheses already in the store are the first thing `--with-sr` would unlock |
 | Transfer factor constants | Guesses; largest error source in the system |
 | `band_version` invalidation | Designed; `band_version: 0` = unbanded is now in the ECU schema. Re-derivation path still unwritten |
 | Outcome vocabulary mapping | Highest-risk unsolved piece |

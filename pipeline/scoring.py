@@ -86,7 +86,7 @@ APPLY_DOSE_IN_WEIGHT = False
 # must never be read side by side as if the numbers meant the same thing, and
 # scripts/archive_reports.py enforces that by sweeping old-model runs out of
 # reports/runs/ into reports/archive/<model>/.
-SCORING_MODEL = "v4-k15"
+SCORING_MODEL = "v5-form-ladder"
 
 # What each model meant, so an archived report can still be understood:
 SCORING_MODEL_HISTORY = {
@@ -107,7 +107,18 @@ SCORING_MODEL_HISTORY = {
     "v4-k15":
         "identical to v3 except K 3.0 -> 1.5 (founder, 2026-08-11): confidence "
         "saturates at realistic per-cell corpus sizes instead of demanding "
-        "~51 studies per ECU cell for c=0.8.",
+        "~51 studies per ECU cell for c=0.8. Form term was still a re-scoring of "
+        "the signed d over the exact-form subset, with effect x 0.15 when that "
+        "subset was empty. Superseded 2026-08-11.",
+    "v5-form-ladder":
+        "form arc decoupled from the effect arc (founder design 2026-08-11). The "
+        "composite's form term is now an EVIDENCE-HIERARCHY strength 0..1 -- the "
+        "mean of the top-3 arcs.FORM_LADDER scores among NON-NEGATIVE evidence in "
+        "the product's own form (umbrella 1.00 ... RCT 0.80 ... animal 0.10) -- "
+        "instead of effect x 0.15 when no exact-form trial existed. Negative "
+        "exact-form evidence scores 0 strength and keeps its signed verdict, so "
+        "'untested' and 'failed' stay distinguishable. Effect arc, dose arc, K and "
+        "S_VALUE unchanged.",
 }
 
 

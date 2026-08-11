@@ -345,6 +345,24 @@ def four_arc_lines(built: dict) -> str:
             bar = "#" * int(round(cov * 16)) + "." * (16 - int(round(cov * 16)))
             out.append(f"  {label:<20} [{bar}]  c={cov:.2f}")
             continue
+        # FORM reads from `strength` since SCORING_MODEL v5: that is the number
+        # the composite actually uses, and printing the signed subset verdict
+        # instead made the two disagree on screen -- muscle_strength showed
+        # "+0.02" beside a composite the ladder had just raised to 40. The
+        # verdict is still shown, as the caveat it is.
+        if key == "form" and "strength" in arc:
+            st = float(arc.get("strength") or 0.0)
+            n = int(round(st * 16))
+            basis = arc.get("basis")
+            if basis == "untested_in_form":
+                tail = "nobody reported your form"
+            elif basis == "negative_in_form":
+                tail = f"TESTED AND FAILED in your form ({v:+.2f} @ {cov:.0%})"
+            else:
+                tail = (f"best evidence in your form scores {st:.2f}"
+                        + (f" ({v:+.2f} @ {cov:.0%})" if v is not None else ""))
+            out.append(f"  {label:<20} [{'#' * n}{'.' * (16 - n)}]  {tail}")
+            continue
         if v is None:
             out.append(f"  {label:<20} [{'/' * 16}]  no trials on this axis")
             continue
