@@ -86,6 +86,36 @@ with creatine". That claim compares creatine+bicarb TO creatine — filing it as
 a creatine null scored the trial against creatine while the same abstract shows
 creatine beating placebo (ES 0.37–0.83).
 
+EXTRACT THE NUMBERS ON EVERY CLAIM, INCLUDING NULLS. THIS IS NOT OPTIONAL.
+
+`effect_size`, `effect_unit`, `ci_low`, `ci_high` and `p_value` must be filled
+whenever the paper reports them, for EVERY direction -- `null_effect` and `harm`
+as much as `benefit`. If the paper prints a between-group difference and a
+confidence interval, record both even when the difference is not significant.
+
+MEASURED 2026-08-11, and this is why the rule had to be made explicit: of 139
+null_effect claims on the four main performance outcomes, only 27 carried any
+number at all. The numbers used to be described here only as inputs to
+`magnitude`, and `magnitude` is assessed for benefits alone -- so a null was
+being read as "no numbers needed" and the point estimate was thrown away.
+
+A null's point estimate and interval are the most valuable thing on the claim,
+because they are what distinguishes the two kinds of null, which are opposites:
+
+  "MD +0.2 kg, 95% CI -3.1 to +3.5"   -> the trial could not have detected a
+                                         real effect. It answers nothing. This
+                                         is an UNDERPOWERED null.
+  "MD +0.1 kg, 95% CI -0.3 to +0.5"   -> a meaningful effect is ruled OUT. This
+                                         is real evidence against the product.
+
+Both read as "no significant difference" and they mean completely different
+things. Without the interval, downstream cannot tell them apart -- and the
+pipeline's own rules (a well-run null is evidence AGAINST, but an underpowered
+trial is out of scope entirely) depend on exactly that distinction.
+
+So: never omit a number because the result was null. `null` remains correct when
+the paper genuinely prints no figure -- never invent or infer one.
+
 MAGNITUDE
   meaningful - the effect is large enough to matter to a person, or the paper
                reports it exceeded a stated MCID / clinical threshold
@@ -93,7 +123,8 @@ MAGNITUDE
                about clinical relevance; or a surrogate marker moved by an
                amount with no known clinical meaning
   unstated   - significant, but there is NO NUMERIC BASIS AT ALL to judge size
-Only assess magnitude for direction=benefit. Null otherwise.
+Only assess magnitude for direction=benefit. Null otherwise. This is about the
+`magnitude` FIELD only -- it does not excuse you from the numeric fields above.
 
 IF YOU FILL IN `effect_size`, YOU MAY NOT ANSWER `unstated`.
 `unstated` means "the paper gives me no number to judge by". It does not mean

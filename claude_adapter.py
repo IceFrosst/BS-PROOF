@@ -105,6 +105,17 @@ def _claude_bin() -> str:
 
 # Bump when you edit ANY prompt (including _shared.md). This is in the cache key.
 # Forget to bump it and you will silently serve stale extractions forever.
+# v1.15 (2026-08-11): S5 must extract effect_size / CI / p_value on EVERY claim,
+# including nulls. Measured: of 139 null_effect claims on the four main
+# performance outcomes, only 27 carried any number. The numeric fields were
+# described only as inputs to `magnitude`, and magnitude is benefit-only, so a
+# null read as "no numbers needed" and the point estimate was discarded. That
+# interval is the most valuable thing on a null claim -- it is the ONLY way to
+# tell an underpowered null ("CI -3.1 to +3.5", answers nothing) from a well-run
+# one ("CI -0.3 to +0.5", rules a real effect out), and invariant 7 already
+# treats those as opposites. Unblocks the founder decision on vote counting
+# (SPEC 13): both candidate fixes need effect-size coverage on nulls, which was
+# 19%. Extraction fidelity only -- no scoring change rides on this bump.
 # v1.14 (2026-08-11): three fixes from the 22-agent extraction audit
 # (docs/history/2026-08-11-extraction-accuracy-audit.md). Targets were chosen by
 # SCORE INFLUENCE -- the top 16 contributors by scoring.contributions -- and every
@@ -180,7 +191,7 @@ def _claude_bin() -> str:
 # v1.6 (2026-08-08): S2 reports results_table + per-study design. SR-table trials
 # now enter evidence mass, so S2's output moves scores and not just confidence.
 # v1.5 (2026-08-07): S3 prompt shortened, SR label resolve, review_methods.
-PROMPT_VERSION = "v1.14"
+PROMPT_VERSION = "v1.15"
 
 # Tier -> model. FULL IDs, NOT ALIASES.
 #
