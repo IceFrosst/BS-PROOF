@@ -23,14 +23,14 @@ is true:
 Deriving bands before answering this would fit them to a `d` that is still moving,
 which is the circularity the harness exists to prevent.
 
-WHAT "SIZEABLE" MEANS HERE. A claim is sizeable if the extraction itself carries a
-number that the prompt's own thresholds could act on: `effect_size`, a `p_value`, or
-a confidence interval. That is deliberately generous -- it is an upper bound on how
-much is recoverable, and the point is to bracket the answer, not to guess each
-claim's true magnitude. The counterfactual is reported as a RANGE for the same
-reason: `effect_unit` varies too much (% change, kg, Cohen's d, points on a scale)
-to auto-size faithfully, so this reports the floor (today) and the ceiling (every
-sizeable benefit read as meaningful) rather than inventing a middle.
+WHAT "SIZEABLE" MEANS HERE. A claim is sizeable only if it carries an `effect_size`
+or a confidence interval -- see the correction in `sizeable()`. A p-value is NOT
+enough and counting it inflated this number from 18% to 46% on the first pass.
+
+The counterfactual is reported as a RANGE rather than a point estimate because
+`effect_unit` varies too much (% change, kg, Cohen's d, points on a scale) to
+auto-size faithfully: floor = today, ceiling = every sizeable benefit read as
+meaningful. Bracket the answer; do not invent a middle.
 """
 from __future__ import annotations
 
@@ -59,9 +59,17 @@ UNSIZED = (None, "unstated")
 
 
 def sizeable(cl: dict) -> bool:
-    """Does the extraction already carry a number the prompt's rules could size by?"""
+    """
+    Does the extraction carry a number that could decide MEANINGFUL vs TRIVIAL?
+
+    CORRECTED 2026-08-11. The first version counted a `p_value` as sizeable, which
+    inflated "recoverable" from 18% to 46%. A p-value says an effect was unlikely to
+    be chance; it says NOTHING about how big the effect was, so it cannot decide
+    magnitude. Only an effect size or a confidence interval can. 36 of the 128
+    unsized benefits carry a p-value and nothing else -- they are correctly
+    `unstated`, and the prompt is right to leave them there.
+    """
     return (cl.get("effect_size") is not None
-            or cl.get("p_value") is not None
             or cl.get("ci_low") is not None
             or cl.get("ci_high") is not None)
 
