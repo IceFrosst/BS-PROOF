@@ -535,10 +535,19 @@ def main():
           "be reported as uncited")
     _partial = cal.validate([{**_row, "tests": [], "pair_id": "", "pair_expect": "",
                               "n_trials": "", "n_positive": "18", "n_null": ""}])
-    check("a HALF-FILLED mixture is a loud validation error",
-          any("partial mixture" in p for p in _partial),
+    check("a HALF-FILLED positive/null pair is a loud validation error",
+          any("must be filled together" in p for p in _partial),
           "derived_band silently returns None on a partial row, so a row that "
           "looks cited would keep grading against its uncited range")
+    # The normal state of a cited row: the review says how many trials it pooled
+    # and publishes a pooled effect, but never a per-trial split. Measured
+    # 2026-08-11: 0 of 14 creatine syntheses publish the split. If this state were
+    # invalid, the next person filling anchors.csv would be pushed into inventing it.
+    check("n_trials WITHOUT a per-trial split is a legal cited row",
+          not cal.validate([{**_row, "tests": [], "pair_id": "", "pair_expect": "",
+                             "n_trials": "21", "n_positive": "", "n_null": ""}]),
+          "'21 trials, pooled SMD 0.43, split not published' is what syntheses "
+          "actually report; requiring the split would invite fabricating it")
     _uncited = cal.validate([{**_row, "tests": [], "pair_id": "", "pair_expect": "",
                               "n_trials": "20", "n_positive": "18", "n_null": "2",
                               "source_doi": ""}])

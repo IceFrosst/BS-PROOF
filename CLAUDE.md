@@ -620,6 +620,44 @@ verdict from **+0.43 to +1.00** but dropped n from 12 to 8, and the composite
 moved **28 → 29**. Higher `d`, lower `c`. Which wins is a real question on a
 real corpus, which is why it is an A/B and not a switch.
 
+**THE SCORE VOTE-COUNTS, and that is now the primary known defect (measured
+2026-08-11, `scripts/vote_counting_investigation.py`). FOUNDER DECISION PENDING.**
+
+Each trial is reduced to a direction LABEL, the label to a number, and the score
+to a weighted mean of those numbers — so the effect SIZE we extract is discarded
+before it reaches the score. Counting how many trials individually cleared
+p < 0.05 is vote counting, whose power falls toward **zero** as trials shrink. It
+is the failure meta-analysis exists to fix, and supplement literature is exactly
+that small-trial regime.
+
+Two independent measurements:
+
+- Of the `null_effect` claims on the four "higher is better" showcase outcomes
+  that carry a usable number, **24 of 27 (89%) have a point estimate FAVOURING
+  creatine.** They failed to reach significance individually; they did not find
+  nothing. Each is scored −0.35 — evidence AGAINST.
+- **8 published pooled estimates on muscle strength favour creatine with CIs
+  excluding zero** (SMD 0.28–0.46; verbatim-verified, and an adversarial pass
+  told to refute them refuted **0 of 24**). Our pipeline scores that outcome
+  **−15**.
+
+So the null share is REAL and the extraction is FAITHFUL — the labels are
+correct. What is wrong is reading "this trial alone did not reach significance"
+as "this trial is evidence the product does not work." Limits, not buried: the
+89% rests on 27 of 139 showcase nulls, units are heterogeneous so only the SIGN
+is comparable, and none of it establishes creatine's true effect size.
+
+Consequence for the anchors: **external band derivation is BLOCKED, not
+unfinished.** 0 of 14 stored creatine syntheses publish per-trial dichotomous
+results usably; an adversarial re-read REFUTED 2 of 3 counts a first pass had
+extracted from the one that looked like it did. Syntheses publish pooled effect
+sizes because that is what synthesis is — **our model consumes a quantity the
+literature does not produce.** The machinery to derive a band the moment a
+mixture exists is built and selftested (`calibration.mixture_score`,
+`derived_band`, `provenance`); `anchors.csv` has the provenance columns and
+**1 of 21** range anchors now cites a source. Three non-equivalent candidate
+fixes are in the script's verdict and in SPEC §13. Do not pick one in code.
+
 **Open constants awaiting Tier-3 calibration:** `k`, transfer factors, RoB
 thresholds, OA penalty. See `docs/SPEC.md` §13.
 
@@ -853,7 +891,11 @@ ownership table added under Multi-agent workflow.
    nothing has yet been run end to end on a live backend. Do this before
    trusting any number from a `--with-sr` run.
 4. **Anchor eval** — 35 anchors in `docs/anchors.csv` (NOT 28; the doc said 28 until 2026-08-06); running them needs
-   extraction. Do this before trusting any constant.
+   extraction. Do this before trusting any constant. **All 35 are now scoreable**
+   (the 14 pair anchors ran nowhere until 2026-08-11), but **20 of 21 range bands
+   are still uncited judgement**, and they cannot be derived externally until the
+   vote-counting decision above is made — the literature does not publish the
+   per-trial split a vote-count band needs.
 5. **Derive dose bands at scale** and bump `band_version` 0 → 1.
 6. **Grok/Claude agreement table** on a fixed paper set. Never merge scores.
 7. **Grok-owned telemetry follow-up.** `DashboardRunV1` already preserves token

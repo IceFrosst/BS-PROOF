@@ -113,11 +113,24 @@ def validate(rows: list[dict] | None = None) -> list[str]:
         for k, v in filled.items():
             if not v.lstrip("-").isdigit() or int(v) < 0:
                 problems.append(f"anchor {aid}: {k}={v!r} is not a non-negative integer")
-        if filled and len(filled) != 3:
-            problems.append(f"anchor {aid}: partial mixture {sorted(filled)} -- "
-                            f"derived_band needs n_trials, n_positive AND n_null, "
-                            f"and returns None without them")
-        if len(filled) == 3 and all(v.isdigit() for v in filled.values()):
+        # n_positive and n_null must arrive TOGETHER -- `derived_band` needs both and
+        # silently returns None with one, so a half-filled pair would look cited
+        # while still grading against the uncited hand-written range.
+        #
+        # n_trials is deliberately INDEPENDENT of them. Measured 2026-08-11: 0 of 14
+        # creatine syntheses publish a per-trial dichotomous split, while nearly all
+        # state how many trials they pooled. "21 trials, pooled SMD 0.43, split not
+        # published" is the NORMAL and honest state of a cited row, and requiring the
+        # split alongside n_trials made it unrepresentable -- which would have pushed
+        # the next person filling this file toward inventing the split.
+        if ("n_positive" in filled) != ("n_null" in filled):
+            problems.append(f"anchor {aid}: n_positive and n_null must be filled "
+                            f"together -- derived_band needs both and returns None "
+                            f"with one, so the row would look cited but still grade "
+                            f"against its uncited range")
+        both = {"n_positive", "n_null"} <= set(filled)
+        if both and "n_trials" in filled and all(
+                filled[k].isdigit() for k in ("n_positive", "n_null", "n_trials")):
             t, p, n = (int(mix[k]) for k in ("n_trials", "n_positive", "n_null"))
             if p + n > t:
                 problems.append(f"anchor {aid}: n_positive+n_null ({p}+{n}) exceeds "
