@@ -696,14 +696,29 @@ and risk ratios have a null of 1 not 0 (5), and `kg`/`W`/`points` cannot be
 standardised without an SD we never extract (89). Refusing costs a magnitude;
 accepting could invert a sign.
 
-**The SIGN is stated, never inferred** (`effect_favours`, PROMPT_VERSION v1.16).
-A design analysis found this literature uses BOTH conventions — a faster sprint
-TIME is a negative number and a better result, while the same finding is often
-reported pre-oriented toward the treatment. Untestable on creatine: all 85
-sized+mapped claims there are on `higher_better` outcomes where both conventions
-coincide, so a creatine run passes either way. It will first matter on magnesium
-(`sleep_onset`, `anxiety`), and pre-v1.16 data on a lower-better outcome is
-REFUSED rather than guessed.
+**The number is used ONLY when S5 names the arm** (`effect_favours`,
+PROMPT_VERSION v1.17). This is the single most important guard in the change, and
+it was added after an adversarial design review measured why:
+
+**The stored `effect_size` is an ABSOLUTE MAGNITUDE, not a signed contrast.** Of
+54 standardised values only 3 are negative, and **24 of 24 standardised
+`null_effect` values are positive** — a genuine treatment-minus-control
+convention would put about half below zero, so P(all 24 one sign) ≈ 1e-7. Papers
+print |d| beside "no significant difference" and S5 copies it faithfully. Taking
+that at face value would read a null reporting |g| = 0.88 as **+1.0** when the
+truth may be −1.0 — the change meant to remove an upward-biasing error would
+have introduced a bigger one, on exactly the claims where the number decides.
+
+So an unstated sign is REFUSED, and so is `favours: neither` (a large effect
+favouring neither arm is a self-contradiction, not a reading). Consequence, and
+it is a feature: **v8 scores every pre-contract corpus identically to v7** —
+measured, 0 of 227 mapped claims activate the measured path. No stored score can
+move until re-extraction under v1.17.
+
+v1.17 also demands the BETWEEN-ARM contrast: 28 of 67 percent-family claims had
+stored one arm's own change while the span showed both ("CR +13.8%, PLA −3.5%"
+stored as 13.8, true contrast 17.3pp), and 4 unit strings embedded the
+comparator's own value ("kg post CR vs 32.0 kg placebo post").
 
 **PROMPT_VERSION v1.15 fixed half of what that decision needs (2026-08-11).** S5
 was describing `effect_size` / CI / `p_value` only as inputs to `magnitude`, and

@@ -99,6 +99,24 @@ number at all. The numbers used to be described here only as inputs to
 `magnitude`, and `magnitude` is assessed for benefits alone -- so a null was
 being read as "no numbers needed" and the point estimate was thrown away.
 
+`effect_size` IS THE BETWEEN-ARM CONTRAST. NOT ONE ARM'S OWN CHANGE.
+
+Report the difference BETWEEN the ingredient arm and the control arm. If the
+paper gives each arm's change separately, the contrast is the difference of the
+two, and you must not store just one of them.
+
+  "CR +13.8%, PLA -3.5%"        -> the contrast is 17.3 percentage points.
+                                   Storing 13.8 attributes the placebo arm's
+                                   decline to the ingredient.
+  "CR post 32.7 kg, PLA post 32.0 kg" -> the contrast is 0.7 kg. Storing 32.7 is
+                                   an arm MEAN, not an effect at all.
+
+MEASURED 2026-08-11: of 67 percent-family claims, 28 stored one arm's own change
+while the span showed both arms, and 4 unit strings embedded the comparator's
+value ("kg post CR vs 32.0 kg placebo post"). If you cannot form the between-arm
+contrast, leave `effect_size` null. A null costs one magnitude; a wrong one is
+scored as though it were the treatment effect.
+
 `effect_favours` — WHICH ARM DOES THE NUMBER FAVOUR? SAY IT, DO NOT LEAVE IT
 IMPLIED.
   ingredient - the effect_size you reported favours the study ingredient
@@ -111,6 +129,19 @@ guessed downstream. Some papers report a raw measurement difference, where a
 faster sprint TIME is a NEGATIVE number and a BETTER result; others report the
 same finding already oriented toward the treatment, as a positive number. Both
 appear in this literature, sometimes in one paper.
+
+MOST IMPORTANTLY: papers routinely print an ABSOLUTE magnitude next to a null.
+"No significant between-condition difference (p = 0.483, g = 0.18)" tells you the
+size and NOT the direction. MEASURED 2026-08-11: 24 of 24 standardised
+null_effect values in this corpus were positive, where a genuine
+treatment-minus-control convention would put about half below zero — because the
+papers printed |d| and the extractor copied it. So a bare magnitude on a null is
+DIRECTIONLESS, and `effect_favours` is the only thing that can tell downstream
+which way it pointed.
+
+If the paper does not make the direction of a null recoverable, answer
+`effect_favours: null`. The number is then discarded rather than guessed, which
+is correct: it would otherwise be read as a benefit of that magnitude.
 
 This matters more than any other numeric field, because the score now uses the
 effect SIZE rather than only your direction label. A magnitude that is too small

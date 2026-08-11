@@ -1426,9 +1426,9 @@ def main():
           "on a safety outcome POSITIVE means MORE harm -- the opposite "
           "orientation from every efficacy outcome. '12.8% more adverse events' "
           "would otherwise read as strong positive evidence")
-    check("an efficacy outcome does standardise the same number",
-          _aes({"effect_size": 5.0, "effect_unit": "% difference"},
-               "muscle_strength")[0] is not None)
+    check("an efficacy outcome standardises the same number ONCE THE ARM IS NAMED",
+          _aes({"effect_size": 5.0, "effect_unit": "% difference",
+                "effect_favours": "ingredient"}, "muscle_strength")[0] is not None)
 
     # -- SIGN CONVENTION (v1.16). The sign is STATED by S5, never inferred from the
     # number's arithmetic sign, because this literature uses both conventions: a
@@ -1460,10 +1460,36 @@ def main():
           "pre-v1.16 data on a lower-better outcome cannot be oriented: a smaller "
           "sleep-onset latency is better, so the raw sign is ambiguous. Refusing "
           "costs one magnitude; accepting could invert it")
-    check("an unstated convention on a HIGHER_BETTER outcome is accepted",
-          _aes(_claim(), "muscle_strength")[0] is not None,
-          "reproduces pre-v1.16 behaviour exactly on the creatine corpus, where "
-          "all 85 sized+mapped claims are higher_better")
+    # This pin was INVERTED on 2026-08-11, hours after being written, and the
+    # reason is the most important measurement in this whole change.
+    #
+    # It used to assert that an unstated convention on a higher_better outcome was
+    # ACCEPTED, on the reasoning that "higher is better" makes the reported sign
+    # unambiguous. That reasoning assumed effect_size is a signed contrast. It is
+    # not: of 54 standardised values only 3 are negative, and 24 of 24 standardised
+    # null_effect values are POSITIVE, where a real treatment-minus-control
+    # convention would put about half of them below zero (P ~ 1e-7). Papers print
+    # |d| next to "no significant difference" and S5 copies it faithfully.
+    #
+    # So accepting an unstated sign would read every such null as a BENEFIT of
+    # that magnitude -- a null reporting |g| = 0.88 becomes +1.0 when the truth may
+    # be -1.0. The change meant to remove an upward-biasing error would have
+    # introduced a larger one.
+    check("an unstated convention is REFUSED even on a higher_better outcome",
+          _aes(_claim(), "muscle_strength")[1] == "sign_convention_unstated",
+          "the reported sign cannot be trusted: 24 of 24 standardised null values "
+          "in the corpus are positive because papers print |d|, so an unstated "
+          "sign would turn every sized null into a benefit")
+    check("'favours neither arm' is refused rather than read as a benefit",
+          _aes(_claim(effect_favours="neither"), "muscle_strength")[1]
+          == "favours_neither_arm_unsignable",
+          "a magnitude with no arm attached cannot be signed, and a LARGE effect "
+          "favouring neither arm is a self-contradiction, not a reading")
+    check("v8 therefore scores the PRE-v1.17 corpus exactly as v7 did",
+          _aes({"effect_size": 0.43, "effect_unit": "cohen's d"},
+               "muscle_strength")[0] is None,
+          "no pre-contract extraction can activate the measured path, so the "
+          "model change cannot move a stored score until re-extraction")
     check("a stated convention works on a lower_better outcome where inference cannot",
           _aes(_claim(effect_favours="ingredient"), "sleep_onset")[0] > 0,
           "this is what the v1.16 field buys: magnesium/sleep becomes scoreable "

@@ -105,6 +105,22 @@ def _claude_bin() -> str:
 
 # Bump when you edit ANY prompt (including _shared.md). This is in the cache key.
 # Forget to bump it and you will silently serve stale extractions forever.
+# v1.17 (2026-08-11): S5 must report the BETWEEN-ARM CONTRAST, and a bare
+# magnitude on a null is directionless. Written hours after v1.16 because a design
+# analysis measured two things that made v1.16 insufficient:
+#   1. The stored effect_size is an ABSOLUTE MAGNITUDE, not a signed contrast --
+#      24 of 24 standardised null_effect values were positive, where a real
+#      treatment-minus-control convention puts ~half below zero (P ~ 1e-7). Papers
+#      print |d| beside "no significant difference" and S5 copied it. Reading that
+#      at face value turns every sized null into a benefit of that magnitude.
+#   2. 28 of 67 percent-family claims stored ONE ARM'S own change while the span
+#      showed both ("CR +13.8%, PLA -3.5%" stored as 13.8, true contrast 17.3pp),
+#      and 4 unit strings embedded the comparator's own value.
+# So the prompt now demands the between-arm difference, forbids storing an arm
+# mean, and says outright that `effect_favours: null` is the correct answer when a
+# null's direction is not recoverable. `pipeline.assemble._effect_s` refuses the
+# number unless the ARM IS NAMED, which makes SCORING_MODEL v8 score every
+# pre-contract corpus identically to v7 instead of biasing it upward.
 # v1.16 (2026-08-11): S5 states `effect_favours` (ingredient | control | neither |
 # null) -- WHICH ARM the reported effect_size favours. New schema field.
 # Required because the founder chose effect-size-weighted s_value ("do i"), so the
@@ -203,7 +219,7 @@ def _claude_bin() -> str:
 # v1.6 (2026-08-08): S2 reports results_table + per-study design. SR-table trials
 # now enter evidence mass, so S2's output moves scores and not just confidence.
 # v1.5 (2026-08-07): S3 prompt shortened, SR label resolve, review_methods.
-PROMPT_VERSION = "v1.16"
+PROMPT_VERSION = "v1.17"
 
 # Tier -> model. FULL IDs, NOT ALIASES.
 #

@@ -265,30 +265,36 @@ def _effect_s(claim: dict, outcome_vocab_id: str) -> tuple[float | None, str]:
     except (TypeError, ValueError):
         return None, "unparseable_effect_size"
 
+    # THE NUMBER IS USED ONLY WHEN S5 NAMES THE ARM. No exceptions, no fallback
+    # to the reported sign, no fallback to outcome polarity.
+    #
+    # MEASURED 2026-08-11 and this is why the rule is absolute: the stored
+    # effect_size is an ABSOLUTE MAGNITUDE, not a signed contrast. Of 54
+    # standardised values only 3 are negative, and **24 of 24 standardised
+    # null_effect values are positive** -- under a real treatment-minus-control
+    # convention roughly half should be negative, so P(all 24 one sign) is about
+    # 1e-7. Papers print |d| alongside "no significant difference" and S5 copies
+    # it faithfully.
+    #
+    # Taking that at face value is not a small error. A null reporting |g| = 0.88
+    # would standardise to +1.0 when the truth may be -1.0, so the change intended
+    # to REMOVE the vote-counting bias would have introduced a systematic UPWARD
+    # one instead -- on exactly the claims where the number is load-bearing.
+    #
+    # "neither" is refused for the same reason: a magnitude with no arm attached
+    # cannot be signed, and a LARGE magnitude that favours neither arm is a
+    # self-contradiction rather than a reading. Both fall back to the direction
+    # label, which is what the pre-v1.16 corpus therefore does in full -- v8
+    # scores that corpus identically to v7 by construction, and only data
+    # extracted under the v1.17 contract activates the measured path.
     if favours == "ingredient":
         oriented = magnitude
     elif favours == "control":
         oriented = -magnitude
     elif favours == "neither":
-        # An explicit "no meaningful difference". Keep the magnitude rather than
-        # forcing 0.0: the recentred scale already reads a sub-threshold effect as
-        # evidence against, and a LARGE magnitude the model calls "neither" stays
-        # visible as the contradiction it is instead of being smoothed away.
-        oriented = magnitude
+        return None, "favours_neither_arm_unsignable"
     else:
-        # PRE-v1.16 DATA, or the model declined to say. Fall back on outcome
-        # polarity, and REFUSE unless "higher is better" makes the raw sign
-        # unambiguous.
-        #
-        # Measured: all 85 sized+mapped claims in the creatine corpus are on
-        # higher_better outcomes, so this branch reproduces earlier behaviour
-        # there exactly and the refusal never fires. It fires first on a
-        # lower_better ingredient -- magnesium/sleep_onset, anxiety -- which is
-        # precisely the case a creatine run can never validate. Refusing costs one
-        # study's magnitude; accepting could invert its sign.
-        if vocab.outcome_polarity(outcome_vocab_id) != "higher_better":
-            return None, "sign_convention_unstated"
-        oriented = float(raw)
+        return None, "sign_convention_unstated"
 
     return scoring.standardise_effect(oriented, claim.get("effect_unit"))
 
