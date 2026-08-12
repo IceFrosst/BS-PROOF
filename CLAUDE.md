@@ -687,6 +687,28 @@ instead — the obvious implementation — makes 20 measured-zero trials score
 `scripts/effect_size_experiment.py` runs that as a control arm (E) precisely so
 nobody re-derives it the wrong way.
 
+**EXTRACTION STABILITY IS NOW THE BINDING PROBLEM, NOT THE FORMULA (measured
+2026-08-12).** Two clean 149-study runs, same `SCORING_MODEL` v8, differing only
+in the WORDING of one prompt field (`effect_favours`, v1.17 → v1.18):
+
+| outcome | v1.17 | v1.18 | delta | n |
+|---|--:|--:|--:|--:|
+| energy_levels | +0 | −3 | −3 | 2 → 3 |
+| muscle_strength | −9 | −10 | −1 | 25 → 24 |
+| lean_body_mass | −1 | **+14** | **+15** | 14 → 12 |
+| exercise_endurance | −16 | −15 | +1 | 10 → 9 |
+| muscle_power | +6 | +9 | +3 | 30 → 26 |
+
+**23 points of total absolute movement from one reworded field, against 2 points
+from the scoring-model change it was written to enable.** Studies also enter and
+leave each ECU between runs. So the score's run-to-run precision is set by
+extraction variance, not by the formula.
+
+Consequence, and it supersedes the band work: **anchor calibration is PREMATURE.**
+A band cannot be fitted to a number that moves 15 points when one prompt field is
+reworded. Establish extraction stability first — the same corpus scored twice
+under an unchanged prompt should reproduce, and that has never been measured.
+
 **MEASURED ON A CLEAN v1.17 RUN (2026-08-12, 149 studies, 5 partial failures,
 zero session-limit failures). The honest result: v8 barely moves this corpus.**
 Isolated properly — same corpus, measured path off vs on — v8 changes

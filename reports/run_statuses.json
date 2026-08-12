@@ -75,6 +75,24 @@
         "It pushed a report because --no-push is not a real flag. Retained rather than deleted (run files are immutable) but it carries no independent information."
       ],
       "note": "Duplicate replay of 20260812_062929. Do not count it as a separate measurement."
+    },
+    "20260812_072850_creatine_creatine-monohydrate_claude-top5-per-o": {
+      "status": "experimental",
+      "public_claims_allowed": false,
+      "reason_codes": [
+        "v118_neither_fix",
+        "effect_size_coverage_16_percent",
+        "extraction_variance_exceeds_model_effect",
+        "not_anchor_validated"
+      ],
+      "limitations": [
+        "First run under PROMPT_VERSION v1.18. 149 of 150 studies usable, 12 partial agent failures, 128 of 996 calls failed (none on the session limit).",
+        "v1.18 fixed what it targeted: the 'large magnitude but favours neither arm' contradiction fell from 17% of mapped claims to 6%, and effect-size coverage rose from 10% to 16%.",
+        "The effect-size scoring model's own contribution remains ~2 points. When the numbers are finally read instead of the labels, they say roughly what the labels said: this corpus's measured per-trial effects on creatine really are small.",
+        "STABILITY IS THE BINDING PROBLEM, not the formula. Between the v1.17 and v1.18 runs -- same 149 studies, same scoring model, one field's WORDING changed -- scores moved 23 points in total absolute terms, including lean_body_mass -1 -> +14, while study counts per ECU shifted (lean_body_mass 14 -> 12, muscle_power 30 -> 26). Run-to-run extraction variance currently exceeds the deliberate model change by an order of magnitude.",
+        "Consequence: anchor calibration is PREMATURE. A band cannot be fitted to a number that moves 15 points when one prompt field is reworded."
+      ],
+      "note": "v1.18 run. Use for the coverage measurement, not as a stable score. Extraction stability must be established before any band is calibrated."
     }
   }
 }
