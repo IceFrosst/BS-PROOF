@@ -180,42 +180,51 @@ p { margin-block: 0 1rem; }
 .segmented-control button[aria-pressed="true"] { color: var(--white); background: var(--night); }
 .result-count { margin: 18px 0; color: var(--ink-soft); font-size: 0.82rem; }
 .outcome-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
-.outcome-card { display: flex; min-width: 0; flex-direction: column; gap: 18px; padding: 26px; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); }
+.outcome-card { display: flex; min-width: 0; flex-direction: column; gap: 16px; padding: 26px; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); transition: box-shadow 160ms ease, border-color 160ms ease, transform 160ms ease; }
+.outcome-card:hover { border-color: var(--ink-soft); box-shadow: var(--shadow); transform: translateY(-2px); }
+.outcome-card.outcome-gated { background: var(--paper); }
+.outcome-card.outcome-gated .ring-plot { opacity: 0.75; }
 .outcome-gated { background: #ebe7df; }
 .outcome-heading { display: flex; align-items: start; justify-content: space-between; gap: 18px; }
 .outcome-heading h3 { font-size: 1.5rem; }
-.outcome-state { flex: 0 0 auto; max-width: 130px; color: var(--ink-soft); font-size: 0.68rem; font-weight: 800; text-align: right; text-transform: uppercase; letter-spacing: 0.07em; }
+.outcome-state { flex: 0 0 auto; max-width: 150px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); color: var(--ink-soft); font-size: 0.66rem; font-weight: 800; text-align: right; text-transform: uppercase; letter-spacing: 0.07em; }
+[data-outcome-state="scored"] .outcome-state { border-color: var(--ink-soft); color: var(--ink); }
 .outcome-verdict { min-height: 3em; margin: 0; font-size: 0.92rem; font-weight: 750; }
 .outcome-footer { display: flex; justify-content: space-between; gap: 18px; padding-top: 15px; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: 0.78rem; }
 .outcome-footer a { color: var(--ink); font-weight: 850; }
 
-.ring-score { display: grid; grid-template-columns: 210px 1fr; gap: 28px; align-items: center; margin: 0; }
-.ring-score-compact { grid-template-columns: 156px 1fr; gap: 18px; }
-.ring-plot { position: relative; aspect-ratio: 1; width: 100%; max-width: 210px; margin-inline: auto; }
+/* Ring redesign 2026-08-12 (dataviz pass). Hue means POLARITY now: verdict arcs
+   are teal (+) / coral (−), a diverging pair; ring identity is carried by
+   position and the numbered readout, so identity no longer wears a status
+   colour (the old design drew a strongly positive effect ring in coral).
+   Coverage is a recessive neutral arc; the evidence ring is pure quantity in
+   gold, fill-is-the-value. Text stays in ink tokens throughout. */
+.ring-score { display: grid; grid-template-columns: 218px 1fr; gap: 28px; align-items: center; margin: 0; }
+.ring-score-compact { grid-template-columns: 164px 1fr; gap: 18px; }
+.ring-plot { position: relative; aspect-ratio: 1; width: 100%; max-width: 218px; margin-inline: auto; }
 .ring-plot svg { width: 100%; height: 100%; }
-.ring-track, .ring-coverage { fill: none; }
-.ring-track { stroke: #d8d2c7; stroke-width: 5; }
-.ring-coverage { stroke-width: 5; }
-.ring-verdict { fill: none; stroke-width: 7; stroke-linecap: round; }
-.ring-zero-marker { stroke: var(--white); stroke-width: 1.5; }
-.ring-effect { stroke: var(--coral); }
-.ring-form { stroke: var(--teal); }
-.ring-dose { stroke: var(--blue); }
-.ring-evidence { stroke: var(--gold); }
+.ring-track { fill: none; stroke: #e2dccf; stroke-width: 3; }
+.ring-coverage { fill: none; stroke: var(--ink-soft); stroke-width: 3; stroke-linecap: round; opacity: 0.5; }
+.ring-quantity { fill: none; stroke: var(--gold); stroke-width: 8; stroke-linecap: round; }
+.ring-verdict { fill: none; stroke-width: 8; stroke-linecap: round; }
+.ring-positive { stroke: var(--teal); }
+.ring-negative { stroke: var(--coral); }
+.ring-zero-marker { fill: var(--ink-soft); stroke: var(--white); stroke-width: 1.5; }
 .ring-center { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
-.ring-center strong { font-size: clamp(2rem, 4vw, 3.2rem); line-height: 0.9; }
-.ring-center span { margin-top: 5px; color: var(--ink-soft); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; }
+.ring-center strong { font-size: clamp(1.9rem, 4vw, 3rem); line-height: 0.9; letter-spacing: -0.02em; }
+.ring-center span { margin-top: 4px; color: var(--ink-soft); font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.1em; }
+.ring-signed { display: inline-block; margin-top: 6px; padding: 1px 8px; border-radius: 999px; font-size: 0.66rem; font-style: normal; font-weight: 800; background: var(--paper-2); color: var(--ink-soft); }
+.ring-signed.signed-positive { background: var(--teal); color: var(--white); }
+.ring-signed.signed-negative { background: var(--coral); color: var(--white); }
 .ring-direction { position: absolute; right: 7%; bottom: 2%; left: 7%; display: flex; justify-content: space-between; color: var(--ink-soft); font-size: 0.56rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; }
-.arc-readout { display: grid; gap: 8px; min-width: 0; }
-.arc-line { display: flex; justify-content: space-between; gap: 12px; color: var(--ink); font-size: 0.78rem; font-weight: 800; }
+.arc-readout { display: grid; gap: 7px; min-width: 0; }
+.arc-line { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 5px 8px; border-radius: 8px; background: var(--paper); color: var(--ink); font-size: 0.78rem; font-weight: 800; }
 .arc-line > span:last-child { text-align: right; }
 .arc-line small { display: block; color: var(--ink-soft); font-size: 0.66rem; font-weight: 650; }
-.arc-label { display: inline-flex; align-items: center; gap: 7px; }
-.arc-label i { width: 8px; height: 8px; background: currentColor; border-radius: 50%; }
-.arc-effect .arc-label { color: var(--coral-text); }
-.arc-form .arc-label { color: var(--teal-text); }
-.arc-dose .arc-label { color: var(--blue); }
-.arc-evidence .arc-label { color: var(--gold-text); }
+.arc-label { display: inline-flex; align-items: center; gap: 8px; color: var(--ink); }
+.arc-ring-index { display: inline-grid; place-content: center; width: 16px; height: 16px; border: 1.5px solid var(--ink-soft); border-radius: 50%; color: var(--ink-soft); font-size: 0.6rem; font-style: normal; font-weight: 800; }
+.arc-value.value-positive { color: var(--teal-text); }
+.arc-value.value-negative { color: var(--coral-text); }
 .gated-caption { color: var(--ink-soft); font-size: 0.8rem; }
 
 .evidence-summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); margin-bottom: 24px; background: var(--night); color: var(--white); border-radius: var(--radius); overflow: hidden; }
