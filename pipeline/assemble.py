@@ -819,8 +819,14 @@ def build_ecus(extractions: list[dict], product: dict, *,
             # unread review must never be credited as non-negative. The ladder
             # therefore caps at rank 4 (0.80) on a primaries-only corpus, which is
             # honest rather than convenient -- see arcs.FORM_LADDER.
-            **{k: v for k, v in arcsmod.build(studies, syntheses or [],
-                                              form_top=form_top).items()
+            **{k: v for k, v in arcsmod.build(
+                   studies, syntheses or [], form_top=form_top,
+                   # The composite's dose term (v12): the product's closeness to
+                   # the range where positive effects occurred. Same number the
+                   # row reports as dose.product_factor.
+                   dose_closeness=dosemod.dose_factor_for(
+                       product.get("dose_low_mg"), product.get("dose_high_mg"),
+                       bands.get(outcome_id, {"low": None}))).items()
                if k in ("arcs", "composite")},
             "flags": sorted({f for s in studies for f in _flags(s, rec=None)}),
             "provenance": {

@@ -219,7 +219,8 @@ def _unit(d: float) -> float:
 
 
 def build(studies: list, syntheses: list | None = None, *,
-          form_syntheses: list | None = None, form_top: int | None = None) -> dict:
+          form_syntheses: list | None = None, form_top: int | None = None,
+          dose_closeness: float | None = None) -> dict:
     """
     studies: the Study objects for one ECU.
 
@@ -253,14 +254,20 @@ def build(studies: list, syntheses: list | None = None, *,
         "form": {"verdict": form_d, "coverage": round(form_w / total_w, 3),
                  "strength": round(form_s, 3), "basis": form_basis,
                  "n_in_form": len(exact)},
-        "dose": {"verdict": dose_d, "coverage": round(dose_w / total_w, 3)},
+        # `closeness` is what the composite eats since v12 (founder design:
+        # "take all the dosages where there was a positive effect, and see how
+        # close our dose is"). verdict/coverage still describe what trials near
+        # the product's dose found -- they are the picture, closeness is the
+        # score input, the same split the form arc uses (verdict vs strength).
+        "dose": {"verdict": dose_d, "coverage": round(dose_w / total_w, 3),
+                 "closeness": dose_closeness},
         # The evidence arc has no direction -- it is pure quantity, so its fill
         # IS its coverage. Drawn last (innermost) because it qualifies the rest.
         "evidence": {"verdict": None, "coverage": round(c, 3), "is_quantity": True},
     }
     return {
         "arcs": arcs,
-        "composite": composite(eff_d, form_s, dose_d, c),
+        "composite": composite(eff_d, form_s, dose_closeness, c),
         "signed": overall["score"],
         "band": overall["band"],
         "gate_fired": False,
@@ -269,7 +276,7 @@ def build(studies: list, syntheses: list | None = None, *,
 
 
 def composite(effect_d: float | None, form_strength_score: float | None,
-              dose_d: float | None, c: float) -> int | None:
+              dose_closeness: float | None, c: float) -> int | None:
     """
     The 0-100 headline.
 
@@ -301,7 +308,22 @@ def composite(effect_d: float | None, form_strength_score: float | None,
     # on this one. Both are monotone in the direction a reader expects, and the arc
     # reports strength separately so the mixture is never the published claim.
     form = 0.0 if form_strength_score is None else form_strength_score
-    dose = _unit(dose_d) if dose_d is not None else eff * MISSING_DOSE_PENALTY
+    # The dose term is CLOSENESS to the range where positive effects occurred
+    # (v12, founder design 2026-08-12) -- already on 0..1 like the form term, so
+    # it is NOT _unit()ed. Direction lives in the effect term alone; benefit
+    # trials far from your dose stop voting FOR you (the 20 g loading trials
+    # that pushed a 4.4 g product's power arc to +0.42 under v10/v11 now serve
+    # as the yardstick you are measured against instead: closeness 0.10).
+    #
+    # None means NO benefit range exists -- either nothing worked anywhere, or
+    # no benefit trial carried a usable dose. Same fallback as an untested
+    # form: the effect term at the missing-dose penalty, so silence is not a
+    # pass. DELIBERATELY NOT DISTINGUISHED (founder call 2026-08-12, "don't fix
+    # that thing we lose"): a dose where trials looked and FAILED and a dose
+    # nobody looked at both read as "outside the range where it worked"; the
+    # null_range on the row and the arc's verdict/coverage still show the
+    # difference to a reader, it just does not move this number.
+    dose = dose_closeness if dose_closeness is not None else eff * MISSING_DOSE_PENALTY
     return round(100 * c * (eff + form + dose) / 3)
 
 

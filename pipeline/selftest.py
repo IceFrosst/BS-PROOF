@@ -1198,6 +1198,32 @@ def main():
           _dnone is None and _wnone == 0.0,
           "unassessable is not punished, it is merely not credited")
 
+    # DOSE TERM = CLOSENESS TO WHERE IT WORKED (v12, founder design 2026-08-12:
+    # "take all the dosages where there was a positive effect, and see how close
+    # our dose is"). Direction lives in the effect term alone; benefit trials
+    # far from your dose stop voting FOR you and become the yardstick instead.
+    from pipeline.arcs import composite as _comp
+    check("a product close to the benefit range outscores one far below it",
+          _comp(0.2, 0.8, 0.85, 0.9) > _comp(0.2, 0.8, 0.10, 0.9),
+          "4.4 g against a 4.8-5 g range (0.85) vs against a 20 g range (0.10)")
+    check("closeness arrives on 0..1 and is NOT _unit()ed",
+          _comp(1.0, 1.0, 1.0, 1.0) == 100 and _comp(1.0, 1.0, 0.0, 1.0) == 67,
+          "closeness 0.0 must read as 'far from the working range', not as 0.5 "
+          "'no effect' -- the same trap the form term documents")
+    check("no benefit range falls back to the missing-dose penalty",
+          _comp(1.0, 1.0, None, 1.0) < _comp(1.0, 1.0, 1.0, 1.0),
+          "silence is not a pass: either nothing worked anywhere or no benefit "
+          "trial carried a dose, and both cap the dose term at eff x 0.10")
+    # FOUNDER CALL 2026-08-12 ("don't fix that thing we lose"), pinned so the
+    # limitation is a decision, not an oversight: the SCORE does not distinguish
+    # "your dose was tested and failed" from "your dose was never tested" --
+    # both are simply outside the range where benefit occurred. The row's
+    # null_range and the arc's verdict/coverage still show the difference to a
+    # READER; it does not move the number.
+    check("tested-and-failed and never-tested doses score the SAME by design",
+          _comp(0.5, 0.5, 0.2, 0.9) == _comp(0.5, 0.5, 0.2, 0.9),
+          "trivially true -- this pin exists to hold the comment above")
+
     check("dose inside the band", dosemod.dose_match_for(250, 250, band) == "in_band")
     check("just under the low end", dosemod.dose_match_for(150, 150, band) == "low_50_99")
     check("far under", dosemod.dose_match_for(40, 40, band) == "below_50")
@@ -1278,14 +1304,21 @@ def main():
                      form_match=form, dose_match=dose, dose_factor=_f,
                      pop_match="exact", direction=direction, magnitude=mag)
 
-    harmful = A.build([_s("harm", "exact", "in_band") for _ in range(10)])
-    works = A.build([_s("benefit", "exact", "in_band", "meaningful") for _ in range(10)])
+    # Every fixture in this block declares its dose intent as a tier on the
+    # study; under v12 the composite's dose term is the product's CLOSENESS to
+    # the benefit range, passed to build() separately. "in_band" intent maps to
+    # closeness 1.0 -- the product sits inside the range where benefit occurred.
+    def _b(studies, closeness=1.0, **kw):
+        return A.build(studies, dose_closeness=closeness, **kw)
+    harmful = _b([_s("harm", "exact", "in_band") for _ in range(10)],
+                 closeness=None)  # all harm -> no benefit range exists
+    works = _b([_s("benefit", "exact", "in_band", "meaningful") for _ in range(10)])
     check("harmful product cannot accumulate points from a good form match",
           harmful["composite"] == 0,
           "summing arcs gave it 74/100; the form arc is now the VERDICT, -1.00")
     check("clean positive reaches the top", works["composite"] >= 90)
 
-    yourform = A.build([_s("benefit", "different", "in_band", "meaningful") for _ in range(8)]
+    yourform = _b([_s("benefit", "different", "in_band", "meaningful") for _ in range(8)]
                        + [_s("null_effect", "exact", "in_band") for _ in range(4)])
     check("works overall but YOUR form found nothing",
           yourform["arcs"]["effect"]["verdict"] > 0
@@ -1297,7 +1330,7 @@ def main():
           yourform["arcs"]["form"]["coverage"] < 0.5,
           f"{yourform['arcs']['form']['coverage']:.0%} of the evidence")
 
-    untested = A.build([_s("benefit", "different", "in_band", "meaningful") for _ in range(10)])
+    untested = _b([_s("benefit", "different", "in_band", "meaningful") for _ in range(10)])
     check("no trial in your form is PENALISED, not dropped",
           untested["composite"] < works["composite"],
           f"{untested['composite']} vs {works['composite']} — averaging over "
@@ -1333,8 +1366,9 @@ def main():
           _fl([12], 1) == _fl([12], 10) == 0.10)
 
     # INVARIANT 8: both score 0 strength, and they must STILL be distinguishable.
-    _neg = A.build([_s("null_effect", "exact", "in_band", None) for _ in range(4)])
-    _unt = A.build([_s("benefit", "different", "in_band", "meaningful") for _ in range(4)])
+    _neg = _b([_s("null_effect", "exact", "in_band", None) for _ in range(4)],
+              closeness=None)  # all null -> no benefit range exists
+    _unt = _b([_s("benefit", "different", "in_band", "meaningful") for _ in range(4)])
     check("a form whose every study is negative earns no ladder credit",
           _neg["arcs"]["form"]["strength"] == 0.0
           and _neg["arcs"]["form"]["basis"] == "all_negative_in_form")
@@ -1343,7 +1377,7 @@ def main():
     # verdict, so one solid positive RCT plus three nulls in your form scored 0.0
     # -- the nulls out-voted the RCT in `d` and the ladder never ran. Eligibility
     # is per STUDY: walk DOWN the hierarchy until you find non-negative evidence.
-    _mixed_form = A.build(
+    _mixed_form = _b(
         [_s("null_effect", "exact", "in_band", None) for _ in range(3)]
         + [_s("benefit", "exact", "in_band", "meaningful")])
     check("one positive RCT in your form still earns ladder credit beside nulls",
@@ -1367,14 +1401,14 @@ def main():
     # THE PREVIOUSLY UNTESTED CORNER. Every arc fixture used exact/different, so
     # nothing pinned how an UNSPECIFIED form behaves -- and 54% of the real
     # creatine corpus is unspecified.
-    _uns = A.build([_s("benefit", "unspecified", "in_band", "meaningful") for _ in range(4)])
+    _uns = _b([_s("benefit", "unspecified", "in_band", "meaningful") for _ in range(4)])
     check("an unreported form earns no form credit and is not read as a match",
           _uns["arcs"]["form"]["strength"] == 0.0
           and _uns["arcs"]["form"]["basis"] == "untested_in_form"
           and _uns["arcs"]["form"]["verdict"] is None,
           "silence is not a pass -- but it no longer drags via effect x 0.15")
     check("a confirmed exact form DOES earn ladder credit over an unreported one",
-          A.build([_s("benefit", "exact", "in_band", "meaningful")
+          _b([_s("benefit", "exact", "in_band", "meaningful")
                    for _ in range(4)])["composite"] > _uns["composite"])
 
     # PER-STUDY CONTRIBUTIONS (founder ask 2026-08-11). Exact, not heuristic:
@@ -1403,9 +1437,10 @@ def main():
           A.composite(1.0, 0.0, None, 1.0) == 37,
           "eff 1.0 + form 0.0 + dose 0.1 over 3; unit-mapping form would give 53")
 
-    thin = A.build([_s("benefit", "exact", "in_band", "meaningful", n=20,
+    thin = _b([_s("benefit", "exact", "in_band", "meaningful", n=20,
                        oa="abstract_only", rob={f"i{i}": 0 for i in range(1, 7)})])
-    nulls = A.build([_s("null_effect", "exact", "in_band") for _ in range(20)])
+    nulls = _b([_s("null_effect", "exact", "in_band") for _ in range(20)],
+               closeness=None)  # all null -> no benefit range exists
     check("confidence MULTIPLIES -- one weak trial cannot score well",
           thin["composite"] < 10,
           f"{thin['composite']}/100; as a fourth term in a mean it scored 76")
