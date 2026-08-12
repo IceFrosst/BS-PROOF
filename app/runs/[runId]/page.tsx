@@ -70,7 +70,7 @@ export default async function RunPage({ params }: RunPageProps) {
       <nav className="section-nav" aria-label="Run sections"><div className="shell"><a href="#outcomes">Outcomes</a><a href="#literature">Literature</a><a href="#cost">Cost</a></div></nav>
 
       <section className="section shell" id="outcomes" aria-labelledby="outcomes-title">
-        <div className="section-heading split-heading"><div><p className="eyebrow">Scores</p><h2 id="outcomes-title">Outcome evidence</h2></div><p>{scored} scored / {gated} unavailable. Open “More info” on any outcome to see each study&apos;s pull on the score and whether it came from a measured effect or a direction label.</p></div>
+        <div className="section-heading split-heading"><div><p className="eyebrow">Scores</p><h2 id="outcomes-title">Outcome evidence</h2></div><p>{scored} scored / {gated} unavailable. Open “More info” on any outcome to see each study&apos;s pull on the score and whether it came from a measured effect or a direction label. <Link href="/methodology#how">How a score is computed →</Link></p></div>
         <div className="notice notice-neutral"><strong>Reader note</strong><span>Composite is a 0–100 display score. A gated em dash is not a score of zero.</span></div>
         <OutcomeExplorer outcomes={dashboardRun.outcomes} runId={dashboardRun.run.id} studies={dashboardRun.studies} />
       </section>

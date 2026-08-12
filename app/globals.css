@@ -516,3 +516,8 @@ thead th { color: var(--ink-soft); font-size: 0.7rem; text-transform: uppercase;
 .direction-null_effect { color: var(--ink-soft); }
 .evidence-quotes { display: grid; gap: 6px; }
 .evidence-quote { margin: 6px 0 0; padding: 8px 12px; border-left: 3px solid var(--gold); background: var(--white); font-size: 0.84rem; font-style: italic; color: var(--ink); border-radius: 0 8px 8px 0; }
+
+/* Plain-language methodology examples (2026-08-12) */
+.method-example { margin: 14px 0; padding: 14px 18px; background: var(--white); border: 1px solid var(--line); border-left: 4px solid var(--teal); border-radius: 0 12px 12px 0; font-size: 0.95rem; line-height: 1.6; }
+.method-example em { font-style: normal; font-weight: 800; }
+.methodology-article h3 { margin: 22px 0 6px; font-size: 1.05rem; }
