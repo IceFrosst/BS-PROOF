@@ -106,6 +106,21 @@
         "Regenerate with python3 scripts/write_demo_artifact.py; this fixture is deliberately overwritable, unlike real run records."
       ],
       "note": "SYNTHETIC DEMO \u2014 not evidence. Every number is invented."
+    },
+    "20260812_180548_creatine_creatine-monohydrate_claude-top5-per-o": {
+      "status": "experimental",
+      "public_claims_allowed": false,
+      "reason_codes": [
+        "deliberate_100_study_partial",
+        "first_run_v121_v12",
+        "not_anchor_validated"
+      ],
+      "limitations": [
+        "Deliberately stopped at 100 of 150 targeted studies to preserve the founder's session limit; the remaining 50 replay from cache on the next run. NOT a truncation failure: zero session-limit errors, 100 usable, 2 partial agent failures.",
+        "First run under PROMPT_VERSION v1.21 and SCORING_MODEL v12 with live dose-closeness data. Do not compare its composites to the 149-study v1.18 run without restricting to the shared 100 studies.",
+        "Isolated on identical studies: measured-effect share 15% -> 25% (20 claims via printed-SD standardisation), dose coverage 34% -> 49%."
+      ],
+      "note": "Deliberate 100-study partial; first v1.21/v12 run. Baseline for the 150-study completion."
     }
   }
 }
