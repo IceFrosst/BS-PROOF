@@ -191,6 +191,13 @@ Two hard rules:
   - Same unit as effect_size, or leave it null. An SD in different units
     silently corrupts the standardisation instead of failing it.
 
+THE SDs ARE USUALLY IN THE TABLES. The payload includes `tables` — the paper's
+tables serialised row by row — because outcome means ± SD are typically printed
+there, not in the prose. MEASURED: one paper carried 109 "±" values in its
+tables and its running text held only demographics. Read the endpoint's
+baseline or per-arm SD off the table like any other reported number; same
+evidence_span duty (quote the table cell or its row).
+
 If the paper reports BOTH a raw difference and its own standardised effect
 (Cohen's d / Hedges' g / SMD), prefer the standardised one as `effect_size` —
 the authors' own standardisation beats ours.

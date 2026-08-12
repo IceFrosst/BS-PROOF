@@ -103,6 +103,45 @@ def _dose_snippets(text: str, cap: int = 5, width: int = 220,
     return [s for _, _, s in hits[:cap]]
 
 
+def _tables_text(record: dict, cap_chars: int = 4000,
+                 max_rows_per_table: int = 14) -> list[str]:
+    """
+    The paper's tables, serialised for S5. Deterministic retrieval, no model.
+
+    Exists because the endpoint's mean +/- SD grids live in TABLES, and S5's
+    payload was prose-only. MEASURED 2026-08-12 on the 10-study SD test: one
+    paper's raw XML held 109 "+/-" values inside <table-wrap> while its prose
+    carried mostly demographics -- so `effect_sd` was unextractable for exactly
+    the papers that report outcomes properly. Same pattern as S7's
+    dose_snippets: hand the model what truncation and section-routing hid.
+
+    Cache-friendly: fetch_xml is disk-cached and was already fetched upstream
+    by best_text, so this is a cache hit in production.
+    """
+    pmcid = record.get("pmcid")
+    if not pmcid:
+        return []
+    try:
+        from sources import fulltext
+        xml = fulltext.fetch_xml(pmcid, use_cache=True)
+        tables = fulltext.extract_tables(xml) if xml else []
+    except Exception:
+        return []
+    out, used = [], 0
+    for t in tables:
+        rows = t.get("rows") or []
+        lines = [f"{t.get('label') or 'Table'} — {t.get('caption') or ''}".strip()]
+        lines += [" | ".join(str(c) for c in row) for row in rows[:max_rows_per_table]]
+        if len(rows) > max_rows_per_table:
+            lines.append(f"... {len(rows) - max_rows_per_table} more rows")
+        block = "\n".join(lines)
+        if used + len(block) > cap_chars:
+            break
+        out.append(block)
+        used += len(block)
+    return out
+
+
 def _fit_text(agent: str, text: str, fixed_chars: int) -> str:
     """
     Trim the study text so system + schema + payload stays under budget.
@@ -211,7 +250,19 @@ def _payload(agent: str, record: dict, text: str, registry: dict | None,
                     "n_completed": (registry or {}).get("n_completed"),
                     "dropout_rate": (registry or {}).get("dropout_rate")}}
     if agent == "S5":
-        return base
+        # Tables ride along (v1.21): endpoint means +/- SD live there, and the
+        # SD is what standardises a raw-unit difference (see _tables_text).
+        #
+        # The cap is FLAT, not budget-derived, because the budget arithmetic is
+        # dead for S5 under the Claude backend and pretending otherwise would
+        # ship zero tables. MEASURED 2026-08-12: S5's system prompt + schema is
+        # 22 204 chars against a 12 000-char total budget, so _fit_text's room
+        # has been negative -- and its room<=0 branch returns the FULL text --
+        # since the v1.15-v1.20 prompt growth. Every recent production S5 call
+        # already sent the whole paper and succeeded 149/149; the ~16k wall in
+        # PROMPT_BUDGET_CHARS was measured on the GROK CLI, not Claude. If the
+        # Grok backend is revived, this is the first thing to revisit.
+        return {**base, "tables": _tables_text(record)}
     if agent == "S7":
         ingredient = record["ingredient"]
         # Dose sentences harvested from the FULL text by regex, because the

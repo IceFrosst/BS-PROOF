@@ -105,6 +105,15 @@ def _claude_bin() -> str:
 
 # Bump when you edit ANY prompt (including _shared.md). This is in the cache key.
 # Forget to bump it and you will silently serve stale extractions forever.
+# v1.21 (2026-08-12): S5 receives the paper's TABLES in its payload. The v1.20
+# SD test on 10 raw-unit studies recovered 21 measured votes but left 45 claims
+# without an SD -- and the diagnosis was that outcome mean +/- SD grids live in
+# tables (one paper: 109 "+/-" values inside <table-wrap>, prose mostly
+# demographics) while S5's payload was prose-only. workers._tables_text
+# serialises up to ~4k chars of tables, deterministically. Discovered en route
+# and documented in workers.py: _fit_text has been a NO-OP for S5/S3 since the
+# prompt growth (S5 fixed cost 22.2k vs 12k budget; the 16k wall was a GROK
+# measurement), so production Claude calls already ship the full paper.
 # v1.20 (2026-08-12): S5 reports the endpoint's printed SD (`effect_sd` +
 # `effect_sd_basis`). Measured: 15% of mapped claims carried a raw-unit
 # difference (kg/W/points) that could not be standardised without an SD we never
@@ -257,7 +266,7 @@ def _claude_bin() -> str:
 # v1.6 (2026-08-08): S2 reports results_table + per-study design. SR-table trials
 # now enter evidence mass, so S2's output moves scores and not just confidence.
 # v1.5 (2026-08-07): S3 prompt shortened, SR label resolve, review_methods.
-PROMPT_VERSION = "v1.20"
+PROMPT_VERSION = "v1.21"
 
 # Tier -> model. FULL IDs, NOT ALIASES.
 #
