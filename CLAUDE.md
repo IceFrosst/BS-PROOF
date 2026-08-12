@@ -994,9 +994,21 @@ Changed 2026-08-08: invariant 6 amended (SR-table trials enter `E`),
 polarity added, SR retrieval scaled with marginal-yield stopping, file
 ownership table added under Multi-agent workflow.
 
-1. **Run production extraction end to end.** The auth block is gone, so the
-   first real `claude_adapter` batch is now the gating step for items 3–6
-   below. Start small and watch the session limit, not the cost.
+1. **DONE 2026-08-12.** Production extraction ran end to end on the Claude
+   subscription: 150 targeted, 149 usable, 5 partial agent failures, zero
+   session-limit failures, 388 fresh calls + 542 cache hits, $0 marginal spend.
+   The lesson that cost one wasted run: **never run workflows or teammates
+   alongside an extraction.** Two analysis workflows (~2.6M subagent tokens)
+   immediately beforehand exhausted the session limit mid-run and killed 364 of
+   906 calls; S5 failed 44%, which HIDES NULLS and biases the score upward, and
+   `muscle_strength` came back n=12 against a baseline n=26. Marked `invalid` in
+   `reports/run_statuses.json`. Run extractions SOLO.
+
+   **Next unlock is extraction coverage, not the model.** The effect-size path
+   reaches only ~10% of mapped claims; `no_effect_size` is 48% and
+   `raw_unit_needs_sd` is 15% (kg/W/points need an SD we never extract).
+   Extracting an SD, or asking S5 for a standardised effect when the paper gives
+   only raw units, is the largest remaining lever on the score.
 2. **Constrain retrieval to the intervention**, not the document. Gates
    extraction cost, coverage and outcome mapping simultaneously.
 3. **SR inheritance uplift is still UNMEASURED** — and it is now the biggest
