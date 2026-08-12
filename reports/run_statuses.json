@@ -29,6 +29,24 @@
         "The scoring constants had not passed anchor calibration."
       ],
       "note": "Historical extraction artifact only. All 80 studies were partial failures, including 80 S8 failures from an invalid Grok model id, and the run predates the health-status population axis. Do not use its scores as product claims."
+    },
+    "20260811_174604_creatine_creatine-monohydrate_claude-top5-per-o": {
+      "status": "invalid",
+      "public_claims_allowed": false,
+      "reason_codes": [
+        "truncated_by_subscription_session_limit",
+        "s5_failed_44_percent_biases_score_upward",
+        "not_anchor_validated"
+      ],
+      "limitations": [
+        "364 of 906 model calls failed. 53 calls PER AGENT failed with 'You've hit your session limit', so the extraction is truncated, not merely lossy.",
+        "63 of 149 studies (42%) had at least one partial agent failure.",
+        "S5 failed 75 of 169 attempts (44%). S5 supplies the direction label AND the effect size, and a missing S5 removes that study's NULL claims -- measured earlier in this project, S5 failures bias a score UPWARD because they hide nulls. The scores in this run are therefore optimistic by an unknown amount and must not be read as the effect of SCORING_MODEL v8.",
+        "S3 failed 65 of 159 attempts (41%), so population and eligibility facts are missing for many studies and invariant 7's refusals could not fire.",
+        "The session limit was exhausted by two large analysis workflows run immediately beforehand. CLAUDE.md warns against exactly this: concurrent subagent work draws on the same subscription session limit as a production extraction.",
+        "This is the FIRST run under v1.17, so it is also the first that could activate the effect-size path at all -- which makes a clean re-run the only way to measure what v8 does."
+      ],
+      "note": "Invalid: truncated by the subscription session limit mid-extraction. Superseded by a clean re-run; do not quote any score from it."
     }
   }
 }
