@@ -54,6 +54,8 @@ export interface ExtractionClaim {
   effectSize: NullableNumber;
   effectUnit: string | null;
   effectFavours: string | null;
+  effectSd: NullableNumber;
+  effectSdBasis: string | null;
   ciLow: NullableNumber;
   ciHigh: NullableNumber;
   pValue: NullableNumber;

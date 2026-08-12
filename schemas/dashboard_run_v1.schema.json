@@ -781,6 +781,16 @@
                       "null"
                     ],
                     "maxLength": 240
+                  },
+                  "effect_sd": {
+                    "$ref": "#/$defs/nullableNumber"
+                  },
+                  "effect_sd_basis": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 20
                   }
                 }
               }

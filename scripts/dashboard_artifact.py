@@ -574,6 +574,8 @@ def _safe_study_extraction(value: Any) -> dict | None:
             "effect_size": _number(cl.get("effect_size")),
             "effect_unit": _cap_text(cl.get("effect_unit"), 60),
             "effect_favours": _cap_text(cl.get("effect_favours"), 20),
+            "effect_sd": _number(cl.get("effect_sd")),
+            "effect_sd_basis": _cap_text(cl.get("effect_sd_basis"), 20),
             "ci_low": _number(cl.get("ci_low")),
             "ci_high": _number(cl.get("ci_high")),
             "p_value": _number(cl.get("p_value")),

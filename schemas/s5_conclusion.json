@@ -75,6 +75,30 @@
             ],
             "description": "WHICH ARM the reported effect_size favours. The SIGN of a reported effect is not a reliable convention -- some papers report a raw measurement difference (a faster sprint TIME is a NEGATIVE number and a GOOD result) and others report it already oriented toward the treatment. State it explicitly so downstream never has to guess: 'ingredient' = the effect favours the study ingredient, 'control' = it favours the comparator, 'neither' = no meaningful difference. null when you cannot tell, which is always a valid answer."
           },
+          "effect_sd": [
+            {
+              "type": [
+                "number",
+                "null"
+              ],
+              "exclusiveMinimum": 0,
+              "description": "The standard deviation of THIS endpoint, in the SAME unit as effect_size, when the paper PRINTS one (group means +/- SD, or a stated pooled SD). It is what lets a raw-unit difference (kg, watts, points) be standardised into a comparable effect. Only a printed SD -- never derive one from a standard error or a confidence interval. null when not printed."
+            }
+          ],
+          "effect_sd_basis": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "pooled",
+              "control_arm",
+              "baseline",
+              "unstated",
+              null
+            ],
+            "description": "Which SD you reported: pooled across arms, the control arm's, the baseline SD, or unstated when the paper does not say."
+          },
           "ci_low": {
             "type": [
               "number",

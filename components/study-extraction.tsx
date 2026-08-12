@@ -60,6 +60,7 @@ export function StudyExtractionDetail({ extraction }: { extraction: StudyExtract
                 <p className="claim-numbers">
                   {claim.effectSize !== null ? `effect ${claim.effectSize}${claim.effectUnit ? ` ${claim.effectUnit}` : ""}` : "no effect size"}
                   {claim.effectFavours ? ` · favours ${claim.effectFavours}` : ""}
+                  {claim.effectSd !== null ? ` · SD ${claim.effectSd}${claim.effectSdBasis ? ` (${claim.effectSdBasis})` : ""}` : ""}
                   {claim.ciLow !== null && claim.ciHigh !== null ? ` · CI [${claim.ciLow}, ${claim.ciHigh}]` : ""}
                   {claim.pValue !== null ? ` · p ${claim.pValue}` : ""}
                   {claim.magnitude ? ` · ${claim.magnitude}` : ""}

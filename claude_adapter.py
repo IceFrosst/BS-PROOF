@@ -105,6 +105,16 @@ def _claude_bin() -> str:
 
 # Bump when you edit ANY prompt (including _shared.md). This is in the cache key.
 # Forget to bump it and you will silently serve stale extractions forever.
+# v1.20 (2026-08-12): S5 reports the endpoint's printed SD (`effect_sd` +
+# `effect_sd_basis`). Measured: 15% of mapped claims carried a raw-unit
+# difference (kg/W/points) that could not be standardised without an SD we never
+# extracted -- the largest fixable share of the label-fallback path. Only a
+# PRINTED SD, same unit as effect_size, never derived from SE/CI/n; downstream
+# (assemble._effect_s -> scoring.standardise_effect) does the division
+# deterministically and records the route as smd_from_sd so a derived
+# standardisation is distinguishable from a printed one. Also: when a paper
+# prints both a raw difference and its own standardised effect, S5 now prefers
+# the standardised one.
 # v1.19 (2026-08-12): S7 dose coverage. AMENDED same day, same version: the two
 # new schema fields gained exclusiveMinimum 0 after an adversarial pass showed
 # -300 mg/kg x -70 kg multiplying to a confident +21000 mg dose. Amending
@@ -247,7 +257,7 @@ def _claude_bin() -> str:
 # v1.6 (2026-08-08): S2 reports results_table + per-study design. SR-table trials
 # now enter evidence mass, so S2's output moves scores and not just confidence.
 # v1.5 (2026-08-07): S3 prompt shortened, SR label resolve, review_methods.
-PROMPT_VERSION = "v1.19"
+PROMPT_VERSION = "v1.20"
 
 # Tier -> model. FULL IDs, NOT ALIASES.
 #

@@ -168,6 +168,8 @@ function normalizeExtractionClaim(value: unknown): ExtractionClaim | null {
     effectSize: number(first(source, "effect_size", "effectSize")),
     effectUnit: text(first(source, "effect_unit", "effectUnit")),
     effectFavours: text(first(source, "effect_favours", "effectFavours")),
+    effectSd: number(first(source, "effect_sd", "effectSd")),
+    effectSdBasis: text(first(source, "effect_sd_basis", "effectSdBasis")),
     ciLow: number(first(source, "ci_low", "ciLow")),
     ciHigh: number(first(source, "ci_high", "ciHigh")),
     pValue: number(first(source, "p_value", "pValue")),

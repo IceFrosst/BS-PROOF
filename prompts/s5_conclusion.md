@@ -172,6 +172,29 @@ effect SIZE rather than only your direction label. A magnitude that is too small
 makes a score weaker. A SIGN that is wrong makes the score say the OPPOSITE of
 the evidence, and no downstream step can detect it. So state the arm.
 
+`effect_sd` — THE STANDARD DEVIATION THAT MAKES A RAW DIFFERENCE COMPARABLE.
+
+A between-arm difference in kg, watts, seconds or scale points cannot be
+compared across studies until it is divided by the endpoint's spread. MEASURED
+2026-08-12: 15% of all mapped claims were unusable for exactly this reason —
+the paper reported "3.2 kg more than placebo" and we had no SD to standardise
+it with. So whenever the paper PRINTS a standard deviation for this endpoint
+(group means ± SD in a table, or a stated pooled SD), report it:
+
+  effect_sd        the SD, in the SAME UNIT as effect_size
+  effect_sd_basis  pooled | control_arm | baseline | unstated
+                   (prefer pooled; else the control arm's; else baseline)
+
+Two hard rules:
+  - ONLY a printed SD. Never derive one from a standard error, a confidence
+    interval, or n — that is downstream's decision, not yours.
+  - Same unit as effect_size, or leave it null. An SD in different units
+    silently corrupts the standardisation instead of failing it.
+
+If the paper reports BOTH a raw difference and its own standardised effect
+(Cohen's d / Hedges' g / SMD), prefer the standardised one as `effect_size` —
+the authors' own standardisation beats ours.
+
 A null's point estimate and interval are the most valuable thing on the claim,
 because they are what distinguishes the two kinds of null, which are opposites:
 

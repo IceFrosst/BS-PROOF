@@ -266,6 +266,8 @@ def _study_extraction(ext: dict) -> dict | None:
             "effect_size": cl.get("effect_size"),
             "effect_unit": _span(cl.get("effect_unit"), 60),
             "effect_favours": cl.get("effect_favours"),
+            "effect_sd": cl.get("effect_sd"),
+            "effect_sd_basis": cl.get("effect_sd_basis"),
             "ci_low": cl.get("ci_low"),
             "ci_high": cl.get("ci_high"),
             "p_value": cl.get("p_value"),

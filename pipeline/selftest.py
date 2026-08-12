@@ -1695,6 +1695,39 @@ def main():
     check("...but an ABOVE-threshold claim with no stated sign stays refused",
           _aes(_claim(effect_size=0.6), "muscle_strength")[1]
           == "sign_convention_unstated")
+
+    # SD STANDARDISATION (v1.20). d = raw difference / printed SD is arithmetic
+    # on two reported numbers; the route name keeps a DERIVED standardisation
+    # distinguishable from a printed one. The guards matter more than the path:
+    check("a raw kg difference + printed SD standardises (smd_from_sd)",
+          _aes({"effect_size": 3.2, "effect_unit": "kg", "effect_sd": 8.0,
+                "effect_favours": "ingredient", "direction": "benefit"},
+               "muscle_strength")
+          == (_se(0.4, "cohen's d")[0], "smd_from_sd"),
+          "3.2 kg / SD 8.0 = 0.4 SMD -- the 15%-of-claims branch that used to "
+          "die as raw_unit_needs_sd")
+    check("a raw unit with NO SD still falls back to the label",
+          _aes({"effect_size": 3.2, "effect_unit": "kg",
+                "effect_favours": "ingredient", "direction": "benefit"},
+               "muscle_strength")[1] == "raw_unit_needs_sd")
+    check("a zero or negative SD is refused, never divided by",
+          _se(3.2, "kg", 0)[1] == "raw_unit_needs_sd"
+          and _se(3.2, "kg", -8)[1] == "raw_unit_needs_sd")
+    check("a printed SMD is NEVER divided a second time",
+          _se(0.43, "cohen's d", 8.0) == (_se(0.43, "cohen's d")[0], "smd"),
+          "an SD arriving beside an already-standardised effect must be ignored, "
+          "or the value shrinks 8x")
+    check("an SD does not rescue a within-group change or a ratio",
+          _se(5.0, "% change vs baseline", 8.0)[1] == "within_group_not_between_arm"
+          and _se(1.4, "or", 0.5)[1] == "ratio_null_is_one",
+          "untrustworthy stays untrustworthy; the SD only unlocks the raw-unit "
+          "branch")
+    check("the SD path still requires the arm to be named",
+          _aes({"effect_size": 3.2, "effect_unit": "kg", "effect_sd": 8.0,
+                "direction": "benefit"}, "muscle_strength")[1]
+          in ("sign_convention_unstated", "raw_unit_needs_sd"),
+          "sub-threshold sign-proofing applies, but an above-threshold unsigned "
+          "raw effect must not enter just because it now has an SD")
     check("v8 therefore scores the PRE-v1.17 corpus exactly as v7 did",
           _aes({"effect_size": 0.43, "effect_unit": "cohen's d"},
                "muscle_strength")[0] is None,

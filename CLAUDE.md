@@ -1127,10 +1127,14 @@ ownership table added under Multi-agent workflow.
    `reports/run_statuses.json`. Run extractions SOLO.
 
    **Next unlock is extraction coverage, not the model.** The effect-size path
-   reaches only ~10% of mapped claims; `no_effect_size` is 48% and
-   `raw_unit_needs_sd` is 15% (kg/W/points need an SD we never extract).
-   Extracting an SD, or asking S5 for a standardised effect when the paper gives
-   only raw units, is the largest remaining lever on the score.
+   reaches only ~16% of mapped claims; `no_effect_size` is 48%.
+   **The SD lever is BUILT (v1.20, 2026-08-12):** S5 reports the endpoint's
+   PRINTED SD (`effect_sd` + basis; never derived from SE/CI/n), and
+   `standardise_effect` divides raw-unit differences by it (route
+   `smd_from_sd`, distinguishable from a printed SMD; guards pinned — a
+   printed SMD is never divided twice, an SD never rescues within-group/ratio
+   claims, zero/negative SDs refuse). Expected to convert most of the 15%
+   raw-unit share on the next run.
 2. **Constrain retrieval to the intervention**, not the document. Gates
    extraction cost, coverage and outcome mapping simultaneously.
 3. **SR inheritance uplift is still UNMEASURED** — and it is now the biggest

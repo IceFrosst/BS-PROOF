@@ -141,7 +141,8 @@ _ABSOLUTE_PCT = ("percentage point", "cid", "absolute risk", "risk difference")
 _NO_UNIT = {"", "none", "n/a", "na", "unknown", "unitless"}
 
 
-def standardise_effect(value: float | None, unit: str | None) -> tuple[float | None, str]:
+def standardise_effect(value: float | None, unit: str | None,
+                       sd: float | None = None) -> tuple[float | None, str]:
     """
     A reported effect -> s in [-1, +1], or (None, reason) if it cannot be trusted.
 
@@ -181,9 +182,25 @@ def standardise_effect(value: float | None, unit: str | None) -> tuple[float | N
         return _rescale(v, EFFECT_MID_PCT, EFFECT_FULL_PCT), "percent"
     if any(p in u for p in _STANDARDISED) or (tokens & _STANDARDISED_TOKENS):
         return _rescale(v, EFFECT_MID_SMD, EFFECT_FULL_SMD), "smd"
-    return None, "raw_unit_needs_sd"    # kg, W, points, s, umol/L: not
-                                        # standardisable without an SD we never
-                                        # extract. 50 claims. Falls back to label.
+    # RAW ABSOLUTE UNITS (kg, W, points, s, umol/L). Standardisable ONLY when
+    # the paper printed the endpoint's SD (v1.20): d = difference / SD is the
+    # standard construction, and it is arithmetic on two reported numbers, not
+    # inference of an unreported one. The route name distinguishes a DERIVED
+    # standardisation from a printed one, so a run can be audited for how much
+    # of its measured share rests on our division versus the authors' own.
+    # Everything above this line is deliberately UNAFFECTED by sd: a
+    # within-group change, an unsigned eta-squared or a ratio does not become
+    # trustworthy because an SD arrived with it -- and a printed SMD must never
+    # be divided a second time. Measured before this existed: 15% of mapped
+    # claims (89 in the v1.14 corpus) died on this branch.
+    if sd is not None:
+        try:
+            sd_v = float(sd)
+        except (TypeError, ValueError):
+            sd_v = None
+        if sd_v is not None and math.isfinite(sd_v) and sd_v > 0:
+            return _rescale(v / sd_v, EFFECT_MID_SMD, EFFECT_FULL_SMD), "smd_from_sd"
+    return None, "raw_unit_needs_sd"    # falls back to the direction label
 
 
 def _rescale(v: float, mid: float, full: float) -> float:

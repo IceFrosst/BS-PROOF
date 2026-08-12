@@ -359,10 +359,11 @@ def _effect_s(claim: dict, outcome_vocab_id: str) -> tuple[float | None, str]:
         return None, "label_number_contradiction"
     if direction == "harm" and favours == "ingredient":
         return None, "label_number_contradiction"
+    sd = claim.get("effect_sd")
     if favours == "ingredient":
-        return scoring.standardise_effect(magnitude, claim.get("effect_unit"))
+        return scoring.standardise_effect(magnitude, claim.get("effect_unit"), sd)
     if favours == "control":
-        return scoring.standardise_effect(-magnitude, claim.get("effect_unit"))
+        return scoring.standardise_effect(-magnitude, claim.get("effect_unit"), sd)
 
     # SIGN UNKNOWN -- "neither", or absent (pre-v1.17 data, or the model declined).
     # Refusing all of these was the first rule and it was too broad: measured on
@@ -385,7 +386,8 @@ def _effect_s(claim: dict, outcome_vocab_id: str) -> tuple[float | None, str]:
     # Above the threshold the sign decides everything, so those stay refused: of
     # 21 standardisable "neither" claims, 9 are sign-proof and 12 are large enough
     # that "favours neither" is a self-contradiction rather than a reading.
-    s, route = scoring.standardise_effect(magnitude, claim.get("effect_unit"))
+    s, route = scoring.standardise_effect(magnitude, claim.get("effect_unit"),
+                                          claim.get("effect_sd"))
     if s is not None and s <= 0:
         return s, route
     return None, ("favours_neither_but_above_threshold" if favours == "neither"
