@@ -14,6 +14,7 @@ inverts the purpose of the harness and invariant 4 forbids it.
 """
 from __future__ import annotations
 import csv
+import re
 from pathlib import Path
 
 from pipeline import vocab
@@ -435,6 +436,37 @@ _DERIVE_PROFILE = dict(design_rank=4, n=60, funding="independent", oa="full_text
                        form_match="exact", dose_match="in_band", pop_match="exact")
 
 
+def pooled_score(effect_smd: float, n_trials: int = 20) -> dict:
+    """
+    Our formula applied to N identical good-quality trials each MEASURING the
+    published pooled effect. The v8-coherent band derivation.
+
+    `mixture_score` below counts labels, which is vote counting -- the defect
+    SCORING_MODEL v8 removed from the run path. Deriving a band by labels and
+    then grading a v8+ run against it puts target and measurement on DIFFERENT
+    SCALES; this puts them on the same one. It is also the only derivation the
+    literature can actually feed: measured 2026-08-11, 0 of 14 creatine
+    syntheses publish a per-trial positive/null split, while nearly all publish
+    a pooled effect with a CI.
+
+    The pooled effect must be in SMD-family units (SMD / Cohen's d / Hedges g).
+    A WMD in kg is NOT convertible here -- that is scoring's raw_unit_needs_sd
+    refusal, and it applies to anchors exactly as it applies to claims.
+    """
+    from pipeline.scoring import Study, score_ecu, standardise_effect
+    s, route = standardise_effect(effect_smd, "smd")
+    if s is None:
+        return {"score": None, "n": 0, "route": route}
+    rob_clean = {f"i{i}": 1 for i in range(1, 7)}
+    studies = [Study(id=f"pooled-{i}", rob_items=rob_clean, direction="benefit",
+                     magnitude="meaningful", effect_s=s, effect_route="smd",
+                     **_DERIVE_PROFILE)
+               for i in range(max(1, int(n_trials)))]
+    r = score_ecu(studies, [])
+    return {"score": r.get("score"), "d": r.get("d"), "c": r.get("c"),
+            "n": len(studies), "route": "smd", "s": s}
+
+
 def mixture_score(n_positive: int, n_null: int, n_negative: int = 0,
                   magnitude: str = "meaningful") -> dict:
     """
@@ -474,20 +506,54 @@ def mixture_score(n_positive: int, n_null: int, n_negative: int = 0,
             "H": r.get("H"), "n": len(studies)}
 
 
+_POOLED = re.compile(
+    r"^\s*([+-]?\d+(?:\.\d+)?)\s*(smd|cohen'?s?\s*d|hedges'?\s*g|g\b|d\b)"
+    r"(?:\s*\[\s*([+-]?\d+(?:\.\d+)?)\s*,\s*([+-]?\d+(?:\.\d+)?)\s*\])?", re.I)
+
+
 def derived_band(row: dict, magnitude: str = "meaningful") -> dict | None:
     """
-    The band a recorded published mixture implies, with a DERIVED width.
+    The band a recorded published result implies, with a DERIVED width.
 
-    Width is the sensitivity to reclassifying one trial: move a single trial from
-    positive to null and from null to positive, and the two resulting scores are
-    the band edges. So the width states how precisely the published mixture pins
-    the answer, instead of being a number someone chose. A review of 4 trials
-    yields a wide band and a review of 40 a narrow one, automatically.
+    TWO ROUTES, tried in this order:
 
-    Returns None when the row has no recorded mixture -- most rows, until the
-    provenance columns are filled. That is not a failure; an unfilled row simply
-    keeps its hand-written range and is reported as uncited.
+    1. POOLED EFFECT (v8-coherent, preferred). If `pooled_effect` parses as an
+       SMD-family estimate -- "0.43 SMD [0.25,0.61]" -- the centre is the formula
+       applied to trials MEASURING that effect, and the width comes from the
+       CI endpoints: the band edges are the scores at ci_low and ci_high. The
+       width is therefore the published estimate's own precision, and target
+       and run sit on the same effect-size scale. Without a CI the point
+       estimate still gives a centre but no width, so the row falls through.
+    2. LABEL MIXTURE (legacy, kept for rows that have one). Width from
+       reclassifying one trial. This counts labels -- vote counting -- so a band
+       derived this way and a v8+ run are on DIFFERENT scales; it survives only
+       because 3 of 14 syntheses offered a (refuted) per-trial split and some
+       future source may offer a real one. Prefer route 1 whenever it exists.
+
+    Returns None when the row has neither. Not a failure: an unfilled row keeps
+    its hand-written range and is reported as uncited.
     """
+    m = _POOLED.match(str(row.get("pooled_effect") or ""))
+    if m and m.group(3) is not None:
+        centre = pooled_score(float(m.group(1)))
+        lo_s = pooled_score(float(m.group(3)))
+        hi_s = pooled_score(float(m.group(4)))
+        edges = [x["score"] for x in (lo_s, hi_s) if x.get("score") is not None]
+        if centre.get("score") is not None and edges:
+            return {
+                "id": row.get("id"),
+                "route": "pooled_smd_ci",
+                "n_trials": row.get("n_trials"),
+                "pooled_smd": float(m.group(1)),
+                "centre": centre["score"],
+                "min": min(edges),
+                "max": max(edges),
+                "d": centre.get("d"),
+                "source_doi": row.get("source_doi") or "",
+                "source_kind": row.get("source_kind") or "",
+                "written_min": row.get("expected_min"),
+                "written_max": row.get("expected_max"),
+            }
     n_pos, n_null = row.get("n_positive"), row.get("n_null")
     if n_pos is None or n_null is None:
         return None

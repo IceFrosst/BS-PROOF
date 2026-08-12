@@ -75,7 +75,19 @@ def effective_range(entries: list[dict]) -> dict:
         d = _point(e)
         if d is None:
             continue
-        if e.get("direction") == "benefit":
+        # Band membership is judged by what the study CONTRIBUTES (s), not by
+        # its direction label -- v8 coherence, 2026-08-12. Once effects are
+        # measured the two disagree both ways: a `null_effect` whose estimate
+        # favours the ingredient (s = +0.68) is a dose at which the ingredient
+        # WORKED and belongs in the benefit band, while a `benefit` whose
+        # measured effect is sub-threshold (s < 0) is a dose at which nothing a
+        # buyer would notice happened. `s` is optional in the entry: absent
+        # (pre-v8 callers, unsized claims) falls back to the label, so a
+        # label-only corpus derives identical bands.
+        sv = e.get("s")
+        if sv is not None:
+            (benefit if sv > 0 else null).append(d)
+        elif e.get("direction") == "benefit":
             benefit.append(d)
         elif e.get("direction") == "null_effect":
             null.append(d)

@@ -242,10 +242,28 @@ APPLY_DOSE_IN_WEIGHT = False
 # must never be read side by side as if the numbers meant the same thing, and
 # scripts/archive_reports.py enforces that by sweeping old-model runs out of
 # reports/runs/ into reports/archive/<model>/.
-SCORING_MODEL = "v10-dose-ramp"
+SCORING_MODEL = "v11-number-coherent"
 
 # What each model meant, so an archived report can still be understood:
 SCORING_MODEL_HISTORY = {
+    "v11-number-coherent":
+        "every consumer of a study's contribution reads s_value, not the "
+        "direction label -- closing the v8 coherence gaps (founder: 'fix v8'). "
+        "Form-ladder eligibility: a null that MEASURED a positive effect earns "
+        "ladder credit, a benefit that measured sub-threshold does not. Dose "
+        "band membership: a measured-positive null's dose joins the benefit "
+        "band, a measured-negative benefit's dose joins the null range. The "
+        "stale sign-agreement guard in s_value is gone: since v1.17 effect_s is "
+        "favours-oriented, so a negative s on a benefit claim means "
+        "SUB-THRESHOLD and is trusted; the genuine label/number contradictions "
+        "(benefit + favours control, harm + favours ingredient) are refused in "
+        "assemble where effect_favours is visible. calibration gains "
+        "pooled_score/a pooled derived_band route: a published pooled SMD with "
+        "its CI derives centre and width ON THE v8 SCALE -- anchor 1's "
+        "0.43 [0.25,0.61] implies 38 (8..68), against a written 80..95. "
+        "Unsized corpora score identically to v10; measured on the v1.18 "
+        "corpus only lean_body_mass moved (+14 -> +12, one sub-threshold "
+        "benefit no longer over-credited).",
     "v10-dose-ramp":
         "the dose axis is CONTINUOUS -- founder decision 2026-08-12 after "
         "challenging the tiers ('4 g against a 5-10 g band'). Flat 1.00 inside "
@@ -449,24 +467,17 @@ class Study:
                 if self.effect_s > 0:
                     return S_VALUE["harm"]
                 return min(self.effect_s, 0.0)
-            # SIGN AGREEMENT GUARD. The number is trusted only where it does not
-            # contradict the label. `effect_s` is required by contract (S5 prompt,
-            # v1.16) to be oriented so POSITIVE means the supplement did better,
-            # so a `benefit` claim with a negative effect means one of the two
-            # readings is wrong -- most likely a measure whose native direction is
-            # inverted, such as a sprint TIME filed under muscle_power where
-            # faster is better but the number is smaller.
-            #
-            # Falling back to the label here is the under-counting choice and it is
-            # the point: a wrong sign does not weaken a score, it inverts it, and
-            # nothing downstream can detect that. Untestable on the creatine
-            # corpus -- all 40 standardisable claims there are on higher_better
-            # outcomes, so orientation is a no-op and this guard never fires. It
-            # will first matter on a lower_better ingredient (magnesium ->
-            # sleep_onset, anxiety), which is exactly why it is here now.
-            if self.direction == "benefit" and self.effect_s < 0:
-                return (S_VALUE["benefit_meaningful"]
-                        if self.magnitude == "meaningful" else S_VALUE["benefit_trivial"])
+            # NO sign-agreement guard here any more (removed 2026-08-12). One
+            # existed -- benefit + negative effect_s fell back to the label --
+            # and it became WRONG the moment effect_s was favours-oriented
+            # (v1.17): a negative s on a benefit claim now usually means
+            # SUB-THRESHOLD (favours=ingredient, magnitude 0.05 -> s -0.25),
+            # and the guard promoted exactly those back to +1.0/+0.3,
+            # over-crediting the smallest effects. The genuine contradictions
+            # (benefit label + number favouring control, harm label + number
+            # favouring the ingredient) are refused in assemble._effect_s,
+            # where `effect_favours` is actually visible, so they never reach
+            # this field.
             return self.effect_s
         if self.direction == "harm": return S_VALUE["harm"]
         if self.direction == "null_effect": return S_VALUE["null_effect"]

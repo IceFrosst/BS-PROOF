@@ -848,6 +848,29 @@ hand-replayed — had flagged the binary window's 99%-out/200%-in cliff; v10's
 grading resolved that. Its direction-blindness finding is the one that remains,
 absorbed into the paragraph above and SPEC §13.)
 
+**V8 COHERENCE CLOSED — SCORING_MODEL v11-number-coherent (founder: "fix v8",
+2026-08-12).** Every consumer of a study's contribution now reads `s_value`, not
+the direction label: the form ladder credits a null that MEASURED a positive
+effect and refuses a benefit that measured sub-threshold; the dose band admits a
+measured-positive null's dose and exiles a measured-negative benefit's. The
+stale sign-agreement guard is gone — since v1.17 `effect_s` is favours-oriented,
+so a negative `s` on a benefit claim means SUB-THRESHOLD and is trusted, and the
+genuine contradictions (benefit + favours control, harm + favours ingredient)
+are refused in `assemble._effect_s` as `label_number_contradiction`. Unsized
+corpora score identically; on the v1.18 corpus only lean_body_mass moved
+(+14 → +12 — one sub-threshold benefit no longer over-credited).
+
+**Anchor bands can now be derived ON THE v8 SCALE** (`calibration.pooled_score`,
+`derived_band` route `pooled_smd_ci`): the centre is the formula applied to
+trials measuring the published pooled SMD, the width comes from its CI. The
+result for anchor 1 is the most consequential number in the file: **0.43 SMD
+[0.25, 0.61] — the strongest published creatine-strength estimate — implies
+38 (8..68), against the hand-written 80..95.** The written band was never
+reachable on this scale, and that now prints as a disagreement on every
+`python3 -m pipeline.calibration` run. `effect_route`/`effect_s` also now
+survive into the dashboard artifact per contribution (allowlisted, spans stay
+out), so a score's measured-vs-label share is auditable there.
+
 **Open constants awaiting Tier-3 calibration:** `k`, transfer factors, RoB
 thresholds, OA penalty. See `docs/SPEC.md` §13.
 

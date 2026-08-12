@@ -146,8 +146,26 @@ def form_strength(exact_studies: list, form_d: float | None,
     has_any = bool(exact_studies) or bool(form_syntheses or [])
     if not has_any:
         return 0.0, "untested_in_form"
+
+    def _non_negative(study) -> bool:
+        # "Non-negative in your form" is judged by what the study actually
+        # CONTRIBUTES (s_value), not by its direction label -- v8 coherence,
+        # 2026-08-12. The two disagree in both directions once effects are
+        # measured: a `null_effect` whose reported estimate favours the
+        # ingredient (s = +0.38) is non-negative evidence the form works, and a
+        # `benefit` whose measured effect is sub-threshold (s = -0.25) is
+        # evidence AGAINST a meaningful effect in this form. Under the label
+        # rule the first earned no ladder credit and the second earned full.
+        # Unsized studies are unchanged: label nulls score -0.35 (< 0, out) and
+        # label benefits score +0.3/+1.0 (>= 0, in), exactly as before, so a
+        # pre-v1.17 corpus produces identical ladders.
+        return study.direction != "harm" and study.s_value() >= 0
+
     ranks = [s.design_rank for s in exact_studies
-             if s.direction not in ("harm", "null_effect") and s.design_rank is not None]
+             if _non_negative(s) and s.design_rank is not None]
+    # Synthesis entries are dicts, not Study objects -- they carry no measured
+    # effect yet (the SR path extracts direction only), so the label test is
+    # still the only test available for them.
     ranks += [e.get("design_rank") for e in (form_syntheses or [])
               if e.get("direction") not in ("harm", "null_effect")
               and e.get("design_rank") is not None]

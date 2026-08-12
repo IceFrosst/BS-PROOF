@@ -343,6 +343,22 @@ def _effect_s(claim: dict, outcome_vocab_id: str) -> tuple[float | None, str]:
     # label, which is what the pre-v1.16 corpus therefore does in full -- v8
     # scores that corpus identically to v7 by construction, and only data
     # extracted under the v1.17 contract activates the measured path.
+    # LABEL/NUMBER CONTRADICTIONS are refused HERE, where `favours` is visible,
+    # not guessed at in scoring from the sign of s (2026-08-12). S5 saying
+    # direction=benefit while the number favours CONTROL (or direction=harm while
+    # it favours the ingredient) is two readings of one paper that cannot both be
+    # right; invariant 9's rule is under-count, so the claim falls back to its
+    # label. This replaces a sign-agreement guard inside Study.s_value() that had
+    # become wrong: since v1.17 effect_s is already favours-oriented, so a
+    # NEGATIVE s on a benefit claim usually just means sub-threshold
+    # (favours=ingredient, magnitude 0.05 -> s -0.25) -- and the old guard
+    # promoted exactly those back to the full label value, over-crediting the
+    # smallest effects.
+    direction = claim.get("direction")
+    if direction == "benefit" and favours == "control":
+        return None, "label_number_contradiction"
+    if direction == "harm" and favours == "ingredient":
+        return None, "label_number_contradiction"
     if favours == "ingredient":
         return scoring.standardise_effect(magnitude, claim.get("effect_unit"))
     if favours == "control":
@@ -613,7 +629,8 @@ def build_ecus(extractions: list[dict], product: dict, *,
             ignore_population=ignore_population,
         ):
             per_outcome.setdefault(outcome_id, []).append(
-                {**dose, "direction": study.direction, "weight": study.weight()})
+                {**dose, "direction": study.direction, "weight": study.weight(),
+                 "s": study.s_value()})
 
     bands = {oid: dosemod.effective_range(entries)
              for oid, entries in per_outcome.items()}

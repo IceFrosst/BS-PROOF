@@ -587,6 +587,30 @@ def _safe_evidence(value: Any) -> dict:
             result[key] = _integer(value.get(key))
     if "study_ids" in value:
         result["study_ids"] = [str(x) for x in (value.get("study_ids") or [])]
+    # Per-study score attribution (2026-08-12). `effect_route` is the single
+    # most important interpretive fact about a v8+ score -- how much of it rests
+    # on MEASURED effects versus on direction labels -- and it was silently
+    # dropped here, so the dashboard could not show it. Fixed keys only, same
+    # allowlist discipline as everything else in this file: evidence spans,
+    # prompts and cache keys stay out.
+    if "contributions" in value:
+        rows = []
+        for c in value.get("contributions") or []:
+            if not isinstance(c, dict):
+                continue
+            rows.append({
+                "id": None if c.get("id") is None else str(c.get("id")),
+                "w": _number(c.get("w")),
+                "s": _number(c.get("s")),
+                "design_rank": _integer(c.get("design_rank")),
+                "direction": None if c.get("direction") is None else str(c.get("direction")),
+                "form_match": None if c.get("form_match") is None else str(c.get("form_match")),
+                "d_share": _number(c.get("d_share")),
+                "points": _number(c.get("points")),
+                "effect_route": None if c.get("effect_route") is None else str(c.get("effect_route")),
+                "effect_s": _number(c.get("effect_s")),
+            })
+        result["contributions"] = rows
     return result
 
 

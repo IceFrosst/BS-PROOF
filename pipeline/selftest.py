@@ -578,6 +578,67 @@ def main():
           any("no source_doi" in p for p in _uncited),
           "an uncited mixture is judgement wearing a number's clothes")
 
+    # V8-COHERENT BAND DERIVATION (2026-08-12). Deriving a band by counting
+    # labels is vote counting -- the defect v8 removed from the run path -- so a
+    # label-derived band and a v8+ run sit on DIFFERENT scales. The pooled route
+    # puts them on the same one, and it is the only route the literature feeds:
+    # 0 of 14 syntheses publish a per-trial split; nearly all publish a pooled
+    # effect with a CI.
+    _ps = cal.pooled_score(0.43)
+    check("a published pooled SMD derives a centre on the v8 scale",
+          _ps["score"] == 38 and abs(_ps["d"] - 0.383) < 1e-9,
+          "0.43 SMD -> s +0.383 -> 38: what our formula says about trials that "
+          "MEASURE the strongest published creatine-strength estimate")
+    _row_p = {"id": "1", "band": "strong_positive", "expected_min": 80,
+              "expected_max": 95, "source_doi": "10.x", "source_kind": "meta_analysis",
+              "pooled_effect": "0.43 SMD [0.25,0.61]", "n_trials": "14"}
+    _db = cal.derived_band(_row_p)
+    check("the band WIDTH comes from the published CI",
+          _db["route"] == "pooled_smd_ci" and _db["min"] == 8 and _db["max"] == 68,
+          "edges are the scores at the CI bounds, so the width is the published "
+          "estimate's own precision -- and 80..95 sits entirely outside it")
+    check("the pooled route beats the label mixture when both exist",
+          cal.derived_band({**_row_p, "n_positive": 18, "n_null": 2})["route"]
+          == "pooled_smd_ci",
+          "a label mixture is vote counting; prefer the same-scale derivation")
+    check("a WMD row falls back rather than being misread as SMD",
+          cal.derived_band({**_row_p, "pooled_effect": "4.43 WMD kg [3.12,5.75]",
+                            "n_positive": "", "n_null": ""}) is None,
+          "4.43 read as an SMD would derive a +100..+100 band from a kg number")
+
+    # V8-COHERENT LADDER AND DOSE BAND (2026-08-12). Both used to read the
+    # direction LABEL; once effects are measured, label and contribution
+    # disagree in both directions.
+    from pipeline.arcs import form_strength as _fs
+    _lad = lambda d, e: Study(id=f"l{d}{e}", design_rank=4, n=60, rob_items=ROB_CLEAN,
+                              funding="independent", oa="full_text",
+                              form_match="exact", pop_match="exact", direction=d,
+                              magnitude="meaningful" if d == "benefit" else None,
+                              effect_s=e, effect_route="smd" if e is not None else "label")
+    check("a null that MEASURED a positive effect earns form-ladder credit",
+          _fs([_lad("null_effect", 0.38)], None)[1] == "ladder",
+          "the label rule filed 'tested in your form, effect favoured it' as "
+          "all_negative_in_form")
+    check("a benefit that MEASURED a sub-threshold effect earns none",
+          _fs([_lad("benefit", -0.25)], None)[1] == "all_negative_in_form",
+          "s < 0 is evidence against a MEANINGFUL effect in this form, whatever "
+          "the significance label said")
+    check("unsized studies ladder exactly as before",
+          _fs([_lad("benefit", None)], None)[1] == "ladder"
+          and _fs([_lad("null_effect", None)], None)[1] == "all_negative_in_form",
+          "pre-v1.17 corpora must produce identical ladders")
+    _ent = lambda d, s_, dose: {"dose_low_mg": dose, "dose_high_mg": dose,
+                                "direction": d, "weight": 1.0, "s": s_}
+    from pipeline import dose as _dosemod
+    _er = _dosemod.effective_range(
+        [_ent("null_effect", 0.68, 5000), _ent("benefit", -0.25, 9000),
+         _ent("benefit", None, 3000)])
+    check("the dose band is s-aware: a measured-positive null joins the band",
+          _er["low"] == 3000 and _er["high"] == 5000,
+          f"{_er} -- 5000 (null label, s +0.68) is a dose at which the "
+          f"ingredient worked; 9000 (benefit label, s -0.25) is not; 3000 "
+          f"(unsized benefit) falls back to its label")
+
     # ORDINAL STRATA. Replaces testing the numeric window, which ANCHORS.md:274 says
     # was judgement, and which measurement showed unsatisfiable for anchors 1-5.
     _st = cal.evaluate_strata({"1": 6}, anchors)
@@ -1469,11 +1530,28 @@ def main():
                                      direction=d, magnitude=m, effect_s=e)
     check("a measured effect overrides the direction label",
           _es("null_effect", 0.38).s_value() == 0.38)
-    check("a benefit whose number DISAGREES in sign falls back to the label",
-          _es("benefit", -0.5, "meaningful").s_value() == S_VALUE["benefit_meaningful"],
-          "an inverted-direction measure (a sprint TIME under muscle_power, where "
-          "faster is better but the number is smaller) must not read as harm; a "
-          "wrong sign does not weaken a score, it inverts it")
+    # This pin's PREDECESSOR asserted the opposite: a benefit with negative
+    # effect_s fell back to the label. That guard was written when effect signs
+    # were untrusted raw values; after v1.17 effect_s is favours-oriented, so a
+    # negative s on a benefit claim means SUB-THRESHOLD, and the guard promoted
+    # exactly the smallest effects back to +1.0. Inverted-measure protection
+    # (sprint time under muscle_power) lives upstream in effect_favours, and the
+    # genuine label/number contradictions are refused in assemble._effect_s.
+    check("Study trusts a favours-oriented negative s: sub-threshold stays negative",
+          _es("benefit", -0.25, "meaningful").s_value() == -0.25,
+          "a 0.05 SMD 'benefit' is evidence against a MEANINGFUL effect; the old "
+          "guard scored it +1.0")
+    from pipeline.assemble import _effect_s as _aes2
+    check("benefit label + number favouring CONTROL is refused upstream",
+          _aes2({"effect_size": 0.5, "effect_unit": "cohen's d",
+                 "effect_favours": "control", "direction": "benefit"},
+                "muscle_strength")[1] == "label_number_contradiction",
+          "two readings of one paper that cannot both be right; invariant 9 "
+          "says under-count, so the claim falls back to its label")
+    check("harm label + number favouring the INGREDIENT is refused upstream",
+          _aes2({"effect_size": 0.5, "effect_unit": "cohen's d",
+                 "effect_favours": "ingredient", "direction": "harm"},
+                "muscle_strength")[1] == "label_number_contradiction")
     check("a harm whose number DISAGREES keeps the FULL harm value, not 0.0",
           _es("harm", 0.9).s_value() == S_VALUE["harm"],
           "the first version clamped to min(effect_s, 0.0), which looked "
