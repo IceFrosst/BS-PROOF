@@ -42,6 +42,7 @@ export function OutcomeBreakdown({ outcome, studiesById }: OutcomeBreakdownProps
   return (
     <div className="outcome-breakdown">
       {story ? <p className="breakdown-story">{story}</p> : null}
+      <div className="breakdown-scroll" tabIndex={0} role="group" aria-label="Per-study contributions">
       <table className="breakdown-contributions">
         <caption>
           Per-study pull on the signed score, largest first.{" "}
@@ -49,12 +50,15 @@ export function OutcomeBreakdown({ outcome, studiesById }: OutcomeBreakdownProps
         </caption>
         <thead>
           <tr>
+            {/* Points immediately after the study: it is the headline number,
+                and on a narrow card the rightmost columns scroll out of view --
+                seen live 2026-08-12. */}
             <th scope="col">Study</th>
-            <th scope="col">Direction</th>
+            <th scope="col">Points</th>
             <th scope="col">Basis</th>
+            <th scope="col">Direction</th>
             <th scope="col">s</th>
             <th scope="col">Weight</th>
-            <th scope="col">Points</th>
           </tr>
         </thead>
         <tbody>
@@ -66,7 +70,9 @@ export function OutcomeBreakdown({ outcome, studiesById }: OutcomeBreakdownProps
                 <th scope="row" className="contribution-study">
                   {study?.title ?? item.id ?? "Unknown study"}
                 </th>
-                <td>{item.direction ? humanize(item.direction) : "—"}</td>
+                <td className={`numeric points ${item.points !== null && item.points < 0 ? "points-negative" : "points-positive"}`}>
+                  {item.points === null ? "—" : `${item.points > 0 ? "+" : ""}${item.points.toFixed(1)}`}
+                </td>
                 <td>
                   <span
                     className={measuredRoute ? "route-chip route-measured" : "route-chip route-label"}
@@ -79,16 +85,15 @@ export function OutcomeBreakdown({ outcome, studiesById }: OutcomeBreakdownProps
                     {measuredRoute ? "measured effect" : "direction label"}
                   </span>
                 </td>
+                <td>{item.direction ? humanize(item.direction) : "—"}</td>
                 <td className="numeric">{item.s === null ? "—" : item.s.toFixed(2)}</td>
                 <td className="numeric">{item.w === null ? "—" : item.w.toFixed(3)}</td>
-                <td className={`numeric points ${item.points !== null && item.points < 0 ? "points-negative" : "points-positive"}`}>
-                  {item.points === null ? "—" : `${item.points > 0 ? "+" : ""}${item.points.toFixed(1)}`}
-                </td>
               </tr>
             );
           })}
         </tbody>
       </table>
+      </div>
       <DoseStory outcome={outcome} />
       <FormBasis outcome={outcome} />
     </div>

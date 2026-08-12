@@ -217,6 +217,12 @@ p { margin-block: 0 1rem; }
 .ring-signed.signed-positive { background: var(--teal); color: var(--white); }
 .ring-signed.signed-negative { background: var(--coral); color: var(--white); }
 .ring-direction { position: absolute; right: 7%; bottom: 2%; left: 7%; display: flex; justify-content: space-between; color: var(--ink-soft); font-size: 0.56rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; }
+/* Compact rings (outcome cards) declutter: the centre was crowding the inner
+   rings once the signed chip joined it -- seen live 2026-08-12. */
+.ring-score-compact .ring-direction { display: none; }
+.ring-score-compact .ring-center strong { font-size: 1.65rem; }
+.ring-score-compact .ring-center span { margin-top: 2px; font-size: 0.55rem; }
+.ring-score-compact .ring-signed { margin-top: 3px; padding: 0 6px; font-size: 0.56rem; }
 .arc-readout { display: grid; gap: 7px; min-width: 0; }
 .arc-line { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 5px 8px; border-radius: 8px; background: var(--paper); color: var(--ink); font-size: 0.78rem; font-weight: 800; }
 .arc-line > span:last-child { text-align: right; }
@@ -471,7 +477,10 @@ thead th { color: var(--ink-soft); font-size: 0.7rem; text-transform: uppercase;
 .outcome-breakdown { padding: 14px; display: grid; gap: 14px; }
 .breakdown-story { margin: 0; font-size: 0.92rem; line-height: 1.55; color: var(--ink); }
 .breakdown-fallback, .extraction-fallback, .breakdown-empty { margin: 0; padding: 10px 12px; font-size: 0.88rem; color: var(--ink-soft); background: var(--paper-2); border-radius: 10px; }
-.breakdown-contributions { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+/* Wide content scrolls inside its own container; the card never clips it.
+   Seen live 2026-08-12: the Points column was cut at the card edge. */
+.breakdown-scroll { overflow-x: auto; max-width: 100%; }
+.breakdown-contributions { width: 100%; min-width: 520px; border-collapse: collapse; font-size: 0.85rem; }
 .breakdown-contributions caption { text-align: left; font-size: 0.8rem; color: var(--ink-soft); padding-bottom: 8px; }
 .breakdown-contributions th, .breakdown-contributions td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
 .breakdown-contributions thead th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); }
