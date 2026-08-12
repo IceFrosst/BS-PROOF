@@ -60,6 +60,16 @@ def plan() -> list[tuple[Path, Path]]:
         model = model_of(f)
         if model != SCORING_MODEL:
             moves.append((f, ARCHIVE / model / f.name))
+    # The _dashboard.json / _context.json artifacts DELIBERATELY STAY in
+    # reports/runs/. Tried moving them alongside their .md reports on
+    # 2026-08-12 and REVERTED the same hour: lib/dashboard/catalog.ts reads
+    # reports/runs/ as the dashboard's whole catalog and throws on any report
+    # path outside it, so the sweep broke the dashboard build and its test
+    # suite. The .md/.json "split" a code sweep flagged is by design -- run
+    # VALIDITY is carried by reports/run_statuses.json, not by directory
+    # placement, and the retained historical Grok artifact (20260807_164410)
+    # must stay put per CLAUDE.md. Only .md reports move, because only they
+    # invite the cross-model score comparison this script exists to prevent.
     return moves
 
 

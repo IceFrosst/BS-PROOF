@@ -106,7 +106,15 @@ def dose_match_for(product_low: float | None, product_high: float | None,
     salt whose bounded interval spans the band edge genuinely does not have an
     answer, and inventing one here would silently move the score.
     """
-    if band.get("low") is None or product_low is None or product_high is None:
+    # .get() on BOTH keys, and high checked too. An adversarial pass verified
+    # the crash this guards: a band dict with "low" set but "high" missing raised
+    # KeyError, and {"low": X, "high": None} raised TypeError at 2*None -- both
+    # unreachable from effective_range (which always emits the pair), but
+    # dose_match_for became a two-caller function on 2026-08-12 and a future
+    # product dict with only dose_low_mg set would have crashed mid-run instead
+    # of reading "unspecified".
+    if (band.get("low") is None or band.get("high") is None
+            or product_low is None or product_high is None):
         return "unspecified"
 
     lo, hi = band["low"], band["high"]

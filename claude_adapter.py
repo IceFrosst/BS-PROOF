@@ -105,6 +105,12 @@ def _claude_bin() -> str:
 
 # Bump when you edit ANY prompt (including _shared.md). This is in the cache key.
 # Forget to bump it and you will silently serve stale extractions forever.
+# v1.19 (2026-08-12): S7 dose coverage. AMENDED same day, same version: the two
+# new schema fields gained exclusiveMinimum 0 after an adversarial pass showed
+# -300 mg/kg x -70 kg multiplying to a confident +21000 mg dose. Amending
+# without a bump is safe HERE ONLY because v1.19 never served a call -- the
+# session limit blocked every attempt since the bump, verified by cache mtime
+# predating the commit. Do not treat that as precedent.
 # v1.19 (2026-08-12): S7 dose coverage. Measured on the v1.18 run: 76 of 148
 # studies extracted NO dose, and 51% of those were fixable -- 25 dose per kg of
 # body weight (no schema field existed, so S7 nulled them) and 12 where the dose

@@ -44,14 +44,16 @@
         "number",
         "null"
       ],
-      "description": "Daily dose stated PER KG OF BODY WEIGHT, in mg/kg/day, when the paper doses that way (e.g. '0.3 g/kg/day' -> 300). null when dosing is absolute. Never convert an absolute dose into this field."
+      "description": "Daily dose stated PER KG OF BODY WEIGHT, in mg/kg/day, when the paper doses that way (e.g. '0.3 g/kg/day' -> 300). null when dosing is absolute. Never convert an absolute dose into this field.",
+      "exclusiveMinimum": 0
     },
     "mean_body_mass_kg": {
       "type": [
         "number",
         "null"
       ],
-      "description": "The paper's own stated mean body mass of the supplemented group, in kg, ONLY if printed (baseline table or methods). Used downstream to turn a per-kg dose into a daily total by arithmetic on reported numbers. NEVER estimate or assume a typical body weight -- null when not stated."
+      "description": "The paper's own stated mean body mass of the supplemented group, in kg, ONLY if printed (baseline table or methods). Used downstream to turn a per-kg dose into a daily total by arithmetic on reported numbers. NEVER estimate or assume a typical body weight -- null when not stated.",
+      "exclusiveMinimum": 0
     },
     "dose_basis": {
       "type": "string",

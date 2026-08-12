@@ -56,26 +56,41 @@ ELISION = "\n\n[... middle of paper elided to fit the input budget ...]\n\n"
 
 import re as _re
 
-# One pattern, two shapes: absolute daily doses ("5 g/day", "3500 mg per day")
-# and per-kg dosing ("0.3 g/kg/day", "0.1 g kg-1"). Deliberately broad -- a false
-# positive costs a wasted sentence in the payload, a false negative loses the
-# study's dose for the run.
+# Two shapes: absolute daily doses ("5 g/day", "3 g of creatine", "5 g daily",
+# "creatine 5 g") and per-kg dosing ("0.3 g/kg/day", "0.1 g kg-1", "75 mg
+# creatine hydrate kg-1 body mass"). Deliberately broad -- a false positive
+# costs a wasted sentence in the payload, a false negative loses the study's
+# dose for the run. The second alternative (bare "N g" with a dosing word
+# within reach) covers the shapes an adversarial pass confirmed the first
+# version missed on real corpus papers: "ingested 3 g of creatine"
+# (PMC10975653), "creatine 5 g" (PMC5698587), "5 g twice daily".
 _DOSE_PAT = _re.compile(
-    r"\b\d+(\.\d+)?\s*(g|mg|grams?)\s*(/|per\s+|·)?\s*(kg|d\b|day|body)", _re.I)
+    r"\b\d+(\.\d+)?\s*(g|mg|grams?)\s*"
+    r"(([/·]|per\s+)?\s*(kg|d\b|day|daily|body)"          # 5 g/day, 0.3 g/kg
+    r"|(of\s+\w|daily|twice|once|dose|per)"               # 3 g of creatine, 5 g daily
+    r")", _re.I)
 
 
-def _dose_snippets(text: str, cap: int = 5, width: int = 220) -> list[str]:
+def _dose_snippets(text: str, cap: int = 5, width: int = 220,
+                   ingredient: str | None = None) -> list[str]:
     """
-    Sentences around every dose mention in the FULL text, deduplicated.
+    Sentences around every dose mention in the FULL text, deduplicated,
+    INGREDIENT-BEARING SNIPPETS FIRST.
 
     Exists because the shared slice truncates: measured 2026-08-12, 12 of 76
     dose-less S7 extractions had the dose in the full text but not in what S7
     received. This is retrieval, not judgement -- a regex either matched or it
     did not, and S7 still decides what the numbers mean.
+
+    The ranking exists because the cap can crowd out the real dose: measured,
+    PMC5698587's "creatine 5 g" was displaced by an animal-feed citation
+    ("animals weighing 200 g and eating 20 g per d"). A snippet that names the
+    ingredient outranks one that does not; the cap then bites the junk first.
     """
     if not text:
         return []
-    out, seen = [], set()
+    ing = (ingredient or "").split("_")[0].lower()
+    hits, seen = [], set()
     for m in _DOSE_PAT.finditer(text):
         start = max(0, m.start() - width // 2)
         snip = " ".join(text[start:m.end() + width // 2].split())
@@ -83,10 +98,9 @@ def _dose_snippets(text: str, cap: int = 5, width: int = 220) -> list[str]:
         if key in seen:
             continue
         seen.add(key)
-        out.append(snip)
-        if len(out) >= cap:
-            break
-    return out
+        hits.append((0 if ing and ing in snip.lower() else 1, len(hits), snip))
+    hits.sort()                          # ingredient-bearing first, stable
+    return [s for _, _, s in hits[:cap]]
 
 
 def _fit_text(agent: str, text: str, fixed_chars: int) -> str:
@@ -200,15 +214,22 @@ def _payload(agent: str, record: dict, text: str, registry: dict | None,
         return base
     if agent == "S7":
         ingredient = record["ingredient"]
-        return {**base, "ingredient": ingredient,
+        # Dose sentences harvested from the FULL text by regex, because the
+        # shared slice can cut them: measured 2026-08-12, 12 of 76 dose-less S7
+        # extractions had the dose in the full text but NOT in the text S7
+        # received (verified 6/6 on the checkable half). Deterministic, and it
+        # rides in the payload so the cache key changes with it.
+        snippets = _dose_snippets(text, ingredient=ingredient)
+        # The snippets COUNT AGAINST the text budget. Without this, the largest
+        # corpus study reached 15,463 total chars -- within 550 of the measured
+        # ~16k CLI wall, the exact size of S7's one prior timeout. Refit rather
+        # than hope: the head/tail slice shrinks by what the snippets add.
+        snip_chars = sum(len(s) for s in snippets) + 24 * len(snippets)
+        return {**base, "text": _fit_text(agent, text, _fixed + snip_chars),
+                "ingredient": ingredient,
                 "form_vocabulary": vocab.forms_for(ingredient),
                 "unspecified_form_id": vocab.unspecified_form_id(ingredient),
-                # Dose sentences harvested from the FULL text by regex, because
-                # the shared slice can cut them: measured 2026-08-12, 12 of 76
-                # dose-less S7 extractions had the dose in the full text but NOT
-                # in the text S7 received. Deterministic (no model), tiny, and it
-                # rides in the payload so the cache key changes with it.
-                "dose_snippets": _dose_snippets(text)}
+                "dose_snippets": snippets}
     if agent == "S8":
         return base
     raise KeyError(agent)

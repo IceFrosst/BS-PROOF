@@ -9,6 +9,7 @@ Predatory venues: flagged on the record for reporting; do NOT zero weight yet
 (founder policy 2026-08-07). See pipeline/predatory.ZERO_WEIGHT.
 """
 from __future__ import annotations
+import math
 from dataclasses import replace
 from datetime import datetime, timezone
 
@@ -40,11 +41,33 @@ def _rob_items(s4: dict | None, registry: dict | None) -> dict:
     return items
 
 
+def _pos_finite(x) -> float | None:
+    """A strictly positive, finite number, or None. Anything else is refused.
+
+    Exists because an adversarial pass found three ways a bad envelope value
+    became a confident dose: dose_per_kg_mg=-300 x mean_body_mass_kg=-70
+    multiplied to +21000 (two negatives cancel, and the schema had no minimum);
+    Infinity survives json.loads on the non-schema-validated fallback paths in
+    claude_adapter._extract_payload; and a STRING elemental dose crashed
+    to_studies with a TypeError inside dose_match_for -- study doses never
+    entered comparisons before dose_match went per-study, so the type was
+    never load-bearing until 2026-08-12. Zero is refused too: "0 mg" is not a
+    dose, and treating it as one made dose_match read below_50.
+    """
+    try:
+        v = float(x)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(v) or v <= 0:
+        return None
+    return v
+
+
 def study_dose(ingredient: str, s7: dict | None) -> dict:
     if not s7:
         return {"dose_low_mg": None, "dose_high_mg": None, "dose_basis": "unstated"}
     form_id = s7.get("form_vocab_id")
-    stated = s7.get("elemental_dose_mg")
+    stated = _pos_finite(s7.get("elemental_dose_mg"))
     if stated is not None:
         return {"dose_low_mg": stated, "dose_high_mg": stated,
                 "dose_basis": s7.get("dose_basis") or "elemental_stated"}
@@ -54,15 +77,12 @@ def study_dose(ingredient: str, s7: dict | None) -> dict:
     # are the paper's own (S7 is forbidden from assuming a body weight, and so is
     # this function -- per-kg with no stated mean mass stays doseless, invariant
     # 5). Arithmetic on reported numbers, not inference of an unreported one.
-    per_kg, mass = s7.get("dose_per_kg_mg"), s7.get("mean_body_mass_kg")
+    per_kg = _pos_finite(s7.get("dose_per_kg_mg"))
+    mass = _pos_finite(s7.get("mean_body_mass_kg"))
     if per_kg is not None and mass is not None:
-        try:
-            daily = float(per_kg) * float(mass)
-        except (TypeError, ValueError):
-            daily = None
-        if daily is not None and daily > 0:
-            return {"dose_low_mg": daily, "dose_high_mg": daily,
-                    "dose_basis": "per_kg_x_stated_mass"}
+        daily = per_kg * mass
+        return {"dose_low_mg": daily, "dose_high_mg": daily,
+                "dose_basis": "per_kg_x_stated_mass"}
     rng = vocab.elemental_dose_range_mg(ingredient, form_id, s7.get("compound_dose_mg"))
     return {"dose_low_mg": rng["low"], "dose_high_mg": rng["high"],
             "dose_basis": rng["basis"]}

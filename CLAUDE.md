@@ -621,7 +621,9 @@ moved **28 → 29**. Higher `d`, lower `c`. Which wins is a real question on a
 real corpus, which is why it is an A/B and not a switch.
 
 **THE SCORE NO LONGER VOTE-COUNTS. `SCORING_MODEL` v7 → v8-effect-size
-(founder decision 2026-08-11, "do i").** `s_i` now comes from the REPORTED
+(founder decision 2026-08-11, "do i"); now v9-dose-arc-per-study (2026-08-12,
+same `s_i` — only the dose arc changed, see the dose-axis block below).**
+`s_i` now comes from the REPORTED
 EFFECT SIZE wherever a usable number exists, falling back to the direction label
 otherwise. What the defect was, measured with
 `scripts/vote_counting_investigation.py`:
@@ -794,6 +796,39 @@ an unreported one — still a founder call.
 Watch on the next full run: claim counts churned per study (8→14, 12→8 nulls).
 v1.15 was meant to add numbers, not move direction or claim splitting, so the
 null share and the population A/B must be **re-measured, not assumed stable.**
+
+**THE DOSE AXIS WAS BROKEN THREE WAYS; FIXED 2026-08-12 (SCORING_MODEL v9 +
+PROMPT_VERSION v1.19).** Founder question: "why is the dosage band scored so low
+or not at all? are you putting the amount of creatine in the tests?" The dose IS
+passed in; what was broken:
+
+1. **The dose arc was degenerate.** `dose_match` held the product-vs-derived-band
+   comparison — one value per outcome stamped on every study — so the arc was
+   either an exact clone of the effect arc or EMPTY, rendering "not tested" when
+   the product sat outside the band (invariant-8 violation: a 4.4 g product vs a
+   4.8–5.0 g band displayed the same as never studied). Now per study, per SPEC:
+   muscle_power reads −0.35 @ 2.7% with `product_match: below_50` — "at your dose
+   the sparse evidence is null; the benefit came from 20 g loading protocols."
+2. **`dose.product_match` reported the wrong field** (a `dose_basis` string).
+   Now the real product-vs-band tier — the warning axis.
+3. **Extraction lost 51% of doses** (76 of 148 studies): 25 per-kg dosing with no
+   schema field, 12 truncated out of S7's slice, 2 misses, 37 genuinely absent.
+   v1.19: `dose_per_kg_mg` + `mean_body_mass_kg` (the paper's OWN stated mass
+   only — assuming a body weight is invariant-5 inventing; the multiplication is
+   deterministic in `study_dose`), plus regex-harvested `dose_snippets` from the
+   FULL text, ingredient-ranked so junk mentions cannot crowd out the real dose.
+
+**The 20 g muscle_power band is REAL, not a bug** — loading-only trials with no
+maintenance phase. The literature's power benefits sit at 20 g/day; a 4.4 g
+product is genuinely below them, and the report now says so instead of hiding it.
+
+**Open founder call from the adversarial verification** (4 skeptics, 0
+refutations, arithmetic verified by hand-replay): the arc's membership window
+[P, 2P] mirrors SPEC §8's transfer asymmetry — a trial at 99% of your dose is
+OUT, one at 200% is IN, and 34% of dosed claims flip between that and the
+mirrored [P/2, P]. Direction-blind windows are also wrong for half the evidence
+(a null ABOVE your dose argues against it; a benefit above it proves nothing).
+Recorded in SPEC §13; the shipped window stands until decided.
 
 **Open constants awaiting Tier-3 calibration:** `k`, transfer factors, RoB
 thresholds, OA penalty. See `docs/SPEC.md` §13.

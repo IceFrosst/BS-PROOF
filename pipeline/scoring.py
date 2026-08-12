@@ -388,7 +388,11 @@ class Study:
     # for second-hand judgement still applies.
     rob_band_direct: str | None = None
     form_match: str = "unspecified"
-    dose_match: str = "in_band"
+    # Default pessimistic since 2026-08-12, same policy as pop_match below.
+    # dose_match became a PER-STUDY "this trial was dosed at your product's
+    # dose" fact when the dose arc went per-study; defaulting it to "in_band"
+    # made every constructor that omitted it silently assert that fact.
+    dose_match: str = "unspecified"
     # Default pessimistic: missing population match is not a free pass.
     pop_match: str = "different"
     direction: str = "null_effect"
