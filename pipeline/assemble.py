@@ -122,6 +122,7 @@ def sr_derived_to_studies(rec: dict, product: dict, *,
         # dose arc whenever the product happened to sit in band, crediting
         # evidence "at your dose" from trials whose dose nobody knows.
         dose_match = "unspecified"
+        # dose_factor stays None for the same reason: no per-trial dose exists.
         claim = entry.get("claim") or {}
         direction = claim.get("direction")
         magnitude = claim.get("magnitude")
@@ -261,6 +262,10 @@ def to_studies(record: dict, extraction: dict, product: dict,
             rob_inherited=bool(record.get("rob_inherited")),
             form_match=form_match,
             dose_match=_dose_match_for(entry["outcome_vocab_id"]),
+            dose_factor=dosemod.dose_factor_for(
+                dose.get("dose_low_mg"), dose.get("dose_high_mg"),
+                {"low": product.get("dose_low_mg"),
+                 "high": product.get("dose_high_mg")}),
             pop_match=pop_match,
             direction=direction,
             magnitude=magnitude,
@@ -760,6 +765,13 @@ def build_ecus(extractions: list[dict], product: dict, *,
                 # `low_50_99` here is the "product dosed where trials found
                 # nothing" warning CLAUDE.md says this axis exists to give.
                 "product_match": dosemod.dose_match_for(
+                    product.get("dose_low_mg"), product.get("dose_high_mg"),
+                    bands.get(outcome_id, {"low": None})),
+                # The continuous version of the line above (SCORING_MODEL v10):
+                # a 4 g product against a 5-10 g band reads 0.64 instead of the
+                # tier's 0.45-with-a-cliff-at-5000. The tier string stays for
+                # display; this is the number.
+                "product_factor": dosemod.dose_factor_for(
                     product.get("dose_low_mg"), product.get("dose_high_mg"),
                     bands.get(outcome_id, {"low": None})),
             },

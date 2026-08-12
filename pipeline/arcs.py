@@ -168,6 +168,33 @@ def _verdict(studies: list) -> tuple[float | None, float]:
     return r["d"], weight
 
 
+def _dose_verdict(studies: list) -> tuple[float | None, float]:
+    """
+    (d, dose-credited weight) with GRADED membership (SCORING_MODEL v10).
+
+    Each study enters at weight x its continuous dose_factor instead of passing
+    a binary in_band test. Under the binary rule a trial at 99% of the product's
+    dose contributed NOTHING to the dose arc while one at 200% contributed fully
+    -- the cliff an adversarial pass flagged, and the same cliff the founder
+    challenged on the product side ("4 g against a 5-10 g band"). Now that trial
+    counts at ~0.98 and a 20 g loading trial against a 4.4 g product at 0.60's
+    tail, priced rather than binned.
+
+    dose_factor None (dose unknown) contributes zero, exactly as "unspecified"
+    membership did -- an unassessable axis earns nothing, it is merely not
+    punished. Coverage stays "credited weight / total weight", so the arc still
+    separates "nobody was dosed near your product" (low coverage) from "they
+    were, and here is what they found" (the verdict).
+    """
+    pairs = [(s, s.weight() * s.dose_factor) for s in studies
+             if s.dose_factor is not None and s.weight() > 0]
+    dose_w = sum(w for _, w in pairs)
+    if dose_w <= 0:
+        return None, 0.0
+    d = sum(w * s.s_value() for s, w in pairs) / dose_w
+    return round(d, 3), dose_w
+
+
 def _unit(d: float) -> float:
     """Signed verdict -1..+1 -> 0..1, so it can be composed. 0.5 is 'no effect'."""
     return (d + 1.0) / 2.0
@@ -192,7 +219,7 @@ def build(studies: list, syntheses: list | None = None, *,
     eff_d, _ = _verdict(studies)
     exact = [s for s in studies if s.form_match == "exact"]
     form_d, form_w = _verdict(exact)
-    dose_d, dose_w = _verdict([s for s in studies if s.dose_match == "in_band"])
+    dose_d, dose_w = _dose_verdict(studies)
     c = overall["c"]
 
     # The form arc carries THREE facts since the ladder (v5): the signed verdict

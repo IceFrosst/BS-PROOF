@@ -822,13 +822,31 @@ passed in; what was broken:
 maintenance phase. The literature's power benefits sit at 20 g/day; a 4.4 g
 product is genuinely below them, and the report now says so instead of hiding it.
 
-**Open founder call from the adversarial verification** (4 skeptics, 0
-refutations, arithmetic verified by hand-replay): the arc's membership window
-[P, 2P] mirrors SPEC §8's transfer asymmetry — a trial at 99% of your dose is
-OUT, one at 200% is IN, and 34% of dosed claims flip between that and the
-mirrored [P/2, P]. Direction-blind windows are also wrong for half the evidence
-(a null ABOVE your dose argues against it; a benefit above it proves nothing).
-Recorded in SPEC §13; the shipped window stands until decided.
+**THE DOSE AXIS IS CONTINUOUS since v10-dose-ramp (founder decision 2026-08-12,
+"your approach is good. implement it").** Flat 1.00 inside the observed band —
+the midpoint is NOT a peak, because every in-band dose was directly measured and
+dose-response is sigmoid with a plateau, not triangular — with linear ramps
+outside whose knots are the existing `DOSE_FACTOR` values (no new constants):
+1.00 at band-low → 0.10 at half of it; 1.00 at band-high → 0.60 at twice it,
+clamped beyond. Two cliffs died: 4 g against a 5 g band-low reads **0.64**
+(tier gave 0.45, and 4999 vs 5000 mg doubled the credit); and the dose ARC now
+grades each study by its continuous `dose_factor`, so a trial at 99% of the
+product's dose counts ~99% instead of zero. Straddling intervals are priced at
+their pessimistic endpoint instead of refused. `dose.product_factor` joins
+`product_match` on the row. Signed score unchanged; composite moves.
+
+Measured consequence to know about: muscle_power's dose arc flipped to
+**+0.42 @ 25%**, because 20 g loading BENEFIT trials now enter at the
+`above_200` tail credit (0.60) instead of being excluded. That is the founder's
+own constant behaving as written — and it makes the direction-blind-window
+question in SPEC §13 live in the numbers, not just the window: a null above
+your dose argues against it, a benefit above it establishes nothing, and
+telling those apart needs a new constant. Founder call, recorded, not made.
+
+(The adversarial verification of v9 — 4 skeptics, 0 refutations, arithmetic
+hand-replayed — had flagged the binary window's 99%-out/200%-in cliff; v10's
+grading resolved that. Its direction-blindness finding is the one that remains,
+absorbed into the paragraph above and SPEC §13.)
 
 **Open constants awaiting Tier-3 calibration:** `k`, transfer factors, RoB
 thresholds, OA penalty. See `docs/SPEC.md` §13.

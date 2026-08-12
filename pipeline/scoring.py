@@ -242,10 +242,25 @@ APPLY_DOSE_IN_WEIGHT = False
 # must never be read side by side as if the numbers meant the same thing, and
 # scripts/archive_reports.py enforces that by sweeping old-model runs out of
 # reports/runs/ into reports/archive/<model>/.
-SCORING_MODEL = "v9-dose-arc-per-study"
+SCORING_MODEL = "v10-dose-ramp"
 
 # What each model meant, so an archived report can still be understood:
 SCORING_MODEL_HISTORY = {
+    "v10-dose-ramp":
+        "the dose axis is CONTINUOUS -- founder decision 2026-08-12 after "
+        "challenging the tiers ('4 g against a 5-10 g band'). Flat 1.00 inside "
+        "the observed band (every dose there was directly measured; the midpoint "
+        "is NOT a peak -- dose-response is sigmoid with a plateau, not "
+        "triangular), linear ramps outside with the founder-owned DOSE_FACTOR "
+        "values as knots: 1.00 at band-low down to 0.10 at half the low end, "
+        "1.00 at band-high down to 0.60 at twice the high end, clamped beyond. "
+        "Kills two cliffs at once: 4999 vs 5000 mg no longer doubles the credit "
+        "(4 g vs a 5 g band-low reads 0.64, was 0.45), and the dose ARC grades "
+        "each study by its continuous dose_factor instead of a binary in_band "
+        "test, so a trial at 99% of the product's dose counts at ~99% instead "
+        "of zero. Intervals straddling an edge are priced at their pessimistic "
+        "endpoint instead of refused. dose.product_factor joins product_match "
+        "on the row. No new constants; signed score unchanged.",
     "v9-dose-arc-per-study":
         "the dose arc measures trials AT THE PRODUCT'S dose, per study. "
         "Study.dose_match was product-vs-derived-band -- one value stamped on "
@@ -393,6 +408,12 @@ class Study:
     # dose" fact when the dose arc went per-study; defaulting it to "in_band"
     # made every constructor that omitted it silently assert that fact.
     dose_match: str = "unspecified"
+    # Continuous dose credit for THIS study's dose against the product's
+    # (dose.dose_factor_for). Replaces the binary in_band membership in the dose
+    # arc (SCORING_MODEL v10): under the tiers a trial at 99% of the product's
+    # dose contributed NOTHING to the arc while one at 200% contributed fully.
+    # None = the study's dose is unknown, so the axis is unassessable for it.
+    dose_factor: float | None = None
     # Default pessimistic: missing population match is not a free pass.
     pop_match: str = "different"
     direction: str = "null_effect"

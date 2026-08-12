@@ -1089,6 +1089,54 @@ def main():
               [{"dose_low_mg": 5, "dose_high_mg": 5, "direction": "null_effect"}]
           )["band_version"] == 0)
 
+    # CONTINUOUS DOSE FACTOR (SCORING_MODEL v10, founder-approved 2026-08-12).
+    # The knots are the DOSE_FACTOR values; the shape is flat-in-band with
+    # linear ramps outside. Pins below encode the two design arguments so they
+    # cannot be silently re-litigated in code.
+    _B = {"low": 5000, "high": 10000}
+    _df = lambda d: dosemod.dose_factor_for(d, d, _B)
+    check("the founder's scenario: 4 g against a 5-10 g band earns 0.64",
+          _df(4000) == 0.64,
+          "the tier gave 0.45 with a cliff at 5000; the ramp prices 80% of the "
+          "low end as 0.64")
+    check("NO CLIFF at the band edge",
+          _df(4999) > 0.99 and _df(5000) == 1.0,
+          "under the tiers a 0.02% dose difference doubled the credit")
+    check("FLAT inside the band -- the midpoint is NOT a peak",
+          _df(5000) == _df(7500) == _df(10000) == 1.0,
+          "the band is the OBSERVED range: every dose inside it was directly "
+          "measured, and the midpoint is often the least evidenced point. "
+          "Peak-at-middle would downgrade an endpoint dose with direct positive "
+          "trials in favour of one nobody tested, and dose-response is sigmoid "
+          "with a plateau (creatine 3 g/d saturates like 5 g/d), not triangular")
+    check("clamped at the tier floors outside",
+          _df(2000) == 0.10 and _df(25000) == 0.60,
+          "the ramp never prices a dose below what the founder's tiers did")
+    check("monotone on each side",
+          _df(3000) < _df(4000) < _df(4999) and _df(12000) > _df(15000) > _df(19000))
+    check("an interval straddling the band edge is PRICED, not refused",
+          dosemod.dose_factor_for(4000, 6000, _B) == 0.64,
+          "the factor is unimodal so the endpoints bound it; the pessimistic "
+          "end is the honest single answer where the tier function had to "
+          "refuse a category")
+    check("no band or no dose is unassessable",
+          dosemod.dose_factor_for(None, None, _B) is None
+          and dosemod.dose_factor_for(4000, 4000, {"low": None}) is None)
+    # graded arc membership: the cliff the adversarial pass flagged is gone
+    _g = lambda f: Study(id=f"g{f}", design_rank=4, n=200, rob_items=ROB_CLEAN,
+                         funding="independent", oa="full_text", form_match="exact",
+                         pop_match="exact", direction="benefit",
+                         magnitude="meaningful", dose_factor=f)
+    from pipeline.arcs import _dose_verdict
+    _d99, _w99 = _dose_verdict([_g(0.9996)])
+    _dnone, _wnone = _dose_verdict([_g(None)])
+    check("a trial at 99% of the product's dose now counts at ~99%",
+          _w99 > 0 and _d99 == 1.0,
+          "binary membership gave it ZERO while a trial at 200% counted fully")
+    check("a trial with no known dose still earns the arc nothing",
+          _dnone is None and _wnone == 0.0,
+          "unassessable is not punished, it is merely not credited")
+
     check("dose inside the band", dosemod.dose_match_for(250, 250, band) == "in_band")
     check("just under the low end", dosemod.dose_match_for(150, 150, band) == "low_50_99")
     check("far under", dosemod.dose_match_for(40, 40, band) == "below_50")
@@ -1158,10 +1206,16 @@ def main():
     from pipeline.donut import four_arc_svg
     ROBC = {f"i{i}": 1 for i in range(1, 7)}
     def _s(direction, form, dose, mag=None, n=200, oa="full_text", rob=None):
+        # The dose arc grades by the continuous dose_factor since v10; the tier
+        # string alone no longer enters it. Fixtures state their intent as a
+        # tier, mapped here through the same DOSE_FACTOR table the ramp's knots
+        # come from, so a founder retuning moves the fixtures with it.
+        _f = {"in_band": 1.0, "low_50_99": 0.45, "below_50": 0.10,
+              "above_200": 0.60}.get(dose)
         return Study(id=f"{direction}{form}{dose}{n}{oa}", design_rank=4, n=n,
                      rob_items=rob or ROBC, funding="independent", oa=oa,
-                     form_match=form, dose_match=dose, pop_match="exact",
-                     direction=direction, magnitude=mag)
+                     form_match=form, dose_match=dose, dose_factor=_f,
+                     pop_match="exact", direction=direction, magnitude=mag)
 
     harmful = A.build([_s("harm", "exact", "in_band") for _ in range(10)])
     works = A.build([_s("benefit", "exact", "in_band", "meaningful") for _ in range(10)])

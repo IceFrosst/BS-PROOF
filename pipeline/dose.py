@@ -91,6 +91,73 @@ def effective_range(entries: list[dict]) -> dict:
     }
 
 
+def dose_factor_for(dose_low: float | None, dose_high: float | None,
+                    band: dict) -> float | None:
+    """
+    Continuous dose credit in [0.10, 1.00], or None when unassessable.
+
+    FOUNDER DECISION 2026-08-12 ("your approach is good. implement it"),
+    replacing the tier CLIFFS for everything score-visible: under the tiers,
+    4999 mg against a 5000 mg band-low earned 0.45 while 5000 mg earned 1.00 --
+    a 0.02% dose difference doubling the credit.
+
+    The shape, and why it is NOT peak-at-the-middle:
+
+        1.00 |        ____________
+             |       /            \\
+             |      /              \\_______ 0.60
+        0.10 |_____/
+             +----+----+----------+----+------->
+              0.5*lo   lo         hi   2*hi
+
+    FLAT 1.00 INSIDE THE BAND. The band is the OBSERVED range -- every dose
+    inside it is one at which benefit was directly measured, and the midpoint is
+    often the LEAST evidenced point (trials cluster at protocol endpoints).
+    Scoring a peak at the middle would downgrade a directly-evidenced endpoint
+    dose in favour of one nobody tested, and it would assert a triangular
+    dose-response this literature does not have: dose-response is sigmoid with a
+    plateau (creatine 3 g/d saturates the same stores 5 g/d does, just slower),
+    so "2x less dose" is nowhere near "2x less effect".
+
+    NO NEW CONSTANTS (invariant 4). The knots are the founder-owned DOSE_FACTOR
+    values, imported so a retuning moves this ramp automatically -- two copies of
+    the same number is how they disagree later (the H_NORM lesson). Below the
+    band the line runs 1.00 at band-low down to below_50 (0.10) at half the low
+    end, clamped there; above, 1.00 at band-high down to above_200 (0.60) at
+    twice the high end, clamped there. The below/above asymmetry is the tiers'
+    own: a sub-threshold dose risks genuinely not working, an over-band dose is
+    mostly waste on a plateau.
+
+    An INTERVAL dose (a hydrate salt's bounded range) takes the MINIMUM of the
+    factor over its endpoints -- the factor is unimodal, so the endpoints bound
+    it, and the pessimistic end is the honest single answer where the old tier
+    function had to refuse ("straddles two tiers"). A refusal was right for a
+    CATEGORY; a continuous scale can price the uncertainty instead.
+    """
+    from pipeline.scoring import DOSE_FACTOR
+    if (band.get("low") is None or band.get("high") is None
+            or dose_low is None or dose_high is None):
+        return None
+    lo, hi = float(band["low"]), float(band["high"])
+    if lo <= 0 or hi <= 0:
+        return None
+    floor_lo = DOSE_FACTOR["below_50"]    # 0.10 at 0.5*lo
+    floor_hi = DOSE_FACTOR["above_200"]   # 0.60 at 2*hi
+
+    def f(d: float) -> float:
+        if d < lo:
+            if d <= 0.5 * lo:
+                return floor_lo
+            return floor_lo + (1.0 - floor_lo) * (d - 0.5 * lo) / (0.5 * lo)
+        if d > hi:
+            if d >= 2 * hi:
+                return floor_hi
+            return 1.0 + (floor_hi - 1.0) * (d - hi) / hi
+        return 1.0
+
+    return round(min(f(float(dose_low)), f(float(dose_high))), 4)
+
+
 def dose_match_for(product_low: float | None, product_high: float | None,
                    band: dict) -> str:
     """
