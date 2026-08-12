@@ -119,10 +119,34 @@ scored as though it were the treatment effect.
 
 `effect_favours` — WHICH ARM DOES THE NUMBER FAVOUR? SAY IT, DO NOT LEAVE IT
 IMPLIED.
-  ingredient - the effect_size you reported favours the study ingredient
-  control    - it favours the placebo / comparator arm
-  neither    - no meaningful difference either way
-  null       - you cannot tell. Always a valid answer.
+  ingredient - the number you reported points in the ingredient's favour
+  control    - it points in the comparator's favour
+  neither    - the two arms came out essentially IDENTICAL: the magnitude itself
+               is negligible, near zero
+  null       - you cannot tell which arm it favours. Always a valid answer.
+
+THIS FIELD IS ABOUT DIRECTION ONLY. STATISTICAL SIGNIFICANCE IS IRRELEVANT TO IT.
+
+`direction` already records significance. `effect_favours` records which way the
+number pointed, and a result that missed significance still points somewhere.
+
+  "creatine +6.1% vs placebo, p = 0.09"   -> direction null_effect,
+                                             effect_favours INGREDIENT.
+                                             It missed significance; it did not
+                                             come out even.
+  "creatine 0.1% vs placebo, p = 0.97"    -> direction null_effect,
+                                             effect_favours neither. The arms
+                                             really were the same.
+  "d = 0.55 favouring placebo, p = 0.11"  -> direction null_effect,
+                                             effect_favours CONTROL.
+
+MEASURED 2026-08-12, and this is why the wording changed: on a 149-study run, 44
+claims reported a LARGE magnitude and answered `neither` -- 17% of all mapped
+claims, the biggest single blocker after "no number at all". A large effect that
+favours neither arm is a contradiction, so every one of those was discarded. The
+previous wording ("no meaningful difference either way") invited it by reading
+like "no SIGNIFICANT difference". Reserve `neither` for a magnitude that is
+genuinely near zero, and use `null` when you cannot tell.
 
 The SIGN of a reported effect is not a reliable convention and must never be
 guessed downstream. Some papers report a raw measurement difference, where a

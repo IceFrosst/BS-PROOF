@@ -105,6 +105,17 @@ def _claude_bin() -> str:
 
 # Bump when you edit ANY prompt (including _shared.md). This is in the cache key.
 # Forget to bump it and you will silently serve stale extractions forever.
+# v1.18 (2026-08-12): `effect_favours` is about DIRECTION ONLY -- significance is
+# irrelevant to it. MEASURED on the first clean v1.17 run: 44 claims reported a
+# LARGE magnitude and answered `neither`, which is 17% of all mapped claims and the
+# single biggest blocker after "no number at all". Every one was discarded, because
+# a large effect that favours neither arm is a contradiction rather than a reading.
+# The cause was the v1.17 wording -- "neither: no meaningful difference either way"
+# reads like "no SIGNIFICANT difference", so the model answered it for any
+# non-significant result no matter how big the effect. `direction` already carries
+# significance. A result that missed p<0.05 still points somewhere, and that is the
+# whole premise of moving off vote counting. `neither` is now reserved for a
+# magnitude genuinely near zero, and `null` for "cannot tell".
 # v1.17 (2026-08-11): S5 must report the BETWEEN-ARM CONTRAST, and a bare
 # magnitude on a null is directionless. Written hours after v1.16 because a design
 # analysis measured two things that made v1.16 insufficient:
@@ -219,7 +230,7 @@ def _claude_bin() -> str:
 # v1.6 (2026-08-08): S2 reports results_table + per-study design. SR-table trials
 # now enter evidence mass, so S2's output moves scores and not just confidence.
 # v1.5 (2026-08-07): S3 prompt shortened, SR label resolve, review_methods.
-PROMPT_VERSION = "v1.17"
+PROMPT_VERSION = "v1.18"
 
 # Tier -> model. FULL IDs, NOT ALIASES.
 #
