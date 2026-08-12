@@ -2,10 +2,14 @@ import type {
   AgentStat,
   ArcKey,
   DashboardArc,
+  DashboardDoseStory,
   DashboardOutcome,
   DashboardRun,
   DashboardStudy,
   DashboardUsage,
+  ExtractionClaim,
+  StudyContribution,
+  StudyExtraction,
 } from "./types";
 
 type UnknownRecord = Record<string, unknown>;
@@ -93,6 +97,149 @@ function normalizeArc(value: unknown, key: ArcKey): DashboardArc {
     verdict: number(source.verdict),
     coverage: number(source.coverage),
     isQuantity: boolean(first(source, "is_quantity", "isQuantity")) ?? key === "evidence",
+    closeness: number(source.closeness),
+  };
+}
+
+function normalizeContribution(value: unknown): StudyContribution | null {
+  const source = record(value);
+  if (!Object.keys(source).length) return null;
+  return {
+    id: text(source.id),
+    w: number(source.w),
+    s: number(source.s),
+    designRank: integer(first(source, "design_rank", "designRank")),
+    direction: text(source.direction),
+    formMatch: text(first(source, "form_match", "formMatch")),
+    dShare: number(first(source, "d_share", "dShare")),
+    points: number(source.points),
+    effectRoute: text(first(source, "effect_route", "effectRoute")),
+    effectS: number(first(source, "effect_s", "effectS")),
+  };
+}
+
+function normalizeDoseStory(value: unknown): DashboardDoseStory | null {
+  const source = record(value);
+  if (!Object.keys(source).length) return null;
+  const nullRange = record(first(source, "null_range", "nullRange"));
+  const observed = record(source.observed);
+  return {
+    low: number(source.low),
+    high: number(source.high),
+    nBenefit: integer(first(source, "n_benefit", "nBenefit")),
+    nNull: integer(first(source, "n_null", "nNull")),
+    nullRange: Object.keys(nullRange).length
+      ? { low: number(nullRange.low), high: number(nullRange.high) }
+      : null,
+    basis: text(source.basis),
+    observed: Object.keys(observed).length
+      ? {
+          low: number(observed.low),
+          high: number(observed.high),
+          nWithDose: integer(first(observed, "n_with_dose", "nWithDose")),
+          nTotal: integer(first(observed, "n_total", "nTotal")),
+        }
+      : null,
+    evidenceWithDose: number(first(source, "evidence_with_dose", "evidenceWithDose")),
+    productMatch: text(first(source, "product_match", "productMatch")),
+    productFactor: number(first(source, "product_factor", "productFactor")),
+  };
+}
+
+const S4_ITEM_LABELS: Array<[string, string]> = [
+  ["item1_randomisation_method", "Randomisation method"],
+  ["item2_double_blind_placebo", "Double-blind placebo"],
+  ["item3_prospective_registration", "Prospective registration"],
+  ["item4_outcome_matches_registry", "Outcome matches registry"],
+  ["item5_attrition_ok", "Attrition acceptable"],
+  ["item6_itt", "Intention-to-treat"],
+];
+
+function normalizeExtractionClaim(value: unknown): ExtractionClaim | null {
+  const source = record(value);
+  if (!Object.keys(source).length) return null;
+  return {
+    outcomeVocabId: text(first(source, "outcome_vocab_id", "outcomeVocabId")),
+    discarded: boolean(source.discarded) ?? false,
+    outcomeRaw: text(first(source, "outcome_raw", "outcomeRaw")),
+    measure: text(source.measure),
+    direction: text(source.direction),
+    magnitude: text(source.magnitude),
+    effectSize: number(first(source, "effect_size", "effectSize")),
+    effectUnit: text(first(source, "effect_unit", "effectUnit")),
+    effectFavours: text(first(source, "effect_favours", "effectFavours")),
+    ciLow: number(first(source, "ci_low", "ciLow")),
+    ciHigh: number(first(source, "ci_high", "ciHigh")),
+    pValue: number(first(source, "p_value", "pValue")),
+    isPrimaryOutcome: boolean(first(source, "is_primary_outcome", "isPrimaryOutcome")),
+    contrast: text(source.contrast),
+    evidenceSpan: text(first(source, "evidence_span", "evidenceSpan")),
+  };
+}
+
+function normalizeStudyExtraction(value: unknown): StudyExtraction | null {
+  const source = record(value);
+  if (!Object.keys(source).length) return null;
+  const s3 = record(source.s3);
+  const s4 = record(source.s4);
+  const s7 = record(source.s7);
+  const s8 = record(source.s8);
+  return {
+    s3: Object.keys(s3).length
+      ? {
+          populationAxes: Object.keys(record(s3.population_axes)).length
+            ? record(s3.population_axes)
+            : null,
+          populationText: text(s3.population_text),
+          nRandomised: integer(s3.n_randomised),
+          nAnalysed: integer(s3.n_analysed),
+          durationDays: number(s3.duration_days),
+          comparator: text(s3.comparator),
+          ingredientIsolated: text(s3.ingredient_isolated),
+          selfDeclaredUnderpowered: boolean(s3.self_declared_underpowered),
+          deficiencyStatus: text(s3.deficiency_status),
+          registrationId: text(s3.registration_id),
+          evidenceSpans: stringArray(s3.evidence_spans),
+        }
+      : null,
+    s4: Object.keys(s4).length
+      ? {
+          items: S4_ITEM_LABELS.map(([key, label]) => ({
+            key,
+            label,
+            value: integer(s4[key]),
+          })),
+          unverifiableItems: stringArray(s4.unverifiable_items),
+          evidenceSpans: stringArray(s4.evidence_spans),
+        }
+      : null,
+    s5Claims: array(first(source, "s5_claims", "s5Claims"))
+      .map(normalizeExtractionClaim)
+      .filter((item): item is ExtractionClaim => item !== null),
+    s7: Object.keys(s7).length
+      ? {
+          formVocabId: text(s7.form_vocab_id),
+          formRaw: text(s7.form_raw),
+          saltFamily: text(s7.salt_family),
+          elementalDoseMg: number(s7.elemental_dose_mg),
+          compoundDoseMg: number(s7.compound_dose_mg),
+          dosePerKgMg: number(s7.dose_per_kg_mg),
+          meanBodyMassKg: number(s7.mean_body_mass_kg),
+          doseBasis: text(s7.dose_basis),
+          doseFrequencyPerDay: number(s7.dose_frequency_per_day),
+          confidence: number(s7.confidence),
+          evidenceSpan: text(s7.evidence_span),
+        }
+      : null,
+    s8: Object.keys(s8).length
+      ? {
+          fundingClass: text(s8.funding_class),
+          funderNames: stringArray(s8.funder_names),
+          authorCoi: boolean(s8.author_coi),
+          suppliesDonatedByIndustry: boolean(s8.supplies_donated_by_industry),
+          evidenceSpan: text(s8.evidence_span),
+        }
+      : null,
   };
 }
 
@@ -149,6 +296,10 @@ function normalizeOutcome(value: unknown): DashboardOutcome | null {
     nPrimaries: integer(first(source, "n_primaries", "evidence_n")) ?? integer(evidence.n_primaries),
     nSyntheses: integer(source.n_syntheses) ?? integer(evidence.n_syntheses),
     promptVersion: text(first(source, "prompt_version", "promptVersion")),
+    contributions: array(evidence.contributions)
+      .map(normalizeContribution)
+      .filter((item): item is StudyContribution => item !== null),
+    doseStory: normalizeDoseStory(source.dose),
   };
 }
 
@@ -173,6 +324,7 @@ function normalizeStudy(value: unknown, index: number): DashboardStudy | null {
     skipped: boolean(source.skipped),
     skipReason: text(first(source, "skip_reason", "skipReason")),
     failedPartial: boolean(first(source, "failed_partial", "failedPartial")),
+    extraction: normalizeStudyExtraction(source.extraction),
   };
 }
 

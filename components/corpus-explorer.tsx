@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 
 import type { DashboardStudy } from "@/lib/dashboard/types";
+import { StudyExtractionDetail } from "./study-extraction";
 
 export function CorpusExplorer({ studies }: { studies: DashboardStudy[] }) {
   const [query, setQuery] = useState("");
@@ -70,6 +71,10 @@ export function CorpusExplorer({ studies }: { studies: DashboardStudy[] }) {
                 {study.doi ? <a href={`https://doi.org/${encodeURIComponent(study.doi)}`} rel="noreferrer" target="_blank">DOI <span className="sr-only">for {study.title}</span></a> : null}
                 {study.pmid ? <a href={`https://pubmed.ncbi.nlm.nih.gov/${encodeURIComponent(study.pmid)}/`} rel="noreferrer" target="_blank">PubMed <span className="sr-only">for {study.title}</span></a> : null}
               </div>
+              <details className="study-more" data-testid="study-extraction">
+                <summary>What the subagents extracted</summary>
+                <StudyExtractionDetail extraction={study.extraction} />
+              </details>
             </li>
           ))}
         </ol>

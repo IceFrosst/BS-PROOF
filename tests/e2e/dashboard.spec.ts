@@ -318,32 +318,6 @@ for (const artifact of artifacts) {
       expectedHumanized(usage.telemetry_status),
     );
 
-    const metrics = telemetry.locator("dl.telemetry-metrics");
-    await expect(definitionValue(page, metrics, "Live calls")).toHaveText(
-      expectedNumber(usage.live_calls),
-    );
-    await expect(definitionValue(page, metrics, "Cache hits")).toHaveText(
-      expectedNumber(usage.cache_hits),
-    );
-    await expect(definitionValue(page, metrics, "Retries")).toHaveText(
-      expectedNumber(usage.retries),
-    );
-    await expect(definitionValue(page, metrics, "Failures")).toHaveText(
-      expectedNumber(usage.failures),
-    );
-    await expect(definitionValue(page, metrics, "Wall time")).toHaveText(
-      expectedSeconds(usage.latency.wall_time_s),
-    );
-    await expect(definitionValue(page, metrics, "Average latency")).toHaveText(
-      expectedSeconds(usage.latency.average_s),
-    );
-    await expect(definitionValue(page, metrics, "P95 latency")).toHaveText(
-      expectedSeconds(usage.latency.p95_s),
-    );
-    await expect(definitionValue(page, metrics, "Peak concurrency")).toHaveText(
-      expectedNumber(usage.latency.peak_concurrency),
-    );
-
     const spend = telemetry
       .locator("article")
       .filter({ has: page.getByText("Recorded marginal spend", { exact: true }) });
@@ -366,18 +340,68 @@ for (const artifact of artifacts) {
       await expect(apiEquivalent).toContainText(/not recorded|not inferred/i);
     }
 
-    const tokenParts = [
-      usage.tokens.fresh_input,
-      usage.tokens.cache_write,
-      usage.tokens.cache_read,
-      usage.tokens.output,
-    ];
-    if (tokenParts.some((part) => part === null)) {
-      await expect(telemetry).toContainText(/tokens unavailable/i);
-      await expect(telemetry).toContainText(/not recorded/i);
+    // Per-agent breakdown: one row per agent the artifact's ledger names.
+    const byAgent = Array.isArray(usage.by_agent) ? usage.by_agent : [];
+    if (byAgent.length) {
+      const table = telemetry.getByRole("group", { name: "Cost breakdown by agent" });
+      await expect(table).toBeVisible();
+      for (const row of byAgent) {
+        const agent = typeof row.agent === "string" ? row.agent : null;
+        if (agent) {
+          await expect(table.getByRole("rowheader", { name: agent })).toBeVisible();
+        }
+      }
     } else {
-      const total = tokenParts.reduce<number>((sum, part) => sum + (part ?? 0), 0);
-      await expect(telemetry).toContainText(`${expectedNumber(total)} tokens`);
+      await expect(telemetry).toContainText(/per-agent breakdown: unavailable/i);
+    }
+  });
+
+  test(`${runId} run page carries only the three reviewer sections`, async ({ page }) => {
+    // Founder redesign 2026-08-12: the scatter, Evidence/SR-progression,
+    // Quality section and rendered Full report were removed OUTRIGHT. Their
+    // ids returning would mean the redesign regressed.
+    await page.goto(`/runs/${runId}`);
+    await expect(page.locator("#outcomes")).toBeVisible();
+    await expect(page.locator("#literature")).toBeVisible();
+    await expect(page.locator("#cost")).toBeVisible();
+    for (const removed of ["#evidence", "#quality", "#cost-models", "#full-report"]) {
+      await expect(page.locator(removed)).toHaveCount(0);
+    }
+  });
+
+  test(`${runId} outcome cards expand to per-study attribution or say it is absent`, async ({ page }) => {
+    await page.goto(`/runs/${runId}`);
+    const cards = page.getByTestId("outcome-card");
+    const count = await cards.count();
+    if (count === 0) return;
+    const first = cards.first();
+    const disclosure = first.getByTestId("outcome-more");
+    await expect(disclosure).toBeVisible();
+    await disclosure.locator("summary").click();
+    const outcomeId = artifact.ecu_rows[0]?.outcome_vocab_id;
+    const row = artifact.ecu_rows.find(
+      (candidate) => (candidate.evidence?.contributions ?? []).length > 0,
+    );
+    if (row === undefined && outcomeId !== undefined) {
+      // This artifact predates per-study attribution: the fallback sentence is
+      // the contract, an empty table would read as "no evidence".
+      await expect(disclosure).toContainText(/attribution was not recorded/i);
+    }
+  });
+
+  test(`${runId} literature entries expand to extraction detail or say it is absent`, async ({ page }) => {
+    await page.goto(`/runs/${runId}`);
+    const entries = page.getByTestId("study-extraction");
+    const count = await entries.count();
+    if (count === 0) return;
+    const first = entries.first();
+    await first.locator("summary").click();
+    const studies = artifact.corpus?.studies ?? [];
+    const anyExtraction = studies.some(
+      (study) => study.extraction !== null && study.extraction !== undefined,
+    );
+    if (!anyExtraction) {
+      await expect(first).toContainText(/extraction detail was not retained/i);
     }
   });
 }

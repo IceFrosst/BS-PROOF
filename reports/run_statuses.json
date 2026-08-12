@@ -93,6 +93,19 @@
         "Consequence: anchor calibration is PREMATURE. A band cannot be fitted to a number that moves 15 points when one prompt field is reworded."
       ],
       "note": "v1.18 run. Use for the coverage measurement, not as a stable score. Extraction stability must be established before any band is calibrated."
+    },
+    "20260812_000000_demo-creatine_demo-synthetic_demo": {
+      "status": "invalid",
+      "public_claims_allowed": false,
+      "reason_codes": [
+        "synthetic_demo_fixture"
+      ],
+      "limitations": [
+        "SYNTHETIC DEMO \u2014 hand-written data for previewing the reviewer UI; every number, study and quote is invented.",
+        "Exists so the per-study attribution and extraction-detail views can be seen populated before the next real pipeline run.",
+        "Regenerate with python3 scripts/write_demo_artifact.py; this fixture is deliberately overwritable, unlike real run records."
+      ],
+      "note": "SYNTHETIC DEMO \u2014 not evidence. Every number is invented."
     }
   }
 }

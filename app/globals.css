@@ -452,3 +452,49 @@ thead th { color: var(--ink-soft); font-size: 0.7rem; text-transform: uppercase;
   html { scroll-behavior: auto; }
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
 }
+
+/* ---- Reviewer redesign 2026-08-12: inline score attribution + extraction detail.
+   Text wears text tokens (never the vivid graphic colours); chips carry their
+   identity in the LABEL, colour is reinforcement only. */
+.outcome-more { margin-top: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
+.outcome-more > summary { padding: 10px 14px; font-weight: 700; font-size: 0.9rem; cursor: pointer; color: var(--ink); }
+.outcome-more[open] > summary { border-bottom: 1px solid var(--line); }
+.outcome-breakdown { padding: 14px; display: grid; gap: 14px; }
+.breakdown-story { margin: 0; font-size: 0.92rem; line-height: 1.55; color: var(--ink); }
+.breakdown-fallback, .extraction-fallback, .breakdown-empty { margin: 0; padding: 10px 12px; font-size: 0.88rem; color: var(--ink-soft); background: var(--paper-2); border-radius: 10px; }
+.breakdown-contributions { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.breakdown-contributions caption { text-align: left; font-size: 0.8rem; color: var(--ink-soft); padding-bottom: 8px; }
+.breakdown-contributions th, .breakdown-contributions td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.breakdown-contributions thead th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); }
+.breakdown-contributions .contribution-study { font-weight: 600; max-width: 26ch; }
+.breakdown-contributions .numeric { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.points-negative { color: var(--coral-text); font-weight: 700; }
+.points-positive { color: var(--teal-text); font-weight: 700; }
+.route-chip { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
+.route-measured { background: var(--teal); color: var(--white); }
+.route-label { background: var(--paper-2); color: var(--ink-soft); border: 1px solid var(--line); }
+.breakdown-dose { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin: 0; padding: 10px 12px; background: var(--white); border: 1px solid var(--line); border-radius: 10px; }
+.breakdown-dose dt { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); }
+.breakdown-dose dd { margin: 2px 0 0; font-weight: 650; font-size: 0.88rem; }
+.breakdown-form { margin: 0; font-size: 0.85rem; color: var(--ink-soft); }
+
+.study-more { margin-top: 8px; }
+.study-more > summary { font-size: 0.85rem; font-weight: 700; cursor: pointer; color: var(--teal-text); }
+.study-extraction { display: grid; gap: 14px; padding: 12px 0 4px; }
+.extraction-group h4 { margin: 0 0 8px; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft); }
+.extraction-facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px 14px; margin: 0 0 8px; }
+.extraction-facts dt { font-size: 0.72rem; color: var(--ink-soft); }
+.extraction-facts dd { margin: 1px 0 0; font-size: 0.86rem; font-weight: 600; }
+.extraction-claims { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.extraction-claims li { padding: 10px 12px; background: var(--white); border: 1px solid var(--line); border-radius: 10px; }
+.extraction-claims li.claim-discarded { opacity: 0.62; }
+.claim-line { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; font-size: 0.88rem; }
+.claim-mapped { font-size: 0.78rem; color: var(--teal-text); font-weight: 650; }
+.claim-mapped.claim-unmapped { color: var(--ink-soft); }
+.claim-numbers { margin: 4px 0 0; font-size: 0.8rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.direction-chip { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 700; border: 1px solid var(--line); background: var(--paper-2); color: var(--ink); }
+.direction-benefit { border-color: var(--teal); color: var(--teal-text); }
+.direction-harm { border-color: var(--danger); color: var(--danger); }
+.direction-null_effect { color: var(--ink-soft); }
+.evidence-quotes { display: grid; gap: 6px; }
+.evidence-quote { margin: 6px 0 0; padding: 8px 12px; border-left: 3px solid var(--gold); background: var(--white); font-size: 0.84rem; font-style: italic; color: var(--ink); border-radius: 0 8px 8px 0; }

@@ -4,19 +4,25 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { humanize } from "@/lib/dashboard/format";
-import type { DashboardOutcome } from "@/lib/dashboard/types";
+import type { DashboardOutcome, DashboardStudy } from "@/lib/dashboard/types";
 import { FourRingScore } from "./four-ring-score";
+import { OutcomeBreakdown } from "./outcome-breakdown";
 
 interface OutcomeExplorerProps {
   outcomes: DashboardOutcome[];
   runId: string;
+  studies: DashboardStudy[];
 }
 
 type Filter = "all" | "scored" | "gated";
 
-export function OutcomeExplorer({ outcomes, runId }: OutcomeExplorerProps) {
+export function OutcomeExplorer({ outcomes, runId, studies }: OutcomeExplorerProps) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+  const studiesById = useMemo(
+    () => new Map(studies.map((study) => [study.canonicalId, study])),
+    [studies],
+  );
   const visible = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return outcomes.filter((outcome) => {
@@ -70,6 +76,10 @@ export function OutcomeExplorer({ outcomes, runId }: OutcomeExplorerProps) {
             </div>
             <FourRingScore outcome={outcome} compact />
             <p className="outcome-verdict">{outcome.verdictLabel ?? "Verdict unavailable"}</p>
+            <details className="outcome-more" data-testid="outcome-more">
+              <summary>More info — how this score came to be</summary>
+              <OutcomeBreakdown outcome={outcome} studiesById={studiesById} />
+            </details>
             <div className="outcome-footer">
               <span>{outcome.nPrimaries ?? "—"} primary studies</span>
               <Link href={`/runs/${runId}/outcomes/${outcome.id}`} aria-label={`Inspect ${outcome.label}`}>

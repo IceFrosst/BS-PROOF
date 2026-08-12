@@ -509,6 +509,107 @@ def normalize_usage(raw: Any, *, context: dict | None = None,
     return _attach_agent_tiers(payload, raw, context)
 
 
+_EXTRACTION_SPAN_CAP = 240      # enforced HERE, not only in the prompts:
+                                # the exporter is the deploy boundary
+
+
+def _cap_text(value: Any, cap: int) -> str | None:
+    if value is None:
+        return None
+    return str(value)[:cap]
+
+
+def _cap_spans(value: Any, n: int = 8) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(x)[:_EXTRACTION_SPAN_CAP] for x in value[:n] if x is not None]
+
+
+def _safe_study_extraction(value: Any) -> dict | None:
+    """
+    Per-study extraction detail for the reviewer UI. FOUNDER DECISION
+    2026-08-12: verbatim evidence spans are exported -- the dashboard is an
+    internal calibration instrument and the quote is what lets a scientist
+    verify extraction against the paper. Prompts, cache keys and model
+    envelopes remain out. Fixed keys only; an unknown field never leaks.
+    """
+    if not isinstance(value, dict):
+        return None
+    out: dict = {}
+    s3 = value.get("s3")
+    out["s3"] = None if not isinstance(s3, dict) else {
+        "population_axes": _json_copy(s3.get("population_axes")),
+        "population_text": _cap_text(s3.get("population_text"), _EXTRACTION_SPAN_CAP),
+        "n_randomised": _integer(s3.get("n_randomised")),
+        "n_analysed": _integer(s3.get("n_analysed")),
+        "duration_days": _number(s3.get("duration_days")),
+        "comparator": _cap_text(s3.get("comparator"), 60),
+        "ingredient_isolated": _cap_text(s3.get("ingredient_isolated"), 20),
+        "self_declared_underpowered": s3.get("self_declared_underpowered")
+            if isinstance(s3.get("self_declared_underpowered"), bool) else None,
+        "deficiency_status": _cap_text(s3.get("deficiency_status"), 40),
+        "registration_id": _cap_text(s3.get("registration_id"), 60),
+        "evidence_spans": _cap_spans(s3.get("evidence_spans")),
+    }
+    s4 = value.get("s4")
+    out["s4"] = None if not isinstance(s4, dict) else {
+        **{k: _integer(s4.get(k)) for k in (
+            "item1_randomisation_method", "item2_double_blind_placebo",
+            "item3_prospective_registration", "item4_outcome_matches_registry",
+            "item5_attrition_ok", "item6_itt")},
+        "unverifiable_items": _json_copy(s4.get("unverifiable_items")),
+        "evidence_spans": _cap_spans(s4.get("evidence_spans")),
+    }
+    claims = []
+    for cl in (value.get("s5_claims") or [])[:24]:
+        if not isinstance(cl, dict):
+            continue
+        claims.append({
+            "outcome_vocab_id": _cap_text(cl.get("outcome_vocab_id"), 60),
+            "discarded": bool(cl.get("discarded")),
+            "outcome_raw": _cap_text(cl.get("outcome_raw"), 120),
+            "measure": _cap_text(cl.get("measure"), 80),
+            "direction": _cap_text(cl.get("direction"), 20),
+            "magnitude": _cap_text(cl.get("magnitude"), 20),
+            "effect_size": _number(cl.get("effect_size")),
+            "effect_unit": _cap_text(cl.get("effect_unit"), 60),
+            "effect_favours": _cap_text(cl.get("effect_favours"), 20),
+            "ci_low": _number(cl.get("ci_low")),
+            "ci_high": _number(cl.get("ci_high")),
+            "p_value": _number(cl.get("p_value")),
+            "is_primary_outcome": cl.get("is_primary_outcome")
+                if isinstance(cl.get("is_primary_outcome"), bool) else None,
+            "contrast": _cap_text(cl.get("contrast"), 30),
+            "evidence_span": _cap_text(cl.get("evidence_span"), _EXTRACTION_SPAN_CAP),
+        })
+    out["s5_claims"] = claims
+    s7 = value.get("s7")
+    out["s7"] = None if not isinstance(s7, dict) else {
+        "form_vocab_id": _cap_text(s7.get("form_vocab_id"), 60),
+        "form_raw": _cap_text(s7.get("form_raw"), 120),
+        "salt_family": _cap_text(s7.get("salt_family"), 40),
+        "elemental_dose_mg": _number(s7.get("elemental_dose_mg")),
+        "compound_dose_mg": _number(s7.get("compound_dose_mg")),
+        "dose_per_kg_mg": _number(s7.get("dose_per_kg_mg")),
+        "mean_body_mass_kg": _number(s7.get("mean_body_mass_kg")),
+        "dose_basis": _cap_text(s7.get("dose_basis"), 40),
+        "dose_frequency_per_day": _number(s7.get("dose_frequency_per_day")),
+        "confidence": _number(s7.get("confidence")),
+        "evidence_span": _cap_text(s7.get("evidence_span"), _EXTRACTION_SPAN_CAP),
+    }
+    s8 = value.get("s8")
+    out["s8"] = None if not isinstance(s8, dict) else {
+        "funding_class": _cap_text(s8.get("funding_class"), 40),
+        "funder_names": _json_copy(s8.get("funder_names")),
+        "author_coi": s8.get("author_coi")
+            if isinstance(s8.get("author_coi"), bool) else None,
+        "supplies_donated_by_industry": s8.get("supplies_donated_by_industry")
+            if isinstance(s8.get("supplies_donated_by_industry"), bool) else None,
+        "evidence_span": _cap_text(s8.get("evidence_span"), _EXTRACTION_SPAN_CAP),
+    }
+    return out
+
+
 def _safe_study(study: Any) -> dict | None:
     if not isinstance(study, dict):
         return None
@@ -517,7 +618,10 @@ def _safe_study(study: Any) -> dict | None:
         "canonical_id", "journal", "publisher", "oa", "predatory_venue",
         "skipped", "failed_partial",
     )
-    return {key: _json_copy(study.get(key)) for key in keys if key in study}
+    result = {key: _json_copy(study.get(key)) for key in keys if key in study}
+    if "extraction" in study:
+        result["extraction"] = _safe_study_extraction(study.get("extraction"))
+    return result
 
 
 def _safe_agents(value: Any) -> dict:
@@ -561,7 +665,11 @@ def _safe_arcs(value: Any) -> dict:
             continue
         result[name] = {
             key: _json_copy(arc.get(key))
-            for key in ("verdict", "coverage", "is_quantity") if key in arc
+            # `closeness` (dose arc only, SCORING_MODEL v12): the product's
+            # distance to the range of doses where benefit occurred -- the
+            # composite's dose term, so a reviewer must be able to see it.
+            for key in ("verdict", "coverage", "is_quantity", "closeness")
+            if key in arc
         }
     return result
 
@@ -619,7 +727,7 @@ def _safe_dose(value: Any) -> dict | None:
         return None
     keys = (
         "low", "high", "n_benefit", "n_null", "null_range", "band_version",
-        "basis", "observed", "evidence_with_dose", "product_match",
+        "basis", "observed", "evidence_with_dose", "product_match", "product_factor",
     )
     return {key: _json_copy(value.get(key)) for key in keys if key in value}
 

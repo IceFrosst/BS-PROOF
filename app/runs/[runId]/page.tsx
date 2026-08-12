@@ -3,14 +3,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { CorpusExplorer } from "@/components/corpus-explorer";
-import { EffectConfidenceScatter } from "@/components/effect-confidence-scatter";
-import { MarkdownReport } from "@/components/markdown-report";
 import { OutcomeExplorer } from "@/components/outcome-explorer";
-import { AgentSuccessBars, SystematicReviewProgression } from "@/components/quality-visuals";
 import { StatusBadge } from "@/components/status-badge";
 import { TelemetryPanel } from "@/components/telemetry-panel";
-import { formatDate, formatNumber, formatUnknown, humanize } from "@/lib/dashboard/format";
-import { getRetainedRunIds, loadDashboardRun, loadReportMarkdown } from "@/lib/dashboard/catalog";
+import { formatDate, formatNumber, humanize } from "@/lib/dashboard/format";
+import { getRetainedRunIds, loadDashboardRun } from "@/lib/dashboard/catalog";
 
 interface RunPageProps { params: Promise<{ runId: string }> }
 
@@ -26,22 +23,21 @@ export async function generateMetadata({ params }: RunPageProps): Promise<Metada
   return { title: dashboardRun ? `${humanize(dashboardRun.run.ingredient)} run` : "Run not found" };
 }
 
-function archiveCheck(value: Record<string, unknown> | null): { ok: boolean | null; issues: number } {
-  const raw = value?.reader_check;
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return { ok: null, issues: 0 };
-  const check = raw as Record<string, unknown>;
-  return { ok: typeof check.ok === "boolean" ? check.ok : null, issues: Array.isArray(check.issues) ? check.issues.length : 0 };
-}
-
+/*
+ * REDESIGNED 2026-08-12 (founder decision) for the page's real audience: the
+ * team and the scientists doing manual score reviews. Three sections only —
+ * outcomes (with inline per-study score attribution), the literature with what
+ * each subagent extracted from it, and a simplified cost ledger. The scatter,
+ * SR-progression, Quality section and rendered Markdown reports were removed
+ * outright; the .md reports remain in the repo and the data remains in the
+ * downloadable artifact.
+ */
 export default async function RunPage({ params }: RunPageProps) {
   const { runId } = await params;
   const dashboardRun = loadDashboardRun(runId);
   if (!dashboardRun) notFound();
   const scored = dashboardRun.outcomes.filter((outcome) => outcome.displayScore !== null).length;
   const gated = dashboardRun.outcomes.length - scored;
-  const summaryMarkdown = loadReportMarkdown(dashboardRun.reports.summaryPath);
-  const fullMarkdown = loadReportMarkdown(dashboardRun.reports.fullPath);
-  const reconciliation = archiveCheck(dashboardRun.reconciliation);
 
   return (
     <main id="main-content" tabIndex={-1}>
@@ -71,55 +67,23 @@ export default async function RunPage({ params }: RunPageProps) {
         </div>
       </div>
 
-      <nav className="section-nav" aria-label="Run sections"><div className="shell"><a href="#outcomes">Outcomes</a><a href="#evidence">Evidence</a><a href="#quality">Quality</a><a href="#cost-models">Cost &amp; models</a><a href="#full-report">Full report</a></div></nav>
+      <nav className="section-nav" aria-label="Run sections"><div className="shell"><a href="#outcomes">Outcomes</a><a href="#literature">Literature</a><a href="#cost">Cost</a></div></nav>
 
       <section className="section shell" id="outcomes" aria-labelledby="outcomes-title">
-        <div className="section-heading split-heading"><div><p className="eyebrow">Scores</p><h2 id="outcomes-title">Outcome evidence</h2></div><p>{scored} scored / {gated} unavailable. Every composite is paired with its exact effect, form, dose, and evidence arcs.</p></div>
+        <div className="section-heading split-heading"><div><p className="eyebrow">Scores</p><h2 id="outcomes-title">Outcome evidence</h2></div><p>{scored} scored / {gated} unavailable. Open “More info” on any outcome to see each study&apos;s pull on the score and whether it came from a measured effect or a direction label.</p></div>
         <div className="notice notice-neutral"><strong>Reader note</strong><span>Composite is a 0–100 display score. A gated em dash is not a score of zero.</span></div>
-        <EffectConfidenceScatter outcomes={dashboardRun.outcomes} runId={dashboardRun.run.id} />
-        <OutcomeExplorer outcomes={dashboardRun.outcomes} runId={dashboardRun.run.id} />
+        <OutcomeExplorer outcomes={dashboardRun.outcomes} runId={dashboardRun.run.id} studies={dashboardRun.studies} />
       </section>
 
-      <section className="section section-tint" id="evidence" aria-labelledby="evidence-title">
+      <section className="section section-tint" id="literature" aria-labelledby="literature-title">
         <div className="shell">
-          <div className="section-heading split-heading"><div><p className="eyebrow">Retrieved corpus</p><h2 id="evidence-title">Evidence</h2></div><p>Searchable run-level study metadata. The retained artifact does not assert that every study belongs to every outcome.</p></div>
-          <div className="evidence-summary-grid">
-            <div><span>Targeted</span><strong>{formatNumber(dashboardRun.extraction.targeted)}</strong></div>
-            <div><span>Usable in run</span><strong>{formatNumber(dashboardRun.extraction.usable)}</strong></div>
-            <div><span>SR requested</span><strong>{formatNumber(dashboardRun.systematicReviews.requested)}</strong></div>
-            <div><span>SR extracted</span><strong>{formatNumber(dashboardRun.systematicReviews.extracted)}</strong></div>
-          </div>
-          <SystematicReviewProgression reviews={dashboardRun.systematicReviews} />
+          <div className="section-heading split-heading"><div><p className="eyebrow">Retrieved corpus</p><h2 id="literature-title">Literature</h2></div><p>{formatNumber(dashboardRun.extraction.targeted)} records targeted, {formatNumber(dashboardRun.extraction.usable)} usable. Expand a study to see what each subagent extracted from it, with the verbatim sentence it relied on.</p></div>
           <CorpusExplorer studies={dashboardRun.studies} />
         </div>
       </section>
 
-      <section className="section shell" id="quality" aria-labelledby="quality-title">
-        <div className="section-heading split-heading"><div><p className="eyebrow">Limits &amp; provenance</p><h2 id="quality-title">Quality</h2></div><p>Pipeline validity and extraction completeness are separate from the displayed outcome score.</p></div>
-        <div className={`validity-panel validity-${dashboardRun.run.validity.status.toLowerCase()}`}>
-          <div><StatusBadge status={dashboardRun.run.validity.status} /><h3>{dashboardRun.run.validity.publicClaimsAllowed ? "Public claims allowed by registry" : "Do not use as product claims"}</h3></div>
-          <p>{dashboardRun.run.validity.note ?? "No registry note was retained."}</p>
-          {dashboardRun.run.validity.reasonCodes.length ? <ul>{dashboardRun.run.validity.reasonCodes.map((code) => <li key={code}>{humanize(code)}</li>)}</ul> : null}
-        </div>
-        <div className="quality-grid">
-          <article><p className="eyebrow">Lab archive check</p><h3>{reconciliation.ok === true ? "Matched" : reconciliation.ok === false ? "Mismatch detected" : "Unavailable"}</h3><p>{reconciliation.ok === true ? "Display-critical fields reconcile with the retained context JSON." : reconciliation.ok === false ? `${reconciliation.issues} reconciliation issue(s) are retained; do not resolve by averaging.` : "No separate retained context was available for comparison."}</p></article>
-          <article><p className="eyebrow">Extraction</p><dl className="detail-list"><div><dt>Skipped</dt><dd>{formatNumber(dashboardRun.extraction.skipped)}</dd></div><div><dt>Partial failures</dt><dd>{formatNumber(dashboardRun.extraction.partialFailures)}</dd></div><div><dt>Concurrency</dt><dd>{formatNumber(dashboardRun.extraction.concurrency)}</dd></div><div><dt>In flight</dt><dd>{formatNumber(dashboardRun.extraction.studiesInFlight)}</dd></div></dl></article>
-          <article><p className="eyebrow">Venue screen</p><dl className="detail-list"><div><dt>Studies checked</dt><dd>{formatNumber(dashboardRun.predatoryScreen.studiesChecked)}</dd></div><div><dt>Studies flagged</dt><dd>{formatNumber(dashboardRun.predatoryScreen.studiesFlagged)}</dd></div><div><dt>Score affected</dt><dd>{dashboardRun.predatoryScreen.affectsScore === null ? "Unavailable" : dashboardRun.predatoryScreen.affectsScore ? "Yes" : "No"}</dd></div><div><dt>Source</dt><dd>{dashboardRun.predatoryScreen.source ?? "Unavailable"}</dd></div></dl></article>
-        </div>
-        <AgentSuccessBars agents={dashboardRun.extraction.agents} />
-        {dashboardRun.extraction.agents.length ? <div className="table-card" tabIndex={0} role="group" aria-label="Agent completion retained by the run"><table><caption>Agent completion retained by the run</caption><thead><tr><th scope="col">Agent</th><th scope="col">OK</th><th scope="col">Failed</th><th scope="col">Cache</th></tr></thead><tbody>{dashboardRun.extraction.agents.map((agent) => <tr key={agent.name}><th scope="row">{agent.name}</th><td>{formatNumber(agent.ok)}</td><td>{formatNumber(agent.fail)}</td><td>{formatNumber(agent.cache)}</td></tr>)}</tbody></table></div> : null}
-        {dashboardRun.run.validity.limitations.length ? <div className="limitations"><h3>Retained limitations</h3><ul>{dashboardRun.run.validity.limitations.map((limitation) => <li key={limitation}>{limitation}</li>)}</ul></div> : null}
-      </section>
-
-      <section className="section section-dark" id="cost-models" aria-labelledby="cost-title"><div className="shell"><div className="section-heading split-heading"><div><p className="eyebrow">Operational ledger</p><h2 id="cost-title">Cost &amp; models</h2></div><p>Telemetry reflects what the artifact can prove. Missing token or price detail remains explicitly unavailable.</p></div><TelemetryPanel dashboardRun={dashboardRun} />
-        <div className="model-card"><p className="eyebrow">Run identity</p><h3>Models &amp; execution</h3><dl className="detail-list"><div><dt>Provider</dt><dd>{humanize(dashboardRun.run.provider)}</dd></div><div><dt>Mode</dt><dd>{humanize(dashboardRun.run.mode)}</dd></div><div><dt>Scope</dt><dd>{humanize(dashboardRun.run.scope)}</dd></div><div><dt>Product dose</dt><dd>{formatUnknown(dashboardRun.run.dose)}</dd></div><div><dt>Population</dt><dd>{formatUnknown(dashboardRun.run.population)}</dd></div>{Object.entries(dashboardRun.run.models).map(([agent, model]) => <div key={agent}><dt>{humanize(agent)}</dt><dd>{model}</dd></div>)}</dl></div>
+      <section className="section section-dark" id="cost" aria-labelledby="cost-title"><div className="shell"><div className="section-heading split-heading"><div><p className="eyebrow">Operational ledger</p><h2 id="cost-title">Cost</h2></div><p>Total spend and the per-agent breakdown. Missing token or price detail remains explicitly unavailable; the full ledger is in the downloadable artifact.</p></div><TelemetryPanel dashboardRun={dashboardRun} />
       </div></section>
-
-      <section className="section shell" id="full-report" aria-labelledby="report-title">
-        <div className="section-heading split-heading"><div><p className="eyebrow">Retained prose</p><h2 id="report-title">Full report</h2></div><p>Markdown is rendered with raw HTML disabled. Links are preserved; scripts and embedded content are not.</p></div>
-        <details className="report-disclosure" open><summary>Summary report</summary><MarkdownReport markdown={summaryMarkdown} label="Summary report" /></details>
-        <details className="report-disclosure"><summary>Full technical report</summary><MarkdownReport markdown={fullMarkdown} label="Full technical report" /></details>
-      </section>
     </main>
   );
 }

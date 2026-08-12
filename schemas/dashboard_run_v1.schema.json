@@ -565,6 +565,334 @@
             "boolean",
             "null"
           ]
+        },
+        "extraction": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "s3": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "population_axes": {
+                  "type": [
+                    "object",
+                    "null"
+                  ]
+                },
+                "population_text": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 240
+                },
+                "n_randomised": {
+                  "$ref": "#/$defs/nullableCount"
+                },
+                "n_analysed": {
+                  "$ref": "#/$defs/nullableCount"
+                },
+                "duration_days": {
+                  "$ref": "#/$defs/nullableNumber"
+                },
+                "comparator": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 60
+                },
+                "ingredient_isolated": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 20
+                },
+                "self_declared_underpowered": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ]
+                },
+                "deficiency_status": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 40
+                },
+                "registration_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 60
+                },
+                "evidence_spans": {
+                  "type": "array",
+                  "maxItems": 8,
+                  "items": {
+                    "type": "string",
+                    "maxLength": 240
+                  }
+                }
+              }
+            },
+            "s4": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "item1_randomisation_method": {
+                  "$ref": "#/$defs/nullableCount"
+                },
+                "item2_double_blind_placebo": {
+                  "$ref": "#/$defs/nullableCount"
+                },
+                "item3_prospective_registration": {
+                  "$ref": "#/$defs/nullableCount"
+                },
+                "item4_outcome_matches_registry": {
+                  "$ref": "#/$defs/nullableCount"
+                },
+                "item5_attrition_ok": {
+                  "$ref": "#/$defs/nullableCount"
+                },
+                "item6_itt": {
+                  "$ref": "#/$defs/nullableCount"
+                },
+                "unverifiable_items": {
+                  "type": [
+                    "array",
+                    "null"
+                  ],
+                  "items": {
+                    "type": "string",
+                    "maxLength": 60
+                  }
+                },
+                "evidence_spans": {
+                  "type": "array",
+                  "maxItems": 8,
+                  "items": {
+                    "type": "string",
+                    "maxLength": 240
+                  }
+                }
+              }
+            },
+            "s5_claims": {
+              "type": "array",
+              "maxItems": 24,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "outcome_vocab_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 60
+                  },
+                  "discarded": {
+                    "type": "boolean"
+                  },
+                  "outcome_raw": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 120
+                  },
+                  "measure": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 80
+                  },
+                  "direction": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 20
+                  },
+                  "magnitude": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 20
+                  },
+                  "effect_size": {
+                    "$ref": "#/$defs/nullableNumber"
+                  },
+                  "effect_unit": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 60
+                  },
+                  "effect_favours": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 20
+                  },
+                  "ci_low": {
+                    "$ref": "#/$defs/nullableNumber"
+                  },
+                  "ci_high": {
+                    "$ref": "#/$defs/nullableNumber"
+                  },
+                  "p_value": {
+                    "$ref": "#/$defs/nullableNumber"
+                  },
+                  "is_primary_outcome": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "contrast": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 30
+                  },
+                  "evidence_span": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 240
+                  }
+                }
+              }
+            },
+            "s7": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "form_vocab_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 60
+                },
+                "form_raw": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 120
+                },
+                "salt_family": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 40
+                },
+                "elemental_dose_mg": {
+                  "$ref": "#/$defs/nullableNumber"
+                },
+                "compound_dose_mg": {
+                  "$ref": "#/$defs/nullableNumber"
+                },
+                "dose_per_kg_mg": {
+                  "$ref": "#/$defs/nullableNumber"
+                },
+                "mean_body_mass_kg": {
+                  "$ref": "#/$defs/nullableNumber"
+                },
+                "dose_basis": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 40
+                },
+                "dose_frequency_per_day": {
+                  "$ref": "#/$defs/nullableNumber"
+                },
+                "confidence": {
+                  "$ref": "#/$defs/nullableNumber"
+                },
+                "evidence_span": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 240
+                }
+              }
+            },
+            "s8": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "funding_class": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 40
+                },
+                "funder_names": {
+                  "type": [
+                    "array",
+                    "null"
+                  ],
+                  "items": {
+                    "type": "string",
+                    "maxLength": 120
+                  }
+                },
+                "author_coi": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ]
+                },
+                "supplies_donated_by_industry": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ]
+                },
+                "evidence_span": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 240
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -583,6 +911,9 @@
             "boolean",
             "null"
           ]
+        },
+        "closeness": {
+          "$ref": "#/$defs/nullableNumber"
         }
       }
     },

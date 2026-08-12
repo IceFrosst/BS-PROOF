@@ -221,6 +221,104 @@ def _agent_stats(raw: list[dict]) -> dict:
     return stats
 
 
+def _span(v, cap: int = 240) -> str | None:
+    """One evidence span, truncated. Spans are quotes from the paper, not ours."""
+    if v is None:
+        return None
+    s = str(v)
+    return s[:cap]
+
+
+def _spans(v, n: int = 8, cap: int = 240) -> list[str]:
+    if not isinstance(v, list):
+        return []
+    return [str(x)[:cap] for x in v[:n] if x is not None]
+
+
+def _study_extraction(ext: dict) -> dict | None:
+    """
+    The per-study extraction payload the dashboard shows to REVIEWERS.
+
+    FOUNDER DECISION 2026-08-12: verbatim evidence spans are now exported. The
+    dashboard is an internal calibration instrument behind Vercel auth, and the
+    quote each subagent extracted its answer from is the single most useful
+    field for a scientist verifying extraction against the paper. This
+    deliberately amends the earlier "no raw extraction text" allowlist policy;
+    what stays out is unchanged -- prompts, cache keys, model envelopes, and the
+    private `_meta`/`_failed` bookkeeping.
+
+    ALLOWLIST, not passthrough: every exported key is named here, so a new
+    extraction field never leaks to the site by default.
+    """
+    if not ext or ext.get("_skipped"):
+        return None
+    s3, s4, s7, s8 = (ext.get(k) or None for k in ("S3", "S4", "S7", "S8"))
+    claims = []
+    for o in ext.get("outcomes") or []:
+        cl = o.get("claim") or {}
+        claims.append({
+            "outcome_vocab_id": o.get("outcome_vocab_id"),
+            "discarded": bool(o.get("discarded")),
+            "outcome_raw": _span(cl.get("outcome_raw"), 120),
+            "measure": _span(cl.get("measure"), 80),
+            "direction": cl.get("direction"),
+            "magnitude": cl.get("magnitude"),
+            "effect_size": cl.get("effect_size"),
+            "effect_unit": _span(cl.get("effect_unit"), 60),
+            "effect_favours": cl.get("effect_favours"),
+            "ci_low": cl.get("ci_low"),
+            "ci_high": cl.get("ci_high"),
+            "p_value": cl.get("p_value"),
+            "is_primary_outcome": cl.get("is_primary_outcome"),
+            "contrast": cl.get("contrast"),
+            "evidence_span": _span(cl.get("evidence_span")),
+        })
+    return {
+        "s3": None if not s3 else {
+            "population_axes": s3.get("population_axes"),
+            "population_text": _span(s3.get("population_text")),
+            "n_randomised": s3.get("n_randomised"),
+            "n_analysed": s3.get("n_analysed"),
+            "duration_days": s3.get("duration_days"),
+            "comparator": s3.get("comparator"),
+            "ingredient_isolated": s3.get("ingredient_isolated"),
+            "self_declared_underpowered": s3.get("self_declared_underpowered"),
+            "deficiency_status": s3.get("deficiency_status"),
+            "registration_id": _span(s3.get("registration_id"), 60),
+            "evidence_spans": _spans(s3.get("evidence_spans")),
+        },
+        "s4": None if not s4 else {
+            **{f"item{i}_{n}": s4.get(f"item{i}_{n}") for i, n in (
+                (1, "randomisation_method"), (2, "double_blind_placebo"),
+                (3, "prospective_registration"), (4, "outcome_matches_registry"),
+                (5, "attrition_ok"), (6, "itt"))},
+            "unverifiable_items": s4.get("unverifiable_items"),
+            "evidence_spans": _spans(s4.get("evidence_spans")),
+        },
+        "s5_claims": claims,
+        "s7": None if not s7 else {
+            "form_vocab_id": s7.get("form_vocab_id"),
+            "form_raw": _span(s7.get("form_raw"), 120),
+            "salt_family": s7.get("salt_family"),
+            "elemental_dose_mg": s7.get("elemental_dose_mg"),
+            "compound_dose_mg": s7.get("compound_dose_mg"),
+            "dose_per_kg_mg": s7.get("dose_per_kg_mg"),
+            "mean_body_mass_kg": s7.get("mean_body_mass_kg"),
+            "dose_basis": s7.get("dose_basis"),
+            "dose_frequency_per_day": s7.get("dose_frequency_per_day"),
+            "confidence": s7.get("confidence"),
+            "evidence_span": _span(s7.get("evidence_span")),
+        },
+        "s8": None if not s8 else {
+            "funding_class": s8.get("funding_class"),
+            "funder_names": s8.get("funder_names"),
+            "author_coi": s8.get("author_coi"),
+            "supplies_donated_by_industry": s8.get("supplies_donated_by_industry"),
+            "evidence_span": _span(s8.get("evidence_span")),
+        },
+    }
+
+
 def _studies_list(raw: list[dict]) -> list[dict]:
     out = []
     for r in raw:
@@ -238,6 +336,7 @@ def _studies_list(raw: list[dict]) -> list[dict]:
             "skipped": bool(ext.get("_skipped")),
             "skip_reason": ext.get("_skipped"),
             "failed_partial": bool(ext.get("_failed")),
+            "extraction": _study_extraction(ext),
         })
     return out
 

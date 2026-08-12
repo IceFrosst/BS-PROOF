@@ -118,9 +118,26 @@ function loadDashboardArtifact(filePath: string): DashboardRun {
 }
 
 function scoringModelFromReport(reportPath: string): string | null {
-  if (!fs.existsSync(reportPath)) return null;
-  const match = fs.readFileSync(reportPath, "utf8").match(/^scoring_model:\s*([^\s]+)\s*$/m);
-  return match?.[1] ?? null;
+  // The .md reports MOVE: scripts/archive_reports.py sweeps superseded-model
+  // reports from reports/runs/ into reports/archive/<model>/ (the .json
+  // artifacts stay put). Every archived run therefore lost its scoring_model
+  // backfill here and QUARANTINED on a cold build — pre-existing before the
+  // 2026-08-12 redesign, diagnosed during it. Probe the run-dir path first,
+  // then the same basename under each archive model directory.
+  const candidates = [reportPath];
+  const archiveRoot = path.join(path.dirname(RUNS_DIR), "archive");
+  if (fs.existsSync(archiveRoot)) {
+    const basename = path.basename(reportPath);
+    for (const model of fs.readdirSync(archiveRoot)) {
+      candidates.push(path.join(archiveRoot, model, basename));
+    }
+  }
+  for (const candidate of candidates) {
+    if (!fs.existsSync(candidate)) continue;
+    const match = fs.readFileSync(candidate, "utf8").match(/^scoring_model:\s*([^\s]+)\s*$/m);
+    if (match?.[1]) return match[1];
+  }
+  return null;
 }
 
 function loadLegacyContext(filePath: string): DashboardRun {

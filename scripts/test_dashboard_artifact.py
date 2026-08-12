@@ -183,6 +183,105 @@ class DashboardArtifactTests(unittest.TestCase):
         self.assertNotIn("evidence_span", rows[0])
         self.assertNotIn("DO-NOT-EXPORT-SPAN", json.dumps(artifact))
 
+    def test_study_extraction_exports_spans_but_never_meta(self) -> None:
+        """Reviewer detail (founder decision 2026-08-12): evidence spans ARE
+        exported now -- the dashboard is an internal calibration instrument and
+        the quote is what lets a scientist verify extraction against the paper.
+        The allowlist discipline is unchanged for everything else: `_meta`,
+        prompt-shaped keys and unknown fields must never reach the artifact,
+        and a skipped study exports extraction: null."""
+        context = {
+            "ingredient": "creatine",
+            "form": "creatine_monohydrate",
+            "scope": "intervention",
+            "ecu_rows": [],
+            "studies_list": [
+                {"title": "A trial", "year": 2025, "doi": "10.1/a",
+                 "canonical_id": "doi:10.1/a", "oa": "full_text",
+                 "predatory_venue": False, "skipped": False,
+                 "failed_partial": False,
+                 "extraction": {
+                     "s3": {"population_axes": {"age_band": "adult"},
+                            "n_randomised": 40,
+                            "comparator": "ingredient_free",
+                            "self_declared_underpowered": False,
+                            "evidence_spans": ["Forty adults were randomised" + "x" * 400],
+                            "_meta": "DO-NOT-EXPORT"},
+                     "s4": {"item1_randomisation_method": 1,
+                            "evidence_spans": ["computer-generated sequence"]},
+                     "s5_claims": [
+                         {"outcome_vocab_id": "muscle_strength",
+                          "discarded": False,
+                          "outcome_raw": "1RM bench press",
+                          "direction": "null_effect",
+                          "effect_size": 0.43, "effect_unit": "cohen's d",
+                          "effect_favours": "ingredient",
+                          "evidence_span": "d = 0.43 favouring creatine, p = 0.09",
+                          "cache_key": "DO-NOT-EXPORT"}],
+                     "s7": {"form_vocab_id": "creatine_monohydrate",
+                            "elemental_dose_mg": 4400,
+                            "dose_per_kg_mg": None,
+                            "evidence_span": "5 g/day creatine monohydrate"},
+                     "s8": {"funding_class": "independent",
+                            "evidence_span": "funded by a university grant"},
+                 }},
+                {"title": "Skipped", "canonical_id": "doi:10.1/skip",
+                 "skipped": True, "failed_partial": False,
+                 "extraction": None},
+            ],
+        }
+        artifact = build_dashboard_run(
+            context,
+            run_id="20990101_000002_creatine_creatine-monohydrate_claude",
+            mode="claude",
+        )
+        studies = artifact["corpus"]["studies"]
+        ext = studies[0]["extraction"]
+        self.assertEqual("d = 0.43 favouring creatine, p = 0.09",
+                         ext["s5_claims"][0]["evidence_span"])
+        self.assertEqual("muscle_strength", ext["s5_claims"][0]["outcome_vocab_id"])
+        self.assertFalse(ext["s5_claims"][0]["discarded"])
+        self.assertEqual("ingredient", ext["s5_claims"][0]["effect_favours"])
+        # span cap enforced at export, not just in prompts
+        self.assertLessEqual(len(ext["s3"]["evidence_spans"][0]), 240)
+        self.assertEqual(4400, ext["s7"]["elemental_dose_mg"])
+        self.assertIsNone(studies[1]["extraction"])
+        payload = json.dumps(artifact)
+        self.assertNotIn("DO-NOT-EXPORT", payload)
+        self.assertNotIn("cache_key", json.dumps(ext))
+
+    def test_dose_closeness_and_product_factor_survive_when_present(self) -> None:
+        """SCORING_MODEL v12: closeness is the composite's dose term, so a
+        reviewer must see it. Absent on old rows -- absent, never null-filled."""
+        row = {
+            "ecu_key": "creatine|creatine_monohydrate|unbanded|muscle_power|general_adult",
+            "ingredient": "creatine", "form_vocab_id": "creatine_monohydrate",
+            "outcome_vocab_id": "muscle_power",
+            "score": 9, "composite": 44, "band": "inconclusive",
+            "components": {"c": 0.9, "d": 0.06, "E": 4.0},
+            "arcs": {
+                "effect": {"verdict": 0.06, "coverage": 1.0},
+                "form": {"verdict": None, "coverage": 0.0},
+                "dose": {"verdict": -0.35, "coverage": 0.027, "closeness": 0.1},
+                "evidence": {"verdict": None, "coverage": 0.9, "is_quantity": True},
+            },
+            "dose": {"low": 20000, "high": 21227, "basis": "observed_benefit_doses",
+                     "product_match": "below_50", "product_factor": 0.1},
+            "evidence": {"n_primaries": 3, "study_ids": ["doi:a"]},
+            "applicability": {"form": {"match": 1.0, "assessable": 1.0}},
+        }
+        context = {"ingredient": "creatine", "form": "creatine_monohydrate",
+                   "scope": "intervention", "ecu_rows": [row]}
+        artifact = build_dashboard_run(
+            context,
+            run_id="20990101_000003_creatine_creatine-monohydrate_claude",
+            mode="claude",
+        )
+        out = artifact["ecu_rows"][0]
+        self.assertEqual(0.1, out["arcs"]["dose"]["closeness"])
+        self.assertEqual(0.1, out["dose"]["product_factor"])
+        self.assertNotIn("closeness", out["arcs"]["effect"])
+
     def test_legacy_usage_normalizes_without_zero_filling_unknowns(self) -> None:
         usage = normalize_usage({
             "calls": 3,

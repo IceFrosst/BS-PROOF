@@ -1,0 +1,1205 @@
+{
+ "ingredient": "demo_creatine_synthetic",
+ "form": "creatine_monohydrate",
+ "scope": "per_outcome",
+ "mode": "demo-synthetic",
+ "provider": "synthetic",
+ "scoring_model": "v12-dose-closeness",
+ "prompt_version": "v1.19",
+ "studies_targeted": 8,
+ "studies_ok": 8,
+ "studies_skipped": 0,
+ "studies_failed_partial": 0,
+ "product": {
+  "ingredient": "demo_creatine_synthetic",
+  "form": "creatine_monohydrate",
+  "dose": {
+   "low_mg": 4400,
+   "high_mg": 4400
+  }
+ },
+ "studies_list": [
+  {
+   "title": "DEMO: Creatine and bench press strength in adults",
+   "year": 2024,
+   "doi": "10.9999/demo.1",
+   "pmid": null,
+   "canonical_id": "doi:10.9999demo1",
+   "journal": "Journal of Synthetic Fixtures",
+   "oa": "full_text",
+   "predatory_venue": false,
+   "skipped": false,
+   "skip_reason": null,
+   "failed_partial": false,
+   "extraction": {
+    "s3": {
+     "population_axes": {
+      "age_band": "adult",
+      "sex": "mixed",
+      "deficiency_status": "unknown",
+      "pregnancy": "not_pregnant",
+      "health_status": "healthy"
+     },
+     "population_text": "SYNTHETIC DEMO: 24 healthy adults, invented",
+     "n_randomised": 24,
+     "n_analysed": 22,
+     "duration_days": 56,
+     "comparator": "ingredient_free",
+     "ingredient_isolated": "yes",
+     "self_declared_underpowered": false,
+     "deficiency_status": "unknown",
+     "registration_id": null,
+     "evidence_spans": [
+      "SYNTHETIC DEMO: participants were randomised to creatine or placebo"
+     ]
+    },
+    "s4": {
+     "item1_randomisation_method": 1,
+     "item2_double_blind_placebo": null,
+     "item3_prospective_registration": null,
+     "item4_outcome_matches_registry": null,
+     "item5_attrition_ok": 1,
+     "item6_itt": 1,
+     "unverifiable_items": [],
+     "evidence_spans": [
+      "SYNTHETIC DEMO: allocation used a computer-generated sequence"
+     ]
+    },
+    "s5_claims": [
+     {
+      "outcome_vocab_id": "muscle_strength",
+      "discarded": false,
+      "outcome_raw": "1RM bench press",
+      "measure": "kg",
+      "direction": "benefit",
+      "magnitude": "meaningful",
+      "effect_size": 0.55,
+      "effect_unit": "cohen's d",
+      "effect_favours": "ingredient",
+      "ci_low": null,
+      "ci_high": null,
+      "p_value": 0.03,
+      "is_primary_outcome": true,
+      "contrast": "vs_ingredient_free",
+      "evidence_span": "SYNTHETIC DEMO: the between-group difference was 0.55 cohen's d"
+     }
+    ],
+    "s7": {
+     "form_vocab_id": "creatine_monohydrate",
+     "form_raw": "creatine monohydrate (DEMO)",
+     "salt_family": null,
+     "elemental_dose_mg": 5000,
+     "compound_dose_mg": null,
+     "dose_per_kg_mg": null,
+     "mean_body_mass_kg": null,
+     "dose_basis": "elemental_stated",
+     "dose_frequency_per_day": 1,
+     "confidence": 0.9,
+     "evidence_span": "SYNTHETIC DEMO: 5 g/day for eight weeks"
+    },
+    "s8": {
+     "funding_class": "industry_other",
+     "funder_names": [
+      "Synthetic Research Council"
+     ],
+     "author_coi": false,
+     "supplies_donated_by_industry": true,
+     "evidence_span": "SYNTHETIC DEMO: funded by a university grant, no industry role"
+    }
+   }
+  },
+  {
+   "title": "DEMO: Maintenance-dose creatine and 1RM",
+   "year": 2023,
+   "doi": "10.9999/demo.2",
+   "pmid": null,
+   "canonical_id": "doi:10.9999demo2",
+   "journal": "Journal of Synthetic Fixtures",
+   "oa": "full_text",
+   "predatory_venue": false,
+   "skipped": false,
+   "skip_reason": null,
+   "failed_partial": false,
+   "extraction": {
+    "s3": {
+     "population_axes": {
+      "age_band": "adult",
+      "sex": "mixed",
+      "deficiency_status": "unknown",
+      "pregnancy": "not_pregnant",
+      "health_status": "healthy"
+     },
+     "population_text": "SYNTHETIC DEMO: 28 healthy adults, invented",
+     "n_randomised": 28,
+     "n_analysed": 26,
+     "duration_days": 56,
+     "comparator": "ingredient_free",
+     "ingredient_isolated": "yes",
+     "self_declared_underpowered": false,
+     "deficiency_status": "unknown",
+     "registration_id": null,
+     "evidence_spans": [
+      "SYNTHETIC DEMO: participants were randomised to creatine or placebo"
+     ]
+    },
+    "s4": {
+     "item1_randomisation_method": 1,
+     "item2_double_blind_placebo": 1,
+     "item3_prospective_registration": null,
+     "item4_outcome_matches_registry": null,
+     "item5_attrition_ok": 1,
+     "item6_itt": 1,
+     "unverifiable_items": [],
+     "evidence_spans": [
+      "SYNTHETIC DEMO: allocation used a computer-generated sequence"
+     ]
+    },
+    "s5_claims": [
+     {
+      "outcome_vocab_id": "muscle_strength",
+      "discarded": false,
+      "outcome_raw": "1RM bench press",
+      "measure": "kg",
+      "direction": "null_effect",
+      "magnitude": null,
+      "effect_size": 0.43,
+      "effect_unit": "cohen's d",
+      "effect_favours": "ingredient",
+      "ci_low": null,
+      "ci_high": null,
+      "p_value": 0.4,
+      "is_primary_outcome": true,
+      "contrast": "vs_ingredient_free",
+      "evidence_span": "SYNTHETIC DEMO: the between-group difference was 0.43 cohen's d"
+     }
+    ],
+    "s7": {
+     "form_vocab_id": "creatine_monohydrate",
+     "form_raw": "creatine monohydrate (DEMO)",
+     "salt_family": null,
+     "elemental_dose_mg": 4400,
+     "compound_dose_mg": null,
+     "dose_per_kg_mg": null,
+     "mean_body_mass_kg": null,
+     "dose_basis": "elemental_stated",
+     "dose_frequency_per_day": 1,
+     "confidence": 0.9,
+     "evidence_span": "SYNTHETIC DEMO: 4.4 g/day for eight weeks"
+    },
+    "s8": {
+     "funding_class": "independent",
+     "funder_names": [
+      "Synthetic Research Council"
+     ],
+     "author_coi": false,
+     "supplies_donated_by_industry": false,
+     "evidence_span": "SYNTHETIC DEMO: funded by a university grant, no industry role"
+    }
+   }
+  },
+  {
+   "title": "DEMO: Loading-protocol creatine trial",
+   "year": 2022,
+   "doi": "10.9999/demo.3",
+   "pmid": null,
+   "canonical_id": "doi:10.9999demo3",
+   "journal": "Journal of Synthetic Fixtures",
+   "oa": "full_text",
+   "predatory_venue": false,
+   "skipped": false,
+   "skip_reason": null,
+   "failed_partial": false,
+   "extraction": {
+    "s3": {
+     "population_axes": {
+      "age_band": "adult",
+      "sex": "mixed",
+      "deficiency_status": "unknown",
+      "pregnancy": "not_pregnant",
+      "health_status": "healthy"
+     },
+     "population_text": "SYNTHETIC DEMO: 32 healthy adults, invented",
+     "n_randomised": 32,
+     "n_analysed": 30,
+     "duration_days": 56,
+     "comparator": "ingredient_free",
+     "ingredient_isolated": "yes",
+     "self_declared_underpowered": false,
+     "deficiency_status": "unknown",
+     "registration_id": null,
+     "evidence_spans": [
+      "SYNTHETIC DEMO: participants were randomised to creatine or placebo"
+     ]
+    },
+    "s4": {
+     "item1_randomisation_method": 1,
+     "item2_double_blind_placebo": null,
+     "item3_prospective_registration": null,
+     "item4_outcome_matches_registry": null,
+     "item5_attrition_ok": 1,
+     "item6_itt": 0,
+     "unverifiable_items": [
+      "item3",
+      "item4"
+     ],
+     "evidence_spans": [
+      "SYNTHETIC DEMO: allocation used a computer-generated sequence"
+     ]
+    },
+    "s5_claims": [
+     {
+      "outcome_vocab_id": "muscle_strength",
+      "discarded": false,
+      "outcome_raw": "1RM bench press",
+      "measure": "kg",
+      "direction": "benefit",
+      "magnitude": "meaningful",
+      "effect_size": 8.0,
+      "effect_unit": "% difference",
+      "effect_favours": "ingredient",
+      "ci_low": null,
+      "ci_high": null,
+      "p_value": 0.03,
+      "is_primary_outcome": true,
+      "contrast": "vs_ingredient_free",
+      "evidence_span": "SYNTHETIC DEMO: the between-group difference was 8.0 % difference"
+     }
+    ],
+    "s7": {
+     "form_vocab_id": "creatine_monohydrate",
+     "form_raw": "creatine monohydrate (DEMO)",
+     "salt_family": null,
+     "elemental_dose_mg": 20000,
+     "compound_dose_mg": null,
+     "dose_per_kg_mg": null,
+     "mean_body_mass_kg": null,
+     "dose_basis": "elemental_stated",
+     "dose_frequency_per_day": 1,
+     "confidence": 0.9,
+     "evidence_span": "SYNTHETIC DEMO: 20 g/day for eight weeks"
+    },
+    "s8": {
+     "funding_class": "industry_other",
+     "funder_names": [
+      "Synthetic Research Council"
+     ],
+     "author_coi": false,
+     "supplies_donated_by_industry": true,
+     "evidence_span": "SYNTHETIC DEMO: funded by a university grant, no industry role"
+    }
+   }
+  },
+  {
+   "title": "DEMO: Creatine vs placebo, null strength result",
+   "year": 2021,
+   "doi": "10.9999/demo.4",
+   "pmid": null,
+   "canonical_id": "doi:10.9999demo4",
+   "journal": "Journal of Synthetic Fixtures",
+   "oa": "full_text",
+   "predatory_venue": false,
+   "skipped": false,
+   "skip_reason": null,
+   "failed_partial": false,
+   "extraction": {
+    "s3": {
+     "population_axes": {
+      "age_band": "adult",
+      "sex": "mixed",
+      "deficiency_status": "unknown",
+      "pregnancy": "not_pregnant",
+      "health_status": "healthy"
+     },
+     "population_text": "SYNTHETIC DEMO: 36 healthy adults, invented",
+     "n_randomised": 36,
+     "n_analysed": 34,
+     "duration_days": 56,
+     "comparator": "ingredient_free",
+     "ingredient_isolated": "yes",
+     "self_declared_underpowered": false,
+     "deficiency_status": "unknown",
+     "registration_id": null,
+     "evidence_spans": [
+      "SYNTHETIC DEMO: participants were randomised to creatine or placebo"
+     ]
+    },
+    "s4": {
+     "item1_randomisation_method": 1,
+     "item2_double_blind_placebo": 1,
+     "item3_prospective_registration": null,
+     "item4_outcome_matches_registry": null,
+     "item5_attrition_ok": 1,
+     "item6_itt": 1,
+     "unverifiable_items": [],
+     "evidence_spans": [
+      "SYNTHETIC DEMO: allocation used a computer-generated sequence"
+     ]
+    },
+    "s5_claims": [
+     {
+      "outcome_vocab_id": "muscle_strength",
+      "discarded": false,
+      "outcome_raw": "1RM bench press",
+      "measure": "kg",
+      "direction": "null_effect",
+      "magnitude": null,
+      "effect_size": null,
+      "effect_unit": null,
+      "effect_favours": null,
+      "ci_low": null,
+      "ci_high": null,
+      "p_value": 0.4,
+      "is_primary_outcome": true,
+      "contrast": "vs_ingredient_free",
+      "evidence_span": "SYNTHETIC DEMO: no significant between-group difference was observed"
+     }
+    ],
+    "s7": {
+     "form_vocab_id": "creatine_monohydrate",
+     "form_raw": "creatine monohydrate (DEMO)",
+     "salt_family": null,
+     "elemental_dose_mg": 3000,
+     "compound_dose_mg": null,
+     "dose_per_kg_mg": null,
+     "mean_body_mass_kg": null,
+     "dose_basis": "elemental_stated",
+     "dose_frequency_per_day": 1,
+     "confidence": 0.9,
+     "evidence_span": "SYNTHETIC DEMO: 3 g/day for eight weeks"
+    },
+    "s8": {
+     "funding_class": "independent",
+     "funder_names": [
+      "Synthetic Research Council"
+     ],
+     "author_coi": false,
+     "supplies_donated_by_industry": false,
+     "evidence_span": "SYNTHETIC DEMO: funded by a university grant, no industry role"
+    }
+   }
+  },
+  {
+   "title": "DEMO: Per-kg dosed creatine and power",
+   "year": 2025,
+   "doi": "10.9999/demo.5",
+   "pmid": null,
+   "canonical_id": "doi:10.9999demo5",
+   "journal": "Journal of Synthetic Fixtures",
+   "oa": "full_text",
+   "predatory_venue": false,
+   "skipped": false,
+   "skip_reason": null,
+   "failed_partial": false,
+   "extraction": {
+    "s3": {
+     "population_axes": {
+      "age_band": "adult",
+      "sex": "mixed",
+      "deficiency_status": "unknown",
+      "pregnancy": "not_pregnant",
+      "health_status": "healthy"
+     },
+     "population_text": "SYNTHETIC DEMO: 40 healthy adults, invented",
+     "n_randomised": 40,
+     "n_analysed": 38,
+     "duration_days": 56,
+     "comparator": "ingredient_free",
+     "ingredient_isolated": "yes",
+     "self_declared_underpowered": false,
+     "deficiency_status": "unknown",
+     "registration_id": null,
+     "evidence_spans": [
+      "SYNTHETIC DEMO: participants were randomised to creatine or placebo"
+     ]
+    },
+    "s4": {
+     "item1_randomisation_method": 1,
+     "item2_double_blind_placebo": null,
+     "item3_prospective_registration": null,
+     "item4_outcome_matches_registry": null,
+     "item5_attrition_ok": 1,
+     "item6_itt": 1,
+     "unverifiable_items": [],
+     "evidence_spans": [
+      "SYNTHETIC DEMO: allocation used a computer-generated sequence"
+     ]
+    },
+    "s5_claims": [
+     {
+      "outcome_vocab_id": "muscle_power",
+      "discarded": false,
+      "outcome_raw": "vertical jump height",
+      "measure": "cm",
+      "direction": "benefit",
+      "magnitude": "meaningful",
+      "effect_size": 6.1,
+      "effect_unit": "%",
+      "effect_favours": "ingredient",
+      "ci_low": null,
+      "ci_high": null,
+      "p_value": 0.03,
+      "is_primary_outcome": true,
+      "contrast": "vs_ingredient_free",
+      "evidence_span": "SYNTHETIC DEMO: the between-group difference was 6.1 %"
+     }
+    ],
+    "s7": {
+     "form_vocab_id": "creatine_monohydrate",
+     "form_raw": "creatine monohydrate (DEMO)",
+     "salt_family": null,
+     "elemental_dose_mg": null,
+     "compound_dose_mg": null,
+     "dose_per_kg_mg": 100,
+     "mean_body_mass_kg": 80,
+     "dose_basis": "per_kg_x_stated_mass",
+     "dose_frequency_per_day": 1,
+     "confidence": 0.9,
+     "evidence_span": "SYNTHETIC DEMO: 0.1 g/kg/day, mean body mass stated"
+    },
+    "s8": {
+     "funding_class": "industry_other",
+     "funder_names": [
+      "Synthetic Research Council"
+     ],
+     "author_coi": false,
+     "supplies_donated_by_industry": true,
+     "evidence_span": "SYNTHETIC DEMO: funded by a university grant, no industry role"
+    }
+   }
+  },
+  {
+   "title": "DEMO: Creatine and jump height",
+   "year": 2024,
+   "doi": "10.9999/demo.6",
+   "pmid": null,
+   "canonical_id": "doi:10.9999demo6",
+   "journal": "Journal of Synthetic Fixtures",
+   "oa": "full_text",
+   "predatory_venue": false,
+   "skipped": false,
+   "skip_reason": null,
+   "failed_partial": false,
+   "extraction": {
+    "s3": {
+     "population_axes": {
+      "age_band": "adult",
+      "sex": "mixed",
+      "deficiency_status": "unknown",
+      "pregnancy": "not_pregnant",
+      "health_status": "healthy"
+     },
+     "population_text": "SYNTHETIC DEMO: 44 healthy adults, invented",
+     "n_randomised": 44,
+     "n_analysed": 42,
+     "duration_days": 56,
+     "comparator": "ingredient_free",
+     "ingredient_isolated": "yes",
+     "self_declared_underpowered": false,
+     "deficiency_status": "unknown",
+     "registration_id": null,
+     "evidence_spans": [
+      "SYNTHETIC DEMO: participants were randomised to creatine or placebo"
+     ]
+    },
+    "s4": {
+     "item1_randomisation_method": 1,
+     "item2_double_blind_placebo": 1,
+     "item3_prospective_registration": null,
+     "item4_outcome_matches_registry": null,
+     "item5_attrition_ok": 1,
+     "item6_itt": 1,
+     "unverifiable_items": [
+      "item3",
+      "item4"
+     ],
+     "evidence_spans": [
+      "SYNTHETIC DEMO: allocation used a computer-generated sequence"
+     ]
+    },
+    "s5_claims": [
+     {
+      "outcome_vocab_id": "muscle_power",
+      "discarded": false,
+      "outcome_raw": "vertical jump height",
+      "measure": "cm",
+      "direction": "null_effect",
+      "magnitude": null,
+      "effect_size": 0.05,
+      "effect_unit": "cohen's d",
+      "effect_favours": "neither",
+      "ci_low": null,
+      "ci_high": null,
+      "p_value": 0.4,
+      "is_primary_outcome": true,
+      "contrast": "vs_ingredient_free",
+      "evidence_span": "SYNTHETIC DEMO: the between-group difference was 0.05 cohen's d"
+     }
+    ],
+    "s7": {
+     "form_vocab_id": "creatine_monohydrate",
+     "form_raw": "creatine monohydrate (DEMO)",
+     "salt_family": null,
+     "elemental_dose_mg": 5000,
+     "compound_dose_mg": null,
+     "dose_per_kg_mg": null,
+     "mean_body_mass_kg": null,
+     "dose_basis": "elemental_stated",
+     "dose_frequency_per_day": 1,
+     "confidence": 0.9,
+     "evidence_span": "SYNTHETIC DEMO: 5 g/day for eight weeks"
+    },
+    "s8": {
+     "funding_class": "independent",
+     "funder_names": [
+      "Synthetic Research Council"
+     ],
+     "author_coi": false,
+     "supplies_donated_by_industry": false,
+     "evidence_span": "SYNTHETIC DEMO: funded by a university grant, no industry role"
+    }
+   }
+  },
+  {
+   "title": "DEMO: A small pilot the authors call underpowered",
+   "year": 2020,
+   "doi": "10.9999/demo.7",
+   "pmid": null,
+   "canonical_id": "doi:10.9999demo7",
+   "journal": "Journal of Synthetic Fixtures",
+   "oa": "full_text",
+   "predatory_venue": false,
+   "skipped": false,
+   "skip_reason": null,
+   "failed_partial": false,
+   "extraction": {
+    "s3": {
+     "population_axes": {
+      "age_band": "adult",
+      "sex": "mixed",
+      "deficiency_status": "unknown",
+      "pregnancy": "not_pregnant",
+      "health_status": "healthy"
+     },
+     "population_text": "SYNTHETIC DEMO: 48 healthy adults, invented",
+     "n_randomised": 48,
+     "n_analysed": 46,
+     "duration_days": 56,
+     "comparator": "ingredient_free",
+     "ingredient_isolated": "yes",
+     "self_declared_underpowered": true,
+     "deficiency_status": "unknown",
+     "registration_id": null,
+     "evidence_spans": [
+      "SYNTHETIC DEMO: participants were randomised to creatine or placebo"
+     ]
+    },
+    "s4": {
+     "item1_randomisation_method": 1,
+     "item2_double_blind_placebo": null,
+     "item3_prospective_registration": null,
+     "item4_outcome_matches_registry": null,
+     "item5_attrition_ok": 1,
+     "item6_itt": 1,
+     "unverifiable_items": [],
+     "evidence_spans": [
+      "SYNTHETIC DEMO: allocation used a computer-generated sequence"
+     ]
+    },
+    "s5_claims": [
+     {
+      "outcome_vocab_id": "muscle_strength",
+      "discarded": false,
+      "outcome_raw": "1RM bench press",
+      "measure": "kg",
+      "direction": "null_effect",
+      "magnitude": null,
+      "effect_size": null,
+      "effect_unit": null,
+      "effect_favours": null,
+      "ci_low": null,
+      "ci_high": null,
+      "p_value": 0.4,
+      "is_primary_outcome": true,
+      "contrast": "vs_ingredient_free",
+      "evidence_span": "SYNTHETIC DEMO: no significant between-group difference was observed"
+     }
+    ],
+    "s7": {
+     "form_vocab_id": "creatine_monohydrate",
+     "form_raw": "creatine monohydrate (DEMO)",
+     "salt_family": null,
+     "elemental_dose_mg": 5000,
+     "compound_dose_mg": null,
+     "dose_per_kg_mg": null,
+     "mean_body_mass_kg": null,
+     "dose_basis": "elemental_stated",
+     "dose_frequency_per_day": 1,
+     "confidence": 0.9,
+     "evidence_span": "SYNTHETIC DEMO: 5 g/day for eight weeks"
+    },
+    "s8": {
+     "funding_class": "industry_other",
+     "funder_names": [
+      "Synthetic Research Council"
+     ],
+     "author_coi": false,
+     "supplies_donated_by_industry": true,
+     "evidence_span": "SYNTHETIC DEMO: funded by a university grant, no industry role"
+    }
+   }
+  },
+  {
+   "title": "DEMO: Creatine and sleep quality",
+   "year": 2023,
+   "doi": "10.9999/demo.8",
+   "pmid": null,
+   "canonical_id": "doi:10.9999demo8",
+   "journal": "Journal of Synthetic Fixtures",
+   "oa": "full_text",
+   "predatory_venue": false,
+   "skipped": false,
+   "skip_reason": null,
+   "failed_partial": false,
+   "extraction": {
+    "s3": {
+     "population_axes": {
+      "age_band": "adult",
+      "sex": "mixed",
+      "deficiency_status": "unknown",
+      "pregnancy": "not_pregnant",
+      "health_status": "healthy"
+     },
+     "population_text": "SYNTHETIC DEMO: 52 healthy adults, invented",
+     "n_randomised": 52,
+     "n_analysed": 50,
+     "duration_days": 56,
+     "comparator": "ingredient_free",
+     "ingredient_isolated": "yes",
+     "self_declared_underpowered": false,
+     "deficiency_status": "unknown",
+     "registration_id": null,
+     "evidence_spans": [
+      "SYNTHETIC DEMO: participants were randomised to creatine or placebo"
+     ]
+    },
+    "s4": {
+     "item1_randomisation_method": 1,
+     "item2_double_blind_placebo": 1,
+     "item3_prospective_registration": null,
+     "item4_outcome_matches_registry": null,
+     "item5_attrition_ok": 1,
+     "item6_itt": 1,
+     "unverifiable_items": [],
+     "evidence_spans": [
+      "SYNTHETIC DEMO: allocation used a computer-generated sequence"
+     ]
+    },
+    "s5_claims": [
+     {
+      "outcome_vocab_id": "sleep_quality",
+      "discarded": false,
+      "outcome_raw": "vertical jump height",
+      "measure": "cm",
+      "direction": "null_effect",
+      "magnitude": null,
+      "effect_size": null,
+      "effect_unit": null,
+      "effect_favours": null,
+      "ci_low": null,
+      "ci_high": null,
+      "p_value": 0.4,
+      "is_primary_outcome": true,
+      "contrast": "vs_ingredient_free",
+      "evidence_span": "SYNTHETIC DEMO: no significant between-group difference was observed"
+     }
+    ],
+    "s7": {
+     "form_vocab_id": "creatine_monohydrate",
+     "form_raw": "creatine monohydrate (DEMO)",
+     "salt_family": null,
+     "elemental_dose_mg": 5000,
+     "compound_dose_mg": null,
+     "dose_per_kg_mg": null,
+     "mean_body_mass_kg": null,
+     "dose_basis": "elemental_stated",
+     "dose_frequency_per_day": 1,
+     "confidence": 0.9,
+     "evidence_span": "SYNTHETIC DEMO: 5 g/day for eight weeks"
+    },
+    "s8": {
+     "funding_class": "independent",
+     "funder_names": [
+      "Synthetic Research Council"
+     ],
+     "author_coi": false,
+     "supplies_donated_by_industry": false,
+     "evidence_span": "SYNTHETIC DEMO: funded by a university grant, no industry role"
+    }
+   }
+  }
+ ],
+ "agent_stats": {
+  "S3": {
+   "ok": 8,
+   "fail": 0,
+   "cache": 0
+  },
+  "S4": {
+   "ok": 8,
+   "fail": 0,
+   "cache": 0
+  },
+  "S5": {
+   "ok": 8,
+   "fail": 0,
+   "cache": 0
+  },
+  "S6B": {
+   "ok": 8,
+   "fail": 0,
+   "cache": 0
+  },
+  "S7": {
+   "ok": 8,
+   "fail": 0,
+   "cache": 0
+  },
+  "S8": {
+   "ok": 8,
+   "fail": 0,
+   "cache": 0
+  }
+ },
+ "usage": {
+  "version": "1",
+  "telemetry_status": "complete",
+  "telemetry_explanation": "SYNTHETIC DEMO ledger; every figure is invented.",
+  "currency": "USD",
+  "metered_run_spend": 0.0,
+  "metered_spend_basis": "Claude subscription; no marginal per-call metered charge (DEMO)",
+  "api_equivalent_cost": 2.34,
+  "live_calls": 48,
+  "cache_hits": 0,
+  "retries": 1,
+  "failures": 0,
+  "tokens": {
+   "fresh_input": 61000,
+   "cache_write": 240000,
+   "cache_read": 410000,
+   "output": 88000,
+   "total": 799000
+  },
+  "latency": {
+   "wall_time_s": 180.0,
+   "average_s": 22.5,
+   "p95_s": 41.0,
+   "peak_concurrency": 8,
+   "basis": "synthetic demo"
+  },
+  "operations": {
+   "successful_calls": 48,
+   "failed_calls": 0,
+   "cache_hits": 0
+  },
+  "by_agent": [
+   {
+    "agent": "S3",
+    "tier": "B",
+    "model": "claude-sonnet-5",
+    "provider": "anthropic",
+    "calls": 8,
+    "cache_hits": 0,
+    "failures": 0,
+    "api_equivalent_cost": 0.62,
+    "tokens": {
+     "fresh_input": 8000,
+     "cache_write": 30000,
+     "cache_read": 51000,
+     "output": 11000,
+     "total": 100000
+    }
+   },
+   {
+    "agent": "S4",
+    "tier": "B",
+    "model": "claude-sonnet-5",
+    "provider": "anthropic",
+    "calls": 8,
+    "cache_hits": 0,
+    "failures": 0,
+    "api_equivalent_cost": 0.31,
+    "tokens": {
+     "fresh_input": 8000,
+     "cache_write": 30000,
+     "cache_read": 51000,
+     "output": 11000,
+     "total": 100000
+    }
+   },
+   {
+    "agent": "S5",
+    "tier": "B",
+    "model": "claude-sonnet-5",
+    "provider": "anthropic",
+    "calls": 8,
+    "cache_hits": 0,
+    "failures": 0,
+    "api_equivalent_cost": 0.71,
+    "tokens": {
+     "fresh_input": 8000,
+     "cache_write": 30000,
+     "cache_read": 51000,
+     "output": 11000,
+     "total": 100000
+    }
+   },
+   {
+    "agent": "S6B",
+    "tier": "C",
+    "model": "claude-sonnet-5",
+    "provider": "anthropic",
+    "calls": 8,
+    "cache_hits": 0,
+    "failures": 0,
+    "api_equivalent_cost": 0.27,
+    "tokens": {
+     "fresh_input": 8000,
+     "cache_write": 30000,
+     "cache_read": 51000,
+     "output": 11000,
+     "total": 100000
+    }
+   },
+   {
+    "agent": "S7",
+    "tier": "B",
+    "model": "claude-sonnet-5",
+    "provider": "anthropic",
+    "calls": 8,
+    "cache_hits": 0,
+    "failures": 0,
+    "api_equivalent_cost": 0.28,
+    "tokens": {
+     "fresh_input": 8000,
+     "cache_write": 30000,
+     "cache_read": 51000,
+     "output": 11000,
+     "total": 100000
+    }
+   },
+   {
+    "agent": "S8",
+    "tier": "A",
+    "model": "claude-haiku-4-5-20251001",
+    "provider": "anthropic",
+    "calls": 8,
+    "cache_hits": 0,
+    "failures": 0,
+    "api_equivalent_cost": 0.15,
+    "tokens": {
+     "fresh_input": 8000,
+     "cache_write": 30000,
+     "cache_read": 51000,
+     "output": 11000,
+     "total": 100000
+    }
+   }
+  ]
+ },
+ "ecu_rows": [
+  {
+   "ecu_key": "demo_creatine_synthetic|creatine_monohydrate|unbanded|muscle_strength|general_adult",
+   "ingredient": "demo_creatine_synthetic",
+   "form_vocab_id": "creatine_monohydrate",
+   "outcome_vocab_id": "muscle_strength",
+   "score": 27,
+   "composite": 61,
+   "band": "weak support",
+   "gate_fired": false,
+   "components": {
+    "d": 0.31,
+    "c": 0.87,
+    "H": 0.21,
+    "E": 3.1,
+    "E_prime": 3.1
+   },
+   "arcs": {
+    "effect": {
+     "verdict": 0.31,
+     "coverage": 1.0
+    },
+    "form": {
+     "verdict": 0.31,
+     "coverage": 1.0,
+     "strength": 0.8,
+     "basis": "ladder",
+     "n_in_form": 5
+    },
+    "dose": {
+     "verdict": 0.42,
+     "coverage": 0.64,
+     "closeness": 0.85
+    },
+    "evidence": {
+     "verdict": null,
+     "coverage": 0.87,
+     "is_quantity": true
+    }
+   },
+   "dose": {
+    "low": 3000,
+    "high": 20000,
+    "n_benefit": 2,
+    "n_null": 3,
+    "null_range": {
+     "low": 3000,
+     "high": 5000
+    },
+    "basis": "observed_benefit_doses",
+    "observed": {
+     "low": 3000,
+     "high": 20000,
+     "n_with_dose": 5,
+     "n_total": 5
+    },
+    "evidence_with_dose": 1.0,
+    "product_match": "in_band",
+    "product_factor": 0.85
+   },
+   "evidence": {
+    "n_primaries": 5,
+    "n_syntheses": 0,
+    "study_ids": [
+     "doi:10.9999demo1",
+     "doi:10.9999demo2",
+     "doi:10.9999demo3",
+     "doi:10.9999demo4",
+     "doi:10.9999demo7"
+    ],
+    "contributions": [
+     {
+      "id": "doi:10.9999demo1",
+      "w": 0.9,
+      "s": 0.583,
+      "design_rank": 4,
+      "direction": "benefit",
+      "form_match": "exact",
+      "d_share": 0.5247,
+      "points": 11.2,
+      "effect_route": "smd",
+      "effect_s": 0.583
+     },
+     {
+      "id": "doi:10.9999demo2",
+      "w": 0.8,
+      "s": 0.383,
+      "design_rank": 4,
+      "direction": "null_effect",
+      "form_match": "exact",
+      "d_share": 0.3064,
+      "points": 6.6,
+      "effect_route": "smd",
+      "effect_s": 0.383
+     },
+     {
+      "id": "doi:10.9999demo3",
+      "w": 0.5,
+      "s": 1.0,
+      "design_rank": 4,
+      "direction": "benefit",
+      "form_match": "exact",
+      "d_share": 0.5,
+      "points": 10.7,
+      "effect_route": "percent",
+      "effect_s": 1.0
+     },
+     {
+      "id": "doi:10.9999demo4",
+      "w": 0.7,
+      "s": -0.35,
+      "design_rank": 4,
+      "direction": "null_effect",
+      "form_match": "exact",
+      "d_share": -0.245,
+      "points": -5.3,
+      "effect_route": "no_effect_size",
+      "effect_s": null
+     },
+     {
+      "id": "doi:10.9999demo7",
+      "w": 0.2,
+      "s": -0.35,
+      "design_rank": 4,
+      "direction": "null_effect",
+      "form_match": "exact",
+      "d_share": -0.07,
+      "points": -1.5,
+      "effect_route": "no_effect_size",
+      "effect_s": null
+     }
+    ]
+   },
+   "n_primaries": 5,
+   "applicability": {
+    "form": {
+     "match": 1.0,
+     "assessable": 1.0
+    }
+   },
+   "prompt_version": "v1.19"
+  },
+  {
+   "ecu_key": "demo_creatine_synthetic|creatine_monohydrate|unbanded|muscle_power|general_adult",
+   "ingredient": "demo_creatine_synthetic",
+   "form_vocab_id": "creatine_monohydrate",
+   "outcome_vocab_id": "muscle_power",
+   "score": 18,
+   "composite": 55,
+   "band": "weak support",
+   "gate_fired": false,
+   "components": {
+    "d": 0.29,
+    "c": 0.62,
+    "H": 0.3,
+    "E": 1.4,
+    "E_prime": 1.4
+   },
+   "arcs": {
+    "effect": {
+     "verdict": 0.29,
+     "coverage": 1.0
+    },
+    "form": {
+     "verdict": 0.29,
+     "coverage": 1.0,
+     "strength": 0.8,
+     "basis": "ladder",
+     "n_in_form": 2
+    },
+    "dose": {
+     "verdict": 0.68,
+     "coverage": 0.59,
+     "closeness": 1.0
+    },
+    "evidence": {
+     "verdict": null,
+     "coverage": 0.62,
+     "is_quantity": true
+    }
+   },
+   "dose": {
+    "low": 8000,
+    "high": 8000,
+    "n_benefit": 1,
+    "n_null": 1,
+    "null_range": {
+     "low": 5000,
+     "high": 5000
+    },
+    "basis": "observed_benefit_doses",
+    "observed": {
+     "low": 5000,
+     "high": 8000,
+     "n_with_dose": 2,
+     "n_total": 2
+    },
+    "evidence_with_dose": 1.0,
+    "product_match": "low_50_99",
+    "product_factor": 1.0
+   },
+   "evidence": {
+    "n_primaries": 2,
+    "n_syntheses": 0,
+    "study_ids": [
+     "doi:10.9999demo5",
+     "doi:10.9999demo6"
+    ],
+    "contributions": [
+     {
+      "id": "doi:10.9999demo5",
+      "w": 0.85,
+      "s": 0.683,
+      "design_rank": 4,
+      "direction": "benefit",
+      "form_match": "exact",
+      "d_share": 0.5806,
+      "points": 12.4,
+      "effect_route": "percent",
+      "effect_s": 0.683
+     },
+     {
+      "id": "doi:10.9999demo6",
+      "w": 0.6,
+      "s": -0.25,
+      "design_rank": 4,
+      "direction": "null_effect",
+      "form_match": "exact",
+      "d_share": -0.15,
+      "points": -3.2,
+      "effect_route": "smd",
+      "effect_s": -0.25
+     }
+    ]
+   },
+   "n_primaries": 2,
+   "applicability": {
+    "form": {
+     "match": 1.0,
+     "assessable": 1.0
+    }
+   },
+   "prompt_version": "v1.19"
+  },
+  {
+   "ecu_key": "demo_creatine_synthetic|creatine_monohydrate|unbanded|sleep_quality|general_adult",
+   "ingredient": "demo_creatine_synthetic",
+   "form_vocab_id": "creatine_monohydrate",
+   "outcome_vocab_id": "sleep_quality",
+   "score": null,
+   "composite": null,
+   "band": "insufficient human evidence",
+   "gate_fired": true,
+   "components": {},
+   "arcs": {
+    "effect": {
+     "verdict": null,
+     "coverage": 0.0
+    },
+    "form": {
+     "verdict": null,
+     "coverage": 0.0
+    },
+    "dose": {
+     "verdict": null,
+     "coverage": 0.0
+    },
+    "evidence": {
+     "verdict": null,
+     "coverage": 0.0,
+     "is_quantity": true
+    }
+   },
+   "dose": {
+    "low": null,
+    "high": null,
+    "basis": "no_dosed_benefit_trial"
+   },
+   "evidence": {
+    "n_primaries": 1,
+    "n_syntheses": 0,
+    "study_ids": [
+     "doi:10.9999demo8"
+    ],
+    "contributions": []
+   },
+   "n_primaries": 1,
+   "applicability": {
+    "form": {
+     "match": 1.0,
+     "assessable": 1.0
+    }
+   },
+   "prompt_version": "v1.19"
+  }
+ ]
+}

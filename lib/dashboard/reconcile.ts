@@ -242,6 +242,24 @@ export function reconcileRun(
         issue(issues, `outcomes.${outcome.id}.arcs.${key}.verdict`, expected.arcs[key].verdict, outcome.arcs[key].verdict);
         issue(issues, `outcomes.${outcome.id}.arcs.${key}.coverage`, expected.arcs[key].coverage, outcome.arcs[key].coverage);
       }
+      // Per-study attribution reconciles ONLY when the artifact retains it.
+      // Three retained runs (2026-08-12) have contributions in their context
+      // but were exported before the artifact allowlist carried them — an
+      // unguarded comparison here would quarantine exactly those runs.
+      if (outcome.contributions.length > 0 && expected.contributions.length > 0) {
+        const expectedById = new Map(expected.contributions.map((c) => [c.id, c]));
+        for (const contribution of outcome.contributions) {
+          const match = contribution.id ? expectedById.get(contribution.id) : undefined;
+          if (!match) {
+            issue(issues, `outcomes.${outcome.id}.contributions.${contribution.id}`, "present in context", "missing", "contribution_missing_from_context");
+            continue;
+          }
+          issue(issues, `outcomes.${outcome.id}.contributions.${contribution.id}.w`, match.w, contribution.w);
+          issue(issues, `outcomes.${outcome.id}.contributions.${contribution.id}.s`, match.s, contribution.s);
+          issue(issues, `outcomes.${outcome.id}.contributions.${contribution.id}.points`, match.points, contribution.points);
+          issue(issues, `outcomes.${outcome.id}.contributions.${contribution.id}.effectRoute`, match.effectRoute, contribution.effectRoute);
+        }
+      }
     }
   }
 
