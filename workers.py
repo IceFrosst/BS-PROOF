@@ -54,6 +54,41 @@ AGENT_BUDGET_TRIM = {
 ELISION = "\n\n[... middle of paper elided to fit the input budget ...]\n\n"
 
 
+import re as _re
+
+# One pattern, two shapes: absolute daily doses ("5 g/day", "3500 mg per day")
+# and per-kg dosing ("0.3 g/kg/day", "0.1 g kg-1"). Deliberately broad -- a false
+# positive costs a wasted sentence in the payload, a false negative loses the
+# study's dose for the run.
+_DOSE_PAT = _re.compile(
+    r"\b\d+(\.\d+)?\s*(g|mg|grams?)\s*(/|per\s+|·)?\s*(kg|d\b|day|body)", _re.I)
+
+
+def _dose_snippets(text: str, cap: int = 5, width: int = 220) -> list[str]:
+    """
+    Sentences around every dose mention in the FULL text, deduplicated.
+
+    Exists because the shared slice truncates: measured 2026-08-12, 12 of 76
+    dose-less S7 extractions had the dose in the full text but not in what S7
+    received. This is retrieval, not judgement -- a regex either matched or it
+    did not, and S7 still decides what the numbers mean.
+    """
+    if not text:
+        return []
+    out, seen = [], set()
+    for m in _DOSE_PAT.finditer(text):
+        start = max(0, m.start() - width // 2)
+        snip = " ".join(text[start:m.end() + width // 2].split())
+        key = snip[:80]
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(snip)
+        if len(out) >= cap:
+            break
+    return out
+
+
 def _fit_text(agent: str, text: str, fixed_chars: int) -> str:
     """
     Trim the study text so system + schema + payload stays under budget.
@@ -167,7 +202,13 @@ def _payload(agent: str, record: dict, text: str, registry: dict | None,
         ingredient = record["ingredient"]
         return {**base, "ingredient": ingredient,
                 "form_vocabulary": vocab.forms_for(ingredient),
-                "unspecified_form_id": vocab.unspecified_form_id(ingredient)}
+                "unspecified_form_id": vocab.unspecified_form_id(ingredient),
+                # Dose sentences harvested from the FULL text by regex, because
+                # the shared slice can cut them: measured 2026-08-12, 12 of 76
+                # dose-less S7 extractions had the dose in the full text but NOT
+                # in the text S7 received. Deterministic (no model), tiny, and it
+                # rides in the payload so the cache key changes with it.
+                "dose_snippets": _dose_snippets(text)}
     if agent == "S8":
         return base
     raise KeyError(agent)

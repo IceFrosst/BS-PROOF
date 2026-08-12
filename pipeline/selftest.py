@@ -2045,28 +2045,76 @@ def main():
     check("a corpus where nothing mapped does not crash the scorer", not crashed,
           "UnboundLocalError: local variable 'outcome_id' referenced before assignment")
 
-    # Two outcomes, wildly different doses. If one band leaks onto the other,
-    # the low-dose outcome's study reads in_band against the high-dose band.
+    # DOSE_MATCH IS STUDY-vs-PRODUCT (2026-08-12). It used to be product-vs-
+    # derived-band, which is one value per outcome stamped onto every study --
+    # so the dose arc was degenerate: a clone of the effect arc when the product
+    # was in band, and EMPTY ("not tested") when it was not. Measured on the
+    # v1.18 run: a 4.4 g product against a 4.8-5.0 g lean-mass band rendered
+    # "not tested" instead of "your dose is BELOW where trials found benefit".
+    # These pins guard the same hazards the old ones did, restated per study.
     mixed = [_extraction("muscle_strength", "benefit", 3000),
              _extraction("muscle_strength", "benefit", 3000),
              _extraction("cognitive_function", "benefit", 20000)]
-    per_outcome_match = {}
+    per_study_match = {}
     for item in mixed:
         for oid, st, _d, _p in _to_studies(
                 item["record"], item["extraction"], _prod, None,
                 ignore_population=True,
                 dose_bands={"muscle_strength": {"low": 3000, "high": 3000},
                             "cognitive_function": {"low": 20000, "high": 20000}}):
-            per_outcome_match[(oid, item["extraction"]["S7"]["elemental_dose_mg"])] = st.dose_match
-    check("each outcome is matched against ITS OWN band",
-          per_outcome_match.get(("muscle_strength", 3000)) == "in_band"
-          and per_outcome_match.get(("cognitive_function", 20000)) != "in_band",
-          f"{per_outcome_match} — product is dosed 3000mg")
-    check("no band for an outcome means unassessable, never in_band",
-          _to_studies(mixed[0]["record"], mixed[0]["extraction"], _prod, None,
-                      ignore_population=True, dose_bands={})[0][1].dose_match
+            per_study_match[(oid, item["extraction"]["S7"]["elemental_dose_mg"])] = st.dose_match
+    check("a study dosed AT the product's dose is in the dose arc",
+          per_study_match.get(("muscle_strength", 3000)) == "in_band",
+          f"{per_study_match} — product is dosed 3000mg")
+    check("a loading-dose trial is NOT evidence at a maintenance product's dose",
+          per_study_match.get(("cognitive_function", 20000)) == "above_200",
+          "20 g against a 3 g product is above_200; the old product-vs-band rule "
+          "put loading trials in the arc whenever the DERIVED band was loading-"
+          "sized, which is how muscle_power's arc came to describe 20 g protocols "
+          "while the product held 4.4 g")
+    # PER-KG DOSING (v1.19). 25 of 76 dose-less extractions were "0.3 g/kg/day"
+    # shapes. The multiplication is deterministic and happens only when BOTH
+    # numbers are the paper's own.
+    from pipeline.assemble import study_dose as _sd
+    _pk = _sd("creatine", {"dose_per_kg_mg": 300, "mean_body_mass_kg": 80})
+    check("a per-kg dose with a STATED mean mass becomes a daily total",
+          _pk["dose_low_mg"] == 24000 and _pk["dose_basis"] == "per_kg_x_stated_mass",
+          f"{_pk} -- 300 mg/kg x 80 kg, arithmetic on reported numbers")
+    check("a per-kg dose with NO stated mass stays doseless",
+          _sd("creatine", {"dose_per_kg_mg": 300})["dose_low_mg"] is None,
+          "invariant 5: assuming a typical body weight would be inventing a "
+          "number, and a dose off by the guess corrupts the band it feeds")
+    check("a stated elemental dose beats the per-kg path",
+          _sd("creatine", {"elemental_dose_mg": 5000, "dose_per_kg_mg": 300,
+                           "mean_body_mass_kg": 80})["dose_low_mg"] == 5000)
+    from workers import _dose_snippets as _ds
+    _txt = ("Participants ingested 20 g/day of creatine for 5 days, then "
+            "5 g/day maintenance. " + "filler sentence. " * 400 +
+            "The control group received 0.3 g/kg/day of placebo.")
+    _sn = _ds(_txt)
+    check("dose snippets survive where truncation would cut them",
+          any("20 g/day" in x for x in _sn) and any("0.3 g/kg" in x for x in _sn),
+          "12 of 76 dose-less extractions had the dose in the full text but not "
+          "in the slice S7 received; the harvest is regex, zero judgement")
+    check("dose snippets are capped and deduplicated",
+          len(_ds("5 g/day. " * 100)) <= 5 and len(_ds("")) == 0)
+
+    check("a study with NO extracted dose is unassessable, never in_band",
+          _to_studies(
+              [{"record": {"_canonical": "doi:10.1/nodose", "ingredient": "creatine",
+                           "design_rank": 4, "oa": "full_text"},
+                "extraction": {"S3": {"n_randomised": 40},
+                               "outcomes": [{"outcome_vocab_id": "muscle_strength",
+                                             "claim": {"direction": "benefit",
+                                                       "magnitude": "meaningful"}}]}}][0]["record"],
+              {"S3": {"n_randomised": 40},
+               "outcomes": [{"outcome_vocab_id": "muscle_strength",
+                             "claim": {"direction": "benefit",
+                                       "magnitude": "meaningful"}}]},
+              _prod, None, ignore_population=True, dose_bands={})[0][1].dose_match
           == "unspecified",
-          "in_band here read +1.00 @ 100% exactly where nothing was known")
+          "in_band here read +1.00 @ 100% exactly where nothing was known -- the "
+          "2026-08-09 lesson, unchanged; only WHOSE dose is unknown changed")
 
     # A vocab ID is not a search term. 7 of 19 ingredients carry an underscore
     # and were silently unretrievable until 2026-08-09; the symptom was

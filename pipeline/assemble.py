@@ -48,6 +48,21 @@ def study_dose(ingredient: str, s7: dict | None) -> dict:
     if stated is not None:
         return {"dose_low_mg": stated, "dose_high_mg": stated,
                 "dose_basis": s7.get("dose_basis") or "elemental_stated"}
+    # PER-KG DOSING (v1.19). "0.3 g/kg/day" was the single largest cause of a
+    # missing dose -- 25 of 76 dose-less extractions in the creatine corpus. The
+    # multiplication happens HERE, deterministically, and only when BOTH numbers
+    # are the paper's own (S7 is forbidden from assuming a body weight, and so is
+    # this function -- per-kg with no stated mean mass stays doseless, invariant
+    # 5). Arithmetic on reported numbers, not inference of an unreported one.
+    per_kg, mass = s7.get("dose_per_kg_mg"), s7.get("mean_body_mass_kg")
+    if per_kg is not None and mass is not None:
+        try:
+            daily = float(per_kg) * float(mass)
+        except (TypeError, ValueError):
+            daily = None
+        if daily is not None and daily > 0:
+            return {"dose_low_mg": daily, "dose_high_mg": daily,
+                    "dose_basis": "per_kg_x_stated_mass"}
     rng = vocab.elemental_dose_range_mg(ingredient, form_id, s7.get("compound_dose_mg"))
     return {"dose_low_mg": rng["low"], "dose_high_mg": rng["high"],
             "dose_basis": rng["basis"]}
@@ -79,14 +94,14 @@ def sr_derived_to_studies(rec: dict, product: dict, *,
         oid = entry.get("outcome_vocab_id")
         if not oid or entry.get("discarded"):
             continue
-        # The band is per OUTCOME, so it can only be looked up once we know
-        # which outcome this row is for.
-        band = (bands or {}).get(oid)
-        if band and band.get("low") is not None:
-            dose_match = dosemod.dose_match_for(
-                product.get("dose_low_mg"), product.get("dose_high_mg"), band)
-        else:
-            dose_match = "unspecified"
+        # SR-table rows carry no per-trial dose (a review's characteristics
+        # table rarely states one usably), so under the study-vs-product
+        # semantics of 2026-08-12 the axis is UNASSESSABLE for them -- same rule
+        # as a directly-read paper whose S7 found no dose. The old code compared
+        # the product to the derived band here, which put every SR trial in the
+        # dose arc whenever the product happened to sit in band, crediting
+        # evidence "at your dose" from trials whose dose nobody knows.
+        dose_match = "unspecified"
         claim = entry.get("claim") or {}
         direction = claim.get("direction")
         magnitude = claim.get("magnitude")
@@ -136,26 +151,42 @@ def to_studies(record: dict, extraction: dict, product: dict,
 
     def _dose_match_for(outcome_id: str) -> str:
         """
-        The band is derived PER OUTCOME, so the lookup has to happen per
-        outcome. It used to be computed once per record from a single band
-        passed by the caller -- as `dose_band=bands.get(outcome_id)`, reading a
-        loop variable of the generator being called, before it was bound.
+        THIS STUDY's dose against the PRODUCT's dose. Per study, not per product.
 
-        Two failures, one line. With no outcomes in the first pass the name was
-        never bound at all and build_ecus raised UnboundLocalError; with any
-        outcomes it silently reused the LAST outcome's band for every study, so
-        a creatine strength band could decide whether a cognition trial was
-        in-band. Fixed 2026-08-09.
+        REWRITTEN 2026-08-12, and the old semantics were a real defect. This used
+        to compare the PRODUCT's dose to the outcome's DERIVED band, which is the
+        same value for every study of an outcome -- so the dose arc (which
+        filters `dose_match == "in_band"`) was degenerate: either an exact clone
+        of the effect arc (product in band; measured, exercise_endurance's dose
+        arc -0.225 @ 1.0 equalled its effect arc to the third decimal) or EMPTY.
+        Empty is the invariant-8 violation: a 4.4 g product against a band
+        derived at 4.8-5.0 g rendered "not tested", when the truth -- "your dose
+        is BELOW the range where trials found benefit" -- is what CLAUDE.md
+        calls the most useful warning this axis can give.
+
+        SPEC section 9 defines the arc as "d over trials in YOUR dose band", so
+        the comparison is study-vs-product. The product's own interval plays the
+        role of the band, reusing `dose_match_for` and its founder-approved
+        tiers rather than inventing a new tolerance (invariant 4): a trial
+        dosed within [product_low, 2x product_high] is at your dose; below half,
+        `below_50`; a 20 g loading trial against a 4.4 g product is `above_200`
+        and stays out of the arc.
+
+        The product-vs-derived-band comparison did not disappear -- it moved to
+        the `dose.product_match` field on the ECU row, where it is a REPORTED
+        WARNING rather than a per-study weight key.
+
+        A study with no extracted dose is "unspecified": the axis is
+        UNASSESSABLE for it, which is not the same as matching. (The 2026-08-09
+        lesson stands: marking unknowns "in_band" made the dose arc read
+        +1.00 @ 100% precisely where we knew least.)
         """
-        band = (dose_bands or {}).get(outcome_id)
-        if band and band.get("low") is not None:
-            return dosemod.dose_match_for(
-                product.get("dose_low_mg"), product.get("dose_high_mg"), band)
-        # No band could be derived. The axis is UNASSESSABLE, which is not the
-        # same as matching. Marking it "in_band" made the dose arc read
-        # +1.00 @ 100% precisely when no dose had been extracted at all --
-        # most confident exactly where we knew least.
-        return "unspecified"
+        del outcome_id  # kept for signature stability; the band no longer enters
+        if dose.get("dose_low_mg") is None:
+            return "unspecified"
+        return dosemod.dose_match_for(
+            dose["dose_low_mg"], dose.get("dose_high_mg") or dose["dose_low_mg"],
+            {"low": product.get("dose_low_mg"), "high": product.get("dose_high_mg")})
 
     rob = _rob_items(s4, registry)
     n = (s3 or {}).get("n_randomised")
@@ -701,7 +732,16 @@ def build_ecus(extractions: list[dict], product: dict, *,
                 "observed": dosemod.observed_range(per_outcome.get(outcome_id, [])),
                 "evidence_with_dose": dosemod.coverage_fraction(
                     bands.get(outcome_id, {}), per_outcome.get(outcome_id, [])),
-                "product_match": next((p["dose"] for _, p in pairs), {}).get("dose_basis"),
+                # The PRODUCT against the DERIVED band -- the warning axis.
+                # Until 2026-08-12 this read the first study's `dose_basis` (how
+                # that study's dose was STATED: "unstated", "converted"...), a
+                # plain wrong-field bug, which is why reports showed
+                # product_match "converted" beside a real band. `below_50` /
+                # `low_50_99` here is the "product dosed where trials found
+                # nothing" warning CLAUDE.md says this axis exists to give.
+                "product_match": dosemod.dose_match_for(
+                    product.get("dose_low_mg"), product.get("dose_high_mg"),
+                    bands.get(outcome_id, {"low": None})),
             },
             "dose_range_mg": {
                 "low": bands.get(outcome_id, {}).get("low"),

@@ -242,10 +242,23 @@ APPLY_DOSE_IN_WEIGHT = False
 # must never be read side by side as if the numbers meant the same thing, and
 # scripts/archive_reports.py enforces that by sweeping old-model runs out of
 # reports/runs/ into reports/archive/<model>/.
-SCORING_MODEL = "v8-effect-size"
+SCORING_MODEL = "v9-dose-arc-per-study"
 
 # What each model meant, so an archived report can still be understood:
 SCORING_MODEL_HISTORY = {
+    "v9-dose-arc-per-study":
+        "the dose arc measures trials AT THE PRODUCT'S dose, per study. "
+        "Study.dose_match was product-vs-derived-band -- one value stamped on "
+        "every study of an outcome -- so the arc was degenerate: a clone of the "
+        "effect arc when the product sat in band, and EMPTY ('not tested') when "
+        "it did not, which is the invariant-8 violation: a 4.4 g product against "
+        "a 4.8-5.0 g band rendered the same as never studied. Now dose_match is "
+        "the STUDY's own dose against the product's interval (dose_match_for "
+        "tiers, no new constants), SR-table rows are 'unspecified' (their dose "
+        "is unknown, so the axis is unassessable), and the product-vs-band "
+        "comparison moved to dose.product_match on the row as the 'dosed where "
+        "trials found nothing' warning. Signed score UNCHANGED from v8; only "
+        "the dose arc and therefore the composite move.",
     "v8-effect-size":
         "s_i comes from the REPORTED EFFECT SIZE, not from the direction label, "
         "wherever a usable number exists -- founder decision 2026-08-11 ('do i'). "

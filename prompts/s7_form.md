@@ -56,4 +56,25 @@ Normalise to DAILY total: multiply per-dose by frequency. Record
 dose_frequency_per_day. If a loading and maintenance phase differ, report the
 maintenance dose and note the loading phase in evidence_span.
 
+PER-KG DOSING. Many trials dose by body weight -- "0.3 g/kg/day", "0.1 g/kg".
+MEASURED 2026-08-12: 25 of 76 dose-less extractions in the creatine corpus were
+this shape, the single largest cause of a missing dose. Handle it with two
+fields, and never merge them yourself:
+
+  dose_per_kg_mg     the per-kg daily dose in mg/kg/day ("0.3 g/kg/day" -> 300).
+                     ONLY for genuinely per-kg dosing; never convert an absolute
+                     dose into it.
+  mean_body_mass_kg  the paper's own stated mean body mass of the supplemented
+                     group, if printed in the baseline table or methods.
+
+Do NOT multiply them into elemental_dose_mg yourself, and NEVER assume a typical
+body weight -- if the paper states no mean mass, leave mean_body_mass_kg null and
+the dose stays per-kg. Downstream does the multiplication deterministically,
+only when both numbers are the paper's own.
+
+The payload may include `dose_snippets`: sentences pulled from the paper's full
+text wherever a dose pattern occurs, because the main text you receive can be
+truncated before the dosing paragraph. Treat them as part of the paper -- same
+rules, same evidence_span duty.
+
 confidence below 0.7 whenever form or dose basis is uncertain.

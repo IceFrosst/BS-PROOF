@@ -105,6 +105,17 @@ def _claude_bin() -> str:
 
 # Bump when you edit ANY prompt (including _shared.md). This is in the cache key.
 # Forget to bump it and you will silently serve stale extractions forever.
+# v1.19 (2026-08-12): S7 dose coverage. Measured on the v1.18 run: 76 of 148
+# studies extracted NO dose, and 51% of those were fixable -- 25 dose per kg of
+# body weight (no schema field existed, so S7 nulled them) and 12 where the dose
+# sentence was truncated out of the text S7 received. New S7 fields
+# dose_per_kg_mg + mean_body_mass_kg (the paper's own stated mean mass only,
+# never an assumed weight); assemble.study_dose multiplies them
+# deterministically, only when both are the paper's numbers. workers._payload
+# now ships regex-harvested `dose_snippets` from the FULL text so truncation
+# cannot drop the dosing paragraph. Also in this batch of fixes, scoring-side:
+# dose_match became study-vs-product (SCORING_MODEL v9) and dose.product_match
+# now reports the real product-vs-band tier instead of a dose_basis string.
 # v1.18 (2026-08-12): `effect_favours` is about DIRECTION ONLY -- significance is
 # irrelevant to it. MEASURED on the first clean v1.17 run: 44 claims reported a
 # LARGE magnitude and answered `neither`, which is 17% of all mapped claims and the
@@ -230,7 +241,7 @@ def _claude_bin() -> str:
 # v1.6 (2026-08-08): S2 reports results_table + per-study design. SR-table trials
 # now enter evidence mass, so S2's output moves scores and not just confidence.
 # v1.5 (2026-08-07): S3 prompt shortened, SR label resolve, review_methods.
-PROMPT_VERSION = "v1.18"
+PROMPT_VERSION = "v1.19"
 
 # Tier -> model. FULL IDs, NOT ALIASES.
 #
