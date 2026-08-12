@@ -1722,6 +1722,43 @@ def main():
           and _se(1.4, "or", 0.5)[1] == "ratio_null_is_one",
           "untrustworthy stays untrustworthy; the SD only unlocks the raw-unit "
           "branch")
+    # SUBAGENT SCHEMAS MUST BE STRUCTURALLY SANE. Cost of the missing check,
+    # measured 2026-08-12: a trailing comma in a schema-editing script turned
+    # effect_sd's subschema into a one-element ARRAY; the file stayed valid
+    # JSON, every offline gate stayed green, and the FIRST live S5 call failed
+    # with "--json-schema is not a valid JSON Schema" -- 10 of 10 calls burned
+    # before the cause was found. A property's schema must be an object (or
+    # boolean, per the spec); anything else here is a wreck waiting for the
+    # next production run.
+    import glob as _glob
+    import json as _json
+
+    def _schema_shape_problems(node, path):
+        problems = []
+        if isinstance(node, dict):
+            for key, sub in (node.get("properties") or {}).items():
+                if not isinstance(sub, (dict, bool)):
+                    problems.append(f"{path}.properties.{key} is "
+                                    f"{type(sub).__name__}, not object/boolean")
+                problems.extend(_schema_shape_problems(sub, f"{path}.{key}"))
+            for key in ("items",):
+                if key in node and not isinstance(node[key], (dict, bool)):
+                    problems.append(f"{path}.{key} is {type(node[key]).__name__}")
+                elif key in node:
+                    problems.extend(_schema_shape_problems(node[key], f"{path}.{key}"))
+        return problems
+
+    _bad = []
+    import pathlib as _pathlib
+    _schemas_dir = _pathlib.Path(__file__).resolve().parent.parent / "schemas"
+    for _f in sorted(_glob.glob(str(_schemas_dir / "s*_*.json"))):
+        _bad.extend(_schema_shape_problems(_json.load(open(_f)),
+                                           _f.rsplit("/", 1)[-1]))
+    check("every subagent schema's property subschemas are objects",
+          not _bad, "; ".join(_bad[:3]) if _bad else
+          "a list where an object belongs passes json.load and every offline "
+          "gate, then fails every live CLI call at once")
+
     check("the SD path still requires the arm to be named",
           _aes({"effect_size": 3.2, "effect_unit": "kg", "effect_sd": 8.0,
                 "direction": "benefit"}, "muscle_strength")[1]
