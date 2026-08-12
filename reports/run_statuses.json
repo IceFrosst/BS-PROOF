@@ -47,6 +47,34 @@
         "This is the FIRST run under v1.17, so it is also the first that could activate the effect-size path at all -- which makes a clean re-run the only way to measure what v8 does."
       ],
       "note": "Invalid: truncated by the subscription session limit mid-extraction. Superseded by a clean re-run; do not quote any score from it."
+    },
+    "20260812_062929_creatine_creatine-monohydrate_claude-top5-per-o": {
+      "status": "experimental",
+      "public_claims_allowed": false,
+      "reason_codes": [
+        "first_clean_v8_run",
+        "effect_size_coverage_10_percent",
+        "not_anchor_validated"
+      ],
+      "limitations": [
+        "First CLEAN run under SCORING_MODEL v8 and PROMPT_VERSION v1.17: 149 of 150 studies usable, 5 partial agent failures, ZERO session-limit failures.",
+        "The effect-size path activated on only 10% of mapped claims, so the score is still mostly vote-counted. Isolated on this same corpus (measured path off vs on), v8 moves muscle_strength +1 and lean_body_mass +1 and nothing else.",
+        "The v7 -> v8 score movement is NOT attributable to the scoring model. It is dominated by the extraction changes across PROMPT_VERSION v1.14 -> v1.17 (numbers on nulls, between-arm contrast, claim-splitting churn).",
+        "Anchor bands remain uncited judgement for 20 of 21 range anchors, so a pass or fail against them is not yet meaningful."
+      ],
+      "note": "First clean v8/v1.17 run. Usable as a baseline for the next comparison; not a validated score."
+    },
+    "20260812_063220_creatine_creatine-monohydrate_claude-top5-per-o": {
+      "status": "experimental",
+      "public_claims_allowed": false,
+      "reason_codes": [
+        "cache_replay_duplicate"
+      ],
+      "limitations": [
+        "A cache-only replay of the 06:29 run, executed solely to capture an extraction dump for offline A/B analysis. Same corpus, same prompts, no new model calls of consequence.",
+        "It pushed a report because --no-push is not a real flag. Retained rather than deleted (run files are immutable) but it carries no independent information."
+      ],
+      "note": "Duplicate replay of 20260812_062929. Do not count it as a separate measurement."
     }
   }
 }

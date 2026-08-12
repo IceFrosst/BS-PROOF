@@ -230,7 +230,7 @@ storage.py       SQLite, postgres-shaped
 vocab.py         forms, outcomes, populations, ECU key, polarity
 invariants.py    structural invariants: model boundary (AST, not grep), offline
                  imports, agent wiring. Zero tokens. Run with selftest
-selftest.py      328 checks. Run after ANY pipeline/ change
+selftest.py      433 checks. Run after ANY pipeline/ change
 ```
 
 **`sources/` — deterministic, NO MODEL**
@@ -687,9 +687,37 @@ instead — the obvious implementation — makes 20 measured-zero trials score
 `scripts/effect_size_experiment.py` runs that as a control arm (E) precisely so
 nobody re-derives it the wrong way.
 
-**Coverage is the limit, not the scale.** Only **40 of 227 (18%)** mapped claims
-on the v1.14 corpus carry a standardisable number, so the label path is still
-the majority path and `muscle_strength` moved only **−15 → −12**. The refusals
+**MEASURED ON A CLEAN v1.17 RUN (2026-08-12, 149 studies, 5 partial failures,
+zero session-limit failures). The honest result: v8 barely moves this corpus.**
+Isolated properly — same corpus, measured path off vs on — v8 changes
+`muscle_strength` by **+1** and `lean_body_mass` by **+1**, and nothing else. The
+larger v7→v8 movement visible in the reports (`muscle_strength` −15 → −9) is
+**NOT the scoring model**; it is the extraction changes across v1.14 → v1.17.
+Do not attribute it to v8.
+
+Why: the measured path reaches only **26 of 257 (10%)** mapped claims. What
+blocks the rest, in order, and the middle one is now the biggest lever:
+
+| blocker | share | what it is |
+|---|--:|---|
+| `no_effect_size` | 48% | S5 reported no number at all |
+| `favours_neither_but_above_threshold` | 17% | S5 reported a LARGE magnitude but said it favours neither arm — self-contradictory, so refused |
+| `raw_unit_needs_sd` | 15% | kg/W/points; not standardisable without an SD we never extract |
+
+**The 17% is an extraction defect worth fixing next.** 44 claims report a big
+effect and answer "neither", which suggests S5 is using `neither` to mean "the
+difference was not significant" rather than "the magnitude is negligible". A
+non-significant large effect still favours an arm. That is a prompt fix, and it
+is the single largest remaining unlock.
+
+**A sub-threshold magnitude is SIGN-PROOF**, which is why unsigned claims are not
+all refused: below the meaningful threshold both possible signs give a negative
+`s` (+0.05 → −0.25, −0.05 → −0.42), so the unknown sign cannot change the verdict
+and the positive reading is the conservative one. Above the threshold the sign
+decides everything, so those stay refused. This recovered coverage 7% → 10% with
+no sign risk.
+
+The refusals
 are deliberate and each one occurs in the corpus: `% change vs baseline` is a
 within-group change (10 claims), `partial eta-squared` is unsigned (26), odds
 and risk ratios have a null of 1 not 0 (5), and `kg`/`W`/`points` cannot be

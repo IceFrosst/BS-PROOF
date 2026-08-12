@@ -1503,11 +1503,31 @@ def main():
           "the reported sign cannot be trusted: 24 of 24 standardised null values "
           "in the corpus are positive because papers print |d|, so an unstated "
           "sign would turn every sized null into a benefit")
-    check("'favours neither arm' is refused rather than read as a benefit",
+    # SIGN-PROOF SUB-THRESHOLD MAGNITUDES. Refusing every unsigned claim was the
+    # first rule and it was too broad -- on the v1.17 creatine corpus "neither"
+    # alone was 48 of 257 mapped claims (19%), the second-largest refusal after
+    # "no number at all". A magnitude at or below the meaningful threshold is
+    # sign-proof: both possible signs give a negative s, so the unknown sign
+    # cannot change the conclusion, and the positive reading is the less negative
+    # of the two.
+    check("a LARGE effect that 'favours neither' is still refused",
           _aes(_claim(effect_favours="neither"), "muscle_strength")[1]
-          == "favours_neither_arm_unsignable",
-          "a magnitude with no arm attached cannot be signed, and a LARGE effect "
-          "favouring neither arm is a self-contradiction, not a reading")
+          == "favours_neither_but_above_threshold",
+          "0.6 SMD is well above the meaningful threshold, so 'favours neither' is "
+          "a self-contradiction and the sign decides everything")
+    check("a SUB-THRESHOLD 'neither' is accepted and lands negative",
+          (_aes(_claim(effect_size=0.05, effect_favours="neither"),
+                "muscle_strength")[0] or 0) < 0,
+          "both signs give a negative s below the threshold (+0.05 -> -0.25, "
+          "-0.05 -> -0.42), so the unknown sign cannot change the verdict and the "
+          "positive reading is the conservative one")
+    check("a SUB-THRESHOLD claim with NO stated sign is likewise accepted",
+          (_aes(_claim(effect_size=0.05), "muscle_strength")[0] or 0) < 0,
+          "same argument, and it is what lets pre-v1.17 data contribute its "
+          "trivial effects without ever risking an inverted sign")
+    check("...but an ABOVE-threshold claim with no stated sign stays refused",
+          _aes(_claim(effect_size=0.6), "muscle_strength")[1]
+          == "sign_convention_unstated")
     check("v8 therefore scores the PRE-v1.17 corpus exactly as v7 did",
           _aes({"effect_size": 0.43, "effect_unit": "cohen's d"},
                "muscle_strength")[0] is None,

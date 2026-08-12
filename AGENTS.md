@@ -46,7 +46,7 @@ non-negotiable.
 
 ```bash
 python3 -m pipeline.invariants    # structural: model boundary, offline imports, agent wiring
-python3 -m pipeline.selftest      # 328 checks, no model, no network, ~0.5s
+python3 -m pipeline.selftest      # 433 checks, no model, no network, ~0.5s
 ```
 
 Use `python3`, not `python` — bare `python` exists only inside `.venv`. Neither

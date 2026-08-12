@@ -288,15 +288,36 @@ def _effect_s(claim: dict, outcome_vocab_id: str) -> tuple[float | None, str]:
     # scores that corpus identically to v7 by construction, and only data
     # extracted under the v1.17 contract activates the measured path.
     if favours == "ingredient":
-        oriented = magnitude
-    elif favours == "control":
-        oriented = -magnitude
-    elif favours == "neither":
-        return None, "favours_neither_arm_unsignable"
-    else:
-        return None, "sign_convention_unstated"
+        return scoring.standardise_effect(magnitude, claim.get("effect_unit"))
+    if favours == "control":
+        return scoring.standardise_effect(-magnitude, claim.get("effect_unit"))
 
-    return scoring.standardise_effect(oriented, claim.get("effect_unit"))
+    # SIGN UNKNOWN -- "neither", or absent (pre-v1.17 data, or the model declined).
+    # Refusing all of these was the first rule and it was too broad: measured on
+    # the v1.17 creatine corpus, "neither" alone was the second-largest refusal
+    # (48 of 257 mapped claims, 19%) after "no number at all".
+    #
+    # A SUB-THRESHOLD MAGNITUDE IS SIGN-PROOF, and that is the whole argument. If
+    # the magnitude sits at or below the meaningful threshold, BOTH possible signs
+    # give a negative s:
+    #
+    #     true effect +m  ->  s = (m - MID)/(FULL - MID)   < 0   for m < MID
+    #     true effect -m  ->  s = (-m - MID)/(FULL - MID)  < 0   and more negative
+    #
+    # so the unknown sign cannot change the conclusion, and taking the positive
+    # reading is the LESS negative of the two -- the conservative choice. A trial
+    # that measured a difference too small to notice is evidence against a
+    # MEANINGFUL effect whichever arm it happened to favour, which is exactly what
+    # the recentred scale says.
+    #
+    # Above the threshold the sign decides everything, so those stay refused: of
+    # 21 standardisable "neither" claims, 9 are sign-proof and 12 are large enough
+    # that "favours neither" is a self-contradiction rather than a reading.
+    s, route = scoring.standardise_effect(magnitude, claim.get("effect_unit"))
+    if s is not None and s <= 0:
+        return s, route
+    return None, ("favours_neither_but_above_threshold" if favours == "neither"
+                  else "sign_convention_unstated")
 
 
 def _one_study_one_vote(pairs: list[tuple]) -> tuple[list[tuple], int]:
