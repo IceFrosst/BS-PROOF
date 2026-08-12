@@ -848,6 +848,30 @@ hand-replayed — had flagged the binary window's 99%-out/200%-in cliff; v10's
 grading resolved that. Its direction-blindness finding is the one that remains,
 absorbed into the paragraph above and SPEC §13.)
 
+**THE DOSE TERM IS CLOSENESS-TO-WHERE-IT-WORKED — SCORING_MODEL
+v12-dose-closeness (founder design 2026-08-12).** Take every dose at which a
+positive effect occurred; the composite's dose term is how close the product's
+dose sits to that range (the same continuous ramp, reported as
+`dose.product_factor`). Same role-split as the form arc: verdict/coverage stay
+as the *picture* of what near-your-dose trials found, closeness is the *score
+input*, direction lives in the effect term alone. The decisive property:
+**benefit trials far from your dose stop voting FOR you and become the
+yardstick you are measured against** — 20 g loading benefits gave a 4.4 g
+product composite 62 under v11; under v12 they define a ~20 g range the product
+is far below (closeness 0.10, composite 44), while lean_body_mass rose 46 → 57
+because 4.4 g sits just under its 4.8–5 g range.
+
+Two founder calls recorded with it: the score deliberately does NOT distinguish
+"dosed where trials failed" from "dosed where nobody looked" (both are outside
+the range that worked; `null_range` and the arc still show a reader the
+difference), and the KNOWN FRAGILITY stands unfixed — the range is a min–max of
+benefit doses, so one extreme benefit trial stretches it and a 2-trial range
+reads identically to a 15-trial one. Also verified the same day: the 20–21 g
+muscle_power range is an extraction artifact, not the literature — 14 of 22
+benefit trials carried no dose (7 abstract-only, 4 dosed per-kg at 0.07–0.3
+g/kg ≈ 5–24 g/day), so the v1.19 run should pull the range's floor down toward
+3 g.
+
 **V8 COHERENCE CLOSED — SCORING_MODEL v11-number-coherent (founder: "fix v8",
 2026-08-12).** Every consumer of a study's contribution now reads `s_value`, not
 the direction label: the form ladder credits a null that MEASURED a positive

@@ -536,7 +536,7 @@ Each arc carries **two** facts, and separating them is the point:
 |---|---|---|
 | effect | d over all evidence | 1.0 |
 | form | d over YOUR-FORM trials | share of evidence weight in that subset |
-| dose | d over trials GRADED by closeness to the product's dose (per study, continuous `dose_factor_for(study, product)`; v10 2026-08-12 — v9's binary in_band membership had a cliff where 99% of the product's dose earned zero and 200% earned full; before v9 it was product-vs-band, a clone of the effect arc or empty) | dose-credited weight / total weight |
+| dose | ARC DISPLAY: d over trials graded by closeness to the product's dose (continuous, per study; v10 killed v9's binary-membership cliff). COMPOSITE INPUT since v12: the product's CLOSENESS to the range of doses where positive effects occurred (`dose.product_factor`), on 0..1 like the form strength — direction lives in the effect term alone, and benefit trials far from your dose serve as the yardstick rather than as votes. Deliberate loss (founder, 2026-08-12): the score does not distinguish 'dosed where trials failed' from 'dosed where nobody looked'; `null_range` and the arc's verdict/coverage show a reader the difference. Known fragility, recorded: the range is a min-max of benefit doses — one extreme benefit trial stretches it, and a 2-trial range reads like a 15-trial one | dose-credited weight / total weight |
 | evidence | — (pure quantity) | c |
 
 A form arc showing only coverage cannot tell a well-tested form from a
