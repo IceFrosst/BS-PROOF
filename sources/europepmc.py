@@ -38,6 +38,30 @@ SUPPLEMENT_CONTEXT = (
     'supplementation OR "dietary supplement" OR "oral supplement" OR oral'
 )
 
+# Same terms as SUPPLEMENT_CONTEXT, but field-scoped to TITLE/ABSTRACT.
+#
+# MEASURED 2026-08-19: the unscoped SUPPLEMENT_CONTEXT matches "oral" and
+# "supplementation" ANYWHERE Europe PMC indexes them -- full text of an open-
+# access record, MeSH terms, affiliations -- not just where pipeline.relevance
+# actually looks (title + abstract). On a creatine supplement-scope run this
+# fetched 1008 stored primaries of which the relevance gate then rejected 776
+# (77%): retrieval budget (RETRIEVE_MAX_PRIMARIES, capped at 1200) was spent
+# fetching records that were never going to pass the gate that decides what
+# gets scored. Scoping the OR terms to TITLE:/ABSTRACT: makes the search
+# condition match what the gate checks, so a fixed primaries budget yields a
+# much higher share of scorable studies instead of noise that is fetched,
+# deduped, OA-resolved and then thrown away.
+def _scoped_supplement_context() -> str:
+    terms = ["supplementation", '"dietary supplement"', '"oral supplement"', "oral"]
+    parts = []
+    for t in terms:
+        parts.append(f"TITLE:{t}")
+        parts.append(f"ABSTRACT:{t}")
+    return " OR ".join(parts)
+
+
+SUPPLEMENT_CONTEXT_SCOPED = _scoped_supplement_context()
+
 
 def search_term(ingredient: str) -> str:
     """
@@ -101,7 +125,7 @@ def _query(ingredient: str, *, syntheses: bool, scope: str = "broad") -> str:
 
     q = f'("{ing}") AND (SRC:"MED") AND ({kinds})'
     if scope == "supplement":
-        q += f' AND ({SUPPLEMENT_CONTEXT}) NOT ({CLINICAL_EXCLUSIONS})'
+        q += f' AND ({SUPPLEMENT_CONTEXT_SCOPED}) NOT ({CLINICAL_EXCLUSIONS})'
     elif scope != "broad":
         raise ValueError(f"unknown scope {scope!r}")
     return q
