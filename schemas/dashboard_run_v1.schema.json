@@ -924,6 +924,21 @@
         },
         "closeness": {
           "$ref": "#/$defs/nullableNumber"
+        },
+        "strength": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "basis": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "n_in_form": {
+          "type": [
+            "integer",
+            "null"
+          ]
         }
       }
     },

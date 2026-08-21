@@ -557,7 +557,27 @@ def _safe_study_extraction(value: Any) -> dict | None:
             "item1_randomisation_method", "item2_double_blind_placebo",
             "item3_prospective_registration", "item4_outcome_matches_registry",
             "item5_attrition_ok", "item6_itt")},
-        "unverifiable_items": _json_copy(s4.get("unverifiable_items")),
+        # RoB item IDENTIFIERS, stringified. S4 names the items it could not
+        # verify by their NUMBER (2, 4, 5, 6 -- the item1..item6 fields above),
+        # so the raw value is a list of ints, while the schema has always
+        # specified `items: {type: string}`. `_json_copy` passed the ints
+        # straight through and every run since then failed artifact generation
+        # on the first study it reached:
+        #
+        #   dashboard artifact ... violates dashboard_run_v1.schema.json:
+        #   /corpus/studies/0/extraction/s4/unverifiable_items/0
+        #   2 is not of type 'string'   (+681 more)
+        #
+        # MEASURED 2026-08-19: this blocked the artifact for the 177-study
+        # supplement-scope run entirely -- "This run cannot be deployed to the
+        # dashboard until that is fixed" -- which is why no artifact newer than
+        # 2026-08-12 exists. Coerced rather than loosening the schema: an item
+        # id is a label, "2" and 2 denote the same RoB item, and the deploy
+        # contract plus the TypeScript types downstream both say string.
+        "unverifiable_items": (
+            None if s4.get("unverifiable_items") is None
+            else [_cap_text(str(x), 60) for x in s4.get("unverifiable_items")]
+        ),
         "evidence_spans": _cap_spans(s4.get("evidence_spans")),
     }
     claims = []
@@ -670,7 +690,22 @@ def _safe_arcs(value: Any) -> dict:
             # `closeness` (dose arc only, SCORING_MODEL v12): the product's
             # distance to the range of doses where benefit occurred -- the
             # composite's dose term, so a reviewer must be able to see it.
-            for key in ("verdict", "coverage", "is_quantity", "closeness")
+            #
+            # `strength` (form arc only, the ladder, v5) is the OTHER term the
+            # composite eats, and it was the one arc input the artifact did not
+            # carry. Without it the composite cannot be recomputed from a stored
+            # row -- it can only be ALGEBRAICALLY INVERTED out of the rounded
+            # headline, and rounding makes that lossy: measured on the
+            # muscle_power row of run 20260812_072850, form_strength values
+            # 0.800 through 0.810 all round to composite 43, so the recovered
+            # number carries +/-0.005 of invented precision. That matters now
+            # that a product's dose is supplied at lookup time (the label
+            # reader): the dose term changes per product while effect, form and
+            # c do not, so `strength` is required to recompute the headline for
+            # a dose the run did not itself score. `basis` and `n_in_form` come
+            # along because a strength without its rung is not auditable.
+            for key in ("verdict", "coverage", "is_quantity", "closeness",
+                        "strength", "basis", "n_in_form")
             if key in arc
         }
     return result

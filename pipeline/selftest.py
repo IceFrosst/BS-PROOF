@@ -2700,6 +2700,81 @@ def main():
           all(f["max_null_share"] is not None for f in _cal.feasibility()),
           "a floor above +100 would be a typo, not a calibration question")
 
+    print("\nPRODUCT LOOKUP: RECOMPUTING ONE PRODUCT'S DOSE TERM")
+    # pipeline/product_score.py answers the label-upload flow. It reuses a
+    # retained run's dose-INDEPENDENT arcs and recomputes only the dose term for
+    # the dose on the tub, because under SCORING_MODEL v12 that term is the
+    # product's closeness to the range where benefit occurred -- a property of
+    # the product, not of the run.
+    from pipeline import product_score as _ps
+    from pipeline import arcs as _A
+
+    # THE REGRESSION THAT MATTERS. Passing no dose must reproduce the run's own
+    # composite exactly. If this drifts, the recompute has stopped agreeing with
+    # arcs.composite and every number the upload flow shows is its own invention.
+    _row = {"outcome_vocab_id": "x", "composite": 45, "outcome": {},
+            "components": {"c": 0.9}, "evidence": {"n_primaries": 30},
+            "arcs": {"effect": {"verdict": 0.1, "coverage": 1.0},
+                     "form": {"verdict": 0.2, "coverage": 0.5, "strength": 0.8},
+                     "dose": {"verdict": None, "coverage": 0.0, "closeness": None},
+                     "evidence": {"coverage": 0.9}},
+            "dose": {"low": 5000.0, "high": 20000.0},
+            "dose_range_mg": {"low": 5000.0, "high": 20000.0,
+                              "basis": "observed_benefit_doses"}}
+    _band = _ps._benefit_range(_row)
+    check("benefit range is read off the row",
+          (_band["low"], _band["high"]) == (5000.0, 20000.0))
+    check("no dose reproduces the run's own composite",
+          _A.composite(0.1, 0.8, None, 0.9)
+          == _A.composite(0.1, 0.8, _ps.dosemod.dose_factor_for(None, None, _band), 0.9),
+          "a missing dose must take MISSING_DOSE_PENALTY, not a recomputed term")
+
+    # The dose axis must actually discriminate, or the whole feature is theatre.
+    _inb = _A.composite(0.1, 0.8, _ps.dosemod.dose_factor_for(6000, 6000, _band), 0.9)
+    _low = _A.composite(0.1, 0.8, _ps.dosemod.dose_factor_for(1000, 1000, _band), 0.9)
+    check("a dose inside the benefit range outscores one far below it",
+          _inb > _low, f"6000 mg -> {_inb}, 1000 mg -> {_low}")
+
+    # A synthetic fixture must never answer a product question. Every number in
+    # the demo artifact is invented; it is marked invalid AND caught by name.
+    check("the synthetic demo artifact can never back a product answer",
+          _ps._is_demo({"run": {"mode": "demo"}, "product": {}})
+          and _ps._is_demo({"run": {}, "product": {"ingredient": "demo-creatine"}}))
+    check("a real run is not mistaken for the demo",
+          not _ps._is_demo({"run": {"mode": "claude-top5-suppl"},
+                            "product": {"ingredient": "creatine",
+                                        "form": "creatine_monohydrate"}}))
+    check("invalid runs cannot back a displayed score",
+          "invalid" in _ps.UNUSABLE_STATUSES)
+
+    # Refusals are scope, not discounts. A row that predates arcs.form.strength
+    # is refused rather than having the strength inverted out of the rounded
+    # composite -- that inversion is lossy (0.800..0.810 all round to 43).
+    _stale = dict(_row)
+    _stale["arcs"] = dict(_row["arcs"], form={"verdict": 0.2, "coverage": 0.5})
+    check("a row with no form strength is refused, not inverted",
+          _stale["arcs"]["form"].get("strength") is None)
+
+    # An unscored ingredient and a wrong form are DIFFERENT answers, and neither
+    # is a number. Reusing one form's arc for another form would answer a
+    # different question at full confidence.
+    _mag = _ps.score_product("magnesium", "magnesium_glycinate", 200.0)
+    check("an ingredient with no run returns not_scored, never a number",
+          _mag["status"] == "not_scored" and "rows" not in _mag)
+    _hcl = _ps.score_product("creatine", "creatine_hcl", 3000.0)
+    check("a form with no run is distinguished from an ingredient with no run",
+          _hcl["status"] == "form_not_scored", str(_hcl.get("scored_forms")))
+
+    # Every scored answer carries its validity. Each retained run is currently
+    # public_claims_allowed=false, and a caller that cannot see that would
+    # publish a claim the registry withheld.
+    _av = _ps.available_products()
+    check("available products all carry a validity status",
+          all(p.get("status") for p in _av), f"{len(_av)} product(s) offered")
+    check("no available product claims public-claim approval it was not granted",
+          all(p["public_claims_allowed"] is False for p in _av),
+          "flip this test the day a run is genuinely validated")
+
     print(f"\n{'ALL PASSED' if not fails else 'FAILURES: ' + ', '.join(fails)}\n")
     return 1 if fails else 0
 

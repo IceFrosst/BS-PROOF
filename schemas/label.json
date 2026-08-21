@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Supplement label read (vision)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["ingredient_vocab_id", "form_vocab_id", "compound_dose_mg",
+               "is_multi_ingredient", "confidence", "evidence_spans"],
+  "properties": {
+    "ingredient_vocab_id": {
+      "description": "Vocab id from vocab/form.json, or null when the label's main active is not in the vocabulary or cannot be read.",
+      "type": ["string", "null"],
+      "maxLength": 40
+    },
+    "ingredient_label_text": {
+      "description": "The ingredient exactly as printed, even when ingredient_vocab_id is null. This is how an unsupported ingredient gets named back to the user.",
+      "type": ["string", "null"],
+      "maxLength": 120
+    },
+    "form_vocab_id": {
+      "description": "Form id from the chosen ingredient's forms list. Null when the label does not state a form; NEVER guessed from the brand or the powder's appearance.",
+      "type": ["string", "null"],
+      "maxLength": 60
+    },
+    "compound_dose_mg": {
+      "description": "Milligrams of the COMPOUND per serving as printed (the salt/hydrate mass, not the active moiety). Conversion to elemental happens deterministically in vocab.elemental_dose_range_mg, never here.",
+      "type": ["number", "null"],
+      "minimum": 0
+    },
+    "dose_unit_as_printed": {
+      "description": "The unit string as printed ('4400 mg', '5 g', '1 scoop'), so a reader can check the mg conversion.",
+      "type": ["string", "null"],
+      "maxLength": 60
+    },
+    "servings_per_day": {
+      "description": "Servings per day if the directions state one. Null when unstated -- never assume 1.",
+      "type": ["number", "null"],
+      "minimum": 0
+    },
+    "is_multi_ingredient": {
+      "description": "True when more than one active is dosed (a blend/MIPS/stack). Decisive: invariant 7 refuses trials whose ingredient arm co-administers another active, so a blend is a different question from the isolated ingredient.",
+      "type": "boolean"
+    },
+    "other_actives": {
+      "description": "Other dosed actives as printed. Empty when single-ingredient.",
+      "type": "array",
+      "maxItems": 30,
+      "items": {"type": "string", "maxLength": 80}
+    },
+    "brand": {"type": ["string", "null"], "maxLength": 80},
+    "product_name": {"type": ["string", "null"], "maxLength": 120},
+    "is_supplement_label": {
+      "description": "False when the image is not a supplement label at all (a receipt, a person, a screenshot). Lets the caller say so instead of scoring noise.",
+      "type": "boolean"
+    },
+    "confidence": {"type": "string", "enum": ["high", "medium", "low"]},
+    "unreadable_reason": {
+      "description": "Why a field could not be read: blur, crop, glare, language, no panel visible.",
+      "type": ["string", "null"],
+      "maxLength": 200
+    },
+    "evidence_spans": {
+      "description": "Verbatim strings copied from the label that justify the fields above. Project convention: evidence spans on every model output.",
+      "type": "array",
+      "maxItems": 12,
+      "items": {"type": "string", "maxLength": 200}
+    }
+  }
+}

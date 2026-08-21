@@ -26,6 +26,7 @@ Allowed model boundaries (nothing else):
 | `claude_adapter.py` | Claude production (subscription + `--safe-mode`) |
 | `pilot_adapter.py` | Claude subscription pilot (not production) |
 | `grok_adapter.py` | Grok pure-function path (separate backend) |
+| `label_adapter.py` | Reads a supplement LABEL off an uploaded image (added 2026-08-21) |
 
 Everything in `pipeline/` and `sources/` is deterministic. If you find yourself
 importing an adapter into `scoring.py` or `dedup.py`, stop.
@@ -45,10 +46,27 @@ expensive.** S6B maps every claim in a study in a single call under the same
 rules and the same bar for null, and matches results back BY INDEX so a
 reordered or short response cannot shift a mapping onto the wrong claim.
 
+**THE ONE EXEMPTION, and it is not the S1–S8 fleet.** `label_adapter` reads a
+photo of a supplement label, and it **must** use the `Read` tool: the Claude CLI
+has no flag that passes an image inline (`--file` fetches a remote resource by
+id; there is no `--image`), so allowing exactly one tool is the only route to a
+vision read. Verified 2026-08-21 on CLI 2.1.237. It is narrowed everywhere else
+instead — one tool and no other, `--add-dir` scoped to the image's own directory,
+`--safe-mode`, `--max-turns 3` — and invariant 2's reasoning still applies inside
+that box: a read needing more turns is a prompt bug, so do not raise the limit.
+S1–S8 remain tool-free. Do not cite this exemption for an extractor.
+
 ### 3. Bump `PROMPT_VERSION` when you edit any prompt
 
 Shared across Claude and Grok adapters. Forget, and caches silently serve stale
 extractions.
+
+**`prompts/label.md` is a SEPARATE cache domain** (`label_adapter
+.LABEL_PROMPT_VERSION`), deliberately not this constant. Bumping the shared
+version invalidates every cached S1–S8 extraction — ~1000 calls on the current
+creatine corpus, hours of re-extraction — and a reworded label prompt has nothing
+to do with how a paper was read. Two prompts with unrelated blast radii must not
+share a cache key. Invariant 3 still applies *within* the label domain.
 
 ### 4. Never invent a constant
 
@@ -900,10 +918,79 @@ thresholds, OA penalty. See `docs/SPEC.md` §13.
 
 **Private evidence dashboard built (2026-08-09).** The root Next.js App Router
 application statically renders immutable `DashboardRunV1` artifacts from
-`reports/runs/`. It has no runtime API, uploads, pipeline controls, Supabase, or
-public release path. Validated runs and the Lab archive are separated; the only
-retained creatine/Grok run is explicitly invalid and cannot support product
-claims. Full Markdown reports render with raw HTML disabled.
+`reports/runs/`. It has no pipeline controls, no Supabase, and no public release
+path. Validated runs and the Lab archive are separated; the only retained
+creatine/Grok run is explicitly invalid and cannot support product claims. Full
+Markdown reports render with raw HTML disabled.
+
+**LABEL UPLOAD IS NOW THE FRONT DOOR, and it added the dashboard's FIRST runtime
+API (founder decision 2026-08-21). The "no runtime API, no uploads" line above
+was true until then — anything still asserting it is stale.** Upload a photo of a
+Supplement Facts panel; the answer is that product's rows.
+
+```
+POST /api/analyze-label   (multipart, one image)
+  -> label_adapter.read_label        image     -> printed COMPOUND dose   [MODEL]
+  -> vocab.elemental_dose_range_mg   compound  -> elemental mg            [exact]
+  -> pipeline.product_score          elemental -> rows + four arcs        [exact]
+  -> europepmc.hit_count             on a miss -> evidence census         [count]
+```
+
+Measured 2026-08-21 end to end on a synthetic label: **21.6 s**, of which 17.7 s
+is the vision read. The route is `nodejs` + `force-dynamic`; every other page
+still prerenders.
+
+Five properties that are the whole design, not polish:
+
+1. **It does not run the pipeline, and does not pretend to.** Scoring a new
+   ingredient is retrieval + full text + ~10 calls per study over ~180 studies —
+   ~40 min and ~1000 subscription calls. An unscored product gets a COUNT of what
+   exists (explicitly `is_a_score: false`) plus a queued request in
+   `out/analysis_queue.json`. **Nothing drains that queue automatically**, by
+   design: an upload that silently began an extraction would compete with a run
+   in progress for the same session limit — the failure that cost the 2026-08-10
+   run 364 of 906 calls. `python3 scripts/analyze_label.py --drain` lists demand,
+   most-asked first, and a human starts the run SOLO.
+2. **The dose term is RECOMPUTED per product; nothing else is.** Under v12 the
+   dose term is closeness to the range where benefit occurred, so it is a
+   property of the tub, not of the run. Effect, form strength and `c` come from
+   the retained artifact unchanged. Regression pinned in `selftest`: passing NO
+   dose must reproduce the run's own composite exactly (45 → 45). Measured on the
+   177-study run, creatine monohydrate: **1 g reads 47/100 on muscle_power, 5 g
+   reads 76** — the axis finally discriminates products, which is the
+   differentiator this project exists for.
+3. **The printed dose is CONVERTED, never copied.** A label prints compound mass
+   ("Creatine Monohydrate 4400 mg"); corpus doses are elemental
+   (`assemble.study_dose`). Comparing them directly is wrong by the salt's mass
+   fraction — 12% for monohydrate, **2.1×** for magnesium chloride hexahydrate.
+   4400 mg compound → **3868 mg** elemental, and that moved `muscle_strength`
+   closeness from 1.00 to 0.94. The conversion refuses when hydration is
+   unstated, which surfaces as "dose axis unavailable" rather than a guess.
+4. **Refusals are scope, the same shape as invariants 6 and 7.** A form we never
+   ran returns `form_not_scored` and no number — reusing monohydrate's exact-form
+   arc for an HCl product would answer a different question at full confidence.
+   An artifact predating `arcs.form.strength` returns `recompute_refused` rather
+   than inverting the strength out of the rounded composite: measured on run
+   `20260812_072850`, strengths 0.800–0.810 all round to 43, so the inversion
+   invents ±0.005 of precision on the term the headline depends on.
+5. **`not_scored` is never rendered as a low score,** and every returned number
+   ships with its four arcs and its validity block. Every retained run is
+   `public_claims_allowed: false`, so the UI banner is load-bearing, not
+   decoration — a selftest asserts no offered product claims approval it was not
+   granted, and says to flip it the day a run is genuinely validated.
+
+Two supporting fixes landed with it:
+
+- **`arcs.form.strength` now survives into the artifact** (plus `basis`,
+  `n_in_form`). It was the one composite input the deploy boundary dropped, which
+  is what made the inversion above the only alternative. Schema updated.
+- **Artifact generation was BROKEN for every run after 2026-08-12** and this is
+  why no newer artifact existed: S4 names unverifiable RoB items by NUMBER
+  (ints), the schema has always said `type: string`, and the writer passed them
+  through raw — `/corpus/studies/0/extraction/s4/unverifiable_items/0 2 is not of
+  type 'string' (+681 more)`. It killed the 177-study run's artifact entirely.
+  Coerced in the writer, since an item id is a label and the TS types downstream
+  say string.
 
 `scripts/dashboard_artifact.py` is the deploy boundary. It preserves complete
 ECU audit fields, canonical Python verdict labels, corpus and extraction facts,

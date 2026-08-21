@@ -183,6 +183,16 @@ def outcome_hit_count(ingredient: str, outcome_id: str) -> int:
     """
     How many RCTs Europe PMC indexes for this ingredient + outcome.
     pageSize=1 — we only need hitCount. Used to pick showcase top-N.
+
+    Deliberately NOT refactored to share code with `hit_count` below, which
+    takes (ingredient, *, syntheses, scope) and builds its own query. An attempt
+    on 2026-08-21 to add a general `hit_count(query)` beside it defined the name
+    twice in this module: Python kept the LAST definition, so the new one was
+    dead and this function silently began calling the other signature -- passing
+    a query string as `ingredient` and omitting a required keyword. That breaks
+    showcase-outcome selection in every run, and it fails at call time rather
+    than import time, so nothing catches it until a run is already going. Two
+    functions, two query builders, two names.
     """
     page = get_json(SEARCH, {
         "query": outcome_query(ingredient, outcome_id),

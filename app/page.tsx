@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { LabelAnalyzer } from "@/components/label-analyzer";
 import { RunCard } from "@/components/run-card";
 import { loadRetainedRuns } from "@/lib/dashboard/catalog";
 import type { DashboardRun } from "@/lib/dashboard/types";
@@ -32,9 +33,9 @@ export default function HomePage() {
             <h1>BS<br /><em>PROOF</em></h1>
           </div>
           <div className="hero-copy">
-            <p className="hero-lede">A read-only view of retained laboratory runs—scores, four scoring arcs, evidence mass, quality failures, and the reports behind them.</p>
-            <p>Nothing here silently becomes a claim. Invalid or experimental runs stay visibly labeled, and unavailable telemetry stays unavailable.</p>
-            <Link className="button button-light" href="#runs">Browse retained runs <span aria-hidden="true">↓</span></Link>
+            <p className="hero-lede">Photograph a supplement label and see what the evidence says about <em>that</em> product—its ingredient, its form, its dose.</p>
+            <p>Nothing here silently becomes a claim. Every score ships with the four arcs behind it, and a product nobody has studied says so instead of scoring low.</p>
+            <Link className="button button-light" href="#analyze">Score a label <span aria-hidden="true">↓</span></Link>
           </div>
         </div>
         <div className="shell hero-ledger" aria-label="Dashboard totals">
@@ -44,6 +45,14 @@ export default function HomePage() {
           <div><strong>4</strong><span>Visible scoring arcs</span></div>
         </div>
       </section>
+
+      {/* The front door (founder decision 2026-08-21): the first thing on the
+          page is the upload, not the run archive. The archive stays below it --
+          it is the provenance for every number the analyzer returns, so it is
+          demoted rather than removed. */}
+      <div className="shell" id="analyze">
+        <LabelAnalyzer />
+      </div>
 
       <section className="section shell" id="runs" aria-labelledby="validated-runs-title">
         <div className="section-heading split-heading">

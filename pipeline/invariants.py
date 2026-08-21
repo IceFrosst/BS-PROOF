@@ -47,9 +47,18 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
-# The three model boundaries from the CLAUDE.md table. Nothing else may reach a
-# model, and these three are the only files allowed to import a CLI.
-MODEL_MODULES = ("claude_adapter", "pilot_adapter", "grok_adapter")
+# The model boundaries from the CLAUDE.md table. Nothing else may reach a model,
+# and these are the only files allowed to import a CLI.
+#
+# `label_adapter` joined 2026-08-21: it reads a supplement LABEL from an uploaded
+# image for the product-lookup flow. It is a boundary like the other three and is
+# listed here for the same reason -- so that pipeline/ and sources/ importing it
+# fails this check. pipeline/product_score.py is the deterministic half of that
+# feature and must never import it; the orchestration happens in
+# scripts/analyze_label.py, which is the injection layer by design (see
+# CHECKED_DIRS below).
+MODEL_MODULES = ("claude_adapter", "pilot_adapter", "grok_adapter",
+                 "label_adapter")
 
 # The deterministic layer. NOT scripts/, run_pipeline.py or workers.py -- those
 # are the injection layer by design (`call=` is passed down from there), so
