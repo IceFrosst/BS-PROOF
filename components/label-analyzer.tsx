@@ -422,8 +422,8 @@ export function LabelAnalyzer() {
             <div className="la-empty">
               <strong>Label reading is not configured on this deployment.</strong>
               <span>
-                The vision read runs through the Anthropic API and needs the ANTHROPIC_API_KEY
-                environment variable set on the server. The retained runs below are unaffected.
+                The vision read needs an API key on the server (GEMINI_API_KEY — free from Google AI
+                Studio — or VISION_API_KEY for another provider). The retained runs below are unaffected.
               </span>
             </div>
           ) : null}

@@ -10,7 +10,7 @@
  *
  * The pipeline, all in-process (no Python, no subprocess, no CLI):
  *
- *   lib/analyze/vision.readLabel          image  -> printed COMPOUND dose  [MODEL, metered API]
+ *   lib/analyze/vision.readLabel          image  -> printed COMPOUND dose  [MODEL, free-tier API]
  *   lib/analyze/vocab.elementalDoseRangeMg compound -> elemental mg        [exact]
  *   lib/analyze/product-score.scoreProduct elemental -> rows + four arcs   [exact]
  *   Europe PMC hitCount (fetch)           on a miss -> evidence census     [count]
@@ -29,10 +29,14 @@
  * the failure that cost the 2026-08-10 run 364 of 906 calls.
  *
  * Deployment requirements (Vercel):
- *   - env ANTHROPIC_API_KEY        the metered key for the vision read
+ *   - env GEMINI_API_KEY (or VISION_API_KEY) — a FREE key from Google AI
+ *     Studio; the default vision backend is the Gemini free tier (~1,500
+ *     reads/day, images included). VISION_API_URL + LABEL_MODEL switch the
+ *     provider to any OpenAI-compatible endpoint (DeepSeek, Groq, OpenRouter)
+ *     without a code change — see lib/analyze/vision.ts.
  *   - next.config.ts traces reports/runs/*_dashboard.json, run_statuses.json,
  *     vocab/*.json and prompts/label.md into this function's bundle
- * Without the key, POSTs return `analyzer_unavailable` and the static site is
+ * Without a key, POSTs return `analyzer_unavailable` and the static site is
  * unaffected.
  */
 import { NextResponse } from "next/server";
@@ -184,7 +188,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       {
         status: "analyzer_unavailable",
         error:
-          "Label reading is not configured on this deployment — the ANTHROPIC_API_KEY environment variable is not set.",
+          "Label reading is not configured on this deployment — no vision API key is set (GEMINI_API_KEY or VISION_API_KEY).",
       },
       { status: 503 },
     );

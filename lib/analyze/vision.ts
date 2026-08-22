@@ -1,37 +1,57 @@
 /*
- * MODEL BOUNDARY 5: the label vision read over the Anthropic API (metered).
+ * MODEL BOUNDARY 5: the label vision read over an OpenAI-compatible HTTP API.
  *
  * WHY THIS EXISTS BESIDE label_adapter.py. The Python adapter reads a label
  * through the local Claude CLI on the SUBSCRIPTION — zero marginal spend, but
  * it needs a machine with Python, this repo, and a signed-in CLI, which a
- * Vercel function is not. Founder decision 2026-08-22: the deployed app must
- * analyze uploads itself, so this file makes the same read over HTTPS with an
- * API key (`ANTHROPIC_API_KEY`, metered per token). Two backends, ONE brain:
+ * Vercel function is not. Founder decisions 2026-08-22, in order: the deployed
+ * app must analyze uploads itself ("i don't want it to be local and i want it
+ * work on vercel"), not on the Anthropic API ("it would be a deepseek api"),
+ * and finally on a FREE api ("ok find a free api that accepts images then").
  *
- *   - the prompt is read from prompts/label.md — the same file label_adapter
- *     renders, with the same {VOCAB} block, so a label reads identically on
- *     either backend and invariant 3 has one prompt to version
- *   - the model is the same tier-A pin (label reading is OCR + a vocabulary
- *     mapping, the same shape as S1/S8; measured correct on the synthetic
- *     label 2026-08-21). `LABEL_MODEL` env overrides, mirroring SP_LABEL_MODEL
- *   - the output contract is schemas/label.json semantics: null is a valid
- *     answer everywhere, evidence spans required, no salt->moiety arithmetic
+ * THE DEFAULT IS THE GEMINI FREE TIER, verified 2026-08-22:
+ *   - Google AI Studio issues free API keys, no card; the free tier covers the
+ *     Flash models WITH image input (~10-15 requests/min, ~1,500/day — a label
+ *     read is one request, so the quota is the daily upload budget)
+ *   - Gemini exposes an OpenAI-compatible endpoint
+ *     (https://generativelanguage.googleapis.com/v1beta/openai/chat/completions)
+ *     taking standard `image_url` data-URL content parts and Bearer auth
  *
- * The CLI backend needed a `Read` tool exemption because it had no way to pass
- * an image inline. The API has one — an image content block — so THIS backend
- * is a true pure function: one request, zero tools, no turns. The exemption in
- * CLAUDE.md invariant 2 stays scoped to the CLI adapter alone.
+ * Because DeepSeek, Groq, OpenRouter and Gemini all speak this same envelope,
+ * the provider is CONFIG, not code:
  *
- * Marginal cost is real here, unlike everywhere else in the pipeline. One read
- * is a few hundred output tokens against a ~2k-token prompt plus the image —
- * fractions of a cent on the tier-A model — but it is METERED, which the
- * subscription path never was. CLAUDE.md's cost accounting section is updated
- * accordingly; do not copy this pattern into the S1–S8 extractors.
+ *   VISION_API_URL   chat-completions endpoint   (default: Gemini's, above)
+ *   VISION_API_KEY   bearer key                  (GEMINI_API_KEY also accepted)
+ *   LABEL_MODEL      model id                    (default: gemini-3.7-flash,
+ *                                                 the id on the official compat
+ *                                                 docs page 2026-08-22)
+ *
+ * e.g. DeepSeek (metered, vision model shipped 2026-08-21):
+ *   VISION_API_URL=https://api.deepseek.com/chat/completions
+ *   LABEL_MODEL=deepseek-v4-flash-vision-exp
+ *
+ * Two backends, ONE brain: the prompt is read from prompts/label.md — the same
+ * file label_adapter renders, with the same {VOCAB} block — so a label reads
+ * identically on either backend and invariant 3 has one prompt to version. The
+ * output contract is schemas/label.json semantics: null is a valid answer
+ * everywhere, evidence spans required, no salt->moiety arithmetic here.
+ *
+ * The prompt travels as the leading TEXT PART of the one user message, not as
+ * a system message: some vision endpoints (DeepSeek's, verified in its docs)
+ * reject requests pairing images with system messages, and a one-shot pure
+ * function loses nothing by carrying its instructions in-message.
+ *
+ * PURITY, same bar as the Grok adapter (CLAUDE.md invariant 2): no chat memory
+ * (single stateless request), fixed prompt version, temperature 0, zero tools
+ * — the API takes the image inline, so the CLI adapter's Read-tool exemption
+ * does not extend here.
+ *
+ * NEVER MERGED WITH THE CLI BACKEND (the invariant-9 discipline): a label read
+ * answers one upload and is never stored, but `_meta.backend` records which
+ * provider read it, so cross-provider disagreement stays attributable.
  */
 import fs from "node:fs";
 import path from "node:path";
-
-import Anthropic from "@anthropic-ai/sdk";
 
 import { vocabBlock } from "./vocab";
 
@@ -40,8 +60,15 @@ const ROOT = process.cwd();
 /** Bump together with prompts/label.md — mirrors label_adapter.LABEL_PROMPT_VERSION. */
 export const LABEL_PROMPT_VERSION = "label-v1.0";
 
-/** Tier A, same reasoning as label_adapter.LABEL_MODEL (see header). */
-const LABEL_MODEL = process.env.LABEL_MODEL ?? "claude-haiku-4-5";
+const DEFAULT_URL =
+  "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+const DEFAULT_MODEL = "gemini-3.7-flash";
+
+const VISION_URL = process.env.VISION_API_URL ?? DEFAULT_URL;
+const LABEL_MODEL = process.env.LABEL_MODEL ?? DEFAULT_MODEL;
+
+/** One read's wall clock. The route's maxDuration is 60s; leave headroom. */
+const TIMEOUT_MS = 50_000;
 
 export class LabelReadError extends Error {}
 
@@ -66,21 +93,31 @@ export interface LabelRead {
     model: string;
     prompt_version: string;
     elapsed_s: number;
-    backend: "anthropic_api";
+    backend: string;
     input_tokens: number | null;
     output_tokens: number | null;
   };
 }
 
-function systemPrompt(): string {
+function apiKey(): string | undefined {
+  // VISION_API_KEY is the canonical name; GEMINI_API_KEY is accepted because
+  // it is the name AI Studio hands people and the default provider is Gemini.
+  return process.env.VISION_API_KEY || process.env.GEMINI_API_KEY || undefined;
+}
+
+export function apiKeyPresent(): boolean {
+  return Boolean(apiKey());
+}
+
+function labelPrompt(): string {
   const raw = fs.readFileSync(path.join(ROOT, "prompts", "label.md"), "utf8");
   return raw.replace("{VOCAB}", vocabBlock());
 }
 
 /**
  * The object out of the model's text. Same tolerance as the Python adapter's
- * _extract_json: a markdown fence is forgiven (the model emits one about half
- * the time even when told not to), anything worse is an error — no repair of
+ * _extract_json: a markdown fence is forgiven (models emit one about half the
+ * time even when told not to), anything worse is an error — no repair of
  * truncated JSON, because a partially-parsed label is how a wrong dose reaches
  * the score.
  */
@@ -107,7 +144,7 @@ function extractJson(text: string): Record<string, unknown> {
 
 /**
  * Normalise then validate — mirrors label_adapter._validate and its measured
- * lesson: the model answers `"other_actives": null` on single-ingredient labels,
+ * lesson: models answer `"other_actives": null` on single-ingredient labels,
  * which is a reasonable way to say "none", so optional fields are defaulted
  * BEFORE the required-field check. Required fields are never defaulted: "the
  * model did not answer" and "the label does not print a dose" are different
@@ -152,65 +189,90 @@ function validate(obj: Record<string, unknown>): LabelRead {
   return obj as unknown as LabelRead;
 }
 
-export function apiKeyPresent(): boolean {
-  // Both env credentials the SDK resolves headlessly. (It can also read an
-  // `ant auth login` OAuth profile from disk, but a serverless function has no
-  // profile directory, so on Vercel these two are the whole story.)
-  return Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
+interface ChatCompletionsResponse {
+  choices?: Array<{ message?: { content?: string | null } }>;
+  usage?: { prompt_tokens?: number; completion_tokens?: number };
 }
 
 /** One image -> one validated label read. Throws LabelReadError on failure. */
 export async function readLabel(imageBase64: string, mediaType: LabelMediaType): Promise<LabelRead> {
-  if (!apiKeyPresent()) {
-    throw new LabelReadError("ANTHROPIC_API_KEY is not configured on this deployment");
+  const key = apiKey();
+  if (!key) {
+    throw new LabelReadError(
+      "no vision API key configured (set VISION_API_KEY or GEMINI_API_KEY)");
   }
-  const client = new Anthropic();
   const started = Date.now();
 
-  let response: Anthropic.Message;
+  let res: Response;
   try {
-    response = await client.messages.create({
-      model: LABEL_MODEL,
-      // A label read is a few hundred tokens of JSON; the cap is generous
-      // headroom, not a target.
-      max_tokens: 2048,
-      system: systemPrompt(),
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "image",
-              source: { type: "base64", media_type: mediaType, data: imageBase64 },
-            },
-            {
-              type: "text",
-              text: "This is the supplement label image. Return only the JSON object.",
-            },
-          ],
-        },
-      ],
+    res = await fetch(VISION_URL, {
+      method: "POST",
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${key}`,
+      },
+      body: JSON.stringify({
+        model: LABEL_MODEL,
+        // Deterministic read: same purity bar as the Grok adapter.
+        temperature: 0,
+        // A label read is a few hundred tokens of JSON; generous headroom.
+        max_tokens: 2048,
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: labelPrompt() },
+              {
+                type: "image_url",
+                image_url: { url: `data:${mediaType};base64,${imageBase64}` },
+              },
+              {
+                type: "text",
+                text: "This is the supplement label image. Return only the JSON object.",
+              },
+            ],
+          },
+        ],
+      }),
     });
   } catch (err) {
-    if (err instanceof Anthropic.APIError) {
-      throw new LabelReadError(`Anthropic API error ${err.status ?? "?"}: ${err.message}`);
+    if (err instanceof Error && err.name === "TimeoutError") {
+      throw new LabelReadError(`label read timed out after ${TIMEOUT_MS / 1000}s`);
     }
-    throw new LabelReadError(`could not reach the Anthropic API: ${String(err)}`);
+    throw new LabelReadError(`could not reach the vision API: ${String(err)}`);
   }
 
-  const text = response.content
-    .filter((block): block is Anthropic.TextBlock => block.type === "text")
-    .map((block) => block.text)
-    .join("\n");
+  if (!res.ok) {
+    let detail = "";
+    try {
+      detail = (await res.text()).slice(0, 300);
+    } catch {
+      /* body unreadable; the status alone will have to do */
+    }
+    // 429 on the free tier means the daily/minute quota, not a broken upload —
+    // say so, because "try again in a minute" is actionable and "error 429" is not.
+    if (res.status === 429) {
+      throw new LabelReadError(
+        "the free vision quota is exhausted for now — try again in a minute or two");
+    }
+    throw new LabelReadError(`vision API error ${res.status}: ${detail}`);
+  }
+
+  const payload = (await res.json()) as ChatCompletionsResponse;
+  const text = payload.choices?.[0]?.message?.content ?? "";
+  if (!text) {
+    throw new LabelReadError("the vision API returned no message content");
+  }
 
   const read = validate(extractJson(text));
   read._meta = {
     model: LABEL_MODEL,
     prompt_version: LABEL_PROMPT_VERSION,
     elapsed_s: Math.round((Date.now() - started) / 10) / 100,
-    backend: "anthropic_api",
-    input_tokens: response.usage?.input_tokens ?? null,
-    output_tokens: response.usage?.output_tokens ?? null,
+    backend: new URL(VISION_URL).hostname,
+    input_tokens: payload.usage?.prompt_tokens ?? null,
+    output_tokens: payload.usage?.completion_tokens ?? null,
   };
   return read;
 }

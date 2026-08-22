@@ -306,15 +306,27 @@ def agent_wiring_problems(root: Path | None = None) -> list[str]:
 # --------------------------------------------------------------------------- #
 # invariant 1, TypeScript side
 
-# The one TS file allowed to import the Anthropic SDK. lib/analyze/vision.ts is
-# the deployed label read (model boundary 5, added 2026-08-22); everything else
-# under lib/ and app/ is deterministic rendering or the injection layer, exactly
-# like pipeline/ and sources/ on the Python side. A second import site would be
-# a second model boundary added without the CLAUDE.md table changing -- the
-# silent drift this file exists to catch. Text scan, not AST: TS has no stdlib
-# parser here, and an import of "@anthropic-ai/sdk" cannot be line-wrapped past
-# a substring check without also breaking the bundler.
-TS_MODEL_SDK = "@anthropic-ai/sdk"
+# The one TS file allowed to call a model API. lib/analyze/vision.ts is the
+# deployed label read (model boundary 5, added 2026-08-22, provider-configurable
+# via VISION_API_URL since the founder moved it Anthropic -> DeepSeek -> free
+# Gemini tier the same day); everything else under lib/ and app/ is
+# deterministic rendering or the injection layer, exactly like pipeline/ and
+# sources/ on the Python side. A second call site would be a second model
+# boundary added without the CLAUDE.md table changing -- the silent drift this
+# file exists to catch.
+#
+# Text scan, not AST: TS has no stdlib parser here. The markers are the strings
+# a model call cannot avoid -- the chat-completions endpoint path, a provider
+# SDK import, or READING a key from the environment -- none of which can be
+# line-wrapped past a substring check without also breaking the code that uses
+# them. Deliberately `process.env.<KEY>` rather than the bare key names: the
+# route's 503 message and the UI's empty state legitimately NAME the vars to
+# tell the operator what to configure, and a first run of this check flagged
+# exactly those strings. Naming a credential is documentation; reading it is a
+# boundary.
+TS_MODEL_MARKERS = ("chat/completions", "@anthropic-ai/sdk",
+                    "process.env.VISION_API_KEY", "process.env.GEMINI_API_KEY",
+                    "process.env.DEEPSEEK_API_KEY", "process.env.ANTHROPIC_API_KEY")
 TS_MODEL_BOUNDARY = "lib/analyze/vision.ts"
 TS_CHECKED_DIRS = ("lib", "app", "components")
 
@@ -330,15 +342,18 @@ def ts_boundary_problems(root: Path | None = None) -> list[str]:
             if "node_modules" in path.parts or path.suffix not in (".ts", ".tsx"):
                 continue
             rel = path.relative_to(root).as_posix()
+            if rel == TS_MODEL_BOUNDARY:
+                continue
             try:
                 text = path.read_text(encoding="utf-8")
             except OSError:
                 out.append(f"{rel}: unreadable while checking the TS model boundary")
                 continue
-            if TS_MODEL_SDK in text and rel != TS_MODEL_BOUNDARY:
-                out.append(
-                    f"{rel}: imports {TS_MODEL_SDK} but only {TS_MODEL_BOUNDARY} "
-                    f"is a model boundary (CLAUDE.md invariant 1)")
+            for marker in TS_MODEL_MARKERS:
+                if marker in text:
+                    out.append(
+                        f"{rel}: contains {marker!r} but only {TS_MODEL_BOUNDARY} "
+                        f"is a model boundary (CLAUDE.md invariant 1)")
     return out
 
 
@@ -365,7 +380,7 @@ def main() -> int:
           f"({n_exc} documented exception{'s' if n_exc != 1 else ''})")
     print("offline:     the deterministic layer imports with no third-party dependency")
     print("agent wiring: every AGENTS entry has a schema, a prompt and a tier")
-    print(f"ts boundary: {TS_MODEL_SDK} is imported only by {TS_MODEL_BOUNDARY}")
+    print(f"ts boundary: model-API markers appear only in {TS_MODEL_BOUNDARY}")
     return 0
 
 
