@@ -210,6 +210,12 @@ function ScoreRow({ row }: { row: AnalyzerRow }) {
 }
 
 export function LabelAnalyzer() {
+  // Two-step by design (founder 2026-08-22): picking a file only STAGES it —
+  // nothing is sent until the user presses Analyze. An auto-submitting drop
+  // zone spends the (rate-limited, possibly metered) vision call on misclicks
+  // and wrong files; the explicit button is both the consent step and the
+  // moment the user expects the ~20s wait to start.
+  const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState(0);
@@ -231,18 +237,29 @@ export function LabelAnalyzer() {
     if (preview) URL.revokeObjectURL(preview);
   }, [preview]);
 
-  const submit = useCallback(async (file: File) => {
-    if (file.size > MAX_BYTES) {
-      setError(`That image is ${(file.size / 1e6).toFixed(1)} MB. The limit is 12 MB.`);
+  /** Step 1: stage the file and show it. Sends nothing. */
+  const pick = useCallback((files: FileList | null) => {
+    const picked = files?.[0];
+    if (!picked) return;
+    if (picked.size > MAX_BYTES) {
+      setError(`That image is ${(picked.size / 1e6).toFixed(1)} MB. The limit is 12 MB.`);
       return;
     }
     setError(null);
     setData(null);
-    setStage(0);
+    setFile(picked);
     setPreview((old) => {
       if (old) URL.revokeObjectURL(old);
-      return URL.createObjectURL(file);
+      return URL.createObjectURL(picked);
     });
+  }, []);
+
+  /** Step 2: the Analyze button. This is the only place a request starts. */
+  const submit = useCallback(async () => {
+    if (!file || busy) return;
+    setError(null);
+    setData(null);
+    setStage(0);
     setBusy(true);
     try {
       const body = new FormData();
@@ -273,12 +290,7 @@ export function LabelAnalyzer() {
     } finally {
       setBusy(false);
     }
-  }, []);
-
-  const onPick = (files: FileList | null) => {
-    const file = files?.[0];
-    if (file) void submit(file);
-  };
+  }, [file, busy]);
 
   const rows = data?.result?.rows ?? [];
   const validity = data?.result?.validity;
@@ -291,9 +303,9 @@ export function LabelAnalyzer() {
         <p className="eyebrow">Score a product</p>
         <h2 id="la-title">Photograph the label.</h2>
         <p className="la-lede">
-          Upload the Supplement Facts panel. The ingredient, form and dose are read off the label, the
-          printed dose is converted to its active moiety, and the product is matched against retained
-          evidence runs.
+          Upload the Supplement Facts panel and press Analyze. The ingredient, form and dose are read
+          off the label, the printed dose is converted to its active moiety, and the product is matched
+          against retained evidence runs.
         </p>
       </div>
 
@@ -307,7 +319,7 @@ export function LabelAnalyzer() {
         onDrop={(e) => {
           e.preventDefault();
           setDragging(false);
-          if (!busy) onPick(e.dataTransfer.files);
+          if (!busy) pick(e.dataTransfer.files);
         }}
       >
         <input
@@ -316,7 +328,7 @@ export function LabelAnalyzer() {
           className="la-input"
           id="la-file"
           disabled={busy}
-          onChange={(e) => onPick(e.target.files)}
+          onChange={(e) => pick(e.target.files)}
         />
 
         {preview ? (
@@ -337,10 +349,24 @@ export function LabelAnalyzer() {
         )}
 
         <div className="la-drop-copy">
-          <label className="button button-light" htmlFor="la-file">
-            {busy ? "Reading…" : preview ? "Try another label" : "Choose a label photo"}
+          {file ? (
+            <button
+              type="button"
+              className="button button-dark la-analyze"
+              onClick={() => void submit()}
+              disabled={busy}
+            >
+              {busy ? "Analyzing…" : "Analyze"}
+            </button>
+          ) : null}
+          <label className={`button ${file ? "button-outline" : "button-light"}`} htmlFor="la-file">
+            {file ? "Choose a different photo" : "Choose a label photo"}
           </label>
-          <span>or drag one here · PNG, JPEG, WebP · up to 12 MB</span>
+          <span>
+            {file
+              ? `${file.name} · ${(file.size / 1e6).toFixed(1)} MB — nothing is sent until you press Analyze`
+              : "or drag one here · PNG, JPEG, WebP · up to 12 MB"}
+          </span>
         </div>
 
         {busy ? (

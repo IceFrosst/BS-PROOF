@@ -607,3 +607,31 @@ thead th { color: var(--ink-soft); font-size: 0.7rem; text-transform: uppercase;
   .la-score strong { font-size: 2rem; }
   .la-arcs { grid-template-columns: 1fr; }
 }
+
+/* --------------------------------------------------------------------------
+   ANALYZE HERO (2026-08-22) — the upload IS the hero.
+
+   Founder: "i want a field with a file upload in the middle and it should be
+   the focus of the website." The brand collapses to a strip, the white
+   .la-drop card becomes the single focal element on the dark ground, and the
+   Analyze button appears only once a file is staged (two-step consent —
+   nothing is sent on pick).
+   -------------------------------------------------------------------------- */
+.analyze-hero { color: var(--white); background-color: var(--night); background-image: radial-gradient(rgb(255 255 255 / 13%) 1px, transparent 1px); background-size: 22px 22px; padding: clamp(30px, 4vw, 52px) 0 0; }
+.analyze-hero-brand { text-align: center; }
+.analyze-hero-brand .hero-kicker { margin-bottom: 0.5rem; }
+.analyze-hero-brand h1 { font-size: clamp(2.6rem, 6vw, 4.2rem); font-weight: 900; letter-spacing: -0.06em; line-height: 1; }
+.analyze-hero-brand h1 em { color: var(--lime); font-style: normal; }
+.analyze-hero-body { max-width: 880px; }
+.analyze-hero .la { padding-block: clamp(26px, 4vw, 44px); }
+.analyze-hero .la-intro { max-width: 720px; margin: 0 auto 28px; text-align: center; }
+.analyze-hero .la-intro .eyebrow { color: var(--lime); }
+.analyze-hero .la-intro h2 { font-size: clamp(1.9rem, 4.5vw, 2.9rem); }
+.analyze-hero .la-lede { color: #b6c3bc; }
+/* The focal card: taller, centered content, brighter edge on the dark ground. */
+.analyze-hero .la-drop { min-height: clamp(280px, 38vh, 420px); justify-content: center; align-content: center; border-color: rgb(255 255 255 / 35%); box-shadow: var(--shadow); }
+.analyze-hero .la-drop.is-dragging { border-color: var(--lime); background: var(--white); }
+.analyze-hero .hero-ledger { margin-top: clamp(36px, 6vw, 68px); }
+/* The Analyze button is the primary action the moment a file is staged. */
+.la-analyze { min-width: 240px; font-size: 1.1rem; }
+.la-analyze[disabled] { opacity: 0.6; cursor: default; }

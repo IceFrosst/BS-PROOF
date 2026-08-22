@@ -5,6 +5,15 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
   turbopack: { root: process.cwd() },
+  // Static export on this repo is memory-bound, not CPU-bound: the default
+  // (cores-1 = 9) workers each load the retained-run catalog, and on a 16 GB
+  // dev machine with ~5 GB free the workers thrash and pages blow the default
+  // 60 s deadline -- measured 2026-08-22 as builds failing on a DIFFERENT page
+  // every attempt (the signature of contention, not of a broken page) after
+  // three earlier same-day builds passed. Fewer workers finish sooner here and
+  // cost little on CI, where 226 mostly-I/O pages do not saturate 4 workers.
+  experimental: { cpus: 4 },
+  staticPageGenerationTimeout: 180,
   // The analyze-label function reads these at REQUEST time via fs, so they must
   // be traced into its serverless bundle — on Vercel nothing outside the traced
   // set exists at runtime. Static pages read the same files at BUILD time and

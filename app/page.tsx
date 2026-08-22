@@ -26,17 +26,18 @@ export default function HomePage() {
 
   return (
     <main id="main-content" tabIndex={-1}>
-      <section className="home-hero">
-        <div className="shell hero-grid">
-          <div>
-            <p className="eyebrow hero-kicker">Supplement evidence, with the seams showing</p>
-            <h1>BS<br /><em>PROOF</em></h1>
-          </div>
-          <div className="hero-copy">
-            <p className="hero-lede">Photograph a supplement label and see what the evidence says about <em>that</em> product—its ingredient, its form, its dose.</p>
-            <p>Nothing here silently becomes a claim. Every score ships with the four arcs behind it, and a product nobody has studied says so instead of scoring low.</p>
-            <Link className="button button-light" href="#analyze">Score a label <span aria-hidden="true">↓</span></Link>
-          </div>
+      {/* The upload IS the hero (founder 2026-08-22: "i want a field with a
+          file upload in the middle and it should be the focus of the
+          website"). The brand shrinks to a strip; the run archive and totals
+          are the provenance for every number the analyzer returns, so they
+          stay — demoted below the fold, not removed. */}
+      <section className="analyze-hero" id="analyze">
+        <div className="shell analyze-hero-brand">
+          <p className="eyebrow hero-kicker">Supplement evidence, with the seams showing</p>
+          <h1>BS <em>PROOF</em></h1>
+        </div>
+        <div className="shell analyze-hero-body">
+          <LabelAnalyzer />
         </div>
         <div className="shell hero-ledger" aria-label="Dashboard totals">
           <div><strong>{runs.length}</strong><span>Retained run{runs.length === 1 ? "" : "s"}</span></div>
@@ -45,14 +46,6 @@ export default function HomePage() {
           <div><strong>4</strong><span>Visible scoring arcs</span></div>
         </div>
       </section>
-
-      {/* The front door (founder decision 2026-08-21): the first thing on the
-          page is the upload, not the run archive. The archive stays below it --
-          it is the provenance for every number the analyzer returns, so it is
-          demoted rather than removed. */}
-      <div className="shell" id="analyze">
-        <LabelAnalyzer />
-      </div>
 
       <section className="section shell" id="runs" aria-labelledby="validated-runs-title">
         <div className="section-heading split-heading">
