@@ -26,7 +26,14 @@ Allowed model boundaries (nothing else):
 | `claude_adapter.py` | Claude production (subscription + `--safe-mode`) |
 | `pilot_adapter.py` | Claude subscription pilot (not production) |
 | `grok_adapter.py` | Grok pure-function path (separate backend) |
-| `label_adapter.py` | Reads a supplement LABEL off an uploaded image (added 2026-08-21) |
+| `label_adapter.py` | Reads a supplement LABEL off an uploaded image, via the local CLI (added 2026-08-21) |
+| `lib/analyze/vision.ts` | The same label read over the metered Anthropic API, for the deployed app (added 2026-08-22). Same `prompts/label.md`; the pipeline's ONE metered call |
+
+`pipeline.invariants` enforces the Python side by AST and the TS side by scan:
+`@anthropic-ai/sdk` may appear only in `lib/analyze/vision.ts`, and a second
+import site fails the gate. Everything else under `lib/analyze/` is
+deterministic — ports of `pipeline/` functions, pinned to Python-computed golden
+values by `tests/analyze-parity.test.ts`.
 
 Everything in `pipeline/` and `sources/` is deterministic. If you find yourself
 importing an adapter into `scoring.py` or `dedup.py`, stop.
@@ -178,9 +185,15 @@ must be **run and evaluated separately**.
 | **Claude pilot** `pilot_adapter` | Claude subscription | Weaker (empty-cwd trick) | **No** — superseded |
 | **Grok pure** `grok_adapter` | Grok CLI, signed in | Strong if pure + pinned model | Only after anchor eval |
 
-**Everything runs on subscriptions. There is no metered model spend anywhere in
-this pipeline, and no key to provision — the only auth question is whether the
-machine is signed in.** `--safe-mode` is what makes that legitimate: it disables
+**EXTRACTION runs on subscriptions — S1–S8 have no metered model spend and no
+key to provision; the only auth question is whether the machine is signed in.**
+**The ONE metered exception (founder decision 2026-08-22) is the deployed label
+read:** `lib/analyze/vision.ts` calls the Anthropic API with `ANTHROPIC_API_KEY`
+so the Vercel app can analyze uploads itself — a serverless function has no CLI
+and no subscription session. One label read is a few hundred output tokens on
+the tier-A model (fractions of a cent); do NOT cite it as precedent for moving
+an extractor onto the metered API. `--safe-mode` is what makes the subscription
+path legitimate: it disables
 CLAUDE.md, skills, plugins, hooks, MCP and custom agents while leaving auth
 working, so a subscription call is now as hermetic as `--bare` was. Measured
 2026-08-09 with the canary experiment `pilot_adapter` documents — see the
@@ -930,15 +943,52 @@ Supplement Facts panel; the answer is that product's rows.
 
 ```
 POST /api/analyze-label   (multipart, one image)
-  -> label_adapter.read_label        image     -> printed COMPOUND dose   [MODEL]
-  -> vocab.elemental_dose_range_mg   compound  -> elemental mg            [exact]
-  -> pipeline.product_score          elemental -> rows + four arcs        [exact]
-  -> europepmc.hit_count             on a miss -> evidence census         [count]
+  -> lib/analyze/vision.readLabel            image    -> printed COMPOUND dose  [MODEL, metered API]
+  -> lib/analyze/vocab.elementalDoseRangeMg  compound -> elemental mg           [exact]
+  -> lib/analyze/product-score.scoreProduct  elemental-> rows + four arcs       [exact]
+  -> Europe PMC hitCount (fetch)             on a miss-> evidence census        [count]
 ```
 
 Measured 2026-08-21 end to end on a synthetic label: **21.6 s**, of which 17.7 s
-is the vision read. The route is `nodejs` + `force-dynamic`; every other page
-still prerenders.
+is the vision read (CLI backend; the API backend is the same prompt on the same
+tier-A model). The route is `nodejs` + `force-dynamic`; every other page still
+prerenders.
+
+**REWORKED FOR VERCEL 2026-08-22 (founder: "i don't want it to be local and i
+want it work on vercel").** The route originally shelled out to
+`scripts/analyze_label.py`, which needs Python + the repo + a signed-in Claude
+CLI — none of which a serverless function has. It now runs entirely in-process:
+
+- **The vision read is a 5th model boundary, `lib/analyze/vision.ts`,** calling
+  the Anthropic API with `ANTHROPIC_API_KEY` (metered — the pipeline's one
+  exception, see "Extraction backends"). It renders the SAME `prompts/label.md`
+  with the same `{VOCAB}` block as `label_adapter`, so a label reads identically
+  on either backend and invariant 3 has one prompt to version. Unlike the CLI
+  backend it needs no `Read`-tool exemption — the API takes an image content
+  block inline, so this backend is a true pure function (one request, zero
+  tools). The CLI backend and `scripts/analyze_label.py` remain for local,
+  zero-marginal-cost use.
+- **The deterministic pieces are TypeScript PORTS** —
+  `lib/analyze/scoring.ts` (`dose_factor_for`, `dose_match_for`, `composite`,
+  `label`), `lib/analyze/vocab.ts` (elemental conversion, vocab block),
+  `lib/analyze/product-score.ts` (`score_product`, same refusals). Two copies of
+  a formula is how they disagree later, so `tests/analyze-parity.test.ts` pins
+  every port to golden values COMPUTED BY THE PYTHON ORIGINALS
+  (`tests/golden_scoring_parity.json`, 47 cases) plus the no-dose round-trip
+  against the real retained artifact. Retune a constant in Python and the
+  parity suite fails until the TS port is re-synced — a loud disagreement.
+  Python stays canonical; the ports move only when Python moves.
+- **Deploy needs two things:** env `ANTHROPIC_API_KEY`, and the
+  `outputFileTracingIncludes` block in `next.config.ts` (run artifacts,
+  `run_statuses.json`, `vocab/form.json`, `prompts/label.md`) — without tracing,
+  the files the route reads via `fs` do not exist inside the function bundle.
+  Without the key, POSTs return `analyzer_unavailable` (503) and the static
+  site is unaffected. `GET /api/analyze-label` reports availability plus the
+  scored-product catalogue.
+- **The demand queue is best-effort on Vercel** (`/tmp`, warm invocations only,
+  reported as `durable: false`) because the filesystem is read-only and this app
+  deliberately has no database. A durable queue is a founder infrastructure
+  decision, not something to improvise here.
 
 Five properties that are the whole design, not polish:
 

@@ -1,160 +1,195 @@
 /*
- * THE DASHBOARD'S FIRST RUNTIME API. Read this before adding a second one.
+ * THE DASHBOARD'S FIRST RUNTIME API — and since 2026-08-22, one that runs on
+ * Vercel. Read this before adding a second one.
  *
  * Every other route in this app is statically rendered from immutable
- * `DashboardRunV1` artifacts, and the handoff in CLAUDE.md describes the
- * dashboard as having "no runtime API, uploads, pipeline controls, Supabase, or
- * public release path". That was a real constraint, not an oversight: a static
- * site has no request path to attack, no upload to abuse, and nothing that can
- * emit a number the artifacts do not contain.
+ * `DashboardRunV1` artifacts. This one accepts ONE image and returns ONE JSON
+ * answer about that product. The founder's requirement (2026-08-22): the
+ * analysis must happen in the background via an AI API and work on Vercel —
+ * not require a local machine.
  *
- * This route exists because the founder asked (2026-08-21) for label upload to
- * be the app's front door, with a vision read of the photo. It is scoped so that
- * the properties above survive as far as possible:
+ * The pipeline, all in-process (no Python, no subprocess, no CLI):
  *
- *   - it accepts ONE image and returns ONE JSON answer. No other verb, no
- *     listing, no mutation of any artifact, no pipeline control
- *   - it never writes to reports/. The only write is the local request queue,
- *     out/analysis_queue.json, which is gitignored and which nothing drains
- *     automatically
- *   - the score it returns is not computed here. It comes from
- *     pipeline/product_score.py, which recomputes only the DOSE term from a
- *     retained artifact's stored arcs. No formula is reimplemented in
- *     TypeScript -- one copy of the scoring model, in Python, per CLAUDE.md
- *   - the model call happens in label_adapter.py, a documented model boundary,
- *     never here. This file spawns a Python process; it holds no prompt, no
- *     schema and no model id
+ *   lib/analyze/vision.readLabel          image  -> printed COMPOUND dose  [MODEL, metered API]
+ *   lib/analyze/vocab.elementalDoseRangeMg compound -> elemental mg        [exact]
+ *   lib/analyze/product-score.scoreProduct elemental -> rows + four arcs   [exact]
+ *   Europe PMC hitCount (fetch)           on a miss -> evidence census     [count]
  *
- * It CANNOT be statically exported, so it forces a Node runtime for this path
- * only. The rest of the app still prerenders.
+ * The deterministic pieces are line-for-line TypeScript ports of the Python
+ * originals, pinned by tests/analyze-parity.test.ts to golden values computed
+ * BY the Python code — one scoring model, verified in two languages, never a
+ * second opinion. The vision read shares prompts/label.md with the CLI
+ * adapter, so a label reads the same on either backend.
  *
- * WHY IT SHELLS OUT rather than calling a model directly: invariant 1 allows
- * exactly four files to reach a model, and all four are Python. Reimplementing
- * the label read in TypeScript would create a fifth boundary in a second
- * language, with its own prompt copy to drift out of sync with prompts/label.md.
- * A subprocess is the cheap way to keep one prompt and one schema.
+ * What this route still never does: write to reports/, mutate an artifact,
+ * start a pipeline run, or emit a number without its four arcs and validity
+ * block. An unscored ingredient gets a COUNT (explicitly is_a_score: false)
+ * and a queued request — nothing drains that queue automatically, because a
+ * full extraction (~40 min, ~1000 calls) competing with a run in progress is
+ * the failure that cost the 2026-08-10 run 364 of 906 calls.
  *
- * ============================================================================
- * THIS ROUTE DOES NOT WORK ON VERCEL, AND CANNOT BE MADE TO.
- * ============================================================================
- * It needs three things a serverless function does not have: a Python runtime
- * with this repo checked out, the `claude` CLI binary, and a signed-in Claude
- * subscription. The whole pipeline runs on subscription auth with no API key
- * anywhere (CLAUDE.md, "Extraction backends"), so there is no key to hand a
- * serverless function even in principle.
- *
- * Consequence for the deployment in the handoff: the protected Vercel PREVIEW
- * still builds and serves every static page, and the upload form still renders,
- * but a POST here returns `analyzer_unavailable`. The UI shows that as a plain
- * message rather than a broken spinner. Label upload is a LOCAL / self-hosted
- * capability (`npm run dev` beside a working `claude` CLI) until someone stands
- * up a long-running host with Python and the CLI on it -- which is a founder
- * decision about infrastructure, not something to fake here with a stub score.
+ * Deployment requirements (Vercel):
+ *   - env ANTHROPIC_API_KEY        the metered key for the vision read
+ *   - next.config.ts traces reports/runs/*_dashboard.json, run_statuses.json,
+ *     vocab/*.json and prompts/label.md into this function's bundle
+ * Without the key, POSTs return `analyzer_unavailable` and the static site is
+ * unaffected.
  */
-import { spawn } from "node:child_process";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import path from "node:path";
-
 import { NextResponse } from "next/server";
+
+import { scoreProduct, availableProducts } from "@/lib/analyze/product-score";
+import { readLabel, apiKeyPresent, LabelReadError, type LabelMediaType } from "@/lib/analyze/vision";
+import { elementalDoseRangeMg, ingredientIds } from "@/lib/analyze/vocab";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
-/* A label photo, not a media library. Bounded before anything touches disk. */
 const MAX_BYTES = 12 * 1024 * 1024;
-const ALLOWED_TYPES = new Set([
+const ALLOWED_TYPES: ReadonlySet<string> = new Set([
   "image/png",
   "image/jpeg",
   "image/webp",
   "image/gif",
 ]);
-const EXT_FOR_TYPE: Record<string, string> = {
-  "image/png": ".png",
-  "image/jpeg": ".jpg",
-  "image/webp": ".webp",
-  "image/gif": ".gif",
-};
+
+type Json = Record<string, unknown>;
 
 /*
- * Wall clock for the whole read. The Python side has its own 60 s ceiling on the
- * model call (label_adapter.TIMEOUT_S); this is deliberately a little longer so
- * that a model timeout surfaces as the adapter's own structured error rather
- * than as an opaque gateway kill.
+ * How much literature EXISTS for an ingredient we have not scored. A count,
+ * explicitly labelled as one — it answers "is there anything to read", never
+ * "does it work". Query shape mirrors sources/europepmc.py `_query` at
+ * supplement scope (field-scoped since the 2026-08-19 fix). Fails soft: a
+ * census is a nice-to-have on a path that already has an honest answer.
  */
-const TIMEOUT_MS = 90_000;
+async function census(ingredient: string): Promise<Json> {
+  const ing = ingredient.split("_").join(" ").trim();
+  const supplementScoped = [
+    "TITLE:supplementation",
+    "ABSTRACT:supplementation",
+    'TITLE:"dietary supplement"',
+    'ABSTRACT:"dietary supplement"',
+    'TITLE:"oral supplement"',
+    'ABSTRACT:"oral supplement"',
+    "TITLE:oral",
+    "ABSTRACT:oral",
+  ].join(" OR ");
+  const exclusions =
+    "eclampsia OR anesthesia OR anaesthesia OR surgery OR intravenous OR infusion " +
+    "OR intubation OR ventilation OR sedation OR perioperative OR postoperative " +
+    "OR preoperative OR ketamine";
 
-function pythonBin(): string {
-  return process.env.SP_PYTHON ?? "python";
-}
+  const count = async (kinds: string): Promise<number> => {
+    const query =
+      `("${ing}") AND (SRC:"MED") AND (${kinds}) ` +
+      `AND (${supplementScoped}) NOT (${exclusions})`;
+    const url =
+      "https://www.ebi.ac.uk/europepmc/webservices/rest/search?" +
+      new URLSearchParams({ query, format: "json", pageSize: "1" }).toString();
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) throw new Error(`Europe PMC ${res.status}`);
+    const page = (await res.json()) as { hitCount?: number };
+    return page.hitCount ?? 0;
+  };
 
-interface RunResult {
-  code: number | null;
-  stdout: string;
-  stderr: string;
-  timedOut: boolean;
-}
-
-/*
- * Is the analyzer even present? Checked before spawning so that a host without
- * Python or without the repo returns one clear sentence instead of a spawn
- * error, and so the Vercel preview (see the header) degrades legibly.
- */
-async function analyzerPresent(repoRoot: string): Promise<boolean> {
   try {
-    const { access } = await import("node:fs/promises");
-    await access(path.join(repoRoot, "scripts", "analyze_label.py"));
-    return true;
-  } catch {
-    return false;
+    const [rcts, syntheses] = await Promise.all([
+      count('PUB_TYPE:"Randomized Controlled Trial"'),
+      count(
+        'PUB_TYPE:"Meta-Analysis" OR PUB_TYPE:"Systematic Review" ' +
+          'OR TITLE:"umbrella review" OR TITLE:"overview of reviews"',
+      ),
+    ]);
+    return {
+      available: true,
+      rcts_indexed: rcts,
+      syntheses_indexed: syntheses,
+      source: "Europe PMC",
+      scope: "supplement",
+      is_a_score: false,
+      means:
+        "How many trials EXIST. Not what they found — direction and quality " +
+        "require extraction, which has not been run for this product.",
+    };
+  } catch (err) {
+    return { available: false, reason: String(err), is_a_score: false };
   }
 }
 
-function runAnalyzer(imagePath: string, repoRoot: string): Promise<RunResult> {
-  return new Promise((resolve) => {
-    const child = spawn(
-      // turbopackIgnore: the analyzer path is built from process.cwd() at
-      // runtime, which makes the bundler trace the ENTIRE project into the
-      // server output -- every source file, every artifact in reports/, the
-      // public folder. That is a deployment-size and disclosure problem, and
-      // tracing buys nothing here because the thing being spawned is a Python
-      // script the bundler could not include anyway.
-      /*turbopackIgnore: true*/ pythonBin(),
-      [path.join("scripts", "analyze_label.py"), "--image", imagePath],
-      {
-        cwd: repoRoot,
-        // PYTHONUTF8: the reports and vocab carry non-ASCII (µ, ±, en dashes)
-        // and Windows defaults cp1252, which raises UnicodeEncodeError mid-print
-        // and looks like a scoring failure. Measured repeatedly on this machine.
-        env: { ...process.env, PYTHONUTF8: "1", PYTHONIOENCODING: "utf-8" },
-      },
-    );
-    let stdout = "";
-    let stderr = "";
-    let timedOut = false;
-    const timer = setTimeout(() => {
-      timedOut = true;
-      child.kill("SIGKILL");
-    }, TIMEOUT_MS);
-
-    child.stdout.on("data", (d) => {
-      stdout += String(d);
-    });
-    child.stderr.on("data", (d) => {
-      stderr += String(d);
-    });
-    child.on("error", (err) => {
-      clearTimeout(timer);
-      resolve({ code: null, stdout, stderr: String(err), timedOut });
-    });
-    child.on("close", (code) => {
-      clearTimeout(timer);
-      resolve({ code, stdout, stderr, timedOut });
-    });
-  });
+/*
+ * Record demand for a product we cannot score yet. On Vercel the filesystem is
+ * read-only outside /tmp and functions are ephemeral, so a durable queue needs
+ * a store this app deliberately does not have (no Supabase — handoff decision).
+ * Best-effort: try the repo's out/ dir (works locally / self-hosted), fall
+ * back to /tmp (survives warm invocations only), and never fail the request
+ * over it. `durable: false` tells the UI not to promise anything.
+ */
+async function enqueue(ingredient: string | null, form: string | null, labelText: string | null): Promise<Json> {
+  if (!ingredient && !labelText) return { queued: false, reason: "nothing identifiable to queue" };
+  const { mkdir, readFile, writeFile } = await import("node:fs/promises");
+  const path = await import("node:path");
+  const key = ingredient ?? `?${labelText}`;
+  const candidates = [
+    path.join(process.cwd(), "out", "analysis_queue.json"),
+    path.join("/tmp", "bsproof_analysis_queue.json"),
+  ];
+  for (const file of candidates) {
+    try {
+      let data: { schema_version: string; requests: Json[] } = {
+        schema_version: "AnalysisQueueV1",
+        requests: [],
+      };
+      try {
+        // turbopackIgnore: the path is a runtime queue location (repo out/ or
+        // /tmp), not an asset to bundle — without the annotation this variable
+        // path makes the bundler trace the ENTIRE project into the function.
+        data = JSON.parse(await readFile(/* turbopackIgnore: true */ file, "utf8"));
+      } catch {
+        /* first write */
+      }
+      const now = new Date().toISOString().replace(/\.\d+Z$/, "Z");
+      const existing = data.requests.find((r) => r.ingredient === key && r.form === form);
+      if (existing) {
+        existing.count = Number(existing.count ?? 1) + 1;
+        existing.last_requested_at = now;
+      } else {
+        data.requests.push({
+          ingredient: key,
+          form,
+          label_text: labelText,
+          in_vocab: Boolean(ingredient),
+          count: 1,
+          first_requested_at: now,
+          last_requested_at: now,
+          status: "pending",
+        });
+      }
+      await mkdir(path.dirname(file), { recursive: true });
+      await writeFile(file, JSON.stringify(data, null, 2) + "\n", "utf8");
+      return {
+        queued: true,
+        durable: !file.startsWith("/tmp"),
+        note: "recorded for a future run; nothing runs automatically",
+      };
+    } catch {
+      /* next candidate */
+    }
+  }
+  return { queued: false, reason: "no writable queue location on this host" };
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
+  if (!apiKeyPresent()) {
+    return NextResponse.json(
+      {
+        status: "analyzer_unavailable",
+        error:
+          "Label reading is not configured on this deployment — the ANTHROPIC_API_KEY environment variable is not set.",
+      },
+      { status: 503 },
+    );
+  }
+
   let form: FormData;
   try {
     form = await request.formData();
@@ -182,9 +217,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json(
       {
         status: "bad_request",
-        error: `That image is ${(file.size / 1e6).toFixed(1)} MB. The limit is ${(
-          MAX_BYTES / 1e6
-        ).toFixed(0)} MB.`,
+        error: `That image is ${(file.size / 1e6).toFixed(1)} MB. The limit is ${(MAX_BYTES / 1e6).toFixed(0)} MB.`,
       },
       { status: 413 },
     );
@@ -199,82 +232,112 @@ export async function POST(request: Request): Promise<NextResponse> {
     );
   }
 
-  const repoRoot = process.cwd();
-  if (!(await analyzerPresent(repoRoot))) {
+  const started = Date.now();
+  const out: Json = {
+    schema_version: "LabelAnalysisV1",
+    analyzed_at: new Date().toISOString().replace(/\.\d+Z$/, "Z"),
+  };
+
+  // The upload never touches disk: straight to base64 and into the API call.
+  const imageBase64 = Buffer.from(await file.arrayBuffer()).toString("base64");
+
+  let label;
+  try {
+    label = await readLabel(imageBase64, file.type as LabelMediaType);
+  } catch (err) {
+    const isRead = err instanceof LabelReadError;
     return NextResponse.json(
       {
-        status: "analyzer_unavailable",
-        error:
-          "Label reading is not available on this host. It needs Python, this repository, and a signed-in Claude CLI — so it runs locally, not on a serverless preview.",
+        ...out,
+        status: "label_unreadable",
+        error: isRead ? String((err as Error).message) : "The label could not be read.",
+        timing_s: Math.round((Date.now() - started) / 10) / 100,
       },
-      { status: 503 },
+      { status: isRead ? 200 : 500, headers: { "Cache-Control": "no-store" } },
     );
   }
+  out.label = label;
 
-  // A fresh directory per request, and the analyzer's --add-dir is scoped to it,
-  // so one upload can never read another's file. Named from the OS temp dir
-  // rather than anywhere under the repo: nothing uploaded belongs in the tree.
-  const dir = await mkdtemp(path.join(tmpdir(), "bsproof-label-"));
-  const imagePath = path.join(dir, `label${EXT_FOR_TYPE[file.type] ?? ".png"}`);
+  if (!label.is_supplement_label) {
+    out.status = "not_a_supplement_label";
+    out.timing_s = Math.round((Date.now() - started) / 10) / 100;
+    return NextResponse.json(out, { headers: { "Cache-Control": "no-store" } });
+  }
 
-  try {
-    await writeFile(imagePath, Buffer.from(await file.arrayBuffer()));
-    const result = await runAnalyzer(imagePath, repoRoot);
+  const ingredient = label.ingredient_vocab_id;
+  const formId = label.form_vocab_id;
+  const printed = label.compound_dose_mg;
 
-    if (result.timedOut) {
-      return NextResponse.json(
-        {
-          status: "timeout",
-          error:
-            "The label read took too long. Try a tighter crop of the Supplement Facts panel.",
-        },
-        { status: 504 },
-      );
-    }
+  if (!ingredient) {
+    out.status = "ingredient_not_supported";
+    out.ingredient_label_text = label.ingredient_label_text;
+    out.supported_ingredients = ingredientIds().sort();
+    out.queue = await enqueue(null, null, label.ingredient_label_text);
+    out.timing_s = Math.round((Date.now() - started) / 10) / 100;
+    return NextResponse.json(out, { headers: { "Cache-Control": "no-store" } });
+  }
 
-    // The analyzer prints one JSON object on stdout and exits non-zero for any
-    // status other than `scored` -- including the legitimate ones such as
-    // `not_scored`. So a non-zero exit is NOT an error here: parse first, and
-    // only treat it as a failure when there is no parseable answer.
-    let parsed: unknown = null;
-    const start = result.stdout.indexOf("{");
-    const end = result.stdout.lastIndexOf("}");
-    if (start !== -1 && end > start) {
-      try {
-        parsed = JSON.parse(result.stdout.slice(start, end + 1));
-      } catch {
-        parsed = null;
-      }
-    }
+  // Compound -> elemental, deterministically. A form of null (label stated no
+  // form) refuses, which is the correct answer.
+  const elemental = elementalDoseRangeMg(ingredient, formId, printed);
+  out.product = {
+    ingredient,
+    form: formId,
+    compound_dose_mg: printed,
+    elemental_dose_mg: elemental,
+    is_multi_ingredient: Boolean(label.is_multi_ingredient),
+    other_actives: label.other_actives ?? [],
+  };
 
-    if (parsed === null) {
-      return NextResponse.json(
-        {
-          status: "analyzer_failed",
-          error: "The analyzer did not return a result.",
-          // Truncated, and stderr only: stdout could carry label text, and an
-          // error page is not a place to echo a user's upload back at them.
-          detail: result.stderr.slice(-600) || null,
-          exit_code: result.code,
-        },
-        { status: 500 },
-      );
-    }
+  // The dose used for scoring is the elemental interval's low end when the
+  // conversion succeeded, and null when it refused. Never the printed compound
+  // number — that is a different quantity from the trial doses.
+  const doseForScore = elemental.low;
+  const result = scoreProduct(ingredient, formId ?? "", doseForScore);
+  out.result = result;
+  out.status = result.status;
 
-    return NextResponse.json(parsed, {
-      status: 200,
-      // Every answer is specific to one uploaded photo. Nothing here is
-      // cacheable, and a shared cache holding somebody's product read would be
-      // a privacy bug rather than a performance win.
-      headers: { "Cache-Control": "no-store" },
+  if (result.status !== "scored") {
+    out.census = await census(ingredient);
+    out.queue = await enqueue(ingredient, formId, label.ingredient_label_text);
+  }
+
+  const caveats: Json[] = [];
+  if (label.is_multi_ingredient) {
+    caveats.push({
+      code: "multi_ingredient_product",
+      text:
+        `This product doses more than one active. The evidence below is about ${ingredient} ` +
+        "on its own, which is not the same question as this blend.",
+      other_actives: label.other_actives ?? [],
     });
-  } catch (err) {
-    return NextResponse.json(
-      { status: "analyzer_failed", error: String(err) },
-      { status: 500 },
-    );
-  } finally {
-    // The upload does not outlive the request.
-    await rm(dir, { recursive: true, force: true }).catch(() => undefined);
   }
+  if (elemental.basis === "compound_only" || elemental.basis === "unstated") {
+    caveats.push({
+      code: "dose_not_convertible",
+      text:
+        "The dose axis is unavailable: " +
+        (elemental.basis === "unstated"
+          ? "no per-serving mass for this ingredient is printed on the label."
+          : "this form's hydration state is not stated, so its elemental dose cannot be computed without guessing."),
+    });
+  }
+  if (caveats.length) out.caveats = caveats;
+
+  out.timing_s = Math.round((Date.now() - started) / 10) / 100;
+  return NextResponse.json(out, { headers: { "Cache-Control": "no-store" } });
+}
+
+/*
+ * GET: what can this deployment actually answer? Lets the UI say "creatine
+ * monohydrate is scored; everything else gets a census" without hardcoding.
+ */
+export async function GET(): Promise<NextResponse> {
+  return NextResponse.json(
+    {
+      analyzer_available: apiKeyPresent(),
+      scored_products: availableProducts(),
+    },
+    { headers: { "Cache-Control": "no-store" } },
+  );
 }

@@ -304,13 +304,53 @@ def agent_wiring_problems(root: Path | None = None) -> list[str]:
 
 
 # --------------------------------------------------------------------------- #
+# invariant 1, TypeScript side
+
+# The one TS file allowed to import the Anthropic SDK. lib/analyze/vision.ts is
+# the deployed label read (model boundary 5, added 2026-08-22); everything else
+# under lib/ and app/ is deterministic rendering or the injection layer, exactly
+# like pipeline/ and sources/ on the Python side. A second import site would be
+# a second model boundary added without the CLAUDE.md table changing -- the
+# silent drift this file exists to catch. Text scan, not AST: TS has no stdlib
+# parser here, and an import of "@anthropic-ai/sdk" cannot be line-wrapped past
+# a substring check without also breaking the bundler.
+TS_MODEL_SDK = "@anthropic-ai/sdk"
+TS_MODEL_BOUNDARY = "lib/analyze/vision.ts"
+TS_CHECKED_DIRS = ("lib", "app", "components")
+
+
+def ts_boundary_problems(root: Path | None = None) -> list[str]:
+    root = root or ROOT
+    out: list[str] = []
+    for d in TS_CHECKED_DIRS:
+        base = root / d
+        if not base.exists():
+            continue
+        for path in base.rglob("*.ts*"):
+            if "node_modules" in path.parts or path.suffix not in (".ts", ".tsx"):
+                continue
+            rel = path.relative_to(root).as_posix()
+            try:
+                text = path.read_text(encoding="utf-8")
+            except OSError:
+                out.append(f"{rel}: unreadable while checking the TS model boundary")
+                continue
+            if TS_MODEL_SDK in text and rel != TS_MODEL_BOUNDARY:
+                out.append(
+                    f"{rel}: imports {TS_MODEL_SDK} but only {TS_MODEL_BOUNDARY} "
+                    f"is a model boundary (CLAUDE.md invariant 1)")
+    return out
+
+
+# --------------------------------------------------------------------------- #
 
 
 def problems(root: Path | None = None) -> list[str]:
     return (import_problems(root)
             + exception_problems(root)
             + dependency_problems(root)
-            + agent_wiring_problems(root))
+            + agent_wiring_problems(root)
+            + ts_boundary_problems(root))
 
 
 def main() -> int:
@@ -325,6 +365,7 @@ def main() -> int:
           f"({n_exc} documented exception{'s' if n_exc != 1 else ''})")
     print("offline:     the deterministic layer imports with no third-party dependency")
     print("agent wiring: every AGENTS entry has a schema, a prompt and a tier")
+    print(f"ts boundary: {TS_MODEL_SDK} is imported only by {TS_MODEL_BOUNDARY}")
     return 0
 
 

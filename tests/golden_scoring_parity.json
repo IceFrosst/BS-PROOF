@@ -1,0 +1,507 @@
+{
+  "dose_factor": [
+    {
+      "args": [
+        1000,
+        1000,
+        {
+          "low": 5000.0,
+          "high": 20000.0
+        }
+      ],
+      "expect": 0.1
+    },
+    {
+      "args": [
+        2400,
+        2400,
+        {
+          "low": 5000.0,
+          "high": 20000.0
+        }
+      ],
+      "expect": 0.1
+    },
+    {
+      "args": [
+        2500,
+        2500,
+        {
+          "low": 5000.0,
+          "high": 20000.0
+        }
+      ],
+      "expect": 0.1
+    },
+    {
+      "args": [
+        3000,
+        3000,
+        {
+          "low": 5000.0,
+          "high": 20000.0
+        }
+      ],
+      "expect": 0.28
+    },
+    {
+      "args": [
+        4000,
+        4000,
+        {
+          "low": 5000.0,
+          "high": 20000.0
+        }
+      ],
+      "expect": 0.64
+    },
+    {
+      "args": [
+        4999,
+        4999,
+        {
+          "low": 5000.0,
+          "high": 20000.0
+        }
+      ],
+      "expect": 0.9996
+    },
+    {
+      "args": [
+        5000,
+        5000,
+        {
+          "low": 5000.0,
+          "high": 20000.0
+        }
+      ],
+      "expect": 1.0
+    },
+    {
+      "args": [
+        12000,
+        12000,
+        {
+          "low": 5000.0,
+          "high": 20000.0
+        }
+      ],
+      "expect": 1.0
+    },
+    {
+      "args": [
+        20000,
+        20000,
+        {
+          "low": 5000.0,
+          "high": 20000.0
+        }
+      ],
+      "expect": 1.0
+    },
+    {
+      "args": [
+        25000,
+        25000,
+        {
+          "low": 5000.0,
+          "high": 20000.0
+        }
+      ],
+      "expect": 0.9
+    },
+    {
+      "args": [
+        39000,
+        39000,
+        {
+          "low": 5000.0,
+          "high": 20000.0
+        }
+      ],
+      "expect": 0.62
+    },
+    {
+      "args": [
+        40000,
+        40000,
+        {
+          "low": 5000.0,
+          "high": 20000.0
+        }
+      ],
+      "expect": 0.6
+    },
+    {
+      "args": [
+        60000,
+        60000,
+        {
+          "low": 5000.0,
+          "high": 20000.0
+        }
+      ],
+      "expect": 0.6
+    },
+    {
+      "args": [
+        null,
+        null,
+        {
+          "low": 5000.0,
+          "high": 20000.0
+        }
+      ],
+      "expect": null
+    },
+    {
+      "args": [
+        3000,
+        6000,
+        {
+          "low": 5000.0,
+          "high": 20000.0
+        }
+      ],
+      "expect": 0.28
+    },
+    {
+      "args": [
+        4400,
+        4400,
+        {
+          "low": null,
+          "high": null
+        }
+      ],
+      "expect": null
+    }
+  ],
+  "dose_match": [
+    {
+      "args": [
+        1000,
+        1000,
+        {
+          "low": 5000.0,
+          "high": 20000.0
+        }
+      ],
+      "expect": "below_50"
+    },
+    {
+      "args": [
+        3000,
+        3000,
+        {
+          "low": 5000.0,
+          "high": 20000.0
+        }
+      ],
+      "expect": "low_50_99"
+    },
+    {
+      "args": [
+        5000,
+        5000,
+        {
+          "low": 5000.0,
+          "high": 20000.0
+        }
+      ],
+      "expect": "in_band"
+    },
+    {
+      "args": [
+        20000,
+        20000,
+        {
+          "low": 5000.0,
+          "high": 20000.0
+        }
+      ],
+      "expect": "in_band"
+    },
+    {
+      "args": [
+        39000,
+        39000,
+        {
+          "low": 5000.0,
+          "high": 20000.0
+        }
+      ],
+      "expect": "in_band"
+    },
+    {
+      "args": [
+        41000,
+        41000,
+        {
+          "low": 5000.0,
+          "high": 20000.0
+        }
+      ],
+      "expect": "above_200"
+    },
+    {
+      "args": [
+        null,
+        null,
+        {
+          "low": 5000.0,
+          "high": 20000.0
+        }
+      ],
+      "expect": "unspecified"
+    },
+    {
+      "args": [
+        3000,
+        6000,
+        {
+          "low": 5000.0,
+          "high": 20000.0
+        }
+      ],
+      "expect": "unspecified"
+    }
+  ],
+  "composite": [
+    {
+      "args": [
+        0.112,
+        0.809,
+        null,
+        0.908
+      ],
+      "expect": 43
+    },
+    {
+      "args": [
+        0.112,
+        0.809,
+        0.94,
+        0.908
+      ],
+      "expect": 70
+    },
+    {
+      "args": [
+        0.02,
+        0.8,
+        1.0,
+        0.926
+      ],
+      "expect": 71
+    },
+    {
+      "args": [
+        0.378,
+        0.8,
+        null,
+        0.328
+      ],
+      "expect": 17
+    },
+    {
+      "args": [
+        -0.11,
+        0.8,
+        1.0,
+        0.721
+      ],
+      "expect": 54
+    },
+    {
+      "args": [
+        null,
+        0.8,
+        1.0,
+        0.9
+      ],
+      "expect": null
+    },
+    {
+      "args": [
+        0.5,
+        null,
+        null,
+        0.5
+      ],
+      "expect": 14
+    }
+  ],
+  "label": [
+    {
+      "args": [
+        45,
+        0.973,
+        0.08,
+        true
+      ],
+      "expect": "unclear"
+    },
+    {
+      "args": [
+        17,
+        0.328,
+        0.378,
+        true
+      ],
+      "expect": "works, but not tested for your product"
+    },
+    {
+      "args": [
+        71,
+        0.926,
+        0.02,
+        false
+      ],
+      "expect": "works"
+    },
+    {
+      "args": [
+        58,
+        0.749,
+        -0.3,
+        false
+      ],
+      "expect": "does not work"
+    },
+    {
+      "args": [
+        null,
+        0.9,
+        null,
+        false
+      ],
+      "expect": "not enough human evidence"
+    },
+    {
+      "args": [
+        30,
+        0.1,
+        0.5,
+        false
+      ],
+      "expect": "barely studied"
+    },
+    {
+      "args": [
+        30,
+        null,
+        null,
+        false
+      ],
+      "expect": "confidence unknown"
+    },
+    {
+      "args": [
+        40,
+        0.9,
+        null,
+        false
+      ],
+      "expect": "probably does not work"
+    }
+  ],
+  "elemental": [
+    {
+      "args": [
+        "creatine",
+        "creatine_monohydrate",
+        4400
+      ],
+      "expect": {
+        "low": 3868.534,
+        "high": 3868.534,
+        "basis": "converted"
+      }
+    },
+    {
+      "args": [
+        "creatine",
+        "creatine_monohydrate",
+        null
+      ],
+      "expect": {
+        "low": null,
+        "high": null,
+        "basis": "unstated"
+      }
+    },
+    {
+      "args": [
+        "creatine",
+        "creatine_buffered",
+        3000
+      ],
+      "expect": {
+        "low": null,
+        "high": null,
+        "basis": "compound_only"
+      }
+    },
+    {
+      "args": [
+        "magnesium",
+        "magnesium_glycinate",
+        2000
+      ],
+      "expect": {
+        "low": 281.921,
+        "high": 281.921,
+        "basis": "converted"
+      }
+    },
+    {
+      "args": [
+        "magnesium",
+        "magnesium_chloride",
+        1000
+      ],
+      "expect": {
+        "low": 119.552,
+        "high": 255.275,
+        "basis": "bounded"
+      }
+    },
+    {
+      "args": [
+        "magnesium",
+        "magnesium_citrate",
+        1000
+      ],
+      "expect": {
+        "low": 118.9,
+        "high": 161.633,
+        "basis": "bounded"
+      }
+    },
+    {
+      "args": [
+        "creatine",
+        null,
+        4400
+      ],
+      "expect": {
+        "low": null,
+        "high": null,
+        "basis": "compound_only"
+      }
+    },
+    {
+      "args": [
+        "creatine",
+        "no_such_form",
+        4400
+      ],
+      "expect": {
+        "low": null,
+        "high": null,
+        "basis": "compound_only"
+      }
+    }
+  ]
+}

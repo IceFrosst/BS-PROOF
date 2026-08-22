@@ -420,10 +420,10 @@ export function LabelAnalyzer() {
           {/* The honest terminal states. */}
           {data.status === "analyzer_unavailable" ? (
             <div className="la-empty">
-              <strong>Label reading is not available on this host.</strong>
+              <strong>Label reading is not configured on this deployment.</strong>
               <span>
-                It needs Python, this repository and a signed-in Claude CLI, so it runs locally rather
-                than on a hosted preview. The retained runs below are unaffected.
+                The vision read runs through the Anthropic API and needs the ANTHROPIC_API_KEY
+                environment variable set on the server. The retained runs below are unaffected.
               </span>
             </div>
           ) : null}
