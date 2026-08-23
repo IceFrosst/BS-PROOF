@@ -8,6 +8,27 @@
 
 ## 2026-08-23 (founder + Pi session)
 
+### v13 measured-effects stack built (SHADOW-ONLY, default OFF) — branch merged
+Founder authorized fixing the effect axis (vote counting + nulls). Built via
+parallel worker agents with 12 independent review cycles, every layer
+reviewer-ACCEPTED before the next:
+- prompts/schemas: S5 gains arm-level stats fields (means/SDs/ns, CI level,
+  p kind, design), S1 gains explicit design_kind, new S5T table-selector
+  agent (Tier A). PROMPT_VERSION v1.21 -> v1.22.
+- pipeline/effect_harvest.py: refusal-first deterministic table candidates
+  (SE/SEM/CI never harvested as SD, no invented n, full provenance).
+- pipeline/meta_effects.py: stdlib Hedges g, CI/p SE recovery, global-max
+  REML, Hartung-Knapp (t, df=k-1 CI / k-2 PI).
+- pipeline/v13_shadow.py: pooled measured-effect analysis; unsized labels are
+  MISSING, never -0.35; strict homogeneity/dedup gates.
+- workers.py: SP_V13_SHADOW=1 wiring; verified byte-identical default-off
+  parity with v12. PRODUCTION SCORING UNCHANGED.
+NEXT: shadow replay on cached creatine corpus (needs subscription; run SOLO,
+after vitamin D/omega-3 extraction), compare pooled vs published MAs
+(creatine strength SMD 0.43 [0.25,0.61]) before any headline switch (v13
+promotion = founder call + SPEC/parity ceremony).
+
+
 ### CONSTANTS FREEZE declared + 400-study creatine run LAUNCHED (evening)
 - Founder decision: all scoring constants FROZEN at current values for this
   run (K=1.5, S_VALUE null=-0.35, ROB/FORM/POP/DOSE factors, FORM_LADDER,
