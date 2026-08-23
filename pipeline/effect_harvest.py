@@ -390,6 +390,27 @@ def _parse_text(text: str, caption: str = "") -> _Table | None:
     return None
 
 
+def _with_wrapper_metadata(table: _Table, wrapper: Mapping[str, Any]) -> _Table:
+    """Attach a ``tables`` wrapper's source metadata to one child table.
+
+    A child caption is more specific provenance than the wrapper caption, so
+    retain it for candidate locations.  Keep a different wrapper caption in
+    annotations, however, so the screening pass still sees it.  This also
+    means wrapper notes are screened without turning them into outcome rows.
+    """
+
+    wrapper_caption = _text(wrapper.get("caption", wrapper.get("title", ""))).strip()
+    annotations = list(_mapping_annotations(wrapper))
+    if wrapper_caption and wrapper_caption != table.caption:
+        annotations.append(wrapper_caption)
+    return _Table(
+        caption=table.caption or wrapper_caption,
+        columns=table.columns,
+        rows=table.rows,
+        annotations=tuple((*annotations, *table.annotations)),
+    )
+
+
 def _coerce_tables(serialized: Any) -> list[_Table]:
     if isinstance(serialized, bytes):
         try:
@@ -404,9 +425,11 @@ def _coerce_tables(serialized: Any) -> list[_Table]:
             return [table] if table else []
         return _coerce_tables(decoded)
     if isinstance(serialized, Mapping):
-        # A payload may wrap one or more tables under ``tables``.
+        # A payload may wrap one or more tables under ``tables``.  Inherit its
+        # caption/title and note-like metadata into every child while retaining
+        # each child's own caption and cell provenance.
         if "tables" in serialized and isinstance(serialized["tables"], Sequence):
-            return _coerce_tables(serialized["tables"])
+            return [_with_wrapper_metadata(table, serialized) for table in _coerce_tables(serialized["tables"])]
         table = _table_from_mapping(serialized)
         return [table] if table else []
     if isinstance(serialized, Sequence):
@@ -636,6 +659,45 @@ def _self_check() -> None:
     assert nested_found[0].outcome_cell.caption == "Outer caption retained"
     assert nested_found[0].arms[0].provenance.caption == "Outer caption retained"
 
+    # A tables-wrapper contributes metadata to every child, but a child's own
+    # caption remains the precise provenance shown on its candidate.
+    wrapped_clean = {
+        "title": "Wrapper source title",
+        "notes": "wrapper note",
+        "footnotes": ["wrapper footnote"],
+        "annotations": {"source": "wrapper annotation"},
+        "tables": [
+            {
+                "caption": "Child table caption",
+                "columns": ["Outcome", "Treatment", "Control"],
+                "rows": [["Muscle strength", "10.2 ± 2.1", "8.4 +/- 2.0"]],
+            }
+        ],
+    }
+    wrapped_tables = _coerce_tables(wrapped_clean)
+    assert len(wrapped_tables) == 1
+    assert wrapped_tables[0].caption == "Child table caption"
+    assert wrapped_tables[0].annotations == (
+        "wrapper note",
+        "wrapper footnote",
+        "source: wrapper annotation",
+        "Wrapper source title",
+    )
+    wrapped_found = harvest_candidates(wrapped_clean, "muscle strength", ["Treatment", "Control"])
+    assert len(wrapped_found) == 1
+    assert wrapped_found[0].caption == "Child table caption"
+    assert wrapped_found[0].arms[0].provenance.caption == "Child table caption"
+    wrapper_caption_fallback = {
+        "title": "Wrapper-only caption",
+        "tables": [
+            {
+                "columns": ["Outcome", "Treatment", "Control"],
+                "rows": [["Muscle strength", "10.2 ± 2.1", "8.4 +/- 2.0"]],
+            }
+        ],
+    }
+    assert harvest_candidates(wrapper_caption_fallback, "muscle strength", ["Treatment", "Control"])[0].caption == "Wrapper-only caption"
+
     # A ± value is not SD when the source labels it as a standard error or CI;
     # this includes labels in headers and footnote cells.
     for marker in (
@@ -663,6 +725,52 @@ def _self_check() -> None:
             "rows": [["Muscle strength", "10.2 ± 2.1", "8.4 +/- 2.0"]],
         }
         assert harvest_candidates(marked_header, "muscle strength", ["Treatment", "Control"]) == []
+
+    clean_markdown_caption = """Markdown caption: clean result
+| Outcome | Treatment | Control |
+| --- | --- | --- |
+| Muscle strength | 10.2 ± 2.1 | 8.4 +/- 2.0 |"""
+    clean_markdown_found = harvest_candidates(clean_markdown_caption, "muscle strength", ["Treatment", "Control"])
+    assert len(clean_markdown_found) == 1
+    assert clean_markdown_found[0].caption == "Markdown caption: clean result"
+
+    clean_trailing_note = """Markdown caption: trailing note result
+| Outcome | Treatment | Control |
+| --- | --- | --- |
+| Muscle strength | 10.2 ± 2.1 | 8.4 +/- 2.0 |
+Note: values are reported as observed."""
+    clean_trailing_found = harvest_candidates(clean_trailing_note, "muscle strength", ["Treatment", "Control"])
+    assert len(clean_trailing_found) == 1
+    assert clean_trailing_found[0].caption == "Markdown caption: trailing note result"
+
+    wrapper_error_child = {
+        "caption": "Child provenance",
+        "columns": ["Outcome", "Treatment", "Control"],
+        "rows": [["Muscle strength", "10.2 ± 2.1", "8.4 +/- 2.0"]],
+    }
+    for marker in ("SE", "SEM", "CI", "Std Error"):
+        wrapped_error = {
+            "title": f"Wrapper result: {marker}",
+            "tables": [wrapper_error_child],
+        }
+        assert harvest_candidates(wrapped_error, "muscle strength", ["Treatment", "Control"]) == []
+    wrapped_explicit_sd = {
+        "caption": "Wrapper result",
+        "notes": "reported SD and standard deviation",
+        "tables": [
+            {
+                "caption": "Child provenance",
+                "columns": ["Outcome", "Treatment", "Control"],
+                "rows": [[
+                    "Muscle strength",
+                    "10.2 ± 2.1 (standard deviation)",
+                    "8.4 +/- 2.0 (SD)",
+                ]],
+            }
+        ],
+    }
+    assert len(harvest_candidates(wrapped_explicit_sd, "muscle strength", ["Treatment", "Control"])) == 1
+
     # Keep each caption regression non-vacuous: its aliases match the actual
     # arm headers, so refusal must come from the annotation being screened.
     for marker in ("SE", "SEM", "CI", "Std. Error", "Std Error", "Std. Err"):
