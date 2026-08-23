@@ -190,8 +190,30 @@ function validate(obj: Record<string, unknown>): LabelRead {
 }
 
 interface ChatCompletionsResponse {
-  choices?: Array<{ message?: { content?: string | null } }>;
+  choices?: Array<{
+    finish_reason?: string | null;
+    message?: {
+      // string on Gemini; some providers return an array of content parts.
+      content?: string | Array<{ type?: string; text?: string }> | null;
+      // Reasoning models (DeepSeek) stream chain-of-thought here; the final
+      // answer is still `content`, but an empty content with a populated
+      // reasoning_content + finish_reason "length" means the token budget
+      // was eaten by reasoning before the answer started.
+      reasoning_content?: string | null;
+    };
+  }>;
   usage?: { prompt_tokens?: number; completion_tokens?: number };
+}
+
+/** Message content -> plain text, tolerating the parts-array shape. */
+function contentText(
+  content: string | Array<{ type?: string; text?: string }> | null | undefined,
+): string {
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    return content.map((part) => part?.text ?? "").join("");
+  }
+  return "";
 }
 
 /** One image -> one validated label read. Throws LabelReadError on failure. */
@@ -216,8 +238,13 @@ export async function readLabel(imageBase64: string, mediaType: LabelMediaType):
         model: LABEL_MODEL,
         // Deterministic read: same purity bar as the Grok adapter.
         temperature: 0,
-        // A label read is a few hundred tokens of JSON; generous headroom.
-        max_tokens: 2048,
+        // A label read is a few hundred tokens of JSON. Reasoning models
+        // (DeepSeek vision) spend tokens on chain-of-thought BEFORE the
+        // answer and count both against this cap: at 2048 the reasoning
+        // consumed the whole budget and content came back empty with
+        // finish_reason "length" (measured 2026-08-23). 8192 leaves room
+        // for both; non-reasoning providers just never approach it.
+        max_tokens: 8192,
         messages: [
           {
             role: "user",
@@ -260,9 +287,17 @@ export async function readLabel(imageBase64: string, mediaType: LabelMediaType):
   }
 
   const payload = (await res.json()) as ChatCompletionsResponse;
-  const text = payload.choices?.[0]?.message?.content ?? "";
+  const choice = payload.choices?.[0];
+  const text = contentText(choice?.message?.content);
   if (!text) {
-    throw new LabelReadError("the vision API returned no message content");
+    // Say WHY there is no content: a reasoning model that spent the whole
+    // max_tokens budget thinking reports finish_reason "length" with a
+    // populated reasoning_content and an empty answer. Measured 2026-08-23
+    // on deepseek's vision model -- the generic message hid exactly this.
+    const finish = choice?.finish_reason ?? "unknown";
+    const reasoned = choice?.message?.reasoning_content ? " after emitting reasoning_content" : "";
+    throw new LabelReadError(
+      `the vision API returned no message content (finish_reason: ${finish}${reasoned})`);
   }
 
   const read = validate(extractJson(text));
