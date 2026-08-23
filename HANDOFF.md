@@ -8,6 +8,25 @@
 
 ## 2026-08-23 (founder + Pi session)
 
+### CONSTANTS FREEZE declared + 400-study creatine run LAUNCHED (evening)
+- Founder decision: all scoring constants FROZEN at current values for this
+  run (K=1.5, S_VALUE null=-0.35, ROB/FORM/POP/DOSE factors, FORM_LADDER,
+  H_PENALTY/H_NORM, EFFECT_MID/FULL). Rationale: Tier-3 calibration is
+  blocked anyway; the run itself produces the data to retune, and re-scoring
+  from cached extractions is cheap afterward.
+- Run: creatine / creatine_monohydrate, --supplement-scope --full-text-only
+  --with-sr --limit 400 --dose 4396 (5 g compound label dose -> elemental),
+  SP_RETRIEVE_MAX_PRIMARIES=1200, Claude backend v1.21.
+  Log: out/run_creatine_400_20260823.log  (launched ~21:00 local, expect
+  ~4000 calls, hours; NOTHING else may use the Claude subscription while it
+  runs).
+- New quota survival (workers.py, commit d6afa04): a subscription-limit hit
+  now requeues the STUDY and pauses the run (SP_QUOTA_WAIT_S=15 min probes,
+  SP_QUOTA_MAX_WAIT_S=8 h budget) instead of burning the rest of the corpus
+  against a closed window (the 2026-08-10 failure). Verified by synthetic
+  drill; selftest + invariants pass.
+
+
 ### Demo plan written: docs/DEMO_PLAN.md
 Full T-minus-2-days plan (scoring tune -> vocab -> 3 sequential pipeline runs
 -> camera capture -> event mode -> re-enable analyzer). Includes a post-event
