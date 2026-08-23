@@ -8,6 +8,15 @@
 
 ## 2026-08-23 (founder + Pi session)
 
+### Demo plan written: docs/DEMO_PLAN.md
+Full T-minus-2-days plan (scoring tune -> vocab -> 3 sequential pipeline runs
+-> camera capture -> event mode -> re-enable analyzer). Includes a post-event
+workstream: apply to Anthropic's AI for Science program ($20k credits),
+Claude Science project calls ($30k + compute), and the research-lab Team
+plan -- all need an academic collaborator; recruiting one at the conference
+is an explicit event goal.
+
+
 ### Conference demo prep started (event in ~2 days)
 Founder gameplan: 3 supplements demoed live — **creatine, vitamin D, omega-3
 fish oil**. Scientists photograph a tub, get a score fast. Requires: live
