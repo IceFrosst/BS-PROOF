@@ -5,7 +5,8 @@ from __future__ import annotations
 
 import time
 import os
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from collections import deque
+from concurrent.futures import ThreadPoolExecutor, FIRST_COMPLETED, wait as _fwait
 
 import claude_adapter
 from pipeline import vocab
@@ -43,6 +44,29 @@ PROMPT_BUDGET_CHARS = int(os.environ.get("SP_PROMPT_BUDGET", "12000"))
 # Sample is 7 studies. SP_S6_BATCH=0 returns to per-claim if a larger corpus
 # ever shows the batch drifting.
 S6_BATCH = os.environ.get("SP_S6_BATCH", "1") == "1"
+
+# Subscription-limit survival. The 2026-08-10 run lost 364 of 906 calls
+# because a limit hit is FATAL per call (claude_adapter._FATAL: retrying a
+# time-based limit is a wasted minute) but the CORPUS loop kept marching,
+# recording every remaining study as failed. The right unit of retry is the
+# STUDY, and the right response to a time-based limit is to WAIT: quota-hit
+# studies are requeued and the run pauses QUOTA_WAIT_S between probes, up to
+# QUOTA_MAX_WAIT_S of total waiting per run. Probing while still limited is
+# nearly free -- the CLI fails fast with no tokens spent.
+QUOTA_WAIT_S = int(os.environ.get("SP_QUOTA_WAIT_S", "900"))          # 15 min
+QUOTA_MAX_WAIT_S = int(os.environ.get("SP_QUOTA_MAX_WAIT_S", "28800"))  # 8 h
+_QUOTA_STRINGS = ("session limit", "usage limit", "rate limit", "rate_limit")
+
+
+def _hit_quota(extraction: dict) -> bool:
+    """True when this study's failures include a subscription-limit hit."""
+    if extraction.get("_quota_exhausted"):
+        return True
+    for f in extraction.get("_failed") or []:
+        err = str(f.get("error") or "").lower()
+        if any(k in err for k in _QUOTA_STRINGS):
+            return True
+    return False
 
 # S3 is the longest system prompt + schema among per-study agents. Give it a
 # stricter text headroom so full-text papers do not re-hit the wall.
@@ -405,41 +429,93 @@ def extract_corpus(records: list[dict], text_for, registry_for=None, *,
     else:
         print("  showcase: OFF (full outcome vocabulary)")
 
-    with ThreadPoolExecutor(max_workers=max_studies_in_flight) as pool:
-        future_map = {
-            pool.submit(
+    # Bounded submission instead of submit-everything: quota-hit studies are
+    # requeued and the run PAUSES until the subscription window resets, instead
+    # of burning the rest of the corpus against a closed door (2026-08-10:
+    # 364 of 906 calls lost exactly that way).
+    pending: deque[int] = deque(range(n))
+    quota_waited = 0.0
+    resume_at = 0.0
+    requeued = 0
+
+    def _submit(pool, future_map):
+        while pending and len(future_map) < max_studies_in_flight:
+            i = pending.popleft()
+            r = records[i]
+            fut = pool.submit(
                 extract_study, r, text_for(r),
                 registry_for(r) if registry_for else None, call=call,
                 outcome_allowlist=outcome_allowlist,
                 sections=sections_for(r) if sections_for else None,
-            ): i
-            for i, r in enumerate(records)
-        }
-        for fut in as_completed(future_map):
-            i = future_map[fut]
-            r = records[i]
-            try:
-                extraction = fut.result()
-            except Exception as e:
-                extraction = {"_failed": [{"agent": "*", "error": str(e)}], "outcomes": []}
-            results_by_id[i] = {"record": r, "extraction": extraction}
-            done += 1
-            if extraction.get("_skipped"):
-                skipped += 1
-                if str(extraction.get("_skipped", "")).startswith("relevance:"):
-                    relevance_skip += 1
-            if extraction.get("_failed"):
-                failed_studies += 1
-            elapsed = time.time() - t0
-            rate = done / elapsed if elapsed > 0 else 0
-            eta = (n - done) / rate if rate > 0 else 0
-            print(
-                f"  progress: {done}/{n}  "
-                f"ok={done - skipped - failed_studies} skip={skipped} "
-                f"(relevance={relevance_skip}) fail_partial={failed_studies}  "
-                f"{elapsed:.0f}s elapsed  ~{eta:.0f}s left  "
-                f"({rate * 60:.1f} studies/min)"
             )
+            future_map[fut] = i
+
+    with ThreadPoolExecutor(max_workers=max_studies_in_flight) as pool:
+        future_map: dict = {}
+        _submit(pool, future_map)
+        while future_map or pending:
+            if not future_map:
+                # Everything in flight was requeued for quota; wait out the
+                # window before probing again.
+                delay = max(0.0, resume_at - time.time())
+                if delay:
+                    print(f"  QUOTA PAUSE: sleeping {delay:.0f}s "
+                          f"(total waited {quota_waited:.0f}/{QUOTA_MAX_WAIT_S}s, "
+                          f"{len(pending)} studies queued)")
+                    time.sleep(delay)
+                _submit(pool, future_map)
+                continue
+            done_set, _ = _fwait(set(future_map), return_when=FIRST_COMPLETED)
+            for fut in done_set:
+                i = future_map.pop(fut)
+                r = records[i]
+                try:
+                    extraction = fut.result()
+                except Exception as e:
+                    extraction = {"_failed": [{"agent": "*", "error": str(e)}], "outcomes": []}
+                if _hit_quota(extraction) and quota_waited < QUOTA_MAX_WAIT_S:
+                    # Requeue the STUDY and schedule a pause. Extending the
+                    # deadline on every hit is correct: concurrent in-flight
+                    # studies failing against the same closed window each land
+                    # here within seconds and should not stack extra waits.
+                    pending.append(i)
+                    requeued += 1
+                    if time.time() >= resume_at:
+                        resume_at = time.time() + QUOTA_WAIT_S
+                        quota_waited += QUOTA_WAIT_S
+                        print(f"  QUOTA HIT on {r.get('canonical_id', '?')}: "
+                              f"requeued; run will pause {QUOTA_WAIT_S}s once "
+                              f"in-flight studies drain "
+                              f"(requeues so far: {requeued})")
+                    continue
+                results_by_id[i] = {"record": r, "extraction": extraction}
+                done += 1
+                if extraction.get("_skipped"):
+                    skipped += 1
+                    if str(extraction.get("_skipped", "")).startswith("relevance:"):
+                        relevance_skip += 1
+                if extraction.get("_failed"):
+                    failed_studies += 1
+                elapsed = time.time() - t0
+                rate = done / elapsed if elapsed > 0 else 0
+                eta = (n - done) / rate if rate > 0 else 0
+                print(
+                    f"  progress: {done}/{n}  "
+                    f"ok={done - skipped - failed_studies} skip={skipped} "
+                    f"(relevance={relevance_skip}) fail_partial={failed_studies}  "
+                    f"{elapsed:.0f}s elapsed  ~{eta:.0f}s left  "
+                    f"({rate * 60:.1f} studies/min)"
+                )
+            if pending and future_map:
+                # Refill only when not inside a quota window; if a pause is
+                # scheduled, let the in-flight studies drain first so the sleep
+                # happens in one block at the top of the loop.
+                if time.time() >= resume_at:
+                    _submit(pool, future_map)
+
+    if requeued:
+        print(f"  quota recovery: {requeued} requeue(s), "
+              f"{quota_waited:.0f}s total pause budget consumed")
 
     if relevance_skip:
         print(f"  relevance gate skipped {relevance_skip}/{n} "
