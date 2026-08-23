@@ -64,6 +64,14 @@ QUOTA_MAX_WAIT_S = int(os.environ.get("SP_QUOTA_MAX_WAIT_S", "28800"))  # 8 h
 _QUOTA_STRINGS = ("session limit", "usage limit", "rate limit", "rate_limit")
 
 
+def _quota_signal(value) -> bool:
+    """Return whether an adapter value identifies a retryable quota failure."""
+    text = str(value or "").lower()
+    return (any(marker in text for marker in _QUOTA_STRINGS)
+            or bool(_re.search(
+                r"\b(?:session|usage|rate)[ _-]?(?:limit|limited)\b", text)))
+
+
 def _hit_quota(extraction: dict) -> bool:
     """True when this study's failures include a subscription-limit hit."""
     if extraction.get("_quota_exhausted"):
@@ -320,11 +328,23 @@ def _payload(agent: str, record: dict, text: str, registry: dict | None,
 
 def _shadow_arm_aliases(s3: dict | None) -> tuple[dict[str, list[str]] | None, str | None]:
     """Build aliases only from the two explicit S3 control facts."""
-    arms = s3.get("arms") if isinstance(s3, dict) else None
+    if not isinstance(s3, dict):
+        return None, "S3 arm facts are absent"
+    if s3.get("comparator") != "ingredient_free":
+        return None, "S3 comparator is not explicitly ingredient_free"
+    if s3.get("ingredient_isolated") != "yes":
+        return None, "S3 ingredient_isolated is not explicitly yes"
+    arms = s3.get("arms")
     if not isinstance(arms, list):
         return None, "S3 arms are absent"
-    controls = [a for a in arms if isinstance(a, dict) and a.get("is_control") is True]
-    ingredients = [a for a in arms if isinstance(a, dict) and a.get("is_control") is False]
+    # Unknown arm roles are not safe to ignore: the selector requires a fully
+    # explicit two-role comparison, not merely one true and one false among
+    # otherwise ambiguous arms.
+    if any(not isinstance(a, dict) or type(a.get("is_control")) is not bool
+           for a in arms):
+        return None, "S3 has an arm with unknown control status"
+    controls = [a for a in arms if a.get("is_control") is True]
+    ingredients = [a for a in arms if a.get("is_control") is False]
     if len(controls) != 1 or len(ingredients) != 1:
         return None, "S3 does not have exactly one explicit control and ingredient arm"
     control_label = controls[0].get("label")
@@ -345,12 +365,81 @@ def _shadow_arm_aliases(s3: dict | None) -> tuple[dict[str, list[str]] | None, s
             control_label: aliases_for(controls[0], control_label)}, None
 
 
+_SHADOW_SELECTION_KEYS = frozenset({
+    "selected_candidate_index", "n_ingredient", "n_control",
+    "mean_ingredient", "mean_control", "sd_ingredient", "sd_control",
+    "estimand", "timepoint", "design_kind", "table_provenance",
+    "refusal_reason",
+})
+_SHADOW_NUMERIC_KEYS = ("mean_ingredient", "mean_control",
+                        "sd_ingredient", "sd_control")
+_SHADOW_NULL_ON_REFUSAL = (
+    "selected_candidate_index", "n_ingredient", "n_control",
+    "mean_ingredient", "mean_control", "sd_ingredient", "sd_control",
+    "estimand", "timepoint", "design_kind", "table_provenance",
+)
+
+
 def _shadow_validate_selection(claim: dict, candidates: list[dict], selected: dict,
                                s1: dict, role_facts: dict) -> tuple[dict | None, str | None]:
-    """Validate S5T by independently copying one deterministic candidate."""
-    index = selected.get("selected_candidate_index") if isinstance(selected, dict) else None
+    """Validate S5T output with dependency-free, strict schema checks."""
+    if not isinstance(selected, dict):
+        return None, "selector output is not an object"
+    if set(selected) != _SHADOW_SELECTION_KEYS:
+        return None, "selector output has missing or extra keys"
+
+    index = selected["selected_candidate_index"]
+    # A refusal is valid only when every selection field is explicitly null.
+    if index is None:
+        if any(selected[key] is not None for key in _SHADOW_NULL_ON_REFUSAL):
+            return None, "refusal contains non-null selection fields"
+        reason = selected["refusal_reason"]
+        if (not isinstance(reason, str) or not reason.strip()
+                or len(reason) > 500):
+            return None, "refusal reason is not a nonblank string"
+        return None, reason.strip()
     if not isinstance(index, int) or isinstance(index, bool):
         return None, "selector index is not an integer"
+    if index < 0 or index > 100000 or index >= len(candidates):
+        return None, "selector index is out of range"
+    if selected["refusal_reason"] is not None:
+        return None, "selection refusal_reason must be null"
+    for key in ("n_ingredient", "n_control"):
+        value = selected[key]
+        if value is not None and (type(value) is not int or value < 1
+                                   or value > 1_000_000):
+            return None, f"selector {key} is not null or a positive integer"
+    for key in _SHADOW_NUMERIC_KEYS:
+        value = selected[key]
+        try:
+            finite = math.isfinite(value) if type(value) in (int, float) else False
+            bounded = abs(value) <= 1_000_000_000_000 if finite else False
+        except (OverflowError, TypeError):
+            finite = bounded = False
+        if not finite or not bounded:
+            return None, f"selector {key} is not a finite native number"
+    if any(selected[key] <= 0 for key in ("mean_ingredient", "mean_control",
+                                           "sd_ingredient", "sd_control")):
+        return None, "selector means and SDs must be positive"
+    if selected["estimand"] not in ("endpoint", "change_from_baseline"):
+        return None, "selector estimand is invalid"
+    if (not isinstance(selected["timepoint"], str)
+            or not selected["timepoint"].strip()
+            or len(selected["timepoint"]) > 120):
+        return None, "selector timepoint is invalid"
+    if selected["design_kind"] != "parallel":
+        return None, "selector design_kind is not parallel"
+    provenance = selected["table_provenance"]
+    if (not isinstance(provenance, dict)
+            or set(provenance) != {"caption", "row", "column"}
+            or any(not isinstance(provenance[key], str)
+                   or not provenance[key].strip()
+                   for key in ("caption", "row", "column"))
+            or len(provenance["caption"]) > 500
+            or len(provenance["row"]) > 500
+            or len(provenance["column"]) > 1000):
+        return None, "selector provenance has invalid shape"
+
     if index < 0 or index >= len(candidates):
         return None, "selector index is out of range"
     candidate = candidates[index]
@@ -391,7 +480,11 @@ def _shadow_validate_selection(claim: dict, candidates: list[dict], selected: di
     def _number(value, *, positive=False):
         if isinstance(value, bool) or not isinstance(value, (int, float)):
             return False
-        if not math.isfinite(value):
+        try:
+            finite = math.isfinite(value)
+        except (OverflowError, TypeError):
+            finite = False
+        if not finite:
             return False
         return value > 0 if positive else True
 
@@ -461,8 +554,14 @@ def _shadow_enrich_claims(out: dict, record: dict, call) -> None:
     # role assignment from candidate order.
     role_facts = None
     if aliases:
-        labels = list(aliases)
-        role_facts = {"ingredient": labels[0], "control": labels[1]}
+        # Derive roles from the same explicit boolean facts, never from alias
+        # insertion order or candidate arm order.
+        role_facts = {
+            "ingredient": next(a["label"] for a in s3["arms"]
+                                if a.get("is_control") is False),
+            "control": next(a["label"] for a in s3["arms"]
+                             if a.get("is_control") is True),
+        }
     for claim_index, claim in enumerate(claims):
         item = {"claim_index": claim_index, "candidate_count": 0}
         if not isinstance(claim, dict):
@@ -471,8 +570,19 @@ def _shadow_enrich_claims(out: dict, record: dict, call) -> None:
             continue
         terms = [claim.get(key) for key in ("outcome_raw", "measure")
                  if isinstance(claim.get(key), str) and claim.get(key).strip()]
-        candidates = harvest_candidates(tables, terms, aliases or {})
-        candidate_dicts = [candidate.to_dict() for candidate in candidates]
+        try:
+            candidates = harvest_candidates(tables, terms, aliases or {})
+            candidate_dicts = [candidate.to_dict() for candidate in candidates]
+        except Exception as exc:
+            # A broken table parser is an audit failure, not a reason to lose
+            # the ordinary S5 claim or skip S6 for this study.
+            error = str(exc) or exc.__class__.__name__
+            item.update({"status": "failed", "stage": "harvester",
+                         "error": error})
+            audit.setdefault("failures", []).append(
+                {"claim_index": claim_index, "stage": "harvester", "error": error})
+            audit["claims"].append(item)
+            continue
         item["candidate_count"] = len(candidate_dicts)
         if not candidates or not aliases:
             item.update({"status": "refused", "reason": alias_reason
@@ -481,21 +591,44 @@ def _shadow_enrich_claims(out: dict, record: dict, call) -> None:
             continue
         payload = {"S5_CLAIM": dict(claim), "CANDIDATES": candidate_dicts,
                    "S1_DESIGN_FACTS": s1, "S3_ARM_FACTS": s3.get("arms") or []}
-        selected, meta = call("S5T", payload)
         audit["selector_calls"] += 1
+        try:
+            selected, meta = call("S5T", payload)
+        except Exception as exc:
+            # Selector failures are isolated to this claim.  Only an explicit
+            # quota signal is promoted to the corpus retry convention.
+            error = str(exc) or exc.__class__.__name__
+            item.update({"status": "failed", "stage": "selector",
+                         "error": error})
+            audit.setdefault("failures", []).append(
+                {"claim_index": claim_index, "stage": "selector", "error": error})
+            if _quota_signal(error):
+                out["_quota_exhausted"] = error
+                out.setdefault("_failed", []).append(
+                    {"agent": "S5T", "error": error})
+            audit["claims"].append(item)
+            continue
         item["selector_result"] = selected
         item["selector_meta"] = meta
-        if isinstance(selected, dict) and selected.get("selected_candidate_index") is None:
-            item.update({"status": "refused", "reason": selected.get("refusal_reason")
-                         or "selector refused"})
+        if _quota_signal(meta):
+            error = str(meta.get("error") if isinstance(meta, dict)
+                        else meta) or "S5T quota limit"
+            item.update({"status": "failed", "stage": "selector",
+                         "error": error})
+            audit.setdefault("failures", []).append(
+                {"claim_index": claim_index, "stage": "selector", "error": error})
+            out["_quota_exhausted"] = error
+            out.setdefault("_failed", []).append(
+                {"agent": "S5T", "error": error})
+            audit["claims"].append(item)
+            continue
+        enriched, reason = _shadow_validate_selection(
+            claim, candidate_dicts, selected, s1, role_facts)
+        if enriched is None:
+            item.update({"status": "refused", "reason": reason})
         else:
-            enriched, reason = _shadow_validate_selection(
-                claim, candidate_dicts, selected, s1, role_facts)
-            if enriched is None:
-                item.update({"status": "refused", "reason": reason})
-            else:
-                claim.update(enriched)
-                item["status"] = "enriched"
+            claim.update(enriched)
+            item["status"] = "enriched"
         audit["claims"].append(item)
     if alias_reason:
         audit["alias_refusal"] = alias_reason
@@ -526,7 +659,16 @@ def _self_check_v13_shadow_wiring() -> None:
                     {"label": "Placebo", "is_control": True}]
             if mode == "multi-arm":
                 arms.append({"label": "Other", "is_control": False})
-            return {"arms": arms}, {}
+            comparator = "ingredient_free"
+            isolated = "yes"
+            if mode == "blend":
+                comparator = "all_arms_get_ingredient"
+            elif mode == "unknown":
+                comparator = "unknown"
+            elif mode == "not-isolated":
+                isolated = "no"
+            return {"arms": arms, "comparator": comparator,
+                    "ingredient_isolated": isolated}, {}
         if agent == "S5":
             return {"claims": [{"outcome_raw": "Strength", "measure": None,
                                  "direction": "benefit", "is_primary_outcome": True,
@@ -549,6 +691,16 @@ def _self_check_v13_shadow_wiring() -> None:
                       "refusal_reason": None}
             if mode == "malicious":
                 result["mean_ingredient"] = 999
+            elif mode == "bool-number":
+                result["mean_ingredient"] = True
+            elif mode == "missing-key":
+                result.pop("table_provenance")
+            elif mode == "extra-key":
+                result["unexpected"] = "nope"
+            elif mode == "selector-exception":
+                raise RuntimeError("ordinary selector failure")
+            elif mode == "selector-quota":
+                raise RuntimeError("rate limit exceeded")
             return result, {}
         if agent == "S6B":
             return {"mappings": []}, {}
@@ -572,8 +724,27 @@ def _self_check_v13_shadow_wiring() -> None:
     assert malicious["_v13_shadow"]["claims"][0]["status"] == "refused"
     multi = run(True, "multi-arm")
     assert "S5T" not in calls and multi["_v13_shadow"]["selector_calls"] == 0
+    for refusal_mode in ("blend", "unknown", "not-isolated"):
+        refused = run(True, refusal_mode)
+        assert "S5T" not in calls
+        assert "alias_refusal" in refused["_v13_shadow"]
+    for malformed_mode in ("missing-key", "extra-key", "bool-number"):
+        malformed = run(True, malformed_mode)
+        assert malformed["_v13_shadow"]["claims"][0]["status"] == "refused"
+        assert "estimate_kind" not in malformed["S5"]["claims"][0]
+    selector_failed = run(True, "selector-exception")
+    assert "S6B" in calls and not any(
+        f.get("agent") == "S5T" for f in selector_failed.get("_failed", []))
+    assert selector_failed["_v13_shadow"]["failures"][0]["stage"] == "selector"
+    selector_quota = run(True, "selector-quota")
+    assert selector_quota.get("_quota_exhausted")
+    assert any(f.get("agent") == "S5T"
+               for f in selector_quota.get("_failed", []))
+    assert "S6B" in calls
     off = run(False, "valid")
-    assert "S1" not in calls and "S5T" not in calls and "_v13_shadow" not in off
+    off_again = run(False, "valid")
+    assert "S1" not in calls and "S5T" not in calls
+    assert "_v13_shadow" not in off and off == off_again
 
 
 def extract_study(record: dict, text: str, registry: dict | None = None, *,
@@ -610,11 +781,11 @@ def extract_study(record: dict, text: str, registry: dict | None = None, *,
             out[agent] = result
             out.setdefault("_meta", {})[agent] = meta
             if result is None:
-                err = str(meta.get("error") or "").lower()
-                if any(k in err for k in ("session limit", "usage limit", "rate limit")):
-                    out["_quota_exhausted"] = meta.get("error")
+                error = meta.get("error") if isinstance(meta, dict) else meta
+                if _quota_signal(meta) or _quota_signal(error):
+                    out["_quota_exhausted"] = error
                 out.setdefault("_failed", []).append(
-                    {"agent": agent, "error": meta.get("error")})
+                    {"agent": agent, "error": error})
 
     if shadow:
         _shadow_enrich_claims(out, record, call)
