@@ -109,6 +109,16 @@ export function apiKeyPresent(): boolean {
   return Boolean(apiKey());
 }
 
+/**
+ * Kill switch. LABEL_ANALYZER_ENABLED=0 turns the quick label analysis off
+ * without touching the stored provider keys (founder 2026-08-23, conference
+ * prep: the demo shows full-pipeline scored runs, not the quick vision read).
+ * Unset or any other value means enabled — the key is still required either way.
+ */
+export function analyzerEnabled(): boolean {
+  return process.env.LABEL_ANALYZER_ENABLED !== "0" && apiKeyPresent();
+}
+
 function labelPrompt(): string {
   const raw = fs.readFileSync(path.join(ROOT, "prompts", "label.md"), "utf8");
   return raw.replace("{VOCAB}", vocabBlock());

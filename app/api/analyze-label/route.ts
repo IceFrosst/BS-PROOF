@@ -42,7 +42,7 @@
 import { NextResponse } from "next/server";
 
 import { scoreProduct, availableProducts } from "@/lib/analyze/product-score";
-import { readLabel, apiKeyPresent, LabelReadError, type LabelMediaType } from "@/lib/analyze/vision";
+import { readLabel, analyzerEnabled, LabelReadError, type LabelMediaType } from "@/lib/analyze/vision";
 import { elementalDoseRangeMg, ingredientIds } from "@/lib/analyze/vocab";
 
 export const runtime = "nodejs";
@@ -183,12 +183,12 @@ async function enqueue(ingredient: string | null, form: string | null, labelText
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
-  if (!apiKeyPresent()) {
+  if (!analyzerEnabled()) {
     return NextResponse.json(
       {
         status: "analyzer_unavailable",
         error:
-          "Label reading is not configured on this deployment — no vision API key is set (GEMINI_API_KEY or VISION_API_KEY).",
+          "Label reading is not enabled on this deployment — either no vision API key is set (GEMINI_API_KEY or VISION_API_KEY) or LABEL_ANALYZER_ENABLED=0.",
       },
       { status: 503 },
     );
@@ -339,7 +339,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 export async function GET(): Promise<NextResponse> {
   return NextResponse.json(
     {
-      analyzer_available: apiKeyPresent(),
+      analyzer_available: analyzerEnabled(),
       scored_products: availableProducts(),
     },
     { headers: { "Cache-Control": "no-store" } },
