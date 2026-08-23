@@ -186,11 +186,37 @@ def _confidence_level(value: Number) -> float:
     value = _finite(value, "confidence_level")
     if not 0.0 < value < 1.0:
         raise ValueError("confidence_level must be strictly between 0 and 1")
+    # The upper critical probability is formed in binary64 below.  Once this
+    # rounds to one, no finite normal (or Student-t) critical value exists and
+    # silently returning ``inf`` makes the interval contract misleading.
+    if 0.5 + value / 2.0 >= 1.0:
+        raise ValueError("confidence_level is too close to 1 for a finite critical value")
     return value
 
 
 def _normal_cdf(x: float) -> float:
     return 0.5 * (1.0 + math.erf(x / math.sqrt(2.0)))
+
+
+def _normal_ppf_from_log_lower_tail(log_probability: float) -> float:
+    """Normal lower-tail quantile when the probability itself underflows."""
+    if not math.isfinite(log_probability) or log_probability >= 0.0:
+        raise ValueError("log lower-tail probability must be finite and < 0")
+    # The tail branch of Acklam's formula depends only on log(p), so it remains
+    # usable for p=5e-324 even though constructing p/2 produces zero.
+    c = (-7.784894002430293e-03, -3.223964580411365e-01,
+         -2.400758277161838e00, -2.549732539343734e00,
+         4.374664141464968e00, 2.938163982698783e00)
+    d = (7.784695709041462e-03, 3.224671290700398e-01,
+         2.445134137142996e00, 3.754408661907416e00)
+    q = math.sqrt(-2.0 * log_probability)
+    numerator = c[0]
+    for coefficient in c[1:]:
+        numerator = numerator * q + coefficient
+    denominator = d[0]
+    for coefficient in d[1:]:
+        denominator = denominator * q + coefficient
+    return numerator / (denominator * q + 1.0)
 
 
 def normal_ppf(probability: Number) -> float:
@@ -219,8 +245,7 @@ def normal_ppf(probability: Number) -> float:
         return result
 
     if p < low:
-        q = math.sqrt(-2.0 * math.log(p))
-        return _horner(c, q) / (_horner(d, q) * q + 1.0)
+        return _normal_ppf_from_log_lower_tail(math.log(p))
     if p > high:
         q = math.sqrt(-2.0 * math.log(1.0 - p))
         return -_horner(c, q) / (_horner(d, q) * q + 1.0)
@@ -404,7 +429,11 @@ def se_from_normal_p(effect: Number, two_sided_p: Number) -> float:
     p = _finite(two_sided_p, "two_sided_p")
     if not 0.0 < p < 1.0:
         raise ValueError("two_sided_p must be strictly between 0 and 1")
-    z = -normal_ppf(p / 2.0)
+    half = p / 2.0
+    if half == 0.0:
+        z = -_normal_ppf_from_log_lower_tail(math.log(p) - math.log(2.0))
+    else:
+        z = -normal_ppf(half)
     if estimate == 0.0:
         raise ValueError("zero effect with a normal p-value does not identify SE")
     return abs(estimate) / z
@@ -507,24 +536,46 @@ def reml_tau2(effects: Sequence[Union[Number, EffectEstimate]],
     if len(ys) < 2:
         raise ValueError("REML requires at least two studies")
 
-    # A logarithmic scan covers both roots close to a tiny within-study
-    # variance and roots driven by very disparate effects.  The score tends to
-    # be negative in the far tail, so this finite range includes every
-    # practically relevant profile region while avoiding an arbitrary single
-    # root assumption.
-    spread = max((y - ys[0]) ** 2 for y in ys)
-    scale = max(max(vs), spread, 1e-300)
-    low = max(min(vs) * 1e-12, scale * 1e-14, 1e-300)
-    high = scale * 1e12
-    if not math.isfinite(high):
-        high = max(vs) * 1e12
-    count = 4096
-    ratio = (high / low) ** (1.0 / count)
+    # The profile changes scale at each within-study variance and at each
+    # squared effect separation.  Using only the largest variance makes the
+    # lower end of a log grid disappear when one study is extremely noisy.
+    # Instead, scan every interval between sorted breakpoints independently.
+    scales = set(vs)
+    for i, left in enumerate(ys):
+        for right in ys[i + 1:]:
+            separation = left - right
+            if math.isfinite(separation) and math.isfinite(separation * separation):
+                if separation != 0.0:
+                    scales.add(separation * separation)
+    ordered_scales = sorted(scales)
+    if not ordered_scales:  # variances are positive, retained for clarity
+        return 0.0
+
+    # Include a small positive neighborhood of zero, then use a fixed number
+    # of logarithmic samples in every breakpoint interval.  The tail is
+    # extended where representable; its profile is monotone toward the
+    # limiting value and the endpoint is still evaluated explicitly.
+    interval_samples = 128
+    log_scales = [math.log(scale) for scale in ordered_scales]
+    log_low = log_scales[0] - 12.0 * math.log(10.0)
     grid = [0.0]
-    value = low
-    for _ in range(count + 1):
-        grid.append(value)
-        value *= ratio
+    if math.isfinite(log_low):
+        low = math.exp(log_low)
+        if low > 0.0 and math.isfinite(low):
+            grid.append(low)
+    for index, scale in enumerate(ordered_scales):
+        grid.append(scale)
+        if index + 1 < len(ordered_scales):
+            log_left, log_right = log_scales[index:index + 2]
+            for step in range(1, interval_samples):
+                grid.append(math.exp(log_left + (log_right - log_left)
+                                      * step / interval_samples))
+    log_high = log_scales[-1] + 12.0 * math.log(10.0)
+    if log_high < math.log(float.fromhex("0x1.fffffffffffffp+1023")):
+        high = math.exp(log_high)
+        if math.isfinite(high):
+            grid.append(high)
+    grid = sorted(set(t for t in grid if t >= 0.0 and math.isfinite(t)))
 
     scores = [_reml_score(t, ys, vs) for t in grid]
     profiles = [_reml_profile_loglik(t, ys, vs) for t in grid]
@@ -654,6 +705,13 @@ if __name__ == "__main__":
     _close(se_from_ci(-0.2, 0.6, 0.95), 0.20408538260532608)
     _close(se_from_normal_p(0.4, 0.04550026389635842), 0.2, 1e-9)
     _close(se_from_normal_p(1.0, 1e-20), 0.10711173906510525, 1e-12)
+    assert math.isfinite(se_from_normal_p(1.0, 5e-324))
+    try:
+        se_from_ci(-1.0, 1.0, math.nextafter(1.0, 0.0))
+    except ValueError as exc:
+        assert "too close to 1" in str(exc)
+    else:
+        raise AssertionError("rounded confidence critical probability must be refused")
     _close(student_t_ppf(0.975, 2), 4.30265, 1e-5)
     _close(student_t_ppf(0.975, 4), 2.77645, 1e-5)
     _close(student_t_ppf(0.975, 9), 2.26216, 1e-5)
@@ -665,6 +723,10 @@ if __name__ == "__main__":
     adversarial_vs = (0.000834, 0.272316, 0.000156, 59.8430)
     adversarial_tau = reml_tau2(adversarial_ys, adversarial_vs)
     assert 8.0 < adversarial_tau < 8.5
+    # A single variance far outside the useful range must not suppress this
+    # interior maximum from the candidate grid.
+    extreme_tau = reml_tau2(adversarial_ys + (0.0,), adversarial_vs + (1e40,))
+    assert 8.0 < extreme_tau < 8.5
     boundary_ys = (0.7028517945952437, -1.1882776183125952,
                    4.546805193435157, 4.19584827401971)
     boundary_vs = (2.500884033520828, 584.5321013205385,
