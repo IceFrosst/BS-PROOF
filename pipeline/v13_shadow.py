@@ -241,6 +241,23 @@ def _norm(value: Any) -> str:
     return str(value).strip().casefold() if value is not None else ""
 
 
+def _estimate_kind(record: StudyEstimate) -> str:
+    """Return only an explicitly declared estimate kind.
+
+    ``effect_unit`` and the generic ``smd`` label are intentionally not used
+    as a correction-status inference: a reported SMD may be either d or g.
+    """
+    return _norm(record.estimate_kind)
+
+
+def _is_hedges_g(record: StudyEstimate) -> bool:
+    return _estimate_kind(record) in {"hedges_g", "hedges g", "hedges' g"}
+
+
+def _is_cohen_d(record: StudyEstimate) -> bool:
+    return _estimate_kind(record) in {"cohen_d", "cohen d", "cohen's d", "d"}
+
+
 def _favours_sign(record: StudyEstimate) -> int:
     favour = _norm(record.effect_favours)
     if favour == "ingredient":
@@ -256,22 +273,41 @@ def _design(record: StudyEstimate) -> str:
 
 def _stratum(record: StudyEstimate) -> str:
     # Do not pool explicitly different endpoints, visits, estimands, or
-    # contrasts merely because their outcome labels happen to match.
+    # contrasts merely because their outcome labels happen to match.  Design
+    # is part of the compatibility key: an adjusted cluster estimate is not
+    # interchangeable with an independent parallel-arm estimate.
     values = (
         record.label,
         record.measure or "",
         record.estimand or "",
         record.timepoint or "",
         record.contrast or "",
+        _design(record),
     )
     return "|".join(str(value).strip() for value in values)
 
 
 def _is_smd(record: StudyEstimate) -> bool:
-    return _norm(record.estimate_kind or record.effect_unit) in {
-        "smd", "hedges_g", "hedges g", "hedges' g",
-        "cohen_d", "cohen d", "cohen's d", "d"
-    }
+    """Whether the record has an explicitly accepted corrected SMD kind."""
+    return _is_hedges_g(record) or _is_cohen_d(record)
+
+
+def _validate_context(record: StudyEstimate) -> str:
+    """Validate metadata that must be known before any arithmetic."""
+    design = _design(record)
+    if design not in {"parallel", "crossover", "cluster"}:
+        raise ValueError("unsupported_design")
+    if not _norm(record.contrast):
+        raise ValueError("between_arm_contrast_required")
+    if _norm(record.contrast) != "between_arm":
+        raise ValueError("within_group_not_between_arm")
+    if not _norm(record.estimand):
+        raise ValueError("estimand_required")
+    if _norm(record.estimand) not in {"endpoint", "change_from_baseline"}:
+        raise ValueError("unsupported_estimand")
+    if not _norm(record.timepoint):
+        raise ValueError("timepoint_required")
+    return design
 
 
 def _direct_adjusted(record: StudyEstimate) -> Optional[tuple[float, float]]:
@@ -282,10 +318,19 @@ def _direct_adjusted(record: StudyEstimate) -> Optional[tuple[float, float]]:
     return estimate, variance
 
 
+def _cohen_j(record: StudyEstimate) -> float:
+    """Small-sample J for a reported Cohen d, requiring both arm Ns."""
+    n1, n2 = record.n_ingredient, record.n_control
+    if (isinstance(n1, bool) or not isinstance(n1, int) or n1 < 2 or
+            isinstance(n2, bool) or not isinstance(n2, int) or n2 < 2):
+        raise ValueError("cohen_d_arm_sample_sizes_required")
+    df = n1 + n2 - 2
+    return 1.0 - 3.0 / (4.0 * df - 1.0)
+
+
 def _reported(record: StudyEstimate, sign: int) -> tuple[float, float]:
-    kind = _norm(record.estimate_kind or record.effect_unit)
     if not _is_smd(record):
-        raise ValueError("reported_estimate_not_smd")
+        raise ValueError("reported_estimate_not_explicit_smd")
     if record.effect_size is None:
         raise ValueError("missing_effect_size")
     magnitude = abs(_finite(record.effect_size, "effect_size"))
@@ -315,11 +360,20 @@ def _reported(record: StudyEstimate, sign: int) -> tuple[float, float]:
         variance = se * se
     else:
         raise ValueError("missing_variance_or_uncertainty")
+
+    # A generic SMD is not enough to know whether the small-sample correction
+    # has already been applied.  Explicit Cohen d is converted here, while a
+    # reported Hedges g is passed through unchanged.
+    if _is_cohen_d(record):
+        j = _cohen_j(record)
+        return sign * j * magnitude, j * j * variance
     return sign * magnitude, variance
 
 
 def _derived(record: StudyEstimate, sign: int) -> tuple[float, float]:
     # A raw difference can be derived only from a parallel two-arm result.
+    if _estimate_kind(record) not in {"mean_difference", "raw_difference"}:
+        raise ValueError("derived_estimate_kind_required")
     required = (
         record.mean_ingredient, record.mean_control,
         record.n_ingredient, record.n_control,
@@ -365,30 +419,33 @@ def _derived(record: StudyEstimate, sign: int) -> tuple[float, float]:
 
 
 def _measure(record: StudyEstimate) -> _Measured:
+    design = _validate_context(record)
     sign = _favours_sign(record)
-    design = _design(record)
+    has_adjustment = (record.adjusted_estimate is not None or
+                      record.adjusted_variance is not None)
+    if has_adjustment and record.directly_adjusted is not True:
+        raise ValueError("direct_adjustment_flag_required")
     adjusted = _direct_adjusted(record)
     if design in {"crossover", "cluster"}:
-        # Direct adjustment must be supplied as a pair and must not be mixed
-        # with an independent-arm derivation.  The source claim remains the
-        # authority for the adjusted estimate and its sampling variance.
+        # These designs cannot be turned into independent-arm estimates.  The
+        # source claim must explicitly provide a directly adjusted Hedges g
+        # and its sampling variance.
         if adjusted is None:
             raise ValueError("crossover_or_cluster_unadjusted")
-        if not _is_smd(record):
-            raise ValueError("adjusted_estimate_not_smd")
+        if not _is_hedges_g(record):
+            raise ValueError("adjusted_estimate_requires_hedges_g")
         return _Measured(record, sign * abs(adjusted[0]), adjusted[1])
     if adjusted is not None:
-        # The pair itself is the explicit provenance gate; no independent-arm
-        # approximation is made for an adjusted estimate.
-        if not _is_smd(record):
-            raise ValueError("adjusted_estimate_not_smd")
+        # No independent-arm approximation is made for an adjusted estimate.
+        if not _is_hedges_g(record):
+            raise ValueError("adjusted_estimate_requires_hedges_g")
         return _Measured(record, sign * abs(adjusted[0]), adjusted[1])
     if record.mean_ingredient is not None or record.mean_control is not None:
         g, variance = _derived(record, sign)
         return _Measured(record, g, variance)
     if record.effect_size is None:
         raise ValueError("missing_effect_size")
-    if (_norm(record.estimate_kind) in {"mean_difference", "raw_difference"}
+    if (_estimate_kind(record) in {"mean_difference", "raw_difference"}
             and record.effect_sd is not None
             and _norm(record.effect_sd_basis) in {"baseline", "control_arm", "control", "primary"}):
         raise ValueError("primary_pool_sd_not_pooled")
@@ -396,13 +453,28 @@ def _measure(record: StudyEstimate) -> _Measured:
 
 
 def _eligible(record: StudyEstimate) -> bool:
-    """Whether a record belongs in the denominator of measured quality share."""
-    design = _design(record)
-    if design == "parallel":
-        return True
-    if design in {"crossover", "cluster"}:
-        return _direct_adjusted(record) is not None
-    return False
+    """Whether a record can fairly enter the measured-quality denominator.
+
+    This deliberately performs only non-arithmetic gates.  Numeric validation
+    (including adjusted variance) remains in ``_measure``'s refusal boundary.
+    """
+    try:
+        design = _validate_context(record)
+        if design == "parallel":
+            return True
+        return (record.directly_adjusted is True and
+                record.adjusted_estimate is not None and
+                record.adjusted_variance is not None)
+    except Exception:
+        return False
+
+
+def _study_key(record: StudyEstimate) -> str:
+    """Stable duplicate key even when an external record has a bad ID type."""
+    try:
+        return str(record.study_id)
+    except Exception:
+        return "(invalid-study-id)"
 
 
 def _result(outcome: str, stratum: str, eligible: int,
@@ -449,23 +521,69 @@ def analyze_shadow(
     level = _finite(confidence_level, "confidence_level")
     if not 0.0 < level < 1.0:
         raise ValueError("confidence_level must be strictly between 0 and 1")
-    groups: dict[str, list[StudyEstimate]] = defaultdict(list)
+    # Conversion errors are represented as ordinary refused records so a bad
+    # claim cannot abort analysis of the remaining claims.
+    groups: dict[str, list[tuple[StudyEstimate, Optional[str]]]] = defaultdict(list)
     for index, raw in enumerate(records):
-        record = _coerce(raw, index)
-        groups[_stratum(record)].append(record)
+        conversion_error: Optional[str] = None
+        try:
+            record = _coerce(raw, index)
+        except Exception as exc:  # malformed external records are refusals
+            conversion_error = str(exc) or "invalid_record"
+            record = StudyEstimate(
+                study_id=f"record-{index + 1}", outcome="(invalid record)",
+                design_kind="unknown")
+        try:
+            stratum = _stratum(record)
+        except Exception:
+            # Even hostile field objects must stay inside the refusal path.
+            stratum = f"(invalid record)|{index + 1}"
+            conversion_error = conversion_error or "invalid_record"
+        groups[stratum].append((record, conversion_error))
 
     results: list[OutcomeResult] = []
-    for stratum, group in sorted(groups.items()):
-        eligible = sum(1 for record in group if _eligible(record))
+    for stratum, entries in sorted(groups.items()):
+        # Count each study_id at most once in the denominator.  In particular,
+        # duplicate rows can never manufacture k=2 from one independent study.
+        eligible_ids = {
+            _study_key(record): record for record, error in entries
+            if error is None and _eligible(record)
+        }
+        eligible = len(eligible_ids)
         measured: list[_Measured] = []
         refusals: Counter[str] = Counter()
-        for record in group:
+        for record, conversion_error in entries:
+            if conversion_error is not None:
+                refusals[conversion_error] += 1
+                continue
             try:
                 measured.append(_measure(record))
-            except (TypeError, ValueError, ZeroDivisionError, OverflowError) as exc:
+            except Exception as exc:
+                # Validation, numeric conversion, and adjusted variance all
+                # live in this refusal boundary; one malformed row is local.
                 reason = str(exc) or "invalid_record"
                 refusals[reason] += 1
-        outcome = group[0].label
+
+        # Keep the first independently measured row for a study and refuse
+        # later rows.  This is deterministic and conservative when a paper
+        # duplicated an estimate in an extraction table.
+        unique_measured: list[_Measured] = []
+        seen_studies: set[str] = set()
+        for item in measured:
+            study_id = _study_key(item.record)
+            if study_id in seen_studies:
+                refusals["duplicate_study_id"] += 1
+                continue
+            seen_studies.add(study_id)
+            unique_measured.append(item)
+        measured = unique_measured
+        # A malformed or otherwise ineligible duplicate must not make the
+        # denominator disagree with the independent-study universe.
+        measured = [item for item in measured if _study_key(item.record) in eligible_ids]
+        try:
+            outcome = entries[0][0].label
+        except Exception:
+            outcome = "(invalid record)"
         results.append(_result(outcome, stratum, eligible, measured, refusals, level))
     return ShadowAnalysisResult(tuple(results), SHADOW_ONLY_WARNING)
 
@@ -487,8 +605,9 @@ def _self_checks() -> None:
     """Comprehensive offline checks for the shadow-only contract."""
     def rec(**kwargs: Any) -> StudyEstimate:
         defaults = dict(study_id="x", outcome="strength", design_kind="parallel",
-                        estimate_kind="mean_difference", effect_favours="ingredient",
-                        effect_sd_basis="pooled", contrast="vs_ingredient_free")
+                        estimate_kind="mean_difference", estimand="endpoint",
+                        timepoint="post", effect_favours="ingredient",
+                        effect_sd_basis="pooled", contrast="between_arm")
         defaults.update(kwargs)
         return StudyEstimate(**defaults)
 
@@ -522,8 +641,9 @@ def _self_checks() -> None:
 
     # Reported SMD uncertainty routes: SE, explicit CI, and exact normal p.
     common = dict(study_id="r", outcome="reported", design_kind="parallel",
-                  estimate_kind="smd", effect_size=.4,
-                  effect_favours="ingredient", contrast="vs_ingredient_free")
+                  estimate_kind="hedges_g", effect_size=.4,
+                  estimand="endpoint", timepoint="post",
+                  effect_favours="ingredient", contrast="between_arm")
     for extra in ({"standard_error": .2}, {"ci_low": .1, "ci_high": .7, "ci_level": .95},
                   {"p_value": .05, "p_value_kind": "exact", "p_sidedness": "two",
                    "test_distribution": "normal"}):
@@ -534,16 +654,54 @@ def _self_checks() -> None:
                                            p_sidedness="two", test_distribution="normal")])
     assert "p_value_not_exact" in bad_p.outcomes[0].refusal_reasons
 
-    # Unadjusted crossover/cluster are refused; direct adjusted g+variance is not.
+    # Metadata and design semantics are hard gates, including explicit
+    # rejection of within-group and unknown designs.
+    missing_metadata = analyze_shadow([StudyEstimate(**{**common, "timepoint": None})])
+    assert "timepoint_required" in missing_metadata.outcomes[0].refusal_reasons
+    within = analyze_shadow([StudyEstimate(**{**common, "contrast": "within_group"})])
+    assert "within_group_not_between_arm" in within.outcomes[0].refusal_reasons
+    unknown = analyze_shadow([StudyEstimate(**{**common, "design_kind": "unknown"})])
+    assert "unsupported_design" in unknown.outcomes[0].refusal_reasons
+
+    # Generic SMD correction status is unknown.  Cohen d is accepted only
+    # with both arm Ns and is converted to g with J and J^2 variance.
+    generic = analyze_shadow([StudyEstimate(**{**common, "estimate_kind": "smd"})])
+    assert generic.outcomes[0].measured_count == 0
+    cohen = analyze_shadow([StudyEstimate(**{**common, "estimate_kind": "cohen_d",
+                                              "effect_size": 1.0, "variance": .25,
+                                              "n_ingredient": 10, "n_control": 10})])
+    assert math.isclose(cohen.outcomes[0].study_effects[0][1],
+                        (1.0 - 3.0 / 71.0))
+    no_n = analyze_shadow([StudyEstimate(**{**common, "estimate_kind": "cohen_d",
+                                             "standard_error": .2})])
+    assert "cohen_d_arm_sample_sizes_required" in no_n.outcomes[0].refusal_reasons
+
+    # Unadjusted crossover/cluster are refused; an adjusted estimate requires
+    # an explicit provenance flag and is accepted only as reported Hedges g.
     cross = analyze_shadow([StudyEstimate(**{**common, "design_kind": "crossover",
                                               "standard_error": .2})])
     assert "crossover_or_cluster_unadjusted" in cross.outcomes[0].refusal_reasons
+    adjusted_no_flag = analyze_shadow([StudyEstimate(**{**common, "study_id": "adj0",
+                                                         "design_kind": "cluster",
+                                                         "adjusted_estimate": .3,
+                                                         "adjusted_variance": .04})])
+    assert "direct_adjustment_flag_required" in adjusted_no_flag.outcomes[0].refusal_reasons
     adjusted = analyze_shadow([StudyEstimate(**{**common, "study_id": "adj",
                                                  "design_kind": "cluster",
                                                  "adjusted_estimate": .3,
                                                  "adjusted_variance": .04,
                                                  "directly_adjusted": True})])
     assert adjusted.outcomes[0].measured_count == 1
+
+    # Duplicate rows from one study cannot manufacture k=2, and malformed
+    # external records are local refusals rather than analysis crashes.
+    duplicate = analyze_shadow([{**common, "standard_error": .2},
+                                {**common, "study_id": "r", "standard_error": .2}])
+    assert duplicate.outcomes[0].measured_count == 1
+    assert duplicate.outcomes[0].k == 1
+    malformed = analyze_shadow([None, {"study_id": "bad", "design_kind": "parallel"}, common])
+    assert malformed.measured_count <= malformed.eligible_count
+    assert malformed.measured_quality_share <= 1.0
 
     # k=1 is not a pooled estimate; k=2 pools but explicitly cannot claim HK;
     # k>=3 uses the meta_effects REML + HK path.
@@ -562,8 +720,8 @@ def _self_checks() -> None:
     # Quality share includes an eligible but unmeasured parallel claim.
     quality = analyze_shadow([studies[0], StudyEstimate(
         study_id="q", outcome="reported", design_kind="parallel",
-        estimate_kind="smd", effect_size=.4, effect_favours="ingredient",
-        contrast="vs_ingredient_free")]).outcomes[0]
+        estimate_kind="hedges_g", effect_size=.4, effect_favours="ingredient",
+        estimand="endpoint", timepoint="post", contrast="between_arm")]).outcomes[0]
     assert quality.eligible_count == 2 and quality.measured_count == 1
     assert math.isclose(quality.measured_quality_share, .5)
 
