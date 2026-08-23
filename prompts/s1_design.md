@@ -1,7 +1,15 @@
 S1 design_classifier
 
 You receive a title, abstract, and any MeSH terms and publication types from
-PubMed. Assign the study design rank.
+PubMed. Assign the study design rank and return JSON with exactly these keys:
+`design_rank`, `design_label`, `design_kind`, `confidence`, and `rationale`.
+
+`design_kind` is an upstream fact for downstream table selection. Set it to
+`parallel`, `crossover`, `cluster`, or `other` only when the paper explicitly
+identifies that design. Otherwise set it to null. Never infer it from arm
+counts, allocation language, headers, sample sizes, or a design that merely
+seems typical. The field is required in every output, including uncertain
+classifications.
 
 RANKS
  1 Umbrella review (a review of systematic reviews)

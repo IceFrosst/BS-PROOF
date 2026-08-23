@@ -35,13 +35,13 @@
     },
     "mean_ingredient": {
       "type": ["number", "null"],
-      "minimum": -1000000000000,
-      "maximum": 1000000000000
+      "maximum": 1000000000000,
+      "minimum": -1000000000000
     },
     "mean_control": {
       "type": ["number", "null"],
-      "minimum": -1000000000000,
-      "maximum": 1000000000000
+      "maximum": 1000000000000,
+      "minimum": -1000000000000
     },
     "sd_ingredient": {
       "type": ["number", "null"],
@@ -63,7 +63,7 @@
     },
     "design_kind": {
       "type": ["string", "null"],
-      "enum": ["parallel", "crossover", "cluster", null]
+      "enum": ["parallel", "crossover", "cluster", "other", null]
     },
     "table_provenance": {
       "type": ["object", "null"],
@@ -81,18 +81,61 @@
       "maxLength": 500
     }
   },
-  "anyOf": [
+  "oneOf": [
     {
+      "required": [
+        "selected_candidate_index",
+        "n_ingredient",
+        "n_control",
+        "mean_ingredient",
+        "mean_control",
+        "sd_ingredient",
+        "sd_control",
+        "estimand",
+        "timepoint",
+        "design_kind",
+        "table_provenance",
+        "refusal_reason"
+      ],
       "properties": {
-        "selected_candidate_index": {"type": "integer"},
-        "estimand": {"type": "string"},
-        "timepoint": {"type": "string"},
-        "design_kind": {"type": "string"},
-        "table_provenance": {"type": "object", "additionalProperties": false},
+        "selected_candidate_index": {"type": "integer", "minimum": 0},
+        "n_ingredient": {"type": ["integer", "null"], "minimum": 1},
+        "n_control": {"type": ["integer", "null"], "minimum": 1},
+        "mean_ingredient": {"type": "number", "exclusiveMinimum": 0},
+        "mean_control": {"type": "number", "exclusiveMinimum": 0},
+        "sd_ingredient": {"type": "number", "exclusiveMinimum": 0},
+        "sd_control": {"type": "number", "exclusiveMinimum": 0},
+        "estimand": {"type": "string", "enum": ["endpoint", "change_from_baseline"]},
+        "timepoint": {"type": "string", "minLength": 1, "pattern": ".*\\S.*", "maxLength": 120},
+        "design_kind": {"const": "parallel"},
+        "table_provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["caption", "row", "column"],
+          "properties": {
+            "caption": {"type": "string", "minLength": 1, "pattern": ".*\\S.*", "maxLength": 500},
+            "row": {"type": "string", "minLength": 1, "pattern": ".*\\S.*", "maxLength": 500},
+            "column": {"type": "string", "minLength": 1, "pattern": ".*\\S.*", "maxLength": 1000}
+          }
+        },
         "refusal_reason": {"type": "null"}
       }
     },
     {
+      "required": [
+        "selected_candidate_index",
+        "n_ingredient",
+        "n_control",
+        "mean_ingredient",
+        "mean_control",
+        "sd_ingredient",
+        "sd_control",
+        "estimand",
+        "timepoint",
+        "design_kind",
+        "table_provenance",
+        "refusal_reason"
+      ],
       "properties": {
         "selected_candidate_index": {"type": "null"},
         "n_ingredient": {"type": "null"},
@@ -105,7 +148,7 @@
         "timepoint": {"type": "null"},
         "design_kind": {"type": "null"},
         "table_provenance": {"type": "null"},
-        "refusal_reason": {"type": "string", "minLength": 1}
+        "refusal_reason": {"type": "string", "minLength": 1, "pattern": ".*\\S.*", "maxLength": 500}
       }
     }
   ]
