@@ -34,8 +34,9 @@ _MEAN_SD = re.compile(
     re.IGNORECASE,
 )
 # Sample sizes must have an explicit literal n/N marker.  In particular,
-# ``age=44`` is not an n value.
-_N = re.compile(r"\bn\s*=\s*(?P<n>\d+)\b", re.IGNORECASE)
+# ``age=44`` is not an n value.  Keep a sign so non-positive values are
+# refused rather than mistaken for an omitted sample size.
+_N = re.compile(r"\bn\s*=\s*(?P<n>[+-]?\d+)\b", re.IGNORECASE)
 # These markers are intentionally broad.  Without a requested visit or
 # contrast, selecting one of these rows would silently make a claim about it.
 _ENDPOINT_MARKER = re.compile(
@@ -148,7 +149,7 @@ def _parse_mean_sd(value: str) -> tuple[float, float] | None:
         return None
     mean = _parse_number(match.group("mean"))
     sd = _parse_number(match.group("sd"))
-    if mean is None or sd is None or sd < 0:
+    if mean is None or sd is None or sd <= 0:
         return None
     return mean, sd
 
@@ -375,6 +376,11 @@ def harvest_candidates(
                 mean, sd = parsed
                 header_n = _header_n(table.columns[column_index])
                 value_n = _value_n(verbatim)
+                # An explicitly reported non-positive n violates the schema;
+                # refuse this candidate instead of treating it as unknown.
+                if (header_n is not None and header_n <= 0) or (value_n is not None and value_n <= 0):
+                    refused = True
+                    break
                 if header_n is not None and value_n is not None and header_n != value_n:
                     refused = True
                     break
@@ -497,6 +503,32 @@ def _self_check() -> None:
         "rows": [["Muscle strength", "10.2", "8.4 ± 2.0"]],
     }
     assert harvest_candidates(missing_sd, "muscle strength", ["Treatment", "Control"]) == []
+
+    non_positive_sd = {
+        "caption": "non-positive SD",
+        "columns": ["Outcome", "Treatment", "Control"],
+        "rows": [["Muscle strength", "10.2 ± 0", "8.4 +/- 2.0"]],
+    }
+    assert harvest_candidates(non_positive_sd, "muscle strength", ["Treatment", "Control"]) == []
+    negative_sd = {
+        "caption": "negative SD",
+        "columns": ["Outcome", "Treatment", "Control"],
+        "rows": [["Muscle strength", "10.2 ± -2.1", "8.4 +/- 2.0"]],
+    }
+    assert harvest_candidates(negative_sd, "muscle strength", ["Treatment", "Control"]) == []
+
+    non_positive_n = {
+        "caption": "non-positive n",
+        "columns": ["Outcome", "Treatment (n=0)", "Control (n=19)"],
+        "rows": [["Muscle strength", "10.2 ± 2.1", "8.4 +/- 2.0"]],
+    }
+    assert harvest_candidates(non_positive_n, "muscle strength", ["Treatment", "Control"]) == []
+    negative_n = {
+        "caption": "negative n",
+        "columns": ["Outcome", "Treatment", "Control"],
+        "rows": [["Muscle strength", "10.2 ± 2.1 (n=-1)", "8.4 +/- 2.0 (n=19)"]],
+    }
+    assert harvest_candidates(negative_n, "muscle strength", ["Treatment", "Control"]) == []
 
     ambiguous_arms = {
         "caption": "ambiguous labels",

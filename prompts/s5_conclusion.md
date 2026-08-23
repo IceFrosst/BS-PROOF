@@ -239,11 +239,22 @@ A CI or point estimate can support `meaningful` or `trivial` only when it is
 interpretable against an explicit MCID or one of the thresholds below. Otherwise
 retain the number and answer `unstated`.
 
+First determine which arm the reported contrast favours using `effect_favours`;
+do not use a magnitude threshold to infer or reverse that direction. For a
+benefit, only after the contrast has been established as favouring the ingredient
+compare its SIZE, not its signed direction: every SMD or percent-family
+threshold below is applied to `abs(effect_size)`. Thus a beneficial reported
+`d = -0.8` is an SMD of 0.8 and is `meaningful`, not `trivial`; a negative sign
+must never make a large beneficial effect look small. If `effect_favours` is
+`control`, `neither`, or `null`, do not relabel the result as a benefit merely
+because its absolute number crosses a threshold.
+
 Rules of thumb when the paper gives a number but no MCID. State the basis you
 used; do not guess beyond these:
-  - standardised effect (Cohen's d / Hedges' g): >= 0.5 meaningful, < 0.2 trivial
+  - standardised effect (Cohen's d / Hedges' g / SMD):
+    `abs(effect_size) >= 0.5` meaningful, `abs(effect_size) < 0.2` trivial
   - relative change vs control on a performance or strength endpoint:
-    >= 5% meaningful, < 2% trivial
+    `abs(effect_size) >= 5%` meaningful, `abs(effect_size) < 2%` trivial
   - anything between those bands, or a scale with no interpretable unit:
     `unstated` is correct -- you have a number but no supported way to size it
 
