@@ -78,13 +78,23 @@ describe("elemental dose conversion parity", () => {
 });
 
 describe("scoreProduct against the retained artifacts", () => {
-  it("passing no dose reproduces the run's own composites exactly", () => {
+  it("passing the run's own dose reproduces its composites exactly", () => {
     // The regression pipeline/selftest.py pins for the Python implementation,
-    // asserted here for the TS port against the real retained run: with no
-    // product dose, the dose term takes MISSING_DOSE_PENALTY, which is exactly
-    // what the run itself scored, so every composite must round-trip.
-    const result = scoreProduct("creatine", "creatine_monohydrate", null);
-    if (result.status === "not_scored") return; // no artifact in this checkout
+    // asserted here for the TS port against the real retained run: scoring at
+    // the SAME product dose the run itself was scored at must round-trip every
+    // composite. For a dose-less run that dose is null (the original pin: the
+    // dose term takes MISSING_DOSE_PENALTY both times). Runs scored WITH a
+    // --dose (first one: 20260823_181048, 4396 mg elemental) bake a real dose
+    // term into the stored composite, so the round-trip must use that dose --
+    // recomputing them at NO dose is a different product and rightly differs.
+    const probe = scoreProduct("creatine", "creatine_monohydrate", null);
+    if (probe.status === "not_scored") return; // no artifact in this checkout
+    expect(probe.status).toBe("scored");
+    const ownDose = ((probe.run ?? {}) as Record<string, unknown>)
+      .scored_product_dose_mg as number | null | undefined;
+    const result = ownDose == null
+      ? probe
+      : scoreProduct("creatine", "creatine_monohydrate", ownDose);
     expect(result.status).toBe("scored");
     for (const row of result.rows as Array<Record<string, unknown>>) {
       expect(row.composite).toBe(row.run_composite);
