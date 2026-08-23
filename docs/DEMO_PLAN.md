@@ -19,6 +19,22 @@ fallback.
       triglyceride vs ethyl ester. Without this the elemental conversion
       refuses and the dose arc dies on stage.
 
+## Corpus reality check (measured 2026-08-23, Europe PMC live)
+
+| ingredient | RCTs indexed (supplement scope) | OA full text | reviews/MA |
+|---|---|---|---|
+| creatine  | 1,221 | 538 (44%) | 305 |
+| vitamin D | 2,930 | 906 (31%) | 1,393 |
+| omega-3   | 1,815 | 519 (29%) | 717 |
+
+The retained creatine run scored 177 studies: **78 full text (44%), 99
+abstract-only (56%)**. Expect WORSE full-text share on vitamin D / omega-3
+(~30%) — most of their evidence will be scored from abstracts. Also: vitamin
+D's 2,930 RCTs exceed `RETRIEVE_MAX_PRIMARIES` (1,200), so the scoped query
+and relevance gate decide what gets in — the run will be a sample, not the
+census. An academic collaborator's library access is the only path to the
+paywalled ~56–70%.
+
 ## Day 1 — the three runs + camera
 - [ ] Pipeline runs **strictly sequential, nothing else running** (the
       2026-08-10 lesson: a competing session cost 364 of 906 calls).
