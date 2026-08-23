@@ -1,4 +1,5 @@
 {
+  "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "required": [
     "claims"
@@ -113,7 +114,9 @@
             "type": [
               "number",
               "null"
-            ]
+            ],
+            "minimum": 0,
+            "maximum": 1
           },
           "estimate_kind": {
             "type": [
@@ -164,50 +167,59 @@
             "type": [
               "integer",
               "null"
-            ]
+            ],
+            "minimum": 1
           },
           "n_control": {
             "type": [
               "integer",
               "null"
-            ]
+            ],
+            "minimum": 1
           },
           "mean_ingredient": {
             "type": [
               "number",
               "null"
-            ]
+            ],
+            "description": "Reported arm mean as a finite JSON number; null when unreported."
           },
           "mean_control": {
             "type": [
               "number",
               "null"
-            ]
+            ],
+            "description": "Reported arm mean as a finite JSON number; null when unreported."
           },
           "sd_ingredient": {
             "type": [
               "number",
               "null"
-            ]
+            ],
+            "exclusiveMinimum": 0
           },
           "sd_control": {
             "type": [
               "number",
               "null"
-            ]
+            ],
+            "exclusiveMinimum": 0
           },
           "standard_error": {
             "type": [
               "number",
               "null"
-            ]
+            ],
+            "exclusiveMinimum": 0
           },
           "ci_level": {
             "type": [
               "number",
               "null"
             ],
-            "description": "Confidence interval level only when explicitly reported; preserve the paper's scale (for example, 95)."
+            "exclusiveMinimum": 0,
+            "exclusiveMaximum": 1,
+            "description": "Confidence interval level as a fractional probability (for example, 0.95 for a reported 95% interval); only when explicitly reported."
           },
           "p_value_kind": {
             "type": [
@@ -249,7 +261,8 @@
             "type": [
               "number",
               "null"
-            ]
+            ],
+            "exclusiveMinimum": 0
           },
           "design_kind": {
             "type": [

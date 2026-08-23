@@ -220,30 +220,24 @@ So: never omit a number because the result was null. `null` remains correct when
 the paper genuinely prints no figure -- never invent or infer one.
 
 MAGNITUDE
-  meaningful - the effect is large enough to matter to a person, or the paper
-               reports it exceeded a stated MCID / clinical threshold
-  trivial    - statistically significant but tiny; the paper itself hedges
-               about clinical relevance; or a surrogate marker moved by an
-               amount with no known clinical meaning
-  unstated   - significant, but there is NO NUMERIC BASIS AT ALL to judge size
-Only assess magnitude for direction=benefit. Null otherwise. This is about the
+  meaningful - only when the paper states that the effect exceeded an MCID /
+               clinical threshold, or an interpretable numeric threshold below
+               is met
+  trivial    - only when an interpretable numeric threshold below supports a
+               tiny effect or an explicitly stated clinical threshold supports
+               calling it trivial
+  unstated   - no explicit threshold supports either label, including an
+               uninterpretable scale or an intermediate numeric value
+Only assess magnitude for direction=benefit; use `magnitude: null` otherwise.
+An `effect_size` being present does NOT force `meaningful` or `trivial`: if its
+scale is uninterpretable, its value falls between the supported bands, or no
+explicit threshold supports a label, use `unstated`. This is about the
 `magnitude` FIELD only -- it does not excuse you from the numeric fields above.
 
-IF YOU FILL IN `effect_size`, YOU MAY NOT ANSWER `unstated`.
-`unstated` means "the paper gives me no number to judge by". It does not mean
-"judging is hard". If you can state the between-group difference, a percentage
-change, a Cohen's d / g, or a CI, then you have a basis: decide `meaningful` or
-`trivial` from it and say which number you used in the evidence span.
-
-MEASURED 2026-08-10, and this is why the rule is explicit: of 487 benefit claims
-extracted from the creatine corpus, 359 came back `unstated` -- and 114 of those
-carried a numeric `effect_size` in the same object. Downstream,
-`scoring.Study.s_value` maps `unstated` and `trivial` to the SAME value (+0.3),
-while any null keeps its full -0.7. So a benefit you decline to size is scored as
-a benefit known to be tiny, and one under-sized benefit is cancelled by less than
-half a null. Replaying the corpus with those benefits sized from the numbers
-already present moved muscle_strength from -4 to +7 (d -0.125 -> +0.249). Refusing
-to judge is not the conservative choice here; it is a thumb on the scale.
+A number is evidence to record, not permission to invent a magnitude label.
+A CI or point estimate can support `meaningful` or `trivial` only when it is
+interpretable against an explicit MCID or one of the thresholds below. Otherwise
+retain the number and answer `unstated`.
 
 Rules of thumb when the paper gives a number but no MCID. State the basis you
 used; do not guess beyond these:
@@ -251,7 +245,7 @@ used; do not guess beyond these:
   - relative change vs control on a performance or strength endpoint:
     >= 5% meaningful, < 2% trivial
   - anything between those bands, or a scale with no interpretable unit:
-    `unstated` is correct -- you have a number but no way to size it
+    `unstated` is correct -- you have a number but no supported way to size it
 
 DO NOT TAKE THE ABSTRACT'S CONCLUSION SENTENCE AT FACE VALUE.
 Authors routinely describe non-significant trends as if they were findings.
@@ -292,14 +286,19 @@ relative_percent, or percentage_points; `estimate_basis` is reported or
 `derived_from_arms`; `estimand` is endpoint or change_from_baseline. Preserve
 the reported `timepoint`, arm Ns, arm means, arm SDs, standard error, CI level,
 p-value kind, sidedness, test distribution, degrees of freedom, and design kind
-(parallel, crossover, or cluster). Leave a field null when the paper does not
-state it. A change score is not an endpoint: never use an endpoint SD as the SD
-for a change-from-baseline estimate.
+(parallel, crossover, or cluster). These nullable numeric fields must stay valid
+when present: arm Ns are positive integers; means are finite JSON numbers; SDs
+and standard errors are > 0; p-values are in [0,1]; degrees of freedom are > 0;
+and `ci_level` is a fractional probability strictly between 0 and 1 (write
+0.95 for a reported 95% interval, never 95). Leave a field null when the paper
+does not state it. A change score is not an endpoint: never use an endpoint SD as
+the SD for a change-from-baseline estimate.
 
 DO NOT ASSUME OR RECONSTRUCT FACTS THAT ARE NOT REPORTED:
   - Do not assume equal allocation or infer an arm N from the other arm.
   - Do not infer a confidence-interval level. Fill `ci_level` only when the
-    level is stated alongside the interval.
+    level is stated alongside the interval; normalize an explicitly stated
+    percentage to a fraction (95% -> 0.95), never store 95.
   - Do not use an endpoint SD for a change score, even if it is the only SD.
   - Do not convert a crossover or cluster result to an independent parallel-arm
     estimate without the required paired or cluster-adjusted facts. Record the
