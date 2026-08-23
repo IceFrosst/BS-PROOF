@@ -129,6 +129,29 @@ class _Table:
     caption: str
     columns: tuple[str, ...]
     rows: tuple[tuple[str, ...], ...]
+    # Text carried alongside a table is source evidence too.  Keep it separate
+    # from cells so that parsers do not accidentally promote a note to an
+    # outcome row, while still allowing the conservative screening pass to see
+    # it.
+    annotations: tuple[str, ...] = ()
+
+
+_ANNOTATION_KEYS = frozenset(
+    {
+        "annotation",
+        "annotations",
+        "auxiliary",
+        "auxiliary_text",
+        "footnote",
+        "footnotes",
+        "legend",
+        "legends",
+        "note",
+        "notes",
+        "source",
+        "source_text",
+    }
+)
 
 
 def _text(value: Any) -> str:
@@ -225,6 +248,40 @@ def _is_markdown_separator(row: Sequence[str]) -> bool:
     return bool(row) and all(re.fullmatch(r":?-{3,}:?", cell.strip()) for cell in row)
 
 
+def _annotation_values(value: Any) -> tuple[str, ...]:
+    """Convert note-like values to preserved, searchable source lines."""
+
+    if value is None:
+        return ()
+    if isinstance(value, Mapping):
+        values: list[str] = []
+        for key, nested in value.items():
+            nested_values = _annotation_values(nested)
+            if nested_values:
+                values.extend(f"{_text(key)}: {line}" for line in nested_values)
+            else:
+                values.append(f"{_text(key)}: {_text(nested)}")
+        return tuple(values)
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+        values: list[str] = []
+        for nested in value:
+            values.extend(_annotation_values(nested))
+        return tuple(values)
+    text = _text(value).strip()
+    return (text,) if text else ()
+
+
+def _mapping_annotations(item: Mapping[str, Any], *, include_text: bool = False) -> tuple[str, ...]:
+    """Retain common mapping note/source fields without treating them as rows."""
+
+    values: list[str] = []
+    for key, value in item.items():
+        key_name = str(key).casefold().replace("-", "_").replace(" ", "_")
+        if key_name in _ANNOTATION_KEYS or (include_text and key_name == "text"):
+            values.extend(_annotation_values(value))
+    return tuple(values)
+
+
 def _table_from_mapping(item: Mapping[str, Any]) -> _Table | None:
     caption = _text(item.get("caption", item.get("title", ""))).strip()
     columns_raw = item.get("columns", item.get("headers", item.get("header")))
@@ -234,16 +291,27 @@ def _table_from_mapping(item: Mapping[str, Any]) -> _Table | None:
         if nested is None:
             return None
         # Keep the outer title/caption attached to every nested cell's
-        # provenance.  The outer mapping is the source record accepted by the
-        # harvester, even when its tabular payload is nested under ``table``.
+        # provenance.  Preserve both levels' notes; an inner caption is also
+        # source text when an outer caption replaces it.
+        annotations = list(_mapping_annotations(item))
+        annotations.extend(nested.annotations)
+        if caption and nested.caption and caption != nested.caption:
+            annotations.append(nested.caption)
         return _Table(
             caption=caption or nested.caption,
             columns=nested.columns,
             rows=nested.rows,
+            annotations=tuple(annotations),
         )
     if rows_raw is None:
         text = item.get("text")
-        return _parse_text(_text(text), caption=caption) if text is not None else None
+        if text is None:
+            return None
+        parsed = _parse_text(_text(text), caption=caption)
+        if parsed is None:
+            return None
+        annotations = tuple((*_mapping_annotations(item), *parsed.annotations))
+        return _Table(parsed.caption, parsed.columns, parsed.rows, annotations)
     if not isinstance(rows_raw, Sequence) or isinstance(rows_raw, (str, bytes)):
         return None
 
@@ -271,24 +339,49 @@ def _table_from_mapping(item: Mapping[str, Any]) -> _Table | None:
         return None
     width = len(columns)
     rows = [row + ("",) * (width - len(row)) if len(row) < width else row[:width] for row in rows]
-    return _Table(caption=caption, columns=tuple(columns), rows=tuple(rows))
+    return _Table(
+        caption=caption,
+        columns=tuple(columns),
+        rows=tuple(rows),
+        annotations=_mapping_annotations(item, include_text=True),
+    )
 
 
 def _parse_text(text: str, caption: str = "") -> _Table | None:
     lines = [line.rstrip("\n") for line in text.splitlines() if line.strip()]
     if not lines:
         return None
-    markdown = [line for line in lines if "|" in line]
-    if len(markdown) >= 2:
-        header = _split_markdown(markdown[0])
-        start = 1
-        if start < len(markdown) and _is_markdown_separator(_split_markdown(markdown[start])):
-            start += 1
-        rows = [_split_markdown(line) for line in markdown[start:]]
+    markdown_indices = [index for index, line in enumerate(lines) if "|" in line]
+    if len(markdown_indices) >= 2:
+        header_index = markdown_indices[0]
+        header = _split_markdown(lines[header_index])
+        row_indices = markdown_indices[1:]
+        separator_index = row_indices[0] if row_indices and _is_markdown_separator(_split_markdown(lines[row_indices[0]])) else None
+        if separator_index is not None:
+            row_indices = row_indices[1:]
+        rows = [_split_markdown(lines[index]) for index in row_indices]
         if header and rows:
             width = len(header)
-            rows = [tuple(row + [""] * (width - len(row)) if len(row) < width else row[:width]) for row in rows]
-            return _Table(caption=caption or (lines[0] if "|" not in lines[0] else ""), columns=tuple(header), rows=tuple(rows))
+            normalised_rows = [
+                tuple(row + [""] * (width - len(row)) if len(row) < width else row[:width])
+                for row in rows
+            ]
+            table_indices = {header_index, *row_indices}
+            if separator_index is not None:
+                table_indices.add(separator_index)
+            non_table = [
+                (index, line.strip()) for index, line in enumerate(lines) if index not in table_indices
+            ]
+            before_table = [(index, line) for index, line in non_table if index < header_index]
+            inferred_caption = caption or (before_table[0][1] if before_table else "")
+            caption_index = before_table[0][0] if not caption and before_table else None
+            annotations = tuple(line for index, line in non_table if index != caption_index)
+            return _Table(
+                caption=inferred_caption,
+                columns=tuple(header),
+                rows=tuple(normalised_rows),
+                annotations=annotations,
+            )
     tabbed = [line.split("\t") for line in lines]
     if len(tabbed) >= 2 and len(tabbed[0]) >= 2:
         width = len(tabbed[0])
@@ -408,7 +501,7 @@ def harvest_candidates(
         # provenance wrapper.  Refuse the whole candidate whenever source
         # text identifies the relevant ± values as SE/SEM/CI.  This is
         # intentionally conservative; SD/standard deviation text is allowed.
-        source_text = [table.caption, *table.columns]
+        source_text = [table.caption, *table.annotations, *table.columns]
         source_text.extend(cell for row in table.rows for cell in row)
         if any(_identifies_se_or_ci(text) for text in source_text):
             continue
@@ -570,23 +663,70 @@ def _self_check() -> None:
             "rows": [["Muscle strength", "10.2 ± 2.1", "8.4 +/- 2.0"]],
         }
         assert harvest_candidates(marked_header, "muscle strength", ["Treatment", "Control"]) == []
-    mapping_caption_marker = {
-        **valid,
-        "caption": "Table 1. Std. Error outcomes",
-    }
-    assert harvest_candidates(mapping_caption_marker, "muscle strength", ["Treatment", "Control"]) == []
+    # Keep each caption regression non-vacuous: its aliases match the actual
+    # arm headers, so refusal must come from the annotation being screened.
+    for marker in ("SE", "SEM", "CI", "Std. Error", "Std Error", "Std. Err"):
+        mapping_caption_marker = {
+            **valid,
+            "caption": f"Table 1. {marker} outcomes",
+        }
+        assert harvest_candidates(mapping_caption_marker, "muscle strength", ["Creatine", "Placebo"]) == []
 
-    nested_caption_marker = {
-        "caption": "Outer caption: Std Error",
-        "table": nested_caption["table"],
-    }
-    assert harvest_candidates(nested_caption_marker, "muscle strength", ["Treatment", "Control"]) == []
+        nested_caption_marker = {
+            "caption": f"Outer caption: {marker}",
+            "table": nested_caption["table"],
+        }
+        assert harvest_candidates(nested_caption_marker, "muscle strength", ["Creatine", "Placebo"]) == []
 
-    markdown_caption_marker = """Markdown caption: S.E.
+        markdown_caption_marker = f"""Markdown caption: {marker}
 | Outcome | Treatment | Control |
 | --- | --- | --- |
 | Muscle strength | 10.2 ± 2.1 | 8.4 +/- 2.0 |"""
-    assert harvest_candidates(markdown_caption_marker, "muscle strength", ["Treatment", "Control"]) == []
+        assert harvest_candidates(markdown_caption_marker, "muscle strength", ["Treatment", "Control"]) == []
+
+        mapping_footnote_marker = {
+            "caption": "clean caption",
+            "footnotes": f"a: {marker}",
+            "columns": ["Outcome", "Treatment", "Control"],
+            "rows": [["Muscle strength", "10.2 ± 2.1", "8.4 +/- 2.0"]],
+        }
+        assert harvest_candidates(mapping_footnote_marker, "muscle strength", ["Treatment", "Control"]) == []
+
+        nested_annotation_marker = {
+            "caption": "clean outer caption",
+            "notes": "outer note",
+            "table": {
+                **nested_caption["table"],
+                "footnotes": f"b: {marker}",
+            },
+        }
+        assert harvest_candidates(nested_annotation_marker, "muscle strength", ["Creatine", "Placebo"]) == []
+
+        markdown_footnote_marker = f"""Markdown caption
+| Outcome | Treatment | Control |
+| --- | --- | --- |
+| Muscle strength | 10.2 ± 2.1 | 8.4 +/- 2.0 |
+Note: {marker}"""
+        assert harvest_candidates(markdown_footnote_marker, "muscle strength", ["Treatment", "Control"]) == []
+
+    preserved_annotations = {
+        "caption": "clean outer caption",
+        "notes": ["outer note", "second outer note"],
+        "table": {
+            "caption": "clean inner caption",
+            "footnotes": ["inner footnote"],
+            **nested_caption["table"],
+        },
+    }
+    parsed_preserved = _coerce_tables(preserved_annotations)
+    assert len(parsed_preserved) == 1
+    assert parsed_preserved[0].annotations == (
+        "outer note",
+        "second outer note",
+        "inner footnote",
+        "clean inner caption",
+    )
+    assert len(harvest_candidates(preserved_annotations, "muscle strength", ["Creatine", "Placebo"])) == 1
 
     marked_footnote = {
         "caption": "error marker footnote",
