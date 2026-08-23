@@ -456,6 +456,12 @@ Rules: continue in-flight work; keep `Current state` / `Next` live; push complet
 units; selftest after `pipeline/` changes; archive reports; **never silent-merge
 Claude and Grok extractions.**
 
+**Worktree-first / deploy-on-push** (founder, 2026-08-12): `IceFrosst/BS-PROOF`
+is Git-connected to the `bs-proof-dashboard` Vercel project, so every push to
+`main` deploys to production automatically. Make changes in a working
+tree/worktree first and only push to `main` later, once verified (both gates
+green). Never push half-done work to `main`.
+
 ### Claude Code helper agents (`.claude/agents/`) — NOT the S1–S8 fleet
 
 "Subagent roster" above means S1–S8, the pure-function extractors. These are

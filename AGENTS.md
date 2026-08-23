@@ -21,6 +21,13 @@ was making agents open branches and then sit waiting — unpushed work is invisi
 work, and three agents cannot coordinate on a tree they cannot see. "Verified"
 means both gates below are green; that is the only gate on a push.
 
+**Worktree-first workflow** (founder, 2026-08-12): changes are made in a working
+tree/worktree first and only pushed to `main` later, once verified. Since
+`IceFrosst/BS-PROOF` is connected to the `bs-proof-dashboard` Vercel project,
+**every push to `main` triggers a production deploy** — so do not push
+half-done or unverified work to `main`. Iterate locally (or on a branch), get
+both gates green, then push.
+
 ## Ownership (changed 2026-08-10)
 
 **Claude Code owns every file. Grok and Codex are helpers.** You may write to any
