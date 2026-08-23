@@ -105,6 +105,11 @@ def _claude_bin() -> str:
 
 # Bump when you edit ANY prompt (including _shared.md). This is in the cache key.
 # Forget to bump it and you will silently serve stale extractions forever.
+# v1.22 (2026-08-23): S5T isolates table-row choice from S5's broad extraction.
+# Measured rationale: deterministic harvesting now supplies exact two-arm mean +/-
+# SD candidates, but it intentionally cannot assign arm roles or endpoint/timepoint
+# semantics. A Tier-A selector can reject semantic mismatches and copy one complete
+# candidate without letting a broad S5 call combine rows or infer missing design facts.
 # v1.21 (2026-08-12): S5 receives the paper's TABLES in its payload. The v1.20
 # SD test on 10 raw-unit studies recovered 21 measured votes but left 45 claims
 # without an SD -- and the diagnosis was that outcome mean +/- SD grids live in
@@ -266,7 +271,7 @@ def _claude_bin() -> str:
 # v1.6 (2026-08-08): S2 reports results_table + per-study design. SR-table trials
 # now enter evidence mass, so S2's output moves scores and not just confidence.
 # v1.5 (2026-08-07): S3 prompt shortened, SR label resolve, review_methods.
-PROMPT_VERSION = "v1.21"
+PROMPT_VERSION = "v1.22"
 
 # Tier -> model. FULL IDs, NOT ALIASES.
 #
@@ -384,6 +389,7 @@ AGENTS = {
     "S3": ("B", "s3_study.json",      "s3_study.md"),
     "S4": ("B", "s4_rob.json",        "s4_rob.md"),
     "S5": ("B", "s5_conclusion.json", "s5_conclusion.md"),
+    "S5T": ("A", "s5_table_selector.json", "s5_table_selector.md"),
     "S6": ("C", "s6_outcome.json",    "s6_outcome.md"),
     # Batched S6: same rules, whole study in one call. Opt in with SP_S6_BATCH=1.
     # S6 fires once per CLAIM, so the ~1 300-token fixed overhead (shared rules
