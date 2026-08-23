@@ -398,7 +398,9 @@ def _shadow_validate_selection(claim: dict, candidates: list[dict], selected: di
                 or len(reason) > 500):
             return None, "refusal reason is not a nonblank string"
         return None, reason.strip()
-    if not isinstance(index, int) or isinstance(index, bool):
+    # type() rather than isinstance(): bool is an int subclass, and an
+    # adversarial int SUBCLASS must not satisfy a strict-native-type contract.
+    if type(index) is not int:
         return None, "selector index is not an integer"
     if index < 0 or index > 100000 or index >= len(candidates):
         return None, "selector index is out of range"
@@ -610,9 +612,13 @@ def _shadow_enrich_claims(out: dict, record: dict, call) -> None:
             continue
         item["selector_result"] = selected
         item["selector_meta"] = meta
-        if _quota_signal(meta):
-            error = str(meta.get("error") if isinstance(meta, dict)
-                        else meta) or "S5T quota limit"
+        # Inspect ONLY the error channel. Stringifying the whole metadata
+        # mapping classified benign fields ({"rate_limit_remaining": 100}) as
+        # quota exhaustion, discarding a valid selector result and requeuing
+        # the study forever (second runtime review, 2026-08-23).
+        meta_error = meta.get("error") if isinstance(meta, dict) else None
+        if meta_error is not None and _quota_signal(meta_error):
+            error = str(meta_error) or "S5T quota limit"
             item.update({"status": "failed", "stage": "selector",
                          "error": error})
             audit.setdefault("failures", []).append(
@@ -781,11 +787,15 @@ def extract_study(record: dict, text: str, registry: dict | None = None, *,
             out[agent] = result
             out.setdefault("_meta", {})[agent] = meta
             if result is None:
-                error = meta.get("error") if isinstance(meta, dict) else meta
-                if _quota_signal(meta) or _quota_signal(error):
-                    out["_quota_exhausted"] = error
+                # PRODUCTION PATH: byte-for-byte the pre-shadow behavior.
+                # The widened _quota_signal regex must not leak here -- with
+                # SP_V13_SHADOW unset this loop's output must exactly match
+                # v12 (default-off parity, second runtime review 2026-08-23).
+                err = str(meta.get("error") or "").lower()
+                if any(k in err for k in ("session limit", "usage limit", "rate limit")):
+                    out["_quota_exhausted"] = meta.get("error")
                 out.setdefault("_failed", []).append(
-                    {"agent": agent, "error": error})
+                    {"agent": agent, "error": meta.get("error")})
 
     if shadow:
         _shadow_enrich_claims(out, record, call)
