@@ -386,11 +386,8 @@ def hedges_g(mean1: Number, sd1: Number, n1: int,
     df = n1 + n2 - 2
     correction = 1.0 - 3.0 / (4.0 * df - 1.0)
     if s == 0.0:
-        if m1 != m2:
-            raise ValueError("pooled SD is zero but means differ")
-        d = 0.0
-    else:
-        d = (m1 - m2) / s
+        raise ValueError("pooled SD is zero")
+    d = (m1 - m2) / s
     g = correction * d
     variance = sampling_variance_g(g, n1, n2)
     return HedgesGEstimate(g, variance, math.sqrt(variance), d, correction, s, n1, n2)
@@ -702,6 +699,12 @@ if __name__ == "__main__":
     fixture = hedges_g(1.2, 0.5, 10, 0.8, 0.6, 12)
     _close(fixture.g, 0.6905826929353683)
     _close(fixture.variance, 0.19417207096473935)
+    try:
+        hedges_g(1.0, 0.0, 10, 1.0, 0.0, 10)
+    except ValueError as exc:
+        assert "pooled SD is zero" in str(exc)
+    else:
+        raise AssertionError("zero pooled SD must be refused even for equal means")
     _close(se_from_ci(-0.2, 0.6, 0.95), 0.20408538260532608)
     _close(se_from_normal_p(0.4, 0.04550026389635842), 0.2, 1e-9)
     _close(se_from_normal_p(1.0, 1e-20), 0.10711173906510525, 1e-12)
