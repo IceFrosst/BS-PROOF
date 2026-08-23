@@ -39,7 +39,22 @@ _MEAN_SD = re.compile(
 # refused rather than mistaken for an omitted sample size.  Consume the whole
 # numeric token so grouped and decimal values cannot be truncated to integers.
 _N_MARKER = re.compile(r"\bn\s*=", re.IGNORECASE)
-_N = re.compile(r"\bn\s*=\s*(?P<n>[+-]?\d[\d.,]*)(?![\w.,])", re.IGNORECASE)
+# Keep the whole n representation attached to the marker.  In particular,
+# do not accept the ``1`` prefix of grouped forms such as ``1 234`` or
+# ``1'234``.  Commas and decimal punctuation are consumed and rejected by
+# _n_status below rather than being silently truncated.
+_N = re.compile(
+    r"\bn\s*=\s*(?P<n>[+-]?\d[\d.,]*)(?![\w.,'’]|\s*(?:\d|['’]))",
+    re.IGNORECASE,
+)
+# A ± value is not evidence of SD when its relevant source text labels it as
+# a standard error or confidence interval.  Explicit SD text is deliberately
+# not a marker and remains acceptable.
+_ERROR_INTERVAL_MARKER = re.compile(
+    r"(?:\b(?:se|sem|ci)\b|\bstandard\s+errors?\b|\bconfidence\s+intervals?\b|"
+    r"\bs\s*\.\s*e\.?\b|\bc\s*\.\s*i\.?\b)",
+    re.IGNORECASE,
+)
 # These markers are intentionally broad.  Without a requested visit or
 # contrast, selecting one of these rows would silently make a claim about it.
 _ENDPOINT_MARKER = re.compile(
@@ -184,6 +199,12 @@ def _value_n(value: str) -> int | None:
     return _n_status(value)[1]
 
 
+def _identifies_se_or_ci(text: str) -> bool:
+    """Whether source text labels a ± value as SE/SEM/CI rather than SD."""
+
+    return _ERROR_INTERVAL_MARKER.search(text) is not None
+
+
 def _split_markdown(line: str) -> list[str]:
     stripped = line.strip()
     if stripped.startswith("|"):
@@ -202,7 +223,17 @@ def _table_from_mapping(item: Mapping[str, Any]) -> _Table | None:
     columns_raw = item.get("columns", item.get("headers", item.get("header")))
     rows_raw = item.get("rows")
     if rows_raw is None and isinstance(item.get("table"), Mapping):
-        return _table_from_mapping(item["table"])
+        nested = _table_from_mapping(item["table"])
+        if nested is None:
+            return None
+        # Keep the outer title/caption attached to every nested cell's
+        # provenance.  The outer mapping is the source record accepted by the
+        # harvester, even when its tabular payload is nested under ``table``.
+        return _Table(
+            caption=caption or nested.caption,
+            columns=nested.columns,
+            rows=nested.rows,
+        )
     if rows_raw is None:
         text = item.get("text")
         return _parse_text(_text(text), caption=caption) if text is not None else None
@@ -366,6 +397,15 @@ def harvest_candidates(
         if ambiguous_header or len(matched_columns) != 2 or len({m[1] for m in matched_columns}) != 2:
             continue
 
+        # A table may carry footnotes in cells that are not retained by a
+        # provenance wrapper.  Refuse the whole candidate whenever source
+        # text identifies the relevant ± values as SE/SEM/CI.  This is
+        # intentionally conservative; SD/standard deviation text is allowed.
+        source_text = list(table.columns)
+        source_text.extend(cell for row in table.rows for cell in row)
+        if any(_identifies_se_or_ci(text) for text in source_text):
+            continue
+
         # The first column is the identified descriptor column for this
         # conservative table shape.  Do not search the complete row: notes,
         # footnotes, and other cells are not outcome descriptors.
@@ -481,6 +521,51 @@ def _self_check() -> None:
     assert found[0].outcome_cell.cell_verbatim == "Muscle strength"
     assert found[0].allocation is None and found[0].timepoint is None and found[0].endpoint_kind is None
 
+    nested_caption = {
+        "caption": "Outer caption retained",
+        "table": {
+            "columns": ["Outcome", "Creatine (n=20)", "Placebo (n=19)"],
+            "rows": [["Muscle strength", "10.2 ± 2.1", "8.4 +/- 2.0"]],
+        },
+    }
+    nested_found = harvest_candidates(
+        nested_caption, "muscle strength", {"arm_a": "Creatine", "arm_b": "Placebo"}
+    )
+    assert len(nested_found) == 1
+    assert nested_found[0].caption == "Outer caption retained"
+    assert nested_found[0].outcome_cell.caption == "Outer caption retained"
+    assert nested_found[0].arms[0].provenance.caption == "Outer caption retained"
+
+    # A ± value is not SD when the source labels it as a standard error or CI;
+    # this includes labels in headers and footnote cells.
+    for marker in ("SE", "SEM", "CI", "standard error", "confidence interval", "S.E."):
+        marked_cell = {
+            "caption": "error marker",
+            "columns": ["Outcome", "Treatment", "Control"],
+            "rows": [["Muscle strength", f"10.2 ± 2.1 ({marker})", "8.4 +/- 2.0"]],
+        }
+        assert harvest_candidates(marked_cell, "muscle strength", ["Treatment", "Control"]) == []
+        marked_header = {
+            "caption": "error marker header",
+            "columns": ["Outcome", f"Treatment ({marker})", "Control"],
+            "rows": [["Muscle strength", "10.2 ± 2.1", "8.4 +/- 2.0"]],
+        }
+        assert harvest_candidates(marked_header, "muscle strength", ["Treatment", "Control"]) == []
+    marked_footnote = {
+        "caption": "error marker footnote",
+        "columns": ["Outcome", "Treatment", "Control", "Notes"],
+        "rows": [
+            ["Muscle strength", "10.2 ± 2.1 (a)", "8.4 +/- 2.0", "a: confidence interval"],
+        ],
+    }
+    assert harvest_candidates(marked_footnote, "muscle strength", ["Treatment", "Control"]) == []
+    explicit_sd = {
+        "caption": "explicit standard deviation",
+        "columns": ["Outcome", "Treatment", "Control"],
+        "rows": [["Muscle strength", "10.2 ± 2.1 (standard deviation)", "8.4 +/- 2.0 (SD)"]],
+    }
+    assert len(harvest_candidates(explicit_sd, "muscle strength", ["Treatment", "Control"])) == 1
+
     age_is_not_n = {
         "caption": "age annotation",
         "columns": ["Outcome", "Treatment (age=44)", "Control (n=19)"],
@@ -521,7 +606,7 @@ def _self_check() -> None:
     }
     assert harvest_candidates(non_finite_sd, "muscle strength", ["Treatment", "Control"]) == []
 
-    for malformed_n in ("1,234", "20.5"):
+    for malformed_n in ("1,234", "20.5", "1 234", "1'234"):
         malformed_n_header = {
             "caption": "malformed n in header",
             "columns": ["Outcome", f"Treatment (n={malformed_n})", "Control (n=19)"],
