@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import time
 import os
+import math
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor, FIRST_COMPLETED, wait as _fwait
 
@@ -14,6 +15,11 @@ from pipeline.relevance import relevance_check
 
 PER_STUDY = ("S3", "S4", "S5", "S7", "S8")
 MIN_TEXT_CHARS = 200
+
+
+def _v13_shadow_enabled() -> bool:
+    """Return whether the experimental v13 wiring is explicitly enabled."""
+    return os.environ.get("SP_V13_SHADOW", "0") == "1"
 
 # Total prompt budget per call: system + schema + payload.
 #
@@ -259,6 +265,8 @@ def _payload(agent: str, record: dict, text: str, registry: dict | None,
               + len((SCHEMAS / _schema_f).read_text()) + 400)
     text = _agent_text(agent, text, sections)
     base = {"title": record.get("title"), "text": _fit_text(agent, text, _fixed)}
+    if agent == "S1":
+        return base
     if agent == "S3":
         # Population vocabulary is NOT sent. S3's prompt lists the four axes and
         # allowed values; shipping the JSON duplicated ~1.9k and pushed S3 over
@@ -310,6 +318,264 @@ def _payload(agent: str, record: dict, text: str, registry: dict | None,
     raise KeyError(agent)
 
 
+def _shadow_arm_aliases(s3: dict | None) -> tuple[dict[str, list[str]] | None, str | None]:
+    """Build aliases only from the two explicit S3 control facts."""
+    arms = s3.get("arms") if isinstance(s3, dict) else None
+    if not isinstance(arms, list):
+        return None, "S3 arms are absent"
+    controls = [a for a in arms if isinstance(a, dict) and a.get("is_control") is True]
+    ingredients = [a for a in arms if isinstance(a, dict) and a.get("is_control") is False]
+    if len(controls) != 1 or len(ingredients) != 1:
+        return None, "S3 does not have exactly one explicit control and ingredient arm"
+    control_label = controls[0].get("label")
+    ingredient_label = ingredients[0].get("label")
+    if not (isinstance(control_label, str) and control_label.strip()
+            and isinstance(ingredient_label, str) and ingredient_label.strip()):
+        return None, "S3 arm labels are not explicit"
+    if control_label == ingredient_label:
+        return None, "S3 arm labels are not unique"
+    # The mapping keys become candidate arm_alias values.  They are the exact
+    # S3 labels, not positional names such as treatment/control.  An explicit
+    # intervention_text is an additional literal header alias, never a guess.
+    def aliases_for(arm, label):
+        text = arm.get("intervention_text")
+        return list(dict.fromkeys([label] + ([text] if isinstance(text, str)
+                                             and text.strip() else [])))
+    return {ingredient_label: aliases_for(ingredients[0], ingredient_label),
+            control_label: aliases_for(controls[0], control_label)}, None
+
+
+def _shadow_validate_selection(claim: dict, candidates: list[dict], selected: dict,
+                               s1: dict, role_facts: dict) -> tuple[dict | None, str | None]:
+    """Validate S5T by independently copying one deterministic candidate."""
+    index = selected.get("selected_candidate_index") if isinstance(selected, dict) else None
+    if not isinstance(index, int) or isinstance(index, bool):
+        return None, "selector index is not an integer"
+    if index < 0 or index >= len(candidates):
+        return None, "selector index is out of range"
+    candidate = candidates[index]
+    if not isinstance(candidate, dict):
+        return None, "selected candidate is malformed"
+
+    design_kind = s1.get("design_kind") if isinstance(s1, dict) else None
+    if design_kind != "parallel":
+        return None, "S1 design_kind is not explicit parallel"
+    estimand = claim.get("estimand")
+    timepoint = claim.get("timepoint")
+    if estimand not in ("endpoint", "change_from_baseline"):
+        return None, "claim estimand is absent or unsupported"
+    if not isinstance(timepoint, str) or not timepoint.strip():
+        return None, "claim timepoint is absent"
+    if str(candidate.get("outcome_term", "")).strip() != str(
+            claim.get("outcome_raw", "")).strip():
+        return None, "candidate outcome does not exactly match claim"
+
+    arms = candidate.get("arms")
+    if not isinstance(arms, (list, tuple)) or len(arms) != 2:
+        return None, "selected candidate does not have exactly two arms"
+    by_alias = {a.get("arm_alias"): a for a in arms
+                if isinstance(a, dict) and isinstance(a.get("arm_alias"), str)}
+    if len(by_alias) != 2:
+        return None, "selected candidate arm aliases are ambiguous"
+    # Aliases are S3 labels, so role assignment is explicit and not positional.
+    s3_facts = role_facts
+    if not isinstance(s3_facts, dict):
+        return None, "missing explicit arm alias facts"
+    ingredient_label = s3_facts.get("ingredient")
+    control_label = s3_facts.get("control")
+    ingredient = by_alias.get(ingredient_label)
+    control = by_alias.get(control_label)
+    if ingredient is None or control is None or ingredient is control:
+        return None, "candidate cannot be mapped to one ingredient and one control arm"
+
+    def _number(value, *, positive=False):
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            return False
+        if not math.isfinite(value):
+            return False
+        return value > 0 if positive else True
+
+    for arm in (ingredient, control):
+        if arm.get("n") is not None and (
+                not isinstance(arm.get("n"), int) or isinstance(arm.get("n"), bool)
+                or arm.get("n") <= 0):
+            return None, "candidate n is invalid"
+        if not _number(arm.get("mean"), positive=True) or not _number(
+                arm.get("sd"), positive=True):
+            return None, "candidate mean or SD is invalid"
+
+    expected = {
+        "n_ingredient": ingredient.get("n"),
+        "n_control": control.get("n"),
+        "mean_ingredient": ingredient.get("mean"),
+        "mean_control": control.get("mean"),
+        "sd_ingredient": ingredient.get("sd"),
+        "sd_control": control.get("sd"),
+        "estimand": estimand,
+        "timepoint": timepoint,
+        "design_kind": design_kind,
+        "table_provenance": {
+            "caption": candidate.get("caption"),
+            "row": (candidate.get("outcome_cell") or {}).get("cell_verbatim"),
+            "column": f"{ingredient.get('column')} | {control.get('column')}",
+        },
+    }
+    provenance = expected["table_provenance"]
+    if not all(isinstance(provenance.get(k), str) and provenance[k]
+               for k in ("caption", "row", "column")):
+        return None, "candidate provenance is incomplete"
+    for key, value in expected.items():
+        if selected.get(key) != value:
+            return None, f"selector field {key} disagrees with candidate"
+    if selected.get("refusal_reason") is not None:
+        return None, "selector returned a selection with refusal metadata"
+
+    # Existing non-null facts are immutable.  This includes the two fields
+    # below: selecting a table cannot silently change an S5-reported estimate.
+    expected.update({"estimate_kind": "mean_difference",
+                     "estimate_basis": "derived_from_arms"})
+    for key, value in expected.items():
+        if claim.get(key) is not None and claim.get(key) != value:
+            return None, f"existing claim field {key} disagrees"
+    return expected, None
+
+
+def _shadow_enrich_claims(out: dict, record: dict, call) -> None:
+    """Run the v13 selector after the normal per-study calls, never in prod."""
+    from pipeline.effect_harvest import harvest_candidates
+
+    s1 = out.get("S1") if isinstance(out.get("S1"), dict) else {}
+    s3 = out.get("S3") if isinstance(out.get("S3"), dict) else {}
+    aliases, alias_reason = _shadow_arm_aliases(s3)
+    claims = ((out.get("S5") or {}).get("claims")) or []
+    audit = {"enabled": True, "selector_calls": 0, "claims": []}
+    try:
+        tables = _tables_text(record)
+    except Exception as exc:
+        tables = []
+        table_error = str(exc)
+    else:
+        table_error = None
+
+    # This role map is retained only in local validation state.  It prevents
+    # role assignment from candidate order.
+    role_facts = None
+    if aliases:
+        labels = list(aliases)
+        role_facts = {"ingredient": labels[0], "control": labels[1]}
+    for claim_index, claim in enumerate(claims):
+        item = {"claim_index": claim_index, "candidate_count": 0}
+        if not isinstance(claim, dict):
+            item.update({"status": "refused", "reason": "claim is malformed"})
+            audit["claims"].append(item)
+            continue
+        terms = [claim.get(key) for key in ("outcome_raw", "measure")
+                 if isinstance(claim.get(key), str) and claim.get(key).strip()]
+        candidates = harvest_candidates(tables, terms, aliases or {})
+        candidate_dicts = [candidate.to_dict() for candidate in candidates]
+        item["candidate_count"] = len(candidate_dicts)
+        if not candidates or not aliases:
+            item.update({"status": "refused", "reason": alias_reason
+                         if not aliases else "no deterministic table candidates"})
+            audit["claims"].append(item)
+            continue
+        payload = {"S5_CLAIM": dict(claim), "CANDIDATES": candidate_dicts,
+                   "S1_DESIGN_FACTS": s1, "S3_ARM_FACTS": s3.get("arms") or []}
+        selected, meta = call("S5T", payload)
+        audit["selector_calls"] += 1
+        item["selector_result"] = selected
+        item["selector_meta"] = meta
+        if isinstance(selected, dict) and selected.get("selected_candidate_index") is None:
+            item.update({"status": "refused", "reason": selected.get("refusal_reason")
+                         or "selector refused"})
+        else:
+            enriched, reason = _shadow_validate_selection(
+                claim, candidate_dicts, selected, s1, role_facts)
+            if enriched is None:
+                item.update({"status": "refused", "reason": reason})
+            else:
+                claim.update(enriched)
+                item["status"] = "enriched"
+        audit["claims"].append(item)
+    if alias_reason:
+        audit["alias_refusal"] = alias_reason
+    if table_error:
+        audit["table_error"] = table_error
+    out["_v13_shadow"] = audit
+
+
+def _self_check_v13_shadow_wiring() -> None:
+    """Offline contract checks for the shadow boundary (never run on import)."""
+    from unittest.mock import patch
+
+    tables = [{"caption": "Table 1",
+               "columns": ["Outcome", "Creatine (n=20)", "Placebo (n=19)"],
+               "rows": [["Strength", "10.2 +/- 2.1", "8.4 +/- 2.0"]]}]
+    record = {"ingredient": "creatine", "title": "Creatine supplement trial",
+              "abstract": "oral creatine supplement"}
+    text = "x" * MIN_TEXT_CHARS
+    mode = "valid"
+
+    def fake_call(agent, payload):
+        calls.append(agent)
+        if agent == "S1":
+            return {"design_rank": 4, "design_label": "RCT", "design_kind": "parallel",
+                    "confidence": 1, "rationale": "fixture"}, {}
+        if agent == "S3":
+            arms = [{"label": "Creatine", "is_control": False},
+                    {"label": "Placebo", "is_control": True}]
+            if mode == "multi-arm":
+                arms.append({"label": "Other", "is_control": False})
+            return {"arms": arms}, {}
+        if agent == "S5":
+            return {"claims": [{"outcome_raw": "Strength", "measure": None,
+                                 "direction": "benefit", "is_primary_outcome": True,
+                                 "evidence_span": "fixture", "estimand": "endpoint",
+                                 "timepoint": "post"}]}, {}
+        if agent == "S5T":
+            candidate = payload["CANDIDATES"][0]
+            arms = {a["arm_alias"]: a for a in candidate["arms"]}
+            result = {"selected_candidate_index": 0,
+                      "n_ingredient": arms["Creatine"]["n"],
+                      "n_control": arms["Placebo"]["n"],
+                      "mean_ingredient": arms["Creatine"]["mean"],
+                      "mean_control": arms["Placebo"]["mean"],
+                      "sd_ingredient": arms["Creatine"]["sd"],
+                      "sd_control": arms["Placebo"]["sd"],
+                      "estimand": "endpoint", "timepoint": "post",
+                      "design_kind": "parallel",
+                      "table_provenance": {"caption": "Table 1", "row": "Strength",
+                                           "column": "Creatine (n=20) | Placebo (n=19)"},
+                      "refusal_reason": None}
+            if mode == "malicious":
+                result["mean_ingredient"] = 999
+            return result, {}
+        if agent == "S6B":
+            return {"mappings": []}, {}
+        return {}, {}
+
+    def run(shadow, fixture_mode):
+        nonlocal mode
+        mode = fixture_mode
+        calls.clear()
+        with patch.dict(os.environ, {"SP_V13_SHADOW": "1"} if shadow else {},
+                        clear=not shadow), patch.object(__import__(__name__),
+                                                         "_tables_text", lambda _: tables):
+            return extract_study(record, text, call=fake_call, max_workers=5)
+
+    calls = []
+    valid = run(True, "valid")
+    assert valid["S5"]["claims"][0]["estimate_kind"] == "mean_difference"
+    assert "S5T" in calls
+    malicious = run(True, "malicious")
+    assert "estimate_kind" not in malicious["S5"]["claims"][0]
+    assert malicious["_v13_shadow"]["claims"][0]["status"] == "refused"
+    multi = run(True, "multi-arm")
+    assert "S5T" not in calls and multi["_v13_shadow"]["selector_calls"] == 0
+    off = run(False, "valid")
+    assert "S1" not in calls and "S5T" not in calls and "_v13_shadow" not in off
+
+
 def extract_study(record: dict, text: str, registry: dict | None = None, *,
                   call=None, max_workers: int = 5,
                   outcome_allowlist: list[str] | None = None,
@@ -331,12 +597,14 @@ def extract_study(record: dict, text: str, registry: dict | None = None, *,
                 "outcomes": []}
 
     out: dict = {}
+    shadow = _v13_shadow_enabled()
+    agents = (("S1",) + PER_STUDY) if shadow else PER_STUDY
 
     with ThreadPoolExecutor(max_workers=max_workers) as pool:
         futures = {agent: pool.submit(
                        call, agent,
                        _payload(agent, record, text, registry, sections))
-                   for agent in PER_STUDY}
+                   for agent in agents}
         for agent, fut in futures.items():
             result, meta = fut.result()
             out[agent] = result
@@ -347,6 +615,9 @@ def extract_study(record: dict, text: str, registry: dict | None = None, *,
                     out["_quota_exhausted"] = meta.get("error")
                 out.setdefault("_failed", []).append(
                     {"agent": agent, "error": meta.get("error")})
+
+    if shadow:
+        _shadow_enrich_claims(out, record, call)
 
     # S6 runs after S5 because it consumes S5's raw outcome strings, but the
     # claims are independent of each other -- fan them out.
