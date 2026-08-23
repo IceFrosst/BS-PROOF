@@ -14,6 +14,8 @@ Conventions
   ``(n1+n2)/(n1*n2) + g**2/(2*(n1+n2))``.
 * REML tau squared is the global non-negative maximum of the profile
   restricted likelihood for an intercept-only model.  The boundary is tested.
+* Hartung--Knapp confidence intervals use ``k-1`` residual degrees of freedom;
+  prediction intervals use the documented ``k-2`` standard degrees of freedom.
 
 This file has no third-party dependencies.  It is intentionally standalone so
 that the numerical checks at the bottom can also be run with ``python3``.
@@ -174,6 +176,51 @@ def _nonnegative(value: Number, name: str) -> float:
     return result
 
 
+def _positive_result(value: Number, name: str) -> float:
+    """Validate a positive finite value produced by a calculation."""
+    result = _finite(value, name)
+    if result <= 0.0:
+        raise ValueError(f"{name} must be finite and > 0")
+    return result
+
+
+def _inverse_weights(variances: Tuple[float, ...], tau2: float = 0.0) -> Tuple[float, ...]:
+    """Form inverse-variance weights without accepting floating-point failures."""
+    extra = _nonnegative(tau2, "tau2")
+    weights = []
+    for variance in variances:
+        denominator = variance + extra
+        if not math.isfinite(denominator) or denominator <= 0.0:
+            raise ValueError("variance plus tau2 must be finite and > 0")
+        weight = 1.0 / denominator
+        if not math.isfinite(weight) or weight <= 0.0:
+            raise ValueError("inverse-variance weight must be finite and > 0")
+        weights.append(weight)
+    return tuple(weights)
+
+
+def _finite_fsum(values: Sequence[float], name: str) -> float:
+    try:
+        result = math.fsum(values)
+    except OverflowError:
+        raise ValueError(f"{name} is not finite") from None
+    return _finite(result, name)
+
+
+def _weighted_mean(weights: Tuple[float, ...], effects: Tuple[float, ...]) -> float:
+    terms = []
+    for weight, effect in zip(weights, effects):
+        term = weight * effect
+        if not math.isfinite(term):
+            raise ValueError("weighted effect is not finite")
+        terms.append(term)
+    total = _finite_fsum(weights, "sum of inverse-variance weights")
+    if total <= 0.0:
+        raise ValueError("sum of inverse-variance weights must be finite and > 0")
+    mean = _finite_fsum(terms, "weighted estimate") / total
+    return _finite(mean, "weighted estimate")
+
+
 def _sample_size(value: int, name: str) -> int:
     if isinstance(value, bool) or not isinstance(value, int):
         raise TypeError(f"{name} must be an integer")
@@ -186,12 +233,21 @@ def _confidence_level(value: Number) -> float:
     value = _finite(value, "confidence_level")
     if not 0.0 < value < 1.0:
         raise ValueError("confidence_level must be strictly between 0 and 1")
-    # The upper critical probability is formed in binary64 below.  Once this
-    # rounds to one, no finite normal (or Student-t) critical value exists and
-    # silently returning ``inf`` makes the interval contract misleading.
-    if 0.5 + value / 2.0 >= 1.0:
+    # Both ends matter: binary64 rounding can collapse q to exactly 0.5 or
+    # 1.0, neither of which has a finite two-sided critical value.
+    q = 0.5 + value / 2.0
+    if q <= 0.5:
+        raise ValueError("confidence_level is too close to 0 for a finite critical value")
+    if q >= 1.0:
         raise ValueError("confidence_level is too close to 1 for a finite critical value")
     return value
+
+
+def _upper_critical_probability(level: float) -> float:
+    q = 0.5 + level / 2.0
+    if not 0.5 < q < 1.0:
+        raise ValueError("confidence critical probability rounded to an endpoint")
+    return q
 
 
 def _normal_cdf(x: float) -> float:
@@ -358,11 +414,28 @@ student_t_quantile = student_t_ppf
 
 
 def pooled_sd(sd1: Number, n1: int, sd2: Number, n2: int) -> float:
-    """Return the unbiased pooled within-arm standard deviation."""
+    """Return the unbiased pooled within-arm standard deviation.
+
+    A computed zero is refused rather than being exposed as a valid SD; this
+    includes underflow from otherwise non-zero, extremely small inputs.
+    """
     s1, s2 = _nonnegative(sd1, "sd1"), _nonnegative(sd2, "sd2")
     n1, n2 = _sample_size(n1, "n1"), _sample_size(n2, "n2")
     df = n1 + n2 - 2
-    return math.sqrt(((n1 - 1) * s1 * s1 + (n2 - 1) * s2 * s2) / df)
+    try:
+        numerator = (n1 - 1) * s1 * s1 + (n2 - 1) * s2 * s2
+        result = math.sqrt(numerator / df)
+    except (OverflowError, ValueError):
+        raise ValueError("pooled SD calculation is not finite") from None
+    if not math.isfinite(numerator):
+        raise ValueError("pooled SD calculation is not finite")
+    if not math.isfinite(result) or result <= 0.0:
+        raise ValueError("pooled SD is zero or not finite")
+    return result
+
+
+def _positive_finite_variance(value: Number, name: str = "variance") -> float:
+    return _positive_result(value, name)
 
 
 def sampling_variance_g(g: Number, n1: int, n2: int) -> float:
@@ -374,7 +447,11 @@ def sampling_variance_g(g: Number, n1: int, n2: int) -> float:
     value = _finite(g, "g")
     n1, n2 = _sample_size(n1, "n1"), _sample_size(n2, "n2")
     total = n1 + n2
-    return total / (n1 * n2) + value * value / (2.0 * total)
+    try:
+        result = total / (n1 * n2) + value * value / (2.0 * total)
+    except (OverflowError, ZeroDivisionError):
+        raise ValueError("sampling variance is not finite") from None
+    return _positive_finite_variance(result, "sampling variance")
 
 
 def hedges_g(mean1: Number, sd1: Number, n1: int,
@@ -385,12 +462,18 @@ def hedges_g(mean1: Number, sd1: Number, n1: int,
     s = pooled_sd(sd1, n1, sd2, n2)
     df = n1 + n2 - 2
     correction = 1.0 - 3.0 / (4.0 * df - 1.0)
-    if s == 0.0:
+    if s <= 0.0:
         raise ValueError("pooled SD is zero")
-    d = (m1 - m2) / s
-    g = correction * d
+    try:
+        d = (m1 - m2) / s
+        g = correction * d
+    except (OverflowError, ZeroDivisionError):
+        raise ValueError("Hedges' g is not finite") from None
+    d = _finite(d, "Cohen's d")
+    g = _finite(g, "Hedges' g")
     variance = sampling_variance_g(g, n1, n2)
-    return HedgesGEstimate(g, variance, math.sqrt(variance), d, correction, s, n1, n2)
+    standard_error = _positive_result(math.sqrt(variance), "standard error")
+    return HedgesGEstimate(g, variance, standard_error, d, correction, s, n1, n2)
 
 
 # Descriptive aliases keep the API discoverable without changing semantics.
@@ -407,8 +490,13 @@ def se_from_ci(lower: Number, upper: Number, confidence_level: Number) -> float:
     level = _confidence_level(confidence_level)
     if not lo < hi:
         raise ValueError("lower must be less than upper")
-    z = normal_ppf(0.5 + level / 2.0)
-    return (hi - lo) / (2.0 * z)
+    z = normal_ppf(_upper_critical_probability(level))
+    try:
+        width = hi - lo
+        result = width / (2.0 * z)
+    except (OverflowError, ZeroDivisionError):
+        raise ValueError("standard error is not finite") from None
+    return _positive_result(result, "standard error")
 
 
 standard_error_from_ci = se_from_ci
@@ -433,7 +521,11 @@ def se_from_normal_p(effect: Number, two_sided_p: Number) -> float:
         z = -normal_ppf(half)
     if estimate == 0.0:
         raise ValueError("zero effect with a normal p-value does not identify SE")
-    return abs(estimate) / z
+    try:
+        result = abs(estimate) / z
+    except (OverflowError, ZeroDivisionError):
+        raise ValueError("standard error is not finite") from None
+    return _positive_result(result, "standard error")
 
 
 standard_error_from_normal_p = se_from_normal_p
@@ -470,33 +562,79 @@ def inverse_variance_pool(effects: Sequence[Union[Number, EffectEstimate]],
     """Pool effects with weights ``1/(vi + tau2)``."""
     ys, vs = _studies(effects, variances)
     extra = _nonnegative(tau2, "tau2")
-    weights = tuple(1.0 / (v + extra) for v in vs)
-    total = math.fsum(weights)
-    estimate = math.fsum(w * y for w, y in zip(weights, ys)) / total
-    variance = 1.0 / total
-    return PooledEstimate(estimate, variance, math.sqrt(variance), extra)
+    weights = _inverse_weights(vs, extra)
+    total = _finite_fsum(weights, "sum of inverse-variance weights")
+    if total <= 0.0:
+        raise ValueError("sum of inverse-variance weights must be finite and > 0")
+    estimate = _weighted_mean(weights, ys)
+    try:
+        variance = 1.0 / total
+        standard_error = math.sqrt(variance)
+    except (OverflowError, ZeroDivisionError):
+        raise ValueError("pooled variance is not finite") from None
+    variance = _positive_finite_variance(variance, "pooled variance")
+    standard_error = _positive_result(standard_error, "pooled standard error")
+    return PooledEstimate(estimate, variance, standard_error, extra)
 
 
 pool_inverse_variance = inverse_variance_pool
 
 
 def _reml_score(tau2: float, ys: Tuple[float, ...], vs: Tuple[float, ...]) -> float:
-    weights = tuple(1.0 / (v + tau2) for v in vs)
-    sw = math.fsum(weights)
-    mean = math.fsum(w * y for w, y in zip(weights, ys)) / sw
-    return 0.5 * (math.fsum(w * w * (y - mean) ** 2 for w, y in zip(weights, ys))
-                   + math.fsum(w * w for w in weights) / sw - sw)
+    weights = _inverse_weights(vs, tau2)
+    sw = _finite_fsum(weights, "sum of inverse-variance weights")
+    if sw <= 0.0:
+        raise ValueError("sum of inverse-variance weights must be finite and > 0")
+    mean = _weighted_mean(weights, ys)
+    residual_terms = []
+    squared_weights = []
+    for weight, effect in zip(weights, ys):
+        residual = effect - mean
+        if not math.isfinite(residual):
+            raise ValueError("REML residual is not finite")
+        try:
+            term = weight * weight * residual * residual
+        except OverflowError:
+            raise ValueError("REML score is not finite") from None
+        if not math.isfinite(term):
+            raise ValueError("REML score is not finite")
+        residual_terms.append(term)
+        squared = weight * weight
+        if not math.isfinite(squared):
+            raise ValueError("REML score is not finite")
+        squared_weights.append(squared)
+    score = 0.5 * (_finite_fsum(residual_terms, "REML score")
+                   + _finite_fsum(squared_weights, "REML score") / sw - sw)
+    return _finite(score, "REML score")
 
 
 def _reml_profile_loglik(tau2: float, ys: Tuple[float, ...],
                          vs: Tuple[float, ...]) -> float:
     """Restricted log likelihood, up to a tau-independent constant."""
-    weights = tuple(1.0 / (v + tau2) for v in vs)
-    sw = math.fsum(weights)
-    mean = math.fsum(w * y for w, y in zip(weights, ys)) / sw
-    residual = math.fsum(w * (y - mean) ** 2 for w, y in zip(weights, ys))
-    return -0.5 * (math.fsum(math.log(v + tau2) for v in vs)
-                   + math.log(sw) + residual)
+    weights = _inverse_weights(vs, tau2)
+    sw = _finite_fsum(weights, "sum of inverse-variance weights")
+    if sw <= 0.0:
+        raise ValueError("sum of inverse-variance weights must be finite and > 0")
+    mean = _weighted_mean(weights, ys)
+    residual_terms = []
+    log_terms = []
+    for weight, effect, variance in zip(weights, ys, vs):
+        residual = effect - mean
+        if not math.isfinite(residual):
+            raise ValueError("REML residual is not finite")
+        try:
+            term = weight * residual * residual
+            denominator = variance + tau2
+            log_term = math.log(denominator)
+        except (OverflowError, ValueError):
+            raise ValueError("REML profile is not finite") from None
+        if not math.isfinite(term) or not math.isfinite(log_term):
+            raise ValueError("REML profile is not finite")
+        residual_terms.append(term)
+        log_terms.append(log_term)
+    result = -0.5 * (_finite_fsum(log_terms, "REML profile")
+                     + math.log(sw) + _finite_fsum(residual_terms, "REML profile"))
+    return _finite(result, "REML profile")
 
 
 def _maximize_reml_interval(lo: float, hi: float,
@@ -573,6 +711,12 @@ def reml_tau2(effects: Sequence[Union[Number, EffectEstimate]],
         if math.isfinite(high):
             grid.append(high)
     grid = sorted(set(t for t in grid if t >= 0.0 and math.isfinite(t)))
+    # Do not ask the profile to add a huge tau2 to a huge finite variance:
+    # that addition can overflow even though both inputs are finite.
+    grid = [t for t in grid
+            if all(math.isfinite(variance + t) for variance in vs)]
+    if not grid:
+        raise ValueError("REML variance-plus-tau2 calculations are not finite")
 
     scores = [_reml_score(t, ys, vs) for t in grid]
     profiles = [_reml_profile_loglik(t, ys, vs) for t in grid]
@@ -589,7 +733,7 @@ def reml_tau2(effects: Sequence[Union[Number, EffectEstimate]],
         value = _reml_profile_loglik(tau, ys, vs)
         if value > best_value:
             best_tau, best_value = tau, value
-    return best_tau
+    return _nonnegative(best_tau, "REML tau2 estimate")
 
 
 reml_tau_squared = reml_tau2
@@ -601,7 +745,15 @@ def heterogeneity_q(effects: Sequence[Union[Number, EffectEstimate]],
     """Cochran's Q using fixed-effect inverse-variance weights."""
     ys, vs = _studies(effects, variances)
     fixed = inverse_variance_pool(ys, vs)
-    return math.fsum((y - fixed.estimate) ** 2 / v for y, v in zip(ys, vs))
+    terms = []
+    for effect, variance in zip(ys, vs):
+        residual = effect - fixed.estimate
+        term = residual * residual / variance
+        if not math.isfinite(term):
+            raise ValueError("heterogeneity Q is not finite")
+        terms.append(term)
+    result = _finite_fsum(terms, "heterogeneity Q")
+    return _nonnegative(result, "q")
 
 
 def i_squared(q: Number, k: int) -> float:
@@ -624,13 +776,25 @@ def hartung_knapp_variance(effects: Sequence[Union[Number, EffectEstimate]],
     if len(ys) < 3:
         raise ValueError("Hartung-Knapp variance requires k >= 3 studies")
     extra = _nonnegative(tau2, "tau2")
-    weights = tuple(1.0 / (v + extra) for v in vs)
-    sw = math.fsum(weights)
-    mean = math.fsum(w * y for w, y in zip(weights, ys)) / sw
-    scale = math.fsum(w * (y - mean) ** 2 for w, y in zip(weights, ys)) / (len(ys) - 1)
+    weights = _inverse_weights(vs, extra)
+    sw = _finite_fsum(weights, "sum of inverse-variance weights")
+    if sw <= 0.0:
+        raise ValueError("sum of inverse-variance weights must be finite and > 0")
+    mean = _weighted_mean(weights, ys)
+    residual_terms = []
+    for weight, effect in zip(weights, ys):
+        residual = effect - mean
+        term = weight * residual * residual
+        if not math.isfinite(term):
+            raise ValueError("Hartung-Knapp variance is not finite")
+        residual_terms.append(term)
+    scale = _finite_fsum(residual_terms, "Hartung-Knapp scale") / (len(ys) - 1)
+    if not math.isfinite(scale) or scale < 0.0:
+        raise ValueError("Hartung-Knapp scale is not finite")
     if truncate:
         scale = max(1.0, scale)
-    return scale / sw
+    result = scale / sw
+    return _positive_finite_variance(result, "Hartung-Knapp variance")
 
 
 def random_effects_meta_analysis(
@@ -639,30 +803,59 @@ def random_effects_meta_analysis(
     *, confidence_level: Number,
     use_hartung_knapp: bool = False,
 ) -> MetaAnalysisResult:
-    """Compute REML random-effects pooling and CI/prediction intervals."""
+    """Compute REML random-effects pooling and CI/prediction intervals.
+
+    With Hartung--Knapp enabled, the confidence interval uses Student-t
+    ``df=k-1`` while the prediction interval uses the documented standard
+    ``df=k-2``.  HK is refused for ``k < 3`` because that prediction df is not
+    available.
+    """
     ys, vs = _studies(effects, variances)
     if len(ys) < 2:
         raise ValueError("meta-analysis requires at least two studies")
     level = _confidence_level(confidence_level)
-    z = normal_ppf(0.5 + level / 2.0)
+    q_probability = _upper_critical_probability(level)
+    z = _positive_result(normal_ppf(q_probability), "normal critical value")
     fixed = inverse_variance_pool(ys, vs)
-    q = math.fsum((y - fixed.estimate) ** 2 / v for y, v in zip(ys, vs))
+    q = heterogeneity_q(ys, vs)
     tau2 = reml_tau2(ys, vs)
+    tau2 = _nonnegative(tau2, "tau2 estimate")
     pooled = inverse_variance_pool(ys, vs, tau2)
     hk_var: Optional[float] = None
     warnings = []
     if use_hartung_knapp:
-        # The helper raises the explicit k<3 refusal required by the API.
+        # This also gives the explicit k<3 refusal required by the API.
         hk_var = hartung_knapp_variance(ys, vs, tau2)
-        variance = hk_var
-        se = math.sqrt(variance)
-        critical = student_t_ppf(0.5 + level / 2.0, len(ys) - 1)
-        warnings.append("Hartung-Knapp variance selected; intervals use Student-t critical values")
+        variance = _positive_finite_variance(hk_var, "Hartung-Knapp variance")
+        se = _positive_result(math.sqrt(variance), "standard error")
+        ci_critical = _positive_result(
+            student_t_ppf(q_probability, len(ys) - 1), "Student-t CI critical value")
+        prediction_critical = _positive_result(
+            student_t_ppf(q_probability, len(ys) - 2),
+            "Student-t prediction critical value")
+        warnings.append(
+            "Hartung-Knapp variance selected; intervals use Student-t critical "
+            "values; CI uses t(df=k-1) and prediction interval uses t(df=k-2)")
     else:
-        variance, se, critical = pooled.variance, pooled.standard_error, z
-    ci_lo, ci_hi = pooled.estimate - critical * se, pooled.estimate + critical * se
-    pred_se = math.sqrt(variance + tau2)
-    pred_lo, pred_hi = pooled.estimate - critical * pred_se, pooled.estimate + critical * pred_se
+        variance, se, ci_critical = pooled.variance, pooled.standard_error, z
+        prediction_critical = z
+    try:
+        ci_margin = ci_critical * se
+        prediction_variance = variance + tau2
+        pred_se = math.sqrt(prediction_variance)
+        pred_margin = prediction_critical * pred_se
+        ci_lo, ci_hi = pooled.estimate - ci_margin, pooled.estimate + ci_margin
+        pred_lo, pred_hi = (pooled.estimate - pred_margin,
+                            pooled.estimate + pred_margin)
+    except (OverflowError, ValueError):
+        raise ValueError("meta-analysis interval is not finite") from None
+    for value, name in ((ci_margin, "CI margin"), (prediction_variance, "prediction variance"),
+                        (pred_se, "prediction standard error"), (pred_margin, "prediction margin"),
+                        (ci_lo, "CI lower bound"), (ci_hi, "CI upper bound"),
+                        (pred_lo, "prediction lower bound"), (pred_hi, "prediction upper bound")):
+        _finite(value, name)
+    _positive_finite_variance(prediction_variance, "prediction variance")
+    _positive_result(pred_se, "prediction standard error")
     return MetaAnalysisResult(pooled.estimate, variance, se, ci_lo, ci_hi,
                               pred_lo, pred_hi, q, i_squared(q, len(ys)), tau2,
                               len(ys), len(ys) - 1, level, fixed, hk_var,
@@ -700,11 +893,35 @@ if __name__ == "__main__":
     _close(fixture.g, 0.6905826929353683)
     _close(fixture.variance, 0.19417207096473935)
     try:
+        pooled_sd(0.0, 10, 0.0, 10)
+    except ValueError as exc:
+        assert "pooled SD is zero" in str(exc)
+    else:
+        raise AssertionError("zero pooled SD must be refused")
+    try:
+        pooled_sd(math.nextafter(0.0, 1.0), 10,
+                  math.nextafter(0.0, 1.0), 10)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("underflowed pooled SD must be refused")
+    try:
         hedges_g(1.0, 0.0, 10, 1.0, 0.0, 10)
     except ValueError as exc:
         assert "pooled SD is zero" in str(exc)
     else:
         raise AssertionError("zero pooled SD must be refused even for equal means")
+    huge_variance = float.fromhex("0x1.fffffffffffffp+1023")
+    huge_pool = inverse_variance_pool((1.0, 2.0), (huge_variance, huge_variance))
+    assert math.isfinite(huge_pool.variance) and huge_pool.variance > 0.0
+    for bad_variances in ((math.nextafter(0.0, 1.0), 0.1),
+                          (math.nextafter(0.0, 1.0), huge_variance)):
+        try:
+            inverse_variance_pool((1.0, 2.0), bad_variances)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("non-finite inverse-variance weights must be refused")
     _close(se_from_ci(-0.2, 0.6, 0.95), 0.20408538260532608)
     _close(se_from_normal_p(0.4, 0.04550026389635842), 0.2, 1e-9)
     _close(se_from_normal_p(1.0, 1e-20), 0.10711173906510525, 1e-12)
@@ -715,6 +932,12 @@ if __name__ == "__main__":
         assert "too close to 1" in str(exc)
     else:
         raise AssertionError("rounded confidence critical probability must be refused")
+    try:
+        se_from_ci(-1.0, 1.0, math.nextafter(0.0, 1.0))
+    except ValueError as exc:
+        assert "too close to 0" in str(exc)
+    else:
+        raise AssertionError("rounded lower confidence critical probability must be refused")
     _close(student_t_ppf(0.975, 2), 4.30265, 1e-5)
     _close(student_t_ppf(0.975, 4), 2.77645, 1e-5)
     _close(student_t_ppf(0.975, 9), 2.26216, 1e-5)
@@ -746,6 +969,18 @@ if __name__ == "__main__":
     assert result.ci_lower < result.estimate < result.ci_upper
     assert result.prediction_lower < result.estimate < result.prediction_upper
     _close(hartung_knapp_variance(ys, vs, result.tau2), 0.07564416819442078, 1e-8)
+    hk_result = random_effects_meta_analysis(ys, vs, confidence_level=0.95,
+                                             use_hartung_knapp=True)
+    assert "df=k-1" in hk_result.warnings[0] and "df=k-2" in hk_result.warnings[0]
+    ci_critical = student_t_ppf(0.975, len(ys) - 1)
+    prediction_critical = student_t_ppf(0.975, len(ys) - 2)
+    assert math.isclose(
+        (hk_result.ci_upper - hk_result.ci_lower) / (2.0 * hk_result.standard_error),
+        ci_critical, rel_tol=1e-10)
+    prediction_se = math.sqrt(hk_result.variance + hk_result.tau2)
+    assert math.isclose(
+        (hk_result.prediction_upper - hk_result.prediction_lower) / (2.0 * prediction_se),
+        prediction_critical, rel_tol=1e-10)
 
     try:
         random_effects_meta_analysis((0.1, 0.2), (0.01, 0.02), confidence_level=0.95,
