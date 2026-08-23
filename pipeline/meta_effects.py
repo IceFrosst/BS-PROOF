@@ -2,8 +2,8 @@
 
 The module deliberately requires every quantity used in a calculation.  In
 particular, a confidence level is never guessed and p-values are interpreted
-only as *exact two-sided normal* p-values; no t quantile approximation is
-provided.
+only as *exact two-sided normal* p-values.  Hartung--Knapp intervals use a
+stdlib Student-t quantile implementation.
 
 Conventions
 -----------
@@ -12,8 +12,8 @@ Conventions
   small-sample multiplier ``J = 1 - 3 / (4*df - 1)``.
 * The sampling variance used for g is the common approximation
   ``(n1+n2)/(n1*n2) + g**2/(2*(n1+n2))``.
-* REML tau squared is the non-negative root of the profile restricted
-  likelihood score for an intercept-only model.  A boundary root is zero.
+* REML tau squared is the global non-negative maximum of the profile
+  restricted likelihood for an intercept-only model.  The boundary is tested.
 
 This file has no third-party dependencies.  It is intentionally standalone so
 that the numerical checks at the bottom can also be run with ``python3``.
@@ -231,6 +231,104 @@ def normal_ppf(probability: Number) -> float:
     return numerator / denominator
 
 
+def _regularized_beta(x: float, a: float, b: float) -> float:
+    """Regularized incomplete beta using a continued fraction (stdlib only)."""
+    if x <= 0.0:
+        return 0.0
+    if x >= 1.0:
+        return 1.0
+    log_term = (math.lgamma(a + b) - math.lgamma(a) - math.lgamma(b)
+                + a * math.log(x) + b * math.log1p(-x))
+
+    def continued_fraction(aa: float, bb: float, xx: float) -> float:
+        qab, qap, qam = aa + bb, aa + 1.0, aa - 1.0
+        c, d = 1.0, 1.0 - qab * xx / qap
+        if abs(d) < 3e-30:
+            d = 3e-30
+        d, h = 1.0 / d, 1.0 / d
+        for m in range(1, 257):
+            m2 = 2.0 * m
+            numerator = m * (bb - m) * xx / ((qam + m2) * (aa + m2))
+            d = 1.0 + numerator * d
+            if abs(d) < 3e-30:
+                d = 3e-30
+            c = 1.0 + numerator / c
+            if abs(c) < 3e-30:
+                c = 3e-30
+            d = 1.0 / d
+            h *= d * c
+            numerator = -(aa + m) * (qab + m) * xx / ((aa + m2) * (qap + m2))
+            d = 1.0 + numerator * d
+            if abs(d) < 3e-30:
+                d = 3e-30
+            c = 1.0 + numerator / c
+            if abs(c) < 3e-30:
+                c = 3e-30
+            d = 1.0 / d
+            delta = d * c
+            h *= delta
+            if abs(delta - 1.0) < 3e-14:
+                break
+        return h
+
+    # This branch keeps the returned value away from a needless 1-minus-small
+    # cancellation by evaluating the smaller tail directly.
+    if x < (a + 1.0) / (a + b + 2.0):
+        return math.exp(log_term) * continued_fraction(a, b, x) / a
+    complement = math.exp((math.lgamma(a + b) - math.lgamma(a) - math.lgamma(b)
+                           + b * math.log1p(-x) + a * math.log(x)))
+    return 1.0 - complement * continued_fraction(b, a, 1.0 - x) / b
+
+
+def _student_t_cdf(x: float, degrees_of_freedom: float) -> float:
+    if x == 0.0:
+        return 0.5
+    z = degrees_of_freedom / (degrees_of_freedom + x * x)
+    tail = 0.5 * _regularized_beta(z, degrees_of_freedom / 2.0, 0.5)
+    return 1.0 - tail if x > 0.0 else tail
+
+
+def student_t_ppf(probability: Number, degrees_of_freedom: Number) -> float:
+    """Return a Student-t quantile using regularized beta and bisection."""
+    p = _finite(probability, "probability")
+    df = _positive(degrees_of_freedom, "degrees_of_freedom")
+    if not 0.0 < p < 1.0:
+        raise ValueError("probability must be strictly between 0 and 1")
+    if p == 0.5:
+        return 0.0
+    if p < 0.5:
+        # Search the negative tail directly; ``1-p`` can round to one.
+        lo, hi = -1.0, 0.0
+        while _student_t_cdf(lo, df) > p:
+            lo *= 2.0
+            if not math.isfinite(lo):
+                return -math.inf
+        for _ in range(100):
+            mid = (lo + hi) / 2.0
+            if _student_t_cdf(mid, df) < p:
+                lo = mid
+            else:
+                hi = mid
+        return (lo + hi) / 2.0
+    lo, hi = 0.0, 1.0
+    while _student_t_cdf(hi, df) < p:
+        hi *= 2.0
+        if not math.isfinite(hi):
+            return math.inf
+    for _ in range(100):
+        mid = (lo + hi) / 2.0
+        if _student_t_cdf(mid, df) < p:
+            lo = mid
+        else:
+            hi = mid
+    return (lo + hi) / 2.0
+
+
+# Short aliases make the quantile available without requiring a dependency.
+t_ppf = student_t_ppf
+student_t_quantile = student_t_ppf
+
+
 # ---- effect sizes and standard errors -----------------------------------
 
 
@@ -299,13 +397,14 @@ def se_from_normal_p(effect: Number, two_sided_p: Number) -> float:
 
     A p-value of zero, or p=1 with a zero effect, does not determine a finite
     standard error and is rejected.  This function intentionally does not
-    invert t statistics.
+    invert t statistics.  The lower-tail form avoids rounding ``1-p/2`` to
+    one for very small p-values.
     """
     estimate = _finite(effect, "effect")
     p = _finite(two_sided_p, "two_sided_p")
     if not 0.0 < p < 1.0:
         raise ValueError("two_sided_p must be strictly between 0 and 1")
-    z = normal_ppf(1.0 - p / 2.0)
+    z = -normal_ppf(p / 2.0)
     if estimate == 0.0:
         raise ValueError("zero effect with a normal p-value does not identify SE")
     return abs(estimate) / z
@@ -363,29 +462,86 @@ def _reml_score(tau2: float, ys: Tuple[float, ...], vs: Tuple[float, ...]) -> fl
                    + math.fsum(w * w for w in weights) / sw - sw)
 
 
+def _reml_profile_loglik(tau2: float, ys: Tuple[float, ...],
+                         vs: Tuple[float, ...]) -> float:
+    """Restricted log likelihood, up to a tau-independent constant."""
+    weights = tuple(1.0 / (v + tau2) for v in vs)
+    sw = math.fsum(weights)
+    mean = math.fsum(w * y for w, y in zip(weights, ys)) / sw
+    residual = math.fsum(w * (y - mean) ** 2 for w, y in zip(weights, ys))
+    return -0.5 * (math.fsum(math.log(v + tau2) for v in vs)
+                   + math.log(sw) + residual)
+
+
+def _maximize_reml_interval(lo: float, hi: float,
+                            ys: Tuple[float, ...],
+                            vs: Tuple[float, ...]) -> float:
+    """Deterministic bounded maximization by golden-section search."""
+    # The score roots are smooth maxima, but maximizing the profile directly
+    # also handles a nearly flat or numerically indistinguishable bracket.
+    golden = (math.sqrt(5.0) - 1.0) / 2.0
+    a, b = lo, hi
+    c, d = b - golden * (b - a), a + golden * (b - a)
+    fc = _reml_profile_loglik(c, ys, vs)
+    fd = _reml_profile_loglik(d, ys, vs)
+    for _ in range(180):
+        if fc > fd:
+            b, d, fd = d, c, fc
+            c = b - golden * (b - a)
+            fc = _reml_profile_loglik(c, ys, vs)
+        else:
+            a, c, fc = c, d, fd
+            d = a + golden * (b - a)
+            fd = _reml_profile_loglik(d, ys, vs)
+    return (a + b) / 2.0
+
+
 def reml_tau2(effects: Sequence[Union[Number, EffectEstimate]],
               variances: Optional[Sequence[Number]] = None) -> float:
-    """Numerically solve the non-negative intercept-only REML score equation."""
+    """Return the global non-negative maximum of the intercept REML profile.
+
+    The profile score need not be monotonic: all boundary, grid, and score
+    sign-change candidates are considered before deterministic refinement.
+    """
     ys, vs = _studies(effects, variances)
     if len(ys) < 2:
         raise ValueError("REML requires at least two studies")
-    at_zero = _reml_score(0.0, ys, vs)
-    if at_zero <= 0.0:
-        return 0.0
-    lo, hi = 0.0, max(1.0, max(vs))
-    for _ in range(256):
-        if _reml_score(hi, ys, vs) <= 0.0:
-            break
-        hi *= 2.0
-    else:
-        raise ArithmeticError("could not bracket the REML tau2 root")
-    for _ in range(160):
-        mid = (lo + hi) / 2.0
-        if _reml_score(mid, ys, vs) > 0.0:
-            lo = mid
-        else:
-            hi = mid
-    return (lo + hi) / 2.0
+
+    # A logarithmic scan covers both roots close to a tiny within-study
+    # variance and roots driven by very disparate effects.  The score tends to
+    # be negative in the far tail, so this finite range includes every
+    # practically relevant profile region while avoiding an arbitrary single
+    # root assumption.
+    spread = max((y - ys[0]) ** 2 for y in ys)
+    scale = max(max(vs), spread, 1e-300)
+    low = max(min(vs) * 1e-12, scale * 1e-14, 1e-300)
+    high = scale * 1e12
+    if not math.isfinite(high):
+        high = max(vs) * 1e12
+    count = 4096
+    ratio = (high / low) ** (1.0 / count)
+    grid = [0.0]
+    value = low
+    for _ in range(count + 1):
+        grid.append(value)
+        value *= ratio
+
+    scores = [_reml_score(t, ys, vs) for t in grid]
+    profiles = [_reml_profile_loglik(t, ys, vs) for t in grid]
+    best_tau, best_value = 0.0, profiles[0]
+    candidates = {0.0}
+    for i in range(1, len(grid) - 1):
+        # Include profile peaks even if a score is too small to change sign.
+        if profiles[i] >= profiles[i - 1] and profiles[i] >= profiles[i + 1]:
+            candidates.add(_maximize_reml_interval(grid[i - 1], grid[i + 1], ys, vs))
+        # Explicitly bracket every positive-to-negative score crossing.
+        if scores[i - 1] > 0.0 and scores[i + 1] <= 0.0:
+            candidates.add(_maximize_reml_interval(grid[i - 1], grid[i + 1], ys, vs))
+    for tau in candidates:
+        value = _reml_profile_loglik(tau, ys, vs)
+        if value > best_value:
+            best_tau, best_value = tau, value
+    return best_tau
 
 
 reml_tau_squared = reml_tau2
@@ -435,7 +591,7 @@ def random_effects_meta_analysis(
     *, confidence_level: Number,
     use_hartung_knapp: bool = False,
 ) -> MetaAnalysisResult:
-    """Compute REML random-effects pooling and normal CI/prediction interval."""
+    """Compute REML random-effects pooling and CI/prediction intervals."""
     ys, vs = _studies(effects, variances)
     if len(ys) < 2:
         raise ValueError("meta-analysis requires at least two studies")
@@ -452,12 +608,13 @@ def random_effects_meta_analysis(
         hk_var = hartung_knapp_variance(ys, vs, tau2)
         variance = hk_var
         se = math.sqrt(variance)
-        warnings.append("Hartung-Knapp variance selected; intervals use normal critical values")
+        critical = student_t_ppf(0.5 + level / 2.0, len(ys) - 1)
+        warnings.append("Hartung-Knapp variance selected; intervals use Student-t critical values")
     else:
-        variance, se = pooled.variance, pooled.standard_error
-    ci_lo, ci_hi = pooled.estimate - z * se, pooled.estimate + z * se
+        variance, se, critical = pooled.variance, pooled.standard_error, z
+    ci_lo, ci_hi = pooled.estimate - critical * se, pooled.estimate + critical * se
     pred_se = math.sqrt(variance + tau2)
-    pred_lo, pred_hi = pooled.estimate - z * pred_se, pooled.estimate + z * pred_se
+    pred_lo, pred_hi = pooled.estimate - critical * pred_se, pooled.estimate + critical * pred_se
     return MetaAnalysisResult(pooled.estimate, variance, se, ci_lo, ci_hi,
                               pred_lo, pred_hi, q, i_squared(q, len(ys)), tau2,
                               len(ys), len(ys) - 1, level, fixed, hk_var,
@@ -469,7 +626,8 @@ meta_analysis = random_effects_meta_analysis
 
 __all__ = [
     "EffectEstimate", "HedgesGEstimate", "PooledEstimate", "MetaAnalysisResult",
-    "normal_ppf", "pooled_sd", "hedges_g", "hedges_g_estimate",
+    "normal_ppf", "student_t_ppf", "t_ppf", "student_t_quantile",
+    "pooled_sd", "hedges_g", "hedges_g_estimate",
     "calculate_hedges_g", "sampling_variance_g", "hedges_g_variance",
     "variance_g", "calculate_sampling_variance_g", "se_from_ci",
     "standard_error_from_ci", "se_from_normal_p", "standard_error_from_normal_p",
@@ -495,6 +653,23 @@ if __name__ == "__main__":
     _close(fixture.variance, 0.19417207096473935)
     _close(se_from_ci(-0.2, 0.6, 0.95), 0.20408538260532608)
     _close(se_from_normal_p(0.4, 0.04550026389635842), 0.2, 1e-9)
+    _close(se_from_normal_p(1.0, 1e-20), 0.10711173906510525, 1e-12)
+    _close(student_t_ppf(0.975, 2), 4.30265, 1e-5)
+    _close(student_t_ppf(0.975, 4), 2.77645, 1e-5)
+    _close(student_t_ppf(0.975, 9), 2.26216, 1e-5)
+
+    # This profile has a negative boundary score, a local minimum near zero,
+    # and a separate global maximum; a single monotonic root search returns
+    # the wrong answer (the global maximum is approximately 8.27 here).
+    adversarial_ys = (-0.10027, -5.36155, -0.11737, -0.27798)
+    adversarial_vs = (0.000834, 0.272316, 0.000156, 59.8430)
+    adversarial_tau = reml_tau2(adversarial_ys, adversarial_vs)
+    assert 8.0 < adversarial_tau < 8.5
+    boundary_ys = (0.7028517945952437, -1.1882776183125952,
+                   4.546805193435157, 4.19584827401971)
+    boundary_vs = (2.500884033520828, 584.5321013205385,
+                   0.5434096154482871, 0.027271798891491165)
+    _close(reml_tau2(boundary_ys, boundary_vs), 0.0, 1e-14)
 
     ys = (0.2, 0.8, 1.1)
     vs = (0.04, 0.09, 0.16)
