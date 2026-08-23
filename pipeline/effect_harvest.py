@@ -51,12 +51,14 @@ _N = re.compile(
 # a standard error or confidence interval.  Explicit SD text is deliberately
 # not a marker and remains acceptable.
 _ERROR_INTERVAL_MARKER = re.compile(
-    # Accept the common abbreviated spellings, including punctuation and
-    # spacing variants (for example ``Std. Error``, ``Std Error``, ``S.E.``
-    # and ``S E``), but deliberately do not treat SD/standard deviation as an
-    # error marker.
+    # Accept the common abbreviated spellings, including plural, punctuation,
+    # and spacing variants (for example ``SEs``, ``95% CIs``, ``S.E.s``,
+    # ``Std. Error``, ``Std Error``, ``S.E.`` and ``S E``), but deliberately
+    # do not treat SD/standard deviation as an error marker.  The optional
+    # punctuation before the plural suffix is needed for forms such as
+    # ``S.E.M.s`` while keeping the acronym itself bounded as one marker.
     r"(?:"
-    r"\b(?:s\s*[\W_]*e\s*[\W_]*m|s\s*[\W_]*e|c\s*[\W_]*i)\b|"
+    r"\b(?:s\s*[\W_]*e\s*[\W_]*m|s\s*[\W_]*e|c\s*[\W_]*i)(?:[\W_]*s)?\b|"
     r"\b(?:standard|std)\s*[\W_]*(?:error|errors|err|errs)\b|"
     r"\bconfidence\s*[\W_]*intervals?\b"
     r")",
@@ -742,6 +744,82 @@ Note: values are reported as observed."""
     clean_trailing_found = harvest_candidates(clean_trailing_note, "muscle strength", ["Treatment", "Control"])
     assert len(clean_trailing_found) == 1
     assert clean_trailing_found[0].caption == "Markdown caption: trailing note result"
+
+    # Exercise every requested plural/punctuated acronym in each supported
+    # source shape.  Each refusal has an equivalent explicit-SD positive
+    # control, and aliases match the actual arm headers in every case.
+    acronym_markers = ("SEs", "SEMs", "CIs", "95% CIs", "S.E.s", "S.E.M.s")
+    for marker in acronym_markers:
+        direct_marked = {
+            "caption": "Direct mapping marker",
+            "footnotes": f"a: values reported as {marker}",
+            "columns": ["Outcome", "Treatment", "Control"],
+            "rows": [["Muscle strength", "10.2 ± 2.1", "8.4 +/- 2.0"]],
+        }
+        direct_clean = {
+            **direct_marked,
+            "footnotes": "a: values explicitly reported as SD",
+            "rows": [["Muscle strength", "10.2 ± 2.1 (SD)", "8.4 +/- 2.0 (SD)"]],
+        }
+        nested_marked = {
+            "caption": "Nested mapping marker",
+            "table": {
+                "footnotes": f"b: values reported as {marker}",
+                "columns": ["Outcome", "Treatment", "Control"],
+                "rows": [["Muscle strength", "10.2 ± 2.1", "8.4 +/- 2.0"]],
+            },
+        }
+        nested_clean = {
+            "caption": "Nested mapping marker",
+            "table": {
+                "footnotes": "b: values explicitly reported as SD",
+                "columns": ["Outcome", "Treatment", "Control"],
+                "rows": [["Muscle strength", "10.2 ± 2.1 (SD)", "8.4 +/- 2.0 (SD)"]],
+            },
+        }
+        wrapper_child = {
+            "caption": "Wrapped child marker",
+            "columns": ["Outcome", "Treatment", "Control"],
+            "rows": [["Muscle strength", "10.2 ± 2.1", "8.4 +/- 2.0"]],
+        }
+        wrapper_marked = {
+            "title": "Tables wrapper marker",
+            "notes": f"c: values reported as {marker}",
+            "tables": [wrapper_child],
+        }
+        wrapper_clean = {
+            "title": "Tables wrapper marker",
+            "notes": "c: values explicitly reported as SD",
+            "tables": [{
+                **wrapper_child,
+                "rows": [["Muscle strength", "10.2 ± 2.1 (SD)", "8.4 +/- 2.0 (SD)"],],
+            }],
+        }
+        markdown_marked = f"""Markdown trailing marker
+| Outcome | Treatment | Control |
+| --- | --- | --- |
+| Muscle strength | 10.2 ± 2.1 | 8.4 +/- 2.0 |
+Note: values reported as {marker}"""
+        markdown_clean = """Markdown trailing explicit SD
+| Outcome | Treatment | Control |
+| --- | --- | --- |
+| Muscle strength | 10.2 ± 2.1 (SD) | 8.4 +/- 2.0 (SD) |
+Note: values explicitly reported as SD"""
+        matrix = (
+            ("direct mapping", direct_marked, direct_clean),
+            ("nested", nested_marked, nested_clean),
+            ("tables wrapper", wrapper_marked, wrapper_clean),
+            ("Markdown trailing note", markdown_marked, markdown_clean),
+        )
+        for shape, marked, clean in matrix:
+            marked_found = harvest_candidates(marked, "muscle strength", ["Treatment", "Control"])
+            assert marked_found == [], f"{shape} accepted {marker}"
+            clean_found = harvest_candidates(clean, "muscle strength", ["Treatment", "Control"])
+            assert len(clean_found) == 1, f"{shape} refused explicit SD for {marker}"
+            assert all("SD" in arm.cell_verbatim for arm in clean_found[0].arms)
+
+    for sd_marker in ("SD", "SDs", "S.D.", "S.D.s", "standard deviation", "standard deviations"):
+        assert not _identifies_se_or_ci(sd_marker)
 
     wrapper_error_child = {
         "caption": "Child provenance",
