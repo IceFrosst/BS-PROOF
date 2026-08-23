@@ -51,8 +51,15 @@ _N = re.compile(
 # a standard error or confidence interval.  Explicit SD text is deliberately
 # not a marker and remains acceptable.
 _ERROR_INTERVAL_MARKER = re.compile(
-    r"(?:\b(?:se|sem|ci)\b|\bstandard\s+errors?\b|\bconfidence\s+intervals?\b|"
-    r"\bs\s*\.\s*e\.?\b|\bc\s*\.\s*i\.?\b)",
+    # Accept the common abbreviated spellings, including punctuation and
+    # spacing variants (for example ``Std. Error``, ``Std Error``, ``S.E.``
+    # and ``S E``), but deliberately do not treat SD/standard deviation as an
+    # error marker.
+    r"(?:"
+    r"\b(?:s\s*[\W_]*e\s*[\W_]*m|s\s*[\W_]*e|c\s*[\W_]*i)\b|"
+    r"\b(?:standard|std)\s*[\W_]*(?:error|errors|err|errs)\b|"
+    r"\bconfidence\s*[\W_]*intervals?\b"
+    r")",
     re.IGNORECASE,
 )
 # These markers are intentionally broad.  Without a requested visit or
@@ -401,7 +408,7 @@ def harvest_candidates(
         # provenance wrapper.  Refuse the whole candidate whenever source
         # text identifies the relevant ± values as SE/SEM/CI.  This is
         # intentionally conservative; SD/standard deviation text is allowed.
-        source_text = list(table.columns)
+        source_text = [table.caption, *table.columns]
         source_text.extend(cell for row in table.rows for cell in row)
         if any(_identifies_se_or_ci(text) for text in source_text):
             continue
@@ -538,7 +545,19 @@ def _self_check() -> None:
 
     # A ± value is not SD when the source labels it as a standard error or CI;
     # this includes labels in headers and footnote cells.
-    for marker in ("SE", "SEM", "CI", "standard error", "confidence interval", "S.E."):
+    for marker in (
+        "SE",
+        "SEM",
+        "CI",
+        "standard error",
+        "confidence interval",
+        "S.E.",
+        "S E",
+        "C.I.",
+        "Std. Error",
+        "Std Error",
+        "Std. Err",
+    ):
         marked_cell = {
             "caption": "error marker",
             "columns": ["Outcome", "Treatment", "Control"],
@@ -551,11 +570,29 @@ def _self_check() -> None:
             "rows": [["Muscle strength", "10.2 ± 2.1", "8.4 +/- 2.0"]],
         }
         assert harvest_candidates(marked_header, "muscle strength", ["Treatment", "Control"]) == []
+    mapping_caption_marker = {
+        **valid,
+        "caption": "Table 1. Std. Error outcomes",
+    }
+    assert harvest_candidates(mapping_caption_marker, "muscle strength", ["Treatment", "Control"]) == []
+
+    nested_caption_marker = {
+        "caption": "Outer caption: Std Error",
+        "table": nested_caption["table"],
+    }
+    assert harvest_candidates(nested_caption_marker, "muscle strength", ["Treatment", "Control"]) == []
+
+    markdown_caption_marker = """Markdown caption: S.E.
+| Outcome | Treatment | Control |
+| --- | --- | --- |
+| Muscle strength | 10.2 ± 2.1 | 8.4 +/- 2.0 |"""
+    assert harvest_candidates(markdown_caption_marker, "muscle strength", ["Treatment", "Control"]) == []
+
     marked_footnote = {
         "caption": "error marker footnote",
         "columns": ["Outcome", "Treatment", "Control", "Notes"],
         "rows": [
-            ["Muscle strength", "10.2 ± 2.1 (a)", "8.4 +/- 2.0", "a: confidence interval"],
+            ["Muscle strength", "10.2 ± 2.1 (a)", "8.4 +/- 2.0", "a: Std. Err"],
         ],
     }
     assert harvest_candidates(marked_footnote, "muscle strength", ["Treatment", "Control"]) == []
