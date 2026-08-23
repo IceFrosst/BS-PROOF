@@ -33,7 +33,9 @@ _MEAN_SD = re.compile(
     r"(?:\([^)]*\)|\[[^]]*\]|[*†‡])?\s*$",
     re.IGNORECASE,
 )
-_N = re.compile(r"\bN?\s*=\s*(?P<n>\d+)\b", re.IGNORECASE)
+# Sample sizes must have an explicit literal n/N marker.  In particular,
+# ``age=44`` is not an n value.
+_N = re.compile(r"\bn\s*=\s*(?P<n>\d+)\b", re.IGNORECASE)
 # These markers are intentionally broad.  Without a requested visit or
 # contrast, selecting one of these rows would silently make a claim about it.
 _ENDPOINT_MARKER = re.compile(
@@ -128,10 +130,16 @@ def _contains_term(text: str, term: str) -> bool:
     return re.search(rf"(?<!\w){re.escape(needle)}(?!\w)", haystack) is not None
 
 
-def _parse_number(value: str) -> float:
-    # A comma as decimal punctuation is common in copied tables; thousands
-    # separators are not accepted because silently changing them is risky.
-    return float(value.replace(",", "."))
+def _parse_number(value: str) -> float | None:
+    # A comma as decimal punctuation is common in copied tables, but a token
+    # such as ``1,234`` is ambiguous with a thousands separator.  Refuse that
+    # shape rather than silently changing its meaning to 1.234.
+    if re.fullmatch(r"[+-]?\d+,\d{3}", value):
+        return None
+    try:
+        return float(value.replace(",", "."))
+    except ValueError:
+        return None
 
 
 def _parse_mean_sd(value: str) -> tuple[float, float] | None:
@@ -140,7 +148,7 @@ def _parse_mean_sd(value: str) -> tuple[float, float] | None:
         return None
     mean = _parse_number(match.group("mean"))
     sd = _parse_number(match.group("sd"))
-    if sd < 0:
+    if mean is None or sd is None or sd < 0:
         return None
     return mean, sd
 
@@ -268,7 +276,7 @@ def _normalise_aliases(arm_aliases: Mapping[str, Any] | Sequence[str]) -> dict[s
     if isinstance(arm_aliases, Mapping):
         result: dict[str, tuple[str, ...]] = {}
         for label, aliases in arm_aliases.items():
-            values = [label] if isinstance(aliases, str) else list(aliases) if isinstance(aliases, Sequence) else []
+            values = [aliases] if isinstance(aliases, str) else list(aliases) if isinstance(aliases, Sequence) else []
             values = [str(value) for value in values if str(value).strip()]
             if str(label).strip() not in values:
                 values.insert(0, str(label))
@@ -337,12 +345,17 @@ def harvest_candidates(
         if ambiguous_header or len(matched_columns) != 2 or len({m[1] for m in matched_columns}) != 2:
             continue
 
+        # The first column is the identified descriptor column for this
+        # conservative table shape.  Do not search the complete row: notes,
+        # footnotes, and other cells are not outcome descriptors.
+        descriptor_column = 0
         for row_index, row in enumerate(table.rows):
             row_verbatim = tuple(row)
             row_text = " | ".join(row)
+            descriptor_text = row[descriptor_column] if descriptor_column < len(row) else ""
             if _ENDPOINT_MARKER.search(row_text) or _TIMEPOINT_MARKER.search(row_text):
                 continue
-            matched_terms = [term for term in terms if _contains_term(row_text, term)]
+            matched_terms = [term for term in terms if _contains_term(descriptor_text, term)]
             if not matched_terms:
                 continue
             longest = max(len(_normalise(term)) for term in matched_terms)
@@ -387,7 +400,6 @@ def harvest_candidates(
             if refused or len(arm_values) != 2:
                 continue
 
-            descriptor_column = 0
             outcome_cell = CellProvenance(
                 table_index=table_index,
                 caption=table.caption,
@@ -430,13 +442,47 @@ def _self_check() -> None:
         "columns": ["Outcome", "Creatine (n=20)", "Placebo (n=19)"],
         "rows": [["Muscle strength", "10.2 ± 2.1", "8.4 +/- 2.0"]],
     }
-    found = harvest_candidates(valid, ["muscle strength"], {"arm_a": ["Creatine"], "arm_b": ["Placebo"]})
+    # Scalar mapping values are valid aliases, not sequences to be expanded.
+    found = harvest_candidates(valid, ["muscle strength"], {"arm_a": "Creatine", "arm_b": "Placebo"})
     assert len(found) == 1
     assert found[0].arms[0].mean == 10.2 and found[0].arms[0].sd == 2.1
     assert found[0].arms[0].n == 20 and found[0].arms[1].n == 19
     assert found[0].caption == "Table 1. Strength outcomes"
     assert found[0].arms[0].provenance.cell_verbatim == "10.2 ± 2.1"
+    assert found[0].outcome_cell.column_index == 0
+    assert found[0].outcome_cell.cell_verbatim == "Muscle strength"
     assert found[0].allocation is None and found[0].timepoint is None and found[0].endpoint_kind is None
+
+    age_is_not_n = {
+        "caption": "age annotation",
+        "columns": ["Outcome", "Treatment (age=44)", "Control (n=19)"],
+        "rows": [["Muscle strength", "10.2 ± 2.1", "8.4 +/- 2.0"]],
+    }
+    age_found = harvest_candidates(age_is_not_n, "muscle strength", {"arm_a": "Treatment", "arm_b": "Control"})
+    assert len(age_found) == 1
+    assert age_found[0].arms[0].n is None and age_found[0].arms[1].n == 19
+
+    age_value_is_not_n = {
+        "caption": "age in value note",
+        "columns": ["Outcome", "Treatment", "Control"],
+        "rows": [["Muscle strength", "10.2 ± 2.1 (age=44)", "8.4 +/- 2.0"]],
+    }
+    age_value_found = harvest_candidates(age_value_is_not_n, "muscle strength", ["Treatment", "Control"])
+    assert len(age_value_found) == 1 and age_value_found[0].arms[0].n is None
+
+    ambiguous_comma = {
+        "caption": "ambiguous comma",
+        "columns": ["Outcome", "Treatment", "Control"],
+        "rows": [["Muscle strength", "1,234 ± 2.1", "8.4 +/- 2.0"]],
+    }
+    assert harvest_candidates(ambiguous_comma, "muscle strength", ["Treatment", "Control"]) == []
+
+    outcome_only_in_notes = {
+        "caption": "notes are not descriptors",
+        "columns": ["Outcome", "Treatment", "Notes", "Control"],
+        "rows": [["Unrelated measure", "10.2 ± 2.1", "muscle strength", "8.4 +/- 2.0"]],
+    }
+    assert harvest_candidates(outcome_only_in_notes, "muscle strength", ["Treatment", "Control"]) == []
 
     single_arm = {
         "caption": "single arm",
@@ -476,4 +522,4 @@ def _self_check() -> None:
 
 if __name__ == "__main__":
     _self_check()
-    print(json.dumps({"CANDIDATES": []}, separators=(",", ":")))
+    print("effect_harvest self-check: PASS")
