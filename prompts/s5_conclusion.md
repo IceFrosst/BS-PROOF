@@ -282,3 +282,40 @@ Report at most 20 claims. If a paper reports more, keep every PRIMARY outcome
 first, then the secondary outcomes with the largest reported effects. Never drop
 a null_effect to make room for a benefit -- that would bias the score upward,
 which is the exact failure this subagent exists to prevent.
+
+STAGE A MEASURED-EFFECTS CONTRACT
+
+Populate the nullable measured-effect fields whenever the paper explicitly
+reports the fact or it can be defensibly derived from the reported ingredient
+and control arm values. `estimate_kind` is smd, mean_difference, ratio,
+relative_percent, or percentage_points; `estimate_basis` is reported or
+`derived_from_arms`; `estimand` is endpoint or change_from_baseline. Preserve
+the reported `timepoint`, arm Ns, arm means, arm SDs, standard error, CI level,
+p-value kind, sidedness, test distribution, degrees of freedom, and design kind
+(parallel, crossover, or cluster). Leave a field null when the paper does not
+state it. A change score is not an endpoint: never use an endpoint SD as the SD
+for a change-from-baseline estimate.
+
+DO NOT ASSUME OR RECONSTRUCT FACTS THAT ARE NOT REPORTED:
+  - Do not assume equal allocation or infer an arm N from the other arm.
+  - Do not infer a confidence-interval level. Fill `ci_level` only when the
+    level is stated alongside the interval.
+  - Do not use an endpoint SD for a change score, even if it is the only SD.
+  - Do not convert a crossover or cluster result to an independent parallel-arm
+    estimate without the required paired or cluster-adjusted facts. Record the
+    design and leave the unsupported derived estimate null.
+  - Do not encode a bounded p (p< or p>) as an exact p. Use the matching
+    `less_than` or `greater_than` kind and do not substitute the bound as the
+    exact value.
+  - Do not encode a result reported as NS as an exact p; use
+    `not_significant`. A bounded or NS result must never be classified as
+    `exact`; only an explicitly reported numeric equality can be `exact`.
+  - Do not attach an omnibus/time/main-effect p to a particular arm contrast.
+    A p-value belongs only to the contrast or endpoint test it actually tests;
+    leave it null when that mapping is not explicit.
+
+When any extracted value comes from a table, `table_provenance` is mandatory.
+Copy the table caption, row label, and column header(s) VERBATIM (including
+capitalisation, punctuation, and units); never paraphrase, invent, or silently
+normalise them. Use null provenance when no table supplied the value. The
+`evidence_span` must still be the shortest supporting quote.

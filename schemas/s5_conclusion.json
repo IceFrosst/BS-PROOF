@@ -115,6 +115,178 @@
               "null"
             ]
           },
+          "estimate_kind": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "smd",
+              "mean_difference",
+              "ratio",
+              "relative_percent",
+              "percentage_points",
+              null
+            ],
+            "description": "Kind of effect estimate reported or derived for this claim."
+          },
+          "estimate_basis": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "reported",
+              "derived_from_arms",
+              null
+            ],
+            "description": "Whether the estimate was printed by the paper or defensibly derived from arm values."
+          },
+          "estimand": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "endpoint",
+              "change_from_baseline",
+              null
+            ]
+          },
+          "timepoint": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Verbatim reported assessment timepoint."
+          },
+          "n_ingredient": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "n_control": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "mean_ingredient": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "mean_control": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "sd_ingredient": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "sd_control": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "standard_error": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "ci_level": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Confidence interval level only when explicitly reported; preserve the paper's scale (for example, 95)."
+          },
+          "p_value_kind": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "exact",
+              "less_than",
+              "greater_than",
+              "not_significant",
+              null
+            ]
+          },
+          "p_sidedness": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "one",
+              "two",
+              null
+            ]
+          },
+          "test_distribution": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "normal",
+              "t",
+              "other",
+              null
+            ]
+          },
+          "degrees_of_freedom": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "design_kind": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "parallel",
+              "crossover",
+              "cluster",
+              null
+            ]
+          },
+          "table_provenance": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": false,
+            "required": [
+              "caption",
+              "row",
+              "column"
+            ],
+            "properties": {
+              "caption": {
+                "type": "string"
+              },
+              "row": {
+                "type": "string"
+              },
+              "column": {
+                "type": "string"
+              }
+            },
+            "description": "Verbatim table caption, row label, and column header(s) supporting extracted values."
+          },
           "is_primary_outcome": {
             "type": "boolean"
           },
