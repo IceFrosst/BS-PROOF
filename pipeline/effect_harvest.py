@@ -20,6 +20,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 import json
+import math
 import re
 from collections.abc import Mapping, Sequence
 from typing import Any
@@ -35,8 +36,10 @@ _MEAN_SD = re.compile(
 )
 # Sample sizes must have an explicit literal n/N marker.  In particular,
 # ``age=44`` is not an n value.  Keep a sign so non-positive values are
-# refused rather than mistaken for an omitted sample size.
-_N = re.compile(r"\bn\s*=\s*(?P<n>[+-]?\d+)\b", re.IGNORECASE)
+# refused rather than mistaken for an omitted sample size.  Consume the whole
+# numeric token so grouped and decimal values cannot be truncated to integers.
+_N_MARKER = re.compile(r"\bn\s*=", re.IGNORECASE)
+_N = re.compile(r"\bn\s*=\s*(?P<n>[+-]?\d[\d.,]*)(?![\w.,])", re.IGNORECASE)
 # These markers are intentionally broad.  Without a requested visit or
 # contrast, selecting one of these rows would silently make a claim about it.
 _ENDPOINT_MARKER = re.compile(
@@ -138,9 +141,10 @@ def _parse_number(value: str) -> float | None:
     if re.fullmatch(r"[+-]?\d+,\d{3}", value):
         return None
     try:
-        return float(value.replace(",", "."))
+        parsed = float(value.replace(",", "."))
     except ValueError:
         return None
+    return parsed if math.isfinite(parsed) else None
 
 
 def _parse_mean_sd(value: str) -> tuple[float, float] | None:
@@ -154,14 +158,30 @@ def _parse_mean_sd(value: str) -> tuple[float, float] | None:
     return mean, sd
 
 
+def _n_status(value: str) -> tuple[bool, int | None]:
+    """Return whether n was reported and its value when it is an integer."""
+
+    marker = _N_MARKER.search(value)
+    if marker is None:
+        return False, None
+    match = _N.search(value, marker.start())
+    if match is None or match.start() != marker.start():
+        return True, None
+    token = match.group("n")
+    if not re.fullmatch(r"[+-]?\d+", token):
+        return True, None
+    try:
+        return True, int(token)
+    except ValueError:
+        return True, None
+
+
 def _header_n(header: str) -> int | None:
-    match = _N.search(header)
-    return int(match.group("n")) if match else None
+    return _n_status(header)[1]
 
 
 def _value_n(value: str) -> int | None:
-    match = _N.search(value)
-    return int(match.group("n")) if match else None
+    return _n_status(value)[1]
 
 
 def _split_markdown(line: str) -> list[str]:
@@ -374,11 +394,13 @@ def harvest_candidates(
                     refused = True
                     break
                 mean, sd = parsed
-                header_n = _header_n(table.columns[column_index])
-                value_n = _value_n(verbatim)
-                # An explicitly reported non-positive n violates the schema;
-                # refuse this candidate instead of treating it as unknown.
-                if (header_n is not None and header_n <= 0) or (value_n is not None and value_n <= 0):
+                header_has_n, header_n = _n_status(table.columns[column_index])
+                value_has_n, value_n = _n_status(verbatim)
+                # An explicitly reported malformed or non-positive n violates
+                # the schema; refuse it instead of treating it as unknown.
+                if (header_has_n and (header_n is None or header_n <= 0)) or (
+                    value_has_n and (value_n is None or value_n <= 0)
+                ):
                     refused = True
                     break
                 if header_n is not None and value_n is not None and header_n != value_n:
@@ -482,6 +504,36 @@ def _self_check() -> None:
         "rows": [["Muscle strength", "1,234 ± 2.1", "8.4 +/- 2.0"]],
     }
     assert harvest_candidates(ambiguous_comma, "muscle strength", ["Treatment", "Control"]) == []
+
+    # Conversion of a syntactically valid but too-large number can produce
+    # infinity; non-finite means and SDs are not table statistics.
+    assert _parse_number("9" * 400) is None
+    non_finite_mean = {
+        "caption": "non-finite mean",
+        "columns": ["Outcome", "Treatment", "Control"],
+        "rows": [["Muscle strength", f"{'9' * 400} ± 2.1", "8.4 +/- 2.0"]],
+    }
+    assert harvest_candidates(non_finite_mean, "muscle strength", ["Treatment", "Control"]) == []
+    non_finite_sd = {
+        "caption": "non-finite SD",
+        "columns": ["Outcome", "Treatment", "Control"],
+        "rows": [["Muscle strength", f"10.2 ± {'9' * 400}", "8.4 +/- 2.0"]],
+    }
+    assert harvest_candidates(non_finite_sd, "muscle strength", ["Treatment", "Control"]) == []
+
+    for malformed_n in ("1,234", "20.5"):
+        malformed_n_header = {
+            "caption": "malformed n in header",
+            "columns": ["Outcome", f"Treatment (n={malformed_n})", "Control (n=19)"],
+            "rows": [["Muscle strength", "10.2 ± 2.1", "8.4 +/- 2.0"]],
+        }
+        assert harvest_candidates(malformed_n_header, "muscle strength", ["Treatment", "Control"]) == []
+        malformed_n_value = {
+            "caption": "malformed n in value",
+            "columns": ["Outcome", "Treatment", "Control"],
+            "rows": [["Muscle strength", f"10.2 ± 2.1 (n={malformed_n})", "8.4 +/- 2.0"]],
+        }
+        assert harvest_candidates(malformed_n_value, "muscle strength", ["Treatment", "Control"]) == []
 
     outcome_only_in_notes = {
         "caption": "notes are not descriptors",
