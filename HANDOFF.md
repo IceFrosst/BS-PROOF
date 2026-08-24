@@ -6,6 +6,117 @@
 
 ---
 
+## 2026-08-24 afternoon (Claude Code session — dose bracket, catalog un-quarantine, bs-proof deploy)
+
+Ran alongside the Pi session; that session bumped PROMPT_VERSION to v1.23
+mid-way, so nothing here re-extracted. All measurements are deterministic
+replays of cached extractions.
+
+### THE DASHBOARD HAD SILENTLY STOPPED SERVING NEW RUNS (fixed, 17b90cf)
+`lib/dashboard/schema.ts` validates DashboardRunV1 with a `.strict()` Zod
+object. The `v13_shadow` block was added to the artifact writer and to
+`schemas/dashboard_run_v1.schema.json` but NOT to the Zod schema, so every
+artifact written after it was quarantined with `Unrecognized key:
+"v13_shadow"`. Five runs, all of 2026-08-24. Nothing failed loudly:
+- the dashboard kept rendering, newest run stuck at 02:14;
+- `GET /api/analyze-label` reads a different path and kept offering
+  `20260824_113359`, whose page therefore **404'd in production**.
+Retained catalog 35 -> 40, quarantined 5 -> 0. `tests/catalog-quarantine.test.ts`
+guards both halves (nothing quarantined; every offered product has a servable
+run) — either check alone would have passed while production was broken.
+
+### Dose axis: unspecified forms are bracketed, not discarded (cdb0dac)
+Founder asked why the dose arc scored so low. It was NOT the constants. 40 of
+155 studies stated a real dose (3 g, 5 g, 20 g) and lost it in
+`elemental_dose_range_mg` because the paper never named the salt — while
+loading-protocol trials survived precisely because they DID name monohydrate.
+Every benefit band therefore rested on ONE trial, at a loading dose:
+muscle_strength 3/16 dosed (band from 1), lean_body_mass 3/11 (1),
+muscle_power 6/25 (2).
+Now bracketed across the ingredient's known salts (creatine 0.78–1.00), the
+same argument the function's own docstring already makes for hydrates. No new
+constants; nothing frozen touched; `w_study` unchanged so SIGNED scores do not
+move. Ported to `lib/analyze/vocab.ts`, pinned by
+`tests/dose-bracket-parity.test.ts` to Python-computed values.
+
+Measured by deterministic replay of run `20260824_113359` (the control replay,
+with the change reverted, reproduces all five published composites exactly):
+
+| outcome | before | after |
+|---|--:|--:|
+| muscle_power | 44 | **67** |
+| lean_body_mass | 40 | 50 |
+| energy_levels | 20 | 28 |
+| muscle_strength | 38 | 38 |
+| exercise_endurance | 9 | 9 |
+
+**NOT YET IN ANY ARTIFACT** — the dashboard renders retained artifacts, so
+those numbers appear only after a re-score. Blocked on v1.23 (cache invalid)
+and on the subscription being busy. The replay script used is disposable; the
+method is: rebuild `build_ecus` inputs from a run's `_context.json`
+(`studies_list` + `product`), grafting `design_rank` from the `_dashboard.json`
+contributions — the context artifact does not retain design rank, and without
+it every study defaults to 14 and every outcome gates.
+
+### The failed omega-3 run was reverted (1a1c776)
+An omega-3 run auto-pushed with zero scored outcomes (`SP_AUTO_PUSH` was not
+set to 0) and became the site's `latest`. Reverted; its artifacts and INDEX
+rows removed. **Use `SP_AUTO_PUSH=0` for anything not meant to publish.**
+Cause of the failure: 40/40 subagent calls failed — see CLI notes below.
+
+### THIS WINDOWS MACHINE COULD NEVER RUN EXTRACTION (fixed)
+Two independent breakages, both now understood:
+1. the npm wrapper existed but the binary did not; reinstalling restored it,
+   and reinstalling ALSO cleared the workspace trust flag, which made every
+   call fail with "this workspace has not been trusted";
+2. `claude` resolves to `claude.CMD`, and cmd.exe mangles the double quotes in
+   `--json-schema`, so every call died with "not valid JSON". Bypass the shim:
+
+   `SP_CLAUDE_BIN=$APPDATA/npm/node_modules/@anthropic-ai/claude-code/bin/claude.exe`
+
+   Verified with a live S8 call returning valid JSON. This is NOT a version
+   issue — 2.1.237 and 2.1.241 both fail through the shim.
+
+### Deploy: bs-proof.vercel.app is now current; the vision key is NOT valid
+There are TWO projects and they are not the same deployment:
+- `bs-proof-dashboard.vercel.app` — icefrost account, the handoff's production.
+  Analyzer OFF. **Not reachable from this machine's Vercel login.**
+- `bs-proof.vercel.app` — aykhanstoic account. Deployed current `main` here
+  (founder chose this target). Analyzer ON, newest run served, the 404 fixed.
+
+**OPEN AND BLOCKING A SCAN DEMO — but not the key.** `GEMINI_API_KEY` on
+`bs-proof` (ends `ZcbA`) is a VALID GEMINI key, not a DeepSeek one: pointing
+`VISION_API_URL` at DeepSeek returned 401 "api key is invalid", and removing
+it again moved the error to Google's own **503 "model is currently
+experiencing high demand"**, i.e. it authenticated. Both overrides were
+removed; the deployment is on the default Gemini free-tier path, which is
+correct.
+
+The remaining problem is CAPACITY, not configuration: 3 of 4 live attempts
+returned 503 and the fourth timed out at 50 s. The free tier was unusable at
+12:47 UTC. Before demoing, re-test — and have a fallback, because a 503 on
+stage looks identical to a broken product. The DeepSeek key on the icefrost
+account reportedly works and is the obvious fallback (`VISION_API_URL` +
+`LABEL_MODEL`, see the 2026-08-23 entry).
+Also: adding env vars by piping a string from PowerShell writes a **BOM** into
+the value (`Failed to parse URL from ﻿https://...`). Use
+`cmd /c "vercel env add NAME production < file.txt"` with a BOM-free file.
+
+### Also fixed
+- `tests/e2e/dashboard.spec.ts` asserted a rowheader named "S5" without
+  `exact: true`, so it matched the new S5T row and failed Playwright strict
+  mode — one of 26 mobile failures in CI run 32708558063.
+- The census on an unscored product is now typeset as figures rather than a
+  footnote: it is the ANSWER on that path. Counts keep their units, there is no
+  denominator, and a "Counts, not a score" tag sits above them.
+
+NEXT: (1) a valid vision key, or demo from bs-proof-dashboard; (2) re-score
+creatine so the 44 -> 67 dose fix reaches an artifact; (3) the remaining
+mobile e2e click/focus timeouts are NOT diagnosed — the local repro needs
+`npx playwright install chromium`.
+
+---
+
 ## 2026-08-24 (founder + Pi session — overnight run, v13 shadow repair, dose bug fixes)
 
 ### ⚠ HEADLINE SCORE CHANGED: creatine 65 → 44/100. READ WHY BEFORE PANICKING.
