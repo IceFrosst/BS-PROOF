@@ -6,6 +6,95 @@
 
 ---
 
+## 2026-08-24 (founder + Pi session — overnight run, v13 shadow repair, dose bug fixes)
+
+### ⚠ HEADLINE SCORE CHANGED: creatine 65 → 44/100. READ WHY BEFORE PANICKING.
+Two genuine production bugs were fixed (details below), both of which had been
+INFLATING the dose arc:
+- the observed-benefit dose band was built from PRE-routing, PRE-collapse
+  claims, so off-target-population and tie-cleared claims defined the band —
+  the product's closeness=1.0 was unearned;
+- study doses were compared in MIXED bases (38 cached studies carried raw
+  compound mg in `elemental_dose_mg`; 23 were monohydrate), so the band mixed
+  5000-compound with 4396-elemental.
+With both fixed, dose closeness collapses for most outcomes and the composite
+drops (best outcome now muscle_power 44). THE EFFECT AXIS IS STILL v12 VOTE
+COUNTING with null=-0.35 — so the score now reads honestly-low on dose while
+still being distorted on effect. **The scoring arc likely needs a founder-
+approved recalibration to score higher again**: either retune the frozen dose
+knots / closeness weighting against the now-honest bands, or promote v13
+measured effects once coverage suffices. Constants are FROZEN; proposals filed
+in docs/REVIEW_PENDING.md. Recalibration = founder call, not an agent call.
+
+### Overnight: 400-study creatine run COMPLETED (v1.22 cold re-extraction)
+- 156/156 studies (155 usable), zero quota losses — the new quota-survival
+  requeue worked through ~13 pauses (~3h15m waiting inside an 8h budget).
+- Log: out/run_creatine_shadow_v13_20260824_c15.log (SP_MAX_CONCURRENCY=15;
+  40 concurrent claude CLIs had crashed the founder's machine, 10–15 is safe).
+- Report: reports/runs/20260824_021449_* (v12 scoring, pre-dose-fix: 65/100).
+- The scheduled post-run PC shutdown FAILED (`systemctl poweroff` needs
+  interactive auth from a background script). For next time: `sudo shutdown -h +N`.
+
+### v13 shadow measured-effects stack REPAIRED (commits d8468e1, f176018 + this)
+Diagnosed on real cached studies (60-study instrumented probe): zero table
+enrichment ever fired. Root causes fixed, all shadow-only, default-off parity
+kept, gates green (invariants, selftest, 3 module self-checks, shadow wiring):
+- workers._shadow_arm_aliases: derives label-anchored aliases (parenthetical/
+  dose-stripping + unique-prefix abbreviations, e.g. 'CR'→'Creatine') with
+  whole-table ambiguity refusal (Creatine/Creatinine, 'Placebo (creatine-free)'
+  cases self-checked); recovers multi-arm trials with exactly one control and
+  one ingredient-alone arm; returns the SELECTED role labels (was: first
+  noncontrol arm — order bug caught in review).
+- pipeline/v13_shadow.py: accepts S5 contrast vocabulary (vs_ingredient_free
+  eligible; vs_ingredient_arm/within_group/unclear refused); stratum key is now
+  outcome|estimand|design|contrast-class (free-text measure/timepoint dropped
+  from the KEY but kept per-study in a bounded audit trail) so same-construct
+  records can pool; selector-None audited as adapter failure.
+- Persistence: SP_V13_SHADOW=1 runs now carry run_context['v13_shadow']
+  (pooled g/CI/PI/k/tau2/i2, measured/eligible, refusal counts, per-study
+  audit) into *_context.json AND an optional schema-valid 'v13_shadow' block in
+  *_dashboard.json (schemas/dashboard_run_v1.schema.json). Flag-off runs omit
+  the key entirely.
+- RESULT on the replay (reports/runs/20260824_085105_*): pooling now works —
+  muscle_strength k=3 pooled g=-0.33, lean_body_mass k=2 g=+0.60. Coverage is
+  the bottleneck: 9 measured / 76 eligible claims. The pooled strength sign
+  still disagrees with the published MA (+0.43 [0.25,0.61]) because only 3
+  studies are measurable — DO NOT read this as a creatine verdict.
+- Remaining harvest gaps (documented, NOT hacked around): 28/75 real tables
+  have clean 2-arm headers but most die legitimately (baseline/demographic
+  tables, within-group Pre/Post grids, SE-labelled cells); two real format
+  gaps remain: multi-row headers (colspan structure lost in
+  sources/fulltext.extract_tables — needs colspan-aware serialisation, which
+  would change S5 payloads/cache keys, so it costs a re-extraction) and
+  'mean (SD)' parenthetical cells. Both filed in docs/REVIEW_PENDING.md.
+
+### Dose arc bug fixes (PRODUCTION-SCORE-AFFECTING, founder-authorized)
+- pipeline/assemble.py study_dose(): honors dose_basis; compound-basis and
+  copied-field (elemental==compound, known form factor) doses convert via
+  vocab; contradictory/unknown-form values refuse; per-kg × body-mass path
+  preserved for elemental bases (review caught a regression that would have
+  refused those).
+- Band/coverage derivation moved AFTER population routing and one-study-one-
+  vote collapse; n_with_dose/n_total are now study counts, not claim counts.
+- pipeline/product_score.py: explicit dose-basis contract; bounded compound→
+  elemental conversions refuse instead of silently taking one endpoint
+  (scripts/analyze_label.py caller fixed accordingly).
+
+### Ops notes
+- Founder's in-flight viz redesign (globals.css, four-ring-score.tsx,
+  normalize.ts, types.ts) was stashed during worktree work and restored —
+  still uncommitted in the founder's tree, untouched.
+- scripts/watch_run.sh added: live progress bar for pipeline runs.
+- SP_AUTO_PUSH=0 used for verification replays (reports local-only).
+
+NEXT: (1) founder decision on scoring recalibration (dose knots vs v13
+promotion path); (2) vitamin D + omega-3 demo runs; (3) colspan-aware table
+serialisation + 'mean (SD)' support to raise measured coverage past 9/76;
+(4) S5 prompt tightening for timepoint/direction (blocked on PROMPT_VERSION
+bump economics — costs a re-extraction).
+
+---
+
 ## 2026-08-23 (founder + Pi session)
 
 ### v13 measured-effects stack built (SHADOW-ONLY, default OFF) — branch merged

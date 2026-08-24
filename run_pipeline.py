@@ -360,7 +360,12 @@ def _shadow_context_summary(extractions: list[dict]) -> dict:
                             "outcome": outcome["outcome_vocab_id"]})
     result = analyze_shadow(records)
     summaries = []
-    for row in sorted(result.outcomes, key=lambda r: r.stratum)[:8]:
+    # Prefer strata that actually measured something (then the most eligible)
+    # so the capped summary shows the pooling frontier, not the first eight
+    # stratum names alphabetically.
+    for row in sorted(result.outcomes,
+                      key=lambda r: (-r.measured_count, -r.eligible_count,
+                                     r.stratum))[:8]:
         summaries.append({
             "outcome": row.outcome,
             "stratum": row.stratum,
