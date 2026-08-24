@@ -87,11 +87,46 @@ kept, gates green (invariants, selftest, 3 module self-checks, shadow wiring):
 - scripts/watch_run.sh added: live progress bar for pipeline runs.
 - SP_AUTO_PUSH=0 used for verification replays (reports local-only).
 
+### Coverage-bottleneck session 2 (same day, later): S5T HAD NEVER WORKED
+Dug into why enrichment stayed at zero and found the real killer: the S5T
+tool schema used a top-level oneOf, and the Anthropic API rejects top-level
+oneOf/allOf/anyOf in tool input schemas with a 400 — so EVERY S5T call since
+v13 was built had failed before the model saw it (this was the mysterious
+'selector output is not an object'). Fixed by dropping the oneOf (the
+select-XOR-refuse contract was already enforced deterministically in
+workers._shadow_validate_selection; schema description now forbids re-adding
+it). S5T calls now reach the model and return real selections/refusals.
+Also shipped, all shadow-only, gates green:
+- sources/fulltext.extract_tables_structured: colspan/rowspan-expanded
+  tables with merged multi-row headers ('Creatine — Post'). Used ONLY by the
+  shadow harvester via workers._tables_structured — _tables_text and S5
+  payloads untouched, LLM cache keys stable.
+- effect_harvest: 'mean (SD)' parenthetical cells accepted ONLY when the
+  table itself declares mean (SD) formatting (SE/SEM/CI refusal still runs
+  first); term matching adds paren-stripped exact equality ('Handgrip
+  strength' row satisfies 'Handgrip strength (kg)' claim; 'Body mass' can
+  never satisfy 'Lean body mass'); qualifier-paired candidates for
+  multi-timepoint grids ('Creatine — Pre'+'Placebo — Pre' pairs, never
+  Pre with Post; same-label-same-qualifier ambiguity refuses the table).
+- Validator outcome check mirrors the harvester contract (containment or
+  paren-stripped equality vs outcome_raw/measure).
+MEASURED RESULT on the cached corpus: candidates now flow (28 claims reach
+S5T, was 0 forever) but measured coverage stays 9/76 — every selection was
+refused for PRINCIPLED reasons, dominated by S1 design_kind=null in the
+cached extractions (~15/28; the paper never said parallel explicitly, and
+automatic selection requires it), plus honest endpoint-vs-change and
+outcome-term mismatches. THIS IS THE CEILING OF THE CACHED v1.22 CORPUS:
+further yield needs prompt-side work (S1 design_kind discipline, S5
+timepoint/direction/SD capture, S5T exact-match wording) at the next
+PROMPT_VERSION bump, which costs a re-extraction. The infrastructure is now
+proven end-to-end and future corpora (vitamin D, omega-3) get it for free.
+
 NEXT: (1) founder decision on scoring recalibration (dose knots vs v13
-promotion path); (2) vitamin D + omega-3 demo runs; (3) colspan-aware table
-serialisation + 'mean (SD)' support to raise measured coverage past 9/76;
-(4) S5 prompt tightening for timepoint/direction (blocked on PROMPT_VERSION
-bump economics — costs a re-extraction).
+promotion path); (2) vitamin D + omega-3 demo runs (will exercise the
+repaired S5T path from scratch); (3) S1/S5/S5T prompt tightening at the next
+PROMPT_VERSION bump — that is what moves measured coverage past 9/76, not
+more deterministic-layer work; (4) teammate aykhanstoic shipped camera
+capture + mobile-first analyzer + the form-id→ingredient fix (1d637e8).
 
 ---
 

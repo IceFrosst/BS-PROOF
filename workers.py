@@ -142,6 +142,30 @@ def _dose_snippets(text: str, cap: int = 5, width: int = 220,
     return [s for _, _, s in hits[:cap]]
 
 
+def _tables_structured(record: dict, max_rows_per_table: int = 40) -> list[dict]:
+    """Structured tables for the SHADOW harvester only (never model payloads).
+
+    Returns effect_harvest-coercible mappings with colspan-expanded, merged
+    multi-row headers.  Deterministic, disk-cached XML, no model calls.
+    """
+    pmcid = record.get("pmcid")
+    if not pmcid:
+        return []
+    try:
+        from sources import fulltext
+        xml = fulltext.fetch_xml(pmcid, use_cache=True)
+        tables = fulltext.extract_tables_structured(xml) if xml else []
+    except Exception:
+        return []
+    out = []
+    for t in tables:
+        caption = " — ".join(x for x in (t.get("label"), t.get("caption")) if x)
+        out.append({"caption": caption or "Table",
+                    "columns": t.get("columns") or [],
+                    "rows": (t.get("rows") or [])[:max_rows_per_table]})
+    return out
+
+
 def _tables_text(record: dict, cap_chars: int = 4000,
                  max_rows_per_table: int = 14) -> list[str]:
     """
@@ -532,9 +556,17 @@ def _shadow_validate_selection(claim: dict, candidates: list[dict], selected: di
         return None, "claim estimand is absent or unsupported"
     if not isinstance(timepoint, str) or not timepoint.strip():
         return None, "claim timepoint is absent"
-    if str(candidate.get("outcome_term", "")).strip() != str(
-            claim.get("outcome_raw", "")).strip():
-        return None, "candidate outcome does not exactly match claim"
+    from pipeline.effect_harvest import _term_matches as _harvest_term_matches
+    outcome_term = str(candidate.get("outcome_term", "")).strip()
+    claim_terms = [str(claim.get(key, "") or "").strip()
+                   for key in ("outcome_raw", "measure")]
+    # Mirror the harvester's matching contract exactly: word-bounded
+    # containment or paren-stripped equality against the same claim terms the
+    # candidates were harvested for.  Anything looser would let a selection
+    # attach a different endpoint's numbers to this claim.
+    if not any(term and _harvest_term_matches(outcome_term, term)
+               for term in claim_terms):
+        return None, "candidate outcome does not match claim terms"
 
     arms = candidate.get("arms")
     if not isinstance(arms, (list, tuple)) or len(arms) != 2:
@@ -621,7 +653,12 @@ def _shadow_enrich_claims(out: dict, record: dict, call) -> None:
     claims = ((out.get("S5") or {}).get("claims")) or []
     audit = {"enabled": True, "selector_calls": 0, "claims": []}
     try:
-        tables = _tables_text(record)
+        # SHADOW-ONLY structured tables: colspan/rowspan-expanded with merged
+        # multi-row headers (sources/fulltext.extract_tables_structured), so
+        # arm columns survive layouts the flat S5 serialisation cannot carry.
+        # _tables_text stays untouched for S5 payloads (LLM cache stability);
+        # it remains the fallback when structured parsing yields nothing.
+        tables = _tables_structured(record) or _tables_text(record)
     except Exception as exc:
         tables = []
         table_error = str(exc)
@@ -849,8 +886,11 @@ def _self_check_v13_shadow_wiring() -> None:
         mode = fixture_mode
         calls.clear()
         with patch.dict(os.environ, {"SP_V13_SHADOW": "1"} if shadow else {},
-                        clear=not shadow), patch.object(__import__(__name__),
-                                                         "_tables_text", lambda _: tables):
+                        clear=not shadow), patch.object(
+                            __import__(__name__), "_tables_text",
+                            lambda _: tables), patch.object(
+                            __import__(__name__), "_tables_structured",
+                            lambda _: []):
             return extract_study(record, text, call=fake_call, max_workers=5)
 
     calls = []
@@ -886,6 +926,65 @@ def _self_check_v13_shadow_wiring() -> None:
     off_again = run(False, "valid")
     assert "S1" not in calls and "S5T" not in calls
     assert "_v13_shadow" not in off and off == off_again
+
+    # Structured table extraction (shadow-only path): colspan/rowspan headers
+    # merge into composite column labels; the flat extract_tables output is
+    # deliberately untouched (S5 payload / LLM-cache stability).
+    from sources.fulltext import extract_tables_structured
+    xml = (
+        '<article><body><table-wrap><label>Table 2</label>'
+        '<caption><p>Values are mean (SD).</p></caption>'
+        '<table><thead>'
+        '<tr><th rowspan="2">Outcome</th><th colspan="2">Creatine</th>'
+        '<th colspan="2">Placebo</th></tr>'
+        '<tr><th>Pre</th><th>Post</th><th>Pre</th><th>Post</th></tr>'
+        '</thead><tbody>'
+        '<tr><td>Muscle strength</td><td>10.1 (2.0)</td><td>12.2 (2.2)</td>'
+        '<td>10.0 (2.1)</td><td>10.4 (2.3)</td></tr>'
+        '</tbody></table></table-wrap></body></article>'
+    )
+    structured = extract_tables_structured(xml)
+    assert structured and structured[0]["columns"] == [
+        "Outcome", "Creatine — Pre", "Creatine — Post",
+        "Placebo — Pre", "Placebo — Post"]
+    assert structured[0]["rows"][0][0] == "Muscle strength"
+    # A multi-timepoint grid yields one candidate per identical qualifier
+    # pair ('Creatine — Pre' with 'Placebo — Pre', never Pre with Post), and
+    # the harvester still asserts nothing about what the qualifier means:
+    # candidate timepoint/endpoint stay None, the qualifier is only visible
+    # in column provenance for the selector + validator to judge.
+    from pipeline.effect_harvest import harvest_candidates
+    grid_tables = [{"caption": "Table 2 — Values are mean (SD).",
+                    "columns": structured[0]["columns"],
+                    "rows": structured[0]["rows"]}]
+    grid_cands = harvest_candidates(grid_tables, "muscle strength",
+                                    {"Creatine": ["Creatine"],
+                                     "Placebo": ["Placebo"]})
+    assert len(grid_cands) == 2
+    pair_columns = {tuple(a.column for a in c.arms) for c in grid_cands}
+    assert pair_columns == {("Creatine — Pre", "Placebo — Pre"),
+                            ("Creatine — Post", "Placebo — Post")}
+    assert all(c.timepoint is None and c.endpoint_kind is None
+               for c in grid_cands)
+    # A single-header-row structured table with a mean (SD) declaration DOES
+    # harvest — the coverage win this path exists for.
+    xml_simple = (
+        '<article><body><table-wrap><label>Table 3</label>'
+        '<caption><p>Data are mean (SD).</p></caption>'
+        '<table><thead>'
+        '<tr><th>Outcome</th><th>Creatine (n=20)</th><th>Placebo (n=19)</th></tr>'
+        '</thead><tbody>'
+        '<tr><td>1RM bench press</td><td>82.1 (5.2)</td><td>79.9 (4.8)</td></tr>'
+        '</tbody></table></table-wrap></body></article>'
+    )
+    simple = extract_tables_structured(xml_simple)
+    simple_tables = [{"caption": "Table 3 — Data are mean (SD).",
+                      "columns": simple[0]["columns"],
+                      "rows": simple[0]["rows"]}]
+    got = harvest_candidates(simple_tables, "1RM bench press (kg)",
+                             {"Creatine": ["Creatine"], "Placebo": ["Placebo"]})
+    assert len(got) == 1 and got[0].arms[0].mean == 82.1 and got[0].arms[0].sd == 5.2
+    assert got[0].arms[0].n == 20 and got[0].arms[1].n == 19
 
 
 def extract_study(record: dict, text: str, registry: dict | None = None, *,

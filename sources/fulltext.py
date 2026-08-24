@@ -204,6 +204,112 @@ def extract_tables(xml: str | None) -> list[dict]:
     return tables
 
 
+def _expand_grid(trs) -> list[list[str]]:
+    """Expand tr elements into a rectangular text grid honouring col/rowspan.
+
+    Cells with ``colspan=N`` repeat their text across N columns and
+    ``rowspan=M`` carries it down M rows, so a group header such as
+    ``Creatine`` over ``Pre | Post`` reaches every column it governs.
+    Malformed span attributes fall back to 1 (never guessed larger).
+    """
+    grid: list[list[str]] = []
+    carry: dict[int, tuple[str, int]] = {}  # col -> (text, rows remaining)
+    for tr in trs:
+        row: list[str] = []
+        col = 0
+        cells = [td for td in list(tr) if td.tag in ("td", "th")]
+        idx = 0
+        while idx < len(cells) or col in carry:
+            if col in carry:
+                text, left = carry.pop(col)
+                row.append(text)
+                if left > 1:
+                    carry[col] = (text, left - 1)
+                col += 1
+                continue
+            if idx >= len(cells):
+                break
+            td = cells[idx]
+            idx += 1
+            text = _text(td)
+            try:
+                colspan = max(1, int(td.get("colspan", "1")))
+            except ValueError:
+                colspan = 1
+            try:
+                rowspan = max(1, int(td.get("rowspan", "1")))
+            except ValueError:
+                rowspan = 1
+            for _ in range(colspan):
+                row.append(text)
+                if rowspan > 1:
+                    carry[col] = (text, rowspan - 1)
+                col += 1
+        # Flush any remaining carried columns beyond the last explicit cell.
+        while col in carry:
+            text, left = carry.pop(col)
+            row.append(text)
+            if left > 1:
+                carry[col] = (text, left - 1)
+            col += 1
+        if row:
+            grid.append(row)
+    return grid
+
+
+def extract_tables_structured(xml: str | None) -> list[dict]:
+    """Colspan/rowspan-expanded tables with merged multi-row headers.
+
+    SHADOW-ONLY consumer: pipeline/effect_harvest table candidates via
+    workers._tables_structured.  This function must NOT feed any model
+    payload -- S5 keeps extract_tables/_tables_text unchanged so the LLM
+    cache keys are stable.
+
+    Header rows are the <thead> rows when present (else the first body row).
+    Multiple header rows merge column-wise into composite labels joined with
+    ' — ' (e.g. 'Creatine — Post'), preserving the structure that the flat
+    extract_tables serialisation loses.
+    """
+    if not xml:
+        return []
+    try:
+        root = ET.fromstring(xml)
+    except ET.ParseError:
+        return []
+
+    tables: list[dict] = []
+    for wrap in root.iter("table-wrap"):
+        label = wrap.find("label")
+        caption = wrap.find("caption")
+        header_trs = [tr for thead in wrap.iter("thead") for tr in thead.iter("tr")]
+        header_set = set(map(id, header_trs))
+        body_trs = [tr for tr in wrap.iter("tr") if id(tr) not in header_set]
+        header_grid = _expand_grid(header_trs)
+        body_grid = _expand_grid(body_trs)
+        if not header_grid and body_grid:
+            header_grid, body_grid = [body_grid[0]], body_grid[1:]
+        if not header_grid or not body_grid:
+            continue
+        width = max(len(r) for r in (*header_grid, *body_grid))
+        columns = []
+        for c in range(width):
+            parts: list[str] = []
+            for hrow in header_grid:
+                cell = hrow[c] if c < len(hrow) else ""
+                if cell and cell not in parts:
+                    parts.append(cell)
+            columns.append(" — ".join(parts))
+        rows = [list(r) + [""] * (width - len(r)) for r in body_grid]
+        tables.append({
+            "label": _text(label) if label is not None else None,
+            "caption": _text(caption) if caption is not None else None,
+            "columns": columns,
+            "rows": rows,
+            "n_rows": len(rows),
+        })
+    return tables
+
+
 # Over-matching here is CHEAP (S2 is shown one extra table and is told to ignore
 # what it is not); under-matching is FATAL (the row structure never reaches S2 at
 # all, and s2_payload's fallback then ships every table in the paper). So both

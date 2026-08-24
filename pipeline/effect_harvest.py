@@ -34,6 +34,19 @@ _MEAN_SD = re.compile(
     r"(?:\([^)]*\)|\[[^]]*\]|[*†‡])?\s*$",
     re.IGNORECASE,
 )
+# ``mean (SD)`` cells are only parseable when the TABLE ITSELF declares that
+# parenthetical values are standard deviations (caption/annotation text such
+# as "values are mean (SD)").  Without that declaration a parenthetical
+# number could be an SE, an IQR bound, or an n, so the shape alone is never
+# accepted.  The table-wide SE/SEM/CI refusal still runs first.
+_MEAN_PAREN_SD = re.compile(
+    rf"^\s*(?P<mean>{_NUMBER})\s*\(\s*(?P<sd>{_NUMBER})\s*\)\s*(?:[*\u2020\u2021])?\s*$",
+    re.IGNORECASE,
+)
+_PAREN_SD_DECLARATION = re.compile(
+    r"mean\s*s?\s*\(\s*(?:sd|standard\s+deviations?)\s*\)",
+    re.IGNORECASE,
+)
 # Sample sizes must have an explicit literal n/N marker.  In particular,
 # ``age=44`` is not an n value.  Keep a sign so non-positive values are
 # refused rather than mistaken for an omitted sample size.  Consume the whole
@@ -194,8 +207,11 @@ def _parse_number(value: str) -> float | None:
     return parsed if math.isfinite(parsed) else None
 
 
-def _parse_mean_sd(value: str) -> tuple[float, float] | None:
+def _parse_mean_sd(value: str, *, paren_sd: bool = False) -> tuple[float, float] | None:
     match = _MEAN_SD.fullmatch(value)
+    if not match and paren_sd:
+        # Only when the table explicitly declared "mean (SD)" formatting.
+        match = _MEAN_PAREN_SD.fullmatch(value)
     if not match:
         return None
     mean = _parse_number(match.group("mean"))
@@ -203,6 +219,28 @@ def _parse_mean_sd(value: str) -> tuple[float, float] | None:
     if mean is None or sd is None or sd <= 0:
         return None
     return mean, sd
+
+
+def _strip_parens(value: str) -> str:
+    """Drop parenthetical/bracketed suffix material, e.g. units."""
+
+    return re.sub(r"[\(\[][^\)\]]*[\)\]]", " ", value)
+
+
+def _term_matches(descriptor: str, term: str) -> bool:
+    """Word-bounded containment, or paren-stripped exact equality.
+
+    The equality branch lets a row labelled ``Handgrip strength`` satisfy the
+    claim term ``Handgrip strength (kg)``.  It is deliberately NOT a reverse
+    containment: ``Body mass`` must never match ``Lean body mass``, so only
+    whole-string equality after stripping parentheticals is accepted.
+    """
+
+    if _contains_term(descriptor, term):
+        return True
+    left = _normalise(_strip_parens(descriptor))
+    right = _normalise(_strip_parens(term))
+    return bool(left) and left == right
 
 
 def _n_status(value: str) -> tuple[bool, int | None]:
@@ -517,9 +555,50 @@ def harvest_candidates(
             if matched is not None:
                 label, alias = matched
                 matched_columns.append((column_index, label, alias))
-        # Any ambiguous arm header or duplicate known label is a refusal.  A
-        # table with three explicitly labelled arms is also not a two-arm row.
-        if ambiguous_header or len(matched_columns) != 2 or len({m[1] for m in matched_columns}) != 2:
+        # Any ambiguous arm header refuses the table, and exactly two DISTINCT
+        # arm labels must be present.  A label may however match several
+        # columns when each match carries a distinct non-arm QUALIFIER from a
+        # merged multi-row header (e.g. 'Creatine — Pre' / 'Creatine — Post'):
+        # such columns pair up per identical qualifier ('Creatine — Post' with
+        # 'Placebo — Post').  The harvester still asserts nothing about what
+        # the qualifier MEANS — candidate timepoint/endpoint stay None and the
+        # qualifier is only visible through the column provenance, which the
+        # selector and the deterministic validator judge against the claim.
+        labels = {m[1] for m in matched_columns}
+        if ambiguous_header or len(labels) != 2:
+            continue
+        column_pairs: list[tuple[tuple[int, str, str], tuple[int, str, str]]] = []
+        if len(matched_columns) == 2:
+            column_pairs.append((matched_columns[0], matched_columns[1]))
+        else:
+            def _qualifier(column_index: int, alias: str) -> tuple[str, ...] | None:
+                segments = [seg.strip() for seg in
+                            table.columns[column_index].split(" — ")]
+                kept = tuple(seg for seg in segments
+                             if seg and not _contains_term(seg, alias))
+                return kept or None
+            by_label: dict[str, dict[tuple[str, ...], list[tuple[int, str, str]]]] = {}
+            malformed = False
+            for match in matched_columns:
+                qualifier = _qualifier(match[0], match[2])
+                if qualifier is None:
+                    # A repeated arm label without a distinguishing qualifier
+                    # cannot be paired deterministically.
+                    malformed = True
+                    break
+                by_label.setdefault(match[1], {}).setdefault(qualifier, []).append(match)
+            if malformed or len(by_label) != 2:
+                continue
+            (label_a, quals_a), (label_b, quals_b) = sorted(by_label.items())
+            if any(len(cols) != 1 for cols in (*quals_a.values(), *quals_b.values())):
+                # The same label+qualifier on two columns is ambiguous.
+                continue
+            shared = [q for q in quals_a if q in quals_b]
+            if not shared or len(shared) > 8:
+                continue
+            for q in shared:
+                column_pairs.append((quals_a[q][0], quals_b[q][0]))
+        if not column_pairs:
             continue
 
         # A table may carry footnotes in cells that are not retained by a
@@ -530,6 +609,11 @@ def harvest_candidates(
         source_text.extend(cell for row in table.rows for cell in row)
         if any(_identifies_se_or_ci(text) for text in source_text):
             continue
+        # ``mean (SD)`` cells are acceptable only under an explicit per-table
+        # declaration, and never together with any SE/SEM/CI marker (already
+        # refused above).
+        paren_sd = any(_PAREN_SD_DECLARATION.search(text)
+                       for text in (table.caption, *table.annotations, *table.columns))
 
         # The first column is the identified descriptor column for this
         # conservative table shape.  Do not search the complete row: notes,
@@ -541,7 +625,7 @@ def harvest_candidates(
             descriptor_text = row[descriptor_column] if descriptor_column < len(row) else ""
             if _ENDPOINT_MARKER.search(row_text) or _TIMEPOINT_MARKER.search(row_text):
                 continue
-            matched_terms = [term for term in terms if _contains_term(descriptor_text, term)]
+            matched_terms = [term for term in terms if _term_matches(descriptor_text, term)]
             if not matched_terms:
                 continue
             longest = max(len(_normalise(term)) for term in matched_terms)
@@ -550,69 +634,81 @@ def harvest_candidates(
                 continue
             outcome_term = longest_terms[0]
 
-            arm_values: list[ArmValue] = []
-            refused = False
-            for column_index, label, _alias in matched_columns:
-                verbatim = row[column_index] if column_index < len(row) else ""
-                parsed = _parse_mean_sd(verbatim)
-                if parsed is None:
-                    refused = True
-                    break
-                mean, sd = parsed
-                header_has_n, header_n = _n_status(table.columns[column_index])
-                value_has_n, value_n = _n_status(verbatim)
-                # An explicitly reported malformed or non-positive n violates
-                # the schema; refuse it instead of treating it as unknown.
-                if (header_has_n and (header_n is None or header_n <= 0)) or (
-                    value_has_n and (value_n is None or value_n <= 0)
-                ):
-                    refused = True
-                    break
-                if header_n is not None and value_n is not None and header_n != value_n:
-                    refused = True
-                    break
-                provenance = CellProvenance(
-                    table_index=table_index,
-                    caption=table.caption,
-                    row_index=row_index,
-                    column_index=column_index,
-                    column=table.columns[column_index],
-                    cell_verbatim=verbatim,
-                )
-                arm_values.append(
-                    ArmValue(
-                        arm_alias=label,
-                        column=table.columns[column_index],
-                        mean=mean,
-                        sd=sd,
-                        n=header_n if header_n is not None else value_n,
-                        cell_verbatim=verbatim,
-                        provenance=provenance,
-                    )
-                )
-            if refused or len(arm_values) != 2:
-                continue
-
-            outcome_cell = CellProvenance(
-                table_index=table_index,
-                caption=table.caption,
-                row_index=row_index,
-                column_index=descriptor_column,
-                column=table.columns[descriptor_column],
-                cell_verbatim=row[descriptor_column] if row else "",
-            )
-            candidates.append(
-                TableCandidate(
-                    table_index=table_index,
-                    caption=table.caption,
-                    row_index=row_index,
-                    row_verbatim=row_verbatim,
-                    outcome_term=outcome_term,
-                    outcome_cell=outcome_cell,
-                    arms=tuple(arm_values),
-                )
-            )
+            for pair in column_pairs:
+                _emit_pair_candidate(
+                    table_index, table, row_index, row, row_verbatim,
+                    outcome_term, pair, descriptor_column, candidates,
+                    paren_sd=paren_sd)
     return candidates
+
+
+def _emit_pair_candidate(table_index, table, row_index, row, row_verbatim,
+                         outcome_term, pair, descriptor_column, candidates,
+                         *, paren_sd: bool) -> None:
+    """Validate one (ingredient-labelled, control-labelled) column pair for a
+    row and append a TableCandidate when every conservative gate passes."""
+    arm_values: list[ArmValue] = []
+    refused = False
+    for column_index, label, _alias in pair:
+        verbatim = row[column_index] if column_index < len(row) else ""
+        parsed = _parse_mean_sd(verbatim, paren_sd=paren_sd)
+        if parsed is None:
+            refused = True
+            break
+        mean, sd = parsed
+        header_has_n, header_n = _n_status(table.columns[column_index])
+        value_has_n, value_n = _n_status(verbatim)
+        # An explicitly reported malformed or non-positive n violates
+        # the schema; refuse it instead of treating it as unknown.
+        if (header_has_n and (header_n is None or header_n <= 0)) or (
+            value_has_n and (value_n is None or value_n <= 0)
+        ):
+            refused = True
+            break
+        if header_n is not None and value_n is not None and header_n != value_n:
+            refused = True
+            break
+        provenance = CellProvenance(
+            table_index=table_index,
+            caption=table.caption,
+            row_index=row_index,
+            column_index=column_index,
+            column=table.columns[column_index],
+            cell_verbatim=verbatim,
+        )
+        arm_values.append(
+            ArmValue(
+                arm_alias=label,
+                column=table.columns[column_index],
+                mean=mean,
+                sd=sd,
+                n=header_n if header_n is not None else value_n,
+                cell_verbatim=verbatim,
+                provenance=provenance,
+            )
+        )
+    if refused or len(arm_values) != 2:
+        return
+
+    outcome_cell = CellProvenance(
+        table_index=table_index,
+        caption=table.caption,
+        row_index=row_index,
+        column_index=descriptor_column,
+        column=table.columns[descriptor_column],
+        cell_verbatim=row[descriptor_column] if row else "",
+    )
+    candidates.append(
+        TableCandidate(
+            table_index=table_index,
+            caption=table.caption,
+            row_index=row_index,
+            row_verbatim=row_verbatim,
+            outcome_term=outcome_term,
+            outcome_cell=outcome_cell,
+            arms=tuple(arm_values),
+        )
+    )
 
 
 def harvest_serialized(
@@ -645,6 +741,39 @@ def _self_check() -> None:
     assert found[0].outcome_cell.column_index == 0
     assert found[0].outcome_cell.cell_verbatim == "Muscle strength"
     assert found[0].allocation is None and found[0].timepoint is None and found[0].endpoint_kind is None
+
+    # mean (SD) parenthetical cells: accepted ONLY under an explicit table
+    # declaration; the same cell without the declaration must refuse; a
+    # declared table that also mentions SE anywhere refuses entirely.
+    paren_declared = {
+        "caption": "Table 2. Values are mean (SD).",
+        "columns": ["Outcome", "Creatine (n=20)", "Placebo (n=19)"],
+        "rows": [["Muscle strength", "10.2 (2.1)", "8.4 (2.0)"]],
+    }
+    assert len(harvest_candidates(paren_declared, "muscle strength",
+                                  {"a": "Creatine", "b": "Placebo"})) == 1
+    paren_undeclared = {**paren_declared, "caption": "Table 2. Outcomes."}
+    assert harvest_candidates(paren_undeclared, "muscle strength",
+                              {"a": "Creatine", "b": "Placebo"}) == []
+    paren_with_se = {**paren_declared,
+                     "caption": "Table 2. Values are mean (SD); SE shown in text."}
+    assert harvest_candidates(paren_with_se, "muscle strength",
+                              {"a": "Creatine", "b": "Placebo"}) == []
+
+    # Term matching: paren-stripped exact equality is accepted, but reverse
+    # containment is not -- 'Body mass' must never satisfy 'Lean body mass'.
+    unit_term = {
+        "columns": ["Outcome", "Creatine (n=20)", "Placebo (n=19)"],
+        "rows": [["Handgrip strength", "10.2 ± 2.1", "8.4 ± 2.0"]],
+    }
+    assert len(harvest_candidates(unit_term, "Handgrip strength (kg)",
+                                  {"a": "Creatine", "b": "Placebo"})) == 1
+    superstring_term = {
+        "columns": ["Outcome", "Creatine (n=20)", "Placebo (n=19)"],
+        "rows": [["Body mass", "70.2 ± 2.1", "69.4 ± 2.0"]],
+    }
+    assert harvest_candidates(superstring_term, "Lean body mass (kg)",
+                              {"a": "Creatine", "b": "Placebo"}) == []
 
     # Shadow aliases can be shortened deterministically: a CR header matches
     # the supplied Creatine label, while a shared first word is ambiguous.
