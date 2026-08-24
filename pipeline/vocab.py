@@ -182,7 +182,42 @@ def elemental_dose_range_mg(ingredient: str, form_vocab_id: str,
     mm, am, hm = (f.get("molar_mass_g_mol"), f.get("active_mass_g_mol"),
                   f.get("hydrate_molar_mass_g_mol"))
     if not (mm and am and hm):
-        return {"low": None, "high": None, "basis": "compound_only"}
+        # An UNSPECIFIED form is the same bounded ambiguity one level up: the
+        # paper stated a dose but not which salt, so the elemental amount lies
+        # between the least and most active-dense salt this ingredient has. That
+        # is a bracket, not a guess, and the reasoning is this function's own --
+        # discarding a study we can bracket is over-caution.
+        #
+        # Measured 2026-08-24 on the 155-study creatine corpus: 40 of 155
+        # studies stated a real dose (3 g, 5 g, 20 g) and lost it here purely
+        # because S7 could not name the salt. Dropping them left every benefit
+        # band resting on ONE study, at a loading dose, which read as
+        # "your product is dosed below where it worked" on a 1-trial band.
+        #
+        # Only the unspecified entry qualifies. A NAMED salt missing molar data
+        # keeps refusing: there we know which salt it is and merely lack its
+        # mass, so bracketing across other salts would answer a different
+        # question. Creatine brackets 0.78-1.00; magnesium chloride hexahydrate
+        # makes the worst case 2.1x, which is wide -- and a wide interval is
+        # handled downstream as a straddle, never resolved by picking an end.
+        if f.get("salt_family") is not None:
+            return {"low": None, "high": None, "basis": "compound_only"}
+        fracs = []
+        for other in forms_for(ingredient):
+            if other.get("salt_family") is None:
+                continue
+            o_mm, o_am = other.get("molar_mass_g_mol"), other.get("active_mass_g_mol")
+            o_hm = other.get("hydrate_molar_mass_g_mol")
+            if not (o_mm and o_am):
+                continue
+            fracs.append(o_am / o_mm)
+            if o_hm:
+                fracs.append(o_am / o_hm)
+        if not fracs:
+            return {"low": None, "high": None, "basis": "compound_only"}
+        return {"low": round(compound_dose_mg * min(fracs), 3),
+                "high": round(compound_dose_mg * max(fracs), 3),
+                "basis": "bounded"}
 
     # More water per mole of salt -> less active mass per mg of powder.
     return {"low": round(compound_dose_mg * (am / hm), 3),

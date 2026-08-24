@@ -77,7 +77,33 @@ export function elementalDoseRangeMg(
   }
 
   const hm = f.hydrate_molar_mass_g_mol ?? null;
-  if (!(mm && am && hm)) return { low: null, high: null, basis: "compound_only" };
+  if (!(mm && am && hm)) {
+    // An UNSPECIFIED form is the same bounded ambiguity one level up: the label
+    // stated a dose but not which salt, so the elemental amount lies between
+    // the least and most active-dense salt this ingredient has. A bracket, not
+    // a guess — port of pipeline/vocab.elemental_dose_range_mg (2026-08-24).
+    //
+    // A NAMED salt missing molar data keeps refusing: there we know which salt
+    // it is and merely lack its mass, so bracketing across other salts would
+    // answer a different question.
+    if (f.salt_family !== null) return { low: null, high: null, basis: "compound_only" };
+    const fracs: number[] = [];
+    for (const other of loadFormVocab().ingredients?.[ingredient]?.forms ?? []) {
+      if (other.salt_family === null) continue;
+      const oMm = other.molar_mass_g_mol ?? null;
+      const oAm = other.active_mass_g_mol ?? null;
+      const oHm = other.hydrate_molar_mass_g_mol ?? null;
+      if (!(oMm && oAm)) continue;
+      fracs.push(oAm / oMm);
+      if (oHm) fracs.push(oAm / oHm);
+    }
+    if (!fracs.length) return { low: null, high: null, basis: "compound_only" };
+    return {
+      low: round3(compoundDoseMg * Math.min(...fracs)),
+      high: round3(compoundDoseMg * Math.max(...fracs)),
+      basis: "bounded",
+    };
+  }
 
   // More water per mole of salt -> less active mass per mg of powder.
   return {
