@@ -105,6 +105,17 @@ def _claude_bin() -> str:
 
 # Bump when you edit ANY prompt (including _shared.md). This is in the cache key.
 # Forget to bump it and you will silently serve stale extractions forever.
+# v1.23 (2026-08-24): measured-coverage prompt tightenings, driven by the first
+# corpus where S5T actually ran (its schema had been 400-rejected since birth;
+# see schemas/s5_table_selector.json). Measured blockers on the 156-study
+# creatine corpus: S1 design_kind=null killed ~15/28 selector-eligible cases
+# (s1_design.md now defines parallel/crossover/cluster recognition from STATED
+# allocation sentences instead of banning all "allocation language");
+# 45 timepoint + 13 estimand + 15 estimate_kind + 34 effect_favours losses
+# (s5_conclusion.md: stated-duration timepoints, change-vs-endpoint wording,
+# derived_from_arms labelling, favours-on-any-number); S5T refused correct
+# selections over unit suffixes (s5_table_selector.md: paren-stripped equality,
+# same contract as the deterministic validator).
 # v1.22 (2026-08-23): S5T isolates table-row choice from S5's broad extraction.
 # Measured rationale: deterministic harvesting now supplies exact two-arm mean +/-
 # SD candidates, but it intentionally cannot assign arm roles or endpoint/timepoint
@@ -271,7 +282,7 @@ def _claude_bin() -> str:
 # v1.6 (2026-08-08): S2 reports results_table + per-study design. SR-table trials
 # now enter evidence mass, so S2's output moves scores and not just confidence.
 # v1.5 (2026-08-07): S3 prompt shortened, SR label resolve, review_methods.
-PROMPT_VERSION = "v1.22"
+PROMPT_VERSION = "v1.23"
 
 # Tier -> model. FULL IDs, NOT ALIASES.
 #

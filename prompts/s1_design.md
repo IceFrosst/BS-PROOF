@@ -5,11 +5,37 @@ PubMed. Assign the study design rank and return JSON with exactly these keys:
 `design_rank`, `design_label`, `design_kind`, `confidence`, and `rationale`.
 
 `design_kind` is an upstream fact for downstream table selection. Set it to
-`parallel`, `crossover`, `cluster`, or `other` only when the paper explicitly
-identifies that design. Otherwise set it to null. Never infer it from arm
-counts, allocation language, headers, sample sizes, or a design that merely
-seems typical. The field is required in every output, including uncertain
-classifications.
+`parallel`, `crossover`, `cluster`, or `other` from the paper's OWN STATED
+allocation, using the definitional rules below. Otherwise set it to null. The
+field is required in every output, including uncertain classifications.
+
+DESIGN KIND — DEFINITIONAL RECOGNITION, NOT INFERENCE.
+These words name a design outright; reading them is not guessing:
+  crossover  the text says "crossover", "cross-over", describes a washout
+             period, treatment sequences/periods (AB/BA), or states that each
+             participant received both/all conditions.
+  cluster    the RANDOMISED UNIT is stated to be something other than the
+             individual: clinics, schools, teams, wards, households, sites.
+  parallel   the text states that individual participants were randomly
+             assigned/allocated/divided into two or more SEPARATE, concurrent
+             groups — each participant receiving exactly one condition — and
+             carries NO crossover marker and NO cluster unit. "Participants
+             were randomised to creatine (n=30) or placebo (n=30) for 8
+             weeks" IS an explicit statement of a parallel design: that
+             sentence is the definition of parallel allocation. So is
+             "parallel", "parallel-group", or "two-arm" by name.
+  other      an explicitly stated design that fits none of the above
+             (factorial without clear arm mapping, n-of-1, adaptive platform).
+null is for allocation that is genuinely UNSTATED — no assignment sentence at
+all — not for an assignment sentence that fails to contain the literal word
+"parallel". MEASURED 2026-08-24: design_kind=null was the single largest
+blocker of automatic table selection (~15 of 28 otherwise-eligible cases)
+while the methods text plainly said participants were randomised to separate
+groups. Still forbidden: deciding the design from arm COUNTS alone, from
+table headers, from sample sizes, or from what is typical for the field — an
+assignment SENTENCE must exist. When crossover and parallel language both
+appear (a crossover paper describing its two sequences as "groups"), the
+crossover marker wins.
 
 RANKS
  1 Umbrella review (a review of systematic reviews)

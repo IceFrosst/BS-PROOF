@@ -33,13 +33,20 @@ refusal form.
    Reject an unmappable, duplicate, ambiguous, combination, or
    `vs_ingredient_arm` contrast. S3 must explicitly support an ingredient-alone
    arm and an ingredient-free comparator.
-2. The candidate's `outcome_term` must be the claim's `outcome_raw` exactly
-   (apart from no more than whitespace trimming). This is an explicit semantic
-   match requirement: units, instrument, construct, endpoint, subgroup, and
-   population must also agree with the claim. Do not use semantic similarity,
-   synonyms, nearby endpoints, a different instrument, a subgroup, or a
-   related outcome. A candidate with different units or an unclear construct
-   is a mismatch and must be refused.
+2. The candidate's `outcome_term` must equal the claim's `outcome_raw` or the
+   claim's `measure`, exactly, where "exactly" tolerates ONLY whitespace
+   trimming and the removal of parenthetical/bracketed unit suffixes from
+   either side: `Handgrip strength` and `Handgrip strength (kg)` are the same
+   term; `Body mass` and `Lean body mass` are NOT (a superstring is a
+   different construct, never a match). This is an explicit semantic match
+   requirement: instrument, construct, endpoint, subgroup, and population
+   must also agree with the claim, and units stated anywhere that CONTRADICT
+   the claim remain a refusal. Do not use semantic similarity, synonyms,
+   nearby endpoints, a different instrument, a subgroup, or a related
+   outcome. MEASURED 2026-08-24: several correct selections were refused for
+   nothing more than a `(kg)` unit suffix present on one side — that refusal
+   was wrong; the paren-stripped rule above is the intended contract and it
+   matches the deterministic validator exactly.
 3. `S5_CLAIM.estimand` must explicitly be `endpoint` or
    `change_from_baseline`, and `S5_CLAIM.timepoint` must explicitly be a
    non-empty string. Copy these values to the output; do not infer either value

@@ -305,6 +305,38 @@ and `ci_level` is a fractional probability strictly between 0 and 1 (write
 does not state it. A change score is not an endpoint: never use an endpoint SD as
 the SD for a change-from-baseline estimate.
 
+TIMEPOINT AND ESTIMAND ARE THE CHEAPEST FIELDS YOU KEEP DROPPING. MEASURED
+2026-08-24 on a 156-study creatine corpus: 45 otherwise-eligible claims were
+unusable for a missing `timepoint` and 13 for a missing `estimand` -- the two
+largest single losses in the measured-effects path -- while the papers stated
+both. These are STATED facts far more often than they look:
+  - A trial that supplements for one stated duration and measures at its end
+    has that duration as the assessment timepoint. "After 8 weeks of
+    supplementation, 1RM increased..." -> timepoint "8 weeks". Copying the
+    stated duration IS reading, not inference. Only a paper with multiple
+    assessment visits and no named analysis visit leaves timepoint null.
+  - A result described as change, gain, increase/decrease from baseline, a
+    delta symbol, or a table column named "Change"/"Δ" is estimand
+    `change_from_baseline`. Arm values measured AT a visit (a "Post" column,
+    "values at week 12") are estimand `endpoint`. Both wordings are explicit
+    statements of the estimand.
+Still forbidden: inventing a timepoint for a paper that truly reports several
+visits without naming the analysed one, or labelling an unclear quantity.
+
+WHEN YOU REPORT A DIFFERENCE OF PRINTED ARM VALUES, SAY WHAT IT IS. If both
+arm means for this claim are printed and your `effect_size` is their
+difference in the endpoint's raw unit, set `estimate_kind`
+`mean_difference` and `estimate_basis` `derived_from_arms`. MEASURED
+2026-08-24: 15 claims carried exactly such a derived difference with a null
+`estimate_kind` and were refused downstream for it. A number whose kind you
+do not state cannot be used by anyone.
+
+AND REMEMBER `effect_favours` (measured again 2026-08-24: 34 claims lost).
+Whenever ANY of `effect_size`, arm means, or a CI is present on this claim,
+answer `effect_favours` -- `null` remains correct only when the direction is
+genuinely unrecoverable from the text, not merely unstated next to the
+number.
+
 DO NOT ASSUME OR RECONSTRUCT FACTS THAT ARE NOT REPORTED:
   - Do not assume equal allocation or infer an arm N from the other arm.
   - Do not infer a confidence-interval level. Fill `ci_level` only when the

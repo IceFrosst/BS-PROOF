@@ -121,12 +121,37 @@ timepoint/direction/SD capture, S5T exact-match wording) at the next
 PROMPT_VERSION bump, which costs a re-extraction. The infrastructure is now
 proven end-to-end and future corpora (vitamin D, omega-3) get it for free.
 
-NEXT: (1) founder decision on scoring recalibration (dose knots vs v13
-promotion path); (2) vitamin D + omega-3 demo runs (will exercise the
-repaired S5T path from scratch); (3) S1/S5/S5T prompt tightening at the next
-PROMPT_VERSION bump — that is what moves measured coverage past 9/76, not
-more deterministic-layer work; (4) teammate aykhanstoic shipped camera
-capture + mobile-first analyzer + the form-id→ingredient fix (1d637e8).
+### PROMPT_VERSION v1.22 -> v1.23 (founder-ordered, same day): the prompt
+### tightenings are IN. Every next extraction pays the re-extraction cost.
+Founder call: "fix this fucking algo for once" — implemented the measured
+blockers directly instead of parking them:
+- prompts/s1_design.md: design_kind now uses DEFINITIONAL RECOGNITION of
+  stated allocation sentences ("randomised to creatine (n=30) or placebo
+  (n=30)" IS parallel; crossover markers win on conflict; cluster = non-
+  individual randomised unit; null only when allocation is truly unstated).
+  The old text banned all "allocation language", which is what produced the
+  design_kind=null wall (~15/28 selector-eligible cases).
+- prompts/s5_conclusion.md: stated-duration timepoints (45 lost claims),
+  change-vs-endpoint estimand wording (13), derived_from_arms
+  estimate_kind labelling (15), effect_favours required whenever any number
+  is present (34) — each with its measured count in the prompt.
+- prompts/s5_table_selector.md: outcome match now tolerates parenthetical
+  unit suffixes and accepts claim measure, mirroring the deterministic
+  validator exactly (correct selections had been refused over "(kg)").
+CONSEQUENCE: the LLM cache is cold for v1.23. The next creatine run
+re-extracts ~156 studies (~1500+ calls, hours); vitamin D and omega-3 were
+always going to be cold anyway. Shadow measured-coverage should finally move
+past 9/76 on the re-extraction; production scoring constants remain frozen
+and default-off parity is untouched (verified: invariants, selftest, module
+self-checks, shadow wiring all green on v1.23).
+
+NEXT: (1) re-run creatine under v1.23 (SOLO, watch quota) and compare shadow
+measured coverage + pooled strength g vs the published MA; (2) vitamin D +
+omega-3 demo runs on v1.23; (3) founder decision on scoring recalibration
+(dose knots vs v13 promotion path); (4) teammate aykhanstoic shipped camera
+capture + mobile-first analyzer + the form-id→ingredient fix (1d637e8) and
+an omega-3 v1.22 run (08dd7f1) — the omega-3 run predates both the S5T fix
+and v1.23, so re-run it before the demo.
 
 ---
 
