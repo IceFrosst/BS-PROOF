@@ -168,6 +168,26 @@ function runCard(page: Page, runId: string): Locator {
     .filter({ has: page.locator(`a[href="/runs/${runId}/"], a[href="/runs/${runId}"]`) });
 }
 
+/*
+ * loadArtifacts() reads the runs directory RAW -- no schema validation, no
+ * quarantine filter -- so the sampled run is not necessarily one the dashboard
+ * serves. When those two disagree, every interaction test against the sample
+ * dies on a 30 s click timeout and the report reads as a broken UI.
+ *
+ * That happened on 2026-08-24: the v13 shadow block was missing from the Zod
+ * schema, the five newest runs were quarantined, and 26 mobile tests timed out
+ * pointing nowhere near the actual defect. Assert the precondition instead, so
+ * the next such mismatch says what it is.
+ */
+async function expectRunIsServed(page: Page, runId: string): Promise<void> {
+  await expect(
+    runCard(page, runId),
+    `Run "${runId}" was sampled from reports/runs/ but the dashboard does not ` +
+      "list it. It is most likely quarantined -- run tests/catalog-quarantine.test.ts " +
+      "for the reason. This is a data/schema fault, not a UI fault.",
+  ).toHaveCount(1);
+}
+
 function outcomeCard(page: Page, runId: string, id: string): Locator {
   const href = `/runs/${runId}/outcomes/${id}`;
   return page
@@ -415,6 +435,7 @@ for (const artifact of sample) {
 
   test("a run card opens exactly the run it names", async ({ page }) => {
     await page.goto("/");
+    await expectRunIsServed(page, runId);
     await runCard(page, runId).getByRole("link").click();
     await expect(page).toHaveURL(new RegExp(`/runs/${runId}/?$`));
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
@@ -428,6 +449,7 @@ for (const artifact of sample) {
     await page.keyboard.press("Enter");
     await expect(page.locator("main#main-content")).toBeFocused();
 
+    await expectRunIsServed(page, runId);
     const runLink = runCard(page, runId).getByRole("link");
     await runLink.focus();
     await expect(runLink).toBeFocused();

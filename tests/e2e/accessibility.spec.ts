@@ -52,6 +52,20 @@ function auditedRoutes(): string[] {
   return [...new Set(routes)];
 }
 
+/*
+ * axe is CPU-heavy, and this spec grows with the archive: it audits every
+ * retained run, so 40 runs is ~88 full scans. Run in parallel they starve each
+ * other and blow the 30 s default -- measured 2026-08-24, 30 of 88 failed on
+ * "Test timeout exceeded" with a fully-rendered page snapshot and ZERO
+ * violations, while the same routes passed in 9.7 s when run alone.
+ *
+ * A timeout here reads as an accessibility failure, which is the wrong alarm
+ * entirely, so give the scans room. If this spec ever gets slow enough to
+ * matter, the fix is to audit route SHAPES against a sampled run rather than
+ * every run in the archive -- the pages are one template.
+ */
+test.describe.configure({ timeout: 120_000 });
+
 for (const route of auditedRoutes()) {
   test(`${route} has no automatically detectable accessibility violations`, async ({
     page,
