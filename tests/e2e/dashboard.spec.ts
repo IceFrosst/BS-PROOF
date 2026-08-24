@@ -348,7 +348,11 @@ for (const artifact of artifacts) {
       for (const row of byAgent) {
         const agent = typeof row.agent === "string" ? row.agent : null;
         if (agent) {
-          await expect(table.getByRole("rowheader", { name: agent })).toBeVisible();
+          // exact, or "S5" also matches the S5T row and Playwright's strict
+          // mode fails the whole assertion on two matches.
+          await expect(
+            table.getByRole("rowheader", { name: agent, exact: true }),
+          ).toBeVisible();
         }
       }
     } else {

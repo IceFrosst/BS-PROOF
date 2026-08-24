@@ -571,8 +571,40 @@ thead th { color: var(--ink-soft); font-size: 0.7rem; text-transform: uppercase;
 .la-empty { display: grid; gap: 8px; padding: 26px 24px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--white); }
 .la-empty > strong { font-size: 1.15rem; }
 .la-empty > span { color: var(--ink-soft); }
-.la-census { padding-top: 12px; border-top: 1px solid var(--line); }
-.la-census strong { color: var(--teal-text); }
+/*
+ * The census is what an unscored product actually gets, so it is typeset as
+ * figures rather than a footnote. It must NOT read as a score: the counts keep
+ * their units, there is no denominator, and the tag says so outright.
+ */
+.la-census { display: grid; gap: 12px; margin-top: 4px; padding-top: 16px; border-top: 1px solid var(--line); }
+.la-census-tag {
+  justify-self: start;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+.la-census-figures { display: flex; flex-wrap: wrap; gap: 14px 36px; }
+.la-census-figure { display: grid; gap: 2px; }
+.la-census-figure strong {
+  font-size: 2rem;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: var(--teal-text);
+  font-variant-numeric: tabular-nums;
+}
+.la-census-figure span {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
 
 .la-rows { display: grid; gap: 16px; }
 .la-row { padding: 20px 22px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--white); }

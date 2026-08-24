@@ -614,13 +614,30 @@ export function LabelAnalyzer() {
                   </>
                 )}
               </span>
+              {/*
+                The census is the ANSWER on this path, not a consolation note,
+                so it is typeset as figures. The counts are deliberately shown
+                with their units and never out of 100 -- a bare large number
+                next to a refusal is exactly the "low score" reading that
+                product-score.scoreProduct refuses to produce.
+              */}
               {data.census?.available ? (
-                <span className="la-census">
-                  <strong>
-                    {data.census.rcts_indexed} trials and {data.census.syntheses_indexed} reviews
-                  </strong>{" "}
-                  exist in the literature. {data.census.means}
-                </span>
+                <div className="la-census">
+                  <span className="la-census-tag">Counts, not a score</span>
+                  <div className="la-census-figures">
+                    <div className="la-census-figure">
+                      <strong>{data.census.rcts_indexed}</strong>
+                      <span>randomised trials</span>
+                    </div>
+                    <div className="la-census-figure">
+                      <strong>{data.census.syntheses_indexed}</strong>
+                      <span>systematic reviews</span>
+                    </div>
+                  </div>
+                  <span className="la-dim">
+                    Indexed in Europe PMC at supplement scope. {data.census.means}
+                  </span>
+                </div>
               ) : null}
               {data.queue?.queued ? (
                 <span className="la-dim">
