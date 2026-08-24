@@ -101,11 +101,11 @@
         "synthetic_demo_fixture"
       ],
       "limitations": [
-        "SYNTHETIC DEMO \u2014 hand-written data for previewing the reviewer UI; every number, study and quote is invented.",
+        "SYNTHETIC DEMO — hand-written data for previewing the reviewer UI; every number, study and quote is invented.",
         "Exists so the per-study attribution and extraction-detail views can be seen populated before the next real pipeline run.",
         "Regenerate with python3 scripts/write_demo_artifact.py; this fixture is deliberately overwritable, unlike real run records."
       ],
-      "note": "SYNTHETIC DEMO \u2014 not evidence. Every number is invented."
+      "note": "SYNTHETIC DEMO — not evidence. Every number is invented."
     },
     "20260812_180548_creatine_creatine-monohydrate_claude-top5-per-o": {
       "status": "experimental",
@@ -121,6 +121,20 @@
         "Isolated on identical studies: measured-effect share 15% -> 25% (20 claims via printed-SD standardisation), dose coverage 34% -> 49%."
       ],
       "note": "Deliberate 100-study partial; first v1.21/v12 run. Baseline for the 150-study completion."
+    },
+    "20260824_172620_creatine_creatine-monohydrate_claude-sr-ft-top5-suppl": {
+      "status": "experimental",
+      "public_claims_allowed": false,
+      "reason_codes": [
+        "rescored_from_cached_extractions",
+        "no_model_calls_in_this_run",
+        "not_anchor_validated"
+      ],
+      "limitations": [
+        "Deterministic RE-SCORE of run 20260824_113359. The extractions are that run's, unchanged and made under PROMPT_VERSION v1.22; this pass made no model calls, which is why its telemetry reads unavailable rather than repeating the parent's spend.",
+        "Scored with the 2026-08-24 dose fix, which brackets a stated dose whose salt the paper never named instead of discarding it. Dose coverage rose from 39 to 74 of 155 studies; muscle_power moved 44 -> 67 and its verdict flipped. Nothing else about the scoring model changed.",
+        "Not anchor-validated, and no run of this ingredient has been."
+      ]
     }
   }
 }
