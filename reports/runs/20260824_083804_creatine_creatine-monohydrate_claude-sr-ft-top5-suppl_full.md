@@ -1,6 +1,6 @@
 # BS-PROOF full audit report (claude-sr-ft-top5-suppl)
 
-Generated: **2026-08-24 08:51 UTC**
+Generated: **2026-08-24 08:38 UTC**
 
 
 scoring_model: v12-dose-closeness

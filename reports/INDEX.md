@@ -11,6 +11,10 @@ sweeps `runs/` whenever `scoring.SCORING_MODEL` changes.
 
 | When (UTC) | Mode | Ingredient | Form | Selftest | File |
 |---|---|---|---|---|---|
+| 2026-08-24 08:51 UTC | claude-sr-ft-top5-suppl | `creatine` | `creatine_monohydrate` | summary | [runs/20260824_085105_creatine_creatine-monohydrate_claude-sr-ft-top5-suppl_summary.md](runs/20260824_085105_creatine_creatine-monohydrate_claude-sr-ft-top5-suppl_summary.md) |
+| 2026-08-24 08:51 UTC | claude-sr-ft-top5-suppl | `creatine` | `creatine_monohydrate` | full | [runs/20260824_085105_creatine_creatine-monohydrate_claude-sr-ft-top5-suppl_full.md](runs/20260824_085105_creatine_creatine-monohydrate_claude-sr-ft-top5-suppl_full.md) |
+| 2026-08-24 08:38 UTC | claude-sr-ft-top5-suppl | `creatine` | `creatine_monohydrate` | summary | [runs/20260824_083804_creatine_creatine-monohydrate_claude-sr-ft-top5-suppl_summary.md](runs/20260824_083804_creatine_creatine-monohydrate_claude-sr-ft-top5-suppl_summary.md) |
+| 2026-08-24 08:38 UTC | claude-sr-ft-top5-suppl | `creatine` | `creatine_monohydrate` | full | [runs/20260824_083804_creatine_creatine-monohydrate_claude-sr-ft-top5-suppl_full.md](runs/20260824_083804_creatine_creatine-monohydrate_claude-sr-ft-top5-suppl_full.md) |
 | 2026-08-24 02:14 UTC | claude-sr-ft-top5-suppl | `creatine` | `creatine_monohydrate` | summary | [runs/20260824_021449_creatine_creatine-monohydrate_claude-sr-ft-top5-suppl_summary.md](runs/20260824_021449_creatine_creatine-monohydrate_claude-sr-ft-top5-suppl_summary.md) |
 | 2026-08-24 02:14 UTC | claude-sr-ft-top5-suppl | `creatine` | `creatine_monohydrate` | full | [runs/20260824_021449_creatine_creatine-monohydrate_claude-sr-ft-top5-suppl_full.md](runs/20260824_021449_creatine_creatine-monohydrate_claude-sr-ft-top5-suppl_full.md) |
 | 2026-08-23 18:10 UTC | claude-sr-ft-top5-suppl | `creatine` | `creatine_monohydrate` | summary | [runs/20260823_181048_creatine_creatine-monohydrate_claude-sr-ft-top5-suppl_summary.md](runs/20260823_181048_creatine_creatine-monohydrate_claude-sr-ft-top5-suppl_summary.md) |
