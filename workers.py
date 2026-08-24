@@ -341,11 +341,38 @@ def _payload(agent: str, record: dict, text: str, registry: dict | None,
         # ~16k CLI wall, the exact size of S7's one prior timeout. Refit rather
         # than hope: the head/tail slice shrinks by what the snippets add.
         snip_chars = sum(len(s) for s in snippets) + 24 * len(snippets)
-        return {**base, "text": _fit_text(agent, text, _fixed + snip_chars),
+        # Tables ride along (v1.23), exactly like S5's (v1.21) and for the
+        # dose arc's version of the same reason: dosing protocols ("20 g/d
+        # loading, 5 g/d maintenance") and the baseline MEAN BODY MASS that
+        # per-kg dosing needs live in tables the prose slice loses. Measured
+        # 2026-08-24 on the creatine corpus: the muscle_strength dose band
+        # rested on ONE dosed benefit trial, and 25 per-kg trials stayed
+        # dose-less for want of a body mass that Table 1 typically prints.
+        # S7's budget arithmetic is LIVE, and _fit_text's room<=0 branch
+        # returns the FULL text -- so tables must NEVER be added to
+        # fixed_chars: measured 2026-08-24, counting a 2.5k table block
+        # against the budget flipped 32/156 corpus studies into the full-text
+        # regime (5k -> up to 60k payloads). The text is therefore fitted
+        # exactly as before (fixed + snippets only), and tables ride in the
+        # gap between the TEXT budget and the CLI WALL: S7's one historical
+        # timeout was a 15,463-char total, so 14,500 is the hard ceiling
+        # here. Measured on the 156-study corpus: text fitting is
+        # byte-identical with and without tables, payload max unchanged
+        # (11.1k), and 76/156 studies ship tables (avg 1.4k) -- which is
+        # 76/76 of the studies that HAVE PMC XML tables at all (58 lack a
+        # pmcid, 22 have XML without <table-wrap>). The leftover-of-12k
+        # variant shipped tables to exactly 1 study, i.e. never.
+        fitted = _fit_text(agent, text, _fixed + snip_chars)
+        wall_room = 14500 - (_fixed + snip_chars + len(fitted) + 400)
+        tables = (_tables_text(record, cap_chars=min(2500, wall_room))
+                  if wall_room >= 300 else [])
+        return {**base,
+                "text": fitted,
                 "ingredient": ingredient,
                 "form_vocabulary": vocab.forms_for(ingredient),
                 "unspecified_form_id": vocab.unspecified_form_id(ingredient),
-                "dose_snippets": snippets}
+                "dose_snippets": snippets,
+                "tables": tables}
     if agent == "S8":
         return base
     raise KeyError(agent)
@@ -888,9 +915,9 @@ def _self_check_v13_shadow_wiring() -> None:
         with patch.dict(os.environ, {"SP_V13_SHADOW": "1"} if shadow else {},
                         clear=not shadow), patch.object(
                             __import__(__name__), "_tables_text",
-                            lambda _: tables), patch.object(
+                            lambda _record, **_kw: tables), patch.object(
                             __import__(__name__), "_tables_structured",
-                            lambda _: []):
+                            lambda _record, **_kw: []):
             return extract_study(record, text, call=fake_call, max_workers=5)
 
     calls = []
@@ -985,6 +1012,38 @@ def _self_check_v13_shadow_wiring() -> None:
                              {"Creatine": ["Creatine"], "Placebo": ["Placebo"]})
     assert len(got) == 1 and got[0].arms[0].mean == 82.1 and got[0].arms[0].sd == 5.2
     assert got[0].arms[0].n == 20 and got[0].arms[1].n == 19
+
+    # S7 payload carries the paper's tables (v1.23): dosing protocols and the
+    # baseline mean body mass live there, and the dose band was resting on one
+    # dosed benefit trial without them. GUARANTEES under test:
+    #   1. the fitted text is byte-identical with and without tables -- tables
+    #      must never flip a study into _fit_text's full-text regime (measured
+    #      2026-08-24: budget-counting them did exactly that for 32/156);
+    #   2. the total (system+schema+snippets+fitted+tables+overhead) stays
+    #      under the 14,500 wall ceiling whenever tables ship;
+    #   3. an ordinary paper actually ships its tables (the leftover-of-12k
+    #      variant shipped tables to 1/156 studies, i.e. never).
+    s7_tables = ["Table 1 — Baseline\nGroup | Body mass (kg)\nCreatine | 83.2 ± 9.8"]
+    def s7_pay(text_body, tables_ret):
+        with patch.object(__import__(__name__), "_tables_text",
+                          lambda _record, cap_chars=4000, **_kw:
+                          [t[:cap_chars] for t in tables_ret]):
+            return _payload("S7", {"ingredient": "creatine",
+                                   "title": "t", "pmcid": "PMC1"},
+                            text_body, None)
+    from claude_adapter import SCHEMAS as _SCH, _system_prompt as _sp
+    _, _s7_schema, _s7_prompt = claude_adapter.AGENTS["S7"]
+    s7_fixed = len(_sp(_s7_prompt)) + len((_SCH / _s7_schema).read_text()) + 400
+    for body in ("creatine 5 g/day. " + "x" * 30000,
+                 "creatine 5 g/day was given for 8 weeks."):
+        pay_with, pay_without = s7_pay(body, s7_tables), s7_pay(body, [])
+        assert pay_with["text"] == pay_without["text"]                    # 1
+        if pay_with["tables"]:
+            total = (s7_fixed + len(pay_with["text"])
+                     + sum(len(s) + 24 for s in pay_with["dose_snippets"])
+                     + sum(len(t) for t in pay_with["tables"]))
+            assert total <= 14500                                          # 2
+        assert pay_with["tables"] == s7_tables                             # 3
 
 
 def extract_study(record: dict, text: str, registry: dict | None = None, *,

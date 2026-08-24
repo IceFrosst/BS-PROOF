@@ -105,6 +105,13 @@ def _claude_bin() -> str:
 
 # Bump when you edit ANY prompt (including _shared.md). This is in the cache key.
 # Forget to bump it and you will silently serve stale extractions forever.
+# v1.23 also ships S7 TABLES (same day, before any v1.23 extraction existed, so
+# the version is not split): the S7 payload now carries the paper's serialised
+# tables, capped at 2500 chars and counted against S7's live text budget.
+# Measured driver: the creatine muscle_strength dose band rested on ONE dosed
+# benefit trial while 25 per-kg trials lacked only the body mass that Table 1
+# prints. prompts/s7_form.md gained the matching TABLES section (protocol
+# doses + baseline mean body mass, same evidence rules as prose).
 # v1.23 (2026-08-24): measured-coverage prompt tightenings, driven by the first
 # corpus where S5T actually ran (its schema had been 400-rejected since birth;
 # see schemas/s5_table_selector.json). Measured blockers on the 156-study
