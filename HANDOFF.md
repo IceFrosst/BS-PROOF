@@ -6,6 +6,51 @@
 
 ---
 
+## 2026-08-24 evening (Claude Code session — re-score tool, dose fix published)
+
+### scripts/rescore_run.py — re-score a run from its OWN cached extractions
+Extraction is the expensive half; scoring is deterministic and free. CLAUDE.md
+has said re-scoring from cache is cheap since the constants freeze, but nothing
+did it, so a scoring fix could only reach the dashboard behind a full
+re-extraction. That bit when PROMPT_VERSION moved to v1.23 and invalidated the
+v1.22 cache while a run held the subscription.
+
+    python scripts/rescore_run.py <run> --verify    fidelity check, writes nothing
+    python scripts/rescore_run.py <run> --write     new run, no model calls
+
+Two things about it that are load-bearing:
+- **Telemetry is dropped, not copied.** The parent's calls were spent once;
+  repeating them would double-count them in every cost aggregate. The artifact
+  takes its "unavailable" path and run_statuses records
+  `no_model_calls_in_this_run`.
+- **`--verify` exists because the reconstruction can be wrong.** `design_rank`
+  is NOT retained in the context artifact and is grafted from the dashboard's
+  per-study contributions; without it every study defaults to rank 14, beyond
+  human evidence, and every outcome gates to null. Always verify against the
+  change REVERTED first — otherwise you are reading reconstruction error as a
+  scoring delta.
+
+### The dose fix is now published (run 20260824_172620)
+Re-score of 20260824_113359's 155 studies. Control verified 5/5 composites
+against the pre-fix code, so this delta is the fix:
+
+| outcome | before | after |
+|---|--:|--:|
+| muscle_power | 44 | **67** — verdict flips to "probably works" |
+| lean_body_mass | 40 | 50 |
+| energy_levels | 20 | 28 |
+| muscle_strength | 38 | 38 (still one dosed benefit trial) |
+| exercise_endurance | 9 | 9 (no dosed benefit trial) |
+
+Signed scores unchanged — invariant 8 keeps dose out of `w_study`, so only the
+composite's dose term moved. Registered experimental,
+`public_claims_allowed: false`, provenance in its limitations.
+
+The analyzer picks artifacts newest-filename-first, so a creatine scan now
+scores against this run.
+
+---
+
 ## 2026-08-24 afternoon (Claude Code session — dose bracket, catalog un-quarantine, bs-proof deploy)
 
 Ran alongside the Pi session; that session bumped PROMPT_VERSION to v1.23
