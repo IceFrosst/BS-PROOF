@@ -635,3 +635,48 @@ thead th { color: var(--ink-soft); font-size: 0.7rem; text-transform: uppercase;
 /* The Analyze button is the primary action the moment a file is staged. */
 .la-analyze { min-width: 240px; font-size: 1.1rem; }
 .la-analyze[disabled] { opacity: 0.6; cursor: default; }
+
+/* --------------------------------------------------------------------------
+   CAMERA + MOBILE-FIRST PASS (2026-08-24) — founder: open the app, take a
+   photo OR upload; must work on mobile first.
+
+   Scoped to .la-* on purpose: the founder has an in-flight, uncommitted viz
+   redesign touching the global styles, so this pass ADDS analyzer-local rules
+   rather than reworking shared ones.
+   -------------------------------------------------------------------------- */
+.la-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.la-actions .button { min-height: 48px; }
+
+.la-camera { display: grid; gap: 14px; justify-items: center; width: 100%; }
+.la-camera-view {
+  width: 100%; max-width: 560px; max-height: 60vh;
+  border-radius: 12px; border: 1px solid var(--line);
+  background: var(--night); object-fit: cover; aspect-ratio: 3 / 4;
+}
+
+/* Mobile-first: on small screens the actions become full-width thumb targets,
+   the focal card hugs the viewport, and the score header stays on one line. */
+@media (max-width: 620px) {
+  .analyze-hero { padding-top: 18px; }
+  .analyze-hero .la { padding-block: 18px 30px; }
+  .analyze-hero .la-intro { margin-bottom: 18px; }
+  .analyze-hero .la-intro h2 { font-size: 1.7rem; }
+  .analyze-hero .la-lede { font-size: 0.95rem; }
+  .analyze-hero .la-drop { min-height: 0; padding: 22px 16px; }
+  .la-actions { flex-direction: column; width: 100%; }
+  .la-actions .button, .la-analyze, .la-drop-copy > .button { width: 100%; }
+  .la-drop-copy { width: 100%; }
+  .la-preview { max-height: 240px; }
+  .la-camera-view { aspect-ratio: 3 / 4; max-height: 55vh; }
+  .la-read-grid { grid-template-columns: 1fr 1fr; gap: 12px 14px; }
+  .la-row { padding: 16px 14px; }
+  .la-row-head h3 { font-size: 1.05rem; }
+  .la-verdict { font-size: 0.82rem; }
+  .la-row-foot { gap: 8px 14px; font-size: 0.78rem; }
+  .analyze-hero .hero-ledger { margin-top: 28px; }
+}
+
+/* Wider phones / small tablets: two arcs per row instead of one. */
+@media (min-width: 480px) and (max-width: 900px) {
+  .la-arcs { grid-template-columns: repeat(2, 1fr); }
+}

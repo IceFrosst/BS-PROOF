@@ -103,3 +103,48 @@ export function vocabBlock(): string {
   }
   return lines.join("\n");
 }
+
+export interface ResolvedProduct {
+  ingredient: string | null;
+  form: string | null;
+}
+
+/**
+ * Repair the model's most common vocabulary slip: the FORM id in the
+ * ingredient field.
+ *
+ * MEASURED 2026-08-23 on the live DeepSeek backend (HANDOFF.md "KNOWN QUIRK"):
+ * a creatine monohydrate label came back as
+ * `ingredient_vocab_id: "creatine_monohydrate"`, which matches no catalog
+ * ingredient, so the scored-run lookup missed and a fully-scored product fell
+ * through to `not_scored` + census. The slip is understandable — the label
+ * literally prints "Creatine Monohydrate" as the ingredient line — and it is
+ * DETERMINISTICALLY repairable, because every form id belongs to exactly one
+ * ingredient in vocab/form.json. This is vocabulary normalisation, not
+ * inference: nothing is guessed that the vocabulary does not state.
+ *
+ * Rules, in order:
+ *   1. ingredient is a real ingredient id -> keep both fields as given
+ *   2. ingredient is a FORM id -> ingredient becomes that form's parent;
+ *      the form id fills the form field ONLY when form was null or the two
+ *      agree — a CONTRADICTING form field is left alone for the caller's
+ *      form-level checks to surface, never silently overruled
+ *   3. anything else -> unchanged (the not-supported path handles it)
+ */
+export function resolveIngredientForm(
+  ingredientId: string | null,
+  formId: string | null,
+): ResolvedProduct {
+  if (!ingredientId) return { ingredient: null, form: formId };
+  const vocab = loadFormVocab().ingredients ?? {};
+  if (ingredientId in vocab) return { ingredient: ingredientId, form: formId };
+  for (const [parent, block] of Object.entries(vocab)) {
+    if ((block.forms ?? []).some((f) => f.id === ingredientId)) {
+      return {
+        ingredient: parent,
+        form: formId === null || formId === ingredientId ? ingredientId : formId,
+      };
+    }
+  }
+  return { ingredient: ingredientId, form: formId };
+}

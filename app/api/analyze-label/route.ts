@@ -43,7 +43,7 @@ import { NextResponse } from "next/server";
 
 import { scoreProduct, availableProducts } from "@/lib/analyze/product-score";
 import { readLabel, analyzerEnabled, LabelReadError, type LabelMediaType } from "@/lib/analyze/vision";
-import { elementalDoseRangeMg, ingredientIds } from "@/lib/analyze/vocab";
+import { elementalDoseRangeMg, ingredientIds, resolveIngredientForm } from "@/lib/analyze/vocab";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -268,8 +268,16 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json(out, { headers: { "Cache-Control": "no-store" } });
   }
 
-  const ingredient = label.ingredient_vocab_id;
-  const formId = label.form_vocab_id;
+  // Vocabulary repair before any lookup: models regularly return the FORM id
+  // ("creatine_monohydrate") in the ingredient field, because that is what the
+  // label's ingredient line literally prints. Unrepaired, a fully-scored
+  // product fell through to not_scored + census (HANDOFF 2026-08-23, measured
+  // live on DeepSeek). Deterministic — every form id has exactly one parent.
+  const resolved = resolveIngredientForm(label.ingredient_vocab_id, label.form_vocab_id);
+  const ingredient = resolved.ingredient && ingredientIds().includes(resolved.ingredient)
+    ? resolved.ingredient
+    : null;
+  const formId = resolved.form;
   const printed = label.compound_dose_mg;
 
   if (!ingredient) {

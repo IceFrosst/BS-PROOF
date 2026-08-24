@@ -20,7 +20,7 @@
  * claim the run registry explicitly withheld.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type NullableNumber = number | null;
 
@@ -222,6 +222,13 @@ export function LabelAnalyzer() {
   const [data, setData] = useState<AnalyzerResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
+  // In-page camera (founder ask 2026-08-24: open the app, take a photo OR
+  // upload). `stream` non-null means the viewfinder is showing. Capturing only
+  // STAGES the frame — the two-step Analyze consent applies to camera shots
+  // exactly as it does to uploads.
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const captureInputRef = useRef<HTMLInputElement | null>(null);
 
   // Advances the narrated stage while a read is in flight. The reset to stage 0
   // happens in `submit`, where the request actually starts -- doing it here
@@ -237,10 +244,8 @@ export function LabelAnalyzer() {
     if (preview) URL.revokeObjectURL(preview);
   }, [preview]);
 
-  /** Step 1: stage the file and show it. Sends nothing. */
-  const pick = useCallback((files: FileList | null) => {
-    const picked = files?.[0];
-    if (!picked) return;
+  /** Step 1: stage a file (picked, dropped, or captured). Sends nothing. */
+  const stageFile = useCallback((picked: File) => {
     if (picked.size > MAX_BYTES) {
       setError(`That image is ${(picked.size / 1e6).toFixed(1)} MB. The limit is 12 MB.`);
       return;
@@ -253,6 +258,70 @@ export function LabelAnalyzer() {
       return URL.createObjectURL(picked);
     });
   }, []);
+
+  const pick = useCallback((files: FileList | null) => {
+    const picked = files?.[0];
+    if (picked) stageFile(picked);
+  }, [stageFile]);
+
+  const closeCamera = useCallback(() => {
+    setStream((old) => {
+      old?.getTracks().forEach((t) => t.stop());
+      return null;
+    });
+  }, []);
+
+  /**
+   * "Take photo": an in-page viewfinder via getUserMedia (rear camera
+   * preferred). When the browser has no camera API, is on an insecure origin,
+   * or the user denies permission, fall back to the hidden
+   * `<input capture="environment">` — on phones that opens the native camera
+   * app, which is the most reliable mobile path and needs no permission prompt
+   * of its own.
+   */
+  const openCamera = useCallback(async () => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      captureInputRef.current?.click();
+      return;
+    }
+    try {
+      const media = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } },
+        audio: false,
+      });
+      setError(null);
+      setStream(media);
+    } catch {
+      captureInputRef.current?.click();
+    }
+  }, []);
+
+  // Attach the stream once the <video> exists; stop the tracks on unmount so
+  // the camera light never outlives the component.
+  useEffect(() => {
+    if (stream && videoRef.current) {
+      videoRef.current.srcObject = stream;
+      void videoRef.current.play().catch(() => undefined);
+    }
+    return () => stream?.getTracks().forEach((t) => t.stop());
+  }, [stream]);
+
+  const snap = useCallback(() => {
+    const video = videoRef.current;
+    if (!video || !video.videoWidth) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext("2d")?.drawImage(video, 0, 0);
+    canvas.toBlob(
+      (blob) => {
+        if (blob) stageFile(new File([blob], "camera-label.jpg", { type: "image/jpeg" }));
+        closeCamera();
+      },
+      "image/jpeg",
+      0.92,
+    );
+  }, [stageFile, closeCamera]);
 
   /** Step 2: the Analyze button. This is the only place a request starts. */
   const submit = useCallback(async () => {
@@ -330,44 +399,91 @@ export function LabelAnalyzer() {
           disabled={busy}
           onChange={(e) => pick(e.target.files)}
         />
+        {/* The getUserMedia fallback: `capture` makes phones open the native
+            camera app directly. Never rendered as a control — openCamera
+            clicks it when the in-page viewfinder is unavailable or denied. */}
+        <input
+          ref={captureInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="la-input"
+          aria-hidden="true"
+          tabIndex={-1}
+          onChange={(e) => pick(e.target.files)}
+        />
 
-        {preview ? (
-          // `preview` is a blob: URL for a file the user just picked. next/image
-          // cannot optimise an object URL -- it would put a loader in front of
-          // bytes already in memory -- and the image never leaves the browser.
-          // The directive has to be the LAST comment line before the tag or it
-          // disables the rule on a comment and the warning returns.
-          // eslint-disable-next-line @next/next/no-img-element
-          <img className="la-preview" src={preview} alt="The label you uploaded" />
-        ) : (
-          <div className="la-drop-art" aria-hidden="true">
-            <svg viewBox="0 0 64 64" width="56" height="56" fill="none" stroke="currentColor" strokeWidth="3">
-              <rect x="10" y="6" width="44" height="52" rx="5" />
-              <path d="M18 24h28M18 34h28M18 44h18" strokeLinecap="round" />
-            </svg>
+        {stream ? (
+          <div className="la-camera">
+            {/* muted+playsInline: iOS refuses to autoplay an unmuted stream and
+                would fullscreen the video without playsInline. */}
+            <video ref={videoRef} className="la-camera-view" muted playsInline autoPlay />
+            <div className="la-actions">
+              <button type="button" className="button button-dark la-analyze" onClick={snap}>
+                Capture
+              </button>
+              <button type="button" className="button button-outline" onClick={closeCamera}>
+                Cancel
+              </button>
+            </div>
           </div>
-        )}
+        ) : (
+          <>
+            {preview ? (
+              // `preview` is a blob: URL for a file the user just picked.
+              // next/image cannot optimise an object URL -- it would put a
+              // loader in front of bytes already in memory -- and the image
+              // never leaves the browser. The directive has to be the LAST
+              // comment line before the tag.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img className="la-preview" src={preview} alt="The label you staged for analysis" />
+            ) : (
+              <div className="la-drop-art" aria-hidden="true">
+                <svg viewBox="0 0 64 64" width="56" height="56" fill="none" stroke="currentColor" strokeWidth="3">
+                  <rect x="10" y="6" width="44" height="52" rx="5" />
+                  <path d="M18 24h28M18 34h28M18 44h18" strokeLinecap="round" />
+                </svg>
+              </div>
+            )}
 
-        <div className="la-drop-copy">
-          {file ? (
-            <button
-              type="button"
-              className="button button-dark la-analyze"
-              onClick={() => void submit()}
-              disabled={busy}
-            >
-              {busy ? "Analyzing…" : "Analyze"}
-            </button>
-          ) : null}
-          <label className={`button ${file ? "button-outline" : "button-light"}`} htmlFor="la-file">
-            {file ? "Choose a different photo" : "Choose a label photo"}
-          </label>
-          <span>
-            {file
-              ? `${file.name} · ${(file.size / 1e6).toFixed(1)} MB — nothing is sent until you press Analyze`
-              : "or drag one here · PNG, JPEG, WebP · up to 12 MB"}
-          </span>
-        </div>
+            <div className="la-drop-copy">
+              {file ? (
+                <>
+                  <button
+                    type="button"
+                    className="button button-dark la-analyze"
+                    onClick={() => void submit()}
+                    disabled={busy}
+                  >
+                    {busy ? "Analyzing…" : "Analyze"}
+                  </button>
+                  <div className="la-actions">
+                    <button type="button" className="button button-outline" onClick={() => void openCamera()} disabled={busy}>
+                      Retake photo
+                    </button>
+                    <label className="button button-outline" htmlFor="la-file">
+                      Choose a different image
+                    </label>
+                  </div>
+                </>
+              ) : (
+                <div className="la-actions">
+                  <button type="button" className="button button-dark" onClick={() => void openCamera()} disabled={busy}>
+                    Take a photo
+                  </button>
+                  <label className="button button-light" htmlFor="la-file">
+                    Upload an image
+                  </label>
+                </div>
+              )}
+              <span>
+                {file
+                  ? `${file.name} · ${(file.size / 1e6).toFixed(1)} MB — nothing is sent until you press Analyze`
+                  : "or drag an image here · PNG, JPEG, WebP · up to 12 MB"}
+              </span>
+            </div>
+          </>
+        )}
 
         {busy ? (
           <p className="la-stage" role="status" aria-live="polite">
