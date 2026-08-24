@@ -1,6 +1,6 @@
 # BS-PROOF summary report (claude-sr-ft-top5-suppl)
 
-Generated: **2026-08-24 11:33 UTC**
+Generated: **2026-08-24 11:10 UTC**
 
 
 scoring_model: v12-dose-closeness
@@ -23,23 +23,23 @@ Full audit: matching `*_full.md` in `reports/runs/`.
 ## Token + cost accounting
 
 - Extraction backend: **Claude subscription** (`--safe-mode`, `--max-turns 1`, one shot per call)
-- Model calls: **38** (cache hits 1081, failures 18)
-- Input tokens: **234,395** (fresh 320 · cache-write 155,132 · cache-read 78,943)
-- Output tokens: **108,813**
+- Model calls: **61** (cache hits 1067, failures 54)
+- Input tokens: **36,092** (fresh 5,510 · cache-write 30,582 · cache-read 0)
+- Output tokens: **6,101**
 - **Spent on this run: $0.00** — subscription, not metered.
-- **API-equivalent cost: $1.014** — what the same work would cost billed per token.
-- Per study: **0.2 calls**, **$0.0065** API-equivalent across 155 scored studies.
+- **API-equivalent cost: $0.267** — what the same work would cost billed per token.
+- Per study: **0.4 calls**, **$0.0017** API-equivalent across 155 scored studies.
 
 | Agent | Tier | Model | Calls | Cache hits | Fail | In | Out | API-equiv |
 |---|---|---|--:|--:|--:|--:|--:|--:|
-| S1 | A | `claude-haiku-4-5-20251001` | 0 | 155 | 0 | 0 | 0 | $0.000 |
-| S3 | B | `claude-sonnet-5` | 3 | 154 | 3 | 0 | 0 | $0.000 |
-| S4 | B | `claude-sonnet-5` | 0 | 155 | 0 | 0 | 0 | $0.000 |
-| S5 | B | `claude-sonnet-5` | 3 | 154 | 3 | 0 | 0 | $0.000 |
-| S5T | A | `claude-haiku-4-5-20251001` | 32 | 7 | 12 | 234,395 | 108,813 | $1.014 |
-| S6B | C | `claude-sonnet-5` | 0 | 146 | 0 | 0 | 0 | $0.000 |
-| S7 | B | `claude-sonnet-5` | 0 | 155 | 0 | 0 | 0 | $0.000 |
-| S8 | A | `claude-haiku-4-5-20251001` | 0 | 155 | 0 | 0 | 0 | $0.000 |
+| S1 | A | `claude-haiku-4-5-20251001` | 1 | 154 | 0 | 2,866 | 1,164 | $0.010 |
+| S3 | B | `claude-sonnet-5` | 4 | 153 | 3 | 5,555 | 592 | $0.044 |
+| S4 | B | `claude-sonnet-5` | 1 | 154 | 0 | 3,601 | 303 | $0.028 |
+| S5 | B | `claude-sonnet-5` | 4 | 153 | 3 | 11,337 | 1,448 | $0.091 |
+| S5T | A | `claude-haiku-4-5-20251001` | 48 | 0 | 48 | 0 | 0 | $0.000 |
+| S6B | C | `claude-sonnet-5` | 1 | 145 | 0 | 4,337 | 932 | $0.041 |
+| S7 | B | `claude-sonnet-5` | 1 | 154 | 0 | 5,762 | 367 | $0.042 |
+| S8 | A | `claude-haiku-4-5-20251001` | 1 | 154 | 0 | 2,634 | 1,295 | $0.011 |
 
 Tier → model is pinned in `claude_adapter.TIER_MODEL` (full ids, never aliases: an alias floats to a new model while the cache key does not change). Tier A = classification, B = extraction, C = the highest-risk agent.
 

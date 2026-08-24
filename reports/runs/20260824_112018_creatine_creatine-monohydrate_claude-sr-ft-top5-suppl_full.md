@@ -1,6 +1,6 @@
 # BS-PROOF full audit report (claude-sr-ft-top5-suppl)
 
-Generated: **2026-08-24 11:33 UTC**
+Generated: **2026-08-24 11:20 UTC**
 
 
 scoring_model: v12-dose-closeness
@@ -100,12 +100,12 @@ ALL PASSED
 ## Token + cost accounting
 
 - Extraction backend: **Claude subscription** (`--safe-mode`, `--max-turns 1`, one shot per call)
-- Model calls: **38** (cache hits 1081, failures 18)
-- Input tokens: **234,395** (fresh 320 · cache-write 155,132 · cache-read 78,943)
-- Output tokens: **108,813**
+- Model calls: **23** (cache hits 1079, failures 12)
+- Input tokens: **71,646** (fresh 170 · cache-write 46,335 · cache-read 25,141)
+- Output tokens: **31,010**
 - **Spent on this run: $0.00** — subscription, not metered.
-- **API-equivalent cost: $1.014** — what the same work would cost billed per token.
-- Per study: **0.2 calls**, **$0.0065** API-equivalent across 155 scored studies.
+- **API-equivalent cost: $0.278** — what the same work would cost billed per token.
+- Per study: **0.1 calls**, **$0.0018** API-equivalent across 155 scored studies.
 
 | Agent | Tier | Model | Calls | Cache hits | Fail | In | Out | API-equiv |
 |---|---|---|--:|--:|--:|--:|--:|--:|
@@ -113,7 +113,7 @@ ALL PASSED
 | S3 | B | `claude-sonnet-5` | 3 | 154 | 3 | 0 | 0 | $0.000 |
 | S4 | B | `claude-sonnet-5` | 0 | 155 | 0 | 0 | 0 | $0.000 |
 | S5 | B | `claude-sonnet-5` | 3 | 154 | 3 | 0 | 0 | $0.000 |
-| S5T | A | `claude-haiku-4-5-20251001` | 32 | 7 | 12 | 234,395 | 108,813 | $1.014 |
+| S5T | A | `claude-haiku-4-5-20251001` | 17 | 5 | 6 | 71,646 | 31,010 | $0.278 |
 | S6B | C | `claude-sonnet-5` | 0 | 146 | 0 | 0 | 0 | $0.000 |
 | S7 | B | `claude-sonnet-5` | 0 | 155 | 0 | 0 | 0 | $0.000 |
 | S8 | A | `claude-haiku-4-5-20251001` | 0 | 155 | 0 | 0 | 0 | $0.000 |
@@ -153,7 +153,7 @@ _SRs never add patients; only a capped confidence boost (≤ +30%)._
 _One row per STUDY. The cost table above counts CLI ATTEMPTS, so its totals are higher by exactly the retries column._
 
 **Telemetry does not reconcile — do not quote these rates:**
-- S5T: 32 attempts in the cost table but no row in the success table -- its failures are invisible to anyone reading success rates
+- S5T: 17 attempts in the cost table but no row in the success table -- its failures are invisible to anyone reading success rates
 - S6B: 0 attempts in the cost table but no row in the success table -- its failures are invisible to anyone reading success rates
 - S1: 0 attempts for 155 studies -- impossible, every study needs at least one attempt
 - S3: 3 attempts for 155 studies -- impossible, every study needs at least one attempt
