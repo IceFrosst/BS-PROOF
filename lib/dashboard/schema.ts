@@ -210,6 +210,18 @@ export const DashboardRunSchema = z
     systematic_reviews: z.record(z.string(), z.unknown()).optional(),
     sr: z.record(z.string(), z.unknown()).optional(),
     reconciliation: z.record(z.string(), z.unknown()).nullable().optional(),
+    // The v13 measured-effect SHADOW block (2026-08-23). Optional, and shadow
+    // by definition: it never feeds a displayed score, so it is carried rather
+    // than interpreted here.
+    //
+    // It must be declared. .strict() rejects unknown keys, and adding this
+    // block to the artifact writer + the Ajv JSON schema without also adding it
+    // here quarantined every run written after it -- measured 2026-08-24, all
+    // five of that day's runs refused with `Unrecognized key: "v13_shadow"`,
+    // so the dashboard's newest run was 02:14 while /api/analyze-label happily
+    // cited the 11:33 run whose page therefore 404'd. Two validators disagreeing
+    // about one artifact is worse than either being strict alone.
+    v13_shadow: z.record(z.string(), z.unknown()).nullable().optional(),
   })
   .strict()
   .superRefine((value, context) => {
