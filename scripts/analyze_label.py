@@ -216,13 +216,11 @@ def analyze(image: Path, *, do_census: bool = True,
         "other_actives": label.get("other_actives") or [],
     }
 
-    # The dose used for scoring is the elemental interval's low end when the
-    # conversion is exact, and None when it refused. Never the printed compound
-    # number: that is a different quantity from the trial doses it would be
-    # compared against.
-    dose_for_score = elemental.get("low")
-
-    result = product_score.score_product(ingredient, form or "", dose_for_score)
+    # Keep the score boundary on the compound axis. score_product performs the
+    # conversion itself and refuses bounded intervals; passing the low endpoint
+    # as elemental would silently turn an interval into a false exact dose.
+    result = product_score.score_product(ingredient, form or "", printed,
+                                         dose_basis="compound")
     out["result"] = result
     out["status"] = result.get("status")
 

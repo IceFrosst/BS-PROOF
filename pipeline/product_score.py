@@ -44,6 +44,7 @@ from pathlib import Path
 
 from pipeline import arcs as arcsmod
 from pipeline import dose as dosemod
+from pipeline import vocab
 
 RUNS_DIR = Path(__file__).resolve().parent.parent / "reports" / "runs"
 STATUSES = Path(__file__).resolve().parent.parent / "reports" / "run_statuses.json"
@@ -177,9 +178,14 @@ def _benefit_range(row: dict) -> dict:
     return {"low": d.get("low"), "high": d.get("high"), "basis": d.get("basis")}
 
 
-def score_product(ingredient: str, form: str, dose_mg: float | None) -> dict:
+def score_product(ingredient: str, form: str, dose_mg: float | None,
+                  *, dose_basis: str = "elemental") -> dict:
     """
     Recompute this product's rows from a retained run.
+
+    ``dose_mg`` is active-moiety/elemental by default.  Compound input must be
+    explicit and is converted only for a known exact vocabulary form; bounded
+    or unknown conversions are refused rather than compared on mixed bases.
 
     Returns {"status": ...}. Statuses are deliberately distinct so the caller
     never has to guess which kind of nothing it got:
@@ -197,6 +203,19 @@ def score_product(ingredient: str, form: str, dose_mg: float | None) -> dict:
                     "form": form,
                     "scored_forms": [p["form"] for p in others]}
         return {"status": "not_scored", "ingredient": ingredient, "form": form}
+
+    if dose_basis in {"compound", "compound_only"} and dose_mg is not None:
+        converted = vocab.elemental_dose_range_mg(ingredient, form, dose_mg)
+        if (converted.get("low") is None or converted.get("high") is None
+                or converted["low"] != converted["high"]):
+            return {"status": "recompute_refused", "ingredient": ingredient,
+                    "form": form, "dose_mg": dose_mg,
+                    "reason": "compound_dose_conversion_ambiguous"}
+        dose_mg = converted["low"]
+    elif dose_basis not in {"elemental", "elemental_stated", "converted"}:
+        return {"status": "recompute_refused", "ingredient": ingredient,
+                "form": form, "dose_mg": dose_mg,
+                "reason": "unsupported_dose_basis"}
 
     run = art.get("run") or {}
     product = art.get("product") or {}

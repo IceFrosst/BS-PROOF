@@ -67,25 +67,70 @@ def study_dose(ingredient: str, s7: dict | None) -> dict:
     if not s7:
         return {"dose_low_mg": None, "dose_high_mg": None, "dose_basis": "unstated"}
     form_id = s7.get("form_vocab_id")
-    stated = _pos_finite(s7.get("elemental_dose_mg"))
-    if stated is not None:
-        return {"dose_low_mg": stated, "dose_high_mg": stated,
-                "dose_basis": s7.get("dose_basis") or "elemental_stated"}
-    # PER-KG DOSING (v1.19). "0.3 g/kg/day" was the single largest cause of a
-    # missing dose -- 25 of 76 dose-less extractions in the creatine corpus. The
-    # multiplication happens HERE, deterministically, and only when BOTH numbers
-    # are the paper's own (S7 is forbidden from assuming a body weight, and so is
-    # this function -- per-kg with no stated mean mass stays doseless, invariant
-    # 5). Arithmetic on reported numbers, not inference of an unreported one.
+    declared_basis = s7.get("dose_basis") or "unstated"
+
+    def _compound(value) -> dict:
+        amount = _pos_finite(value)
+        rng = vocab.elemental_dose_range_mg(ingredient, form_id, amount)
+        return {"dose_low_mg": rng["low"], "dose_high_mg": rng["high"],
+                "dose_basis": rng["basis"]}
+
+    elemental = _pos_finite(s7.get("elemental_dose_mg"))
+    compound = _pos_finite(s7.get("compound_dose_mg"))
+
+    # A known-form extraction sometimes copies compound_dose_mg into the
+    # elemental field. Equality is not evidence that the amount is elemental:
+    # when a known conversion exists, prefer the explicitly convertible
+    # compound interpretation.  Unknown/bounded forms cannot trigger this
+    # rule, because there is no exact factor with which to identify a copy.
+    if elemental is not None and compound is not None and math.isclose(
+            elemental, compound, rel_tol=1e-9, abs_tol=1e-9):
+        known = vocab.elemental_dose_range_mg(ingredient, form_id, compound)
+        if known.get("basis") == "converted":
+            return _compound(compound)
+
+    # Explicit compound-only reports (including a copied elemental field) are
+    # converted only here. Per-kg compound values are converted after their
+    # stated body mass is applied.
+    if declared_basis == "compound_only":
+        if compound is not None and elemental is not None and not math.isclose(
+                compound, elemental, rel_tol=1e-9, abs_tol=1e-9):
+            return {"dose_low_mg": None, "dose_high_mg": None,
+                    "dose_basis": "contradictory_dose_fields"}
+        if compound is not None or elemental is not None:
+            return _compound(compound if compound is not None else elemental)
+
+    # An explicit elemental amount remains authoritative over a redundant
+    # per-kg field. (The copied-field case was handled above.)
+    if elemental is not None and declared_basis != "compound_only":
+        # When both fields are present, verify that they describe the same
+        # basis. A mismatch is safer as a refusal than an invented preference.
+        if compound is not None:
+            converted = vocab.elemental_dose_range_mg(ingredient, form_id, compound)
+            if (converted["low"] is None or converted["high"] is None
+                    or not converted["low"] <= elemental <= converted["high"]):
+                return {"dose_low_mg": None, "dose_high_mg": None,
+                        "dose_basis": "contradictory_dose_fields"}
+        return {"dose_low_mg": elemental, "dose_high_mg": elemental,
+                "dose_basis": declared_basis}
+    # PER-KG DOSING (v1.19): arithmetic uses only the paper's stated mass.
+    # Critically, a missing elemental_dose_mg does not block this branch: S7's
+    # per-kg value is elemental unless the declaration explicitly says compound.
     per_kg = _pos_finite(s7.get("dose_per_kg_mg"))
     mass = _pos_finite(s7.get("mean_body_mass_kg"))
     if per_kg is not None and mass is not None:
         daily = per_kg * mass
+        if declared_basis == "compound_only":
+            return _compound(daily)
         return {"dose_low_mg": daily, "dose_high_mg": daily,
                 "dose_basis": "per_kg_x_stated_mass"}
-    rng = vocab.elemental_dose_range_mg(ingredient, form_id, s7.get("compound_dose_mg"))
-    return {"dose_low_mg": rng["low"], "dose_high_mg": rng["high"],
-            "dose_basis": rng["basis"]}
+
+    # Legacy/unstated envelopes with an explicit elemental value are already on
+    # the active-moiety axis; retain it rather than treating it as compound.
+    if elemental is not None:
+        return {"dose_low_mg": elemental, "dose_high_mg": elemental,
+                "dose_basis": "elemental_stated"}
+    return _compound(compound)
 
 
 def sr_derived_to_studies(rec: dict, product: dict, *,
@@ -623,30 +668,16 @@ def build_ecus(extractions: list[dict], product: dict, *,
             ineligible[id(item)] = why
     eligible = [i for i in extractions if id(i) not in ineligible]
 
-    per_outcome: dict[str, list[dict]] = {}
-    for item in eligible:
-        rec, ext = item["record"], item["extraction"]
-        for outcome_id, study, dose, is_primary in to_studies(
-            rec, ext, product, item.get("registry"),
-            ignore_population=ignore_population,
-        ):
-            per_outcome.setdefault(outcome_id, []).append(
-                {**dose, "direction": study.direction, "weight": study.weight(),
-                 "s": study.s_value()})
-
-    bands = {oid: dosemod.effective_range(entries)
-             for oid, entries in per_outcome.items()}
-
-    # SR-derived trials are appended AFTER the band pass on purpose: they carry
-    # no extractable dose, so letting them into effective_range would add rows
-    # with dose None and nothing else. They are scored against the band the
-    # readable trials produced.
-
+    # Build and route the same buckets that will be scored first.  Dose bands
+    # and dose counts must describe this final evidence universe, not discarded
+    # populations or duplicate claims.
     buckets: dict[str, list[tuple[Study, dict]]] = {}
+    bands: dict[str, dict] = {}
     dropped_form = 0
     dropped_population = 0
     kept = 0
     form_mix: dict[str, int] = {}
+
     for item in eligible:
         rec, ext = item["record"], item["extraction"]
         for outcome_id, study, dose, is_primary in to_studies(
@@ -686,6 +717,24 @@ def build_ecus(extractions: list[dict], product: dict, *,
     if n_sr_derived:
         print(f"  +{n_sr_derived} claims from trials reachable ONLY through "
               f"review tables (oa=sr_table x0.85, rob_inherited x0.85)")
+
+    # Collapse before deriving every dose-facing statistic.  This is the same
+    # one-study-one-vote evidence passed to score_ecu below.
+    collapsed_claims = 0
+    for key, pairs in list(buckets.items()):
+        collapsed, n_collapsed = _one_study_one_vote(pairs)
+        buckets[key] = collapsed
+        collapsed_claims += n_collapsed
+    per_outcome: dict[str, list[dict]] = {}
+    for pairs in buckets.values():
+        for study, meta in pairs:
+            oid = meta["outcome_id"]
+            per_outcome.setdefault(oid, []).append(
+                {**meta["dose"], "direction": study.direction,
+                 "weight": study.weight(), "s": study.s_value(),
+                 "study_id": study.id})
+    bands = {oid: dosemod.effective_range(entries)
+             for oid, entries in per_outcome.items()}
 
     if form_mix:
         from pipeline.scoring import FORM_FACTOR
@@ -748,10 +797,7 @@ def build_ecus(extractions: list[dict], product: dict, *,
                            "scorer_version": SCORER_VERSION, "computed_at": _now()},
         })
 
-    collapsed_claims = 0
     for key, pairs in sorted(buckets.items()):
-        pairs, n_collapsed = _one_study_one_vote(pairs)
-        collapsed_claims += n_collapsed
         studies = [s for s, _ in pairs]
         outcome_id = pairs[0][1]["outcome_id"]
         result = score_ecu(studies, syntheses or [])

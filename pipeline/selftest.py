@@ -2321,9 +2321,33 @@ def main():
           _sd("creatine", {"dose_per_kg_mg": 300})["dose_low_mg"] is None,
           "invariant 5: assuming a typical body weight would be inventing a "
           "number, and a dose off by the guess corrupts the band it feeds")
+    check("null elemental dose still falls through per-kg branch",
+          _sd("creatine", {"dose_basis": "elemental_stated",
+                             "dose_per_kg_mg": 300,
+                             "mean_body_mass_kg": 80})["dose_low_mg"] == 24000,
+          "a missing elemental field must not refuse an already-elemental per-kg report")
     check("a stated elemental dose beats the per-kg path",
           _sd("creatine", {"elemental_dose_mg": 5000, "dose_per_kg_mg": 300,
                            "mean_body_mass_kg": 80})["dose_low_mg"] == 5000)
+    _compound = _sd("creatine", {"form_vocab_id": "creatine_monohydrate",
+                                  "dose_basis": "compound_only",
+                                  "elemental_dose_mg": 5000,
+                                  "compound_dose_mg": 5000})
+    check("compound_only monohydrate converts copied elemental field",
+          _compound["dose_basis"] == "converted" and 4390 <= _compound["dose_low_mg"] <= 4400,
+          f"5000 mg powder -> {_compound}")
+    _pk_compound = _sd("creatine", {"form_vocab_id": "creatine_monohydrate",
+                                     "dose_basis": "compound_only",
+                                     "dose_per_kg_mg": 300,
+                                     "mean_body_mass_kg": 80})
+    check("compound per-kg dose converts after multiplication",
+          _pk_compound["dose_basis"] == "converted" and 21000 <= _pk_compound["dose_low_mg"] <= 22000,
+          f"24000 mg powder -> {_pk_compound}")
+    check("contradictory dose fields refuse",
+          _sd("creatine", {"form_vocab_id": "creatine_monohydrate",
+                            "dose_basis": "elemental_stated",
+                            "elemental_dose_mg": 5000,
+                            "compound_dose_mg": 1000})["dose_low_mg"] is None)
     from workers import _dose_snippets as _ds
     _txt = ("Participants ingested 20 g/day of creatine for 5 days, then "
             "5 g/day maintenance. " + "filler sentence. " * 400 +
@@ -2761,6 +2785,21 @@ def main():
     _mag = _ps.score_product("magnesium", "magnesium_glycinate", 200.0)
     check("an ingredient with no run returns not_scored, never a number",
           _mag["status"] == "not_scored" and "rows" not in _mag)
+    # Exercise the compound conversion boundary against a retained artifact
+    # without depending on the repository's current run inventory.
+    from unittest.mock import patch as _patch
+    _art = {"run": {}, "product": {}, "ecu_rows": [_row]}
+    with _patch.object(_ps, "_pick_artifact", return_value=(_art, {})):
+        _bounded = _ps.score_product("magnesium", "magnesium_citrate", 400.0,
+                                     dose_basis="compound")
+        _exact = _ps.score_product("magnesium", "magnesium_oxide", 400.0,
+                                   dose_basis="compound")
+    check("bounded compound product conversion is refused",
+          _bounded["status"] == "recompute_refused",
+          "never pass a bounded low endpoint as an exact elemental dose")
+    check("known compound product conversion is accepted",
+          _exact["status"] == "scored",
+          "known-form compound input is converted inside score_product")
     _hcl = _ps.score_product("creatine", "creatine_hcl", 3000.0)
     check("a form with no run is distinguished from an ingredient with no run",
           _hcl["status"] == "form_not_scored", str(_hcl.get("scored_forms")))
