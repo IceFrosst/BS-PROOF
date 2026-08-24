@@ -419,9 +419,55 @@
       "items": {
         "$ref": "#/$defs/ecu"
       }
+    },
+    "v13_shadow": {
+      "$ref": "#/$defs/v13Shadow"
     }
   },
   "$defs": {
+    "v13Shadow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["warning", "outcomes", "measured", "eligible"],
+      "properties": {
+        "warning": {"type": "string", "maxLength": 300},
+        "measured": {"type": ["integer", "null"], "minimum": 0},
+        "eligible": {"type": ["integer", "null"], "minimum": 0},
+        "outcomes": {
+          "type": "array", "maxItems": 8,
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["outcome", "stratum", "pooled_g", "ci", "pi", "k", "tau2", "i2", "measured", "eligible", "top_refusals", "study_audit"],
+            "properties": {
+              "outcome": {"type": "string", "maxLength": 120},
+              "stratum": {"type": "string", "maxLength": 240},
+              "pooled_g": {"type": ["number", "null"]},
+              "ci": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": ["number", "null"]}},
+              "pi": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": ["number", "null"]}},
+              "k": {"type": ["integer", "null"], "minimum": 0},
+              "tau2": {"type": ["number", "null"]},
+              "i2": {"type": ["number", "null"]},
+              "measured": {"type": ["integer", "null"], "minimum": 0},
+              "eligible": {"type": ["integer", "null"], "minimum": 0},
+              "top_refusals": {"type": "array", "maxItems": 5, "items": {"type": "array", "minItems": 2, "maxItems": 2, "items": [{"type": "string", "maxLength": 120}, {"type": ["integer", "null"], "minimum": 0}]}},
+              "study_audit": {
+                "type": "array", "maxItems": 24,
+                "items": {
+                  "type": "object", "additionalProperties": false,
+                  "required": ["study_id", "measure", "timepoint", "g"],
+                  "properties": {
+                    "study_id": {"type": "string", "maxLength": 160},
+                    "measure": {"type": "string", "maxLength": 160},
+                    "timepoint": {"type": "string", "maxLength": 160},
+                    "g": {"type": ["number", "null"]}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "nullableCount": {
       "type": [
         "integer",

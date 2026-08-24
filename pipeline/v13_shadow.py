@@ -16,10 +16,21 @@ from __future__ import annotations
 
 from collections import Counter, defaultdict
 from dataclasses import dataclass, fields
+import os
+import sys
+if __package__ in (None, ""):
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Also support the mandated ``python3 pipeline/v13_shadow.py`` invocation when
+# a launcher changes the working directory before executing the script.
+if os.path.dirname(os.path.dirname(os.path.abspath(__file__))) not in sys.path:
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import math
 from typing import Any, Iterable, Mapping, Optional, Sequence, Tuple
 
-from pipeline import meta_effects
+try:
+    from pipeline import meta_effects
+except ModuleNotFoundError:  # direct-file invocation from inside pipeline/
+    import meta_effects
 
 
 SHADOW_ONLY_WARNING = (
@@ -100,6 +111,9 @@ class OutcomeResult:
     measured_quality_share: float
     refusal_reason_counts: dict[str, int]
     study_effects: Tuple[Tuple[str, float], ...] = ()
+    # Bounded source audit: enough to identify exactly what entered a pool,
+    # without reintroducing free-text endpoint keys into the stratum.
+    study_audit: Tuple[Tuple[str, str, str, float], ...] = ()
     k: int = 0
     pooling_method: str = "none"
     warning: str = SHADOW_ONLY_WARNING
@@ -271,19 +285,25 @@ def _design(record: StudyEstimate) -> str:
     return _norm(record.design_kind) or "missing"
 
 
+def _contrast_class(value: Any) -> str:
+    """Map S5's contrast vocabulary to the shadow compatibility class."""
+    value = _norm(value)
+    return {
+        "vs_ingredient_free": "between_arm",
+        "between_arm": "between_arm",
+        "vs_ingredient_arm": "vs_ingredient_arm",
+        "within_group": "within_group",
+    }.get(value, value)
+
+
 def _stratum(record: StudyEstimate) -> str:
-    # Do not pool explicitly different endpoints, visits, estimands, or
-    # contrasts merely because their outcome labels happen to match.  Design
-    # is part of the compatibility key: an adjusted cluster estimate is not
-    # interchangeable with an independent parallel-arm estimate.
-    values = (
-        record.label,
-        record.measure or "",
-        record.estimand or "",
-        record.timepoint or "",
-        record.contrast or "",
-        _design(record),
-    )
+    # Measure and timepoint are retained on each record and in audit output, but
+    # are free-text endpoint descriptions that prevent safe pooling ("1RM
+    # (kg)" vs "kg (1-RM)").  Compatibility is deliberately conservative at
+    # outcome + estimand + design + contrast class; callers still retain the
+    # source metadata for review.  Design remains part of the key.
+    values = (record.label, record.estimand or "", _design(record),
+              _contrast_class(record.contrast))
     return "|".join(str(value).strip() for value in values)
 
 
@@ -297,10 +317,15 @@ def _validate_context(record: StudyEstimate) -> str:
     design = _design(record)
     if design not in {"parallel", "crossover", "cluster"}:
         raise ValueError("unsupported_design")
-    if not _norm(record.contrast):
+    contrast = _contrast_class(record.contrast)
+    if not contrast:
         raise ValueError("between_arm_contrast_required")
-    if _norm(record.contrast) != "between_arm":
+    if contrast == "within_group":
         raise ValueError("within_group_not_between_arm")
+    if contrast == "vs_ingredient_arm":
+        raise ValueError("analogous_contrast_not_between_arm")
+    if contrast != "between_arm":
+        raise ValueError("between_arm_contrast_required")
     if not _norm(record.estimand):
         raise ValueError("estimand_required")
     if _norm(record.estimand) not in {"endpoint", "change_from_baseline"}:
@@ -482,16 +507,25 @@ def _result(outcome: str, stratum: str, eligible: int,
             confidence_level: float) -> OutcomeResult:
     share = len(measured) / eligible if eligible else 0.0
     effects = tuple((item.record.study_id, item.g) for item in measured)
+    audit = tuple((str(item.record.study_id), str(item.record.measure or ""),
+                   str(item.record.timepoint or ""), item.g)
+                  for item in measured[:24])
+    common = dict(outcome=outcome, stratum=stratum, eligible_count=eligible,
+                  measured_quality_share=share,
+                  refusal_reason_counts=dict(sorted(refusals.items())),
+                  study_effects=effects, study_audit=audit,
+                  warning=SHADOW_ONLY_WARNING)
     if not measured:
-        return OutcomeResult(
-            outcome, stratum, None, None, None, None, None, None, None,
-            0, eligible, share, dict(sorted(refusals.items())), effects, 0,
-            "none", SHADOW_ONLY_WARNING)
+        return OutcomeResult(pooled_effect=None, ci_lower=None, ci_upper=None,
+                             prediction_lower=None, prediction_upper=None,
+                             tau2=None, i2=None, measured_count=0, k=0,
+                             pooling_method="none", **common)
     if len(measured) == 1:
-        return OutcomeResult(
-            outcome, stratum, None, None, None, None, None, None, None,
-            1, eligible, share, dict(sorted(refusals.items())), effects, 1,
-            "none (single measured study; no pooled estimate)", SHADOW_ONLY_WARNING)
+        return OutcomeResult(pooled_effect=None, ci_lower=None, ci_upper=None,
+                             prediction_lower=None, prediction_upper=None,
+                             tau2=None, i2=None, measured_count=1, k=1,
+                             pooling_method="none (single measured study; no pooled estimate)",
+                             **common)
     estimates = tuple(meta_effects.EffectEstimate(item.g, item.variance) for item in measured)
     use_hk = len(estimates) >= 3
     pooled = meta_effects.random_effects_meta_analysis(
@@ -501,10 +535,11 @@ def _result(outcome: str, stratum: str, eligible: int,
     else:
         method = "REML (k=2; Hartung-Knapp certainty unavailable)"
     return OutcomeResult(
-        outcome, stratum, pooled.estimate, pooled.ci_lower, pooled.ci_upper,
-        pooled.prediction_lower, pooled.prediction_upper, pooled.tau2, pooled.i2,
-        len(measured), eligible, share, dict(sorted(refusals.items())), effects,
-        len(measured), method, SHADOW_ONLY_WARNING)
+        pooled_effect=pooled.estimate, ci_lower=pooled.ci_lower,
+        ci_upper=pooled.ci_upper, prediction_lower=pooled.prediction_lower,
+        prediction_upper=pooled.prediction_upper, tau2=pooled.tau2, i2=pooled.i2,
+        measured_count=len(measured), k=len(measured), pooling_method=method,
+        **common)
 
 
 def analyze_shadow(
@@ -660,6 +695,11 @@ def _self_checks() -> None:
     assert "timepoint_required" in missing_metadata.outcomes[0].refusal_reasons
     within = analyze_shadow([StudyEstimate(**{**common, "contrast": "within_group"})])
     assert "within_group_not_between_arm" in within.outcomes[0].refusal_reasons
+    ingredient_arm = analyze_shadow([StudyEstimate(**{**common, "contrast": "vs_ingredient_arm"})])
+    assert "analogous_contrast_not_between_arm" in ingredient_arm.outcomes[0].refusal_reasons
+    free_control = analyze_shadow([StudyEstimate(**{**common, "contrast": "vs_ingredient_free",
+                                                    "standard_error": .2})])
+    assert free_control.outcomes[0].measured_count == 1
     unknown = analyze_shadow([StudyEstimate(**{**common, "design_kind": "unknown"})])
     assert "unsupported_design" in unknown.outcomes[0].refusal_reasons
 
@@ -715,6 +755,20 @@ def _self_checks() -> None:
     assert two.pooled_effect is not None and "k=2" in two.pooling_method
     assert three.pooled_effect is not None and "Hartung-Knapp" in three.pooling_method
     assert three.tau2 is not None and three.i2 is not None
+    # Free-text measure/timepoint variants now pool within the declared
+    # outcome/estimand/design/contrast class; design classes still never mix.
+    varied = [StudyEstimate(**{**common, "study_id": "m1", "measure": "kg (1-RM)",
+                               "timepoint": "week 8", "standard_error": .2}),
+              StudyEstimate(**{**common, "study_id": "m2", "measure": "1RM (kg)",
+                               "timepoint": "post", "standard_error": .2})]
+    assert analyze_shadow(varied).outcomes[0].k == 2
+    cross_variant = StudyEstimate(**{**common, "study_id": "cx",
+                                     "design_kind": "crossover",
+                                     "adjusted_estimate": .3,
+                                     "adjusted_variance": .04,
+                                     "directly_adjusted": True})
+    mixed = analyze_shadow(varied + [cross_variant])
+    assert any(row.k == 2 for row in mixed.outcomes)
     assert three.warning == SHADOW_ONLY_WARNING
 
     # Quality share includes an eligible but unmeasured parallel claim.

@@ -759,6 +759,46 @@ def _safe_evidence(value: Any) -> dict:
     return result
 
 
+def _safe_v13_shadow(value: Any) -> dict | None:
+    """Bound the experimental shadow block before exposing it publicly."""
+    if not isinstance(value, dict):
+        return None
+    outcomes = []
+    for raw in (value.get("outcomes") or [])[:8]:
+        if not isinstance(raw, dict):
+            continue
+        refusals = []
+        for pair in (raw.get("top_refusals") or [])[:5]:
+            if isinstance(pair, (list, tuple)) and len(pair) == 2:
+                refusals.append([str(pair[0])[:120], _integer(pair[1])])
+        audit = []
+        for entry in (raw.get("study_audit") or [])[:24]:
+            if not isinstance(entry, dict):
+                continue
+            audit.append({
+                "study_id": str(entry.get("study_id") or "")[:160],
+                "measure": str(entry.get("measure") or "")[:160],
+                "timepoint": str(entry.get("timepoint") or "")[:160],
+                "g": _number(entry.get("g")),
+            })
+        outcomes.append({
+            "outcome": str(raw.get("outcome") or "")[:120],
+            "stratum": str(raw.get("stratum") or "")[:240],
+            "pooled_g": _number(raw.get("pooled_g")),
+            "study_audit": audit,
+            "ci": [_number(x) for x in (raw.get("ci") or [None, None])[:2]],
+            "pi": [_number(x) for x in (raw.get("pi") or [None, None])[:2]],
+            "k": _integer(raw.get("k")), "tau2": _number(raw.get("tau2")),
+            "i2": _number(raw.get("i2")),
+            "measured": _integer(raw.get("measured")),
+            "eligible": _integer(raw.get("eligible")),
+            "top_refusals": refusals,
+        })
+    return {"warning": str(value.get("warning") or "")[:300],
+            "outcomes": outcomes, "measured": _integer(value.get("measured")),
+            "eligible": _integer(value.get("eligible"))}
+
+
 def _safe_dose(value: Any) -> dict | None:
     if not isinstance(value, dict):
         return None
@@ -954,6 +994,8 @@ def build_dashboard_run(context: dict, *, run_id: str, mode: str | None = None,
                                  provider=provider),
         "ecu_rows": rows,
     }
+    if "v13_shadow" in context:
+        artifact["v13_shadow"] = _safe_v13_shadow(context.get("v13_shadow"))
     validate_dashboard_run(artifact)
     return artifact
 

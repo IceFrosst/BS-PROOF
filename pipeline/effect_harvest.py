@@ -646,6 +646,20 @@ def _self_check() -> None:
     assert found[0].outcome_cell.cell_verbatim == "Muscle strength"
     assert found[0].allocation is None and found[0].timepoint is None and found[0].endpoint_kind is None
 
+    # Shadow aliases can be shortened deterministically: a CR header matches
+    # the supplied Creatine label, while a shared first word is ambiguous.
+    short = {"columns": ["Outcome", "CR", "PLA"],
+             "rows": [["Muscle strength", "10.2 +/- 2.1", "8.4 +/- 2.0"]]}
+    assert len(harvest_candidates(short, "muscle strength",
+                                  {"Creatine": ["Creatine", "cr"],
+                                   "Placebo": ["Placebo", "pla"]})) == 1
+    ambiguous = {"columns": ["Outcome", "Cr", "Control"],
+                 "rows": [["Muscle strength", "10.2 +/- 2.1", "8.4 +/- 2.0"]]}
+    assert harvest_candidates(ambiguous, "muscle strength",
+                              {"Creatine": ["Creatine", "cr"],
+                               "Creatine+Protein": ["Creatine+Protein", "cr"],
+                               "Control": ["Control"]}) == []
+
     nested_caption = {
         "caption": "Outer caption retained",
         "table": {

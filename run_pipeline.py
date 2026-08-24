@@ -343,6 +343,44 @@ def _studies_list(raw: list[dict]) -> list[dict]:
     return out
 
 
+def _shadow_context_summary(extractions: list[dict]) -> dict:
+    """Run the opt-in measured-effect path and retain only compact audit data."""
+    from pipeline.v13_shadow import analyze_shadow, SHADOW_ONLY_WARNING
+    records = []
+    for item in extractions:
+        rec, ext = item.get("record") or {}, item.get("extraction") or {}
+        study_id = rec.get("_canonical") or rec.get("doi") or rec.get("pmid")
+        for outcome in ext.get("outcomes") or []:
+            if outcome.get("discarded") or not outcome.get("outcome_vocab_id"):
+                continue
+            claim = outcome.get("claim")
+            if not isinstance(claim, dict):
+                continue
+            records.append({**claim, "study_id": study_id or "unknown",
+                            "outcome": outcome["outcome_vocab_id"]})
+    result = analyze_shadow(records)
+    summaries = []
+    for row in sorted(result.outcomes, key=lambda r: r.stratum)[:8]:
+        summaries.append({
+            "outcome": row.outcome,
+            "stratum": row.stratum,
+            "pooled_g": row.pooled_g,
+            "ci": [row.ci_lower, row.ci_upper],
+            "pi": [row.prediction_lower, row.prediction_upper],
+            "k": row.k, "tau2": row.tau2, "i2": row.i2,
+            "measured": row.measured_count, "eligible": row.eligible_count,
+            "top_refusals": sorted(row.refusal_reasons.items(),
+                                    key=lambda item: (-item[1], item[0]))[:5],
+            "study_audit": [
+                {"study_id": str(study_id), "measure": str(measure),
+                 "timepoint": str(timepoint), "g": g}
+                for study_id, measure, timepoint, g in row.study_audit[:24]
+            ],
+        })
+    return {"warning": SHADOW_ONLY_WARNING, "outcomes": summaries,
+            "measured": result.measured_count, "eligible": result.eligible_count}
+
+
 def _auto_push_report(ingredient: str, form: str, mode: str,
                       run_context: dict | None = None) -> None:
     try:
@@ -883,6 +921,16 @@ def main(argv: list[str]) -> int:
                 {"outcome": r["outcome_vocab_id"], "stored": r.get("composite"),
                  "k_old": (_kb.get(r["outcome_vocab_id"]) or {}).get("composite")}
                 for r in rows if r["outcome_vocab_id"] in _kb]
+
+        if os.environ.get("SP_V13_SHADOW") == "1":
+            try:
+                run_context["v13_shadow"] = _shadow_context_summary(extractions)
+            except Exception as exc:
+                # The opt-in audit must never change production scoring; retain
+                # a bounded failure marker rather than aborting the run.
+                run_context["v13_shadow"] = {
+                    "warning": "SHADOW ONLY: analysis failed; production scores unchanged.",
+                    "outcomes": [], "error": str(exc)[:300]}
 
         rows = show.filter_ecu_rows(rows, outcome_allowlist)
         for row in rows:

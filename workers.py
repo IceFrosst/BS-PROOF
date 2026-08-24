@@ -6,6 +6,7 @@ from __future__ import annotations
 import time
 import os
 import math
+import re
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor, FIRST_COMPLETED, wait as _fwait
 
@@ -326,43 +327,117 @@ def _payload(agent: str, record: dict, text: str, registry: dict | None,
     raise KeyError(agent)
 
 
-def _shadow_arm_aliases(s3: dict | None) -> tuple[dict[str, list[str]] | None, str | None]:
-    """Build aliases only from the two explicit S3 control facts."""
+def _shadow_arm_aliases(s3: dict | None, ingredient: str | None = None) -> tuple[dict[str, list[str]] | None, str | None, dict[str, str] | None]:
+    """Build conservative aliases from explicit S3 labels only.
+
+    Parenthetical/dose removal handles the common table header shortening.  The
+    prefix aliases are deliberately generated from the labels (never from
+    world knowledge); if two arm words share a first word, abbreviation would
+    be ambiguous and the whole table is refused.
+    """
     if not isinstance(s3, dict):
-        return None, "S3 arm facts are absent"
+        return None, "S3 arm facts are absent", None
     if s3.get("comparator") != "ingredient_free":
-        return None, "S3 comparator is not explicitly ingredient_free"
+        return None, "S3 comparator is not explicitly ingredient_free", None
     if s3.get("ingredient_isolated") != "yes":
-        return None, "S3 ingredient_isolated is not explicitly yes"
+        return None, "S3 ingredient_isolated is not explicitly yes", None
     arms = s3.get("arms")
     if not isinstance(arms, list):
-        return None, "S3 arms are absent"
+        return None, "S3 arms are absent", None
     # Unknown arm roles are not safe to ignore: the selector requires a fully
     # explicit two-role comparison, not merely one true and one false among
     # otherwise ambiguous arms.
     if any(not isinstance(a, dict) or type(a.get("is_control")) is not bool
            for a in arms):
-        return None, "S3 has an arm with unknown control status"
+        return None, "S3 has an arm with unknown control status", None
     controls = [a for a in arms if a.get("is_control") is True]
-    ingredients = [a for a in arms if a.get("is_control") is False]
-    if len(controls) != 1 or len(ingredients) != 1:
-        return None, "S3 does not have exactly one explicit control and ingredient arm"
+    noncontrols = [a for a in arms if a.get("is_control") is False]
+    if len(controls) != 1:
+        return None, "S3 does not have exactly one explicit control arm", None
+    if not noncontrols:
+        return None, "S3 has no explicit non-control arm", None
+    # More than two arms are recoverable only when exactly one non-control arm
+    # explicitly contains the ingredient token.  This preserves the ingredient
+    # alone vs comparator contrast while refusing Cr vs Cr+protein mixtures.
+    token = str(ingredient or s3.get("ingredient") or "").strip().casefold()
+    token_words = re.findall(r"[a-z0-9]+", token)
+    token = token_words[0] if token_words else ""
+    if len(noncontrols) != 1:
+        if not token:
+            return None, "S3 multi-arm trial has no ingredient token", None
+        hits = [a for a in noncontrols
+                if re.search(rf"(?<![a-z0-9]){re.escape(token)}(?![a-z0-9])",
+                             str(a.get("label", "")).casefold())]
+        if len(hits) == 0:
+            return None, "S3 multi-arm trial has no ingredient-alone arm", None
+        if len(hits) > 1:
+            return None, "S3 multi-arm trial has multiple ingredient arms", None
+        ingredients = hits
+    else:
+        ingredients = noncontrols
     control_label = controls[0].get("label")
     ingredient_label = ingredients[0].get("label")
     if not (isinstance(control_label, str) and control_label.strip()
             and isinstance(ingredient_label, str) and ingredient_label.strip()):
-        return None, "S3 arm labels are not explicit"
+        return None, "S3 arm labels are not explicit", None
     if control_label == ingredient_label:
-        return None, "S3 arm labels are not unique"
-    # The mapping keys become candidate arm_alias values.  They are the exact
-    # S3 labels, not positional names such as treatment/control.  An explicit
-    # intervention_text is an additional literal header alias, never a guess.
+        return None, "S3 arm labels are not unique", None
+    if not token:
+        ingredient_words = re.findall(r"[a-z0-9]+", ingredient_label.casefold())
+        token = ingredient_words[0] if ingredient_words else ""
+
+    def _label_aliases(label: str) -> list[str]:
+        # Strip parenthetical sample sizes, comparator details, and doses only;
+        # these are formatting variants of the supplied label, not synonyms.
+        bare = re.sub(r"\s*\([^)]*\)", "", label).strip()
+        dose = re.sub(r"\s+(?:\d+(?:\.\d+)?\s*(?:mg|g|kg|μg|mcg)(?:\s*/\s*(?:kg|day|d))?\s*)+$",
+                      "", bare, flags=re.IGNORECASE).strip()
+        values = [label, bare, dose]
+        text = next((a.get("intervention_text") for a in arms
+                     if a.get("label") == label), None)
+        if isinstance(text, str) and text.strip():
+            values.append(text)
+        return list(dict.fromkeys(v for v in values if v))
+
+    # Prefix aliases are unsafe if *any* S3 arm can claim the same header,
+    # including ignored multi-arm arms.  Check every explicit label before
+    # returning aliases for the selected pair.
+    all_labels = [a.get("label") for a in arms]
+    if any(not isinstance(label, str) or not label.strip() for label in all_labels):
+        return None, "S3 arm labels are not explicit", None
+    first_words = []
+    for label in all_labels:
+        match = re.match(r"[A-Za-z]+", label)
+        first_words.append(match.group(0).casefold() if match else "")
+    prefixes: dict[str, str] = {}
+    for label, word in zip(all_labels, first_words):
+        if not word:
+            continue
+        for size in range(2, len(word) + 1):
+            prefix = word[:size]
+            prior = prefixes.get(prefix)
+            if prior is not None and prior != label:
+                return None, "S3 arm words share a prefix; abbreviation is ambiguous", None
+            prefixes[prefix] = label
+    # A control label that contains the ingredient token is not a safe control
+    # alias (e.g. "Placebo (creatine-free)").
+    if token and re.search(rf"(?<![a-z0-9]){re.escape(token)}(?![a-z0-9])",
+                           control_label.casefold()):
+        return None, "S3 control label contains the ingredient token", None
+
     def aliases_for(arm, label):
-        text = arm.get("intervention_text")
-        return list(dict.fromkeys([label] + ([text] if isinstance(text, str)
-                                             and text.strip() else [])))
-    return {ingredient_label: aliases_for(ingredients[0], ingredient_label),
-            control_label: aliases_for(controls[0], control_label)}, None
+        values = _label_aliases(label)
+        # Prefix aliases allow headers such as CR/PLA, but only for a unique
+        # first word.  They are label-derived and therefore cannot invent PLC
+        # or any other world-knowledge synonym.
+        first = re.match(r"[A-Za-z]+", label)
+        if first:
+            word = first.group(0)
+            values.extend(word[:i] for i in range(2, len(word) + 1))
+        return list(dict.fromkeys(values))
+    selected = {ingredient_label: aliases_for(ingredients[0], ingredient_label),
+                control_label: aliases_for(controls[0], control_label)}
+    return selected, None, {"ingredient": ingredient_label, "control": control_label}
 
 
 _SHADOW_SELECTION_KEYS = frozenset({
@@ -541,7 +616,8 @@ def _shadow_enrich_claims(out: dict, record: dict, call) -> None:
 
     s1 = out.get("S1") if isinstance(out.get("S1"), dict) else {}
     s3 = out.get("S3") if isinstance(out.get("S3"), dict) else {}
-    aliases, alias_reason = _shadow_arm_aliases(s3)
+    aliases, alias_reason, selected_roles = _shadow_arm_aliases(
+        s3, record.get("ingredient"))
     claims = ((out.get("S5") or {}).get("claims")) or []
     audit = {"enabled": True, "selector_calls": 0, "claims": []}
     try:
@@ -558,12 +634,10 @@ def _shadow_enrich_claims(out: dict, record: dict, call) -> None:
     if aliases:
         # Derive roles from the same explicit boolean facts, never from alias
         # insertion order or candidate arm order.
-        role_facts = {
-            "ingredient": next(a["label"] for a in s3["arms"]
-                                if a.get("is_control") is False),
-            "control": next(a["label"] for a in s3["arms"]
-                             if a.get("is_control") is True),
-        }
+        # Use the exact pair selected by _shadow_arm_aliases; rebuilding this
+        # from the first non-control arm breaks when an ignored arm precedes the
+        # ingredient-alone arm.
+        role_facts = dict(selected_roles or {})
     for claim_index, claim in enumerate(claims):
         item = {"claim_index": claim_index, "candidate_count": 0}
         if not isinstance(claim, dict):
@@ -612,6 +686,22 @@ def _shadow_enrich_claims(out: dict, record: dict, call) -> None:
             continue
         item["selector_result"] = selected
         item["selector_meta"] = meta
+        # A schema-valid envelope can still contain a null result.  That is a
+        # selector/adapter failure, not an evidence refusal: retain its error
+        # channel for audit and do not pretend the table was inspected.
+        if selected is None:
+            error = (meta.get("error") if isinstance(meta, dict) else None) or \
+                    "selector returned no result"
+            error = str(error)
+            item.update({"status": "failed", "stage": "selector", "error": error})
+            audit.setdefault("failures", []).append(
+                {"claim_index": claim_index, "stage": "selector", "error": error})
+            if _quota_signal(error):
+                out["_quota_exhausted"] = error
+                out.setdefault("_failed", []).append(
+                    {"agent": "S5T", "error": error})
+            audit["claims"].append(item)
+            continue
         # Inspect ONLY the error channel. Stringifying the whole metadata
         # mapping classified benign fields ({"rate_limit_remaining": 100}) as
         # quota exhaustion, discarding a valid selector result and requeuing
@@ -654,6 +744,44 @@ def _self_check_v13_shadow_wiring() -> None:
               "abstract": "oral creatine supplement"}
     text = "x" * MIN_TEXT_CHARS
     mode = "valid"
+    # Label-only aliases cover real short headers and conservatively refuse
+    # ingredient-plus-protein ambiguity in a multi-arm trial.
+    cr_aliases, cr_reason, cr_roles = _shadow_arm_aliases({
+        "comparator": "ingredient_free", "ingredient_isolated": "yes",
+        "arms": [{"label": "Creatine (0.2 g/kg)", "is_control": False},
+                 {"label": "Placebo (Resistant Dextrin, 0.2 g/kg)", "is_control": True}]},
+        "creatine")
+    assert cr_reason is None and "cr" in [x.casefold() for x in cr_aliases["Creatine (0.2 g/kg)"]]
+    # Prefixes are compared against every S3 label, not only the selected pair.
+    _, crinine_reason, _ = _shadow_arm_aliases({
+        "comparator": "ingredient_free", "ingredient_isolated": "yes",
+        "arms": [{"label": "Creatine", "is_control": False},
+                 {"label": "Creatinine", "is_control": True}]}, "creatine")
+    assert crinine_reason and "prefix" in crinine_reason
+    _, ignored_prefix_reason, _ = _shadow_arm_aliases({
+        "comparator": "ingredient_free", "ingredient_isolated": "yes",
+        "arms": [{"label": "Placebogenic", "is_control": False},
+                 {"label": "Creatine", "is_control": False},
+                 {"label": "Placebo", "is_control": True}]}, "creatine")
+    assert ignored_prefix_reason and "prefix" in ignored_prefix_reason
+    _, control_token_reason, _ = _shadow_arm_aliases({
+        "comparator": "ingredient_free", "ingredient_isolated": "yes",
+        "arms": [{"label": "Creatine", "is_control": False},
+                 {"label": "Placebo (creatine-free)", "is_control": True}]}, "creatine")
+    assert control_token_reason and "ingredient token" in control_token_reason
+    amb, amb_reason, amb_roles = _shadow_arm_aliases({
+        "comparator": "ingredient_free", "ingredient_isolated": "yes",
+        "arms": [{"label": "Creatine", "is_control": False},
+                 {"label": "Creatine+Protein", "is_control": False},
+                 {"label": "Placebo", "is_control": True}]}, "creatine")
+    assert amb is None and "multiple ingredient arms" in amb_reason
+    four, four_reason, four_roles = _shadow_arm_aliases({
+        "comparator": "ingredient_free", "ingredient_isolated": "yes",
+        "arms": [{"label": "Creatine", "is_control": False},
+                 {"label": "Creatine+Protein", "is_control": False},
+                 {"label": "Placebo", "is_control": True},
+                 {"label": "Other", "is_control": False}]}, "creatine")
+    assert four is None and four_reason and "multiple ingredient arms" in four_reason
 
     def fake_call(agent, payload):
         calls.append(agent)
@@ -665,6 +793,10 @@ def _self_check_v13_shadow_wiring() -> None:
                     {"label": "Placebo", "is_control": True}]
             if mode == "multi-arm":
                 arms.append({"label": "Other", "is_control": False})
+            elif mode == "reordered":
+                arms = [{"label": "Other", "is_control": False},
+                        {"label": "Creatine", "is_control": False},
+                        {"label": "Placebo", "is_control": True}]
             comparator = "ingredient_free"
             isolated = "yes"
             if mode == "blend":
@@ -729,7 +861,10 @@ def _self_check_v13_shadow_wiring() -> None:
     assert "estimate_kind" not in malicious["S5"]["claims"][0]
     assert malicious["_v13_shadow"]["claims"][0]["status"] == "refused"
     multi = run(True, "multi-arm")
-    assert "S5T" not in calls and multi["_v13_shadow"]["selector_calls"] == 0
+    assert "S5T" in calls and multi["_v13_shadow"]["selector_calls"] == 1
+    reordered = run(True, "reordered")
+    assert reordered["S5"]["claims"][0]["estimate_kind"] == "mean_difference"
+    assert reordered["_v13_shadow"]["claims"][0]["status"] == "enriched"
     for refusal_mode in ("blend", "unknown", "not-isolated"):
         refused = run(True, refusal_mode)
         assert "S5T" not in calls
