@@ -329,6 +329,23 @@ VERCEL: git integration disconnect/reconnect done (was 'connected' but dead;
 now freshly Connected). The push of THIS branch is the live test — a preview
 deployment appearing = auto-deploys are back.
 
+### Branch effect-axis-ab: S7 TABLES — the dose-bottleneck fix (v1.23, no split)
+Per-arc A/B showed the #1 composite bottleneck is dose closeness starved of
+DOSED trials (muscle_strength band rested on ONE 10 g benefit trial →
+closeness 0.10; 25 per-kg trials dose-less for want of a body mass). The
+doses and body masses are IN THE TABLES the prose slice loses. So, mirroring
+S5's v1.21 change: the S7 payload now carries the paper's serialised tables
+(2500-char cap, counted against S7's LIVE text budget like dose_snippets),
+and prompts/s7_form.md gained a TABLES section (protocol dosing schedules;
+baseline mean body mass of the supplemented arm; same evidence rules; still
+never multiply per-kg×mass yourself; bare table numbers stay
+compound_only/unstated). Folded into v1.23 — legitimate because NO v1.23
+extraction has ever run, so no cache is split. Payload regression checks
+added to workers self-check (tables present + budget shrinks). Gates green.
+EXPECTED effect at the next extraction: more dosed trials → wider honest
+benefit bands + higher dose-evidence coverage → the dose term stops being
+the cap on outcomes whose effect evidence is fine.
+
 NEXT: (1) re-run creatine under v1.23 (SOLO, watch quota) and compare shadow
 measured coverage + pooled strength g vs the published MA; (2) vitamin D +
 omega-3 demo runs on v1.23; (3) founder decision on scoring recalibration

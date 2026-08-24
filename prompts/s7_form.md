@@ -77,4 +77,22 @@ text wherever a dose pattern occurs, because the main text you receive can be
 truncated before the dosing paragraph. Treat them as part of the paper -- same
 rules, same evidence_span duty.
 
+THE TABLES ARE WHERE THE MISSING DOSES LIVE. The payload may include `tables`:
+the paper's tables serialised row by row. MEASURED 2026-08-24 on the creatine
+corpus: the dose axis for muscle strength rested on ONE dosed benefit trial,
+and 25 per-kg trials had no usable dose for want of a mean body mass -- while
+the protocol table printed the dosing schedule and Table 1 printed the body
+mass. Read from tables exactly what you read from prose, same rules, same
+evidence_span duty (quote the cell or its row):
+  - dosing schedules in protocol/intervention tables ("20 g/d x 5 d, then
+    5 g/d" -> maintenance 5 g/d, loading noted in evidence_span);
+  - the supplemented group's mean body mass in the baseline table -- this is
+    the number that turns a per-kg dose into a usable one downstream. Use the
+    SUPPLEMENTED arm's mass (or the whole-sample mass when arms are not
+    separated); never a subgroup's, never an assumed weight.
+Everything above still applies: never multiply per-kg by mass yourself, never
+guess elemental vs compound from a bare table number (a bare figure in a dose
+column is `compound_only` or `unstated` by the same rules as prose), and a
+dose that appears only for a NON-ingredient arm is not this ingredient's dose.
+
 confidence below 0.7 whenever form or dose basis is uncertain.
