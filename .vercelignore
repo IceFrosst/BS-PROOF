@@ -16,3 +16,9 @@ docs/history
 pipeline_v1.excalidraw
 pipeline_v2_demo.excalidraw
 
+# Playwright output. Gitignored, but .vercelignore is a SEPARATE list and the
+# CLI uploads the working tree, not the git index -- so a local `npm run
+# test:e2e` put 246 MB of videos and traces into the deploy upload and every
+# `vercel deploy` died with "Upload aborted" partway through (2026-08-24).
+test-results
+playwright-report
