@@ -301,6 +301,34 @@ past 9/76 on the re-extraction; production scoring constants remain frozen
 and default-off parity is untouched (verified: invariants, selftest, module
 self-checks, shadow wiring all green on v1.23).
 
+### Branch effect-axis-ab: null-policy A/B/C + Vercel integration repair
+(founder question: "disable nulls from the effect axis — all-null scores 0,
+only harms negative?") scripts/effect_axis_ab.py re-scores a retained run
+under four effect-axis policies with no model calls and no production change
+(constants restored after; nothing written). Creatine 20260824_113359:
+  outcome              A cur  B1 null=0  B2 no-null  C shadow-pooled
+  energy_levels           28        28         23        28
+  exercise_endurance       9        31         35         9
+  lean_body_mass          50        41         28        59
+  muscle_power            67        69         61        67
+  muscle_strength         38        42         18        28
+READING: B2 (drop nulls) is a publication-bias amplifier — endurance flips
+to d=+1.0 off ONE small benefit trial against 8 nulls, and strength reads
+POSITIVE (d=+0.47) while the pooled measured effect of the same corpus is
+NEGATIVE (g=-0.325). B1 (null=0) was already tried and rejected by founder
+decision 2026-08-11 (null=0 makes an all-null outcome read "inconclusive",
+not "doesn't work", and does NOT produce a 0 composite — d=0 puts the effect
+term mid-scale). The principled version of the founder's instinct is C:
+nulls count as their MEASURED near-zero effect instead of a flat -0.35 —
+which is exactly v13, blocked on measured coverage until the v1.23 rerun.
+Also: rescore_run.py LIMITATION confirmed — it re-scores with new CODE but
+the artifact's OLD fields (estimand/timepoint/arm stats are stripped from
+s5_claims), so field-hungry variants must come from the LLM cache or the
+artifact's v13_shadow block, as this script does.
+VERCEL: git integration disconnect/reconnect done (was 'connected' but dead;
+now freshly Connected). The push of THIS branch is the live test — a preview
+deployment appearing = auto-deploys are back.
+
 NEXT: (1) re-run creatine under v1.23 (SOLO, watch quota) and compare shadow
 measured coverage + pooled strength g vs the published MA; (2) vitamin D +
 omega-3 demo runs on v1.23; (3) founder decision on scoring recalibration
