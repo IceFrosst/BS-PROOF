@@ -1112,8 +1112,19 @@ siblings collapse unclear, and safety harm ties remain protected.
 
 Run `20260825_072759` is invalid for claims pending verification of the 32-study
 incident ledger in `docs/history/2026-08-25-universal-negative-incident-ledger.md`.
-An audit delta is not a corrected score or evidence mass. No model/network
-extraction was run for this repair.
+An audit delta is not a corrected score or evidence mass.
+
+**Targeted v1.25 live check (2026-08-25, after two reviewer passes): blocked.**
+The fixed 32-study negative-contributor set was extracted cold, then replayed from
+cache. The replay completed 22/32 cleanly but retained 10 partial studies: 9 S7
+`max_turns` failures and 2 S3 `max_turns` failures (one study failed both). The
+Claude session then had about one hour remaining after 15 quota requeues and
+4,500 seconds of enforced pauses. Among available corrected contributions, 0/43
+old negative rows remained negative, but this is **not validation** because the
+10 partials include both known wrong-intervention sentinels. No full-corpus rerun
+was started. Next: improve one-turn S3/S7 schema compliance without raising
+`--max-turns 1`, bump `PROMPT_VERSION`, require 32/32 clean plus paper review,
+then and only then start the full corpus solo.
 
 ## Next
 
