@@ -1378,9 +1378,23 @@ ownership table added under Multi-agent workflow.
    printed SMD is never divided twice, an SD never rescues within-group/ratio
    claims, zero/negative SDs refuse). Expected to convert most of the 15%
    raw-unit share on the next run.
-2. **Constrain retrieval to the intervention**, not the document. Gates
+2. **Fix the per-arm body-mass dosage regression (prompt fix, measured
+   2026-08-25).** v1.24 moved `mean_body_mass_kg` from a top-level study field
+   to a per-arm field, and papers print ONE sample-level baseline mean, so the
+   model now answers null unless the ARM states a mass: per-kg studies with a
+   usable mass fell **17 → 5**, and **13 studies whose stated mass the v1.23
+   contract had captured now return null** (2–23 g/day of computed dose lost
+   each). This emptied the muscle_strength and lean_body_mass benefit bands.
+   Absolute-dose studies are untouched (74 → 74). Fix: amend the S7 prompt so
+   the per-arm field may carry the paper's stated SAMPLE-LEVEL baseline mean
+   when no per-arm mass is printed — still the paper's own number, invariant 5
+   intact. Invariant 3 applies: bump `PROMPT_VERSION`, which invalidates the
+   whole S1–S8 cache (~1,000 calls). Do the v1.15-style surgical pass first:
+   replay S7 alone on the ~32 per-kg studies (~32 live calls) to verify the
+   fix before deciding whether the full re-extraction is worth scheduling.
+3. **Constrain retrieval to the intervention**, not the document. Gates
    extraction cost, coverage and outcome mapping simultaneously.
-3. **SR inheritance uplift MEASURED 2026-08-25 (first live end-to-end run,
+4. **SR inheritance uplift MEASURED 2026-08-25 (first live end-to-end run,
    retained as `20260825_173541`): approximately ZERO on the creatine corpus.**
    S2 ran live on 60 ranked syntheses (54 ok, 47 resolved, 431 distinct trials
    named; 64 live calls, 903 cache hits, $0 marginal). Of 32 SR-derived trial
@@ -1392,19 +1406,19 @@ ownership table added under Multi-agent workflow.
    is on THIN corpora where the trials behind reviews are unreachable, and that
    is now a hypothesis to test on a second ingredient, not an unknown blocking
    this one.
-4. **Anchor eval** — 35 anchors in `docs/anchors.csv` (NOT 28; the doc said 28 until 2026-08-06); running them needs
+5. **Anchor eval** — 35 anchors in `docs/anchors.csv` (NOT 28; the doc said 28 until 2026-08-06); running them needs
    extraction. Do this before trusting any constant. **All 35 are now scoreable**
    (the 14 pair anchors ran nowhere until 2026-08-11), but **20 of 21 range bands
    are still uncited judgement**, and they cannot be derived externally until the
    vote-counting decision above is made — the literature does not publish the
    per-trial split a vote-count band needs.
-5. **Derive dose bands at scale** and bump `band_version` 0 → 1.
-6. **Grok/Claude agreement table** on a fixed paper set. Never merge scores.
-7. **Grok-owned telemetry follow-up.** `DashboardRunV1` already preserves token
+6. **Derive dose bands at scale** and bump `band_version` 0 → 1.
+7. **Grok/Claude agreement table** on a fixed paper set. Never merge scores.
+8. **Grok-owned telemetry follow-up.** `DashboardRunV1` already preserves token
    and price fields when a Grok context contains them, but `grok_adapter.py` still
    needs its owner to capture those fields from the CLI envelope. Do not infer
    them for historical runs.
-8. Venue factor (`Study.venue_ok` is still a boolean; SJR quartiles have nowhere
+9. Venue factor (`Study.venue_ok` is still a boolean; SJR quartiles have nowhere
    to go until a real factor exists — new constant, so SPEC §13 first).
 
 ---
