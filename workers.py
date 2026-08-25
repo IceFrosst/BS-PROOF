@@ -96,6 +96,10 @@ ELISION = "\n\n[... middle of paper elided to fit the input budget ...]\n\n"
 # abstract failed for both S3 and S5 after their contracts grew, while the same
 # source fitted to 1,550 chars succeeded. The first call produced no model
 # output, so this is an input-transport retry, not a second scientific turn.
+# The error match is deliberately EXACT (fail-closed): a reworded CLI error
+# falls back to the pre-existing hard-fail path rather than over-triggering.
+# If the CLI wall moves, re-measure this constant; the selftest section
+# "PROMPT TEXT FITTING" pins both the retry length and the fail-closed match.
 PROMPT_TOO_LONG_RETRY_CHARS = 1550
 
 
@@ -1114,6 +1118,9 @@ def extract_study(record: dict, text: str, registry: dict | None = None, *,
         retry_meta = dict(retry_meta or {})
         retry_meta.update({
             "prompt_too_long_retry": True,
+            # The first attempt's literal error is preserved so the audit trail
+            # never loses WHY a retry happened, even when the retry succeeds.
+            "first_attempt_error": (meta or {}).get("error"),
             "original_text_chars": len(original),
             "retry_text_chars": len(retry_payload["text"]),
         })

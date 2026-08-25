@@ -2287,6 +2287,10 @@ def main():
           == _w.PROMPT_TOO_LONG_RETRY_CHARS
           and _retry_out["_meta"]["S3"].get("original_text_chars")
           > _w.PROMPT_TOO_LONG_RETRY_CHARS)
+    check("the first attempt's literal error survives a successful retry",
+          _retry_out["_meta"]["S3"].get("first_attempt_error")
+          == "exit 1: Prompt is too long",
+          "the audit trail must keep WHY the retry fired, not only that it did")
     _other_err_seen = []
     def _other_error_call(agent, payload):
         if agent == "S3":
@@ -2299,6 +2303,37 @@ def main():
     check("a NON-matching error never triggers the transport retry",
           len(_other_err_seen) == 1,
           "the retry is fail-closed by exact match; loosening it must be deliberate")
+    _short_seen = []
+    def _short_text_call(agent, payload):
+        if agent == "S3":
+            _short_seen.append(payload["text"])
+            return None, {"error": "exit 1: Prompt is too long"}
+        return {}, {"cached": False}
+    _short_body = ("METHODS m RESULTS p = 0.001 CONCLUSION ok. "
+                   * 3).ljust(_w.MIN_TEXT_CHARS + 1, "x")
+    assert len(_short_body) <= _w.PROMPT_TOO_LONG_RETRY_CHARS
+    _w.extract_study(
+        {"title": "Creatine supplementation trial", "ingredient": "creatine"},
+        _short_body, call=_short_text_call, max_workers=1)
+    check("text already at or under the retry budget is never re-fit",
+          len(_short_seen) == 1,
+          "an identical or longer retry would be a pointless second call")
+    _fail_twice_seen = []
+    def _fail_twice_call(agent, payload):
+        if agent == "S3":
+            _fail_twice_seen.append(payload["text"])
+            return None, {"error": "exit 1: Prompt is too long"}
+        return {}, {"cached": False}
+    _fail_out = _w.extract_study(
+        {"title": "Creatine supplementation trial", "ingredient": "creatine"},
+        _body, call=_fail_twice_call, max_workers=1)
+    check("a retry that ALSO fails keeps the error and the flag together",
+          len(_fail_twice_seen) == 2
+          and _fail_out["_meta"]["S3"].get("prompt_too_long_retry") is True
+          and _fail_out["_meta"]["S3"].get("error")
+          == "exit 1: Prompt is too long"
+          and any(f["agent"] == "S3" for f in _fail_out.get("_failed", [])),
+          "exactly one retry, then the study is honestly partial -- never a loop")
     check("the transport retry keeps both methods and results",
           _retry_seen[1].startswith("METHODS")
           and "CONCLUSION" in _retry_seen[1]
