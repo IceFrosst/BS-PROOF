@@ -95,7 +95,7 @@ export function WaitlistForm({ source = "qr" }: { source?: string }) {
         </p>
         <p className="waitlist-done-note">
           {phase === "joined"
-            ? "We'll email you when scanning opens up beyond this stand. One email, not a newsletter."
+            ? "We'll email you once, when scanning opens. Not a newsletter."
             : "No need to sign up twice — we still have your address."}
         </p>
         <button
@@ -117,9 +117,14 @@ export function WaitlistForm({ source = "qr" }: { source?: string }) {
       <label className="waitlist-label" htmlFor={inputId}>
         Get early access
       </label>
+      {/* With the scanner hidden this paragraph is the ONLY thing telling a
+          visitor what they are joining, so it says what the product does
+          rather than that it is coming. The differentiator is the second
+          sentence: everyone else scores the ingredient. */}
       <p className="waitlist-copy">
-        Scan any supplement here at the stand. Leave your email and we&rsquo;ll tell you when you
-        can do it from home.
+        We read a supplement label and score that <em>exact</em> product against the clinical
+        trials &mdash; its ingredient, its form and its dose, not just the ingredient everyone else
+        scores. Leave your email and we&rsquo;ll tell you the moment it opens.
       </p>
       <div className="waitlist-row">
         <input
