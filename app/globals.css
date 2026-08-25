@@ -788,6 +788,16 @@ thead th { color: var(--ink-soft); font-size: 0.7rem; text-transform: uppercase;
 .waitlist-again:hover { background: var(--paper-2); }
 
 @media (max-width: 560px) {
+  /*
+   * Stacking the row turns the main axis VERTICAL, and `flex: 1 1 240px` on
+   * the input then means a 240px flex-basis on its HEIGHT, free to grow from
+   * there. Measured on an iPhone 2026-08-25: a ~400px tall oval, because the
+   * 999px pill radius is applied to a box that is no longer a strip.
+   *
+   * So the basis has to be reset wherever the direction is flipped. Height
+   * comes from min-height alone here.
+   */
   .waitlist-row { flex-direction: column; }
+  .waitlist-input { flex: 0 0 auto; width: 100%; }
   .waitlist-submit { width: 100%; }
 }
