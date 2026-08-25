@@ -327,6 +327,8 @@ class UniversalNegativeRepairTests(unittest.TestCase):
                    errors=["rate limit exceeded"]),
             stream([{"StructuredOutput": '{"x": 7}'},
                     {"StructuredOutput": '{"x": 8}'}]),
+            stream([{"StructuredOutput": '{"x": 7}'},
+                    {"StructuredOutput": '{bad json'}]),
         )
         for raw in refused_streams:
             self.assertIsNone(
@@ -339,6 +341,57 @@ class UniversalNegativeRepairTests(unittest.TestCase):
                              "total_cost_usd": 0.1})
         self.assertEqual(claude_adapter._extract_payload(normal, schema),
                          ({"x": 9}, 0.1))
+        wrapped_normal = json.dumps({
+            "structured_output": {"StructuredOutput": '{"x": 9}'},
+            "total_cost_usd": 0.1})
+        self.assertEqual(claude_adapter._extract_payload(wrapped_normal),
+                         ({"StructuredOutput": '{"x": 9}'}, 0.1))
+
+    def test_claude_call_caches_recovered_output_but_never_fatal_output(self):
+        import sqlite3
+        from types import SimpleNamespace
+        from unittest.mock import patch
+        import claude_adapter
+
+        valid = {"funding_class": "undisclosed", "evidence_span": None}
+
+        def stream(errors=None):
+            return "\n".join(json.dumps(event) for event in (
+                {"type": "assistant", "message": {"content": [{
+                    "type": "tool_use", "name": "StructuredOutput",
+                    "input": {"StructuredOutput": json.dumps(valid)}}]}},
+                {"type": "result", "subtype": "error_max_turns",
+                 "terminal_reason": "max_turns", "errors": errors or [],
+                 "total_cost_usd": 0.2,
+                 "usage": {"input_tokens": 2, "output_tokens": 3}},
+            ))
+
+        original_conn = claude_adapter._CONN
+        conn = sqlite3.connect(":memory:", check_same_thread=False)
+        conn.execute("CREATE TABLE c (k TEXT PRIMARY KEY, v TEXT, cost REAL)")
+        claude_adapter._CONN = conn
+        try:
+            proc = SimpleNamespace(returncode=1, stdout=stream(), stderr="")
+            with patch.object(claude_adapter.subprocess, "run", return_value=proc) as run:
+                first, meta = claude_adapter.call("S8", {"case": "recover"}, retries=0)
+                second, cached = claude_adapter.call("S8", {"case": "recover"}, retries=0)
+            self.assertEqual(first, valid)
+            self.assertTrue(meta["transport_recovered"])
+            self.assertEqual(second, valid)
+            self.assertTrue(cached["cached"])
+            self.assertEqual(run.call_count, 1)
+
+            fatal_proc = SimpleNamespace(
+                returncode=1, stdout=stream(["rate limit exceeded"]), stderr="")
+            with patch.object(claude_adapter.subprocess, "run", return_value=fatal_proc):
+                refused, meta = claude_adapter.call(
+                    "S8", {"case": "fatal"}, retries=0)
+            self.assertIsNone(refused)
+            self.assertTrue(meta["flagged"])
+            self.assertEqual(conn.execute("SELECT count(*) FROM c").fetchone()[0], 1)
+        finally:
+            claude_adapter._CONN = original_conn
+            conn.close()
 
     def test_v124_schemas_require_contract_and_nullable_fields(self):
         try:

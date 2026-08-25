@@ -929,16 +929,7 @@ def _envelope_tokens(raw: str) -> dict:
 
 
 def _schema_checked(candidate, schema_text: str | None):
-    """Unwrap exact CLI transport mistakes, then validate without inference."""
-    if (isinstance(candidate, dict) and len(candidate) == 1
-            and next(iter(candidate)) in ("StructuredOutput", "$PARAMETER_NAME")):
-        nested = next(iter(candidate.values()))
-        if not isinstance(nested, str):
-            return None
-        try:
-            candidate = json.loads(nested)
-        except json.JSONDecodeError:
-            return None
+    """Validate a direct object without transport repair or inference."""
     if not isinstance(candidate, dict):
         return None
     if schema_text is not None:
@@ -990,33 +981,33 @@ def _recover_max_turns_wrapper(raw: str, schema_text: str):
     # if an earlier assistant event happened to contain valid-looking JSON.
     if _is_fatal(json.dumps(env, ensure_ascii=False)):
         return None, 0.0
-    candidates = []
+    tool_calls = []
     for event in _json_events(raw):
         if event.get("type") != "assistant":
             continue
-        for block in (event.get("message") or {}).get("content") or []:
-            if block.get("type") != "tool_use" or block.get("name") != "StructuredOutput":
-                continue
-            tool_input = block.get("input")
-            if (not isinstance(tool_input, dict) or len(tool_input) != 1
-                    or next(iter(tool_input)) not in
-                    ("StructuredOutput", "$PARAMETER_NAME")):
-                continue
-            nested = next(iter(tool_input.values()))
-            if not isinstance(nested, str):
-                continue
-            try:
-                parsed = json.loads(nested)
-            except json.JSONDecodeError:
-                continue
-            checked = _schema_checked(parsed, schema_text)
-            if checked is not None:
-                candidates.append(checked)
-    # Multiple valid attempts in one failed envelope are ambiguous; choosing
-    # one would make extraction order decide scientific data.
-    if len(candidates) != 1:
+        tool_calls.extend(
+            block for block in ((event.get("message") or {}).get("content") or [])
+            if block.get("type") == "tool_use")
+    # Exactly one model tool call total. A second attempt is ambiguity even when
+    # it is malformed or schema-invalid; never select the nicer candidate.
+    if len(tool_calls) != 1 or tool_calls[0].get("name") != "StructuredOutput":
         return None, 0.0
-    return candidates[0], float(env.get("total_cost_usd") or 0.0)
+    tool_input = tool_calls[0].get("input")
+    if (not isinstance(tool_input, dict) or len(tool_input) != 1
+            or next(iter(tool_input)) not in
+            ("StructuredOutput", "$PARAMETER_NAME")):
+        return None, 0.0
+    nested = next(iter(tool_input.values()))
+    if not isinstance(nested, str):
+        return None, 0.0
+    try:
+        parsed = json.loads(nested)
+    except json.JSONDecodeError:
+        return None, 0.0
+    checked = _schema_checked(parsed, schema_text)
+    if checked is None:
+        return None, 0.0
+    return checked, float(env.get("total_cost_usd") or 0.0)
 
 
 def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
@@ -1116,8 +1107,9 @@ def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
             # exact max_turns terminal state, exact observed one-key string
             # wrapper, one unambiguous candidate, full Draft-7 validation, and
             # no fatal auth/quota/budget marker anywhere in the final envelope.
-            recovered, recovered_cost = _recover_max_turns_wrapper(
-                proc.stdout, schema)
+            recovered, recovered_cost = ((None, 0.0) if _is_fatal(detail) else
+                                         _recover_max_turns_wrapper(
+                                             proc.stdout, schema))
             if recovered is not None:
                 toks = _envelope_tokens(proc.stdout)
                 USAGE.finish_attempt(
