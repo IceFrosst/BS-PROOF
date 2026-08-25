@@ -40,7 +40,12 @@ test.describe("front door separation", () => {
   test("the tester page offers the scanner", async ({ page }) => {
     await page.goto("/tester");
     await expect(page.locator(".la-drop")).toHaveCount(1);
-    await expect(page.locator('input[type="file"]')).toHaveCount(1);
+    // At LEAST one, not exactly one: the analyzer carries a separate input for
+    // camera capture alongside the upload, and pinning the number here would
+    // fail the next time the scanner gains an input without anything being
+    // wrong. The public page's count is asserted as exactly 0, where the
+    // exactness is the whole point.
+    expect(await page.locator('input[type="file"]').count()).toBeGreaterThan(0);
   });
 
   test("the tester page does not carry the waitlist", async ({ page }) => {
