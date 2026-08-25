@@ -134,7 +134,7 @@ export function WaitlistForm({ source = "qr" }: { source?: string }) {
           name="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
-          placeholder="you@university.edu"
+          placeholder="you@example.com"
           autoComplete="email"
           inputMode="email"
           autoCapitalize="off"
