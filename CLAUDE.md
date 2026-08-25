@@ -1153,10 +1153,15 @@ cannot support public claims.
 
 The generated full-run artifact was not retained because its mode said `sr`
 while its own counters said `requested: 0, s2_ok: 0, resolved: 0`. Production
-`--with-sr` is still gated on a non-`None` injected call even though production
-uses the adapter default, so retaining that artifact would falsely label a
-primary-only run as SR-backed. Fix and test that runner wiring before the next
-retained run; do not spend another cold extraction to do it.
+`--with-sr` was gated on a non-`None` injected call while production relied on
+the workers default (`call_fn = None`), so retaining that artifact would have
+falsely labelled a primary-only run as SR-backed. **Fixed 2026-08-25, same
+day:** production now injects `ca.call` explicitly (identical for extraction,
+live for the SR gate), and `tests/test_sr_wiring.py` pins the shape by AST --
+no backend branch may assign `call_fn = None`, production must inject the
+Claude adapter, and the SR gate must keep both conditions. No live SR
+extraction was spent on the fix; the first real `--with-sr` production run is
+still the unmeasured SR-uplift experiment (Next item 3).
 
 ## Next
 

@@ -66,8 +66,11 @@ mode label would have been false.
   paper-level verification.
 - The fraction of affected claims with a valid equivalence or non-inferiority
   basis remains unknown without independent paper review.
-- Production `--with-sr` must be wired to the default Claude adapter before any
-  retained run may claim SR inheritance.
+- Production `--with-sr` was gated on an injected call the production branch
+  never supplied. Fixed the same day: production now injects the Claude
+  adapter's `call` explicitly and `tests/test_sr_wiring.py` pins the wiring by
+  AST. The fix spent no model calls; SR-inheritance uplift itself remains
+  unmeasured until a deliberate live `--with-sr` run.
 - No audit delta is a corrected score, an effect estimate, or additional evidence
   mass. It is only a diagnostic count of routing decisions.
 

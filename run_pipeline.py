@@ -684,7 +684,16 @@ def main(argv: list[str]) -> int:
                 import claude_adapter as ca
                 if not ca.preflight():
                     return 1
-                call_fn = None                  # workers default = claude_adapter
+                # EXPLICIT, not None. workers.extract_study defaults a None
+                # call to claude_adapter.call, so for extraction the two are
+                # identical
+                # -- but the SR block below gates on `call_fn is not None`, so
+                # None silently skipped SR inheritance on the one production
+                # backend while the report still said `-sr`. Measured
+                # 2026-08-25: two full --with-sr production runs reported
+                # requested: 0, s2_ok: 0, resolved: 0 under an `sr` mode label,
+                # and neither artifact could be retained.
+                call_fn = ca.call
                 prompt_version = ca.PROMPT_VERSION
                 tag = ""
                 in_flight = ca.MAX_CONCURRENCY
