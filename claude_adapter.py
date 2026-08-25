@@ -293,7 +293,12 @@ def _claude_bin() -> str:
 # qualified null semantics, and complete arm-keyed S7 output. The extraction
 # payload contract remains explicitly tagged v1.24; this shared cache version
 # invalidates every prompt/schema consumer after those wording changes.
-PROMPT_VERSION = "v1.25"
+# v1.26 (2026-08-25): the shared prompt names the CLI StructuredOutput return
+# channel and forbids stringifying/wrapping its argument. Stream diagnostics on
+# the 32-study gate proved every remaining S3/S7 max_turns failure had emitted
+# {"StructuredOutput": "{...json...}"}; schema rejection then required a second
+# turn that purity correctly forbids.
+PROMPT_VERSION = "v1.26"
 
 # Tier -> model. FULL IDs, NOT ALIASES.
 #

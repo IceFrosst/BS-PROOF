@@ -311,7 +311,11 @@ class UniversalNegativeRepairTests(unittest.TestCase):
         self.assertFalse(Draft7Validator(schemas["s7_form.json"]).is_valid(
             {"extraction_version": "v1.24", "arms": []}))
         import claude_adapter
-        self.assertEqual(claude_adapter.PROMPT_VERSION, "v1.25")
+        self.assertEqual(claude_adapter.PROMPT_VERSION, "v1.26")
+        shared = (Path(__file__).parents[1] / "prompts" / "_shared.md").read_text()
+        self.assertIn("DIRECT argument", shared)
+        self.assertIn("Never stringify", shared)
+        self.assertIn("never wrap", shared)
 
 
 if __name__ == "__main__":

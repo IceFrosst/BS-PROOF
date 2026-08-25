@@ -871,10 +871,18 @@ system that are currently exact.
 
 ## Changelog
 
+- **2026-08-25 rev 9 — one-turn structured-output reliability.** Stream
+  diagnostics on the targeted 32-study v1.25 gate showed every remaining S3/S7
+  `max_turns` failure had wrapped stringified JSON inside a `StructuredOutput`
+  property. The schema channel rejected that extra key and requested correction
+  on turn two. v1.26 explicitly requires the schema object as the direct return
+  argument. `--max-turns 1`, schemas, scoring semantics, and constants are
+  unchanged; the 32/32 live gate must pass before a full run.
+
 - **2026-08-25 rev 8 — universal negative contract and scoring semantics.**
   `SCORING_MODEL` is now `v13-universal-negative-contract`; no scoring constants
   changed. S3 is staged before S5/S7 and passes exact target-arm facts. Fresh
-  `PROMPT_VERSION` v1.25 emits the v1.24 extraction contract; S3/S5/S7 outputs
+  `PROMPT_VERSION` v1.26 emits the v1.24 extraction contract; S3/S5/S7 outputs
   require explicit extraction metadata and nullable/unknown
   fields; legacy is accepted only with explicit legacy metadata. Efficacy claims
   require an evidenced counterfactual, while valid safety harm/observational

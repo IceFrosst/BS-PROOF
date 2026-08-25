@@ -1122,9 +1122,15 @@ Claude session then had about one hour remaining after 15 quota requeues and
 4,500 seconds of enforced pauses. Among available corrected contributions, 0/43
 old negative rows remained negative, but this is **not validation** because the
 10 partials include both known wrong-intervention sentinels. No full-corpus rerun
-was started. Next: improve one-turn S3/S7 schema compliance without raising
-`--max-turns 1`, bump `PROMPT_VERSION`, require 32/32 clean plus paper review,
-then and only then start the full corpus solo.
+was started.
+
+Stream diagnostics then identified the exact one-turn failure: the model called
+the CLI schema channel with `{StructuredOutput: "{...json...}"}` instead of
+passing the schema object directly. The validator rejected the wrapper and asked
+for a second turn, which `--max-turns 1` correctly refused. `PROMPT_VERSION`
+v1.26 makes the direct-argument return contract explicit without raising the
+turn limit or weakening any schema. Next gate: require 32/32 clean under v1.26,
+review every remaining negative, then and only then start the full corpus solo.
 
 ## Next
 
