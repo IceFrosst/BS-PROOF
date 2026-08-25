@@ -2266,6 +2266,44 @@ def main():
           "a model must not read a truncation as a finished sentence")
     check("short text is passed through untouched",
           _w._fit_text("S5", "short study text", 2000) == "short study text")
+    _retry_seen = []
+    def _prompt_retry_call(agent, payload):
+        if agent == "S3":
+            _retry_seen.append(payload["text"])
+            if len(_retry_seen) == 1:
+                return None, {"error": "exit 1: Prompt is too long"}
+            return {}, {"cached": False}
+        return {}, {"cached": False}
+    _retry_out = _w.extract_study(
+        {"title": "Creatine supplementation trial", "ingredient": "creatine"},
+        _body, call=_prompt_retry_call, max_workers=1)
+    check("an exact prompt-too-long refusal retries once with bounded text",
+          len(_retry_seen) == 2
+          and len(_retry_seen[1]) == _w.PROMPT_TOO_LONG_RETRY_CHARS
+          and _retry_out["_meta"]["S3"].get("prompt_too_long_retry") is True,
+          f"attempt lengths={[len(x) for x in _retry_seen]}")
+    check("the retry meta pins both audit lengths the ledger cites",
+          _retry_out["_meta"]["S3"].get("retry_text_chars")
+          == _w.PROMPT_TOO_LONG_RETRY_CHARS
+          and _retry_out["_meta"]["S3"].get("original_text_chars")
+          > _w.PROMPT_TOO_LONG_RETRY_CHARS)
+    _other_err_seen = []
+    def _other_error_call(agent, payload):
+        if agent == "S3":
+            _other_err_seen.append(payload["text"])
+            return None, {"error": "exit 1: something else"}
+        return {}, {"cached": False}
+    _w.extract_study(
+        {"title": "Creatine supplementation trial", "ingredient": "creatine"},
+        _body, call=_other_error_call, max_workers=1)
+    check("a NON-matching error never triggers the transport retry",
+          len(_other_err_seen) == 1,
+          "the retry is fail-closed by exact match; loosening it must be deliberate")
+    check("the transport retry keeps both methods and results",
+          _retry_seen[1].startswith("METHODS")
+          and "CONCLUSION" in _retry_seen[1]
+          and _w.ELISION.strip() in _retry_seen[1],
+          "a failed transport call may shrink input, never silently take one side")
 
     # build_ecus read `outcome_id` inside the argument list of the generator that
     # BINDS it. Crashed outright when nothing mapped; silently reused the last

@@ -1139,8 +1139,24 @@ own values, and accept them only after full local Draft-7 schema validation. The
 S7 flatten changes no arm, dose, form, label, or value. This repairs transport,
 never a scientific field; malformed, additional, or schema-invalid content still
 refuses. The turn limit and schemas
-remain unchanged. Next gate: require 32/32 clean, review every remaining
-negative, then and only then start the full corpus solo.
+remain unchanged.
+
+**Live gate completed 2026-08-25.** The fixed 32-study roster replayed 32/32
+clean under v1.26 with S3/S5/S7 contract metadata at v1.24. Reconciliation
+against all 43 original negative rows found 25 now refused/gated, 18 retained
+with nonnegative signed contribution, and **0 still negative**. A warm-cache
+full-corpus continuation then completed 155/156 usable studies with one no-text
+skip and zero partial failures; all scored contributions were nonnegative. This
+is a transport/contract validation result, not evidence that creatine works:
+the run remains experimental, has no product dose, has not passed anchors, and
+cannot support public claims.
+
+The generated full-run artifact was not retained because its mode said `sr`
+while its own counters said `requested: 0, s2_ok: 0, resolved: 0`. Production
+`--with-sr` is still gated on a non-`None` injected call even though production
+uses the adapter default, so retaining that artifact would falsely label a
+primary-only run as SR-backed. Fix and test that runner wiring before the next
+retained run; do not spend another cold extraction to do it.
 
 ## Next
 

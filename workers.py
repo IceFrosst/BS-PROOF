@@ -91,6 +91,12 @@ AGENT_BUDGET_TRIM = {
 
 
 ELISION = "\n\n[... middle of paper elided to fit the input budget ...]\n\n"
+# Exact transport fallback after the CLI rejects an otherwise valid call as
+# "Prompt is too long". Measured on the v1.26 156-study gate: a 1,703-char
+# abstract failed for both S3 and S5 after their contracts grew, while the same
+# source fitted to 1,550 chars succeeded. The first call produced no model
+# output, so this is an input-transport retry, not a second scientific turn.
+PROMPT_TOO_LONG_RETRY_CHARS = 1550
 
 
 import re as _re
@@ -1089,8 +1095,29 @@ def extract_study(record: dict, text: str, registry: dict | None = None, *,
     shadow = _v13_shadow_enabled()
 
     def run_agent(agent: str, *, facts: dict | None = None):
-        return call(agent, _payload(agent, record, text, registry, sections,
-                                    s3_facts=facts))
+        payload = _payload(agent, record, text, registry, sections,
+                           s3_facts=facts)
+        result, meta = call(agent, payload)
+        if (result is not None
+                or str((meta or {}).get("error") or "").lower()
+                != "exit 1: prompt is too long"):
+            return result, meta
+        original = payload.get("text")
+        if not isinstance(original, str) or len(original) <= PROMPT_TOO_LONG_RETRY_CHARS:
+            return result, meta
+        room = PROMPT_TOO_LONG_RETRY_CHARS - len(ELISION)
+        head = room // 2
+        retry_payload = {**payload,
+                         "text": (original[:head] + ELISION
+                                  + original[-(room - head):])}
+        retried, retry_meta = call(agent, retry_payload)
+        retry_meta = dict(retry_meta or {})
+        retry_meta.update({
+            "prompt_too_long_retry": True,
+            "original_text_chars": len(original),
+            "retry_text_chars": len(retry_payload["text"]),
+        })
+        return retried, retry_meta
 
     def store(agent: str, result_meta):
         result, meta = result_meta

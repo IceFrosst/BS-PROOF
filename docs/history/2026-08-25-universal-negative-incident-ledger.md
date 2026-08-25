@@ -32,18 +32,42 @@ this repair.
 | 11 | The source bundle reconciles to 32 studies, 43 contributions, and −95.73 points. | `2026-08-25-negative-contributors.v1.json`, pinned to bundle SHA-256 `8e5529754ddaa4bea206f5377cf7a0c777054333a7fbd0a18de0152d907f1c96`. | Every source row has a durable disposition; quarantine is not reclassification to benefit. |
 | 12 | Two records administered no target ingredient as an intervention. | Primary DOI/registry verification for `doi:101093geronaglaa162` and `registry:nct04048616`; the labelled ingredient was a measurement tracer. | Both are `exclude_scope`; this rule is implemented generically through arm role/presence, not by DOI or ingredient name. |
 
+## Live contract validation — 2026-08-25
+
+After the deterministic repair and transport recovery landed, the fixed roster
+replayed **32/32 clean** under `PROMPT_VERSION` v1.26. S3, S5, and S7 all carried
+`extraction_version: v1.24`. Reconciliation against the 43 original negative
+rows found:
+
+- **0/43 remained negative**;
+- 25/43 were absent after scope refusals, eligibility gates, or claim routing;
+- 18/43 remained as nonnegative signed contributions.
+
+A warm-cache full-corpus continuation then completed 155/156 usable studies,
+one no-text skip, and zero partial failures. No completed scored contribution
+was negative. The exact `Prompt is too long` transport refusal was retried once
+with a deterministic 1,550-character head/tail slice; the rejected call produced
+no model output, and the retry changed no schema, scientific field, or scoring
+constant.
+
+These counts validate transport and contract routing only. They do **not** prove
+benefit, establish a corrected historical score, or add evidence mass. The run
+remains experimental and prohibited for public claims. Its generated artifact
+was not retained: although invoked with `--with-sr`, production runner wiring
+reported `requested: 0`, `s2_ok: 0`, and `resolved: 0`, so the generated `sr`
+mode label would have been false.
+
 ## Unresolved facts
 
-- The 32-study roster and all 43 original contribution rows are retained in the
+- The 32-study roster and all 43 original contribution rows remain in the
   machine-readable ledger. Apart from the two primary-source-verified scope
-  exclusions, rows remain `quarantine_reextract` with `bundle_only` verification;
-  paper-level corrected claims still require independent verification before any
-  row is promoted or scored.
-- The fraction of affected claims that had a valid equivalence or
-  non-inferiority basis is unknown until the affected extraction envelopes are
-  reviewed.
-- The repair has not been validated against a fresh model extraction; doing so
-  would violate the no-extraction scope of this change.
+  exclusions, source adjudications still say `quarantine_reextract` with
+  `bundle_only` verification; a clean contract replay is not independent
+  paper-level verification.
+- The fraction of affected claims with a valid equivalence or non-inferiority
+  basis remains unknown without independent paper review.
+- Production `--with-sr` must be wired to the default Claude adapter before any
+  retained run may claim SR inheritance.
 - No audit delta is a corrected score, an effect estimate, or additional evidence
   mass. It is only a diagnostic count of routing decisions.
 
