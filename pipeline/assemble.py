@@ -43,23 +43,48 @@ def _rob_items(s4: dict | None, registry: dict | None) -> dict:
 
 
 def _s7_for_claim(s7: dict | None, claim: dict, s3: dict | None) -> dict | None:
-    """Select only the S7 facts belonging to S5's named target arm.
+    """Select S7 facts only from S5/S3's administered target arm.
 
-    Legacy single-arm S7 envelopes remain usable only when the S5/S3 contract
-    is legacy or the claim resolves one administered target. No positional arm
-    selection is attempted.
+    Arm-keyed S7 facts must be joined by an evidenced label, never by array
+    position.  In particular, a one-row S7 response may be the control arm, so
+    its length does not make it safe to project onto the ingredient claim.
+    Legacy top-level S7 envelopes remain usable unchanged.
     """
     if not isinstance(s7, dict):
         return None
     arm_rows = s7.get("arms")
     if not isinstance(arm_rows, list) or not arm_rows:
         return s7
+    s3_arms = s3.get("arms") if isinstance(s3, dict) else None
+    if not isinstance(s3_arms, list) or not s3_arms:
+        return None
+
+    def _administered_target(a: dict) -> bool:
+        role = a.get("role")
+        if role is not None and role != "administered":
+            return False
+        presence = a.get("target_ingredient_presence")
+        return presence == "yes"
+
+    targets = [a for a in s3_arms if isinstance(a, dict) and _administered_target(a)
+               and _arm_norm(a.get("label"))]
     wanted = claim.get("ingredient_arm")
-    if not isinstance(wanted, str) or not wanted.strip():
-        # A single arm-keyed row is safe; multiple rows are not.
-        return arm_rows[0] if len(arm_rows) == 1 and isinstance(arm_rows[0], dict) else None
+    if isinstance(wanted, str) and wanted.strip():
+        target_labels = [a for a in targets
+                         if _arm_norm(a.get("label")) == _arm_norm(wanted)]
+        if len(target_labels) != 1:
+            return None
+        target_label = _arm_norm(target_labels[0].get("label"))
+    else:
+        # The firewall may resolve an unnamed claim only when there is exactly
+        # one target/control pair. Requiring one target here avoids borrowing a
+        # dose from an arbitrary active arm or from a placebo-only S7 row.
+        if len(targets) != 1:
+            return None
+        target_label = _arm_norm(targets[0].get("label"))
+
     matches = [a for a in arm_rows if isinstance(a, dict)
-               and _arm_norm(a.get("label")) == _arm_norm(wanted)]
+               and _arm_norm(a.get("label")) == target_label]
     return matches[0] if len(matches) == 1 else None
 
 
@@ -317,12 +342,20 @@ def _resolve_claim_arms(claim: dict, s3: dict | None, ingredient: str) -> tuple[
     else:
         if not isinstance(requested_target, str) or not isinstance(requested_control, str):
             return False, "claim_arm_names_incomplete"
-        by_label = {_arm_norm(a.get("label")): a for a, _ in administered
-                    if _arm_norm(a.get("label"))}
-        selected_target = by_label.get(_arm_norm(requested_target))
-        selected_control = by_label.get(_arm_norm(requested_control))
-        if selected_target is None or selected_control is None:
-            return False, "claim_arm_not_in_s3"
+        by_label: dict[str, list[dict]] = {}
+        for arm, _ in administered:
+            label = _arm_norm(arm.get("label"))
+            if label:
+                by_label.setdefault(label, []).append(arm)
+        target_matches = by_label.get(_arm_norm(requested_target), [])
+        control_matches = by_label.get(_arm_norm(requested_control), [])
+        # Duplicate normalised labels are not a join key. Choosing one would
+        # make the result depend on extraction order, so ambiguous labels
+        # refuse just like a missing arm.
+        if len(target_matches) != 1 or len(control_matches) != 1:
+            return False, "claim_arm_not_unique_in_s3"
+        selected_target = target_matches[0]
+        selected_control = control_matches[0]
         if selected_target is selected_control:
             return False, "claim_arms_not_distinct"
         if _presence(selected_target) != "yes":

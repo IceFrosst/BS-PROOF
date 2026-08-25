@@ -861,6 +861,12 @@ system that are currently exact.
 
 ## Changelog
 
+- **2026-08-25 rev 7 follow-up — arm-key joins hardened.** Arm-keyed S7 facts
+  are joined to the uniquely evidenced administered target arm from S3; a
+  control-only or ambiguous one-row response is refused, as are duplicate
+  normalised S3 labels. No array position, inferred alias, or dose projection
+  can select the target arm.
+
 - **2026-08-25 rev 7 — universal negative-effect repair.** Arm-level S3 facts now
   record target-ingredient presence, active cointerventions, evidenced text, and
   administered/measurement-only/biomarker/unclear role. S7 form and dose facts

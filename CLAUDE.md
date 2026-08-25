@@ -1085,9 +1085,11 @@ are arm-keyed, and S5 names the target/control arms and test provenance. The
 assembler firewall refuses invalid counterfactuals and routes a nonsignificant
 efficacy claim without a usable signed between-arm estimate or explicit valid
 equivalence/non-inferiority basis to `inconclusive_unquantified` with zero
-signed contribution. Measured zero still uses the current effect scale; harm is
-unchanged. Primary endpoint hierarchy leads, mixed unknown-role siblings collapse
-unclear, and safety harm ties remain protected.
+signed contribution. Arm-keyed S7 facts join only to the uniquely evidenced
+administered target arm from S3; control-only and ambiguous rows refuse rather
+than falling back to array position. Measured zero still uses the current effect
+scale; harm is unchanged. Primary endpoint hierarchy leads, mixed unknown-role
+siblings collapse unclear, and safety harm ties remain protected.
 
 Run `20260825_072759` is invalid for claims pending verification of the 32-study
 incident ledger in `docs/history/2026-08-25-universal-negative-incident-ledger.md`.
