@@ -312,8 +312,18 @@ class UniversalNegativeRepairTests(unittest.TestCase):
                 stream([wrapped]), schema)
             self.assertEqual(payload, {"x": 7})
             self.assertEqual(cost, 0.25)
+        arms_schema = json.dumps({
+            "type": "object", "required": ["arms"],
+            "additionalProperties": False,
+            "properties": {"arms": {"type": "array",
+                                      "items": {"type": "integer"}}}})
+        nested_arms = stream([{"arms": {"arms": [1, 2]}}])
+        self.assertEqual(
+            claude_adapter._recover_max_turns_wrapper(nested_arms, arms_schema),
+            ({"arms": [1, 2]}, 0.25))
         refused_streams = (
             stream([{"x": 7}]),                         # direct is not recovery
+            stream([{"arms": {"other": [1, 2]}}]),
             stream([{"StructuredOutput": {"x": 7}}]), # wrapper must be string
             stream([{"StructuredOutput": '{"x": "wrong"}'}]),
             stream([{"StructuredOutput": '{bad json'}]),

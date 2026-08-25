@@ -878,8 +878,10 @@ system that are currently exact.
   on turn two. v1.26 explicitly requires the schema object as the direct return
   argument. Because a first v1.26 live pass still wrapped 8/32 responses, the
   Claude adapter retains verbose first-turn tool arguments and may unwrap only
-  the exact one-key `StructuredOutput`/`$PARAMETER_NAME` string transports. The
-  model's parsed object must pass the full original Draft-7 schema locally;
+  the exact one-key `StructuredOutput`/`$PARAMETER_NAME` string transports or
+  the observed S7 redundant array container `arms:{arms:[...]}`. The latter
+  removes one container without changing an extracted value. The parsed object
+  must pass the full original Draft-7 schema locally;
   malformed, additional, or schema-invalid content refuses. This is transport
   recovery, not scientific-field repair. `--max-turns 1`, schemas, scoring
   semantics, and constants are unchanged; the 32/32 live gate must pass before

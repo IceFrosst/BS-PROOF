@@ -972,7 +972,7 @@ def _extract_payload(raw: str, schema_text: str | None = None):
 
 
 def _recover_max_turns_wrapper(raw: str, schema_text: str):
-    """Recover only the two observed one-key string transport wrappers."""
+    """Recover only observed exact transport containers, then validate fully."""
     env = _result_envelope(raw)
     if not env or not (env.get("subtype") == "error_max_turns"
                        and env.get("terminal_reason") == "max_turns"):
@@ -993,16 +993,26 @@ def _recover_max_turns_wrapper(raw: str, schema_text: str):
     if len(tool_calls) != 1 or tool_calls[0].get("name") != "StructuredOutput":
         return None, 0.0
     tool_input = tool_calls[0].get("input")
-    if (not isinstance(tool_input, dict) or len(tool_input) != 1
-            or next(iter(tool_input)) not in
+    if not isinstance(tool_input, dict):
+        return None, 0.0
+    if (len(tool_input) == 1 and next(iter(tool_input)) in
             ("StructuredOutput", "$PARAMETER_NAME")):
-        return None, 0.0
-    nested = next(iter(tool_input.values()))
-    if not isinstance(nested, str):
-        return None, 0.0
-    try:
-        parsed = json.loads(nested)
-    except json.JSONDecodeError:
+        nested = next(iter(tool_input.values()))
+        if not isinstance(nested, str):
+            return None, 0.0
+        try:
+            parsed = json.loads(nested)
+        except json.JSONDecodeError:
+            return None, 0.0
+    elif (isinstance(tool_input.get("arms"), dict)
+          and set(tool_input["arms"]) == {"arms"}
+          and isinstance(tool_input["arms"]["arms"], list)):
+        # Observed S7 transport shape: every schema field was direct except the
+        # array argument arrived as arms={arms:[...]}. Flatten that one exact
+        # redundant container, then require the complete original schema. No
+        # arm, dose, form, label, or value is inferred or altered.
+        parsed = {**tool_input, "arms": tool_input["arms"]["arms"]}
+    else:
         return None, 0.0
     checked = _schema_checked(parsed, schema_text)
     if checked is None:
@@ -1104,8 +1114,8 @@ def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
         if proc.returncode != 0:
             detail = _envelope_error(proc.stdout) or proc.stderr.strip()
             # Recovery is narrower than ordinary successful-envelope parsing:
-            # exact max_turns terminal state, exact observed one-key string
-            # wrapper, one unambiguous candidate, full Draft-7 validation, and
+            # exact max_turns terminal state, exact observed transport
+            # container, one unambiguous candidate, full Draft-7 validation, and
             # no fatal auth/quota/budget marker anywhere in the final envelope.
             recovered, recovered_cost = (
                 (None, 0.0)

@@ -1133,10 +1133,12 @@ contract explicit. A first live v1.26 pass improved to 24/32 clean but retained
 8 wrapper-driven partials, proving wording alone was insufficient.
 
 The Claude adapter now retains verbose first-turn schema-tool arguments. On a
-`max_turns` exit it may unwrap only those two exact one-key string wrappers,
-parse the model's own JSON, and accept it only after full local Draft-7 schema
-validation. This repairs transport, never a scientific field; malformed,
-additional, or schema-invalid content still refuses. The turn limit and schemas
+`max_turns` exit it may unwrap only those two exact one-key string wrappers or
+the observed S7 redundant array container `arms:{arms:[...]}`, parse the model's
+own values, and accept them only after full local Draft-7 schema validation. The
+S7 flatten changes no arm, dose, form, label, or value. This repairs transport,
+never a scientific field; malformed, additional, or schema-invalid content still
+refuses. The turn limit and schemas
 remain unchanged. Next gate: require 32/32 clean, review every remaining
 negative, then and only then start the full corpus solo.
 
