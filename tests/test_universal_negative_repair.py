@@ -311,11 +311,19 @@ class UniversalNegativeRepairTests(unittest.TestCase):
         self.assertFalse(Draft7Validator(schemas["s7_form.json"]).is_valid(
             {"extraction_version": "v1.24", "arms": []}))
         import claude_adapter
+        import grok_adapter
         self.assertEqual(claude_adapter.PROMPT_VERSION, "v1.26")
         shared = (Path(__file__).parents[1] / "prompts" / "_shared.md").read_text()
-        self.assertIn("DIRECT argument", shared)
+        self.assertIn("schema object directly", shared)
         self.assertIn("Never stringify", shared)
-        self.assertIn("never wrap", shared)
+        self.assertNotIn("StructuredOutput", shared)
+        for _agent, (_tier, _schema, prompt_f) in claude_adapter.AGENTS.items():
+            neutral = claude_adapter._system_prompt(prompt_f)
+            claude = claude_adapter._claude_system_prompt(prompt_f)
+            self.assertNotIn("StructuredOutput", neutral)
+            self.assertEqual(claude.count("CLAUDE SCHEMA RETURN CHANNEL"), 1)
+            self.assertIn("DIRECT argument object", claude)
+            self.assertEqual(grok_adapter._system_prompt(prompt_f), neutral)
 
 
 if __name__ == "__main__":

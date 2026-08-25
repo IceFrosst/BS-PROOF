@@ -824,12 +824,27 @@ def _key(agent: str, model: str, payload: str, effort: str | None = None) -> str
 
 
 def _system_prompt(prompt_f: str) -> str:
-    """Universal rules first, then the agent-specific prompt."""
+    """Backend-neutral universal rules first, then the agent prompt."""
     shared = SHARED_PROMPT.read_text() if SHARED_PROMPT.exists() else ""
     specific = (PROMPTS / prompt_f).read_text()
     if shared:
         return shared.rstrip() + "\n\n---\n\n" + specific
     return specific
+
+
+CLAUDE_STRUCTURED_OUTPUT_RULE = """
+CLAUDE SCHEMA RETURN CHANNEL
+The runtime exposes a `StructuredOutput` schema return channel. Invoke it once
+with the schema fields as its DIRECT argument object. Never stringify that
+object, never put JSON text inside a `StructuredOutput` property, and never wrap
+the schema object in another key. This return channel is not permission to use
+research, file, shell, network, or any other tool.
+""".strip()
+
+
+def _claude_system_prompt(prompt_f: str) -> str:
+    """Claude-only schema transport guidance; Grok keeps raw JSON stdout."""
+    return _system_prompt(prompt_f).rstrip() + "\n\n---\n\n" + CLAUDE_STRUCTURED_OUTPUT_RULE
 
 
 def _envelope_error(raw: str) -> str:
@@ -946,7 +961,7 @@ def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
         raise ValueError(f"SP_EFFORT_{tier}={effort!r} is not one of {VALID_EFFORT}")
 
     schema = (SCHEMAS / schema_f).read_text()
-    system = _system_prompt(prompt_f)
+    system = _claude_system_prompt(prompt_f)
     body = json.dumps(payload, ensure_ascii=False, sort_keys=True)
 
     k = _key(agent, model, body, effort)

@@ -299,10 +299,10 @@ def _agent_text(agent: str, text: str, sections: dict | None) -> str:
 
 def _payload(agent: str, record: dict, text: str, registry: dict | None,
              sections: dict | None = None, s3_facts: dict | None = None) -> dict:
-    from claude_adapter import SCHEMAS, _system_prompt
+    from claude_adapter import SCHEMAS, _claude_system_prompt
     _, _schema_f, _prompt_f = claude_adapter.AGENTS[agent]
     # +400 for JSON scaffolding and the fixed keys around the text.
-    _fixed = (len(_system_prompt(_prompt_f))
+    _fixed = (len(_claude_system_prompt(_prompt_f))
               + len((SCHEMAS / _schema_f).read_text()) + 400)
     text = _agent_text(agent, text, sections)
     base = {"title": record.get("title"), "text": _fit_text(agent, text, _fixed)}
