@@ -20,7 +20,19 @@ import { describe, expect, it } from "vitest";
 import { getRetainedRunIds, loadQuarantinedRuns } from "@/lib/dashboard/catalog";
 import { availableProducts } from "@/lib/analyze/product-score";
 
-describe("dashboard catalog and analyzer agree", () => {
+/*
+ * Both checks walk the WHOLE archive -- 41 artifacts, ~60 MB of JSON, parsed
+ * and schema-validated. That took 6-12 s measured on 2026-08-25, already past
+ * vitest's 5 s default before any parallel load, so in a full run these failed
+ * on time rather than on truth: "quarantines nothing" would report a failure
+ * while the catalog was in fact clean.
+ *
+ * A guard that cries wolf gets deleted, and this one is the only thing
+ * standing between a schema mismatch and a silently half-empty dashboard.
+ * Give it room. If the archive grows enough to make this slow again, cache the
+ * catalog load rather than trimming what is checked.
+ */
+describe("dashboard catalog and analyzer agree", { timeout: 120_000 }, () => {
   it("quarantines nothing", () => {
     const quarantined = loadQuarantinedRuns().map(
       (r) => `${r.runId}: ${String(r.reason).slice(0, 200)}`,

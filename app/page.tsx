@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { LabelAnalyzer } from "@/components/label-analyzer";
+import { WaitlistForm } from "@/components/waitlist-form";
 import { RunCard } from "@/components/run-card";
 import { loadRetainedRuns } from "@/lib/dashboard/catalog";
 import type { DashboardRun } from "@/lib/dashboard/types";
@@ -36,7 +37,12 @@ export default function HomePage() {
           <p className="eyebrow hero-kicker">Supplement evidence, with the seams showing</p>
           <h1>BS <em>PROOF</em></h1>
         </div>
+        {/* The QR code on the stand's roll-up lands here, so the email field
+            comes BEFORE the scanner: a visitor who only has ten seconds should
+            be able to leave an address without scrolling. The scanner stays
+            directly beneath it because the scan is what makes them want to. */}
         <div className="shell analyze-hero-body">
+          <WaitlistForm source="qr" />
           <LabelAnalyzer />
         </div>
         <div className="shell hero-ledger" aria-label="Dashboard totals">
