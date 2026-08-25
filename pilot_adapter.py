@@ -53,7 +53,8 @@ import threading
 from pathlib import Path
 
 import claude_adapter
-from claude_adapter import AGENTS, PROMPT_VERSION, SCHEMAS, TIER_MODEL, _system_prompt
+from claude_adapter import (AGENTS, PROMPT_VERSION, SCHEMAS, TIER_MODEL,
+                            _claude_system_prompt)
 
 CANARY = "CANARY7788"
 PILOT_MARKER = "pilot-subscription-not-production"
@@ -188,7 +189,7 @@ def call(agent: str, payload: dict, *, timeout: int | None = None, retries: int 
     tier, schema_f, prompt_f = AGENTS[agent]
     model = TIER_MODEL[tier]
     schema = (SCHEMAS / schema_f).read_text()
-    system = _system_prompt(prompt_f)
+    system = _claude_system_prompt(prompt_f)
     body = json.dumps(payload, ensure_ascii=False, sort_keys=True)
 
     cwd = _empty_cwd()

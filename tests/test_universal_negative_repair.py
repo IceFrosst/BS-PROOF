@@ -324,6 +324,13 @@ class UniversalNegativeRepairTests(unittest.TestCase):
             self.assertEqual(claude.count("CLAUDE SCHEMA RETURN CHANNEL"), 1)
             self.assertIn("DIRECT argument object", claude)
             self.assertEqual(grok_adapter._system_prompt(prompt_f), neutral)
+        root = Path(__file__).parents[1]
+        production_source = (root / "claude_adapter.py").read_text()
+        pilot_source = (root / "pilot_adapter.py").read_text()
+        grok_source = (root / "grok_adapter.py").read_text()
+        self.assertIn("system = _claude_system_prompt(prompt_f)", production_source)
+        self.assertIn("system = _claude_system_prompt(prompt_f)", pilot_source)
+        self.assertIn("system = _system_prompt(prompt_f)", grok_source)
 
 
 if __name__ == "__main__":
