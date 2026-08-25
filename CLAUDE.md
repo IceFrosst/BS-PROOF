@@ -1378,20 +1378,34 @@ ownership table added under Multi-agent workflow.
    printed SMD is never divided twice, an SD never rescues within-group/ratio
    claims, zero/negative SDs refuse). Expected to convert most of the 15%
    raw-unit share on the next run.
-2. **Fix the per-arm body-mass dosage regression (prompt fix, measured
-   2026-08-25).** v1.24 moved `mean_body_mass_kg` from a top-level study field
-   to a per-arm field, and papers print ONE sample-level baseline mean, so the
-   model now answers null unless the ARM states a mass: per-kg studies with a
-   usable mass fell **17 → 5**, and **13 studies whose stated mass the v1.23
-   contract had captured now return null** (2–23 g/day of computed dose lost
-   each). This emptied the muscle_strength and lean_body_mass benefit bands.
-   Absolute-dose studies are untouched (74 → 74). Fix: amend the S7 prompt so
-   the per-arm field may carry the paper's stated SAMPLE-LEVEL baseline mean
-   when no per-arm mass is printed — still the paper's own number, invariant 5
-   intact. Invariant 3 applies: bump `PROMPT_VERSION`, which invalidates the
-   whole S1–S8 cache (~1,000 calls). Do the v1.15-style surgical pass first:
-   replay S7 alone on the ~32 per-kg studies (~32 live calls) to verify the
-   fix before deciding whether the full re-extraction is worth scheduling.
+2. **S7 body-mass dosage regression FIXED + surgically measured 2026-08-25
+   (`PROMPT_VERSION` v1.28); full S7 corpus replay still pending.** v1.24 moved
+   `mean_body_mass_kg` per-arm, but the first prompt-only fix recovered **0/32**.
+   Root cause was upstream: S7's strict prompt+schema grew to ~14k chars against
+   a hardcoded **14,500-char GROK wall**, so `_fit_text` clamped every paper to
+   1,000 chars and table room went negative — **zero tables shipped** across the
+   156-study corpus. The mass was not in the payload. Claude is now separately
+   budgeted at 26k text / 30k total (measured safe below same-day 38k+ S5
+   envelopes); Grok must be re-measured before revival. The prompt explicitly
+   allows the paper's stated whole-sample baseline mean on a target arm when
+   per-arm means are absent — still the paper's OWN number, invariant 5 intact.
+   Final v1.28 surgical S7 replay on all 32 affected studies recovered mass on
+   **15/32, 0 failures**, including **12/13 known regressions**; the remaining
+   known paper (`doi:103390nu13072303`) returned null despite its mass being in
+   the payload. v1.28 also closes two audit holes found in review: final envelope
+   size is computed from the COMPLETE serialized payload (form vocabulary, S3
+   arms and JSON overhead included; exact assert ≤30k), and drift compares the
+   full arm-label multiset so renamed/added/removed/duplicate arms cannot hide.
+   Non-mass S7 fields drifted on 12 studies under the richer payload.
+   Deterministic hybrid rescore: lean_body_mass band restored to **5.10 g
+   (1 benefit trial)** and composite 30→44; muscle_strength dosed coverage rose
+   4→6 but its benefit band remains empty because surviving benefit trials have
+   no absolute convertible dose
+   (restoring the old 2.67 g band would require an assumed body weight or a now-
+   ineligible claim). The surgical result is validation, not a production
+   mixed-version corpus.
+   Next: replay S7 on all 155 usable studies under v1.28, review drift, then
+   rescore from the unchanged S3/S5 corpus; no need to cold-run every agent.
 3. **Constrain retrieval to the intervention**, not the document. Gates
    extraction cost, coverage and outcome mapping simultaneously.
 4. **SR inheritance uplift MEASURED 2026-08-25 (first live end-to-end run,

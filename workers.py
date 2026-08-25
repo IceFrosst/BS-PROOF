@@ -7,6 +7,7 @@ import time
 import os
 import math
 import re
+import json
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor, FIRST_COMPLETED, wait as _fwait
 
@@ -91,6 +92,23 @@ AGENT_BUDGET_TRIM = {
 
 
 ELISION = "\n\n[... middle of paper elided to fit the input budget ...]\n\n"
+
+# S7's payload walls, RE-MEASURED FOR THE CLAUDE BACKEND 2026-08-25. The old
+# single 14,500-char wall was measured on the GROK CLI (S7's one historical
+# timeout, a 15,463-char total). Under the v1.24 arm-keyed contract S7's
+# system prompt + schema alone reach ~14k chars, so against that wall
+# _fit_text clamped every paper to 1,000 chars and wall_room went negative --
+# ZERO tables shipped, silently, on the whole 156-study corpus. That is what
+# actually emptied the per-kg body masses (the v1.27 prompt fix alone
+# recovered 0/32, because the mass was never in the payload). Claude tier B
+# demonstrably handles far larger calls: S5 succeeded the same day at a
+# 38,376-char fixed envelope plus full 35,740-char papers. TEXT_WALL bounds
+# the fitted text region (fixed + snippets + text) at roughly the historical
+# 12k text intent; TOTAL_WALL leaves the gap tables ride in, exactly the
+# v1.23 design. If the Grok backend is revived, these must be re-measured
+# there -- same caveat the S5 budget comment already carries.
+S7_TEXT_WALL = 26000
+S7_TOTAL_WALL = 30000
 # Exact transport fallback after the CLI rejects an otherwise valid call as
 # "Prompt is too long". Measured on the v1.26 156-study gate: a 1,703-char
 # abstract failed for both S3 and S5 after their contracts grew, while the same
@@ -241,10 +259,10 @@ def _fit_text(agent: str, text: str, fixed_chars: int) -> str:
     room = PROMPT_BUDGET_CHARS - fixed_chars - extra
     if room <= 0:
         # v1.24's arm-keyed S7 schema is intentionally strict and can exceed
-        # the historical 12k prompt budget. S7 still has a measured CLI wall;
+        # the historical 12k prompt budget. S7 still has a measured wall;
         # fit it to that wall rather than returning an unbounded full paper.
         if agent == "S7":
-            room = max(1000, 14500 - fixed_chars - extra)
+            room = max(1000, S7_TEXT_WALL - fixed_chars - extra)
         else:
             return text
     if len(text) <= room:
@@ -307,11 +325,22 @@ def _agent_text(agent: str, text: str, sections: dict | None) -> str:
     return "\n\n".join(parts) if parts else text
 
 
+def _envelope_chars(agent: str, payload: dict) -> int:
+    """Exact CLI envelope chars: system prompt + schema + serialized payload."""
+    from claude_adapter import SCHEMAS, _claude_system_prompt
+    _, schema_f, prompt_f = claude_adapter.AGENTS[agent]
+    return (len(_claude_system_prompt(prompt_f))
+            + len((SCHEMAS / schema_f).read_text())
+            + len(json.dumps(payload, ensure_ascii=False, sort_keys=True)))
+
+
 def _payload(agent: str, record: dict, text: str, registry: dict | None,
              sections: dict | None = None, s3_facts: dict | None = None) -> dict:
     from claude_adapter import SCHEMAS, _claude_system_prompt
     _, _schema_f, _prompt_f = claude_adapter.AGENTS[agent]
-    # +400 for JSON scaffolding and the fixed keys around the text.
+    # +400 for JSON scaffolding and the fixed keys around the text. This is a
+    # TEXT-fit reserve only; S7's final TOTAL wall uses _envelope_chars on the
+    # complete serialized payload, never this approximation.
     _fixed = (len(_claude_system_prompt(_prompt_f))
               + len((SCHEMAS / _schema_f).read_text()) + 400)
     text = _agent_text(agent, text, sections)
@@ -385,20 +414,69 @@ def _payload(agent: str, record: dict, text: str, registry: dict | None,
         # 76/76 of the studies that HAVE PMC XML tables at all (58 lack a
         # pmcid, 22 have XML without <table-wrap>). The leftover-of-12k
         # variant shipped tables to exactly 1 study, i.e. never.
+        # (Those measurements were made under the v1.23 contract; the walls
+        # are S7_TEXT_WALL / S7_TOTAL_WALL now -- see their comment for the
+        # v1.24 collapse this repairs.)
         fitted = _fit_text(agent, text, _fixed + snip_chars)
-        wall_room = 14500 - (_fixed + snip_chars + len(fitted) + 400)
-        tables = (_tables_text(record, cap_chars=min(2500, wall_room))
-                  if wall_room >= 300 else [])
-        return {**base,
-                "text": fitted,
-                "ingredient": ingredient,
-                "target_ingredient": ingredient,
-                "s3_arm_facts": (s3_facts or {}).get("arms", []),
-                "s3_extraction_version": (s3_facts or {}).get("extraction_version"),
-                "form_vocabulary": vocab.forms_for(ingredient),
-                "unspecified_form_id": vocab.unspecified_form_id(ingredient),
-                "dose_snippets": snippets,
-                "tables": tables}
+        payload = {**base,
+                   "text": fitted,
+                   "ingredient": ingredient,
+                   "target_ingredient": ingredient,
+                   "s3_arm_facts": (s3_facts or {}).get("arms", []),
+                   "s3_extraction_version": (s3_facts or {}).get("extraction_version"),
+                   "form_vocabulary": vocab.forms_for(ingredient),
+                   "unspecified_form_id": vocab.unspecified_form_id(ingredient),
+                   "dose_snippets": snippets,
+                   "tables": []}
+        # COMPLETE serialized-envelope accounting. The previous arithmetic
+        # omitted form_vocabulary, S3 arm facts and JSON encoding overhead; its
+        # selftest repeated the same underestimate (~2.2k chars measured), so a
+        # nominal 30k wall could actually overflow. Start with up to 2.5k raw
+        # table text, then trim/pop the last table until the exact envelope
+        # fits. If tables are exhausted and the envelope still overflows (a
+        # long paper plus many serialized S3 arms -- reproduced at 31,547
+        # chars with 12 arms), the TEXT is re-fit head/tail by the exact
+        # overflow: text is the one elastic field left, and crashing on a
+        # live study was the alternative.
+        # `room` is a RAW char budget compared against a SERIALIZED envelope
+        # (JSON quoting/escaping unaccounted, and cap_chars is per table while
+        # several may return). That is safe ONLY because the trim loop below
+        # corrects against the exact serialized envelope -- do not remove one
+        # without the other.
+        room = S7_TOTAL_WALL - _envelope_chars("S7", payload)
+        tables = (_tables_text(record, cap_chars=min(2500, room))
+                  if room >= 300 else [])
+        payload["tables"] = list(tables)
+        while _envelope_chars("S7", payload) > S7_TOTAL_WALL:
+            overflow = _envelope_chars("S7", payload) - S7_TOTAL_WALL
+            if payload["tables"]:
+                last = payload["tables"][-1]
+                keep = len(last) - overflow - 1
+                if keep >= 80:
+                    # Cut at a row boundary so the model never reads a half
+                    # row like "Creatine | 83." as a complete fact.
+                    cut = last[:keep]
+                    payload["tables"][-1] = cut.rsplit("\n", 1)[0] or cut
+                else:
+                    payload["tables"].pop()
+                continue
+            body = payload["text"]
+            keep = len(body) - overflow - len(ELISION)
+            if keep < 1000:
+                # The fixed prompt+schema+facts alone exceed the wall; a
+                # sub-1000-char paper slice cannot answer S7's questions, so
+                # refuse loudly instead of shipping a doomed call.
+                raise RuntimeError(
+                    f"S7 envelope cannot fit {S7_TOTAL_WALL} chars: "
+                    f"{_envelope_chars('S7', payload)} with text at "
+                    f"{len(body)} chars")
+            head = keep // 2
+            payload["text"] = body[:head] + ELISION + body[-(keep - head):]
+        # Explicit raise, not assert: asserts vanish under python -O, which
+        # would turn an overflow into a silent oversized live call.
+        if _envelope_chars("S7", payload) > S7_TOTAL_WALL:
+            raise RuntimeError("S7 envelope exceeds S7_TOTAL_WALL after fitting")
+        return payload
     if agent == "S8":
         return base
     raise KeyError(agent)
@@ -1046,33 +1124,42 @@ def _self_check_v13_shadow_wiring() -> None:
     #      must never flip a study into _fit_text's full-text regime (measured
     #      2026-08-24: budget-counting them did exactly that for 32/156);
     #   2. the total (system+schema+snippets+fitted+tables+overhead) stays
-    #      under the 14,500 wall ceiling whenever tables ship;
+    #      under the S7_TOTAL_WALL ceiling whenever tables ship;
     #   3. an ordinary paper actually ships its tables (the leftover-of-12k
     #      variant shipped tables to 1/156 studies, i.e. never).
     s7_tables = ["Table 1 — Baseline\nGroup | Body mass (kg)\nCreatine | 83.2 ± 9.8"]
+    # Realistic maximal S3 arm overhead: the bugged total-wall arithmetic
+    # omitted this entire serialized field (plus form vocabulary and JSON
+    # encoding), undercounting a measured envelope by ~2.2k chars.
+    s7_s3 = {"extraction_version": "v1.24", "arms": [
+        {"label": f"Arm {i}", "role": "administered",
+         "target_ingredient_presence": "yes" if i == 0 else "no",
+         "evidenced_arm_text": "reported intervention arm " + "x" * 120,
+         "active_cointerventions": []}
+        for i in range(12)]}
     def s7_pay(text_body, tables_ret):
         with patch.object(__import__(__name__), "_tables_text",
                           lambda _record, cap_chars=4000, **_kw:
                           [t[:cap_chars] for t in tables_ret]):
             return _payload("S7", {"ingredient": "creatine",
                                    "title": "t", "pmcid": "PMC1"},
-                            text_body, None)
-    from claude_adapter import SCHEMAS as _SCH, _system_prompt as _sp
-    _, _s7_schema, _s7_prompt = claude_adapter.AGENTS["S7"]
-    s7_fixed = len(_sp(_s7_prompt)) + len((_SCH / _s7_schema).read_text()) + 400
+                            text_body, None, s3_facts=s7_s3)
     for body in ("creatine 5 g/day. " + "x" * 30000,
                  "creatine 5 g/day was given for 8 weeks."):
         pay_with, pay_without = s7_pay(body, s7_tables), s7_pay(body, [])
         assert pay_with["text"] == pay_without["text"]                    # 1
         if pay_with["tables"]:
-            total = (s7_fixed + len(pay_with["text"])
-                     + sum(len(s) + 24 for s in pay_with["dose_snippets"])
-                     + sum(len(t) for t in pay_with["tables"]))
-            assert total <= 14500                                          # 2
+            # COMPLETE serialized envelope, not the old approximation that
+            # omitted form vocabulary, S3 facts and JSON encoding overhead.
+            assert _envelope_chars("S7", pay_with) <= S7_TOTAL_WALL         # 2
         # With the strict v1.24 schema, a pathological oversized text may
-        # consume the entire measured wall; ordinary short papers still ship
-        # tables. Never allow this boundary test to imply an unsafe overflow.
-        assert pay_with["tables"] in (s7_tables, [])                        # 3
+        # consume the entire measured wall; ordinary short papers MUST still
+        # ship tables. v1.24's larger prompt once made this permissive assertion
+        # pass while zero tables shipped across the whole 156-study corpus.
+        if len(body) < 1000:
+            assert pay_with["tables"] == s7_tables                          # 3
+        else:
+            assert pay_with["tables"] in (s7_tables, [])
 
 
 def extract_study(record: dict, text: str, registry: dict | None = None, *,

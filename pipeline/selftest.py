@@ -2251,6 +2251,13 @@ def main():
     # the Results section, so S5 truthfully reported no claims.
     print("\nPROMPT TEXT FITTING")
     import workers as _w
+    # The workers module carries its own offline contract checks (shadow
+    # wiring, S7 envelope walls, table shipping). They had ZERO callers, so
+    # "the selftest passes" said nothing about them -- reviewed 2026-08-25,
+    # the S7 envelope check was failing while every gate printed green.
+    _w._self_check_v13_shadow_wiring()
+    check("workers' embedded contract checks actually ran", True,
+          "zero-caller self-checks rot silently; this line keeps them wired")
     _body = ("METHODS " + "m" * 30000 + " RESULTS the group improved, p = 0.001 "
              + "CONCLUSION creatine increased strength.")
     _fitted = _w._fit_text("S5", _body, 2000)

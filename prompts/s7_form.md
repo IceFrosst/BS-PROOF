@@ -81,8 +81,22 @@ fields, and never merge them yourself:
   dose_per_kg_mg     the per-kg daily dose in mg/kg/day ("0.3 g/kg/day" -> 300).
                      ONLY for genuinely per-kg dosing; never convert an absolute
                      dose into it.
-  mean_body_mass_kg  the paper's own stated mean body mass of the supplemented
-                     group, if printed in the baseline table or methods.
+  mean_body_mass_kg  the paper's own stated mean body mass, if printed in the
+                     baseline table or methods. On an ARM row, fill it from the
+                     first of these the paper actually states: (a) that arm's
+                     own mean mass; (b) the WHOLE-SAMPLE baseline mean when
+                     per-arm masses are not printed. The whole-sample mean is
+                     a permitted PROXY only on an administered TARGET-
+                     INGREDIENT arm row; never copy it to placebo, measurement,
+                     biomarker, or other-active rows, and never describe it as
+                     that arm's own reported mean. Quote the stated number in
+                     the evidence span and say explicitly that it is the
+                     whole-sample proxy. Refusing this permitted proxy deletes
+                     a reported per-kg dose.
+                     MEASURED 2026-08-25: 13 papers whose stated mass the
+                     previous contract captured came back null under arm
+                     keying, emptying two dose bands -- over-caution here
+                     destroys real data.
 
 Do NOT multiply them into elemental_dose_mg yourself, and NEVER assume a typical
 body weight -- if the paper states no mean mass, leave mean_body_mass_kg null and

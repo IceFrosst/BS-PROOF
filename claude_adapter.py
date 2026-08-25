@@ -293,13 +293,22 @@ def _claude_bin() -> str:
 # qualified null semantics, and complete arm-keyed S7 output. The extraction
 # payload contract remains explicitly tagged v1.24; this shared cache version
 # invalidates every prompt/schema consumer after those wording changes.
+# v1.28 (2026-08-25): narrow v1.27's whole-sample mean wording: it is a
+#   permitted target-arm PROXY only, never a stated fact about every arm; plus
+#   restore the S7 tables that v1.24's larger contract silently budgeted out.
+# v1.27 (2026-08-25): S7 per-arm mean_body_mass_kg may carry the paper's
+#   stated WHOLE-SAMPLE baseline mean when per-arm masses are not printed.
+#   Measured: 13 papers whose stated mass v1.23 captured returned null under
+#   v1.24 arm keying (per-kg studies with usable mass fell 17 -> 5), emptying
+#   the muscle_strength and lean_body_mass dose bands. Same contract shape;
+#   extraction_version stays v1.24.
 # v1.26 (2026-08-25): Claude's appended transport rule names the CLI
 # StructuredOutput return channel and forbids stringifying/wrapping its argument.
 # Stream diagnostics on
 # the 32-study gate proved every remaining S3/S7 max_turns failure had emitted
 # {"StructuredOutput": "{...json...}"}; schema rejection then required a second
 # turn that purity correctly forbids.
-PROMPT_VERSION = "v1.26"
+PROMPT_VERSION = "v1.28"
 
 # Tier -> model. FULL IDs, NOT ALIASES.
 #
