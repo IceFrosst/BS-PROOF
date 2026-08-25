@@ -921,8 +921,8 @@ g/kg ≈ 5–24 g/day), so the v1.19 run should pull the range's floor down towa
 
 **UNIVERSAL NEGATIVE CONTRACT — `SCORING_MODEL` v13-universal-negative-contract
 (2026-08-25; no scoring constants changed).** S3 is staged before S5/S7 and passes
-the target ingredient plus exact arm facts/labels. Fresh v1.24 contracts require
-explicit version metadata and all nullable/unknown fields; modern omissions refuse,
+the target ingredient plus exact arm facts/labels. `PROMPT_VERSION` v1.25 emits
+the v1.24 extraction contract; fresh contracts require explicit version metadata and all nullable/unknown fields; modern omissions refuse,
 while legacy is accepted only with explicit legacy metadata. The efficacy firewall
 accepts only an evidenced target-vs-control counterfactual, including isolated
 factorial A+B vs B when non-target active cointerventions match; unmatched

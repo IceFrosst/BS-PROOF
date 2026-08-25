@@ -874,7 +874,8 @@ system that are currently exact.
 - **2026-08-25 rev 8 — universal negative contract and scoring semantics.**
   `SCORING_MODEL` is now `v13-universal-negative-contract`; no scoring constants
   changed. S3 is staged before S5/S7 and passes exact target-arm facts. Fresh
-  v1.24 S3/S5/S7 outputs require explicit extraction metadata and nullable/unknown
+  `PROMPT_VERSION` v1.25 emits the v1.24 extraction contract; S3/S5/S7 outputs
+  require explicit extraction metadata and nullable/unknown
   fields; legacy is accepted only with explicit legacy metadata. Efficacy claims
   require an evidenced counterfactual, while valid safety harm/observational
   signals remain eligible. Factorial A+B versus B is eligible only when the

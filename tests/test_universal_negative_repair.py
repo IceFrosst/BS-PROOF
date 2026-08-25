@@ -148,7 +148,7 @@ class UniversalNegativeRepairTests(unittest.TestCase):
             "S7": {"extraction_version": "v1.24", "form_vocab_id": "creatine_monohydrate",
                    "arms": [{"label": "Placebo", "form_vocab_id": "creatine_monohydrate"}]},
             "outcomes": [{"outcome_vocab_id": "adverse_events_any", "discarded": False,
-                           "claim": {"direction": "harm"}}],
+                           "claim": {"direction": "harm", "ingredient_arm": "Exposed"}}],
         }
         record = {"_canonical": "safety", "ingredient": "creatine", "design_rank": 6}
         product = {"ingredient": "creatine", "form_vocab_id": "creatine_monohydrate",
@@ -163,6 +163,48 @@ class UniversalNegativeRepairTests(unittest.TestCase):
                                 effect_unit="smd", effect_favours="ingredient")
             self.assertEqual(_effect_s(claim, "muscle_strength"),
                              (None, "unparseable_effect_size"))
+            null = dict(claim, direction="null_effect")
+            effect, route = _effect_s(null, "muscle_strength")
+            self.assertIsNone(effect)
+            self.assertEqual(route, "inconclusive_unquantified")
+            self.assertEqual(Study(id="n", design_rank=4,
+                                   direction="null_effect",
+                                   effect_route=route).s_value(), 0.0)
+
+    def test_unsupported_equal_contract_versions_refuse(self):
+        product = {"ingredient": "creatine", "form_vocab_id": "creatine_monohydrate",
+                   "population": {}}
+        record = {"_canonical": "bad-version", "ingredient": "creatine", "design_rank": 6}
+        for version in ("bogus", "legacy-evil"):
+            extraction = {
+                "S3": {"extraction_version": version, "arms": [{
+                    "label": "Exposed", "role": "administered",
+                    "target_ingredient_presence": "yes"}]},
+                "S5": {"extraction_version": version, "claims": []},
+                "S7": {"extraction_version": version},
+                "outcomes": [{"outcome_vocab_id": "adverse_events_any",
+                               "discarded": False,
+                               "claim": {"direction": "harm",
+                                         "ingredient_arm": "Exposed"}}],
+            }
+            self.assertEqual(to_studies(record, extraction, product), [])
+
+    def test_safety_harm_must_name_the_target_exposed_arm(self):
+        product = {"ingredient": "creatine", "form_vocab_id": "creatine_monohydrate",
+                   "population": {}}
+        extraction = {
+            "S3": {"extraction_version": "v1.24", "arms": [
+                {"label": "Target", "role": "administered",
+                 "target_ingredient_presence": "yes"},
+                {"label": "Drug X", "role": "administered",
+                 "target_ingredient_presence": "no"}]},
+            "S5": {"extraction_version": "v1.24", "claims": []},
+            "S7": {"extraction_version": "v1.24", "arms": []},
+            "outcomes": [{"outcome_vocab_id": "adverse_events_any", "discarded": False,
+                           "claim": {"direction": "harm", "ingredient_arm": "Drug X"}}],
+        }
+        record = {"_canonical": "wrong-harm-arm", "ingredient": "creatine", "design_rank": 6}
+        self.assertEqual(to_studies(record, extraction, product), [])
 
     def test_unversioned_contract_never_enters_legacy_route(self):
         self.assertEqual(
@@ -199,11 +241,14 @@ class UniversalNegativeRepairTests(unittest.TestCase):
     def test_safety_harm_observational_route_is_not_efficacy_firewalled(self):
         record = {"_canonical": "obs", "ingredient": "creatine", "design_rank": 6}
         extraction = {
-            "S3": {"extraction_version": "legacy-v1.23"},
+            "S3": {"extraction_version": "legacy-v1.23", "arms": [{
+                "label": "Exposed", "role": "administered",
+                "target_ingredient_presence": "yes"}]},
             "S5": {"extraction_version": "legacy-v1.23", "claims": []},
             "S7": {"extraction_version": "legacy-v1.23"},
             "outcomes": [{"outcome_vocab_id": "adverse_events_any", "discarded": False,
-                           "claim": {"direction": "harm", "magnitude": None}}]}
+                           "claim": {"direction": "harm", "magnitude": None,
+                                     "ingredient_arm": "Exposed"}}]}
         product = {"ingredient": "creatine", "form_vocab_id": "creatine_monohydrate",
                    "population": {}}
         rows = to_studies(record, extraction, product)
@@ -232,6 +277,18 @@ class UniversalNegativeRepairTests(unittest.TestCase):
         self.assertEqual(statuses["runs"][full_id]["status"], "invalid")
         self.assertFalse(statuses["runs"][full_id]["public_claims_allowed"])
 
+    def test_incident_ledger_reconciles_without_asserting_a_corrected_score(self):
+        ledger = json.loads((Path(__file__).parents[1] / "docs" / "history" /
+                             "2026-08-25-negative-contributors.v1.json").read_text())
+        rows = ledger["adjudications"]
+        self.assertEqual(ledger["source_totals"],
+                         {"studies": 32, "contributions": 43, "points": -95.73})
+        self.assertEqual(len(rows), 32)
+        self.assertEqual(len({row["study_id"] for row in rows}), 32)
+        self.assertEqual(sum(len(row["original_contributions"]) for row in rows), 43)
+        self.assertTrue(all(not row["corrected_score_asserted"] for row in rows))
+        self.assertEqual(sum(row["action"] == "exclude_scope" for row in rows), 2)
+
     def test_v124_schemas_require_contract_and_nullable_fields(self):
         try:
             from jsonschema import Draft7Validator
@@ -253,6 +310,8 @@ class UniversalNegativeRepairTests(unittest.TestCase):
             {"extraction_version": "v1.24", "arms": []}))
         self.assertFalse(Draft7Validator(schemas["s7_form.json"]).is_valid(
             {"extraction_version": "v1.24", "arms": []}))
+        import claude_adapter
+        self.assertEqual(claude_adapter.PROMPT_VERSION, "v1.25")
 
 
 if __name__ == "__main__":

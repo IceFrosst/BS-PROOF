@@ -70,6 +70,11 @@ provenance (the exact test/contrast it tests), and use `p_operator` for `<`,
 table-wide p, time main effect, or unsigned statistic is not a signed pairwise
 estimate. A group×time differential may support direction, but its omnibus
 magnitude must never be used as the pairwise signed effect.
+For an observational or uncontrolled ADVERSE-EVENT harm, `ingredient_arm` must
+still name the exact S3 arm/group exposed to the target ingredient. Do not attach
+a harm from another active arm to the target merely because both occur in the
+same paper. `control_arm` may be null only for that target-exposed safety-harm
+route; a reassuring safety null still requires a valid control comparison.
 
 NULL PRECISION. For a non-significant efficacy result, report `null_precision`
 only when the paper states a precision/equivalence margin or a valid equivalence

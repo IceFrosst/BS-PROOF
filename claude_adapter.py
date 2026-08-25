@@ -289,7 +289,11 @@ def _claude_bin() -> str:
 # v1.6 (2026-08-08): S2 reports results_table + per-study design. SR-table trials
 # now enter evidence mass, so S2's output moves scores and not just confidence.
 # v1.5 (2026-08-07): S3 prompt shortened, SR label resolve, review_methods.
-PROMPT_VERSION = "v1.24"
+# v1.25 (2026-08-25): post-review clarification of nullable cointerventions,
+# qualified null semantics, and complete arm-keyed S7 output. The extraction
+# payload contract remains explicitly tagged v1.24; this shared cache version
+# invalidates every prompt/schema consumer after those wording changes.
+PROMPT_VERSION = "v1.25"
 
 # Tier -> model. FULL IDs, NOT ALIASES.
 #

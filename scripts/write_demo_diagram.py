@@ -136,7 +136,7 @@ MID = L + W / 2
 row = {}                            # name -> (y, h), so arrows read clearly
 
 box(L, -230, W, 100,
-    f"BS-PROOF  ·  HOW ONE DEMO RUN WORKS\nscoring model: {SCORING_MODEL}   ·   2026-08-07",
+    f"BS-PROOF  ·  HOW ONE DEMO RUN WORKS\nscoring model: {SCORING_MODEL}   ·   2026-08-25",
     BLUE, size=26)
 
 panel(1500, -230, 560, "READING THIS DIAGRAM", f"""

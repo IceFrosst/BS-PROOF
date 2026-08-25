@@ -255,9 +255,27 @@ def sr_derived_to_studies(rec: dict, product: dict, *,
     return out
 
 
+SUPPORTED_EXTRACTION_CONTRACTS = frozenset({
+    "v1.24", "legacy-v1.23", "legacy-v1.22", "legacy-v1.21",
+})
+
+
 def _arm_norm(value) -> str:
     """Stable arm-label comparison; never invents aliases or ingredient names."""
     return re.sub(r"[^a-z0-9]+", " ", str(value or "").casefold()).strip()
+
+
+def _claim_has_target_exposure(claim: dict, s3: dict | None) -> bool:
+    """Whether this claim names one uniquely evidenced target-exposed arm."""
+    requested = _arm_norm(claim.get("ingredient_arm"))
+    arms = (s3 or {}).get("arms") if isinstance(s3, dict) else None
+    if not requested or not isinstance(arms, list):
+        return False
+    matches = [arm for arm in arms if isinstance(arm, dict)
+               and _arm_norm(arm.get("label")) == requested]
+    return (len(matches) == 1
+            and matches[0].get("role") == "administered"
+            and matches[0].get("target_ingredient_presence") == "yes")
 
 
 def _claim_equivalence_valid(claim: dict) -> bool:
@@ -493,7 +511,9 @@ def to_studies(record: dict, extraction: dict, product: dict,
     # S3/S5/S7 are one joined contract. Every component must state the same
     # version: a missing value is just as unsafe as a mixed value because it
     # lets malformed v1.24 output impersonate a legacy cache row.
-    if any(value is None for value in contract_values):
+    if (any(value is None for value in contract_values)
+            or any(value not in SUPPORTED_EXTRACTION_CONTRACTS
+                   for value in contract_values)):
         return []
     contract_versions = set(contract_values)
     if len(contract_versions) != 1:
@@ -584,13 +604,7 @@ def to_studies(record: dict, extraction: dict, product: dict,
         # safety null needs a control. Modern safety harms must at minimum prove
         # exposure to the target ingredient; otherwise a biomarker/tracer paper
         # could manufacture a safety signal without administering the product.
-        modern_target_exposure = any(
-            isinstance(arm, dict)
-            and arm.get("role") == "administered"
-            and arm.get("target_ingredient_presence") == "yes"
-            for arm in ((s3 or {}).get("arms") or []))
-        safety_bypass = safety_signal and (
-            not modern_contract or modern_target_exposure)
+        safety_bypass = safety_signal and _claim_has_target_exposure(claim, s3)
         firewall_reason = (None if safety_bypass else
                            _claim_firewall(claim, s3, ingredient,
                                            contract_version=contract_version))
@@ -716,7 +730,9 @@ def _effect_s(claim: dict, outcome_vocab_id: str) -> tuple[float | None, str]:
                 claim.get("direction") == "null_effect" and
                 not _claim_equivalence_valid(claim) else "unparseable_effect_size")
     if not math.isfinite(magnitude):
-        return None, "unparseable_effect_size"
+        return (None, "inconclusive_unquantified" if
+                claim.get("direction") == "null_effect" and
+                not equivalence_valid else "unparseable_effect_size")
 
     # THE NUMBER IS USED ONLY WHEN S5 NAMES THE ARM. No exceptions, no fallback
     # to the reported sign, no fallback to outcome polarity.
