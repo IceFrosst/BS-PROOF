@@ -1380,12 +1380,18 @@ ownership table added under Multi-agent workflow.
    raw-unit share on the next run.
 2. **Constrain retrieval to the intervention**, not the document. Gates
    extraction cost, coverage and outcome mapping simultaneously.
-3. **SR inheritance uplift is still UNMEASURED** — and it is now the biggest
-   unknown in the system, because SR-derived trials MOVE SCORES rather than only
-   confidence. Six defects that guaranteed zero are fixed (payload builder,
-   table filter, `q_s`, arbitrary cap slice, backend lock-in, missing direction);
-   nothing has yet been run end to end on a live backend. Do this before
-   trusting any number from a `--with-sr` run.
+3. **SR inheritance uplift MEASURED 2026-08-25 (first live end-to-end run,
+   retained as `20260825_173541`): approximately ZERO on the creatine corpus.**
+   S2 ran live on 60 ranked syntheses (54 ok, 47 resolved, 431 distinct trials
+   named; 64 live calls, 903 cache hits, $0 marginal). Of 32 SR-derived trial
+   candidates, **0 entered evidence mass**: 18 were already held directly (the
+   dedup working as designed), 12 had no design in any review table, 2 no
+   direction, 0 conflicts. The only movement was the bounded cov multiplier:
+   muscle_strength 37→38, lean_body_mass 29→30. So on a corpus this saturated
+   with directly-read trials, SR inheritance adds ~nothing — its value, if any,
+   is on THIN corpora where the trials behind reviews are unreachable, and that
+   is now a hypothesis to test on a second ingredient, not an unknown blocking
+   this one.
 4. **Anchor eval** — 35 anchors in `docs/anchors.csv` (NOT 28; the doc said 28 until 2026-08-06); running them needs
    extraction. Do this before trusting any constant. **All 35 are now scoreable**
    (the 14 pair anchors ran nowhere until 2026-08-11), but **20 of 21 range bands
