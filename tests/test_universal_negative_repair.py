@@ -388,6 +388,15 @@ class UniversalNegativeRepairTests(unittest.TestCase):
                     "S8", {"case": "fatal"}, retries=0)
             self.assertIsNone(refused)
             self.assertTrue(meta["flagged"])
+
+            fatal_stderr = SimpleNamespace(
+                returncode=1, stdout=stream(),
+                stderr="authentication_error: not logged in")
+            with patch.object(claude_adapter.subprocess, "run", return_value=fatal_stderr):
+                refused, meta = claude_adapter.call(
+                    "S8", {"case": "fatal-stderr"}, retries=0)
+            self.assertIsNone(refused)
+            self.assertTrue(meta["flagged"])
             self.assertEqual(conn.execute("SELECT count(*) FROM c").fetchone()[0], 1)
         finally:
             claude_adapter._CONN = original_conn

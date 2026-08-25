@@ -945,7 +945,7 @@ def _schema_checked(candidate, schema_text: str | None):
 
 
 def _extract_payload(raw: str, schema_text: str | None = None):
-    """Extract direct or exactly wrapped schema output from JSON/JSONL."""
+    """Extract ordinary successful direct schema output from JSON/JSONL."""
     env = _result_envelope(raw)
     cost = float(env.get("total_cost_usd") or 0.0) if env else 0.0
     candidates = []
@@ -1107,9 +1107,10 @@ def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
             # exact max_turns terminal state, exact observed one-key string
             # wrapper, one unambiguous candidate, full Draft-7 validation, and
             # no fatal auth/quota/budget marker anywhere in the final envelope.
-            recovered, recovered_cost = ((None, 0.0) if _is_fatal(detail) else
-                                         _recover_max_turns_wrapper(
-                                             proc.stdout, schema))
+            recovered, recovered_cost = (
+                (None, 0.0)
+                if (_is_fatal(detail) or _is_fatal(proc.stderr or ""))
+                else _recover_max_turns_wrapper(proc.stdout, schema))
             if recovered is not None:
                 toks = _envelope_tokens(proc.stdout)
                 USAGE.finish_attempt(
