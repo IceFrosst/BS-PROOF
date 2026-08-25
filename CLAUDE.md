@@ -1125,12 +1125,20 @@ old negative rows remained negative, but this is **not validation** because the
 was started.
 
 Stream diagnostics then identified the exact one-turn failure: the model called
-the CLI schema channel with `{StructuredOutput: "{...json...}"}` instead of
-passing the schema object directly. The validator rejected the wrapper and asked
-for a second turn, which `--max-turns 1` correctly refused. `PROMPT_VERSION`
-v1.26 makes the direct-argument return contract explicit without raising the
-turn limit or weakening any schema. Next gate: require 32/32 clean under v1.26,
-review every remaining negative, then and only then start the full corpus solo.
+the CLI schema channel with `{StructuredOutput: "{...json...}"}` or
+`{$PARAMETER_NAME: "{...json...}"}` instead of passing the schema object directly.
+The validator rejected the wrapper and asked for a second turn, which
+`--max-turns 1` correctly refused. `PROMPT_VERSION` v1.26 makes the direct-object
+contract explicit. A first live v1.26 pass improved to 24/32 clean but retained
+8 wrapper-driven partials, proving wording alone was insufficient.
+
+The Claude adapter now retains verbose first-turn schema-tool arguments. On a
+`max_turns` exit it may unwrap only those two exact one-key string wrappers,
+parse the model's own JSON, and accept it only after full local Draft-7 schema
+validation. This repairs transport, never a scientific field; malformed,
+additional, or schema-invalid content still refuses. The turn limit and schemas
+remain unchanged. Next gate: require 32/32 clean, review every remaining
+negative, then and only then start the full corpus solo.
 
 ## Next
 

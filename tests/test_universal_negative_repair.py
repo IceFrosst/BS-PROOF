@@ -289,6 +289,34 @@ class UniversalNegativeRepairTests(unittest.TestCase):
         self.assertTrue(all(not row["corrected_score_asserted"] for row in rows))
         self.assertEqual(sum(row["action"] == "exclude_scope" for row in rows), 2)
 
+    def test_claude_stream_transport_unwraps_only_schema_valid_model_json(self):
+        import claude_adapter
+        schema = json.dumps({"type": "object", "required": ["x"],
+                             "additionalProperties": False,
+                             "properties": {"x": {"type": "integer"}}})
+
+        def stream(tool_input):
+            return "\n".join(json.dumps(event) for event in (
+                {"type": "assistant", "message": {"content": [{
+                    "type": "tool_use", "name": "StructuredOutput",
+                    "input": tool_input}]}},
+                {"type": "result", "subtype": "error_max_turns",
+                 "terminal_reason": "max_turns", "total_cost_usd": 0.25,
+                 "usage": {"input_tokens": 2, "output_tokens": 3}},
+            ))
+
+        for wrapped in ({"x": 7},
+                        {"StructuredOutput": '{"x": 7}'},
+                        {"$PARAMETER_NAME": '{"x": 7}'}):
+            payload, cost = claude_adapter._extract_payload(stream(wrapped), schema)
+            self.assertEqual(payload, {"x": 7})
+            self.assertEqual(cost, 0.25)
+        for refused in ({"StructuredOutput": '{"x": "wrong"}'},
+                        {"StructuredOutput": '{bad json'},
+                        {"StructuredOutput": '{"x": 7}', "extra": 1}):
+            self.assertIsNone(claude_adapter._extract_payload(stream(refused), schema)[0])
+        self.assertEqual(claude_adapter._envelope_tokens(stream({"x": 7}))["output"], 3)
+
     def test_v124_schemas_require_contract_and_nullable_fields(self):
         try:
             from jsonschema import Draft7Validator

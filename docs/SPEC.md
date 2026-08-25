@@ -876,8 +876,14 @@ system that are currently exact.
   `max_turns` failure had wrapped stringified JSON inside a `StructuredOutput`
   property. The schema channel rejected that extra key and requested correction
   on turn two. v1.26 explicitly requires the schema object as the direct return
-  argument. `--max-turns 1`, schemas, scoring semantics, and constants are
-  unchanged; the 32/32 live gate must pass before a full run.
+  argument. Because a first v1.26 live pass still wrapped 8/32 responses, the
+  Claude adapter retains verbose first-turn tool arguments and may unwrap only
+  the exact one-key `StructuredOutput`/`$PARAMETER_NAME` string transports. The
+  model's parsed object must pass the full original Draft-7 schema locally;
+  malformed, additional, or schema-invalid content refuses. This is transport
+  recovery, not scientific-field repair. `--max-turns 1`, schemas, scoring
+  semantics, and constants are unchanged; the 32/32 live gate must pass before
+  a full run.
 
 - **2026-08-25 rev 8 — universal negative contract and scoring semantics.**
   `SCORING_MODEL` is now `v13-universal-negative-contract`; no scoring constants

@@ -848,11 +848,35 @@ def _claude_system_prompt(prompt_f: str) -> str:
     return _system_prompt(prompt_f).rstrip() + "\n\n---\n\n" + CLAUDE_STRUCTURED_OUTPUT_RULE
 
 
+def _json_events(raw: str) -> list[dict]:
+    """Read either the legacy single JSON envelope or verbose JSONL events."""
+    try:
+        one = json.loads(raw)
+        return [one] if isinstance(one, dict) else []
+    except (json.JSONDecodeError, TypeError):
+        events = []
+        for line in (raw or "").splitlines():
+            try:
+                item = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(item, dict):
+                events.append(item)
+        return events
+
+
+def _result_envelope(raw: str) -> dict:
+    events = _json_events(raw)
+    for item in reversed(events):
+        if item.get("type") == "result":
+            return item
+    return events[-1] if events else {}
+
+
 def _envelope_error(raw: str) -> str:
     """The CLI's own error text, which it prints to stdout, not stderr."""
-    try:
-        env = json.loads(raw)
-    except (json.JSONDecodeError, TypeError):
+    env = _result_envelope(raw)
+    if not env:
         return (raw or "").strip()
     res = env.get("result")
     if isinstance(res, str) and res.strip():
@@ -890,9 +914,8 @@ def _envelope_tokens(raw: str) -> dict:
     cheap ones; a run whose input is mostly cache_read is far cheaper per study
     than the raw input total suggests.
     """
-    try:
-        env = json.loads(raw)
-    except (json.JSONDecodeError, TypeError):
+    env = _result_envelope(raw)
+    if not env:
         return {}
     u = env.get("usage")
     if not isinstance(u, dict) or not u:
@@ -905,40 +928,66 @@ def _envelope_tokens(raw: str) -> dict:
     }
 
 
-def _extract_payload(raw: str):
-    """
-    Claude Code's JSON envelope shape has moved around between versions.
-    Try the documented locations in order rather than assuming one.
-    """
-    try:
-        env = json.loads(raw)
-    except json.JSONDecodeError:
-        return None, 0.0
+def _schema_checked(candidate, schema_text: str | None):
+    """Unwrap exact CLI transport mistakes, then validate without inference."""
+    if (isinstance(candidate, dict) and len(candidate) == 1
+            and next(iter(candidate)) in ("StructuredOutput", "$PARAMETER_NAME")):
+        nested = next(iter(candidate.values()))
+        if not isinstance(nested, str):
+            return None
+        try:
+            candidate = json.loads(nested)
+        except json.JSONDecodeError:
+            return None
+    if not isinstance(candidate, dict):
+        return None
+    if schema_text is not None:
+        try:
+            from jsonschema import validators
+            schema = json.loads(schema_text)
+            validator = validators.validator_for(schema)
+            validator.check_schema(schema)
+            if list(validator(schema).iter_errors(candidate)):
+                return None
+        except Exception:
+            return None
+    return candidate
 
-    cost = float(env.get("total_cost_usd") or 0.0)
 
-    # 1. top-level structured_output (used with --json-schema)
+def _extract_payload(raw: str, schema_text: str | None = None):
+    """Extract direct or exactly wrapped schema output from JSON/JSONL."""
+    env = _result_envelope(raw)
+    cost = float(env.get("total_cost_usd") or 0.0) if env else 0.0
+    candidates = []
     if isinstance(env.get("structured_output"), dict):
-        return env["structured_output"], cost
-
-    # 2. result as dict with content blocks
+        candidates.append(env["structured_output"])
     res = env.get("result")
     if isinstance(res, dict):
-        blocks = res.get("content") or []
-        for b in blocks:
-            if b.get("type") == "text":
+        for block in res.get("content") or []:
+            if block.get("type") == "text":
                 try:
-                    return json.loads(b["text"]), cost
-                except json.JSONDecodeError:
+                    candidates.append(json.loads(block["text"]))
+                except (json.JSONDecodeError, TypeError):
                     pass
-
-    # 3. result as a bare JSON string
-    if isinstance(res, str):
+    elif isinstance(res, str):
         try:
-            return json.loads(res), cost
+            candidates.append(json.loads(res))
         except json.JSONDecodeError:
             pass
-
+    # Verbose stream-json retains the model's first-turn StructuredOutput tool
+    # arguments even when the CLI rejects a wrapper and exits max_turns. The
+    # inner JSON is still model output; exact unwrapping plus full local schema
+    # validation repairs transport only and never invents a scientific field.
+    for event in _json_events(raw):
+        if event.get("type") != "assistant":
+            continue
+        for block in (event.get("message") or {}).get("content") or []:
+            if block.get("type") == "tool_use" and block.get("name") == "StructuredOutput":
+                candidates.append(block.get("input"))
+    for candidate in candidates:
+        checked = _schema_checked(candidate, schema_text)
+        if checked is not None:
+            return checked, cost
     return None, cost
 
 
@@ -977,7 +1026,7 @@ def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
 
     cmd = [
         _claude_bin(), "-p", "--safe-mode",
-        "--output-format", "json",
+        "--output-format", "stream-json", "--verbose",
         "--json-schema", schema,
         # REPLACE the default system prompt, do not append to it. Measured
         # 2026-08-09 on CLI 2.1.226, identical S1 call, subscription auth:
@@ -1034,9 +1083,35 @@ def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
             time.sleep(2 ** attempt); continue
 
         if proc.returncode != 0:
+            # max_turns can be a transport-only failure: Claude supplied a
+            # complete schema object as a string under StructuredOutput or
+            # $PARAMETER_NAME, then the CLI requested a corrective second turn.
+            # Recover only that exact first-turn object and validate it against
+            # the full schema locally. No scientific value is repaired.
+            recovered, recovered_cost = _extract_payload(proc.stdout, schema)
+            if recovered is not None:
+                toks = _envelope_tokens(proc.stdout)
+                USAGE.finish_attempt(
+                    agent, started, cost=recovered_cost, tokens=toks,
+                    model=model, tier=tier, effort=effort,
+                    outcome="structured_output_transport_recovered")
+                with _lock:
+                    _CONN.execute("INSERT OR REPLACE INTO c VALUES (?,?,?)",
+                                  (k, json.dumps(recovered), recovered_cost))
+                    _CONN.commit()
+                return recovered, {
+                    "cached": False, "provider": "anthropic", "model": model,
+                    "tier": tier, "cost": recovered_cost, "effort": effort,
+                    "prompt_version": PROMPT_VERSION,
+                    "transport_recovered": True,
+                    "latency_s": round(max(0.0, time.perf_counter() - started), 4),
+                    "tokens": {"fresh_input": toks.get("input", 0),
+                               "cache_write": toks.get("cache_write", 0),
+                               "cache_read": toks.get("cache_read", 0),
+                               "output": toks.get("output", 0)},
+                }
             # The CLI reports the actual reason ("Not logged in", auth errors,
             # budget) in the JSON envelope on STDOUT and leaves stderr empty.
-            # Reading only stderr gives the operator "exit 1: " and nothing else.
             detail = _envelope_error(proc.stdout) or proc.stderr.strip()
             last_err = f"exit {proc.returncode}: {detail[:300]}"
             USAGE.finish_attempt(
@@ -1044,10 +1119,10 @@ def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
                 tokens=_envelope_tokens(proc.stdout), model=model, tier=tier,
                 effort=effort, outcome="cli_error")
             if _is_fatal(detail):
-                break            # auth/config failure -- retrying cannot fix it
+                break
             time.sleep(2 ** attempt); continue
 
-        result, cost = _extract_payload(proc.stdout)
+        result, cost = _extract_payload(proc.stdout, schema)
         toks = _envelope_tokens(proc.stdout)
         if result is None:
             last_err = "schema violation / unparseable envelope"
@@ -1090,9 +1165,8 @@ def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
 
 def _envelope_cost(raw: str) -> float | None:
     """Return a recorded CLI cost, or ``None`` when the envelope omitted it."""
-    try:
-        env = json.loads(raw)
-    except (json.JSONDecodeError, TypeError):
+    env = _result_envelope(raw)
+    if not env:
         return None
     value = env.get("total_cost_usd")
     if value is None:
