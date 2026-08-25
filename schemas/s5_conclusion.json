@@ -1,366 +1,494 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "type": "object",
-  "required": [
-    "claims"
-  ],
-  "additionalProperties": false,
-  "properties": {
-    "claims": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": [
-          "outcome_raw",
-          "direction",
-          "is_primary_outcome",
-          "evidence_span"
-        ],
-        "additionalProperties": false,
-        "properties": {
-          "outcome_raw": {
-            "type": "string",
-            "maxLength": 120
-          },
-          "measure": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "maxLength": 80
-          },
-          "direction": {
-            "type": "string",
-            "enum": [
-              "benefit",
-              "null_effect",
-              "harm",
-              "unclear"
-            ]
-          },
-          "magnitude": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "enum": [
-              "meaningful",
-              "trivial",
-              "unstated",
-              null
-            ]
-          },
-          "effect_size": {
-            "type": [
-              "number",
-              "null"
-            ]
-          },
-          "effect_unit": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "maxLength": 40
-          },
-          "effect_favours": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "enum": [
-              "ingredient",
-              "control",
-              "neither",
-              null
-            ],
-            "description": "WHICH ARM the reported effect_size favours. The SIGN of a reported effect is not a reliable convention -- some papers report a raw measurement difference (a faster sprint TIME is a NEGATIVE number and a GOOD result) and others report it already oriented toward the treatment. State it explicitly so downstream never has to guess: 'ingredient' = the effect favours the study ingredient, 'control' = it favours the comparator, 'neither' = no meaningful difference. null when you cannot tell, which is always a valid answer."
-          },
-          "effect_sd": {
-            "type": [
-              "number",
-              "null"
-            ],
-            "exclusiveMinimum": 0,
-            "description": "The standard deviation of THIS endpoint, in the SAME unit as effect_size, when the paper PRINTS one (group means +/- SD, or a stated pooled SD). It is what lets a raw-unit difference (kg, watts, points) be standardised into a comparable effect. Only a printed SD -- never derive one from a standard error or a confidence interval. null when not printed."
-          },
-          "effect_sd_basis": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "enum": [
-              "pooled",
-              "control_arm",
-              "baseline",
-              "unstated",
-              null
-            ],
-            "description": "Which SD you reported: pooled across arms, the control arm's, the baseline SD, or unstated when the paper does not say."
-          },
-          "ci_low": {
-            "type": [
-              "number",
-              "null"
-            ]
-          },
-          "ci_high": {
-            "type": [
-              "number",
-              "null"
-            ]
-          },
-          "p_value": {
-            "type": [
-              "number",
-              "null"
-            ],
-            "minimum": 0,
-            "maximum": 1
-          },
-          "estimate_kind": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "enum": [
-              "smd",
-              "mean_difference",
-              "ratio",
-              "relative_percent",
-              "percentage_points",
-              null
-            ],
-            "description": "Kind of effect estimate reported or derived for this claim."
-          },
-          "estimate_basis": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "enum": [
-              "reported",
-              "derived_from_arms",
-              null
-            ],
-            "description": "Whether the estimate was printed by the paper or defensibly derived from arm values."
-          },
-          "estimand": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "enum": [
-              "endpoint",
-              "change_from_baseline",
-              null
-            ]
-          },
-          "timepoint": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "Verbatim reported assessment timepoint."
-          },
-          "n_ingredient": {
-            "type": [
-              "integer",
-              "null"
-            ],
-            "minimum": 1
-          },
-          "n_control": {
-            "type": [
-              "integer",
-              "null"
-            ],
-            "minimum": 1
-          },
-          "mean_ingredient": {
-            "type": [
-              "number",
-              "null"
-            ],
-            "description": "Reported arm mean as a finite JSON number; null when unreported."
-          },
-          "mean_control": {
-            "type": [
-              "number",
-              "null"
-            ],
-            "description": "Reported arm mean as a finite JSON number; null when unreported."
-          },
-          "sd_ingredient": {
-            "type": [
-              "number",
-              "null"
-            ],
-            "exclusiveMinimum": 0
-          },
-          "sd_control": {
-            "type": [
-              "number",
-              "null"
-            ],
-            "exclusiveMinimum": 0
-          },
-          "standard_error": {
-            "type": [
-              "number",
-              "null"
-            ],
-            "exclusiveMinimum": 0
-          },
-          "ci_level": {
-            "type": [
-              "number",
-              "null"
-            ],
-            "exclusiveMinimum": 0,
-            "exclusiveMaximum": 1,
-            "description": "Confidence interval level as a fractional probability (for example, 0.95 for a reported 95% interval); only when explicitly reported."
-          },
-          "p_value_kind": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "enum": [
-              "exact",
-              "less_than",
-              "greater_than",
-              "not_significant",
-              null
-            ]
-          },
-          "p_sidedness": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "enum": [
-              "one",
-              "two",
-              null
-            ]
-          },
-          "test_distribution": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "enum": [
-              "normal",
-              "t",
-              "other",
-              null
-            ]
-          },
-          "degrees_of_freedom": {
-            "type": [
-              "number",
-              "null"
-            ],
-            "exclusiveMinimum": 0
-          },
-          "design_kind": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "enum": [
-              "parallel",
-              "crossover",
-              "cluster",
-              null
-            ]
-          },
-          "table_provenance": {
-            "type": [
-              "object",
-              "null"
-            ],
-            "additionalProperties": false,
-            "required": [
-              "caption",
-              "row",
-              "column"
-            ],
-            "properties": {
-              "caption": {
-                "type": "string"
-              },
-              "row": {
-                "type": "string"
-              },
-              "column": {
-                "type": "string"
-              }
-            },
-            "description": "Verbatim table caption, row label, and column header(s) supporting extracted values."
-          },
-          "is_primary_outcome": {
-            "type": "boolean"
-          },
-          "evidence_span": {
-            "type": "string",
-            "maxLength": 200
-          },
-          "ingredient_arm": {
-            "type": ["string", "null"],
-            "maxLength": 80
-          },
-          "control_arm": {
-            "type": ["string", "null"],
-            "maxLength": 80
-          },
-          "test_kind": {
-            "type": ["string", "null"],
-            "enum": ["between_arm", "group_by_time", "within_group", "baseline", "time_main_effect", "omnibus", "unknown", null]
-          },
-          "outcome_role": {
-            "type": ["string", "null"],
-            "enum": ["primary", "secondary", "exploratory", "unknown", null]
-          },
-          "statistic": {
-            "type": ["string", "null"],
-            "maxLength": 120
-          },
-          "statistic_provenance": {
-            "type": ["string", "null"],
-            "maxLength": 200
-          },
-          "p_operator": {
-            "type": ["string", "null"],
-            "enum": ["=", "<", ">", "<=", ">=", "ns", "not_significant", null]
-          },
-          "null_precision": {
-            "type": ["number", "null"],
-            "minimum": 0
-          },
-          "equivalence_basis": {
-            "type": ["string", "object", "null"],
-            "additionalProperties": true,
-            "maxLength": 300
-          },
-          "contrast": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "enum": [
-              "vs_ingredient_free",
-              "vs_ingredient_arm",
-              "within_group",
-              "unclear",
-              null
-            ],
-            "description": "Which comparison this claim reports: against an arm with no study ingredient (vs_ingredient_free), against another arm that ALSO received the ingredient (vs_ingredient_arm -- e.g. ingredient+X vs ingredient), a within-group pre/post change (within_group), or unclear."
-          }
-        }
+ "$schema": "http://json-schema.org/draft-07/schema#",
+ "type": "object",
+ "required": [
+  "extraction_version"
+ ],
+ "additionalProperties": false,
+ "properties": {
+  "claims": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "outcome_raw",
+     "measure",
+     "direction",
+     "magnitude",
+     "effect_size",
+     "effect_unit",
+     "effect_favours",
+     "effect_sd",
+     "effect_sd_basis",
+     "ci_low",
+     "ci_high",
+     "p_value",
+     "estimate_kind",
+     "estimate_basis",
+     "estimand",
+     "timepoint",
+     "n_ingredient",
+     "n_control",
+     "mean_ingredient",
+     "mean_control",
+     "sd_ingredient",
+     "sd_control",
+     "standard_error",
+     "ci_level",
+     "p_value_kind",
+     "p_sidedness",
+     "test_distribution",
+     "degrees_of_freedom",
+     "design_kind",
+     "table_provenance",
+     "is_primary_outcome",
+     "evidence_span",
+     "ingredient_arm",
+     "control_arm",
+     "test_kind",
+     "outcome_role",
+     "statistic",
+     "statistic_provenance",
+     "p_operator",
+     "null_precision",
+     "equivalence_basis",
+     "contrast"
+    ],
+    "additionalProperties": false,
+    "properties": {
+     "outcome_raw": {
+      "type": "string",
+      "maxLength": 120
+     },
+     "measure": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "maxLength": 80
+     },
+     "direction": {
+      "type": "string",
+      "enum": [
+       "benefit",
+       "null_effect",
+       "harm",
+       "unclear"
+      ]
+     },
+     "magnitude": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "enum": [
+       "meaningful",
+       "trivial",
+       "unstated",
+       null
+      ]
+     },
+     "effect_size": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "effect_unit": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "maxLength": 40
+     },
+     "effect_favours": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "enum": [
+       "ingredient",
+       "control",
+       "neither",
+       null
+      ],
+      "description": "WHICH ARM the reported effect_size favours. The SIGN of a reported effect is not a reliable convention -- some papers report a raw measurement difference (a faster sprint TIME is a NEGATIVE number and a GOOD result) and others report it already oriented toward the treatment. State it explicitly so downstream never has to guess: 'ingredient' = the effect favours the study ingredient, 'control' = it favours the comparator, 'neither' = no meaningful difference. null when you cannot tell, which is always a valid answer."
+     },
+     "effect_sd": {
+      "type": [
+       "number",
+       "null"
+      ],
+      "exclusiveMinimum": 0,
+      "description": "The standard deviation of THIS endpoint, in the SAME unit as effect_size, when the paper PRINTS one (group means +/- SD, or a stated pooled SD). It is what lets a raw-unit difference (kg, watts, points) be standardised into a comparable effect. Only a printed SD -- never derive one from a standard error or a confidence interval. null when not printed."
+     },
+     "effect_sd_basis": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "enum": [
+       "pooled",
+       "control_arm",
+       "baseline",
+       "unstated",
+       null
+      ],
+      "description": "Which SD you reported: pooled across arms, the control arm's, the baseline SD, or unstated when the paper does not say."
+     },
+     "ci_low": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "ci_high": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "p_value": {
+      "type": [
+       "number",
+       "null"
+      ],
+      "minimum": 0,
+      "maximum": 1
+     },
+     "estimate_kind": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "enum": [
+       "smd",
+       "mean_difference",
+       "ratio",
+       "relative_percent",
+       "percentage_points",
+       null
+      ],
+      "description": "Kind of effect estimate reported or derived for this claim."
+     },
+     "estimate_basis": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "enum": [
+       "reported",
+       "derived_from_arms",
+       null
+      ],
+      "description": "Whether the estimate was printed by the paper or defensibly derived from arm values."
+     },
+     "estimand": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "enum": [
+       "endpoint",
+       "change_from_baseline",
+       null
+      ]
+     },
+     "timepoint": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "description": "Verbatim reported assessment timepoint."
+     },
+     "n_ingredient": {
+      "type": [
+       "integer",
+       "null"
+      ],
+      "minimum": 1
+     },
+     "n_control": {
+      "type": [
+       "integer",
+       "null"
+      ],
+      "minimum": 1
+     },
+     "mean_ingredient": {
+      "type": [
+       "number",
+       "null"
+      ],
+      "description": "Reported arm mean as a finite JSON number; null when unreported."
+     },
+     "mean_control": {
+      "type": [
+       "number",
+       "null"
+      ],
+      "description": "Reported arm mean as a finite JSON number; null when unreported."
+     },
+     "sd_ingredient": {
+      "type": [
+       "number",
+       "null"
+      ],
+      "exclusiveMinimum": 0
+     },
+     "sd_control": {
+      "type": [
+       "number",
+       "null"
+      ],
+      "exclusiveMinimum": 0
+     },
+     "standard_error": {
+      "type": [
+       "number",
+       "null"
+      ],
+      "exclusiveMinimum": 0
+     },
+     "ci_level": {
+      "type": [
+       "number",
+       "null"
+      ],
+      "exclusiveMinimum": 0,
+      "exclusiveMaximum": 1,
+      "description": "Confidence interval level as a fractional probability (for example, 0.95 for a reported 95% interval); only when explicitly reported."
+     },
+     "p_value_kind": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "enum": [
+       "exact",
+       "less_than",
+       "greater_than",
+       "not_significant",
+       null
+      ]
+     },
+     "p_sidedness": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "enum": [
+       "one",
+       "two",
+       null
+      ]
+     },
+     "test_distribution": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "enum": [
+       "normal",
+       "t",
+       "other",
+       null
+      ]
+     },
+     "degrees_of_freedom": {
+      "type": [
+       "number",
+       "null"
+      ],
+      "exclusiveMinimum": 0
+     },
+     "design_kind": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "enum": [
+       "parallel",
+       "crossover",
+       "cluster",
+       null
+      ]
+     },
+     "table_provenance": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+       "caption",
+       "row",
+       "column"
+      ],
+      "properties": {
+       "caption": {
+        "type": "string"
+       },
+       "row": {
+        "type": "string"
+       },
+       "column": {
+        "type": "string"
+       }
       },
-      "maxItems": 20
+      "description": "Verbatim table caption, row label, and column header(s) supporting extracted values."
+     },
+     "is_primary_outcome": {
+      "type": "boolean"
+     },
+     "evidence_span": {
+      "type": "string",
+      "maxLength": 200
+     },
+     "ingredient_arm": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "maxLength": 80
+     },
+     "control_arm": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "maxLength": 80
+     },
+     "test_kind": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "enum": [
+       "between_arm",
+       "group_by_time",
+       "within_group",
+       "baseline",
+       "time_main_effect",
+       "omnibus",
+       "unknown",
+       null
+      ]
+     },
+     "outcome_role": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "enum": [
+       "primary",
+       "secondary",
+       "exploratory",
+       "unknown",
+       null
+      ]
+     },
+     "statistic": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "maxLength": 120
+     },
+     "statistic_provenance": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "maxLength": 200
+     },
+     "p_operator": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "enum": [
+       "=",
+       "<",
+       ">",
+       "<=",
+       ">=",
+       "ns",
+       "not_significant",
+       null
+      ]
+     },
+     "null_precision": {
+      "type": [
+       "number",
+       "null"
+      ],
+      "minimum": 0
+     },
+     "equivalence_basis": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+       "method",
+       "conclusion",
+       "margin_value",
+       "margin_unit"
+      ],
+      "properties": {
+       "method": {
+        "type": "string",
+        "enum": [
+         "equivalence",
+         "noninferiority"
+        ]
+       },
+       "conclusion": {
+        "type": "string",
+        "enum": [
+         "successful",
+         "equivalent",
+         "noninferior"
+        ]
+       },
+       "margin_value": {
+        "type": "number",
+        "exclusiveMinimum": 0
+       },
+       "margin_unit": {
+        "type": "string",
+        "maxLength": 40
+       }
+      }
+     },
+     "contrast": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "enum": [
+       "vs_ingredient_free",
+       "vs_ingredient_arm",
+       "within_group",
+       "unclear",
+       null
+      ],
+      "description": "Which comparison this claim reports: against an arm with no study ingredient (vs_ingredient_free), against another arm that ALSO received the ingredient (vs_ingredient_arm -- e.g. ingredient+X vs ingredient), a within-group pre/post change (within_group), or unclear."
+     }
     }
+   },
+   "maxItems": 20
+  },
+  "extraction_version": {
+   "type": "string",
+   "enum": [
+    "v1.24",
+    "legacy-v1.23",
+    "legacy-v1.22",
+    "legacy-v1.21"
+   ]
   }
+ }
 }

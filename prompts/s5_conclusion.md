@@ -1,5 +1,11 @@
 S5 conclusion_extractor
 
+CONTRACT VERSION
+Return `extraction_version: "v1.24"` exactly. Every claim property in the
+schema is required; use null for unavailable values, never omit provenance.
+Legacy output is accepted only when it explicitly carries a legacy extraction
+version.
+
 You receive results and discussion sections. Extract every outcome the study
 reports a result for, as a separate claim.
 
@@ -46,6 +52,10 @@ unit rule above. The two rules do not conflict: never drop a null, never split
 one finding.)
 
 ARM AND TEST PROVENANCE (load-bearing)
+The payload includes `target_ingredient` and authoritative `s3_arm_facts`; use the
+exact S3 labels, not positional guesses or a synonym. A missing/unknown S3 role
+or target presence means the claim provenance remains explicit unknown and is
+refused downstream.
 Name the exact `ingredient_arm` and `control_arm` labels used by this claim,
 matching S3, whenever a claim is attributable to a pair. `test_kind` must be
 `between_arm` for a direct endpoint comparison or `group_by_time` only for an
@@ -294,6 +304,13 @@ downstream.
 outcome_raw: the endpoint exactly as the paper names it, e.g. "PSQI global
 score" or "sleep onset latency (min)". Do not normalise it -- S6 does that,
 and it needs your raw string.
+
+The required provenance fields are ingredient_arm, control_arm, test_kind,
+outcome_role, statistic, statistic_provenance, p_operator, contrast, estimand,
+and timepoint. For an efficacy claim, missing arm/test provenance is a refusal,
+not a reason to omit the field. `equivalence_basis` must be the typed object in
+the schema (method, successful conclusion, positive margin_value and matching
+margin_unit); ordinary NHST prose is not an equivalence basis.
 
 KEEP THE OUTPUT SHORT. You are a pure function with ONE turn; a response that
 runs long is cut off mid-flight and the whole extraction is discarded, so a

@@ -42,7 +42,8 @@ def _rob_items(s4: dict | None, registry: dict | None) -> dict:
     return items
 
 
-def _s7_for_claim(s7: dict | None, claim: dict, s3: dict | None) -> dict | None:
+def _s7_for_claim(s7: dict | None, claim: dict, s3: dict | None,
+                   *, modern: bool = False) -> dict | None:
     """Select S7 facts only from S5/S3's administered target arm.
 
     Arm-keyed S7 facts must be joined by an evidenced label, never by array
@@ -54,7 +55,18 @@ def _s7_for_claim(s7: dict | None, claim: dict, s3: dict | None) -> dict | None:
         return None
     arm_rows = s7.get("arms")
     if not isinstance(arm_rows, list) or not arm_rows:
-        return s7
+        # Top-level S7 facts are an explicitly legacy contract only. A modern
+        # envelope with omitted arm rows must not silently fall back to the
+        # historical positional/top-level dose.
+        return None if modern else s7
+    if modern and any(not isinstance(row, dict) or
+                      any(key not in row for key in (
+                          "label", "form_vocab_id", "form_raw", "compound_dose_mg",
+                          "elemental_dose_mg", "dose_per_kg_mg",
+                          "mean_body_mass_kg", "dose_basis",
+                          "dose_frequency_per_day", "evidence_span"))
+                      for row in arm_rows):
+        return None
     s3_arms = s3.get("arms") if isinstance(s3, dict) else None
     if not isinstance(s3_arms, list) or not s3_arms:
         return None
@@ -248,24 +260,70 @@ def _arm_norm(value) -> str:
 
 
 def _claim_equivalence_valid(claim: dict) -> bool:
-    """Whether a paper supplied an explicit precision/equivalence basis."""
+    """Validate a typed, successful equivalence/non-inferiority result.
+
+    Prose such as ``"authors considered it equivalent"`` is not a statistical
+    basis.  The margin, metric, estimate and interval must be explicit and
+    internally compatible; ordinary nonsignificant NHST therefore cannot
+    revive the negative null penalty.
+    """
     basis = claim.get("equivalence_basis")
-    precision = claim.get("null_precision")
-    if isinstance(basis, str):
-        present = bool(basis.strip())
-    elif isinstance(basis, dict):
-        present = bool(str(basis.get("type") or basis.get("method") or "").strip())
-    else:
-        present = False
-    if not present:
+    if not isinstance(basis, dict):
         return False
+    method = basis.get("method")
+    conclusion = basis.get("conclusion")
+    if method not in ("equivalence", "noninferiority"):
+        return False
+    if conclusion not in ("successful", "equivalent", "noninferior"):
+        return False
+    margin = basis.get("margin")
+    if isinstance(margin, dict):
+        margin_value, margin_unit = margin.get("value"), margin.get("unit")
+    else:
+        margin_value = basis.get("margin_value")
+        margin_unit = basis.get("margin_unit")
     try:
-        return math.isfinite(float(precision)) and float(precision) > 0
+        margin_value = float(margin_value)
+        if not math.isfinite(margin_value) or margin_value <= 0:
+            return False
     except (TypeError, ValueError):
         return False
+    unit = str(claim.get("effect_unit") or "").strip().casefold()
+    margin_unit = str(margin_unit or "").strip().casefold()
+    if not unit or not margin_unit or unit != margin_unit:
+        return False
+    try:
+        estimate = float(claim.get("effect_size"))
+        low, high = float(claim.get("ci_low")), float(claim.get("ci_high"))
+        precision = float(claim.get("null_precision"))
+    except (TypeError, ValueError):
+        return False
+    if not all(math.isfinite(v) for v in (estimate, low, high, precision)):
+        return False
+    if low > high or precision <= 0 or abs(estimate) > margin_value:
+        return False
+    # The interval is the actual deterministic success criterion. A successful
+    # equivalence CI is wholly inside +/- margin; non-inferiority only needs the
+    # lower bound above the tolerated loss. Both require a reported CI, not p.
+    if method == "equivalence":
+        valid_ci = low >= -margin_value and high <= margin_value
+    else:
+        valid_ci = low >= -margin_value
+    if not valid_ci:
+        return False
+    # null_precision is a legacy scalar retained for audit, but must agree with
+    # the typed margin rather than act as an arbitrary switch.
+    return math.isclose(precision, margin_value, rel_tol=1e-9, abs_tol=1e-12)
 
 
-def _resolve_claim_arms(claim: dict, s3: dict | None, ingredient: str) -> tuple[bool, str]:
+def _normalise_cointerventions(values) -> frozenset[str] | None:
+    if not isinstance(values, list):
+        return None
+    return frozenset(_arm_norm(v) for v in values if _arm_norm(v))
+
+
+def _resolve_claim_arms(claim: dict, s3: dict | None, ingredient: str,
+                        *, contract_version: str | None = None) -> tuple[bool, str]:
     """Firewall S5 claims against evidenced S3 intervention arms.
 
     A missing modern contract is retained for old cached runs. Once either side
@@ -273,16 +331,28 @@ def _resolve_claim_arms(claim: dict, s3: dict | None, ingredient: str) -> tuple[
     guess. This deliberately knows only the ingredient passed by the caller.
     """
     arms = (s3 or {}).get("arms") if isinstance(s3, dict) else None
-    modern = isinstance(arms, list) and bool(arms) and any(
+    explicit_v124 = contract_version == "v1.24"
+    modern = explicit_v124 or (isinstance(arms, list) and bool(arms) and any(
         any(k in a for k in ("target_ingredient_presence", "role",
                               "active_cointerventions", "evidenced_arm_text"))
-        for a in arms if isinstance(a, dict))
-    claim_modern = any(claim.get(k) is not None for k in (
+        for a in arms if isinstance(a, dict)))
+    claim_modern = modern or any(claim.get(k) is not None for k in (
         "ingredient_arm", "control_arm", "test_kind", "outcome_role",
         "statistic_provenance"))
-    # Old cache compatibility: pre-arm S5/S3 envelopes retain their old route.
+    # Legacy is not inferred from a missing field in a modern envelope. A
+    # caller may explicitly mark an old cached extraction; unmarked modern
+    # provenance is a refusal.
     if not modern and not claim_modern:
+        if contract_version and str(contract_version).startswith("legacy-"):
+            return True, "legacy_contract"
+        # Keep the pre-arm shape for old in-process callers only; any arm-level
+        # facts or claim provenance above has already entered the strict route.
         return True, "legacy_contract"
+    if explicit_v124:
+        required_claim = ("ingredient_arm", "control_arm", "test_kind",
+                          "outcome_role", "statistic_provenance", "contrast")
+        if any(claim.get(key) is None for key in required_claim):
+            return False, "modern_provenance_missing"
     if not isinstance(arms, list) or not arms:
         return False, "s3_arms_missing"
     if not isinstance(ingredient, str) or not ingredient.strip():
@@ -292,6 +362,8 @@ def _resolve_claim_arms(claim: dict, s3: dict | None, ingredient: str) -> tuple[
         p = a.get("target_ingredient_presence")
         if p in ("yes", "no", "unknown"):
             return p
+        if explicit_v124:
+            return "unknown"
         # Safe legacy derivation: only an explicit token in the evidenced text
         # can establish presence. Absence is never inferred from a label.
         text = " ".join(str(a.get(k) or "") for k in
@@ -308,9 +380,8 @@ def _resolve_claim_arms(claim: dict, s3: dict | None, ingredient: str) -> tuple[
         role = a.get("role")
         if role in ("administered", "measurement_only", "biomarker", "unclear"):
             return role
-        if type(a.get("is_control")) is bool:
-            return "administered"
-        return "unclear"
+        return "unclear" if explicit_v124 else (
+            "administered" if type(a.get("is_control")) is bool else "unclear")
 
     administered = []
     for a in arms:
@@ -362,11 +433,16 @@ def _resolve_claim_arms(claim: dict, s3: dict | None, ingredient: str) -> tuple[
             return False, "named_ingredient_arm_not_target"
         if _presence(selected_control) != "no":
             return False, "named_control_contains_ingredient"
-    co = selected_target.get("active_cointerventions")
-    # An explicit list is authoritative. A non-empty list means the target is a
-    # combination arm; its result cannot leak into the ingredient-alone score.
-    if isinstance(co, list) and co:
-        return False, "named_target_has_active_cointervention"
+    co = _normalise_cointerventions(selected_target.get("active_cointerventions"))
+    control_co = _normalise_cointerventions(selected_control.get("active_cointerventions"))
+    # A factorial A+B versus B contrast isolates A when the non-target active
+    # background is identical. Unmatched combinations answer a different
+    # question and refuse. Unknown modern lists are never treated as equal.
+    if co is None or control_co is None:
+        if explicit_v124:
+            return False, "cointervention_provenance_missing"
+    elif co != control_co:
+        return False, "unmatched_active_cointerventions"
     if selected_target.get("role") in ("measurement_only", "biomarker", "unclear"):
         return False, "named_target_nonintervention_role"
 
@@ -377,7 +453,9 @@ def _resolve_claim_arms(claim: dict, s3: dict | None, ingredient: str) -> tuple[
         return False, f"invalid_test_kind:{test_kind}"
     provenance = str(claim.get("statistic_provenance") or "").casefold()
     statistic = str(claim.get("statistic") or "").casefold()
-    if "omnibus" in provenance or "main effect" in provenance or statistic.startswith("f") and "pair" not in provenance:
+    omnibus = ("omnibus" in provenance or "main effect" in provenance or
+               (statistic.startswith("f") and "pair" not in provenance))
+    if omnibus and test_kind != "group_by_time":
         return False, "omnibus_statistic_not_pairwise"
     contrast = claim.get("contrast")
     if contrast in ("vs_ingredient_arm", "within_group", "unclear"):
@@ -386,11 +464,16 @@ def _resolve_claim_arms(claim: dict, s3: dict | None, ingredient: str) -> tuple[
     # vs_ingredient_free remains compatible only when arm resolution succeeded.
     if claim_modern and test_kind is None:
         return False, "test_kind_missing"
+    if explicit_v124 and claim.get("outcome_role") not in (
+            "primary", "secondary", "exploratory", "unknown"):
+        return False, "outcome_role_missing"
     return True, "eligible"
 
 
-def _claim_firewall(claim: dict, s3: dict | None, ingredient: str) -> str | None:
-    ok, reason = _resolve_claim_arms(claim, s3, ingredient)
+def _claim_firewall(claim: dict, s3: dict | None, ingredient: str,
+                    *, contract_version: str | None = None) -> str | None:
+    ok, reason = _resolve_claim_arms(claim, s3, ingredient,
+                                     contract_version=contract_version)
     return None if ok else reason
 
 
@@ -399,7 +482,12 @@ def to_studies(record: dict, extraction: dict, product: dict,
                ignore_population: bool = False,
                dose_bands: dict[str, dict] | None = None) -> list[tuple[str, Study]]:
     s3, s4, s7, s8 = (extraction.get(k) for k in ("S3", "S4", "S7", "S8"))
+    s5 = extraction.get("S5") if isinstance(extraction.get("S5"), dict) else {}
     ingredient = record["ingredient"]
+    contract_version = ((s3 or {}).get("extraction_version") or
+                        (s5 or {}).get("extraction_version") or
+                        (s7 or {}).get("extraction_version"))
+    modern_contract = contract_version == "v1.24"
 
     form_id = (s7 or {}).get("form_vocab_id") or vocab.unspecified_form_id(ingredient)
     form_match = vocab.form_match(ingredient, form_id, product.get("form_vocab_id"))
@@ -473,12 +561,21 @@ def to_studies(record: dict, extraction: dict, product: dict,
         # Universal arm/test firewall. It is deliberately before any numeric
         # routing: a beautifully reported number from a baseline, biomarker,
         # combination, or omnibus test is still the wrong counterfactual.
-        firewall_reason = _claim_firewall(claim, s3, ingredient)
+        # Counterfactual arm rules scope to efficacy. Safety harm signals are
+        # valid in observational/no-arm reports and must not disappear merely
+        # because an efficacy comparison cannot be established.
+        safety_signal = (vocab.outcome_kind(entry["outcome_vocab_id"]) ==
+                         "adverse_event" or claim.get("direction") == "harm")
+        firewall_reason = (None if safety_signal else
+                           _claim_firewall(claim, s3, ingredient,
+                                           contract_version=contract_version))
         if firewall_reason:
             continue
-        claim_s7 = _s7_for_claim(s7, claim, s3)
-        if isinstance(s7, dict) and isinstance(s7.get("arms"), list) and claim_s7 is None:
-            # Arm-keyed S7 cannot be safely projected onto an unnamed claim.
+        claim_s7 = _s7_for_claim(s7, claim, s3, modern=modern_contract)
+        if (not safety_signal and isinstance(s7, dict)
+                and isinstance(s7.get("arms"), list) and claim_s7 is None):
+            # Arm-keyed S7 cannot be safely projected onto an efficacy claim;
+            # safety direction remains eligible even when form/dose is absent.
             continue
         claim_form_id = (claim_s7 or {}).get("form_vocab_id") or form_id
         claim_form_match = vocab.form_match(ingredient, claim_form_id,
@@ -528,6 +625,7 @@ def to_studies(record: dict, extraction: dict, product: dict,
             pop_match=pop_match,
             direction=direction,
             magnitude=magnitude,
+            outcome_role=claim.get("outcome_role"),
         ), claim_dose, bool((claim or {}).get("is_primary_outcome"))))
     return out
 
@@ -556,8 +654,9 @@ def _effect_s(claim: dict, outcome_vocab_id: str) -> tuple[float | None, str]:
         return None, "adverse_event_inverted_polarity"
 
     raw = claim.get("effect_size")
+    equivalence_valid = _claim_equivalence_valid(claim)
     if raw is None:
-        if claim.get("direction") == "null_effect" and not _claim_equivalence_valid(claim):
+        if claim.get("direction") == "null_effect" and not equivalence_valid:
             return None, "inconclusive_unquantified"
         return None, "no_effect_size"
 
@@ -618,16 +717,32 @@ def _effect_s(claim: dict, outcome_vocab_id: str) -> tuple[float | None, str]:
     # promoted exactly those back to the full label value, over-crediting the
     # smallest effects.
     direction = claim.get("direction")
+    # An unsigned nonsignificant efficacy estimate is not rescued merely because
+    # its magnitude is sub-threshold. Signed measured zero remains valid. A
+    # typed successful equivalence basis is the sole exception.
+    if direction == "null_effect" and favours not in ("ingredient", "control"):
+        return (None, "no_effect_size" if equivalence_valid
+                else "inconclusive_unquantified")
     if direction == "benefit" and favours == "control":
         return None, "label_number_contradiction"
     if direction == "harm" and favours == "ingredient":
         return None, "label_number_contradiction"
+    # Group×time F/omnibus statistics can establish a differential direction,
+    # but the F number has no effect-size magnitude semantics. Never pass it to
+    # standardise_effect (an SD field must not turn an omnibus into d).
+    test_kind = claim.get("test_kind")
+    statistic = str(claim.get("statistic") or "").strip().casefold()
+    provenance = str(claim.get("statistic_provenance") or "").casefold()
+    if (test_kind == "group_by_time" and
+            (statistic.startswith("f") or "omnibus" in provenance)):
+        return None, ("inconclusive_unquantified" if direction == "null_effect"
+                      and not equivalence_valid else "omnibus_magnitude_refused")
     sd = claim.get("effect_sd")
     if favours in ("ingredient", "control"):
         measured, route = scoring.standardise_effect(
             magnitude if favours == "ingredient" else -magnitude,
             claim.get("effect_unit"), sd)
-        if measured is None and claim.get("direction") == "null_effect" and not _claim_equivalence_valid(claim):
+        if measured is None and claim.get("direction") == "null_effect" and not equivalence_valid:
             return None, "inconclusive_unquantified"
         return measured, route
 
@@ -655,8 +770,12 @@ def _effect_s(claim: dict, outcome_vocab_id: str) -> tuple[float | None, str]:
     s, route = scoring.standardise_effect(magnitude, claim.get("effect_unit"),
                                           claim.get("effect_sd"))
     if s is not None and s <= 0:
+        # This branch is the unsigned rescue for sub-threshold magnitudes. It is
+        # intentionally unavailable to ordinary nonsignificant efficacy claims.
+        if claim.get("direction") == "null_effect" and not equivalence_valid:
+            return None, "inconclusive_unquantified"
         return s, route
-    if claim.get("direction") == "null_effect" and not _claim_equivalence_valid(claim):
+    if claim.get("direction") == "null_effect" and not equivalence_valid:
         return None, "inconclusive_unquantified"
     return None, ("favours_neither_but_above_threshold" if favours == "neither"
                   else "sign_convention_unstated")
@@ -805,6 +924,21 @@ def _one_study_one_vote(pairs: list[tuple]) -> tuple[list[tuple], int]:
     return kept, n_collapsed
 
 
+def _matched_factorial_background(s3: dict | None, ingredient: str) -> bool:
+    """True only for an explicitly matched A+B versus B factorial contrast."""
+    if not isinstance(s3, dict) or not isinstance(s3.get("arms"), list):
+        return False
+    arms = [a for a in s3["arms"] if isinstance(a, dict) and
+            a.get("role", "administered") == "administered"]
+    targets = [a for a in arms if a.get("target_ingredient_presence") == "yes"]
+    controls = [a for a in arms if a.get("target_ingredient_presence") == "no"]
+    if len(targets) != 1 or len(controls) != 1:
+        return False
+    target_co = _normalise_cointerventions(targets[0].get("active_cointerventions"))
+    control_co = _normalise_cointerventions(controls[0].get("active_cointerventions"))
+    return target_co is not None and control_co is not None and target_co == control_co
+
+
 def _ineligible(ext: dict) -> str | None:
     """
     Why this trial cannot vote on whether the ingredient works. None = it can.
@@ -866,7 +1000,8 @@ def _ineligible(ext: dict) -> str | None:
     # that were never credited. SYMMETRIC like the others: a combination's
     # benefit is dropped too. "yes"/unknown/None/absent all KEEP -- only S3's
     # explicit "no" (no arm isolates the ingredient) refuses.
-    if s3.get("ingredient_isolated") == "no":
+    if (s3.get("ingredient_isolated") == "no" and
+            not _matched_factorial_background(s3, ext.get("record", {}).get("ingredient", ""))):
         return "no_isolated_ingredient_arm"
     return None
 
@@ -945,8 +1080,9 @@ def build_ecus(extractions: list[dict], product: dict, *,
             buckets.setdefault(key, []).append(
                 (study, {"outcome_id": outcome_id, "dose": dose,
                          "is_primary": is_primary,
-                         "outcome_role": ((next((e.get("claim") for e in ext.get("outcomes", [])
-                                                   if e.get("outcome_vocab_id") == outcome_id), {}) or {}).get("outcome_role"))}))
+                         # Carry the role from the exact claim selected by
+                         # to_studies; outcome ids are not unique within a study.
+                         "outcome_role": study.outcome_role}))
 
     n_sr_derived = 0
     for rec in (sr_derived or []):

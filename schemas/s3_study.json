@@ -7,7 +7,12 @@
   "n_randomised",
   "population_axes",
   "population_text",
-  "registration_id"
+  "registration_id",
+  "extraction_version",
+  "comparator",
+  "self_declared_underpowered",
+  "ingredient_isolated",
+  "deficiency_status"
  ],
  "additionalProperties": false,
  "properties": {
@@ -28,7 +33,14 @@
    "items": {
     "type": "object",
     "required": [
-     "label"
+     "label",
+     "n",
+     "intervention_text",
+     "is_control",
+     "target_ingredient_presence",
+     "active_cointerventions",
+     "evidenced_arm_text",
+     "role"
     ],
     "additionalProperties": false,
     "properties": {
@@ -56,21 +68,44 @@
       ]
      },
      "target_ingredient_presence": {
-      "type": ["string", "null"],
-      "enum": ["yes", "no", "unknown", null]
+      "type": [
+       "string",
+       "null"
+      ],
+      "enum": [
+       "yes",
+       "no",
+       "unknown",
+       null
+      ]
      },
      "active_cointerventions": {
       "type": "array",
-      "items": {"type": "string", "maxLength": 120},
+      "items": {
+       "type": "string",
+       "maxLength": 120
+      },
       "maxItems": 12
      },
      "evidenced_arm_text": {
-      "type": ["string", "null"],
+      "type": [
+       "string",
+       "null"
+      ],
       "maxLength": 300
      },
      "role": {
-      "type": ["string", "null"],
-      "enum": ["administered", "measurement_only", "biomarker", "unclear", null]
+      "type": [
+       "string",
+       "null"
+      ],
+      "enum": [
+       "administered",
+       "measurement_only",
+       "biomarker",
+       "unclear",
+       null
+      ]
      }
     }
    },
@@ -200,6 +235,15 @@
     null
    ],
    "description": "Does at least one treatment arm receive the ingredient WITHOUT another active co-ingested ingredient? Training programs shared by all arms, carriers and flavouring do not count as co-ingestants. Answer 'no' ONLY when every ingredient arm co-administers another active. Unknown keeps the study."
+  },
+  "extraction_version": {
+   "type": "string",
+   "enum": [
+    "v1.24",
+    "legacy-v1.23",
+    "legacy-v1.22",
+    "legacy-v1.21"
+   ]
   }
  }
 }

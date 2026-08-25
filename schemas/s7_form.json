@@ -1,106 +1,190 @@
 {
-  "type": "object",
-  "required": [
-    "form_vocab_id",
-    "salt_family",
-    "elemental_dose_mg",
-    "dose_basis",
-    "confidence"
-  ],
-  "additionalProperties": false,
-  "properties": {
-    "arms": {
-      "type": "array",
-      "maxItems": 8,
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["label"],
-        "properties": {
-          "label": {"type": "string", "maxLength": 80},
-          "form_vocab_id": {"type": ["string", "null"]},
-          "form_raw": {"type": ["string", "null"], "maxLength": 120},
-          "compound_dose_mg": {"type": ["number", "null"], "exclusiveMinimum": 0},
-          "elemental_dose_mg": {"type": ["number", "null"], "exclusiveMinimum": 0},
-          "dose_per_kg_mg": {"type": ["number", "null"], "exclusiveMinimum": 0},
-          "mean_body_mass_kg": {"type": ["number", "null"], "exclusiveMinimum": 0},
-          "dose_basis": {"type": ["string", "null"], "enum": ["elemental_stated", "converted", "compound_only", "unstated", null]},
-          "dose_frequency_per_day": {"type": ["number", "null"], "exclusiveMinimum": 0},
-          "evidence_span": {"type": ["string", "null"], "maxLength": 200}
-        }
-      }
-    },
-    "form_vocab_id": {
-      "type": [
-        "string",
-        "null"
-      ]
-    },
-    "form_raw": {
-      "type": [
-        "string",
-        "null"
-      ]
-    },
-    "salt_family": {
-      "type": [
-        "string",
-        "null"
-      ]
-    },
-    "elemental_dose_mg": {
-      "type": [
-        "number",
-        "null"
-      ]
-    },
-    "compound_dose_mg": {
-      "type": [
-        "number",
-        "null"
-      ]
-    },
-    "dose_per_kg_mg": {
-      "type": [
-        "number",
-        "null"
-      ],
-      "description": "Daily dose stated PER KG OF BODY WEIGHT, in mg/kg/day, when the paper doses that way (e.g. '0.3 g/kg/day' -> 300). null when dosing is absolute. Never convert an absolute dose into this field.",
-      "exclusiveMinimum": 0
-    },
-    "mean_body_mass_kg": {
-      "type": [
-        "number",
-        "null"
-      ],
-      "description": "The paper's own stated mean body mass of the supplemented group, in kg, ONLY if printed (baseline table or methods). Used downstream to turn a per-kg dose into a daily total by arithmetic on reported numbers. NEVER estimate or assume a typical body weight -- null when not stated.",
-      "exclusiveMinimum": 0
-    },
-    "dose_basis": {
+ "type": "object",
+ "required": [
+  "form_vocab_id",
+  "salt_family",
+  "elemental_dose_mg",
+  "dose_basis",
+  "confidence",
+  "extraction_version",
+  "arms"
+ ],
+ "additionalProperties": false,
+ "properties": {
+  "arms": {
+   "type": "array",
+   "maxItems": 8,
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "label",
+     "form_vocab_id",
+     "form_raw",
+     "compound_dose_mg",
+     "elemental_dose_mg",
+     "dose_per_kg_mg",
+     "mean_body_mass_kg",
+     "dose_basis",
+     "dose_frequency_per_day",
+     "evidence_span"
+    ],
+    "properties": {
+     "label": {
       "type": "string",
+      "maxLength": 80
+     },
+     "form_vocab_id": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "form_raw": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "maxLength": 120
+     },
+     "compound_dose_mg": {
+      "type": [
+       "number",
+       "null"
+      ],
+      "exclusiveMinimum": 0
+     },
+     "elemental_dose_mg": {
+      "type": [
+       "number",
+       "null"
+      ],
+      "exclusiveMinimum": 0
+     },
+     "dose_per_kg_mg": {
+      "type": [
+       "number",
+       "null"
+      ],
+      "exclusiveMinimum": 0
+     },
+     "mean_body_mass_kg": {
+      "type": [
+       "number",
+       "null"
+      ],
+      "exclusiveMinimum": 0
+     },
+     "dose_basis": {
+      "type": [
+       "string",
+       "null"
+      ],
       "enum": [
-        "elemental_stated",
-        "converted",
-        "compound_only",
-        "unstated"
+       "elemental_stated",
+       "converted",
+       "compound_only",
+       "unstated",
+       null
       ]
-    },
-    "dose_frequency_per_day": {
+     },
+     "dose_frequency_per_day": {
       "type": [
-        "number",
-        "null"
-      ]
-    },
-    "confidence": {
-      "type": "number",
-      "minimum": 0,
-      "maximum": 1
-    },
-    "evidence_span": {
+       "number",
+       "null"
+      ],
+      "exclusiveMinimum": 0
+     },
+     "evidence_span": {
       "type": [
-        "string",
-        "null"
-      ]
+       "string",
+       "null"
+      ],
+      "maxLength": 200
+     }
     }
+   }
+  },
+  "form_vocab_id": {
+   "type": [
+    "string",
+    "null"
+   ]
+  },
+  "form_raw": {
+   "type": [
+    "string",
+    "null"
+   ]
+  },
+  "salt_family": {
+   "type": [
+    "string",
+    "null"
+   ]
+  },
+  "elemental_dose_mg": {
+   "type": [
+    "number",
+    "null"
+   ]
+  },
+  "compound_dose_mg": {
+   "type": [
+    "number",
+    "null"
+   ]
+  },
+  "dose_per_kg_mg": {
+   "type": [
+    "number",
+    "null"
+   ],
+   "description": "Daily dose stated PER KG OF BODY WEIGHT, in mg/kg/day, when the paper doses that way (e.g. '0.3 g/kg/day' -> 300). null when dosing is absolute. Never convert an absolute dose into this field.",
+   "exclusiveMinimum": 0
+  },
+  "mean_body_mass_kg": {
+   "type": [
+    "number",
+    "null"
+   ],
+   "description": "The paper's own stated mean body mass of the supplemented group, in kg, ONLY if printed (baseline table or methods). Used downstream to turn a per-kg dose into a daily total by arithmetic on reported numbers. NEVER estimate or assume a typical body weight -- null when not stated.",
+   "exclusiveMinimum": 0
+  },
+  "dose_basis": {
+   "type": "string",
+   "enum": [
+    "elemental_stated",
+    "converted",
+    "compound_only",
+    "unstated"
+   ]
+  },
+  "dose_frequency_per_day": {
+   "type": [
+    "number",
+    "null"
+   ]
+  },
+  "confidence": {
+   "type": "number",
+   "minimum": 0,
+   "maximum": 1
+  },
+  "evidence_span": {
+   "type": [
+    "string",
+    "null"
+   ]
+  },
+  "extraction_version": {
+   "type": "string",
+   "enum": [
+    "v1.24",
+    "legacy-v1.23",
+    "legacy-v1.22",
+    "legacy-v1.21"
+   ]
   }
+ }
 }

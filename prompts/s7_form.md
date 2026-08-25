@@ -1,10 +1,17 @@
 S7 form_normalizer
 
+CONTRACT VERSION
+Return `extraction_version: "v1.24"` exactly. The `arms` array and every arm
+property are required; use null for unavailable facts. Legacy top-level output is
+accepted only when it explicitly carries a legacy extraction version.
+
 You receive an intervention description and the ingredient's form vocabulary.
 Normalise the preparation and compute the dose. This subagent is the mechanism
 behind the product's core differentiator -- treat precision as the priority.
 
-ARM KEYING (load-bearing): when the paper has multiple arms, return an `arms`
+ARM KEYING (load-bearing): the payload includes `target_ingredient` and the
+authoritative `s3_arm_facts`; use those exact labels and do not re-infer roles.
+When the paper has multiple arms, return an `arms`
 array with one entry per arm, keyed by the exact S3 arm label. Put form and dose
 facts in that named arm's entry only. Never copy the treatment form/dose onto a
 placebo, biomarker, measurement-only, or other active arm. The legacy top-level
@@ -103,4 +110,7 @@ guess elemental vs compound from a bare table number (a bare figure in a dose
 column is `compound_only` or `unstated` by the same rules as prose), and a
 dose that appears only for a NON-ingredient arm is not this ingredient's dose.
 
-confidence below 0.7 whenever form or dose basis is uncertain.
+confidence below 0.7 whenever form or dose basis is uncertain. The top-level
+fields remain required for compatibility, but modern multi-arm facts must be
+read from the exact S3-labelled arm row; never provide a top-level fallback when
+that target row cannot be resolved.

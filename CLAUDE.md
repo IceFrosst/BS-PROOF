@@ -115,7 +115,13 @@ is **not** a per-study result and must never be distributed back onto the trials
 
 ### 7. Nulls are negative — but only a WELL-RUN null, and only against a real control
 
-Well-run null trial → evidence against (`s_i = −0.7`), not “no data.”
+Well-run, quantified null trial → evidence against (`s_i = −0.35`), not “no data.”
+An unsigned nonsignificant efficacy estimate (including a sub-threshold magnitude)
+is `inconclusive_unquantified` with `s_i = 0` before any sign rescue; a signed
+measured zero remains negative. Only a typed successful equivalence/non-inferiority
+basis with explicit margin value+unit and compatible estimate/CI semantics restores
+−0.35. Safety harm and valid observational safety signals bypass this efficacy
+counterfactual firewall and retain their existing harm behavior.
 
 **Amended 2026-08-10.** "Well-run" was doing unenforced work. Two classes of
 trial were entering at the full −0.7 while answering a different question, and
@@ -912,6 +918,19 @@ muscle_power range is an extraction artifact, not the literature — 14 of 22
 benefit trials carried no dose (7 abstract-only, 4 dosed per-kg at 0.07–0.3
 g/kg ≈ 5–24 g/day), so the v1.19 run should pull the range's floor down toward
 3 g.
+
+**UNIVERSAL NEGATIVE CONTRACT — `SCORING_MODEL` v13-universal-negative-contract
+(2026-08-25; no scoring constants changed).** S3 is staged before S5/S7 and passes
+the target ingredient plus exact arm facts/labels. Fresh v1.24 contracts require
+explicit version metadata and all nullable/unknown fields; modern omissions refuse,
+while legacy is accepted only with explicit legacy metadata. The efficacy firewall
+accepts only an evidenced target-vs-control counterfactual, including isolated
+factorial A+B vs B when non-target active cointerventions match; unmatched
+combinations refuse. Group×time interaction F tests may establish direction, but
+an omnibus F cannot supply effect magnitude. `outcome_role` travels on the exact
+S5 claim through `to_studies`, never by outcome-id rejoin. Run
+`20260825_072759_creatine_creatine-monohydrate_claude-sr-ft-top5-suppl` is invalid
+for claims; no extraction/network run was performed.
 
 **V8 COHERENCE CLOSED — SCORING_MODEL v11-number-coherent (founder: "fix v8",
 2026-08-12).** Every consumer of a study's contribution now reads `s_value`, not

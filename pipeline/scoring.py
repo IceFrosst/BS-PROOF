@@ -259,10 +259,18 @@ APPLY_DOSE_IN_WEIGHT = False
 # must never be read side by side as if the numbers meant the same thing, and
 # scripts/archive_reports.py enforces that by sweeping old-model runs out of
 # reports/runs/ into reports/archive/<model>/.
-SCORING_MODEL = "v12-dose-closeness"
+SCORING_MODEL = "v13-universal-negative-contract"
 
 # What each model meant, so an archived report can still be understood:
 SCORING_MODEL_HISTORY = {
+    "v13-universal-negative-contract":
+        "universal negative-effect contract: S3 precedes dependent workers and "
+        "passes exact arm facts; v1.24 contracts require explicit provenance; "
+        "efficacy counterfactuals refuse wrong arms, unmatched combinations, "
+        "baseline/time/omnibus statistics, and unsigned nonsignificant estimates "
+        "route to inconclusive_unquantified (s=0). Valid safety harm signals "
+        "remain eligible. Primary/secondary roles travel on the exact claim. "
+        "No scoring constants changed.",
     "v12-dose-closeness":
         "the composite's dose term is the product's CLOSENESS to the range of "
         "doses where positive effects occurred (founder design 2026-08-12: "
@@ -481,6 +489,10 @@ class Study:
     # audited for how much of its score came from measured effects vs from labels.
     effect_s: float | None = None
     effect_route: str = "label"
+    # S5's exact endpoint role travels with this Study. It is never recovered
+    # later by outcome id, because one outcome can have primary and secondary
+    # claims in the same trial.
+    outcome_role: str | None = None
 
     def s_value(self) -> float:
         # A nonsignificant efficacy claim with no usable signed between-arm

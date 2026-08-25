@@ -502,15 +502,25 @@ SCORE = 100 · d · c · (1 − 0.4H)
 |---|---|
 | Clinically meaningful benefit | +1.0 |
 | Statistically significant but trivial magnitude | +0.3 |
-| Null / no significant effect | **−0.7** |
+| Well-run null with valid precision/equivalence basis | **−0.35** |
+| Unsigned/nonsignificant efficacy estimate without that basis | **0.0 (inconclusive_unquantified)** |
 | Significant harm | −1.0 |
 
-**The load-bearing decision is that null results are negative.** A product claims
-a benefit; a well-run trial finding no effect is *disconfirming evidence for that
-claim*, not absence of evidence. Scoring nulls at 0 is what made the earlier
-unsigned design collapse — it made "20 RCTs prove this does nothing" indistinguishable
-from "nobody has tested this." With nulls negative, **0 means exactly one thing:
-inconclusive.** No-data is caught by the sufficiency gate; conflict is caught by H.
+**The load-bearing decision is that a well-run, quantified null is negative.** A
+product claims a benefit; a valid precision/equivalence result finding no
+meaningful difference is disconfirming evidence for that claim. An unsigned
+nonsignificant efficacy estimate — even a sub-threshold magnitude — is instead
+`inconclusive_unquantified` and contributes `s=0`; it must not be rescued by
+assuming the favourable sign. A signed measured zero remains negative on the
+recentred effect scale. The null constant is **−0.35** and is unchanged by this
+contract repair; safety harm remains −1.0 and is not routed through this efficacy
+firewall.
+
+A well-run, quantified trial finding no meaningful effect is *disconfirming
+evidence for that claim*, not absence of evidence. An unsigned nonsignificant
+estimate is different: it is `inconclusive_unquantified` at `s=0`, while a signed
+measured zero remains negative. No-data is caught by the sufficiency gate;
+conflict is caught by H.
 
 ### Bands
 
@@ -860,6 +870,21 @@ system that are currently exact.
 ---
 
 ## Changelog
+
+- **2026-08-25 rev 8 — universal negative contract and scoring semantics.**
+  `SCORING_MODEL` is now `v13-universal-negative-contract`; no scoring constants
+  changed. S3 is staged before S5/S7 and passes exact target-arm facts. Fresh
+  v1.24 S3/S5/S7 outputs require explicit extraction metadata and nullable/unknown
+  fields; legacy is accepted only with explicit legacy metadata. Efficacy claims
+  require an evidenced counterfactual, while valid safety harm/observational
+  signals remain eligible. Factorial A+B versus B is eligible only when the
+  non-target active background matches exactly. Group×time interactions may
+  support direction, but their omnibus F cannot supply magnitude. Unsigned
+  nonsignificant efficacy estimates are `inconclusive_unquantified` (`s=0`);
+  only a typed successful equivalence/non-inferiority margin and compatible CI
+  can restore −0.35. Outcome roles travel from the exact claim. Run
+  `20260825_072759_creatine_creatine-monohydrate_claude-sr-ft-top5-suppl` is
+  registered invalid for claims; no extraction or network run was performed.
 
 - **2026-08-25 rev 7 follow-up — arm-key joins hardened.** Arm-keyed S7 facts
   are joined to the uniquely evidenced administered target arm from S3; a

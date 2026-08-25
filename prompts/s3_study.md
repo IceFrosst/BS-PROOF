@@ -1,5 +1,10 @@
 S3 study_extractor
 
+CONTRACT VERSION
+Return `extraction_version: "v1.24"` exactly. Every field below is required;
+use null or unknown explicitly rather than omitting a field. This metadata is the
+only way a cached legacy envelope may be accepted downstream.
+
 You receive a primary study -- full text where available, otherwise abstract
 only. Extract the trial's structural facts.
 
@@ -129,6 +134,10 @@ KEEP THE OUTPUT SHORT. One turn. A long response is cut mid-JSON and discarded.
   population_text   300 characters maximum
 
 Never drop a required field to save room. Shorten the values, not the structure.
+The top-level required fields are extraction_version, n_randomised, n_analysed,
+arms, duration_days, comparator, self_declared_underpowered, ingredient_isolated,
+population_text, deficiency_status, registration_id, evidence_spans, and
+population_axes. Each arm requires every arm field, including null/unknown values.
 
 duration_days: convert weeks/months to days (1 week = 7, 1 month = 30). If the
 intervention period and follow-up differ, use the INTERVENTION period.

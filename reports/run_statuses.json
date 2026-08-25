@@ -136,7 +136,7 @@
         "Not anchor-validated, and no run of this ingredient has been."
       ]
     },
-    "20260825_072759": {
+    "20260825_072759_creatine_creatine-monohydrate_claude-sr-ft-top5-suppl": {
       "status": "invalid",
       "public_claims_allowed": false,
       "reason_codes": [
@@ -148,6 +148,13 @@
         "No corrected score or audit delta is asserted; audit deltas are not evidence or corrected scores."
       ],
       "note": "Invalid for claims. Preserve as an audit reference only; do not quote its scores."
+    },
+    "20260825_072759": {
+      "status": "invalid",
+      "public_claims_allowed": false,
+      "reason_codes": ["legacy_short_run_id_alias"],
+      "limitations": ["Use the exact full run id entry above for status lookup."],
+      "note": "Legacy short alias; no claim validity is implied."
     }
   }
 }

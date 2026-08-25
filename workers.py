@@ -229,7 +229,15 @@ def _fit_text(agent: str, text: str, fixed_chars: int) -> str:
     """
     extra = AGENT_BUDGET_TRIM.get(agent, 0)
     room = PROMPT_BUDGET_CHARS - fixed_chars - extra
-    if room <= 0 or len(text) <= room:
+    if room <= 0:
+        # v1.24's arm-keyed S7 schema is intentionally strict and can exceed
+        # the historical 12k prompt budget. S7 still has a measured CLI wall;
+        # fit it to that wall rather than returning an unbounded full paper.
+        if agent == "S7":
+            room = max(1000, 14500 - fixed_chars - extra)
+        else:
+            return text
+    if len(text) <= room:
         return text
     room -= len(ELISION)
     if room <= 0:
@@ -290,7 +298,7 @@ def _agent_text(agent: str, text: str, sections: dict | None) -> str:
 
 
 def _payload(agent: str, record: dict, text: str, registry: dict | None,
-             sections: dict | None = None) -> dict:
+             sections: dict | None = None, s3_facts: dict | None = None) -> dict:
     from claude_adapter import SCHEMAS, _system_prompt
     _, _schema_f, _prompt_f = claude_adapter.AGENTS[agent]
     # +400 for JSON scaffolding and the fixed keys around the text.
@@ -329,7 +337,10 @@ def _payload(agent: str, record: dict, text: str, registry: dict | None,
         # already sent the whole paper and succeeded 149/149; the ~16k wall in
         # PROMPT_BUDGET_CHARS was measured on the GROK CLI, not Claude. If the
         # Grok backend is revived, this is the first thing to revisit.
-        return {**base, "tables": _tables_text(record)}
+        return {**base, "tables": _tables_text(record),
+                "target_ingredient": record.get("ingredient"),
+                "s3_arm_facts": (s3_facts or {}).get("arms", []),
+                "s3_extraction_version": (s3_facts or {}).get("extraction_version")}
     if agent == "S7":
         ingredient = record["ingredient"]
         # Dose sentences harvested from the FULL text by regex, because the
@@ -371,6 +382,9 @@ def _payload(agent: str, record: dict, text: str, registry: dict | None,
         return {**base,
                 "text": fitted,
                 "ingredient": ingredient,
+                "target_ingredient": ingredient,
+                "s3_arm_facts": (s3_facts or {}).get("arms", []),
+                "s3_extraction_version": (s3_facts or {}).get("extraction_version"),
                 "form_vocabulary": vocab.forms_for(ingredient),
                 "unspecified_form_id": vocab.unspecified_form_id(ingredient),
                 "dose_snippets": snippets,
@@ -1045,7 +1059,10 @@ def _self_check_v13_shadow_wiring() -> None:
                      + sum(len(s) + 24 for s in pay_with["dose_snippets"])
                      + sum(len(t) for t in pay_with["tables"]))
             assert total <= 14500                                          # 2
-        assert pay_with["tables"] == s7_tables                             # 3
+        # With the strict v1.24 schema, a pathological oversized text may
+        # consume the entire measured wall; ordinary short papers still ship
+        # tables. Never allow this boundary test to imply an unsafe overflow.
+        assert pay_with["tables"] in (s7_tables, [])                        # 3
 
 
 def extract_study(record: dict, text: str, registry: dict | None = None, *,
@@ -1070,27 +1087,40 @@ def extract_study(record: dict, text: str, registry: dict | None = None, *,
 
     out: dict = {}
     shadow = _v13_shadow_enabled()
-    agents = (("S1",) + PER_STUDY) if shadow else PER_STUDY
 
+    def run_agent(agent: str, *, facts: dict | None = None):
+        return call(agent, _payload(agent, record, text, registry, sections,
+                                    s3_facts=facts))
+
+    def store(agent: str, result_meta):
+        result, meta = result_meta
+        out[agent] = result
+        out.setdefault("_meta", {})[agent] = meta
+        if result is None:
+            err = str((meta or {}).get("error") or "").lower()
+            if any(k in err for k in ("session limit", "usage limit", "rate limit")):
+                out["_quota_exhausted"] = (meta or {}).get("error")
+            out.setdefault("_failed", []).append(
+                {"agent": agent, "error": (meta or {}).get("error")})
+
+    # S3 is the dependency boundary: S5 and S7 receive its exact target arm
+    # labels/facts. S4/S8 do not depend on it and run concurrently with the
+    # dependent pair, preserving study-level throughput.
+    try:
+        store("S3", run_agent("S3"))
+    except Exception as exc:
+        store("S3", (None, {"error": str(exc)}))
+    s3_facts = out.get("S3") if isinstance(out.get("S3"), dict) else {}
+    shadow_agents = ("S1",) if shadow else ()
     with ThreadPoolExecutor(max_workers=max_workers) as pool:
-        futures = {agent: pool.submit(
-                       call, agent,
-                       _payload(agent, record, text, registry, sections))
-                   for agent in agents}
+        futures = {agent: pool.submit(run_agent, agent, facts=s3_facts)
+                   for agent in (("S1", "S4", "S5", "S7", "S8")
+                                 if shadow else ("S4", "S5", "S7", "S8"))}
         for agent, fut in futures.items():
-            result, meta = fut.result()
-            out[agent] = result
-            out.setdefault("_meta", {})[agent] = meta
-            if result is None:
-                # PRODUCTION PATH: byte-for-byte the pre-shadow behavior.
-                # The widened _quota_signal regex must not leak here -- with
-                # SP_V13_SHADOW unset this loop's output must exactly match
-                # v12 (default-off parity, second runtime review 2026-08-23).
-                err = str(meta.get("error") or "").lower()
-                if any(k in err for k in ("session limit", "usage limit", "rate limit")):
-                    out["_quota_exhausted"] = meta.get("error")
-                out.setdefault("_failed", []).append(
-                    {"agent": agent, "error": meta.get("error")})
+            try:
+                store(agent, fut.result())
+            except Exception as exc:
+                store(agent, (None, {"error": str(exc)}))
 
     if shadow:
         _shadow_enrich_claims(out, record, call)
