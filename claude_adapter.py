@@ -943,11 +943,10 @@ def _schema_checked(candidate, schema_text: str | None):
         return None
     if schema_text is not None:
         try:
-            from jsonschema import validators
+            from jsonschema import Draft7Validator
             schema = json.loads(schema_text)
-            validator = validators.validator_for(schema)
-            validator.check_schema(schema)
-            if list(validator(schema).iter_errors(candidate)):
+            Draft7Validator.check_schema(schema)
+            if list(Draft7Validator(schema).iter_errors(candidate)):
                 return None
         except Exception:
             return None
@@ -974,21 +973,50 @@ def _extract_payload(raw: str, schema_text: str | None = None):
             candidates.append(json.loads(res))
         except json.JSONDecodeError:
             pass
-    # Verbose stream-json retains the model's first-turn StructuredOutput tool
-    # arguments even when the CLI rejects a wrapper and exits max_turns. The
-    # inner JSON is still model output; exact unwrapping plus full local schema
-    # validation repairs transport only and never invents a scientific field.
-    for event in _json_events(raw):
-        if event.get("type") != "assistant":
-            continue
-        for block in (event.get("message") or {}).get("content") or []:
-            if block.get("type") == "tool_use" and block.get("name") == "StructuredOutput":
-                candidates.append(block.get("input"))
     for candidate in candidates:
         checked = _schema_checked(candidate, schema_text)
         if checked is not None:
             return checked, cost
     return None, cost
+
+
+def _recover_max_turns_wrapper(raw: str, schema_text: str):
+    """Recover only the two observed one-key string transport wrappers."""
+    env = _result_envelope(raw)
+    if not env or not (env.get("subtype") == "error_max_turns"
+                       and env.get("terminal_reason") == "max_turns"):
+        return None, 0.0
+    # Never turn an auth/quota/budget/other fatal envelope into a cache hit even
+    # if an earlier assistant event happened to contain valid-looking JSON.
+    if _is_fatal(json.dumps(env, ensure_ascii=False)):
+        return None, 0.0
+    candidates = []
+    for event in _json_events(raw):
+        if event.get("type") != "assistant":
+            continue
+        for block in (event.get("message") or {}).get("content") or []:
+            if block.get("type") != "tool_use" or block.get("name") != "StructuredOutput":
+                continue
+            tool_input = block.get("input")
+            if (not isinstance(tool_input, dict) or len(tool_input) != 1
+                    or next(iter(tool_input)) not in
+                    ("StructuredOutput", "$PARAMETER_NAME")):
+                continue
+            nested = next(iter(tool_input.values()))
+            if not isinstance(nested, str):
+                continue
+            try:
+                parsed = json.loads(nested)
+            except json.JSONDecodeError:
+                continue
+            checked = _schema_checked(parsed, schema_text)
+            if checked is not None:
+                candidates.append(checked)
+    # Multiple valid attempts in one failed envelope are ambiguous; choosing
+    # one would make extraction order decide scientific data.
+    if len(candidates) != 1:
+        return None, 0.0
+    return candidates[0], float(env.get("total_cost_usd") or 0.0)
 
 
 def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
@@ -1083,12 +1111,13 @@ def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
             time.sleep(2 ** attempt); continue
 
         if proc.returncode != 0:
-            # max_turns can be a transport-only failure: Claude supplied a
-            # complete schema object as a string under StructuredOutput or
-            # $PARAMETER_NAME, then the CLI requested a corrective second turn.
-            # Recover only that exact first-turn object and validate it against
-            # the full schema locally. No scientific value is repaired.
-            recovered, recovered_cost = _extract_payload(proc.stdout, schema)
+            detail = _envelope_error(proc.stdout) or proc.stderr.strip()
+            # Recovery is narrower than ordinary successful-envelope parsing:
+            # exact max_turns terminal state, exact observed one-key string
+            # wrapper, one unambiguous candidate, full Draft-7 validation, and
+            # no fatal auth/quota/budget marker anywhere in the final envelope.
+            recovered, recovered_cost = _recover_max_turns_wrapper(
+                proc.stdout, schema)
             if recovered is not None:
                 toks = _envelope_tokens(proc.stdout)
                 USAGE.finish_attempt(
@@ -1112,7 +1141,6 @@ def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
                 }
             # The CLI reports the actual reason ("Not logged in", auth errors,
             # budget) in the JSON envelope on STDOUT and leaves stderr empty.
-            detail = _envelope_error(proc.stdout) or proc.stderr.strip()
             last_err = f"exit {proc.returncode}: {detail[:300]}"
             USAGE.finish_attempt(
                 agent, started, cost=_envelope_cost(proc.stdout), failed=True,

@@ -289,33 +289,56 @@ class UniversalNegativeRepairTests(unittest.TestCase):
         self.assertTrue(all(not row["corrected_score_asserted"] for row in rows))
         self.assertEqual(sum(row["action"] == "exclude_scope" for row in rows), 2)
 
-    def test_claude_stream_transport_unwraps_only_schema_valid_model_json(self):
+    def test_claude_stream_transport_recovers_only_exact_max_turns_wrappers(self):
         import claude_adapter
         schema = json.dumps({"type": "object", "required": ["x"],
                              "additionalProperties": False,
                              "properties": {"x": {"type": "integer"}}})
 
-        def stream(tool_input):
-            return "\n".join(json.dumps(event) for event in (
-                {"type": "assistant", "message": {"content": [{
-                    "type": "tool_use", "name": "StructuredOutput",
-                    "input": tool_input}]}},
-                {"type": "result", "subtype": "error_max_turns",
-                 "terminal_reason": "max_turns", "total_cost_usd": 0.25,
-                 "usage": {"input_tokens": 2, "output_tokens": 3}},
-            ))
+        def stream(tool_inputs, *, subtype="error_max_turns",
+                   terminal="max_turns", errors=None, tool="StructuredOutput"):
+            events = [{"type": "assistant", "message": {"content": [{
+                "type": "tool_use", "name": tool, "input": value}]}}
+                for value in tool_inputs]
+            events.append({"type": "result", "subtype": subtype,
+                           "terminal_reason": terminal, "errors": errors or [],
+                           "total_cost_usd": 0.25,
+                           "usage": {"input_tokens": 2, "output_tokens": 3}})
+            return "\n".join(json.dumps(event) for event in events)
 
-        for wrapped in ({"x": 7},
-                        {"StructuredOutput": '{"x": 7}'},
+        for wrapped in ({"StructuredOutput": '{"x": 7}'},
                         {"$PARAMETER_NAME": '{"x": 7}'}):
-            payload, cost = claude_adapter._extract_payload(stream(wrapped), schema)
+            payload, cost = claude_adapter._recover_max_turns_wrapper(
+                stream([wrapped]), schema)
             self.assertEqual(payload, {"x": 7})
             self.assertEqual(cost, 0.25)
-        for refused in ({"StructuredOutput": '{"x": "wrong"}'},
-                        {"StructuredOutput": '{bad json'},
-                        {"StructuredOutput": '{"x": 7}', "extra": 1}):
-            self.assertIsNone(claude_adapter._extract_payload(stream(refused), schema)[0])
-        self.assertEqual(claude_adapter._envelope_tokens(stream({"x": 7}))["output"], 3)
+        refused_streams = (
+            stream([{"x": 7}]),                         # direct is not recovery
+            stream([{"StructuredOutput": {"x": 7}}]), # wrapper must be string
+            stream([{"StructuredOutput": '{"x": "wrong"}'}]),
+            stream([{"StructuredOutput": '{bad json'}]),
+            stream([{"StructuredOutput": '{"x": 7}', "extra": 1}]),
+            stream([{"StructuredOutput": '{"x": 7}'}], tool="OtherTool"),
+            stream([{"StructuredOutput": '{"x": 7}'}], subtype="cli_error",
+                   terminal="execution_error"),
+            stream([{"StructuredOutput": '{"x": 7}'}],
+                   errors=["authentication_error: not logged in"]),
+            stream([{"StructuredOutput": '{"x": 7}'}],
+                   errors=["rate limit exceeded"]),
+            stream([{"StructuredOutput": '{"x": 7}'},
+                    {"StructuredOutput": '{"x": 8}'}]),
+        )
+        for raw in refused_streams:
+            self.assertIsNone(
+                claude_adapter._recover_max_turns_wrapper(raw, schema)[0])
+        self.assertEqual(claude_adapter._envelope_tokens(
+            stream([{"StructuredOutput": '{"x": 7}'}]))["output"], 3)
+        # Legacy/pilot single-envelope success remains ordinary parsing, never
+        # the failed-turn recovery path.
+        normal = json.dumps({"structured_output": {"x": 9},
+                             "total_cost_usd": 0.1})
+        self.assertEqual(claude_adapter._extract_payload(normal, schema),
+                         ({"x": 9}, 0.1))
 
     def test_v124_schemas_require_contract_and_nullable_fields(self):
         try:
