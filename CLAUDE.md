@@ -1264,6 +1264,15 @@ ownership table added under Multi-agent workflow.
    them for historical runs.
 9. Venue factor (`Study.venue_ok` is still a boolean; SJR quartiles have nowhere
    to go until a real factor exists — new constant, so SPEC §13 first).
+10. **Right-size dashboard CI.** The current GitHub dashboard workflow ran **802
+    Playwright browser/accessibility tests in ~33 minutes** even for a
+    documentation-only push. Add path filtering so docs-only changes skip the
+    dashboard workflow; run a small desktop/mobile browser smoke suite on normal
+    pushes; reserve the complete Playwright matrix for dashboard/UI changes,
+    nightly runs, and pre-release validation. Keep Python invariants/selftest,
+    unit tests, typecheck, lint, and production build on relevant code pushes.
+    Do not reduce release coverage—only avoid repeating the full browser matrix
+    when changed paths cannot affect it.
 
 ---
 
