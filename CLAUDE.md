@@ -1165,18 +1165,14 @@ still the unmeasured SR-uplift experiment (Next item 3).
 
 ## Next
 
-**Clean resume point (2026-08-25):** `origin/main` is clean at `47e18b7` with
-no open PRs. Historical merged/cherry-picked helper branches and their obsolete
-worktree were removed locally and from GitHub. The only non-main remote branch is
-`wip/score-viz-redesign` at `1305f5b`: it preserves an unrelated score-card
-visualization experiment found uncommitted during cleanup. It is intentionally
-not merged and has no PR; before considering it, require design review plus full
-dashboard/E2E validation. Its current unit state is 128/128 passing, typecheck
-clean, and lint clean except one pre-existing unused-variable warning in
-`tests/e2e/dashboard.spec.ts`. Obsolete untracked v1.23 generated reports and the
-completed local repair plan were deleted; canonical retained runs remain under
-`reports/runs/`. Next scientific work is the S7-only replay below, not a cold
-all-agent run.
+**Clean resume point (2026-08-25):** `origin/main` is clean with no open PRs,
+no stashes, and no topic branches or extra worktrees. Historical merged or
+cherry-picked helper branches were removed locally and from GitHub. An unrelated
+uncommitted score-visualization experiment found during cleanup was discarded at
+the founder's request; do not look for or revive a WIP branch. Obsolete untracked
+v1.23 generated reports and the completed local repair plan were also deleted;
+canonical retained runs remain under `reports/runs/`. Next scientific work is
+the S7-only replay below, not a cold all-agent run.
 
 Changed 2026-08-09: production extraction moved to the **Claude subscription**
 via `--safe-mode` (`claude_adapter`); `--bare` and the API-key gate are gone,
