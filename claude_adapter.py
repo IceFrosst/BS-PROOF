@@ -289,7 +289,7 @@ def _claude_bin() -> str:
 # v1.6 (2026-08-08): S2 reports results_table + per-study design. SR-table trials
 # now enter evidence mass, so S2's output moves scores and not just confidence.
 # v1.5 (2026-08-07): S3 prompt shortened, SR label resolve, review_methods.
-PROMPT_VERSION = "v1.23"
+PROMPT_VERSION = "v1.24"
 
 # Tier -> model. FULL IDs, NOT ALIASES.
 #

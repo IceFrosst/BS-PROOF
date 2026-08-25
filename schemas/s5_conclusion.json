@@ -307,6 +307,43 @@
             "type": "string",
             "maxLength": 200
           },
+          "ingredient_arm": {
+            "type": ["string", "null"],
+            "maxLength": 80
+          },
+          "control_arm": {
+            "type": ["string", "null"],
+            "maxLength": 80
+          },
+          "test_kind": {
+            "type": ["string", "null"],
+            "enum": ["between_arm", "group_by_time", "within_group", "baseline", "time_main_effect", "omnibus", "unknown", null]
+          },
+          "outcome_role": {
+            "type": ["string", "null"],
+            "enum": ["primary", "secondary", "exploratory", "unknown", null]
+          },
+          "statistic": {
+            "type": ["string", "null"],
+            "maxLength": 120
+          },
+          "statistic_provenance": {
+            "type": ["string", "null"],
+            "maxLength": 200
+          },
+          "p_operator": {
+            "type": ["string", "null"],
+            "enum": ["=", "<", ">", "<=", ">=", "ns", "not_significant", null]
+          },
+          "null_precision": {
+            "type": ["number", "null"],
+            "minimum": 0
+          },
+          "equivalence_basis": {
+            "type": ["string", "object", "null"],
+            "additionalProperties": true,
+            "maxLength": 300
+          },
           "contrast": {
             "type": [
               "string",

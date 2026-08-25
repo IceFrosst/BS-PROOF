@@ -483,6 +483,14 @@ class Study:
     effect_route: str = "label"
 
     def s_value(self) -> float:
+        # A nonsignificant efficacy claim with no usable signed between-arm
+        # estimate is not a well-run measured null. It is an unquantified,
+        # inconclusive observation and contributes zero signed mass. Keep this
+        # route explicit so it cannot silently fall through to the historical
+        # null penalty. Harm and valid equivalence/non-inferiority nulls never
+        # use this route.
+        if self.effect_route == "inconclusive_unquantified":
+            return 0.0
         # FOUNDER DECISION 2026-08-11: a measured effect beats the label. See the
         # EFFECT_MID_SMD block above for why the scale is recentred on the
         # meaningful threshold rather than on zero.

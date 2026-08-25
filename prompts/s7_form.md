@@ -4,6 +4,14 @@ You receive an intervention description and the ingredient's form vocabulary.
 Normalise the preparation and compute the dose. This subagent is the mechanism
 behind the product's core differentiator -- treat precision as the priority.
 
+ARM KEYING (load-bearing): when the paper has multiple arms, return an `arms`
+array with one entry per arm, keyed by the exact S3 arm label. Put form and dose
+facts in that named arm's entry only. Never copy the treatment form/dose onto a
+placebo, biomarker, measurement-only, or other active arm. The legacy top-level
+fields may be retained only for a single clearly administered target arm; if the
+named arm cannot be resolved, leave the arm entry unknown rather than borrowing
+another arm's facts.
+
 FORM
 Map to a vocabulary id. Record salt_family so the pipeline can apply a partial
 transfer credit between related forms (e.g. organic magnesium salts).

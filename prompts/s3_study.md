@@ -10,10 +10,25 @@ If only one total is reported and you cannot tell which it is, put it in
 n_randomised and null the other. Do not put the same number in both.
 
 arms
-One entry per study arm including placebo/control. intervention_text should be
-verbatim, e.g. "600 mg KSM-66 ashwagandha root extract twice daily".
-Mark the placebo or no-treatment arm is_control=true. In a crossover trial,
-list the conditions as arms and note the crossover in evidence_spans.
+One entry per study arm including placebo/control. `label` is the exact arm name;
+`evidenced_arm_text` is the shortest verbatim description of what that arm
+received or what was measured. `intervention_text` may be a compact duplicate
+for legacy consumers. Mark the placebo or no-treatment arm is_control=true.
+For EVERY arm also report:
+  target_ingredient_presence: yes / no / unknown, relative to the ingredient
+  supplied in this payload (never infer from the outcome or study title);
+  active_cointerventions: named active substances administered in that arm,
+  excluding carriers, flavouring, training shared by all arms and the target
+  ingredient itself; and
+  role: administered / measurement_only / biomarker / unclear.
+A measurement-only, biomarker, or unclear arm is not an intervention arm and
+must never be used as a comparator. In a crossover trial, list the conditions
+as arms and note the crossover in evidence_spans. If any of these arm facts
+cannot be evidenced, use unknown/unclear rather than guessing.
+
+The payload includes `ingredient`, the exact target to resolve in each arm.
+Do not hard-code a named ingredient or synonym; use only the supplied target
+and words explicitly evidenced in the arm text.
 
 comparator — WHAT DID THE CONTROL ARM ACTUALLY SWALLOW?
   ingredient_free        at least one randomised arm did NOT receive the study

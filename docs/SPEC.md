@@ -861,6 +861,23 @@ system that are currently exact.
 
 ## Changelog
 
+- **2026-08-25 rev 7 — universal negative-effect repair.** Arm-level S3 facts now
+  record target-ingredient presence, active cointerventions, evidenced text, and
+  administered/measurement-only/biomarker/unclear role. S7 form and dose facts
+  are arm-keyed; S5 records named arms, test kind, outcome role, estimand,
+  timepoint, statistic provenance, p operator, and null precision/equivalence
+  basis. The deterministic assembler refuses wrong-intervention, baseline,
+  within-group, time-main, unresolved, unsigned-omnibus, and combination leakage;
+  isolated factorial contrasts remain valid and group×time interactions may
+  support direction without importing an omnibus magnitude. A nonsignificant
+  efficacy claim without a usable signed between-arm estimate or explicit valid
+  equivalence/non-inferiority basis is `inconclusive_unquantified` with zero
+  signed contribution. Measured zero and harm behavior are unchanged. Primary
+  endpoint hierarchy leads; mixed eligible unknown-role siblings collapse
+  `unclear`, while safety harm still wins a tie. The 20260825_072759 run is
+  invalid for claims pending a verified 32-study ledger; no audit delta is a
+  corrected score or evidence mass.
+
 - **2026-08-07 rev 6** — **Scoring redesigned; this supersedes §7–§9 as written
   before today.** Founder decisions, all measured rather than argued:
 

@@ -54,6 +54,23 @@
        "boolean",
        "null"
       ]
+     },
+     "target_ingredient_presence": {
+      "type": ["string", "null"],
+      "enum": ["yes", "no", "unknown", null]
+     },
+     "active_cointerventions": {
+      "type": "array",
+      "items": {"type": "string", "maxLength": 120},
+      "maxItems": 12
+     },
+     "evidenced_arm_text": {
+      "type": ["string", "null"],
+      "maxLength": 300
+     },
+     "role": {
+      "type": ["string", "null"],
+      "enum": ["administered", "measurement_only", "biomarker", "unclear", null]
      }
     }
    },

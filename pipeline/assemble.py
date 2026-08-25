@@ -10,6 +10,7 @@ Predatory venues: flagged on the record for reporting; do NOT zero weight yet
 """
 from __future__ import annotations
 import math
+import re
 from dataclasses import replace
 from datetime import datetime, timezone
 
@@ -39,6 +40,27 @@ def _rob_items(s4: dict | None, registry: dict | None) -> dict:
         if rate is not None:
             items["i5"] = 1 if rate < 0.20 else 0
     return items
+
+
+def _s7_for_claim(s7: dict | None, claim: dict, s3: dict | None) -> dict | None:
+    """Select only the S7 facts belonging to S5's named target arm.
+
+    Legacy single-arm S7 envelopes remain usable only when the S5/S3 contract
+    is legacy or the claim resolves one administered target. No positional arm
+    selection is attempted.
+    """
+    if not isinstance(s7, dict):
+        return None
+    arm_rows = s7.get("arms")
+    if not isinstance(arm_rows, list) or not arm_rows:
+        return s7
+    wanted = claim.get("ingredient_arm")
+    if not isinstance(wanted, str) or not wanted.strip():
+        # A single arm-keyed row is safe; multiple rows are not.
+        return arm_rows[0] if len(arm_rows) == 1 and isinstance(arm_rows[0], dict) else None
+    matches = [a for a in arm_rows if isinstance(a, dict)
+               and _arm_norm(a.get("label")) == _arm_norm(wanted)]
+    return matches[0] if len(matches) == 1 else None
 
 
 def _pos_finite(x) -> float | None:
@@ -195,6 +217,150 @@ def sr_derived_to_studies(rec: dict, product: dict, *,
     return out
 
 
+def _arm_norm(value) -> str:
+    """Stable arm-label comparison; never invents aliases or ingredient names."""
+    return re.sub(r"[^a-z0-9]+", " ", str(value or "").casefold()).strip()
+
+
+def _claim_equivalence_valid(claim: dict) -> bool:
+    """Whether a paper supplied an explicit precision/equivalence basis."""
+    basis = claim.get("equivalence_basis")
+    precision = claim.get("null_precision")
+    if isinstance(basis, str):
+        present = bool(basis.strip())
+    elif isinstance(basis, dict):
+        present = bool(str(basis.get("type") or basis.get("method") or "").strip())
+    else:
+        present = False
+    if not present:
+        return False
+    try:
+        return math.isfinite(float(precision)) and float(precision) > 0
+    except (TypeError, ValueError):
+        return False
+
+
+def _resolve_claim_arms(claim: dict, s3: dict | None, ingredient: str) -> tuple[bool, str]:
+    """Firewall S5 claims against evidenced S3 intervention arms.
+
+    A missing modern contract is retained for old cached runs. Once either side
+    supplies arm-level facts, ambiguity is a refusal rather than a positional
+    guess. This deliberately knows only the ingredient passed by the caller.
+    """
+    arms = (s3 or {}).get("arms") if isinstance(s3, dict) else None
+    modern = isinstance(arms, list) and bool(arms) and any(
+        any(k in a for k in ("target_ingredient_presence", "role",
+                              "active_cointerventions", "evidenced_arm_text"))
+        for a in arms if isinstance(a, dict))
+    claim_modern = any(claim.get(k) is not None for k in (
+        "ingredient_arm", "control_arm", "test_kind", "outcome_role",
+        "statistic_provenance"))
+    # Old cache compatibility: pre-arm S5/S3 envelopes retain their old route.
+    if not modern and not claim_modern:
+        return True, "legacy_contract"
+    if not isinstance(arms, list) or not arms:
+        return False, "s3_arms_missing"
+    if not isinstance(ingredient, str) or not ingredient.strip():
+        return False, "target_ingredient_missing"
+
+    def _presence(a: dict) -> str:
+        p = a.get("target_ingredient_presence")
+        if p in ("yes", "no", "unknown"):
+            return p
+        # Safe legacy derivation: only an explicit token in the evidenced text
+        # can establish presence. Absence is never inferred from a label.
+        text = " ".join(str(a.get(k) or "") for k in
+                         ("evidenced_arm_text", "intervention_text", "label"))
+        token = _arm_norm(ingredient)
+        if token and re.search(rf"(?<![a-z0-9]){re.escape(token)}(?![a-z0-9])",
+                              _arm_norm(text)):
+            return "yes"
+        if a.get("is_control") is True:
+            return "no"
+        return "unknown"
+
+    def _role(a: dict) -> str:
+        role = a.get("role")
+        if role in ("administered", "measurement_only", "biomarker", "unclear"):
+            return role
+        if type(a.get("is_control")) is bool:
+            return "administered"
+        return "unclear"
+
+    administered = []
+    for a in arms:
+        if not isinstance(a, dict):
+            return False, "malformed_s3_arm"
+        role = _role(a)
+        if role != "administered":
+            # Explicit non-intervention arms cannot silently become controls.
+            if role in ("measurement_only", "biomarker"):
+                continue
+            return False, "unclear_s3_arm_role"
+        p = _presence(a)
+        if p == "unknown":
+            return False, "unknown_s3_ingredient_presence"
+        administered.append((a, p))
+    targets = [a for a, p in administered if p == "yes"]
+    controls = [a for a, p in administered if p == "no"]
+    if not targets:
+        return False, "no_administered_target_arm"
+    if not controls:
+        return False, "no_ingredient_free_control_arm"
+
+    requested_target = claim.get("ingredient_arm")
+    requested_control = claim.get("control_arm")
+    if requested_target is None and requested_control is None:
+        if len(targets) != 1 or len(controls) != 1:
+            return False, "claim_arms_unresolved"
+        selected_target, selected_control = targets[0], controls[0]
+    else:
+        if not isinstance(requested_target, str) or not isinstance(requested_control, str):
+            return False, "claim_arm_names_incomplete"
+        by_label = {_arm_norm(a.get("label")): a for a, _ in administered
+                    if _arm_norm(a.get("label"))}
+        selected_target = by_label.get(_arm_norm(requested_target))
+        selected_control = by_label.get(_arm_norm(requested_control))
+        if selected_target is None or selected_control is None:
+            return False, "claim_arm_not_in_s3"
+        if selected_target is selected_control:
+            return False, "claim_arms_not_distinct"
+        if _presence(selected_target) != "yes":
+            return False, "named_ingredient_arm_not_target"
+        if _presence(selected_control) != "no":
+            return False, "named_control_contains_ingredient"
+    co = selected_target.get("active_cointerventions")
+    # An explicit list is authoritative. A non-empty list means the target is a
+    # combination arm; its result cannot leak into the ingredient-alone score.
+    if isinstance(co, list) and co:
+        return False, "named_target_has_active_cointervention"
+    if selected_target.get("role") in ("measurement_only", "biomarker", "unclear"):
+        return False, "named_target_nonintervention_role"
+
+    test_kind = claim.get("test_kind")
+    if test_kind in ("within_group", "baseline", "time_main_effect", "omnibus", "unknown"):
+        return False, f"invalid_test_kind:{test_kind}"
+    if test_kind is not None and test_kind not in ("between_arm", "group_by_time"):
+        return False, f"invalid_test_kind:{test_kind}"
+    provenance = str(claim.get("statistic_provenance") or "").casefold()
+    statistic = str(claim.get("statistic") or "").casefold()
+    if "omnibus" in provenance or "main effect" in provenance or statistic.startswith("f") and "pair" not in provenance:
+        return False, "omnibus_statistic_not_pairwise"
+    contrast = claim.get("contrast")
+    if contrast in ("vs_ingredient_arm", "within_group", "unclear"):
+        return False, f"invalid_contrast:{contrast}"
+    # A named modern claim must state a usable comparison. Legacy explicit
+    # vs_ingredient_free remains compatible only when arm resolution succeeded.
+    if claim_modern and test_kind is None:
+        return False, "test_kind_missing"
+    return True, "eligible"
+
+
+def _claim_firewall(claim: dict, s3: dict | None, ingredient: str) -> str | None:
+    ok, reason = _resolve_claim_arms(claim, s3, ingredient)
+    return None if ok else reason
+
+
 def to_studies(record: dict, extraction: dict, product: dict,
                registry: dict | None = None, *,
                ignore_population: bool = False,
@@ -215,7 +381,7 @@ def to_studies(record: dict, extraction: dict, product: dict,
 
     dose = study_dose(ingredient, s7)
 
-    def _dose_match_for(outcome_id: str) -> str:
+    def _dose_match_for(outcome_id: str, selected_dose: dict | None = None) -> str:
         """
         THIS STUDY's dose against the PRODUCT's dose. Per study, not per product.
 
@@ -248,10 +414,11 @@ def to_studies(record: dict, extraction: dict, product: dict,
         +1.00 @ 100% precisely where we knew least.)
         """
         del outcome_id  # kept for signature stability; the band no longer enters
-        if dose.get("dose_low_mg") is None:
+        selected_dose = selected_dose or dose
+        if selected_dose.get("dose_low_mg") is None:
             return "unspecified"
         return dosemod.dose_match_for(
-            dose["dose_low_mg"], dose.get("dose_high_mg") or dose["dose_low_mg"],
+            selected_dose["dose_low_mg"], selected_dose.get("dose_high_mg") or selected_dose["dose_low_mg"],
             {"low": product.get("dose_low_mg"), "high": product.get("dose_high_mg")})
 
     rob = _rob_items(s4, registry)
@@ -270,6 +437,20 @@ def to_studies(record: dict, extraction: dict, product: dict,
         if entry.get("discarded") or not entry.get("outcome_vocab_id"):
             continue
         claim = entry["claim"]
+        # Universal arm/test firewall. It is deliberately before any numeric
+        # routing: a beautifully reported number from a baseline, biomarker,
+        # combination, or omnibus test is still the wrong counterfactual.
+        firewall_reason = _claim_firewall(claim, s3, ingredient)
+        if firewall_reason:
+            continue
+        claim_s7 = _s7_for_claim(s7, claim, s3)
+        if isinstance(s7, dict) and isinstance(s7.get("arms"), list) and claim_s7 is None:
+            # Arm-keyed S7 cannot be safely projected onto an unnamed claim.
+            continue
+        claim_form_id = (claim_s7 or {}).get("form_vocab_id") or form_id
+        claim_form_match = vocab.form_match(ingredient, claim_form_id,
+                                            product.get("form_vocab_id"))
+        claim_dose = study_dose(ingredient, claim_s7)
         # CLAIM-LEVEL CONTRAST (v1.13, 2026-08-11). A trial can hold a genuine
         # placebo AND a claim that compares two ingredient arms: audited case --
         # "coingestion vs creatine, ES -0.21..0.14" was filed as a creatine null
@@ -305,16 +486,16 @@ def to_studies(record: dict, extraction: dict, product: dict,
             retracted=bool(record.get("retracted")),
             oa=record.get("oa") or "abstract_only",
             rob_inherited=bool(record.get("rob_inherited")),
-            form_match=form_match,
-            dose_match=_dose_match_for(entry["outcome_vocab_id"]),
+            form_match=claim_form_match,
+            dose_match=_dose_match_for(entry["outcome_vocab_id"], claim_dose),
             dose_factor=dosemod.dose_factor_for(
-                dose.get("dose_low_mg"), dose.get("dose_high_mg"),
+                claim_dose.get("dose_low_mg"), claim_dose.get("dose_high_mg"),
                 {"low": product.get("dose_low_mg"),
                  "high": product.get("dose_high_mg")}),
             pop_match=pop_match,
             direction=direction,
             magnitude=magnitude,
-        ), dose, bool((claim or {}).get("is_primary_outcome"))))
+        ), claim_dose, bool((claim or {}).get("is_primary_outcome"))))
     return out
 
 
@@ -343,6 +524,8 @@ def _effect_s(claim: dict, outcome_vocab_id: str) -> tuple[float | None, str]:
 
     raw = claim.get("effect_size")
     if raw is None:
+        if claim.get("direction") == "null_effect" and not _claim_equivalence_valid(claim):
+            return None, "inconclusive_unquantified"
         return None, "no_effect_size"
 
     # WHICH WAY IS "GOOD"? Never inferred from the number's arithmetic sign.
@@ -364,7 +547,9 @@ def _effect_s(claim: dict, outcome_vocab_id: str) -> tuple[float | None, str]:
     try:
         magnitude = abs(float(raw))
     except (TypeError, ValueError):
-        return None, "unparseable_effect_size"
+        return (None, "inconclusive_unquantified" if
+                claim.get("direction") == "null_effect" and
+                not _claim_equivalence_valid(claim) else "unparseable_effect_size")
 
     # THE NUMBER IS USED ONLY WHEN S5 NAMES THE ARM. No exceptions, no fallback
     # to the reported sign, no fallback to outcome polarity.
@@ -405,10 +590,13 @@ def _effect_s(claim: dict, outcome_vocab_id: str) -> tuple[float | None, str]:
     if direction == "harm" and favours == "ingredient":
         return None, "label_number_contradiction"
     sd = claim.get("effect_sd")
-    if favours == "ingredient":
-        return scoring.standardise_effect(magnitude, claim.get("effect_unit"), sd)
-    if favours == "control":
-        return scoring.standardise_effect(-magnitude, claim.get("effect_unit"), sd)
+    if favours in ("ingredient", "control"):
+        measured, route = scoring.standardise_effect(
+            magnitude if favours == "ingredient" else -magnitude,
+            claim.get("effect_unit"), sd)
+        if measured is None and claim.get("direction") == "null_effect" and not _claim_equivalence_valid(claim):
+            return None, "inconclusive_unquantified"
+        return measured, route
 
     # SIGN UNKNOWN -- "neither", or absent (pre-v1.17 data, or the model declined).
     # Refusing all of these was the first rule and it was too broad: measured on
@@ -435,6 +623,8 @@ def _effect_s(claim: dict, outcome_vocab_id: str) -> tuple[float | None, str]:
                                           claim.get("effect_sd"))
     if s is not None and s <= 0:
         return s, route
+    if claim.get("direction") == "null_effect" and not _claim_equivalence_valid(claim):
+        return None, "inconclusive_unquantified"
     return None, ("favours_neither_but_above_threshold" if favours == "neither"
                   else "sign_convention_unstated")
 
@@ -553,9 +743,23 @@ def _one_study_one_vote(pairs: list[tuple]) -> tuple[list[tuple], int]:
         n_collapsed += len(group) - 1
         if len(group) == 1:
             kept.append(group[0]); continue
-        primaries = [g for g in group if (g[1] or {}).get("is_primary")]
+        # New S5 hierarchy is preferred when evidenced. A declared primary
+        # endpoint leads; an explicit unknown-role sibling mixed with eligible
+        # non-primary claims is intentionally unclear rather than majority-voted
+        # into a direction. The legacy boolean remains compatible.
+        role_primaries = [g for g in group if (g[1] or {}).get("outcome_role") == "primary"]
+        primaries = role_primaries or [g for g in group if (g[1] or {}).get("is_primary")]
         if primaries:
             kept.append(min(primaries, key=_rank)); continue
+        roles = {(g[1] or {}).get("outcome_role") for g in group}
+        if "unknown" in roles and any(r in roles for r in ("secondary", "exploratory")):
+            if any(g[0].direction == "harm" for g in group):
+                kept.append(next(g for g in group if g[0].direction == "harm"))
+            else:
+                candidate = group[0]
+                kept.append((replace(candidate[0], direction="unclear", magnitude=None,
+                                     effect_s=None, effect_route="mixed_role_unclear"), candidate[1]))
+            continue
         counts: dict[str, int] = {}
         for g in group:
             counts[g[0].direction] = counts.get(g[0].direction, 0) + 1
@@ -605,6 +809,16 @@ def _ineligible(ext: dict) -> str | None:
     evidence -- it only fails to gain the refusal.
     """
     s3 = ext.get("S3") or {}
+    arms = s3.get("arms") if isinstance(s3, dict) else None
+    if isinstance(arms, list) and arms:
+        administered = [a for a in arms if isinstance(a, dict) and
+                        a.get("role", "administered") == "administered"]
+        if not administered and any(isinstance(a, dict) and a.get("role") in
+                                     ("measurement_only", "biomarker") for a in arms):
+            return "no_administered_intervention_arm"
+        explicit_presence = [a.get("target_ingredient_presence") for a in administered]
+        if explicit_presence and all(p == "yes" for p in explicit_presence):
+            return "no_ingredient_free_arm"
     if s3.get("comparator") == "all_arms_get_ingredient":
         return "no_ingredient_free_arm"
     if s3.get("self_declared_underpowered") is True:
@@ -697,7 +911,9 @@ def build_ecus(extractions: list[dict], product: dict, *,
                                 else product.get("dose_band"), outcome_id, pop["id"])
             buckets.setdefault(key, []).append(
                 (study, {"outcome_id": outcome_id, "dose": dose,
-                         "is_primary": is_primary}))
+                         "is_primary": is_primary,
+                         "outcome_role": ((next((e.get("claim") for e in ext.get("outcomes", [])
+                                                   if e.get("outcome_vocab_id") == outcome_id), {}) or {}).get("outcome_role"))}))
 
     n_sr_derived = 0
     for rec in (sr_derived or []):

@@ -389,9 +389,9 @@ def main():
           "the unmapped claim was DISCARDED, not bucketed")
     check("benefit outcome scores positive", by_outcome["sleep_onset"]["score"] >= 70,
           f"score {by_outcome['sleep_onset']['score']}")
-    check("nulls on a second outcome score NEGATIVE",
-          by_outcome["anxiety"]["score"] < 100 * S_VALUE["null_effect"] * 0.6,
-          f"score {by_outcome['anxiety']['score']} — dropping nulls would bias every score up")
+    check("unquantified efficacy nulls are inconclusive, not fixed-negative",
+          by_outcome["anxiety"]["score"] == 0,
+          f"score {by_outcome['anxiety']['score']} — no signed estimate means zero signed contribution")
     check("provenance stamped on every row",
           by_outcome["sleep_onset"]["provenance"]["vocab_versions"] == vocab.versions())
 
@@ -1480,9 +1480,10 @@ def main():
                              "outcome_vocab_id": outcome, "discarded": False}]}
         return _ts(rec, ext, product)[0][1]
 
-    check("a null on an EFFICACY outcome stays negative",
-          _one("sleep_onset", "null_effect").s_value() < 0,
-          "invariant 7: a well-run trial finding nothing disconfirms the claim")
+    check("an unquantified EFFICACY null is inconclusive",
+          _one("sleep_onset", "null_effect").s_value() == 0
+          and _one("sleep_onset", "null_effect").effect_route == "inconclusive_unquantified",
+          "without a signed between-arm estimate, a nonsignificant efficacy result is not evidence against")
     check("a null on a SAFETY outcome is reassurance, not failure",
           _one("adverse_events_gi", "null_effect").s_value() > 0,
           "no difference in side effects CONFIRMS 'this is safe'; scoring it "
@@ -1989,7 +1990,8 @@ def main():
     only_ben = _b2([_ext("doi:10.1/a", [("benefit", "meaningful")])],
                    _pr, ignore_population=True)
     check("a benefit/null tie is neither side's win",
-          only_null[0]["score"] < mixed[0]["score"] < only_ben[0]["score"],
+          mixed[0]["components"]["d"] == 0.0
+          and mixed[0]["score"] == only_null[0]["score"] == 0,
           f"null={only_null[0]['score']} tie={mixed[0]['score']} benefit={only_ben[0]['score']}")
     check("a benefit/null tie adds no evidence in either direction",
           mixed[0]["components"]["d"] == 0.0,

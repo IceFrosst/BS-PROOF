@@ -45,6 +45,28 @@ them null_effect. (Six timepoints of one construct is still one claim -- see the
 unit rule above. The two rules do not conflict: never drop a null, never split
 one finding.)
 
+ARM AND TEST PROVENANCE (load-bearing)
+Name the exact `ingredient_arm` and `control_arm` labels used by this claim,
+matching S3, whenever a claim is attributable to a pair. `test_kind` must be
+`between_arm` for a direct endpoint comparison or `group_by_time` only for an
+explicit group×time differential interaction. Use `within_group`, `baseline`,
+`time_main_effect`, or `omnibus` for those tests even when their p-value is
+impressive; they cannot sign a pairwise ingredient effect. `outcome_role` is
+`primary`, `secondary`, `exploratory`, or `unknown` from the paper's stated
+hierarchy, never inferred from significance. Preserve the statistic and its
+provenance (the exact test/contrast it tests), and use `p_operator` for `<`,
+`>`, `<=`, `>=`, `=`, or an explicitly non-significant result. An omnibus F,
+table-wide p, time main effect, or unsigned statistic is not a signed pairwise
+estimate. A group×time differential may support direction, but its omnibus
+magnitude must never be used as the pairwise signed effect.
+
+NULL PRECISION. For a non-significant efficacy result, report `null_precision`
+only when the paper states a precision/equivalence margin or a valid equivalence
+or non-inferiority basis; quote it in `equivalence_basis`. Otherwise preserve
+`direction: null_effect` but do not imply that the null ruled out a meaningful
+effect. The deterministic scorer routes that case as inconclusive_unquantified
+with zero signed contribution.
+
 DIRECTION IS A BETWEEN-ARM CONTRAST. NEVER A WITHIN-GROUP CHANGE.
 A significant time or trial main effect means everyone improved, including the
 control arm. That is training, not the supplement. `benefit` requires the

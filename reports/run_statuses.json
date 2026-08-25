@@ -101,11 +101,11 @@
         "synthetic_demo_fixture"
       ],
       "limitations": [
-        "SYNTHETIC DEMO — hand-written data for previewing the reviewer UI; every number, study and quote is invented.",
+        "SYNTHETIC DEMO \u2014 hand-written data for previewing the reviewer UI; every number, study and quote is invented.",
         "Exists so the per-study attribution and extraction-detail views can be seen populated before the next real pipeline run.",
         "Regenerate with python3 scripts/write_demo_artifact.py; this fixture is deliberately overwritable, unlike real run records."
       ],
-      "note": "SYNTHETIC DEMO — not evidence. Every number is invented."
+      "note": "SYNTHETIC DEMO \u2014 not evidence. Every number is invented."
     },
     "20260812_180548_creatine_creatine-monohydrate_claude-top5-per-o": {
       "status": "experimental",
@@ -135,6 +135,19 @@
         "Scored with the 2026-08-24 dose fix, which brackets a stated dose whose salt the paper never named instead of discarding it. Dose coverage rose from 39 to 74 of 155 studies; muscle_power moved 44 -> 67 and its verdict flipped. Nothing else about the scoring model changed.",
         "Not anchor-validated, and no run of this ingredient has been."
       ]
+    },
+    "20260825_072759": {
+      "status": "invalid",
+      "public_claims_allowed": false,
+      "reason_codes": [
+        "universal_negative_incident_unresolved",
+        "not_claim_validated"
+      ],
+      "limitations": [
+        "Marked invalid for claims pending verification of the 32-study incident ledger.",
+        "No corrected score or audit delta is asserted; audit deltas are not evidence or corrected scores."
+      ],
+      "note": "Invalid for claims. Preserve as an audit reference only; do not quote its scores."
     }
   }
 }

@@ -1076,6 +1076,24 @@ hosting, free literature APIs, and any future database are outside model-run
 cost. The current historical Grok artifact proves 797 live attempts and retained
 latency, but it did not retain token or API-equivalent price fields.
 
+## Current repair state — universal negative effects (2026-08-25)
+
+The universal negative-effect repair is deterministic and ingredient-agnostic.
+S3 arm facts now identify target presence, active cointerventions, evidenced arm
+text, and administered versus measurement-only/biomarker/unclear roles. S7 facts
+are arm-keyed, and S5 names the target/control arms and test provenance. The
+assembler firewall refuses invalid counterfactuals and routes a nonsignificant
+efficacy claim without a usable signed between-arm estimate or explicit valid
+equivalence/non-inferiority basis to `inconclusive_unquantified` with zero
+signed contribution. Measured zero still uses the current effect scale; harm is
+unchanged. Primary endpoint hierarchy leads, mixed unknown-role siblings collapse
+unclear, and safety harm ties remain protected.
+
+Run `20260825_072759` is invalid for claims pending verification of the 32-study
+incident ledger in `docs/history/2026-08-25-universal-negative-incident-ledger.md`.
+An audit delta is not a corrected score or evidence mass. No model/network
+extraction was run for this repair.
+
 ## Next
 
 **Handoff:** active dashboard completion handoff to **Claude Code**,

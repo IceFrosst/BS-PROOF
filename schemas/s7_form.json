@@ -9,6 +9,27 @@
   ],
   "additionalProperties": false,
   "properties": {
+    "arms": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["label"],
+        "properties": {
+          "label": {"type": "string", "maxLength": 80},
+          "form_vocab_id": {"type": ["string", "null"]},
+          "form_raw": {"type": ["string", "null"], "maxLength": 120},
+          "compound_dose_mg": {"type": ["number", "null"], "exclusiveMinimum": 0},
+          "elemental_dose_mg": {"type": ["number", "null"], "exclusiveMinimum": 0},
+          "dose_per_kg_mg": {"type": ["number", "null"], "exclusiveMinimum": 0},
+          "mean_body_mass_kg": {"type": ["number", "null"], "exclusiveMinimum": 0},
+          "dose_basis": {"type": ["string", "null"], "enum": ["elemental_stated", "converted", "compound_only", "unstated", null]},
+          "dose_frequency_per_day": {"type": ["number", "null"], "exclusiveMinimum": 0},
+          "evidence_span": {"type": ["string", "null"], "maxLength": 200}
+        }
+      }
+    },
     "form_vocab_id": {
       "type": [
         "string",

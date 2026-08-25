@@ -303,8 +303,10 @@ def _payload(agent: str, record: dict, text: str, registry: dict | None,
     if agent == "S3":
         # Population vocabulary is NOT sent. S3's prompt lists the four axes and
         # allowed values; shipping the JSON duplicated ~1.9k and pushed S3 over
-        # the CLI input wall (magnesium: 12/54 S3 fails).
-        return base
+        # the CLI input wall (magnesium: 12/54 S3 fails). The target ingredient
+        # is load-bearing for arm eligibility and is therefore explicit rather
+        # than guessed from a named case in the prompt.
+        return {**base, "ingredient": record.get("ingredient")}
     if agent == "S4":
         return {**base,
                 "registry_item3_prospective": (registry or {}).get("item3_prospective"),
