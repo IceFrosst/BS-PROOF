@@ -72,11 +72,12 @@ def _s7_for_claim(s7: dict | None, claim: dict, s3: dict | None,
         return None
 
     def _administered_target(a: dict) -> bool:
-        role = a.get("role")
-        if role is not None and role != "administered":
-            return False
-        presence = a.get("target_ingredient_presence")
-        return presence == "yes"
+        # An arm-keyed S7 row is usable only when S3 explicitly evidenced that
+        # the corresponding arm was administered. A null/omitted role is not a
+        # safe fallback: it could be a biomarker or measurement row carrying a
+        # tempting dose.
+        return (a.get("role") == "administered" and
+                a.get("target_ingredient_presence") == "yes")
 
     targets = [a for a in s3_arms if isinstance(a, dict) and _administered_target(a)
                and _arm_norm(a.get("label"))]
@@ -345,9 +346,10 @@ def _resolve_claim_arms(claim: dict, s3: dict | None, ingredient: str,
     if not modern and not claim_modern:
         if contract_version and str(contract_version).startswith("legacy-"):
             return True, "legacy_contract"
-        # Keep the pre-arm shape for old in-process callers only; any arm-level
-        # facts or claim provenance above has already entered the strict route.
-        return True, "legacy_contract"
+        # Compatibility is explicit, never inferred from omitted provenance.
+        # Unversioned cache rows cannot be distinguished from malformed fresh
+        # output, so the only safe behaviour is to under-count and re-extract.
+        return False, "extraction_version_missing"
     if explicit_v124:
         required_claim = ("ingredient_arm", "control_arm", "test_kind",
                           "outcome_role", "statistic_provenance", "contrast")
@@ -484,9 +486,19 @@ def to_studies(record: dict, extraction: dict, product: dict,
     s3, s4, s7, s8 = (extraction.get(k) for k in ("S3", "S4", "S7", "S8"))
     s5 = extraction.get("S5") if isinstance(extraction.get("S5"), dict) else {}
     ingredient = record["ingredient"]
-    contract_version = ((s3 or {}).get("extraction_version") or
-                        (s5 or {}).get("extraction_version") or
-                        (s7 or {}).get("extraction_version"))
+    contract_parts = (s3, s5, s7)
+    contract_values = [part.get("extraction_version")
+                       if isinstance(part, dict) else None
+                       for part in contract_parts]
+    # S3/S5/S7 are one joined contract. Every component must state the same
+    # version: a missing value is just as unsafe as a mixed value because it
+    # lets malformed v1.24 output impersonate a legacy cache row.
+    if any(value is None for value in contract_values):
+        return []
+    contract_versions = set(contract_values)
+    if len(contract_versions) != 1:
+        return []
+    contract_version = contract_values[0]
     modern_contract = contract_version == "v1.24"
 
     form_id = (s7 or {}).get("form_vocab_id") or vocab.unspecified_form_id(ingredient)
@@ -564,20 +576,41 @@ def to_studies(record: dict, extraction: dict, product: dict,
         # Counterfactual arm rules scope to efficacy. Safety harm signals are
         # valid in observational/no-arm reports and must not disappear merely
         # because an efficacy comparison cannot be established.
-        safety_signal = (vocab.outcome_kind(entry["outcome_vocab_id"]) ==
-                         "adverse_event" or claim.get("direction") == "harm")
-        firewall_reason = (None if safety_signal else
+        adverse_event = (vocab.outcome_kind(entry["outcome_vocab_id"]) ==
+                         "adverse_event")
+        safety_signal = adverse_event and claim.get("direction") == "harm"
+        # Only an adverse-event HARM may use the observational safety route.
+        # Efficacy harms still need a valid counterfactual, and a reassuring
+        # safety null needs a control. Modern safety harms must at minimum prove
+        # exposure to the target ingredient; otherwise a biomarker/tracer paper
+        # could manufacture a safety signal without administering the product.
+        modern_target_exposure = any(
+            isinstance(arm, dict)
+            and arm.get("role") == "administered"
+            and arm.get("target_ingredient_presence") == "yes"
+            for arm in ((s3 or {}).get("arms") or []))
+        safety_bypass = safety_signal and (
+            not modern_contract or modern_target_exposure)
+        firewall_reason = (None if safety_bypass else
                            _claim_firewall(claim, s3, ingredient,
                                            contract_version=contract_version))
         if firewall_reason:
             continue
         claim_s7 = _s7_for_claim(s7, claim, s3, modern=modern_contract)
-        if (not safety_signal and isinstance(s7, dict)
+        if (not safety_bypass and isinstance(s7, dict)
                 and isinstance(s7.get("arms"), list) and claim_s7 is None):
             # Arm-keyed S7 cannot be safely projected onto an efficacy claim;
             # safety direction remains eligible even when form/dose is absent.
             continue
-        claim_form_id = (claim_s7 or {}).get("form_vocab_id") or form_id
+        # Modern arm-keyed S7 has no top-level fallback. A safety claim may
+        # remain eligible without a dose, but must not inherit a control or
+        # ambiguous top-level form and thereby claim exact-form applicability.
+        if claim_s7 is not None:
+            claim_form_id = claim_s7.get("form_vocab_id") or vocab.unspecified_form_id(ingredient)
+        elif modern_contract:
+            claim_form_id = vocab.unspecified_form_id(ingredient)
+        else:
+            claim_form_id = form_id
         claim_form_match = vocab.form_match(ingredient, claim_form_id,
                                             product.get("form_vocab_id"))
         claim_dose = study_dose(ingredient, claim_s7)
@@ -682,6 +715,8 @@ def _effect_s(claim: dict, outcome_vocab_id: str) -> tuple[float | None, str]:
         return (None, "inconclusive_unquantified" if
                 claim.get("direction") == "null_effect" and
                 not _claim_equivalence_valid(claim) else "unparseable_effect_size")
+    if not math.isfinite(magnitude):
+        return None, "unparseable_effect_size"
 
     # THE NUMBER IS USED ONLY WHEN S5 NAMES THE ARM. No exceptions, no fallback
     # to the reported sign, no fallback to outcome polarity.

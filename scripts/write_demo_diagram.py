@@ -349,15 +349,16 @@ feed the ARCS now, not the weight.""".strip("\n"), GREY) + 30
 py = panel(px, py, pw, "WHAT ONE STUDY CONTRIBUTES  (s_i)", f"""
   meaningful benefit   {S_VALUE['benefit_meaningful']:+.1f}
   trivial benefit      {S_VALUE['benefit_trivial']:+.1f}
-  null / no effect     {S_VALUE['null_effect']:+.1f}   <-- NOT zero
+  quantified null      {S_VALUE['null_effect']:+.2f}  measured/equivalence
+  unquantified NS       0.0   inconclusive
   harm                 {S_VALUE['harm']:+.1f}
 
-A well-run trial that found nothing is evidence
-AGAINST, not an absence of evidence. Competitors
-count studies; counting studies rewards a supplement
-for being tested and failing.
+A measured zero or successful equivalence result is
+evidence AGAINST; a p>0.05 label without a usable
+signed estimate or precision basis is retained as
+inconclusive, not converted into a fixed negative.
 
-Exception: for an ADVERSE-EVENT outcome a null is
+Exception: a valid controlled ADVERSE-EVENT null is
 reassurance, and is scored as such.""".strip("\n"), GREY) + 30
 
 py = panel(px, py, pw, "WHY 0-100 DOESN'T LIE", """

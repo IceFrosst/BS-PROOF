@@ -44,7 +44,8 @@ DIRECTION IS RELATIVE TO THE SUPPLEMENT DOING SOMETHING GOOD.
   unclear     - genuinely cannot tell from the text
 
 null_effect is a real, informative finding, not a missing value. Report it.
-The pipeline treats a null as evidence AGAINST the product's claim, so failing
+The pipeline treats a valid measured or equivalence-supported null as evidence
+AGAINST the product's claim; unquantified nonsignificance is inconclusive, so failing
 to extract nulls would systematically bias every score upward. If a study
 measured six DISTINCT CONSTRUCTS and five were null, emit six claims, five of
 them null_effect. (Six timepoints of one construct is still one claim -- see the

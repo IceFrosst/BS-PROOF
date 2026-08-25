@@ -24,7 +24,8 @@ For EVERY arm also report:
   supplied in this payload (never infer from the outcome or study title);
   active_cointerventions: named active substances administered in that arm,
   excluding carriers, flavouring, training shared by all arms and the target
-  ingredient itself; and
+  ingredient itself. Use [] only when the evidence establishes there are none;
+  use null when cointerventions cannot be determined; and
   role: administered / measurement_only / biomarker / unclear.
 A measurement-only, biomarker, or unclear arm is not an intervention arm and
 must never be used as a comparator. In a crossover trial, list the conditions

@@ -2,10 +2,16 @@
  "type": "object",
  "required": [
   "form_vocab_id",
+  "form_raw",
   "salt_family",
   "elemental_dose_mg",
+  "compound_dose_mg",
+  "dose_per_kg_mg",
+  "mean_body_mass_kg",
   "dose_basis",
+  "dose_frequency_per_day",
   "confidence",
+  "evidence_span",
   "extraction_version",
   "arms"
  ],
@@ -152,12 +158,16 @@
    "exclusiveMinimum": 0
   },
   "dose_basis": {
-   "type": "string",
+   "type": [
+    "string",
+    "null"
+   ],
    "enum": [
     "elemental_stated",
     "converted",
     "compound_only",
-    "unstated"
+    "unstated",
+    null
    ]
   },
   "dose_frequency_per_day": {
@@ -167,7 +177,10 @@
    ]
   },
   "confidence": {
-   "type": "number",
+   "type": [
+    "number",
+    "null"
+   ],
    "minimum": 0,
    "maximum": 1
   },

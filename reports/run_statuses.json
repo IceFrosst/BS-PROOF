@@ -101,11 +101,11 @@
         "synthetic_demo_fixture"
       ],
       "limitations": [
-        "SYNTHETIC DEMO \u2014 hand-written data for previewing the reviewer UI; every number, study and quote is invented.",
+        "SYNTHETIC DEMO — hand-written data for previewing the reviewer UI; every number, study and quote is invented.",
         "Exists so the per-study attribution and extraction-detail views can be seen populated before the next real pipeline run.",
         "Regenerate with python3 scripts/write_demo_artifact.py; this fixture is deliberately overwritable, unlike real run records."
       ],
-      "note": "SYNTHETIC DEMO \u2014 not evidence. Every number is invented."
+      "note": "SYNTHETIC DEMO — not evidence. Every number is invented."
     },
     "20260812_180548_creatine_creatine-monohydrate_claude-top5-per-o": {
       "status": "experimental",

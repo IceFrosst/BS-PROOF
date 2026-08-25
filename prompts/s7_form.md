@@ -1,8 +1,10 @@
 S7 form_normalizer
 
 CONTRACT VERSION
-Return `extraction_version: "v1.24"` exactly. The `arms` array and every arm
-property are required; use null for unavailable facts. Legacy top-level output is
+Return `extraction_version: "v1.24"` exactly. The `arms` array, every arm
+property, and every top-level schema property are required; use null for
+unavailable nullable facts. For multi-arm studies, keep the top-level legacy
+summary fields null rather than borrowing one arm. Legacy top-level output is
 accepted only when it explicitly carries a legacy extraction version.
 
 You receive an intervention description and the ingredient's form vocabulary.

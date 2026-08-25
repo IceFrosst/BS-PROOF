@@ -5,6 +5,7 @@
   "duration_days",
   "evidence_spans",
   "n_randomised",
+  "n_analysed",
   "population_axes",
   "population_text",
   "registration_id",
@@ -80,7 +81,10 @@
       ]
      },
      "active_cointerventions": {
-      "type": "array",
+      "type": [
+       "array",
+       "null"
+      ],
       "items": {
        "type": "string",
        "maxLength": 120

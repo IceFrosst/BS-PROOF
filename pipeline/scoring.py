@@ -163,6 +163,8 @@ def standardise_effect(value: float | None, unit: str | None,
         v = float(value)
     except (TypeError, ValueError):
         return None, "unparseable_effect_size"
+    if not math.isfinite(v):
+        return None, "unparseable_effect_size"
     u = (unit or "").strip().lower()
     if u in _NO_UNIT:
         return None, "no_unit"          # a bare number could be kg or an SMD

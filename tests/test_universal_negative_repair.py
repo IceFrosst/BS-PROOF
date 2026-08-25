@@ -34,6 +34,14 @@ class UniversalNegativeRepairTests(unittest.TestCase):
         s7 = {"arms": [{"label": "Placebo", "compound_dose_mg": 5000}]}
         self.assertIsNone(_s7_for_claim(s7, {"ingredient_arm": "Creatine"}, self.s3))
 
+    def test_arm_keyed_s7_requires_explicit_administered_role(self):
+        s3 = {"arms": [
+            {"label": "Creatine", "target_ingredient_presence": "yes", "role": None},
+            {"label": "Placebo", "target_ingredient_presence": "no", "role": "administered"},
+        ]}
+        s7 = {"arms": [{"label": "Creatine", "compound_dose_mg": 5000}]}
+        self.assertIsNone(_s7_for_claim(s7, {"ingredient_arm": "Creatine"}, s3))
+
     def test_modern_top_level_s7_and_missing_provenance_refuse(self):
         modern_s7 = {"extraction_version": "v1.24", "compound_dose_mg": 5000}
         self.assertIsNone(_s7_for_claim(modern_s7, {"ingredient_arm": "Creatine"}, self.s3, modern=True))
@@ -53,7 +61,9 @@ class UniversalNegativeRepairTests(unittest.TestCase):
         ]}
         ok, reason = _resolve_claim_arms(
             {"ingredient_arm": "Creatine", "control_arm": "Placebo", "test_kind": "between_arm",
-             "outcome_role": "primary", "statistic_provenance": "pairwise"}, s3, "creatine")
+             "outcome_role": "primary", "statistic_provenance": "pairwise",
+             "contrast": "vs_ingredient_free"}, s3, "creatine",
+            contract_version="v1.24")
         self.assertFalse(ok)
         self.assertEqual(reason, "claim_arm_not_unique_in_s3")
 
@@ -70,11 +80,13 @@ class UniversalNegativeRepairTests(unittest.TestCase):
             {"label": "B", "target_ingredient_presence": "no", "role": "administered", "active_cointerventions": ["B"]},
         ]}
         claim = self._claim(ingredient_arm="A+B", control_arm="B")
-        self.assertEqual(_resolve_claim_arms(claim, factorial, "A"), (True, "eligible"))
+        self.assertEqual(_resolve_claim_arms(
+            claim, factorial, "A", contract_version="v1.24"), (True, "eligible"))
         self.assertIsNone(_ineligible({"S3": {**factorial, "ingredient_isolated": "no"}, "record": {"ingredient": "A"}}))
         unmatched = {"arms": [dict(factorial["arms"][0]), dict(factorial["arms"][1])]}
         unmatched["arms"][1]["active_cointerventions"] = ["C"]
-        ok, reason = _resolve_claim_arms(claim, unmatched, "A")
+        ok, reason = _resolve_claim_arms(
+            claim, unmatched, "A", contract_version="v1.24")
         self.assertFalse(ok)
         self.assertEqual(reason, "unmatched_active_cointerventions")
 
@@ -112,11 +124,86 @@ class UniversalNegativeRepairTests(unittest.TestCase):
         bad_unit = dict(valid, equivalence_basis={**valid["equivalence_basis"], "margin_unit": "percent"})
         self.assertFalse(_claim_equivalence_valid(bad_unit))
 
+    def test_mixed_s3_s5_s7_contract_versions_refuse_before_joining(self):
+        extraction = {
+            "S3": {"extraction_version": "v1.24"},
+            "S5": {"extraction_version": "legacy-v1.23", "claims": []},
+            "S7": {"extraction_version": "v1.24"},
+            "outcomes": [],
+        }
+        record = {"_canonical": "mixed", "ingredient": "creatine", "design_rank": 4}
+        product = {"ingredient": "creatine", "form_vocab_id": "creatine_monohydrate",
+                   "population": {}}
+        self.assertEqual(to_studies(record, extraction, product), [])
+
+    def test_safety_claim_without_matching_s7_does_not_inherit_top_level_form(self):
+        extraction = {
+            "S3": {"extraction_version": "v1.24", "arms": [
+                {"label": "Exposed", "target_ingredient_presence": "yes",
+                 "role": "administered", "active_cointerventions": []},
+                {"label": "Placebo", "target_ingredient_presence": "no",
+                 "role": "administered", "active_cointerventions": []}
+            ]},
+            "S5": {"extraction_version": "v1.24"},
+            "S7": {"extraction_version": "v1.24", "form_vocab_id": "creatine_monohydrate",
+                   "arms": [{"label": "Placebo", "form_vocab_id": "creatine_monohydrate"}]},
+            "outcomes": [{"outcome_vocab_id": "adverse_events_any", "discarded": False,
+                           "claim": {"direction": "harm"}}],
+        }
+        record = {"_canonical": "safety", "ingredient": "creatine", "design_rank": 6}
+        product = {"ingredient": "creatine", "form_vocab_id": "creatine_monohydrate",
+                   "population": {}}
+        rows = to_studies(record, extraction, product)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0][1].form_match, "unspecified")
+
+    def test_nonfinite_effect_size_is_refused(self):
+        for value in (float("nan"), float("inf"), float("-inf")):
+            claim = self._claim(direction="benefit", effect_size=value,
+                                effect_unit="smd", effect_favours="ingredient")
+            self.assertEqual(_effect_s(claim, "muscle_strength"),
+                             (None, "unparseable_effect_size"))
+
+    def test_unversioned_contract_never_enters_legacy_route(self):
+        self.assertEqual(
+            _resolve_claim_arms({}, None, "ingredient"),
+            (False, "extraction_version_missing"))
+        record = {"_canonical": "unversioned", "ingredient": "creatine", "design_rank": 4}
+        extraction = {
+            "S3": {}, "S5": {"claims": []}, "S7": {},
+            "outcomes": [{"outcome_vocab_id": "muscle_strength", "discarded": False,
+                           "claim": {"direction": "harm"}}],
+        }
+        product = {"ingredient": "creatine", "form_vocab_id": "creatine_monohydrate",
+                   "population": {}}
+        self.assertEqual(to_studies(record, extraction, product), [])
+
+    def test_efficacy_harm_and_reassuring_safety_null_need_counterfactual(self):
+        base = {
+            "S3": {"extraction_version": "v1.24", "arms": []},
+            "S5": {"extraction_version": "v1.24", "claims": []},
+            "S7": {"extraction_version": "v1.24", "arms": []},
+        }
+        product = {"ingredient": "creatine", "form_vocab_id": "creatine_monohydrate",
+                   "population": {}}
+        record = {"_canonical": "bad-counterfactual", "ingredient": "creatine", "design_rank": 4}
+        for outcome, direction in (("muscle_strength", "harm"),
+                                   ("adverse_events_any", "null_effect"),
+                                   ("adverse_events_any", "harm")):
+            extraction = {**base, "outcomes": [{
+                "outcome_vocab_id": outcome, "discarded": False,
+                "claim": {"direction": direction, "test_kind": "within_group"},
+            }]}
+            self.assertEqual(to_studies(record, extraction, product), [])
+
     def test_safety_harm_observational_route_is_not_efficacy_firewalled(self):
         record = {"_canonical": "obs", "ingredient": "creatine", "design_rank": 6}
-        extraction = {"S3": None, "S7": None,
-                      "outcomes": [{"outcome_vocab_id": "adverse_events_any", "discarded": False,
-                                     "claim": {"direction": "harm", "magnitude": None}}]}
+        extraction = {
+            "S3": {"extraction_version": "legacy-v1.23"},
+            "S5": {"extraction_version": "legacy-v1.23", "claims": []},
+            "S7": {"extraction_version": "legacy-v1.23"},
+            "outcomes": [{"outcome_vocab_id": "adverse_events_any", "discarded": False,
+                           "claim": {"direction": "harm", "magnitude": None}}]}
         product = {"ingredient": "creatine", "form_vocab_id": "creatine_monohydrate",
                    "population": {}}
         rows = to_studies(record, extraction, product)
@@ -124,9 +211,10 @@ class UniversalNegativeRepairTests(unittest.TestCase):
         self.assertEqual(rows[0][1].s_value(), -1.0)
 
     def test_outcome_role_is_carried_from_exact_claim_not_rejoined_by_id(self):
-        s3 = {"comparator": "ingredient_free", "ingredient_isolated": "yes",
-              "arms": self.s3["arms"]}
-        extraction = {"S3": s3, "S7": None, "S5": {"extraction_version": "legacy-v1.23"},
+        s3 = {"extraction_version": "legacy-v1.23", "comparator": "ingredient_free",
+              "ingredient_isolated": "yes", "arms": self.s3["arms"]}
+        extraction = {"S3": s3, "S7": {"extraction_version": "legacy-v1.23"},
+                      "S5": {"extraction_version": "legacy-v1.23"},
                       "outcomes": [
                           {"outcome_vocab_id": "muscle_strength", "discarded": False,
                            "claim": self._claim(direction="benefit", outcome_role="secondary")},
@@ -149,10 +237,22 @@ class UniversalNegativeRepairTests(unittest.TestCase):
             from jsonschema import Draft7Validator
         except ImportError:
             self.skipTest("jsonschema unavailable")
+        schemas = {}
         for name in ("s3_study.json", "s5_conclusion.json", "s7_form.json"):
             schema = json.loads((Path(__file__).parents[1] / "schemas" / name).read_text())
+            schemas[name] = schema
             self.assertIn("extraction_version", schema["required"])
             self.assertIn("v1.24", schema["properties"]["extraction_version"]["enum"])
+        self.assertIn("n_analysed", schemas["s3_study.json"]["required"])
+        self.assertIn("claims", schemas["s5_conclusion.json"]["required"])
+        self.assertTrue(Draft7Validator(schemas["s5_conclusion.json"]).is_valid(
+            {"extraction_version": "v1.24", "claims": []}))
+        self.assertFalse(Draft7Validator(schemas["s5_conclusion.json"]).is_valid(
+            {"extraction_version": "v1.24"}))
+        self.assertFalse(Draft7Validator(schemas["s3_study.json"]).is_valid(
+            {"extraction_version": "v1.24", "arms": []}))
+        self.assertFalse(Draft7Validator(schemas["s7_form.json"]).is_valid(
+            {"extraction_version": "v1.24", "arms": []}))
 
 
 if __name__ == "__main__":

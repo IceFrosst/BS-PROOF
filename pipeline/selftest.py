@@ -366,13 +366,16 @@ def main():
                 "registry": {"item3_prospective": 1, "dropout_rate": 0.05,
                              "n_enrolled": 120},
                 "extraction": {
-                    "S3": {"n_randomised": 120, "population_axes": axes},
+                    "S3": {"extraction_version": "legacy-v1.23",
+                           "n_randomised": 120, "population_axes": axes},
+                    "S5": {"extraction_version": "legacy-v1.23"},
                     "S4": {"item1_randomisation_method": 1,
                            "item2_double_blind_placebo": 1,
                            "item3_prospective_registration": None,
                            "item4_outcome_matches_registry": 1,
                            "item5_attrition_ok": None, "item6_itt": 1},
-                    "S7": {"form_vocab_id": form},
+                    "S7": {"extraction_version": "legacy-v1.23",
+                           "form_vocab_id": form},
                     "S8": {"funding_class": "independent"},
                     "outcomes": [
                         {"claim": {"direction": direction, "magnitude": mag},
@@ -440,15 +443,21 @@ def main():
           f"APPLY_POP_IN_WEIGHT is off, so re-enabling costs one line")
     _, st_unknown, _, _ = to_studies(
         {"_canonical": "x", "ingredient": "magnesium", "design_rank": 4},
-        {"S3": None, "outcomes": [{"claim": {"direction": "benefit"},
-                                   "outcome_vocab_id": "sleep_onset",
-                                   "discarded": False}]}, product)[0]
+        {"S3": {"extraction_version": "legacy-v1.23"},
+         "S5": {"extraction_version": "legacy-v1.23"},
+         "S7": {"extraction_version": "legacy-v1.23"},
+         "outcomes": [{"claim": {"direction": "benefit"},
+                        "outcome_vocab_id": "sleep_onset",
+                        "discarded": False}]}, product)[0]
     check("S3 failure -> population unknown, not assumed exact",
           st_unknown.pop_match != "exact", f"pop_match={st_unknown.pop_match}")
 
     check("missing S8 -> undisclosed, the vocabulary's own value",
           to_studies({"_canonical": "x", "ingredient": "magnesium", "design_rank": 4},
-                     {"S8": None, "outcomes": [
+                     {"S3": {"extraction_version": "legacy-v1.23"},
+                      "S5": {"extraction_version": "legacy-v1.23"},
+                      "S7": {"extraction_version": "legacy-v1.23"},
+                      "S8": None, "outcomes": [
                          {"claim": {"direction": "benefit"},
                           "outcome_vocab_id": "sleep_onset", "discarded": False}]},
                      product)[0][1].funding == "undisclosed")
@@ -1474,7 +1483,10 @@ def main():
     def _one(outcome, direction):
         rec = {"_canonical": "x", "ingredient": "magnesium", "design_rank": 4,
                "oa": "full_text"}
-        ext = {"S3": {"n_randomised": 100}, "S7": {"form_vocab_id": "magnesium_glycinate"},
+        ext = {"S3": {"extraction_version": "legacy-v1.23", "n_randomised": 100},
+               "S5": {"extraction_version": "legacy-v1.23"},
+               "S7": {"extraction_version": "legacy-v1.23",
+                      "form_vocab_id": "magnesium_glycinate"},
                "S8": {"funding_class": "independent"},
                "outcomes": [{"claim": {"direction": direction, "magnitude": None},
                              "outcome_vocab_id": outcome, "discarded": False}]}
@@ -1950,8 +1962,11 @@ def main():
     def _ext(canonical, claims):
         return {"record": {"_canonical": canonical, "ingredient": "creatine",
                            "design_rank": 4, "oa": "full_text"},
-                "extraction": {"S3": {"n_randomised": 40},
-                               "S7": {"form_vocab_id": "creatine_monohydrate"},
+                "extraction": {"S3": {"extraction_version": "legacy-v1.23",
+                                      "n_randomised": 40},
+                               "S5": {"extraction_version": "legacy-v1.23"},
+                               "S7": {"extraction_version": "legacy-v1.23",
+                                      "form_vocab_id": "creatine_monohydrate"},
                                "outcomes": [
                                    {"outcome_vocab_id": "muscle_strength",
                                     "claim": {"direction": d, "magnitude": m}}
@@ -2005,8 +2020,11 @@ def main():
     def _ext_sized(canonical, claims):
         return {"record": {"_canonical": canonical, "ingredient": "creatine",
                            "design_rank": 4, "oa": "full_text"},
-                "extraction": {"S3": {"n_randomised": 40},
-                               "S7": {"form_vocab_id": "creatine_monohydrate"},
+                "extraction": {"S3": {"extraction_version": "legacy-v1.23",
+                                      "n_randomised": 40},
+                               "S5": {"extraction_version": "legacy-v1.23"},
+                               "S7": {"extraction_version": "legacy-v1.23",
+                                      "form_vocab_id": "creatine_monohydrate"},
                                "outcomes": [
                                    {"outcome_vocab_id": "muscle_strength",
                                     "claim": {"direction": d, "magnitude": m,
@@ -2264,8 +2282,10 @@ def main():
                            "ingredient": "creatine", "design_rank": 4,
                            "oa": "full_text"},
                 "extraction": {
-                    "S3": {"n_randomised": 40},
-                    "S7": {"form_vocab_id": "creatine_monohydrate",
+                    "S3": {"extraction_version": "legacy-v1.23", "n_randomised": 40},
+                    "S5": {"extraction_version": "legacy-v1.23"},
+                    "S7": {"extraction_version": "legacy-v1.23",
+                           "form_vocab_id": "creatine_monohydrate",
                            "elemental_dose_mg": dose_mg},
                     "outcomes": [{"outcome_vocab_id": outcome_id,
                                   "claim": {"direction": direction,
@@ -2275,7 +2295,11 @@ def main():
     # was never bound at all.
     no_outcomes = [{"record": {"_canonical": "doi:10.1/none", "ingredient": "creatine",
                                "design_rank": 4, "oa": "full_text"},
-                    "extraction": {"S3": {"n_randomised": 40}, "outcomes": []}}]
+                    "extraction": {"S3": {"extraction_version": "legacy-v1.23",
+                                              "n_randomised": 40},
+                                   "S5": {"extraction_version": "legacy-v1.23"},
+                                   "S7": {"extraction_version": "legacy-v1.23"},
+                                   "outcomes": []}}]
     try:
         _build(no_outcomes, _prod, ignore_population=True)
         crashed = False
@@ -2366,11 +2390,16 @@ def main():
           _to_studies(
               [{"record": {"_canonical": "doi:10.1/nodose", "ingredient": "creatine",
                            "design_rank": 4, "oa": "full_text"},
-                "extraction": {"S3": {"n_randomised": 40},
+                "extraction": {"S3": {"extraction_version": "legacy-v1.23",
+                                      "n_randomised": 40},
+                               "S5": {"extraction_version": "legacy-v1.23"},
+                               "S7": {"extraction_version": "legacy-v1.23"},
                                "outcomes": [{"outcome_vocab_id": "muscle_strength",
                                              "claim": {"direction": "benefit",
                                                        "magnitude": "meaningful"}}]}}][0]["record"],
-              {"S3": {"n_randomised": 40},
+              {"S3": {"extraction_version": "legacy-v1.23", "n_randomised": 40},
+               "S5": {"extraction_version": "legacy-v1.23"},
+               "S7": {"extraction_version": "legacy-v1.23"},
                "outcomes": [{"outcome_vocab_id": "muscle_strength",
                              "claim": {"direction": "benefit",
                                        "magnitude": "meaningful"}}]},

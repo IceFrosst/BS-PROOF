@@ -1,8 +1,11 @@
 # Universal-negative incident ledger — 2026-08-25
 
 This ledger records the available evidence behind the 32-study universal-negative
-repair. It is an audit aid, not a corrected score, and the audit delta must never
-be treated as evidence mass or a rescore.
+repair. The complete machine-readable source roster is
+`docs/history/2026-08-25-negative-contributors.v1.json` (32 studies, 43 rows,
+−95.73 original points; source bundle SHA-256 recorded in that file). It is an
+audit aid, not a corrected score, and the audit delta must never be treated as
+evidence mass or a rescore.
 
 ## Scope and evidence boundary
 
@@ -25,14 +28,17 @@ this repair.
 | 7 | Primary endpoint precedence already existed as a boolean rule, while the richer primary/secondary/exploratory/unknown hierarchy was absent. | `_one_study_one_vote()` and S5 schema. | Explicit primary roles lead; mixed known/unknown siblings collapse unclear, with harm tie protection retained. |
 | 8 | Measurement-only and biomarker mentions are not administered intervention arms. | S3 arm contract and generic relevance tests. | Explicit nonintervention roles cannot be used as target or control. |
 | 9 | Historical run `20260807_164410_creatine_creatine-monohydrate_grok-sr-ft-per-o` is already marked invalid. | `reports/run_statuses.json`: invalid S8 model, all studies partial, predates health axis, no anchor validation. | It cannot support product claims. |
-| 10 | No corrected score is available for run `20260825_072759`. | No retained validated artifact or extraction was available in this worktree. | The run is marked invalid for claims only; no score or delta is asserted. |
+| 10 | No corrected score is available for run `20260825_072759`. | The negative-contributor bundle contains only the affected side of the score and cannot reproduce the nonlinear composite. | The run is marked invalid for claims only; no score or delta is asserted. |
+| 11 | The source bundle reconciles to 32 studies, 43 contributions, and −95.73 points. | `2026-08-25-negative-contributors.v1.json`, pinned to bundle SHA-256 `8e5529754ddaa4bea206f5377cf7a0c777054333a7fbd0a18de0152d907f1c96`. | Every source row has a durable disposition; quarantine is not reclassification to benefit. |
+| 12 | Two records administered no target ingredient as an intervention. | Primary DOI/registry verification for `doi:101093geronaglaa162` and `registry:nct04048616`; the labelled ingredient was a measurement tracer. | Both are `exclude_scope`; this rule is implemented generically through arm role/presence, not by DOI or ingredient name. |
 
 ## Unresolved facts
 
-- The 32-study incident roster, paper-level adjudications, and any corrected
-  per-claim scores were not present as a complete retained artifact in this
-  worktree. They must be supplied from the source run or independently verified
-  before any row is promoted from unresolved to verified.
+- The 32-study roster and all 43 original contribution rows are retained in the
+  machine-readable ledger. Apart from the two primary-source-verified scope
+  exclusions, rows remain `quarantine_reextract` with `bundle_only` verification;
+  paper-level corrected claims still require independent verification before any
+  row is promoted or scored.
 - The fraction of affected claims that had a valid equivalence or
   non-inferiority basis is unknown until the affected extraction envelopes are
   reviewed.

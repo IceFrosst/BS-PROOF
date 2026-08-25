@@ -1,0 +1,1049 @@
+{
+  "schema_version": "1.0",
+  "audit_id": "2026-08-25-universal-negative",
+  "source_run_id": "20260825_072759_creatine_creatine-monohydrate_claude-sr-ft-top5-suppl",
+  "source_bundle_sha256": "8e5529754ddaa4bea206f5377cf7a0c777054333a7fbd0a18de0152d907f1c96",
+  "source_totals": {
+    "studies": 32,
+    "contributions": 43,
+    "points": -95.73
+  },
+  "limitations": [
+    "negative-contributor-conditioned sample",
+    "bundle facts are not corrected claims",
+    "quarantine is not benefit",
+    "no corrected aggregate score is asserted"
+  ],
+  "adjudications": [
+    {
+      "study_id": "doi:101249mss0000000000003202",
+      "title": "A 2-yr Randomized Controlled Trial on Creatine Supplementation during Exercise for Postmenopausal Bone Health.",
+      "year": 2023,
+      "doi": "10.1249/mss.0000000000003202",
+      "pmid": "37144634",
+      "primary_source_links": [
+        "https://doi.org/10.1249/mss.0000000000003202",
+        "https://pubmed.ncbi.nlm.nih.gov/37144634/"
+      ],
+      "original_total_points": -12.22,
+      "original_contributions": [
+        {
+          "outcome_vocab_id": "muscle_strength",
+          "outcome_label": "Muscle strength",
+          "direction": "null_effect",
+          "effect_route": "favours_neither_but_above_threshold",
+          "s": -0.35,
+          "w": 0.6,
+          "points": -5.26
+        },
+        {
+          "outcome_vocab_id": "lean_body_mass",
+          "outcome_label": "Lean body mass",
+          "direction": "null_effect",
+          "effect_route": "raw_unit_needs_sd",
+          "s": -0.35,
+          "w": 0.6,
+          "points": -6.96
+        }
+      ],
+      "action": "quarantine_reextract",
+      "primary_cause": "claim_level_adjudication_pending",
+      "source_verification": "bundle_only",
+      "verified_finding": null,
+      "replacement_claim": null,
+      "corrected_score_asserted": false
+    },
+    {
+      "study_id": "doi:103390nu12010193",
+      "title": "Effect of Ten Weeks of Creatine Monohydrate Plus HMB Supplementation on Athletic Performance Tests in Elite Male Endurance Athletes.",
+      "year": 2020,
+      "doi": "10.3390/nu12010193",
+      "pmid": "31936727",
+      "primary_source_links": [
+        "https://doi.org/10.3390/nu12010193",
+        "https://pubmed.ncbi.nlm.nih.gov/31936727/"
+      ],
+      "original_total_points": -10.16,
+      "original_contributions": [
+        {
+          "outcome_vocab_id": "exercise_endurance",
+          "outcome_label": "Endurance performance",
+          "direction": "null_effect",
+          "effect_route": "no_effect_size",
+          "s": -0.35,
+          "w": 0.7236,
+          "points": -10.16
+        }
+      ],
+      "action": "quarantine_reextract",
+      "primary_cause": "claim_level_adjudication_pending",
+      "source_verification": "bundle_only",
+      "verified_finding": null,
+      "replacement_claim": null,
+      "corrected_score_asserted": false
+    },
+    {
+      "study_id": "registry:nct01164020",
+      "title": "Creatine supplementation associated or not with strength training upon emotional and cognitive measures in older women: a randomized double-blind study.",
+      "year": 2013,
+      "doi": "10.1371/journal.pone.0076301",
+      "pmid": "24098469",
+      "primary_source_links": [
+        "https://doi.org/10.1371/journal.pone.0076301",
+        "https://pubmed.ncbi.nlm.nih.gov/24098469/",
+        "https://clinicaltrials.gov/study/NCT01164020"
+      ],
+      "original_total_points": -6.13,
+      "original_contributions": [
+        {
+          "outcome_vocab_id": "muscle_strength",
+          "outcome_label": "Muscle strength",
+          "direction": "null_effect",
+          "effect_route": "absolute_percentage_difference",
+          "s": -0.35,
+          "w": 0.6993,
+          "points": -6.13
+        }
+      ],
+      "action": "quarantine_reextract",
+      "primary_cause": "claim_level_adjudication_pending",
+      "source_verification": "bundle_only",
+      "verified_finding": null,
+      "replacement_claim": null,
+      "corrected_score_asserted": false
+    },
+    {
+      "study_id": "doi:101007s1260300901248",
+      "title": "The effects of supplementation with creatine and protein on muscle strength following a traditional resistance training program in middle-aged and older men.",
+      "year": 2010,
+      "doi": "10.1007/s12603-009-0124-8",
+      "pmid": "20126965",
+      "primary_source_links": [
+        "https://doi.org/10.1007/s12603-009-0124-8",
+        "https://pubmed.ncbi.nlm.nih.gov/20126965/"
+      ],
+      "original_total_points": -5.95,
+      "original_contributions": [
+        {
+          "outcome_vocab_id": "muscle_strength",
+          "outcome_label": "Muscle strength",
+          "direction": "null_effect",
+          "effect_route": "no_effect_size",
+          "s": -0.35,
+          "w": 0.2922,
+          "points": -2.56
+        },
+        {
+          "outcome_vocab_id": "lean_body_mass",
+          "outcome_label": "Lean body mass",
+          "direction": "null_effect",
+          "effect_route": "no_effect_size",
+          "s": -0.35,
+          "w": 0.2922,
+          "points": -3.39
+        }
+      ],
+      "action": "quarantine_reextract",
+      "primary_cause": "claim_level_adjudication_pending",
+      "source_verification": "bundle_only",
+      "verified_finding": null,
+      "replacement_claim": null,
+      "corrected_score_asserted": false
+    },
+    {
+      "study_id": "doi:101111sms14629",
+      "title": "No additive effect of creatine, caffeine, and sodium bicarbonate on intense exercise performance in endurance-trained individuals.",
+      "year": 2024,
+      "doi": "10.1111/sms.14629",
+      "pmid": "38646853",
+      "primary_source_links": [
+        "https://doi.org/10.1111/sms.14629",
+        "https://pubmed.ncbi.nlm.nih.gov/38646853/"
+      ],
+      "original_total_points": -5.23,
+      "original_contributions": [
+        {
+          "outcome_vocab_id": "exercise_endurance",
+          "outcome_label": "Endurance performance",
+          "direction": "null_effect",
+          "effect_route": "raw_unit_needs_sd",
+          "s": -0.35,
+          "w": 0.3727,
+          "points": -5.23
+        }
+      ],
+      "action": "quarantine_reextract",
+      "primary_cause": "claim_level_adjudication_pending",
+      "source_verification": "bundle_only",
+      "verified_finding": null,
+      "replacement_claim": null,
+      "corrected_score_asserted": false
+    },
+    {
+      "study_id": "registry:nct04048616",
+      "title": "Independent effects of whey protein and alkali supplementation on muscle health in healthy older adults: factorial randomized controlled trial.",
+      "year": 2026,
+      "doi": "10.1016/j.ajcnut.2026.101257",
+      "pmid": "41780731",
+      "primary_source_links": [
+        "https://doi.org/10.1016/j.ajcnut.2026.101257",
+        "https://pubmed.ncbi.nlm.nih.gov/41780731/",
+        "https://clinicaltrials.gov/study/NCT04048616"
+      ],
+      "original_total_points": -4.64,
+      "original_contributions": [
+        {
+          "outcome_vocab_id": "lean_body_mass",
+          "outcome_label": "Lean body mass",
+          "direction": "null_effect",
+          "effect_route": "no_effect_size",
+          "s": -0.35,
+          "w": 0.264,
+          "points": -3.06
+        },
+        {
+          "outcome_vocab_id": "muscle_power",
+          "outcome_label": "Power and sprint performance",
+          "direction": "null_effect",
+          "effect_route": "raw_unit_needs_sd",
+          "s": -0.35,
+          "w": 0.264,
+          "points": -1.58
+        }
+      ],
+      "action": "exclude_scope",
+      "primary_cause": "measurement_only_not_intervention",
+      "source_verification": "primary_source_verified",
+      "verified_finding": "target ingredient was not administered; labelled-isotope ingredient was measurement-only",
+      "replacement_claim": null,
+      "corrected_score_asserted": false
+    },
+    {
+      "study_id": "doi:101007bf02982622",
+      "title": "The effects of creatine and whey protein supplementation on body composition in men aged 48 to 72 years during resistance training.",
+      "year": 2008,
+      "doi": "10.1007/bf02982622",
+      "pmid": "18309444",
+      "primary_source_links": [
+        "https://doi.org/10.1007/bf02982622",
+        "https://pubmed.ncbi.nlm.nih.gov/18309444/"
+      ],
+      "original_total_points": -4.52,
+      "original_contributions": [
+        {
+          "outcome_vocab_id": "lean_body_mass",
+          "outcome_label": "Lean body mass",
+          "direction": "null_effect",
+          "effect_route": "absolute_percentage_difference",
+          "s": -0.35,
+          "w": 0.3896,
+          "points": -4.52
+        }
+      ],
+      "action": "quarantine_reextract",
+      "primary_cause": "claim_level_adjudication_pending",
+      "source_verification": "bundle_only",
+      "verified_finding": null,
+      "replacement_claim": null,
+      "corrected_score_asserted": false
+    },
+    {
+      "study_id": "doi:103390nu14061140",
+      "title": "Effects of Oral Creatine Supplementation on Power Output during Repeated Treadmill Sprinting.",
+      "year": 2022,
+      "doi": "10.3390/nu14061140",
+      "pmid": "35334797",
+      "primary_source_links": [
+        "https://doi.org/10.3390/nu14061140",
+        "https://pubmed.ncbi.nlm.nih.gov/35334797/"
+      ],
+      "original_total_points": -4.34,
+      "original_contributions": [
+        {
+          "outcome_vocab_id": "exercise_endurance",
+          "outcome_label": "Endurance performance",
+          "direction": "null_effect",
+          "effect_route": "no_effect_size",
+          "s": -0.35,
+          "w": 0.2167,
+          "points": -3.04
+        },
+        {
+          "outcome_vocab_id": "muscle_power",
+          "outcome_label": "Power and sprint performance",
+          "direction": "null_effect",
+          "effect_route": "no_effect_size",
+          "s": -0.35,
+          "w": 0.2167,
+          "points": -1.3
+        }
+      ],
+      "action": "quarantine_reextract",
+      "primary_cause": "claim_level_adjudication_pending",
+      "source_verification": "bundle_only",
+      "verified_finding": null,
+      "replacement_claim": null,
+      "corrected_score_asserted": false
+    },
+    {
+      "study_id": "doi:101186s1297002100456y",
+      "title": "The effects of phosphocreatine disodium salts plus blueberry extract supplementation on muscular strength, power, and endurance.",
+      "year": 2021,
+      "doi": "10.1186/s12970-021-00456-y",
+      "pmid": "34503541",
+      "primary_source_links": [
+        "https://doi.org/10.1186/s12970-021-00456-y",
+        "https://pubmed.ncbi.nlm.nih.gov/34503541/"
+      ],
+      "original_total_points": -4.04,
+      "original_contributions": [
+        {
+          "outcome_vocab_id": "muscle_strength",
+          "outcome_label": "Muscle strength",
+          "direction": "null_effect",
+          "effect_route": "absolute_percentage_difference",
+          "s": -0.35,
+          "w": 0.2733,
+          "points": -2.4
+        },
+        {
+          "outcome_vocab_id": "muscle_power",
+          "outcome_label": "Power and sprint performance",
+          "direction": "null_effect",
+          "effect_route": "absolute_percentage_difference",
+          "s": -0.35,
+          "w": 0.2733,
+          "points": -1.64
+        }
+      ],
+      "action": "quarantine_reextract",
+      "primary_cause": "claim_level_adjudication_pending",
+      "source_verification": "bundle_only",
+      "verified_finding": null,
+      "replacement_claim": null,
+      "corrected_score_asserted": false
+    },
+    {
+      "study_id": "doi:103390nu9121359",
+      "title": "Hematological and Hemodynamic Responses to Acute and Short-Term Creatine Nitrate Supplementation.",
+      "year": 2017,
+      "doi": "10.3390/nu9121359",
+      "pmid": "29244743",
+      "primary_source_links": [
+        "https://doi.org/10.3390/nu9121359",
+        "https://pubmed.ncbi.nlm.nih.gov/29244743/"
+      ],
+      "original_total_points": -3.93,
+      "original_contributions": [
+        {
+          "outcome_vocab_id": "muscle_strength",
+          "outcome_label": "Muscle strength",
+          "direction": "null_effect",
+          "effect_route": "raw_unit_needs_sd",
+          "s": -0.35,
+          "w": 0.1723,
+          "points": -1.51
+        },
+        {
+          "outcome_vocab_id": "exercise_endurance",
+          "outcome_label": "Endurance performance",
+          "direction": "null_effect",
+          "effect_route": "no_effect_size",
+          "s": -0.35,
+          "w": 0.1723,
+          "points": -2.42
+        }
+      ],
+      "action": "quarantine_reextract",
+      "primary_cause": "claim_level_adjudication_pending",
+      "source_verification": "bundle_only",
+      "verified_finding": null,
+      "replacement_claim": null,
+      "corrected_score_asserted": false
+    },
+    {
+      "study_id": "doi:103390nu10111640",
+      "title": "Effects of 4-Week Creatine Supplementation Combined with Complex Training on Muscle Damage and Sport Performance.",
+      "year": 2018,
+      "doi": "10.3390/nu10111640",
+      "pmid": "30400221",
+      "primary_source_links": [
+        "https://doi.org/10.3390/nu10111640",
+        "https://pubmed.ncbi.nlm.nih.gov/30400221/"
+      ],
+      "original_total_points": -3.25,
+      "original_contributions": [
+        {
+          "outcome_vocab_id": "lean_body_mass",
+          "outcome_label": "Lean body mass",
+          "direction": "null_effect",
+          "effect_route": "raw_unit_needs_sd",
+          "s": -0.35,
+          "w": 0.1846,
+          "points": -2.14
+        },
+        {
+          "outcome_vocab_id": "muscle_power",
+          "outcome_label": "Power and sprint performance",
+          "direction": "null_effect",
+          "effect_route": "raw_unit_needs_sd",
+          "s": -0.35,
+          "w": 0.1846,
+          "points": -1.11
+        }
+      ],
+      "action": "quarantine_reextract",
+      "primary_cause": "claim_level_adjudication_pending",
+      "source_verification": "bundle_only",
+      "verified_finding": null,
+      "replacement_claim": null,
+      "corrected_score_asserted": false
+    },
+    {
+      "study_id": "doi:101016jjsams201510005",
+      "title": "Effects of plyometric training and creatine supplementation on maximal-intensity exercise and endurance in female soccer players.",
+      "year": 2016,
+      "doi": "10.1016/j.jsams.2015.10.005",
+      "pmid": "26778661",
+      "primary_source_links": [
+        "https://doi.org/10.1016/j.jsams.2015.10.005",
+        "https://pubmed.ncbi.nlm.nih.gov/26778661/"
+      ],
+      "original_total_points": -2.74,
+      "original_contributions": [
+        {
+          "outcome_vocab_id": "exercise_endurance",
+          "outcome_label": "Endurance performance",
+          "direction": "null_effect",
+          "effect_route": "no_effect_size",
+          "s": -0.35,
+          "w": 0.195,
+          "points": -2.74
+        }
+      ],
+      "action": "quarantine_reextract",
+      "primary_cause": "claim_level_adjudication_pending",
+      "source_verification": "bundle_only",
+      "verified_finding": null,
+      "replacement_claim": null,
+      "corrected_score_asserted": false
+    },
+    {
+      "study_id": "doi:101093geronaglaa162",
+      "title": "Effects of Fortetropin on the Rate of Muscle Protein Synthesis in Older Men and Women: A Randomized, Double-Blinded, Placebo-Controlled Study.",
+      "year": 2021,
+      "doi": "10.1093/gerona/glaa162",
+      "pmid": "32598445",
+      "primary_source_links": [
+        "https://doi.org/10.1093/gerona/glaa162",
+        "https://pubmed.ncbi.nlm.nih.gov/32598445/"
+      ],
+      "original_total_points": -2.72,
+      "original_contributions": [
+        {
+          "outcome_vocab_id": "lean_body_mass",
+          "outcome_label": "Lean body mass",
+          "direction": "null_effect",
+          "effect_route": "raw_unit_needs_sd",
+          "s": -0.35,
+          "w": 0.2342,
+          "points": -2.72
+        }
+      ],
+      "action": "exclude_scope",
+      "primary_cause": "measurement_only_not_intervention",
+      "source_verification": "primary_source_verified",
+      "verified_finding": "Fortetropin was administered; labelled-isotope ingredient was measurement-only",
+      "replacement_claim": null,
+      "corrected_score_asserted": false
+    },
+    {
+      "study_id": "doi:103390nu16152437",
+      "title": "Combined Impact of Creatine, Caffeine, and Variable Resistance on Repeated Sprint Ability in Young Soccer Players.",
+      "year": 2024,
+      "doi": "10.3390/nu16152437",
+      "pmid": "39125317",
+      "primary_source_links": [
+        "https://doi.org/10.3390/nu16152437",
+        "https://pubmed.ncbi.nlm.nih.gov/39125317/"
+      ],
+      "original_total_points": -2.6,
+      "original_contributions": [
+        {
+          "outcome_vocab_id": "muscle_power",
+          "outcome_label": "Power and sprint performance",
+          "direction": "null_effect",
+          "effect_route": "no_effect_size",
+          "s": -0.35,
+          "w": 0.4341,
+          "points": -2.6
+        }
+      ],
+      "action": "quarantine_reextract",
+      "primary_cause": "claim_level_adjudication_pending",
+      "source_verification": "bundle_only",
+      "verified_finding": null,
+      "replacement_claim": null,
+      "corrected_score_asserted": false
+    },
+    {
+      "study_id": "doi:101038s4159802644278x",
+      "title": "Synergistic effects of creatine, carbs, protein on repeated sprint performance.",
+      "year": 2026,
+      "doi": "10.1038/s41598-026-44278-x",
+      "pmid": "41888192",
+      "primary_source_links": [
+        "https://doi.org/10.1038/s41598-026-44278-x",
+        "https://pubmed.ncbi.nlm.nih.gov/41888192/"
+      ],
+      "original_total_points": -2.56,
+      "original_contributions": [
+        {
+          "outcome_vocab_id": "muscle_power",
+          "outcome_label": "Power and sprint performance",
+          "direction": "null_effect",
+          "effect_route": "no_effect_size",
+          "s": -0.35,
+          "w": 0.4268,
+          "points": -2.56
+        }
+      ],
+      "action": "quarantine_reextract",
+      "primary_cause": "claim_level_adjudication_pending",
+      "source_verification": "bundle_only",
+      "verified_finding": null,
+      "replacement_claim": null,
+      "corrected_score_asserted": false
+    },
+    {
+      "study_id": "doi:101186s1297001701622",
+      "title": "Effect of low dose, short-term creatine supplementation on muscle power output in elite youth soccer players.",
+      "year": 2017,
+      "doi": "10.1186/s12970-017-0162-2",
+      "pmid": "28190980",
+      "primary_source_links": [
+        "https://doi.org/10.1186/s12970-017-0162-2",
+        "https://pubmed.ncbi.nlm.nih.gov/28190980/"
+      ],
+      "original_total_points": -2.34,
+      "original_contributions": [
+        {
+          "outcome_vocab_id": "muscle_power",
+          "outcome_label": "Power and sprint performance",
+          "direction": "null_effect",
+          "effect_route": "no_effect_size",
+          "s": -0.35,
+          "w": 0.3903,
+          "points": -2.34
+        }
+      ],
+      "action": "quarantine_reextract",
+      "primary_cause": "claim_level_adjudication_pending",
+      "source_verification": "bundle_only",
+      "verified_finding": null,
+      "replacement_claim": null,
+      "corrected_score_asserted": false
+    },
+    {
+      "study_id": "doi:101136bjsm2005022558",
+      "title": "The effects of creatine supplementation on selected factors of tennis specific training.",
+      "year": 2006,
+      "doi": "10.1136/bjsm.2005.022558",
+      "pmid": "16720886",
+      "primary_source_links": [
+        "https://doi.org/10.1136/bjsm.2005.022558",
+        "https://pubmed.ncbi.nlm.nih.gov/16720886/"
+      ],
+      "original_total_points": -2.29,
+      "original_contributions": [
+        {
+          "outcome_vocab_id": "muscle_strength",
+          "outcome_label": "Muscle strength",
+          "direction": "null_effect",
+          "effect_route": "no_effect_size",
+          "s": -0.35,
+          "w": 0.1556,
+          "points": -1.36
+        },
+        {
+          "outcome_vocab_id": "muscle_power",
+          "outcome_label": "Power and sprint performance",
+          "direction": "null_effect",
+          "effect_route": "raw_unit_needs_sd",
+          "s": -0.35,
+          "w": 0.1556,
+          "points": -0.93
+        }
+      ],
+      "action": "quarantine_reextract",
+      "primary_cause": "claim_level_adjudication_pending",
+      "source_verification": "bundle_only",
+      "verified_finding": null,
+      "replacement_claim": null,
+      "corrected_score_asserted": false
+    },
+    {
+      "study_id": "doi:103390nu16060766",
+      "title": "The Effect of Creatine Nitrate and Caffeine Individually or Combined on Exercise Performance and Cognitive Function: A Randomized, Crossover, Double-Blind, Placebo-Controlled Trial.",
+      "year": 2024,
+      "doi": "10.3390/nu16060766",
+      "pmid": "38542677",
+      "primary_source_links": [
+        "https://doi.org/10.3390/nu16060766",
+        "https://pubmed.ncbi.nlm.nih.gov/38542677/"
+      ],
+      "original_total_points": -2.12,
+      "original_contributions": [
+        {
+          "outcome_vocab_id": "muscle_power",
+          "outcome_label": "Power and sprint performance",
+          "direction": "null_effect",
+          "effect_route": "raw_unit_needs_sd",
+          "s": -0.35,
+          "w": 0.3528,
+          "points": -2.12
+        }
+      ],
+      "action": "quarantine_reextract",
+      "primary_cause": "claim_level_adjudication_pending",
+      "source_verification": "bundle_only",
+      "verified_finding": null,
+      "replacement_claim": null,
+      "corrected_score_asserted": false
+    },
+    {
+      "study_id": "doi:103390nu16091324",
+      "title": "Effects of a Low Dose of Orally Administered Creatine Monohydrate on Post-Fatigue Muscle Power in Young Soccer Players.",
+      "year": 2024,
+      "doi": "10.3390/nu16091324",
+      "pmid": "38732571",
+      "primary_source_links": [
+        "https://doi.org/10.3390/nu16091324",
+        "https://pubmed.ncbi.nlm.nih.gov/38732571/"
+      ],
+      "original_total_points": -2.08,
+      "original_contributions": [
+        {
+          "outcome_vocab_id": "muscle_power",
+          "outcome_label": "Power and sprint performance",
+          "direction": "null_effect",
+          "effect_route": "favours_neither_but_above_threshold",
+          "s": -0.35,
+          "w": 0.3473,
+          "points": -2.08
+        }
+      ],
+      "action": "quarantine_reextract",
+      "primary_cause": "claim_level_adjudication_pending",
+      "source_verification": "bundle_only",
+      "verified_finding": null,
+      "replacement_claim": null,
+      "corrected_score_asserted": false
+    },
+    {
+      "study_id": "doi:1010801550278320262617283",
+      "title": "Short-term creatine supplementation enhances strength, reduces fatigue, and accelerates recovery in resistance-trained athletes: a double-blind, randomized, crossover trial.",
+      "year": 2025,
+      "doi": "10.1080/15502783.2026.2617283",
+      "pmid": "41579075",
+      "primary_source_links": [
+        "https://doi.org/10.1080/15502783.2026.2617283",
+        "https://pubmed.ncbi.nlm.nih.gov/41579075/"
+      ],
+      "original_total_points": -1.87,
+      "original_contributions": [
+        {
+          "outcome_vocab_id": "muscle_power",
+          "outcome_label": "Power and sprint performance",
+          "direction": "null_effect",
+          "effect_route": "no_effect_size",
+          "s": -0.35,
+          "w": 0.3124,
+          "points": -1.87
+        }
+      ],
+      "action": "quarantine_reextract",
+      "primary_cause": "claim_level_adjudication_pending",
+      "source_verification": "bundle_only",
+      "verified_finding": null,
+      "replacement_claim": null,
+      "corrected_score_asserted": false
+    },
+    {
+      "study_id": "doi:1010801550278320232193556",
+      "title": "Creatine monohydrate supplementation changes total body water and DXA lean mass estimates in female collegiate dancers.",
+      "year": 2023,
+      "doi": "10.1080/15502783.2023.2193556",
+      "pmid": "36960692",
+      "primary_source_links": [
+        "https://doi.org/10.1080/15502783.2023.2193556",
+        "https://pubmed.ncbi.nlm.nih.gov/36960692/"
+      ],
+      "original_total_points": -1.77,
+      "original_contributions": [
+        {
+          "outcome_vocab_id": "muscle_strength",
+          "outcome_label": "Muscle strength",
+          "direction": "null_effect",
+          "effect_route": "raw_unit_needs_sd",
+          "s": -0.35,
+          "w": 0.12,
+          "points": -1.05
+        },
+        {
+          "outcome_vocab_id": "muscle_power",
+          "outcome_label": "Power and sprint performance",
+          "direction": "null_effect",
+          "effect_route": "raw_unit_needs_sd",
+          "s": -0.35,
+          "w": 0.12,
+          "points": -0.72
+        }
+      ],
+      "action": "quarantine_reextract",
+      "primary_cause": "claim_level_adjudication_pending",
+      "source_verification": "bundle_only",
+      "verified_finding": null,
+      "replacement_claim": null,
+      "corrected_score_asserted": false
+    },
+    {
+      "study_id": "doi:101519jsc0000000000001223",
+      "title": "Effects of Coffee and Caffeine Anhydrous Intake During Creatine Loading.",
+      "year": 2016,
+      "doi": "10.1519/jsc.0000000000001223",
+      "pmid": "26439785",
+      "primary_source_links": [
+        "https://doi.org/10.1519/jsc.0000000000001223",
+        "https://pubmed.ncbi.nlm.nih.gov/26439785/"
+      ],
+      "original_total_points": -1.04,
+      "original_contributions": [
+        {
+          "outcome_vocab_id": "muscle_power",
+          "outcome_label": "Power and sprint performance",
+          "direction": "null_effect",
+          "effect_route": "no_effect_size",
+          "s": -0.35,
+          "w": 0.1732,
+          "points": -1.04
+        }
+      ],
+      "action": "quarantine_reextract",
+      "primary_cause": "claim_level_adjudication_pending",
+      "source_verification": "bundle_only",
+      "verified_finding": null,
+      "replacement_claim": null,
+      "corrected_score_asserted": false
+    },
+    {
+      "study_id": "doi:103390nu15163567",
+      "title": "The Effects of Creatine Monohydrate Loading on Exercise Recovery in Active Women throughout the Menstrual Cycle.",
+      "year": 2023,
+      "doi": "10.3390/nu15163567",
+      "pmid": "37630756",
+      "primary_source_links": [
+        "https://doi.org/10.3390/nu15163567",
+        "https://pubmed.ncbi.nlm.nih.gov/37630756/"
+      ],
+      "original_total_points": -1.03,
+      "original_contributions": [
+        {
+          "outcome_vocab_id": "muscle_power",
+          "outcome_label": "Power and sprint performance",
+          "direction": "null_effect",
+          "effect_route": "raw_unit_needs_sd",
+          "s": -0.35,
+          "w": 0.1716,
+          "points": -1.03
+        }
+      ],
+      "action": "quarantine_reextract",
+      "primary_cause": "claim_level_adjudication_pending",
+      "source_verification": "bundle_only",
+      "verified_finding": null,
+      "replacement_claim": null,
+      "corrected_score_asserted": false
+    },
+    {
+      "study_id": "doi:103390nu16162772",
+      "title": "Creatine Improves Total Sleep Duration Following Resistance Training Days versus Non-Resistance Training Days among Naturally Menstruating Females.",
+      "year": 2024,
+      "doi": "10.3390/nu16162772",
+      "pmid": "39203908",
+      "primary_source_links": [
+        "https://doi.org/10.3390/nu16162772",
+        "https://pubmed.ncbi.nlm.nih.gov/39203908/"
+      ],
+      "original_total_points": -0.94,
+      "original_contributions": [
+        {
+          "outcome_vocab_id": "muscle_strength",
+          "outcome_label": "Muscle strength",
+          "direction": "null_effect",
+          "effect_route": "no_effect_size",
+          "s": -0.35,
+          "w": 0.1074,
+          "points": -0.94
+        }
+      ],
+      "action": "quarantine_reextract",
+      "primary_cause": "claim_level_adjudication_pending",
+      "source_verification": "bundle_only",
+      "verified_finding": null,
+      "replacement_claim": null,
+      "corrected_score_asserted": false
+    },
+    {
+      "study_id": "registry:nct01472393",
+      "title": "Creatine supplementation and resistance training in vulnerable older women: a randomized double-blind placebo-controlled clinical trial.",
+      "year": 2014,
+      "doi": "10.1016/j.exger.2014.02.003",
+      "pmid": "24530883",
+      "primary_source_links": [
+        "https://doi.org/10.1016/j.exger.2014.02.003",
+        "https://pubmed.ncbi.nlm.nih.gov/24530883/",
+        "https://clinicaltrials.gov/study/NCT01472393"
+      ],
+      "original_total_points": -0.86,
+      "original_contributions": [
+        {
+          "outcome_vocab_id": "muscle_strength",
+          "outcome_label": "Muscle strength",
+          "direction": "null_effect",
+          "effect_route": "absolute_percentage_difference",
+          "s": -0.35,
+          "w": 0.0978,
+          "points": -0.86
+        }
+      ],
+      "action": "quarantine_reextract",
+      "primary_cause": "claim_level_adjudication_pending",
+      "source_verification": "bundle_only",
+      "verified_finding": null,
+      "replacement_claim": null,
+      "corrected_score_asserted": false
+    },
+    {
+      "study_id": "doi:103305nh20132826314",
+      "title": "Effects of creatine supplementation in taekwondo practitioners.",
+      "year": 2013,
+      "doi": "10.3305/nh.2013.28.2.6314",
+      "pmid": "23822690",
+      "primary_source_links": [
+        "https://doi.org/10.3305/nh.2013.28.2.6314",
+        "https://pubmed.ncbi.nlm.nih.gov/23822690/"
+      ],
+      "original_total_points": -0.79,
+      "original_contributions": [
+        {
+          "outcome_vocab_id": "muscle_power",
+          "outcome_label": "Power and sprint performance",
+          "direction": "null_effect",
+          "effect_route": "no_effect_size",
+          "s": -0.35,
+          "w": 0.132,
+          "points": -0.79
+        }
+      ],
+      "action": "quarantine_reextract",
+      "primary_cause": "claim_level_adjudication_pending",
+      "source_verification": "bundle_only",
+      "verified_finding": null,
+      "replacement_claim": null,
+      "corrected_score_asserted": false
+    },
+    {
+      "study_id": "doi:103390nu9111169",
+      "title": "Effects of Creatine Supplementation on Muscle Strength and Optimal Individual Post-Activation Potentiation Time of the Upper Body in Canoeists.",
+      "year": 2017,
+      "doi": "10.3390/nu9111169",
+      "pmid": "29077022",
+      "primary_source_links": [
+        "https://doi.org/10.3390/nu9111169",
+        "https://pubmed.ncbi.nlm.nih.gov/29077022/"
+      ],
+      "original_total_points": -0.74,
+      "original_contributions": [
+        {
+          "outcome_vocab_id": "muscle_strength",
+          "outcome_label": "Muscle strength",
+          "direction": "null_effect",
+          "effect_route": "no_effect_size",
+          "s": -0.35,
+          "w": 0.05,
+          "points": -0.44
+        },
+        {
+          "outcome_vocab_id": "muscle_power",
+          "outcome_label": "Power and sprint performance",
+          "direction": "null_effect",
+          "effect_route": "no_effect_size",
+          "s": -0.35,
+          "w": 0.05,
+          "points": -0.3
+        }
+      ],
+      "action": "quarantine_reextract",
+      "primary_cause": "claim_level_adjudication_pending",
+      "source_verification": "bundle_only",
+      "verified_finding": null,
+      "replacement_claim": null,
+      "corrected_score_asserted": false
+    },
+    {
+      "study_id": "doi:103390nu8030143",
+      "title": "The Effects of Creatine Supplementation on Explosive Performance and Optimal Individual Postactivation Potentiation Time.",
+      "year": 2016,
+      "doi": "10.3390/nu8030143",
+      "pmid": "26959056",
+      "primary_source_links": [
+        "https://doi.org/10.3390/nu8030143",
+        "https://pubmed.ncbi.nlm.nih.gov/26959056/"
+      ],
+      "original_total_points": -0.74,
+      "original_contributions": [
+        {
+          "outcome_vocab_id": "muscle_strength",
+          "outcome_label": "Muscle strength",
+          "direction": "null_effect",
+          "effect_route": "no_effect_size",
+          "s": -0.35,
+          "w": 0.05,
+          "points": -0.44
+        },
+        {
+          "outcome_vocab_id": "muscle_power",
+          "outcome_label": "Power and sprint performance",
+          "direction": "null_effect",
+          "effect_route": "no_effect_size",
+          "s": -0.35,
+          "w": 0.05,
+          "points": -0.3
+        }
+      ],
+      "action": "quarantine_reextract",
+      "primary_cause": "claim_level_adjudication_pending",
+      "source_verification": "bundle_only",
+      "verified_finding": null,
+      "replacement_claim": null,
+      "corrected_score_asserted": false
+    },
+    {
+      "study_id": "doi:1015191533428720030170026csaieo20co2",
+      "title": "Creatine supplementation and its effect on musculotendinous stiffness and performance.",
+      "year": 2003,
+      "doi": "10.1519/1533-4287(2003)017<0026:csaieo>2.0.co;2",
+      "pmid": "12580652",
+      "primary_source_links": [
+        "https://doi.org/10.1519/1533-4287(2003)017<0026:csaieo>2.0.co;2",
+        "https://pubmed.ncbi.nlm.nih.gov/12580652/"
+      ],
+      "original_total_points": -0.65,
+      "original_contributions": [
+        {
+          "outcome_vocab_id": "muscle_strength",
+          "outcome_label": "Muscle strength",
+          "direction": "null_effect",
+          "effect_route": "raw_unit_needs_sd",
+          "s": -0.35,
+          "w": 0.0738,
+          "points": -0.65
+        }
+      ],
+      "action": "quarantine_reextract",
+      "primary_cause": "claim_level_adjudication_pending",
+      "source_verification": "bundle_only",
+      "verified_finding": null,
+      "replacement_claim": null,
+      "corrected_score_asserted": false
+    },
+    {
+      "study_id": "doi:1010801550278320222108683",
+      "title": "A randomized open-labeled study to examine the effects of creatine monohydrate and combined training on jump and scoring performance in young basketball players.",
+      "year": 2022,
+      "doi": "10.1080/15502783.2022.2108683",
+      "pmid": "35966022",
+      "primary_source_links": [
+        "https://doi.org/10.1080/15502783.2022.2108683",
+        "https://pubmed.ncbi.nlm.nih.gov/35966022/"
+      ],
+      "original_total_points": -0.62,
+      "original_contributions": [
+        {
+          "outcome_vocab_id": "muscle_power",
+          "outcome_label": "Power and sprint performance",
+          "direction": "null_effect",
+          "effect_route": "raw_unit_needs_sd",
+          "s": -0.35,
+          "w": 0.1035,
+          "points": -0.62
+        }
+      ],
+      "action": "quarantine_reextract",
+      "primary_cause": "claim_level_adjudication_pending",
+      "source_verification": "bundle_only",
+      "verified_finding": null,
+      "replacement_claim": null,
+      "corrected_score_asserted": false
+    },
+    {
+      "study_id": "doi:101007s004210031031z",
+      "title": "The effects of creatine supplementation on muscular performance and body composition responses to short-term resistance training overreaching.",
+      "year": 2004,
+      "doi": "10.1007/s00421-003-1031-z",
+      "pmid": "14685870",
+      "primary_source_links": [
+        "https://doi.org/10.1007/s00421-003-1031-z",
+        "https://pubmed.ncbi.nlm.nih.gov/14685870/"
+      ],
+      "original_total_points": -0.59,
+      "original_contributions": [
+        {
+          "outcome_vocab_id": "muscle_strength",
+          "outcome_label": "Muscle strength",
+          "direction": "null_effect",
+          "effect_route": "no_effect_size",
+          "s": -0.35,
+          "w": 0.0677,
+          "points": -0.59
+        }
+      ],
+      "action": "quarantine_reextract",
+      "primary_cause": "claim_level_adjudication_pending",
+      "source_verification": "bundle_only",
+      "verified_finding": null,
+      "replacement_claim": null,
+      "corrected_score_asserted": false
+    },
+    {
+      "study_id": "doi:103390nu13030826",
+      "title": "Short-Term Creatine Loading Improves Total Work and Repetitions to Failure but Not Load-Velocity Characteristics in Strength-Trained Men.",
+      "year": 2021,
+      "doi": "10.3390/nu13030826",
+      "pmid": "33802283",
+      "primary_source_links": [
+        "https://doi.org/10.3390/nu13030826",
+        "https://pubmed.ncbi.nlm.nih.gov/33802283/"
+      ],
+      "original_total_points": -0.23,
+      "original_contributions": [
+        {
+          "outcome_vocab_id": "muscle_strength",
+          "outcome_label": "Muscle strength",
+          "direction": "null_effect",
+          "effect_route": "smd",
+          "s": -0.03333333333333336,
+          "w": 0.2812,
+          "points": -0.23
+        }
+      ],
+      "action": "quarantine_reextract",
+      "primary_cause": "claim_level_adjudication_pending",
+      "source_verification": "bundle_only",
+      "verified_finding": null,
+      "replacement_claim": null,
+      "corrected_score_asserted": false
+    }
+  ]
+}
