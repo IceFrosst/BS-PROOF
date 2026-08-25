@@ -14,8 +14,16 @@ export function SiteHeader() {
             <span aria-hidden="true" className="wordmark-mark">B·S</span>
             <span>Proof</span>
           </Link>
+          {/* "Runs" pointed at "/", which since 2026-08-25 is the waitlist and
+              carries no runs at all -- a nav item promising a run archive and
+              delivering an email field. The archive moved to /tester, and the
+              nav cannot link there: /tester is unlisted, and a header link on
+              every public page would hand it to the audience it excludes.
+
+              Methodology stays. It is a public explainer, it makes sense to
+              somebody who has just been asked for their email, and it is the
+              one page that says what the score would even mean. */}
           <nav aria-label="Primary navigation">
-            <Link href="/">Runs</Link>
             <Link href="/methodology">Methodology</Link>
           </nav>
         </div>

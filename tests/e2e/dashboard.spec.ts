@@ -182,7 +182,7 @@ function runCard(page: Page, runId: string): Locator {
 async function expectRunIsServed(page: Page, runId: string): Promise<void> {
   await expect(
     runCard(page, runId),
-    `Run "${runId}" was sampled from reports/runs/ but the dashboard does not ` +
+    `Run "${runId}" was sampled from reports/runs/ but /tester does not ` +
       "list it. It is most likely quarantined -- run tests/catalog-quarantine.test.ts " +
       "for the reason. This is a data/schema fault, not a UI fault.",
   ).toHaveCount(1);
@@ -205,7 +205,9 @@ for (const artifact of artifacts) {
   const gated = gatedRows(artifact);
 
   test(`catalog lists ${runId} with the counts its artifact declares`, async ({ page }) => {
-    await page.goto("/");
+    // /tester, not "/". The run archive moved there on 2026-08-25 when the
+    // public page became the waitlist alone; "/" now lists no runs by design.
+    await page.goto("/tester");
 
     await expect(page.locator("main#main-content")).toBeVisible();
     await expect(page.getByRole("heading", { level: 1, name: /BS.?PROOF/i })).toBeVisible();
@@ -434,7 +436,7 @@ for (const artifact of sample) {
   const runId = artifact.run.id;
 
   test("a run card opens exactly the run it names", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/tester");
     await expectRunIsServed(page, runId);
     await runCard(page, runId).getByRole("link").click();
     await expect(page).toHaveURL(new RegExp(`/runs/${runId}/?$`));
@@ -442,7 +444,7 @@ for (const artifact of sample) {
   });
 
   test("keyboard users can skip navigation and open a run", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/tester");
     await page.keyboard.press("Tab");
     const skipLink = page.getByRole("link", { name: /skip to (main )?content/i });
     await expect(skipLink).toBeFocused();
