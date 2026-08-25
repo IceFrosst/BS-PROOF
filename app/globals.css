@@ -729,6 +729,14 @@ thead th { color: var(--ink-soft); font-size: 0.7rem; text-transform: uppercase;
   .la-arcs { grid-template-columns: repeat(2, 1fr); }
 }
 
+/* --------------------------------------------------------------- /tester */
+/* On the dark hero, so light-on-dark like the waitlist copy beside it. */
+.tester-crumbs { justify-content: center; margin-bottom: 14px; color: #bdc9c2; font-size: 0.82rem; }
+.tester-crumbs a { color: var(--lime); }
+.tester-lede { max-width: 640px; margin: 14px auto 0; color: #c7d2cc; font-size: 0.98rem; line-height: 1.5; }
+.tester-foot { margin: 0; color: var(--ink-soft); font-size: 0.85rem; }
+.tester-foot code { font-size: 0.8rem; }
+
 /* ---------------------------------------------------------------- waitlist */
 /*
  * Sits on the DARK hero, so unlike the analyzer's result cards this block is

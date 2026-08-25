@@ -1,6 +1,5 @@
 import Link from "next/link";
 
-import { LabelAnalyzer } from "@/components/label-analyzer";
 import { WaitlistForm } from "@/components/waitlist-form";
 import { RunCard } from "@/components/run-card";
 import { loadRetainedRuns } from "@/lib/dashboard/catalog";
@@ -19,11 +18,6 @@ function RunGroups({ runs, prefix }: { runs: DashboardRun[]; prefix: string }) {
 }
 
 export default function HomePage() {
-  // Opt IN, not out. An unset variable hides the scanner, so the waitlist-only
-  // front door is what a fresh deploy gives you.
-  const showScanner = ["1", "true", "yes"].includes(
-    (process.env.SHOW_SCANNER ?? "").trim().toLowerCase(),
-  );
   const runs = loadRetainedRuns();
   const validatedRuns = runs.filter((run) => run.run.validity.status.toLowerCase() === "validated");
   const archiveRuns = runs.filter((run) => run.run.validity.status.toLowerCase() !== "validated");
@@ -42,20 +36,16 @@ export default function HomePage() {
           <p className="eyebrow hero-kicker">Supplement evidence, with the seams showing</p>
           <h1>BS <em>PROOF</em></h1>
         </div>
-        {/* WAITLIST FIRST, AND FOR NOW ALONE (founder, 2026-08-25: "the
-            waitlist should be the main thing people see, they shouldn't have
-            the option to scan yet").
+        {/* THE PUBLIC FRONT DOOR IS THE WAITLIST, AND ONLY THE WAITLIST
+            (founder, 2026-08-25). No flag: a switch that can put the scanner
+            back on this page is a switch that eventually does, by accident, in
+            front of the people it was hidden from.
 
-            The scanner is gated rather than deleted, because it is the thing
-            the waitlist is a waitlist FOR, and it will come back. Default is
-            HIDDEN: a page with two calls to action has neither, and a visitor
-            who scans the QR has seconds of attention to spend on one.
-
-            This is read at BUILD time -- the homepage is statically rendered --
-            so flipping SHOW_SCANNER needs a redeploy, not just an env edit. */}
+            The analyzer lives at /tester instead -- same component, separate
+            route, for developers and board members. Two audiences, two pages,
+            no shared toggle between them. */}
         <div className="shell analyze-hero-body">
           <WaitlistForm source="qr" />
-          {showScanner ? <LabelAnalyzer /> : null}
         </div>
         <div className="shell hero-ledger" aria-label="Dashboard totals">
           <div><strong>{runs.length}</strong><span>Retained run{runs.length === 1 ? "" : "s"}</span></div>
