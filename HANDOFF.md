@@ -6,6 +6,101 @@
 
 ---
 
+## 2026-08-27 (Claude Code session — FIRST omega-3 production extraction, bounded sample)
+
+Run `20260827_194637_omega-3_fish-oil-triglyceride_claude-sr-ft-top5-suppl` —
+the first extraction on a second ingredient. **This is an experimental sample
+(`--limit 40`, and only 18 studies survived the gates), NOT a full-corpus
+score.** Artifact is `experimental`, `public_claims_allowed: false`, and
+`run_statuses.json` was left untouched (the `__default__` registry entry
+already refuses claims). Command:
+
+    SP_AUTO_PUSH=0 run_pipeline.py omega_3 --form fish_oil_triglyceride \
+      --full-text-only --supplement-scope --with-sr --limit 40
+
+Network gate first: the founder's policy change took effect — all six
+literature hosts (Europe PMC, ClinicalTrials.gov, OpenAlex, Unpaywall,
+Crossref, doi.org) returned real HTTP statuses through the proxy.
+
+### Scores (population policy B, stored)
+
+| outcome | 0–100 | verdict | n | signed |
+|---|--:|---|--:|--:|
+| inflammation_crp | 3 | barely studied | 1 | +7 |
+| adverse_events_any | gated | not enough human evidence | 0 | — |
+| blood_pressure | gated | not enough human evidence | 0 | — |
+| glycaemic_control | gated | not enough human evidence | 0 | — |
+| depressive_symptoms | gated | not enough human evidence | 0 | — |
+
+Policy A (comparison only): inflammation_crp 9 (n=2), adverse_events_any 7
+(n=1), glycaemic_control 6 (n=1). Showcase outcomes for omega-3 picked by RCT
+count: inflammation_crp (328), adverse_events_any (225), blood_pressure (210),
+glycaemic_control (209), depressive_symptoms (173). No `--dose` was passed, so
+the dose arc reads "not tested" by construction. **No trial reported the
+`fish_oil_triglyceride` form** — all 7 kept claims entered at the `unspecified`
+×0.3 transfer tier, so the form arc is empty across the board.
+
+### The headline finding: the relevance gate ate the corpus
+
+Retrieval discovered 400 syntheses + 600 primaries; dedup 600 → 576 units
+(canonical keys: 446 DOI, 129 registry, 1 PMID). Full-text-only kept 378/536
+RCT-rank (52 via green OA).
+Then the relevance gate kept **18 of 378 — 360 dropped as noise (95%)**. So the
+run extracted 18 studies against a `--limit 40`. This is CLAUDE.md's known
+"retrieval specificity is the gating problem" at its worst so far: omega-3
+appears in vast non-supplement literature (parenteral nutrition, drug-form
+icosapent ethyl, dietary fish intake), and the supplement scope still surfaces
+mostly ineligible records. Recorded, not fought — Next item 3 (constrain
+retrieval to the INTERVENTION) is now the binding constraint for omega-3, more
+than it ever was for creatine.
+
+### Extraction: 18/18 clean, zero partials
+
+151 live calls, 0 cache hits (cold corpus), 8 transient failures all recovered
+by retry (terminal failures 0, partial-failure studies 0, zero session-limit
+errors). $0.00 metered (subscription); $5.70 API-equivalent; wall time 43 min
+(most of it rate-limited retrieval — extraction itself was ~4 min at
+concurrency 40). `PROMPT_VERSION` v1.28, `SCORING_MODEL`
+v13-universal-negative-contract, models pinned A=haiku-4.5 / B=C=sonnet-5.
+
+Eligibility (invariant 7 scope rules): **8 of 18 trials cannot vote** —
+3 `no_isolated_ingredient_arm`, 3 `self_declared_underpowered`,
+2 `no_ingredient_free_arm`. Population routing excluded 6 claims
+(`pop_match: "different"`). One-study-one-vote collapsed 3 duplicate claims.
+
+### SR inheritance — second data point for Next item 4: again ~zero, but for a DIFFERENT reason
+
+S2 ran under the cap of 60 ranked syntheses (54 reached before the
+marginal-yield stop): 36 ok, 18 unreadable — no tables in full text — and 4 of
+the ok ones returned no included-studies list; 32 resolved, 430 distinct
+trials named.
+Of 18 SR-derived trial candidates, **0 entered evidence mass**: 11 already held
+directly, 6 no design in any review table, 1 no direction, 0 conflicts.
+
+On creatine (2026-08-25) the yield was ~zero because the corpus was SATURATED
+with directly-read trials. Here the corpus is 18 studies and the yield is still
+zero — but the blocker is the refusal rules (no design/direction in the tables)
+plus overlap, not saturation. Notably, most resolved reviews had near-zero
+overlap with our 18 (e.g. "19 included, 0 in our corpus"), which is more
+evidence the relevance gate is starving the corpus relative to what reviewers
+consider omega-3 supplementation trials. The "SR inheritance helps THIN
+corpora" hypothesis did not survive contact with a thin corpus in this form:
+review tables mostly do not carry the design/direction facts the refusals
+require.
+
+### Anomalies / notes
+
+- S2 had 2 call failures, S5 and S7 3 each — all recovered on retry within the
+  run; no study lost an agent.
+- 4 studies flagged predatory-venue (flag only; AME Publishing, Frontiers).
+- 25 unpublished-trial flags (shown, never scored).
+- The DashboardRunV1 artifact was written and validated by the run itself
+  (`scripts/dashboard_artifact.py` refuses overwrite; not re-run). Reports:
+  `*_summary.md`, `*_full.md`, `*_dashboard.json`, `*_context.json` under
+  `reports/runs/`, plus `latest.md` / `latest_full.md` / `INDEX.md` refreshed.
+
+---
+
 ## 2026-08-24 evening (Claude Code session — re-score tool, dose fix published)
 
 ### scripts/rescore_run.py — re-score a run from its OWN cached extractions

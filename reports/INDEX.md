@@ -11,6 +11,8 @@ sweeps `runs/` whenever `scoring.SCORING_MODEL` changes.
 
 | When (UTC) | Mode | Ingredient | Form | Selftest | File |
 |---|---|---|---|---|---|
+| 2026-08-27 19:46 UTC | claude-sr-ft-top5-suppl | `omega_3` | `fish_oil_triglyceride` | summary | [runs/20260827_194637_omega-3_fish-oil-triglyceride_claude-sr-ft-top5-suppl_summary.md](runs/20260827_194637_omega-3_fish-oil-triglyceride_claude-sr-ft-top5-suppl_summary.md) |
+| 2026-08-27 19:46 UTC | claude-sr-ft-top5-suppl | `omega_3` | `fish_oil_triglyceride` | full | [runs/20260827_194637_omega-3_fish-oil-triglyceride_claude-sr-ft-top5-suppl_full.md](runs/20260827_194637_omega-3_fish-oil-triglyceride_claude-sr-ft-top5-suppl_full.md) |
 | 2026-08-25 17:53 UTC | claude-sr-ft-top5-suppl | `creatine` | `creatine_monohydrate` | summary | [runs/20260825_175339_creatine_creatine-monohydrate_claude-sr-ft-top5-suppl_summary.md](runs/20260825_175339_creatine_creatine-monohydrate_claude-sr-ft-top5-suppl_summary.md) |
 | 2026-08-25 17:53 UTC | claude-sr-ft-top5-suppl | `creatine` | `creatine_monohydrate` | full | [runs/20260825_175339_creatine_creatine-monohydrate_claude-sr-ft-top5-suppl_full.md](runs/20260825_175339_creatine_creatine-monohydrate_claude-sr-ft-top5-suppl_full.md) |
 | 2026-08-25 17:35 UTC | claude-sr-ft-top5-suppl | `creatine` | `creatine_monohydrate` | summary | [runs/20260825_173541_creatine_creatine-monohydrate_claude-sr-ft-top5-suppl_summary.md](runs/20260825_173541_creatine_creatine-monohydrate_claude-sr-ft-top5-suppl_summary.md) |
