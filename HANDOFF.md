@@ -6,6 +6,79 @@
 
 ---
 
+## 2026-08-28 (Claude Code session — AUDIT: the relevance gate is blind on omega-3)
+
+Full per-study audit of yesterday's omega-3 run, deterministic replay of
+`pipeline.relevance.relevance_check`, **zero model calls**. Findings and the
+378-row per-study table:
+`docs/history/2026-08-28-omega3-relevance-gate-audit.md` (+ `.csv`).
+
+**The gate is not doing its job. precision 1.00, recall 0.067.** It keeps nothing
+it shouldn't (0 false positives) and drops **93% of the real omega-3 trials it was
+given**: of 378 inputs, 267 were genuine omega-3 trials and **18** reached
+extraction. All 249 false negatives carried the same reason string,
+`"ingredient not in title/abstract"` — logged in the run as "dropped 360 noise",
+which reads like the gate working. Reconciles exactly with the run (326+52 in,
+16+2 out).
+
+**Root cause: a vocab id is not a spelling.** The gate converts `omega_3` →
+`"omega 3"` (underscore→space) and requires that literal substring. The literature
+writes `omega-3`. "Effect of omega-3 supplementation on CRP: an RCT" is DROPPED;
+the same title with a space PASSES. This is the **same class** as the `vitamin_d`
+incident documented in that file's own comment (175/175 dropped, 2026-08-09) — that
+fix cured the symptom, not the class.
+
+Note the asymmetry: `europepmc.search_term` produces the same `"omega 3"` string,
+but Europe PMC **tokenizes**, so retrieval found a genuine corpus that the gate's
+**exact substring check** then threw away. Retrieval was not the problem.
+
+**Not omega-3-specific:** `beta_carotene` (`beta-carotene`, `β-carotene`) fails
+identically and has never been run. The other 17 vocab ingredients are spelled with
+a space or one word, which is why creatine/magnesium/vitamin-D runs never exposed
+this — and why 433 selftest checks stay green (`selftest.py:2503` tests only
+space-spelled ingredients).
+
+**What was lost, conservatively:** of 249 false negatives, **149 are clean
+single-ingredient omega-3/fish-oil/krill/EPA-DHA trials named in the TITLE** — the
+robust floor, indefensible drops. 28 secondary analyses and 23 co-supplementation
+designs would likely be refused downstream anyway, but by rules built to judge
+them. A second tier of 62 records names only a synonym (EPA/DHA 44, fish oil 18,
+n-3 11, krill 5); `vocab/form.json` has no synonym field for the gate to read.
+Simulated hyphen-awareness alone takes the kept corpus **16 → 155 of 326 (8.7×)**.
+
+**The survivors are biased in KIND, not just few — this is the important part.**
+All 18 passed on an orthographic accident, and the accident is not random: a space
+survives mostly in multi-ingredient product names (`omega 3-6-9`, `omega 3-, 7-,
+and 9-FA`) and where omega-3 is a measured analyte (a BEETROOT trial;
+immunonutrition blends). Hyphenated prose is how a single-ingredient trial writes
+it. So the gate selected FOR blends and biomarker papers and AGAINST clean trials.
+That explains three things previously logged separately: form transfer 100%
+`unspecified ×0.3` (blends name no form), 8 of 18 trials unable to vote including
+3 `no_isolated_ingredient_arm`, and 4 of 5 outcomes gated at n=0.
+
+**The run's single score rests on the same accident.** `inflammation_crp = 3/100`
+(n=1) is entirely `registry:nct06480812`, which passed on the one string
+`"omega 3 (n = 33; 500 mg/day)"` while its title and body use `omega-3`. The
+extraction is faithful — S3 correctly read an isolated 500 mg/day arm vs an
+ingredient-free control, so the row is legitimate — but had those authors been
+typographically consistent, **the run would have produced zero scores.** Separate
+defect on that study: S7 returned all-null form/dose though `500 mg/day` is in the
+abstract it was given.
+
+**Nothing was fixed.** `pipeline/relevance.py` was out of scope for the extraction
+session, and the fix touches the shared gate for every ingredient — it wants its
+own change, its own selftest and owner review, not a drive-by edit. Recommendations
+(normalise separators in rule 1; add a vocab synonym list; selftest every vocab
+ingredient against a hyphenated title; warn when a drop rate exceeds ~50% with one
+dominant reason; re-run omega-3 after) are in the audit doc.
+
+Run `20260827_194637` keeps its `experimental` / `public_claims_allowed: false`
+standing, now with a sharper reason than sample size: **its corpus is a biased 6.7%
+sample selected by typography.** Do not compare it against a post-fix run as if the
+delta were evidence.
+
+---
+
 ## 2026-08-27 (Claude Code session — FIRST omega-3 production extraction, bounded sample)
 
 Run `20260827_194637_omega-3_fish-oil-triglyceride_claude-sr-ft-top5-suppl` —
