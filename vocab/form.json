@@ -1,6 +1,6 @@
 {
   "vocab": "form",
-  "version": "v1",
+  "version": "v2",
   "status": "PROVISIONAL — covers the three demo ingredients only. Adding an ingredient means adding a block here, not changing code.",
   "policy": {
     "salt_family": "Drives the 0.50 partial-transfer tier. For botanicals it means PREPARATION family, not a chemical salt.",
@@ -1010,6 +1010,11 @@
     },
     "beta_carotene": {
       "dose_basis_kind": "active_moiety",
+      "search_synonyms_note": "The greek-letter spelling is the common one in the literature. The hyphenated ascii form (beta-carotene) is handled by separator tolerance in pipeline.relevance, not by this list.",
+      "search_synonyms": [
+        "β-carotene",
+        "β carotene"
+      ],
       "salt_families": [
         "synthetic",
         "natural_source"
@@ -1193,6 +1198,25 @@
     "omega_3": {
       "dose_basis_kind": "active_moiety",
       "note": "The dose that matters is EPA+DHA, not total oil. A 1000 mg fish oil capsule typically carries ~300 mg EPA+DHA -- a 3x trap directly analogous to the elemental-dose trap.",
+      "search_synonyms_note": "Names for the INGREDIENT, read by pipeline.relevance. Bare 'PUFA' and 'polyunsaturated fatty acid' are deliberately EXCLUDED: omega-6 is also a PUFA, so they name a superset and would admit the wrong ingredient. EPA/DHA are short tokens and are matched with word boundaries.",
+      "search_synonyms": [
+        "fish oil",
+        "ω-3",
+        "n-3 fatty acid",
+        "n-3 PUFA",
+        "n-3 polyunsaturated fatty acid",
+        "n-3 long chain polyunsaturated fatty acid",
+        "n-3 long chain fatty acid",
+        "omega-3 PUFA",
+        "eicosapentaenoic acid",
+        "docosahexaenoic acid",
+        "EPA",
+        "DHA",
+        "krill oil",
+        "algal oil",
+        "cod liver oil",
+        "marine oil"
+      ],
       "salt_families": [
         "triglyceride",
         "ethyl_ester",

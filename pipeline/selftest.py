@@ -2510,6 +2510,59 @@ def main():
                   "vitamin_d")[0],
           "the fix must not make the gate permissive")
 
+    # SEPARATORS ARE NOT PART OF THE NAME. The vitamin_d fix above cured ONE
+    # spelling; the class survived and cost the first omega-3 run 249 of 267 real
+    # trials (recall 0.067), reported as "dropped 360 noise". This asserts the
+    # CLASS, over every ingredient in the vocabulary, so the next hyphenated or
+    # greek-letter ingredient cannot fail silently the way beta_carotene did.
+    print("\nRELEVANCE: A VOCAB ID IS NOT A SPELLING")
+    for _sep in ("-", " ", "", "–"):
+        _t = f"Effect of omega{_sep}3 supplementation on CRP: a randomized trial"
+        check(f"omega{_sep or '(nothing)'}3 in a title is recognised",
+              _rc({"title": _t, "abstract": ""}, "omega_3")[0],
+              "the literature hyphenates; the vocab id does not")
+    check("greek-letter beta-carotene is recognised",
+          _rc({"title": "Effect of β-carotene supplementation on lung cancer risk",
+               "abstract": ""}, "beta_carotene")[0],
+          "beta_carotene was broken identically and had never been run")
+    check("ascii beta-carotene is recognised",
+          _rc({"title": "Effect of beta-carotene supplementation on lung cancer risk",
+               "abstract": ""}, "beta_carotene")[0])
+
+    # Every ingredient, against its own realistically-hyphenated title. A new
+    # ingredient whose canonical spelling carries a separator fails here rather
+    # than in a run that reports the loss as noise.
+    from pipeline import vocab as _vc
+    _unmatched = []
+    for _ing in _vc.ingredients():
+        _spelled = _ing.replace("_", "-")
+        _rec = {"title": f"Effect of {_spelled} supplementation on outcomes: an RCT",
+                "abstract": f"Participants received oral {_spelled} daily."}
+        if not _rc(_rec, _ing)[0]:
+            _unmatched.append(_ing)
+    check("every vocab ingredient is recognised in a hyphenated title",
+          not _unmatched, f"unmatched: {_unmatched}")
+
+    # Synonyms: a paper that never writes the canonical name still counts.
+    check("an omega-3 trial named only 'fish oil' is recognised",
+          _rc({"title": "Fish oil supplementation and headache symptoms in migraine",
+               "abstract": "1 g fish oil twice daily versus placebo."}, "omega_3")[0],
+          "62 of 171 unmatchable records named only a synonym")
+    check("a docosahexaenoic-acid-only trial is recognised",
+          _rc({"title": "High-dose docosahexaenoic acid supplementation in preterm infants",
+               "abstract": "Infants were randomised to DHA or placebo."}, "omega_3")[0])
+    # PRECISION MUST SURVIVE THE SYNONYMS. Bare "PUFA" names a superset --
+    # omega-6 is also a polyunsaturated fatty acid -- so it is deliberately NOT a
+    # synonym, and a linoleic-acid trial must still be refused.
+    check("a bare-PUFA omega-6 trial is NOT admitted as omega-3",
+          not _rc({"title": "Linoleic acid rich PUFA supplementation and lipids",
+                   "abstract": "Participants received a polyunsaturated fatty acid "
+                               "supplement rich in linoleic acid."}, "omega_3")[0],
+          "'PUFA' is a superset, not a synonym -- omega-6 is one too")
+    check("synonyms did not make the gate accept any supplement",
+          not _rc({"title": "Blueberry supplementation and depression",
+                   "abstract": "oral blueberry powder daily"}, "omega_3")[0])
+
     check("no underscore survives into a query",
           "vitamin_d" not in _ep._query("vitamin_d", syntheses=False, scope="intervention")
           and 'TITLE:"vitamin d"' in _ep._query("vitamin_d", syntheses=False,

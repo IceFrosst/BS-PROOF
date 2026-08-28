@@ -62,6 +62,21 @@ def ingredients() -> list[str]:
     return sorted(load("form")["ingredients"])
 
 
+def search_synonyms(ingredient: str) -> list[str]:
+    """
+    Other names the LITERATURE uses for this ingredient, for the relevance gate.
+
+    Not aliases of a FORM (those live on each form's `aliases`) -- these name the
+    ingredient itself, so `omega_3` is recognised in a paper that only ever writes
+    "fish oil" or "docosahexaenoic acid". Measured 2026-08-28: 62 of 171
+    otherwise-unmatchable omega-3 records named only a synonym.
+
+    Absent field -> no synonyms. A one-word ingredient like `zinc` needs none.
+    """
+    block = load("form")["ingredients"].get(ingredient) or {}
+    return list(block.get("search_synonyms") or [])
+
+
 def forms_for(ingredient: str) -> list[dict]:
     block = load("form")["ingredients"].get(ingredient)
     return block["forms"] if block else []
