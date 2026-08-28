@@ -6,6 +6,94 @@
 
 ---
 
+## 2026-08-28 evening (Claude Code session — SCORING_MODEL v14, form term reads near-form evidence)
+
+Founder instruction, verbatim: **"make the algorithm less strict but at the same
+it should be absolutely true."** `SCORING_MODEL` v13 -> **v14-form-transfer-ladder**
+(`c50439f`), measured on run `20260828_152434`. Recorded in
+`docs/REVIEW_PENDING.md` item 0 and SPEC 13 as invariant 4 requires -- the hook
+blocked the constant change until it was documented, correctly.
+
+### The one relaxation that is also a correction
+
+The composite's form term read `form_match == "exact"` studies ONLY. Every other
+tier contributed **0.0**, so "the paper never printed which form" (`unspecified`),
+"a form we know is not yours" (`different`) and "no evidence at all" were priced
+IDENTICALLY -- collapsing three tiers `FORM_FACTOR` already prices apart
+(exact 1.00 / salt_family 0.50 / unspecified 0.30 / different 0.15).
+
+A non-exact study now enters at `FORM_LADDER[design_rank] x
+FORM_FACTOR[form_match]`; the term is the best of the exact and transfer ladders.
+**No new constant** -- `FORM_FACTOR` exists to price partial form evidence and was
+simply not being read there.
+
+**What made it a defect rather than strictness**, measured on run
+`20260828_083440` (inflammation_crp): **six `unspecified` RCTs, every one
+non-negative and four at `s = +1.00`, earned zero form credit, while the single
+exact-form trial at `s = -0.02` -- arithmetically indistinguishable from zero --
+set `all_negative_in_form` and drove the term to 0.0.** One marginal trial erased
+six positive ones. That is the founder's own v5 correction ("a negative pooled
+verdict is a WARNING, not a reason to discard the positive evidence that exists")
+applied one tier out.
+
+### Measured, v13 -> v14 on an IDENTICAL corpus
+
+Re-ran the same command from cache, so effect `d`, `c`, `n` and the dose term are
+byte-identical between the two runs and the delta is purely the form term:
+
+| outcome | v13 | **v14** | signed (both) | n |
+|---|--:|--:|--:|--:|
+| inflammation_crp | 17 | **23** | 20 | 7 |
+| glycaemic_control | 6 | **8** | 2 | 2 |
+| blood_pressure | 2 | **3** | 3 | 1 |
+| adverse_events_any | gated | gated | — | 0 |
+| depressive_symptoms | gated | gated | — | 0 |
+
+**Signed scores did not move at all**, as designed -- `APPLY_FORM_IN_WEIGHT =
+False`, so form is not in `w_study` and only the display composite changes.
+
+The arc now renders both facts at once, which is invariant 8 working visibly:
+`best evidence in your form scores 0.24 (-0.02 @ 32%)` -- the transfer strength
+AND the exact-form warning, where v13 printed only
+`EVERY trial in your form was negative`.
+
+Run cost: 204 s, 130/130 from cache, $0. `reports/runs/` swept to v14 via
+`scripts/archive_reports.py --apply`; v13 and earlier now under
+`reports/archive/<model>/`.
+
+### Deliberately NOT relaxed (each would make the score less true)
+
+- **`different` still earns nothing.** A form we know is not yours answers a
+  different question -- the same reason `product-score` refuses a form the run
+  never scored. `FORM_TRANSFER_TIERS` omits it; pinned.
+- **"Silence is not a pass" survives.** Six unspecified RCTs score 0.24 against
+  0.80 for six confirmed exact-form ones: a 70% discount. The failure that rule
+  was adopted for was 99/100 on an untested product; 0.24 is not that.
+- **Invariant 8 intact.** Arc `verdict` / `coverage` / `n_in_form` stay
+  exact-form only, so "nobody tested your form" cannot render as "your form
+  failed". Pinned by a new check.
+- **`MISSING_DOSE_PENALTY` = 0.10 untouched.** Treating "nobody looked near your
+  dose" as "your dose is wrong" is an explicit founder decision in CLAUDE.md.
+  Relaxing it to neutral reads **27** on inflammation_crp alone, **33** combined
+  with v14. **Founder's call, not taken.**
+- **The equal-weight mean untouched.** While a form term can be 0 the ceiling is
+  **67/100** even with perfect effect, dose and confidence. Reweighting needs a
+  new constant -- SPEC 13, founder call.
+
+Pinned selftest `"an unreported form earns no form credit"` was REVERSED with its
+reasoning inline, plus six new checks (tier ordering, `different` exclusion, the
+marginal-exact regression, best-evidence-wins, pre-v14 back-compatibility).
+
+**`scripts/rescore_run.py` could NOT measure this** and that is worth knowing
+before someone trusts it again: it recovered **7 of 130** design ranks, so every
+outcome gated to `None`, and its eligibility counts differed from the parent's
+(56/26/24/6 vs 55/24/21/7) on numbers the form change cannot touch. Confirmed as
+reconstruction error by re-running `--verify` with v14 reverted -- identical
+`None`s -- exactly the check the tool's own output demands. A cached full re-run
+cost 204 s and measured it exactly.
+
+---
+
 ## 2026-08-28 later (Claude Code session — gate FIXED, omega-3 re-run: 18 -> 130 studies, score 3 -> 17)
 
 Founder decision: fix the gate the audit below found, and reach more studies. Both
