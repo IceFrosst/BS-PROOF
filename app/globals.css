@@ -829,24 +829,31 @@ thead th { color: var(--ink-soft); font-size: 0.7rem; text-transform: uppercase;
    email field, then nothing. On a phone that is a wall of text under a
    headline; on a desktop it is a footer floating above half a blank screen.
 
-   So this block does three things, in order of how much they matter:
+   The fix is NOT more sections. A first pass added three explanatory ones and
+   the founder cut them the same day, so what is left has to earn a whole
+   screen on its own:
 
-   1. PACE. Four beats (ask -> how -> why -> where it stands) instead of one
-      dense one, with section rhythm from clamp()ed padding rather than a fixed
-      gap that is either cramped on a phone or lost on a monitor.
-   2. LINE LENGTH. Every prose block is capped in `ch`, not px: the old copy ran
-      the full 560px column at 0.92rem, which is ~62 characters on a phone and
-      the reason it read as a wall.
-   3. TAP TARGETS AND STACKING. The form panel, the scroll cue and the closing
-      actions are all >=44px and go full-width below 620px, where a
-      side-by-side pair would leave two 150px columns nobody can hit.
+   1. THE HERO FILLS THE VIEWPORT. With one section, `padding` alone leaves the
+      page ending wherever the copy happens to stop. .front-main stretches (the
+      body flex rule at the top of this file) and the hero grows into it, so
+      the dark ground always reaches the footer and the content sits centred in
+      it rather than crowding the top edge.
+   2. LINE LENGTH IS CAPPED IN ch, NOT px. The old copy ran the full 560px
+      column at 0.92rem — ~62 characters on a phone, and the reason it read as
+      a wall. Each block now breaks where the eye wants it to.
+   3. TAP TARGETS. The form panel and its controls go full-width below 620px,
+      where a side-by-side pair would leave two 150px columns nobody can hit.
 
    Scoped to .front-* on purpose. /tester shares the old .analyze-hero and the
    .waitlist form styles; nothing here reaches either, so the analyzer page is
    untouched by a change made for the public page.
    -------------------------------------------------------------------------- */
+.front-main { display: flex; flex-direction: column; }
 .front-hero {
-  padding-block: clamp(44px, 11vw, 96px) clamp(40px, 9vw, 88px);
+  flex: 1;
+  display: grid;
+  align-content: center;
+  padding-block: clamp(44px, 11vw, 96px);
   color: var(--white);
   background-color: var(--night);
   background-image: radial-gradient(rgb(255 255 255 / 13%) 1px, transparent 1px);
@@ -889,91 +896,3 @@ thead th { color: var(--ink-soft); font-size: 0.7rem; text-transform: uppercase;
 .front-form .waitlist { max-width: none; padding-block: 0; }
 .front-form .waitlist-copy { max-width: 46ch; }
 .front-form .waitlist-done { margin: 0; }
-/* Not decoration: it is the only thing telling a phone reader that the page
-   continues past the fold, and the sections below are where the pitch actually
-   gets explained. */
-.front-scroll {
-  display: inline-flex;
-  min-height: 44px;
-  align-items: center;
-  gap: 9px;
-  margin-top: clamp(24px, 5vw, 34px);
-  color: #c7d2cc;
-  font-size: 0.85rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  text-decoration: none;
-}
-.front-scroll::after { content: "\2193"; font-size: 1rem; }
-.front-scroll:hover { color: var(--lime); text-decoration: underline; }
-
-.front-heading { max-width: 800px; margin-bottom: clamp(28px, 5vw, 46px); }
-.front-heading h2, .front-status h2 { font-size: clamp(1.85rem, 6vw, 2.9rem); line-height: 1.08; }
-
-/* minmax(min(100%, 260px), 1fr): the min() is what makes this safe on a 320px
-   phone, where a bare 260px track plus the gap overflows the column. */
-.front-step-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
-  gap: clamp(16px, 2.5vw, 22px);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.front-step {
-  display: grid;
-  align-content: start;
-  gap: 12px;
-  padding: clamp(22px, 4vw, 32px);
-  background: var(--white);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-}
-.front-step-n {
-  display: grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  color: var(--lime);
-  background: var(--night);
-  border-radius: 50%;
-  font-size: 1rem;
-  font-weight: 900;
-}
-.front-step h3 { font-size: 1.25rem; letter-spacing: -0.02em; }
-.front-step p { margin: 0; max-width: 46ch; color: var(--ink-soft); line-height: 1.6; }
-
-.front-compare {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
-  gap: clamp(16px, 2.5vw, 22px);
-}
-.front-compare-card {
-  padding: clamp(22px, 4vw, 34px);
-  background: var(--white);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-}
-.front-compare-tag { margin: 0 0 12px; color: var(--ink-soft); font-size: 0.7rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
-.front-compare-card p:last-child { margin: 0; max-width: 44ch; color: var(--ink-soft); font-size: clamp(1rem, 3.8vw, 1.12rem); line-height: 1.6; }
-/* Light card on tint, dark card for ours -- the contrast between the two panels
-   IS the argument, so it is carried by the ground and not by a coloured word. */
-.front-compare-ours { color: var(--white); background: var(--night); border-color: var(--night); }
-.front-compare-ours .front-compare-tag { color: var(--lime); }
-.front-compare-ours p:last-child { color: #c7d2cc; }
-.front-compare-ours strong { color: var(--white); }
-.front-punchline { margin: clamp(24px, 4vw, 32px) 0 0; font-size: clamp(1.15rem, 4.5vw, 1.6rem); font-weight: 800; letter-spacing: -0.02em; }
-
-.front-status-inner { display: grid; grid-template-columns: minmax(0, 0.42fr) minmax(0, 1fr); gap: clamp(22px, 4vw, 64px); align-items: start; }
-.front-status p { max-width: 62ch; color: var(--ink-soft); font-size: clamp(1rem, 3.8vw, 1.12rem); line-height: 1.65; }
-.front-status-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 24px; margin: clamp(20px, 3vw, 26px) 0 0; }
-.front-status-link { display: inline-flex; min-height: 44px; align-items: center; color: var(--ink); font-weight: 800; }
-
-@media (max-width: 620px) {
-  .front-status-inner { grid-template-columns: 1fr; }
-  /* Two half-width controls at this size are ~150px each and sit at the very
-     bottom of a long scroll, which is exactly where a thumb is least accurate. */
-  .front-status-actions { flex-direction: column; align-items: stretch; }
-  .front-status-actions .button, .front-status-link { width: 100%; justify-content: center; }
-}

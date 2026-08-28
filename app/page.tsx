@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 import { WaitlistForm } from "@/components/waitlist-form";
 
 /*
@@ -18,25 +16,27 @@ import { WaitlistForm } from "@/components/waitlist-form";
  * for public claims" — true, necessary on a page that shows scores, and
  * actively confusing on a page that only asks for an email.
  *
- * REDESIGNED 2026-08-28 (founder: the page was "too compact" and "from mobile
- * it looks like shit"). One action is not the same as one screen of text, and
- * what was here was one dense dark block: a two-line shouty kicker, a wall of
- * five-line body copy, an email field, and then a footer floating in an empty
- * half-page. Three things changed and each is a reason, not a preference:
+ * REWRITTEN 2026-08-28 (founder: the page was "too compact" and "from mobile
+ * it looks like shit"). What was here was one dark block: a two-line shouty
+ * kicker reading "Supplement evidence, with the seams showing", a five-line
+ * paragraph, an email field, and then a footer floating above an empty half
+ * page. Two things changed:
  *
- * 1. THE KICKER IS GONE. It read "Supplement evidence, with the seams showing"
- *    — a metaphor about showing your working that the founder read and could
- *    not parse, which is the only test a tagline has to pass. The page now
- *    opens with the question the visitor actually arrived with ("Does that
- *    supplement actually do anything?") and answers it in one sentence.
- * 2. THE EXPLANATION IS PACED, not compressed. The old paragraph carried the
- *    input, the method, the differentiator and the ask in one breath. It is now
- *    four beats — ask, how it works, why a product score differs from an
- *    ingredient score, where the project honestly stands — so a phone reader
- *    meets one idea per screen instead of all four at once.
- * 3. THE PAGE HAS A BOTTOM. With one short section the footer sat mid-viewport
- *    above a blank half-page on desktop; the extra beats plus the sticky-footer
- *    rule in globals.css mean the ground now reaches the fold on every size.
+ * 1. THE KICKER IS GONE. A metaphor about showing your working that the
+ *    founder read and could not parse, which is the only test a tagline has to
+ *    pass. The page now opens with the question the visitor actually arrived
+ *    with and answers it in one sentence.
+ * 2. THE COPY IS PACED, not compressed — a question, an answer, the ask —
+ *    each capped in ch so no line runs past comfortable reading width on a
+ *    phone. The old paragraph ran a full 560px column at 0.92rem, which is
+ *    ~62 characters on a phone and the reason it read as a wall.
+ *
+ * TRIMMED BACK the same day, also on the founder's call: an explanatory pass
+ * below the fold (how it works / why a product score / project status) is
+ * gone, and the "see how it works" cue with it — a scroll cue pointing at
+ * nothing is worse than no cue. So the page is one screen again, deliberately:
+ * the hero stretches to fill the viewport (see .front-hero in globals.css)
+ * rather than stopping halfway down with paper underneath it.
  *
  * This route still reads no catalog at all, so it renders the same whether or
  * not any artifact is present, and it still offers no scanner and no link to
@@ -45,7 +45,7 @@ import { WaitlistForm } from "@/components/waitlist-form";
 
 export default function HomePage() {
   return (
-    <main id="main-content" tabIndex={-1}>
+    <main className="front-main" id="main-content" tabIndex={-1}>
       <section className="front-hero" id="waitlist">
         <div className="shell front-hero-inner">
           <p className="eyebrow front-kicker">Early access · opening soon</p>
@@ -60,104 +60,6 @@ export default function HomePage() {
 
           <div className="front-form">
             <WaitlistForm source="qr" />
-          </div>
-
-          <a className="front-scroll" href="#how">
-            See how it works
-          </a>
-        </div>
-      </section>
-
-      <section className="section front-steps" id="how" aria-labelledby="how-heading">
-        <div className="shell">
-          <div className="front-heading">
-            <p className="eyebrow">How it works</p>
-            <h2 id="how-heading">Three steps, one photo</h2>
-          </div>
-          <ol className="front-step-grid">
-            <li className="front-step">
-              <span className="front-step-n" aria-hidden="true">
-                1
-              </span>
-              <h3>Snap the label</h3>
-              <p>
-                One photo of the Supplement Facts panel. That is the whole input — no typing, no
-                account, no shopping list.
-              </p>
-            </li>
-            <li className="front-step">
-              <span className="front-step-n" aria-hidden="true">
-                2
-              </span>
-              <h3>We match the trials</h3>
-              <p>
-                We find the trials that tested that ingredient, in that form, near that dose — and
-                discount the ones that tested something else.
-              </p>
-            </li>
-            <li className="front-step">
-              <span className="front-step-n" aria-hidden="true">
-                3
-              </span>
-              <h3>You get the receipts</h3>
-              <p>
-                A score for each health outcome, with the studies, the doses and the limitations
-                readable underneath it.
-              </p>
-            </li>
-          </ol>
-        </div>
-      </section>
-
-      <section className="section section-tint front-why" aria-labelledby="why-heading">
-        <div className="shell">
-          <div className="front-heading">
-            <p className="eyebrow">Why it is different</p>
-            <h2 id="why-heading">Everyone rates the ingredient. You bought a product.</h2>
-          </div>
-          <div className="front-compare">
-            <article className="front-compare-card">
-              <p className="front-compare-tag">The usual rating</p>
-              <p>
-                Creatine is well studied, so every creatine tub gets the same tick — whatever form
-                it uses, and however much of it is actually in a scoop.
-              </p>
-            </article>
-            <article className="front-compare-card front-compare-ours">
-              <p className="front-compare-tag">What we score</p>
-              <p>
-                Your label says <strong>creatine monohydrate 4,400&nbsp;mg</strong>. That is
-                <strong> 3,868&nbsp;mg</strong> of actual creatine — and some of the trials behind
-                the headline used four times that.
-              </p>
-            </article>
-          </div>
-          <p className="front-punchline">
-            Same ingredient. Different product. Often a different answer.
-          </p>
-        </div>
-      </section>
-
-      <section className="section front-status" aria-labelledby="status-heading">
-        <div className="shell front-status-inner">
-          <div>
-            <p className="eyebrow">Where this is at</p>
-            <h2 id="status-heading">Honest about the stage</h2>
-          </div>
-          <div>
-            <p>
-              The scoring pipeline is built and runs today on retained research runs. The label
-              scanner opens to a small group of testers first, then to the waitlist. Every score is
-              research output — not medical advice, and not yet approved for public claims.
-            </p>
-            <p className="front-status-actions">
-              <a className="button button-dark" href="#waitlist">
-                Join the waitlist
-              </a>
-              <Link className="front-status-link" href="/methodology">
-                Read the methodology
-              </Link>
-            </p>
           </div>
         </div>
       </section>
