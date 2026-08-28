@@ -117,14 +117,16 @@ export function WaitlistForm({ source = "qr" }: { source?: string }) {
       <label className="waitlist-label" htmlFor={inputId}>
         Get early access
       </label>
-      {/* With the scanner hidden this paragraph is the ONLY thing telling a
-          visitor what they are joining, so it says what the product does
-          rather than that it is coming. The differentiator is the second
-          sentence: everyone else scores the ingredient. */}
+      {/* This paragraph used to carry the whole pitch, because it was the only
+          prose on the page. Since the 2026-08-28 redesign the hero above says
+          what the product does and a "how it works" section says how, so
+          repeating it here would make the reader parse the same claim twice
+          before reaching the field. What is left is the only thing a person
+          hesitating over an email address still needs: what lands in their
+          inbox, how often, and that it is not a newsletter. */}
       <p className="waitlist-copy">
-        We read a supplement label and score that <em>exact</em> product against the clinical
-        trials &mdash; its ingredient, its form and its dose, not just the ingredient everyone else
-        scores. Leave your email and we&rsquo;ll tell you the moment it opens.
+        One email, once, the day scanning opens. Not a newsletter, and we don&rsquo;t pass your
+        address on.
       </p>
       <div className="waitlist-row">
         <input

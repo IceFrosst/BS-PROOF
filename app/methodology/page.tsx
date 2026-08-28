@@ -14,7 +14,12 @@ export default function MethodologyPage() {
   return (
     <main id="main-content" tabIndex={-1}>
       <div className="shell article-hero">
-        <nav className="breadcrumbs" aria-label="Breadcrumb"><Link href="/">Runs</Link><span aria-hidden="true">/</span><span>Methodology</span></nav>
+        {/* "Runs", not "Home", until 2026-08-28 -- but "/" stopped being the run
+            archive on 2026-08-25 and is now the waitlist, so the crumb promised
+            an archive and delivered an email field. The archive lives at
+            /tester, which this page cannot link to (unlisted is the whole
+            mechanism), so the crumb says where it actually goes. */}
+        <nav className="breadcrumbs" aria-label="Breadcrumb"><Link href="/">Home</Link><span aria-hidden="true">/</span><span>Methodology</span></nav>
         <p className="eyebrow">Reader’s guide</p>
         <h1>A score with its<br /><em>working visible.</em></h1>
         <p className="article-lede">The dashboard is an inspection layer over retained pipeline outputs. It does not recompute scores, fill missing values, or promote historical runs into product claims.</p>
