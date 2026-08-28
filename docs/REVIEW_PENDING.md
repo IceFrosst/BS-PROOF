@@ -15,6 +15,61 @@ Last swept: **2026-08-08**.
 
 ## OPEN
 
+### 0. `SCORING_MODEL` v13 → v14-form-transfer-ladder — DONE ON FOUNDER INSTRUCTION, needs confirmation
+
+**Founder instruction 2026-08-28, verbatim: "make the algorithm less strict but at
+the same it should be absolutely true."** Implemented; flagged here because it
+changes the meaning of a published number and reverses a previously pinned
+decision. **No constant value changed** — `FORM_FACTOR`, `k`, `S_VALUE`,
+`H_PENALTY`, `H_NORM`, `DOSE_FACTOR` are all untouched.
+
+**What changed.** The composite's form term read `form_match == "exact"` studies
+only. Everything else contributed **0.0** — so `unspecified` (the paper never
+said which form), `different` (a form we know is not yours) and *no evidence at
+all* were priced identically, collapsing three tiers `FORM_FACTOR` already prices
+apart (exact 1.00 / salt_family 0.50 / unspecified 0.30 / different 0.15). A
+non-exact study now enters the ladder at
+`FORM_LADDER[design_rank] × FORM_FACTOR[form_match]`, and the term is the best of
+the exact and transfer ladders.
+
+**The measurement that motivated it** — omega-3 run `20260828_083440`,
+`inflammation_crp`: six `unspecified` RCTs, every one non-negative and four at
+`s = +1.00`, earned zero form credit, while the single exact-form trial at
+**s = −0.02** (arithmetically indistinguishable from zero) set
+`all_negative_in_form` and drove the term to 0.0. One marginal trial erased six
+positive ones. Composite 17 → 23 on that row.
+
+**Why this is truth-improving and not merely looser** — it is the founder's own
+v5 correction applied one tier out: *"a negative pooled verdict is a WARNING, not
+a reason to discard the positive evidence that exists."*
+
+**What was deliberately NOT relaxed:**
+
+- `different` still earns nothing. A form we know is not yours answers a
+  different question — the same reason `product-score` refuses a form the run
+  never scored. `FORM_TRANSFER_TIERS` omits it and a selftest pins that.
+- **"Silence is not a pass" is preserved.** Six unspecified RCTs score 0.24
+  against 0.80 for six confirmed exact-form ones — a 70% discount. The failure
+  that rule was adopted for was 99/100 on an untested product; 0.24 is not that.
+- **Invariant 8 is intact.** Arc `verdict`, `coverage` and `n_in_form` stay
+  exact-form only, so "nobody tested your form" (`None @ 0%`) still cannot render
+  as "your form was tested and failed". Pinned.
+- **The signed score does not move at all** — form is out of `w_study`
+  (`APPLY_FORM_IN_WEIGHT = False`). Only the composite changes.
+- The **dose**-silence penalty (`MISSING_DOSE_PENALTY = 0.10`) was left alone. It
+  is an explicit founder decision recorded in CLAUDE.md ("the score deliberately
+  does NOT distinguish 'dosed where trials failed' from 'dosed where nobody
+  looked'"). Relaxing it to neutral would read 27 instead of 17 on the row above,
+  and 33 combined with this change. **Founder's call, not taken.**
+
+**Pinned test changed:** `selftest.py` "an unreported form earns no form credit"
+→ "earns DISCOUNTED transfer credit, not zero", with the reasoning recorded
+inline. Six new checks added around it (tier ordering, `different` exclusion,
+the marginal-exact regression, exact-still-wins, back-compatibility).
+
+**Confirm or revert.** Revert is one commit; the composite is recomputable from
+cache with `scripts/rescore_run.py`, no model calls.
+
 ### 1. Predatory list flags nothing, and that is now deliberate
 
 **Fixed 2026-08-08, but read the second half.**

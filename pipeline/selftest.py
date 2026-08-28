@@ -1411,14 +1411,86 @@ def main():
     # nothing pinned how an UNSPECIFIED form behaves -- and 54% of the real
     # creatine corpus is unspecified.
     _uns = _b([_s("benefit", "unspecified", "in_band", "meaningful") for _ in range(4)])
-    check("an unreported form earns no form credit and is not read as a match",
-          _uns["arcs"]["form"]["strength"] == 0.0
-          and _uns["arcs"]["form"]["basis"] == "untested_in_form"
-          and _uns["arcs"]["form"]["verdict"] is None,
-          "silence is not a pass -- but it no longer drags via effect x 0.15")
+
+    # CHANGED IN v14 (founder ask 2026-08-28: "less strict but absolutely true").
+    # This check previously pinned strength == 0.0 / "untested_in_form" for an
+    # unreported form. It now earns the DISCOUNTED transfer credit
+    # FORM_LADDER[4] x FORM_FACTOR["unspecified"] = 0.80 x 0.30 = 0.24.
+    #
+    # Why the old pin was wrong rather than merely strict: it priced `unspecified`
+    # identically to `different` and to no evidence at all, collapsing three tiers
+    # the founder had already priced apart. Measured on omega-3 run
+    # 20260828_083440 (inflammation_crp): six unspecified RCTs, all non-negative,
+    # four at s=+1.00, earned nothing, while one exact-form trial at s=-0.02 set
+    # all_negative_in_form and zeroed the term.
+    #
+    # "Silence is not a pass" still holds -- 0.24 against 0.80 for a confirmed
+    # form is a 70% discount, not a pass. The failure that rule was adopted for
+    # was 99/100 on an untested product.
+    check("an unreported form earns DISCOUNTED transfer credit, not zero",
+          abs(_uns["arcs"]["form"]["strength"] - 0.24) < 1e-9
+          and _uns["arcs"]["form"]["basis"] == "transfer_ladder",
+          "0.80 ladder x 0.30 unspecified; was 0.0, which priced silence below "
+          "the founder's own `different` tier")
+    check("an unreported form is STILL not read as a match (invariant 8)",
+          _uns["arcs"]["form"]["verdict"] is None
+          and _uns["arcs"]["form"]["coverage"] == 0.0
+          and _uns["arcs"]["form"]["n_in_form"] == 0,
+          "verdict/coverage/n stay exact-form only, so the arc keeps saying "
+          "nobody tested YOUR form even while strength reflects near-form data")
     check("a confirmed exact form DOES earn ladder credit over an unreported one",
           _b([_s("benefit", "exact", "in_band", "meaningful")
                    for _ in range(4)])["composite"] > _uns["composite"])
+
+    # `different` IS STILL EXCLUDED, and that pin is untouched: a form we KNOW is
+    # not yours answers a different question, which is why product-score refuses
+    # a form the run never scored. Only `unspecified` (might be yours) and
+    # `salt_family` (same preparation family) transfer.
+    check("a form we know is NOT yours still earns nothing",
+          _unt["arcs"]["form"]["strength"] == 0.0
+          and _unt["arcs"]["form"]["basis"] == "untested_in_form",
+          "FORM_TRANSFER_TIERS deliberately omits `different`")
+    _fam = _b([_s("benefit", "salt_family", "in_band", "meaningful") for _ in range(4)])
+    check("the same preparation family transfers at 0.50, above unspecified",
+          abs(_fam["arcs"]["form"]["strength"] - 0.40) < 1e-9
+          and _fam["arcs"]["form"]["strength"] > _uns["arcs"]["form"]["strength"],
+          "0.80 x 0.50; the tier ordering in FORM_FACTOR is finally visible here")
+
+    # THE REGRESSION THIS CHANGE EXISTS FOR. One marginally-negative exact trial
+    # must no longer erase strong near-form evidence -- the same reasoning as the
+    # founder's v5 correction, applied one tier out.
+    _marginal = _b([_s("null_effect", "exact", "in_band", None)]
+                   + [_s("benefit", "unspecified", "in_band", "meaningful")
+                      for _ in range(6)])
+    check("one marginal exact-form trial cannot erase six positive near-form ones",
+          _marginal["arcs"]["form"]["basis"] == "transfer_ladder"
+          and _marginal["arcs"]["form"]["strength"] > 0.0,
+          "omega-3 inflammation_crp: exact s=-0.02 zeroed six s=+1.00 RCTs")
+    check("...and the exact-form WARNING is still shown in the verdict",
+          _marginal["arcs"]["form"]["verdict"] is not None
+          and _marginal["arcs"]["form"]["coverage"] > 0.0,
+          "invariant 8: the reader still sees that your form's own trial failed")
+
+    # Best available evidence, not a preference for the exact tier at any quality.
+    from pipeline.arcs import form_strength as _fs2
+    _animal_exact = Study(id="ae", design_rank=12, n=40, rob_items=ROB_CLEAN,
+                          funding="independent", oa="full_text", form_match="exact",
+                          pop_match="exact", direction="benefit", magnitude="meaningful")
+    _rct_unspec = Study(id="ru", design_rank=4, n=80, rob_items=ROB_CLEAN,
+                        funding="independent", oa="full_text",
+                        form_match="unspecified", pop_match="exact",
+                        direction="benefit", magnitude="meaningful")
+    _s_val, _s_basis = _fs2([_animal_exact], None, transfer_studies=[_rct_unspec])
+    check("an RCT in an unreported form beats an animal study in your exact form",
+          abs(_s_val - 0.24) < 1e-9 and _s_basis == "transfer_ladder",
+          "0.24 > 0.10; the exact tier does not win at any evidence quality")
+    check("a strong exact ladder still wins over transfer credit",
+          _fs2([_lad("benefit", None)], None,
+               transfer_studies=[_rct_unspec]) == (0.80, "ladder"),
+          "0.80 exact > 0.24 transfer")
+    check("form_strength is unchanged when no transfer studies are passed",
+          _fs2([_animal_exact], None) == (0.10, "ladder"),
+          "back-compatible: every pre-v14 call site behaves identically")
 
     # PER-STUDY CONTRIBUTIONS (founder ask 2026-08-11). Exact, not heuristic:
     # the points must sum to the signed score, or the report would be inventing

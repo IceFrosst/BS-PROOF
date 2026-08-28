@@ -114,9 +114,53 @@ def form_ladder_score(design_ranks, top_n: int = FORM_LADDER_TOP) -> float | Non
     return sum(top) / len(top)
 
 
+#: Which non-exact tiers may transfer into the form term, and at what price.
+#: `different` is absent on purpose -- see form_strength's docstring. Values are
+#: read from the founder-owned FORM_FACTOR; nothing new is defined here.
+FORM_TRANSFER_TIERS = ("salt_family", "unspecified")
+
+
+def _transfer_ranks(transfer_studies: list | None) -> list[tuple[int, float]]:
+    """
+    [(design_rank, transfer_factor)] for NON-NEGATIVE near-form studies.
+
+    Same per-study eligibility as the exact ladder: judged on what the study
+    contributes (s_value), never on its direction label.
+    """
+    out = []
+    for s in transfer_studies or []:
+        tier = getattr(s, "form_match", None)
+        if tier not in FORM_TRANSFER_TIERS:
+            continue
+        if getattr(s, "direction", None) == "harm":
+            continue
+        try:
+            if s.s_value() < 0:
+                continue
+        except Exception:
+            continue
+        if s.design_rank is None:
+            continue
+        out.append((s.design_rank, FORM_FACTOR[tier]))
+    return out
+
+
+def _transfer_ladder(transfer_studies: list | None,
+                     top_n: int = FORM_LADDER_TOP) -> float | None:
+    """Mean of the top `top_n` discounted ladder scores. None when empty."""
+    scores = sorted((FORM_LADDER.get(rank, 0.0) * factor
+                     for rank, factor in _transfer_ranks(transfer_studies)),
+                    reverse=True)
+    if not scores:
+        return None
+    top = scores[:max(1, top_n)]
+    return sum(top) / len(top)
+
+
 def form_strength(exact_studies: list, form_d: float | None,
                   form_syntheses: list | None = None,
-                  top_n: int = FORM_LADDER_TOP) -> tuple[float, str]:
+                  top_n: int = FORM_LADDER_TOP,
+                  transfer_studies: list | None = None) -> tuple[float, str]:
     """
     (strength 0..1, basis) -- the composite's form term.
 
@@ -133,17 +177,55 @@ def form_strength(exact_studies: list, form_d: float | None,
     verdict is a WARNING, and it belongs in the verdict where the reader sees it;
     it is not a reason to discard the positive evidence that exists in your form.
 
-    Two remaining zero cases, still distinguishable in the arc:
+    NEAR-FORM EVIDENCE IS NOT NO EVIDENCE (v14, founder ask 2026-08-28: "make the
+    algorithm less strict but at the same it should be absolutely true").
 
-      no exact-form evidence at all       0.0, "untested_in_form"
-      exact-form evidence, none positive  0.0, "all_negative_in_form"
+    Until v13 the ladder saw ONLY `form_match == "exact"` studies, so a trial that
+    simply never printed which form it used contributed 0.0 -- identical to a
+    trial in a form we KNOW is not yours, and identical to no trial at all. That
+    collapsed three tiers the founder had already priced differently
+    (FORM_FACTOR: exact 1.00, salt_family 0.50, unspecified 0.30, different 0.15).
+
+    Measured on omega-3 run 20260828_083440, inflammation_crp: SIX unspecified
+    RCTs, every one non-negative and four at s=+1.00, earned zero form credit,
+    while the single exact-form trial at s=-0.02 -- arithmetically indistinguish-
+    able from zero -- set `all_negative_in_form` and drove the whole term to 0.0.
+    One marginal trial erased six positive ones.
+
+    So a non-exact study now enters the ladder at its OWN transfer factor:
+
+        FORM_LADDER[design_rank] x FORM_FACTOR[form_match]
+
+    and the term is the best of the exact ladder and the transfer ladder. No new
+    constant -- FORM_FACTOR exists precisely to price partial form evidence, and
+    it was simply not being read here.
+
+    `different` is deliberately EXCLUDED and still earns nothing. `unspecified`
+    MIGHT be your form and `salt_family` is the same preparation family, but
+    `different` is one we know is not yours -- that answers a different question,
+    which is the same reason `product-score` refuses a form the run never scored.
+
+    "Silence is not a pass" is preserved, because the discount is real: six
+    unspecified RCTs score 0.24 where six confirmed exact-form RCTs score 0.80.
+    The measured failure that rule was adopted for was a 99/100 on an untested
+    product; 0.24 is not that.
+
+    Three zero cases, still distinguishable in the arc:
+
+      no evidence in or near your form     0.0, "untested_in_form"
+      exact evidence, none positive, and
+        no near-form evidence either       0.0, "all_negative_in_form"
+      only `different`-form evidence       0.0, "untested_in_form"
 
     Invariant 8 is unaffected: the arc still carries the signed verdict and the
     coverage beside the strength, so "nobody tested your form" (verdict None,
     coverage 0) can never render as "your form was tested and failed" (signed
-    verdict, real coverage).
+    verdict, real coverage). Coverage and n_in_form stay EXACT-form only, so the
+    arc keeps telling the reader that nobody tested their actual form even when
+    the strength reflects discounted near-form evidence.
     """
-    has_any = bool(exact_studies) or bool(form_syntheses or [])
+    has_any = (bool(exact_studies) or bool(form_syntheses or [])
+               or bool(_transfer_ranks(transfer_studies)))
     if not has_any:
         return 0.0, "untested_in_form"
 
@@ -170,9 +252,20 @@ def form_strength(exact_studies: list, form_d: float | None,
               if e.get("direction") not in ("harm", "null_effect")
               and e.get("design_rank") is not None]
     lad = form_ladder_score(ranks, top_n)
+    trn = _transfer_ladder(transfer_studies, top_n)
+
+    # Best available evidence wins. An RCT that did not name its form (0.80 x
+    # 0.30 = 0.24) is stronger evidence your product works than an animal study
+    # that did (0.10), so taking the max is the truthful comparison rather than
+    # a preference for the exact tier at any quality.
+    if lad is None and trn is None:
+        return (0.0, "all_negative_in_form") if (exact_studies or form_syntheses) \
+            else (0.0, "untested_in_form")
     if lad is None:
-        return 0.0, "all_negative_in_form"
-    return lad, "ladder"
+        return trn, "transfer_ladder"
+    if trn is None or lad >= trn:
+        return lad, "ladder"
+    return trn, "transfer_ladder"
 
 
 def _verdict(studies: list) -> tuple[float | None, float]:
@@ -246,8 +339,10 @@ def build(studies: list, syntheses: list | None = None, *,
     # score that the composite actually uses. verdict/coverage are what stop
     # "nobody tested your form" and "your form failed" from ever rendering the
     # same; strength is what stops an unreported form from dragging the headline.
-    form_s, form_basis = form_strength(exact, form_d, form_syntheses,
-                                       top_n=form_top or FORM_LADDER_TOP)
+    form_s, form_basis = form_strength(
+        exact, form_d, form_syntheses,
+        top_n=form_top or FORM_LADDER_TOP,
+        transfer_studies=[s for s in studies if s.form_match != "exact"])
 
     arcs = {
         "effect": {"verdict": eff_d, "coverage": 1.0},
