@@ -6,6 +6,125 @@
 
 ---
 
+## 2026-08-28 later (Claude Code session — gate FIXED, omega-3 re-run: 18 -> 130 studies, score 3 -> 17)
+
+Founder decision: fix the gate the audit below found, and reach more studies. Both
+done. Fix is `1af9406`; run is `20260828_083440_omega-3_fish-oil-triglyceride_claude-sr-ft-top5-suppl`.
+
+### The fix (`pipeline/relevance.py`, `pipeline/vocab.py`, `vocab/form.json`)
+
+Separator-tolerant ingredient matching (hyphen, en/em dash, underscore, space or
+nothing all match) plus a real `search_synonyms` list read from the vocabulary.
+The vocab id is now carried alongside the prose form, because the vocabulary is
+indexed by the id -- looking synonyms up under `"omega 3"` silently returns
+nothing, which is how the first attempt at this fix failed its own new test.
+
+`vocab/form.json` v1 -> v2. Bare `PUFA` / `polyunsaturated fatty acid` are
+deliberately EXCLUDED as synonyms: omega-6 is also a PUFA, so they name a
+superset and would admit the wrong ingredient. A selftest pins that.
+
+**Selftest now asserts the CLASS, not the case** (433 -> 509 checks): every vocab
+ingredient must be recognised in a hyphenated title, plus greek-letter spellings,
+synonym-only papers, and two precision guards. `beta_carotene` failed that check
+before the fix.
+
+Measured on the identical 378-record gate input:
+
+| | before | after |
+|---|--:|--:|
+| recall on real omega-3 trials | 0.067 | **0.985** |
+| precision | 1.00 | 0.99 |
+| studies reaching extraction | 18 | **265** |
+
+The 2 admitted non-trials are diet studies measuring serum omega-3 as an
+OUTCOME. That is the pre-existing mention-not-intervention weakness -- the OLD
+gate admitted a beetroot trial the same way -- not something synonyms introduced,
+and invariant 7 eligibility refuses them downstream. S7's `form_vocabulary`
+payload is byte-identical, so no envelope change and no cache invalidation.
+
+### The run: 130 studies, `--dose 1000` (mg EPA+DHA)
+
+19 min, 130/130 usable, **6 partial failures**, 805 live calls + 101 cache hits,
+88 retries, 12 terminal call failures, **$0 metered**, zero session-limit errors.
+S7 was again the most fragile agent (32 call failures of 148).
+
+`--dose 1000` was passed this time. **The previous run passed no dose at all**, so
+its dose arc was pinned at the `MISSING_DOSE_PENALTY` 0.10 by construction --
+that was a run-invocation error of mine, not an algorithm limit. 1000 mg EPA+DHA
+is a stated assumption (a representative high-strength triglyceride serving), not
+a real product; `dose_basis_kind` for omega_3 is `active_moiety`, so the dose that
+matters is EPA+DHA, never total oil.
+
+| outcome | 0-100 | verdict | effect | form | dose | c | n |
+|---|--:|---|---|---|---|--:|--:|
+| inflammation_crp | **17** | works, but weakly evidenced | +0.29 @ 100% | **-0.02 @ 32%** | +0.00 @ 10% | 0.72 | 7 |
+| glycaemic_control | 6 | does not work | +0.08 @ 100% | not tested | not tested | 0.28 | 2 |
+| blood_pressure | 2 | barely studied | +0.40 @ 100% | not tested | not tested | 0.08 | 1 |
+| adverse_events_any | gated | not enough human evidence | — | — | — | — | 0 |
+| depressive_symptoms | gated | not enough human evidence | — | — | — | — | 0 |
+
+Best outcome 3 -> **17**, and the reason is `c`: **0.095 -> 0.72**. The direction
+barely moved (+0.70 on n=1 was noise; +0.29 on n=7 is a real estimate). The run's
+own projection: full-corpus **+26 +/- 5**, c reaching 0.92, needing ~237 studies
+at this evidence quality (mean w=0.015).
+
+The form arc is now informative instead of empty: **32% of evidence weight is in
+the triglyceride form and reads -0.02** ("every trial in your form was
+negative"), where before it was `0.00 @ 0%` / "nobody reported your form".
+
+### THE NEW BOTTLENECK IS NOT RETRIEVAL — it is eligibility + population
+
+130 studies produced only 24 kept claims and 10 contributing studies across the 5
+scored outcomes. Where they went, and none of it is a bug:
+
+- **55 of 130 trials cannot vote** (42%): `self_declared_underpowered` 24,
+  `no_isolated_ingredient_arm` 21, `no_ingredient_free_arm` 7,
+  `no_administered_intervention_arm` 3. Omega-3 is heavily co-administered
+  (vitamin D in VITAL, multinutrient formulas), so invariant 7's isolation
+  refusal fires far more than it did on creatine.
+- **10 claims excluded by population routing**, and this is the big one.
+- Only 5 of 30 vocab outcomes are scored in `top5` mode; the rest of the claims
+  map to outcomes nobody asked this run to score.
+
+**Population policy B is starving every row, and for omega-3 that may be the
+single most important fact about the ingredient:**
+
+| outcome | B (stored) | A (everything) | n B | n A |
+|---|--:|--:|--:|--:|
+| inflammation_crp | 17 | **30** | 7 | 8 |
+| adverse_events_any | gated | 13 | 0 | 2 |
+| depressive_symptoms | gated | 8 | 0 | 2 |
+| blood_pressure | 2 | 9 | 1 | 2 |
+| glycaemic_control | 6 | 9 | 2 | 3 |
+
+Omega-3 is studied overwhelmingly in DISEASE populations -- cardiovascular,
+diabetic, depressed, preterm -- because that is where the funding and the
+endpoints are. Against a `general_adult` / `healthy` product, most of that
+literature scores `pop_match = "different"` and is correctly excluded as a
+different question. So the healthy-adult omega-3 evidence base is genuinely thin,
+and B will keep reading low no matter how many studies we retrieve. That is a
+finding about fish oil, not a defect -- and it is exactly what invariant 8's arcs
+exist to communicate. The run's own warning fired: "n_B far below n_A means B is
+starving the row -- check S3 health_status before trusting it."
+
+**Form is still unresolved and is a LITERATURE limit, not our bug:** 23 of 24
+claims are `unspecified x0.3`, only 1 is `exact`. Papers say "fish oil", not
+"triglyceride form". The gate fix cannot recover a fact the paper never printed.
+
+### SR inheritance — third data point, still ZERO
+
+S2 on 60 ranked syntheses: 50 ok, 42 resolved, 526 distinct trials named. Of 21
+SR-derived candidates, **0 entered evidence mass** (14 already held, 6 no design,
+1 no direction, 0 conflicts). Three ingredients-runs now, three zeros. On a
+saturated corpus dedup eats it; on a thin one the refusal rules do. The remaining
+untested case is an ingredient whose trials are genuinely unreachable.
+
+Run registered `experimental` / `public_claims_allowed: false`. Not a validated
+score, not a product claim: `--limit 130` of 265 available, no anchors run, and
+the dose is an assumption.
+
+---
+
 ## 2026-08-28 (Claude Code session — AUDIT: the relevance gate is blind on omega-3)
 
 Full per-study audit of yesterday's omega-3 run, deterministic replay of
