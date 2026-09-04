@@ -713,8 +713,12 @@ def _safe_arcs(value: Any) -> dict:
 
 def _safe_components(value: Any) -> dict:
     value = value if isinstance(value, dict) else {}
+    # `applicability` (SCORING_MODEL v14): the A term the composite eats --
+    # mean(form strength, dose closeness). It is the one headline input that is
+    # not already in the signed score, so it is retained beside d/c/H.
     return {key: _number(value.get(key)) for key in
-            ("d", "c", "H", "E", "E_prime", "coverage") if key in value}
+            ("d", "c", "H", "E", "E_prime", "coverage", "applicability")
+            if key in value}
 
 
 def _safe_population(value: Any) -> dict | None:
@@ -859,6 +863,7 @@ def _dashboard_ecu(raw: Any) -> dict:
         components.get("c"),
         effect_verdict=effect,
         applicability_limited=applicability_limited,
+        applicability_score=components.get("applicability"),
     )
 
     evidence = _safe_evidence(raw.get("evidence"))

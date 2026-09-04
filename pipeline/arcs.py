@@ -22,12 +22,13 @@ THE FOUR ARCS
     dose       verdict over IN-BAND evidence      "does it work at your dose?"
     evidence   overall confidence c               "how much do we actually know?"
 
-The form and dose arcs are SUBSETS of the effect arc, which is why the composite
-below multiplies by confidence rather than averaging it in -- see composite().
+The form and dose arcs are SUBSETS of the effect arc. The 0-100 headline is the
+SIGNED score rescaled onto 0-100 and discounted for how much of that evidence
+applies to the product in front of you -- see composite().
 """
 from __future__ import annotations
 
-from pipeline.scoring import DOSE_FACTOR, FORM_FACTOR, score_ecu
+from pipeline.scoring import DOSE_FACTOR, FORM_FACTOR, H_PENALTY, score_ecu
 
 ARC_ORDER = ("effect", "form", "dose", "evidence")
 
@@ -213,11 +214,6 @@ def _dose_verdict(studies: list) -> tuple[float | None, float]:
     return round(d, 3), dose_w
 
 
-def _unit(d: float) -> float:
-    """Signed verdict -1..+1 -> 0..1, so it can be composed. 0.5 is 'no effect'."""
-    return (d + 1.0) / 2.0
-
-
 def build(studies: list, syntheses: list | None = None, *,
           form_syntheses: list | None = None, form_top: int | None = None,
           dose_closeness: float | None = None) -> dict:
@@ -265,9 +261,11 @@ def build(studies: list, syntheses: list | None = None, *,
         # IS its coverage. Drawn last (innermost) because it qualifies the rest.
         "evidence": {"verdict": None, "coverage": round(c, 3), "is_quantity": True},
     }
+    fit = applicability(form_s, dose_closeness)
     return {
         "arcs": arcs,
-        "composite": composite(eff_d, form_s, dose_closeness, c),
+        "composite": composite(eff_d, form_s, dose_closeness, c, overall["H"]),
+        "applicability": round(fit, 3),
         "signed": overall["score"],
         "band": overall["band"],
         "gate_fired": False,
@@ -275,65 +273,126 @@ def build(studies: list, syntheses: list | None = None, *,
     }
 
 
-def composite(effect_d: float | None, form_strength_score: float | None,
-              dose_closeness: float | None, c: float) -> int | None:
+def applicability(form_strength_score: float | None,
+                  dose_closeness: float | None) -> float:
     """
-    The 0-100 headline.
+    How much of the evidence applies to THIS product, 0..1. The composite's
+    only input beyond the signed score (SCORING_MODEL v14).
 
-        100 x c x mean(effect, form, dose)
+        mean(form strength, dose closeness)
 
-    Confidence MULTIPLIES rather than averaging in. Measured on five cases: as a
-    fourth term in a mean, a single tiny abstract-only trial scored 76/100,
-    because three direction terms outvoted it. Confidence is not a peer of the
-    other arcs -- if we barely know anything, nothing else matters, and only
-    multiplication expresses that.
+    Both terms arrive already on 0..1 and both are evidence-ABOUT-YOUR-BOTTLE
+    scores, not verdicts: the form ladder (v5) says how strong the non-negative
+    evidence in your exact form is, the dose closeness (v12) says how near your
+    dose sits to the range where benefit occurred. Neither carries a direction
+    -- direction lives in the signed score alone -- so a mean of the two is a
+    plain "share of the evidence that is about your product".
 
-    A missing subset is PENALISED, not dropped. Averaging over "available" arcs
-    gave 99/100 to a product no study had ever tested in that form, identical to
-    one whose form was tested and worked. Silence is not a pass.
+    A MISSING axis is priced, never dropped (the 2026-08-07 measurement stands:
+    averaging over "available" axes handed 99/100 to a product no trial had
+    used in that form). No form evidence contributes 0.0; no benefit dose range
+    contributes MISSING_DOSE_PENALTY (0.10) -- the transfer tier SPEC section 8
+    already assigns to "dose relationship unestablished", so no new constant.
+    The founder call of 2026-08-12 ("don't fix that thing we lose") is kept:
+    a dose where trials looked and FAILED and a dose nobody looked at both
+    read as "outside the range where it worked"; the row's null_range and the
+    dose arc show a reader the difference, it does not move this number.
+    """
+    form = 0.0 if form_strength_score is None else float(form_strength_score)
+    dose = (float(dose_closeness) if dose_closeness is not None
+            else MISSING_DOSE_PENALTY)
+    return max(0.0, min(1.0, (form + dose) / 2.0))
 
-    50 means "no effect either way", not "half good". 0 means actively harmful
-    on strong evidence; a well-studied useless product lands near 0-25, and an
-    unstudied one lands near 0 too -- but its EVIDENCE ARC is empty, which is
-    what tells them apart. The number alone never could.
+
+def composite(effect_d: float | None, form_strength_score: float | None,
+              dose_closeness: float | None, c: float, h: float) -> int | None:
+    """
+    The 0-100 headline (SCORING_MODEL v14-applicability-discount).
+
+        signal    = d x c x (1 - H_PENALTY x H)        (= signed score / 100)
+        composite = 50 + 50 x signal x (A if signal > 0 else 1)
+
+    where A is applicability() -- the mean of form strength and dose closeness.
+    So the headline IS the signed score, rescaled onto 0-100 (50 = the evidence
+    points nowhere), and then pulled back toward 50 by however much of that
+    evidence is NOT about your product. At full applicability the identity is
+    exact: composite = 50 + signed / 2, and SPEC section 9's signed bands map
+    one-to-one onto the labels below.
+
+    WHY THIS REPLACED 100 x c x mean(effect, form, dose) (2026-09-04, founder:
+    "it's too strict, make it make sense"). That mean treated two
+    APPLICABILITY terms as peers of the one DIRECTION term, so the number was
+    set mostly by the applicability axes and only a third by what the trials
+    found. Measured on the 155-study creatine run (v13):
+
+        d = +0.04, c = 0.82, form 0.80, NO benefit dose range
+            -> dose term 0.05 -> 38 "probably does not work"   (evidence: neutral)
+        the same d with the dose term at 1.0 -> 63 "probably works"
+        d = 0.00 (nothing works), form 0.80, dose 1.0, c = 1 -> 77 "works"
+        d = -1.00 (harm) with full form and dose, c = 1        -> 60 "probably works"
+
+    A well-matched useless product read "works" and a poorly-matched neutral
+    one read "does not work". Applicability cannot be a peer of direction: it
+    can only QUALIFY a verdict, never supply one.
+
+    Three properties, each measured against the fixtures in selftest:
+
+    - CONFIDENCE STILL MULTIPLIES, inside the signed score, so one tiny trial
+      still cannot score well -- but it now lands at ~50 "barely studied"
+      rather than ~3. Low confidence means "we do not know", and the middle of
+      the scale is where "we do not know" belongs. "Barely studied" and "does
+      not work" stay distinguishable by the number AND by the evidence arc.
+    - APPLICABILITY DISCOUNTS BENEFIT ONLY. A positive verdict for an
+      ingredient does not transfer to an untested form or an untested dose, so
+      it is pulled toward 50. A NEGATIVE verdict is not softened by a poor
+      match: harm is a safety signal and a null is the burden of proof
+      unmet, and "your form was never tested" is no reason to read either as
+      "unclear". This is the same under-count direction every other refusal in
+      the system takes (invariants 6, 7, 9).
+    - SILENCE IS STILL NOT A PASS. An untested form or a missing dose range
+      cannot raise the number; it caps how far above 50 a positive verdict may
+      travel (untested form + no dose range: A = 0.05, so even d = +1 at
+      c = 1 reads 52 "unclear").
+
+    0 still means actively harmful on strong evidence and 100 a strong,
+    replicated, fully applicable benefit. 50 now means exactly one thing: the
+    evidence points nowhere, either because it is neutral or because there is
+    too little of it -- and the evidence arc says which.
     """
     if effect_d is None:
         return None
-    eff = _unit(effect_d)
-    # The form term arrives ALREADY on 0..1 from form_strength() -- it is an
-    # evidence-strength score, not a signed verdict, so it must NOT be _unit()ed.
-    # Passing a strength of 0.0 through _unit() would read it as 0.5, "no effect",
-    # and hand an untested form half credit. Scales differ deliberately: 0.5 means
-    # "neutral" on the effect and dose terms and "moderately strong form evidence"
-    # on this one. Both are monotone in the direction a reader expects, and the arc
-    # reports strength separately so the mixture is never the published claim.
-    form = 0.0 if form_strength_score is None else form_strength_score
-    # The dose term is CLOSENESS to the range where positive effects occurred
-    # (v12, founder design 2026-08-12) -- already on 0..1 like the form term, so
-    # it is NOT _unit()ed. Direction lives in the effect term alone; benefit
-    # trials far from your dose stop voting FOR you (the 20 g loading trials
-    # that pushed a 4.4 g product's power arc to +0.42 under v10/v11 now serve
-    # as the yardstick you are measured against instead: closeness 0.10).
-    #
-    # None means NO benefit range exists -- either nothing worked anywhere, or
-    # no benefit trial carried a usable dose. Same fallback as an untested
-    # form: the effect term at the missing-dose penalty, so silence is not a
-    # pass. DELIBERATELY NOT DISTINGUISHED (founder call 2026-08-12, "don't fix
-    # that thing we lose"): a dose where trials looked and FAILED and a dose
-    # nobody looked at both read as "outside the range where it worked"; the
-    # null_range on the row and the arc's verdict/coverage still show the
-    # difference to a reader, it just does not move this number.
-    dose = dose_closeness if dose_closeness is not None else eff * MISSING_DOSE_PENALTY
-    return round(100 * c * (eff + form + dose) / 3)
+    signal = float(effect_d) * float(c) * (1.0 - H_PENALTY * float(h or 0.0))
+    if signal > 0:
+        signal *= applicability(form_strength_score, dose_closeness)
+    return int(max(0, min(100, round(50.0 + 50.0 * signal))))
 
 
 def label(composite_score: int | None, c: float | None,
           effect_verdict: float | None = None,
-          applicability_limited: bool = False) -> str:
+          applicability_limited: bool = False,
+          applicability_score: float | None = None) -> str:
     """
     Plain words. Deliberately does NOT read a low number as 'bad' when the
     evidence arc is empty -- that is the confusion the whole system exists to
     prevent.
+
+    THE THRESHOLDS ARE SPEC SECTION 9's SIGNED BANDS, not new constants. Under
+    v14 the composite at full applicability is exactly 50 + signed/2, so each
+    band maps onto the 0-100 scale arithmetically:
+
+        signed  +30 .. +100  moderate/strong support   -> composite >= 65  "works"
+        signed  +10 .. +29   weak support              -> 55 .. 64  "probably works"
+        signed   -9 .. +9    inconclusive              -> 45 .. 54  "unclear"
+        signed  -39 .. -10   weak evidence against     -> 30 .. 44  "probably does not work"
+        signed -100 .. -40   does not work / harm      ->  0 .. 29  "does not work"
+
+    So 20 unanimous well-run nulls (signed -35, the fixture the null constant
+    was chosen on) read "probably does not work", and harm reads "does not
+    work", exactly where the founder's bands put them.
+
+    `applicability_score` is the v14 A term when the caller has it; below 0.5
+    the product's own form/dose is the reason a positive verdict sits low, and
+    the label says so instead of blaming the evidence.
     """
     if composite_score is None:
         return "not enough human evidence"
@@ -344,25 +403,27 @@ def label(composite_score: int | None, c: float | None,
     if c < 0.15:
         return "barely studied"
 
-    # A composite can be dragged down by APPLICABILITY -- no trial in your form,
-    # no dose band -- while the evidence itself is clearly positive. Reading
-    # that as a verdict published "probably does not work" for an outcome whose
-    # effect arc was +1.00 (unanimous benefit). An applicability penalty is not
+    limited = applicability_limited or (
+        applicability_score is not None and applicability_score < 0.5)
+    # A composite can be pulled toward 50 by APPLICABILITY -- no trial in your
+    # form, a dose far from where it worked -- or by thin confidence, while
+    # the evidence itself is clearly positive. An applicability penalty is not
     # a finding, and must never be reported as one.
-    if effect_verdict is not None and effect_verdict >= 0.25 and composite_score < 45:
+    if effect_verdict is not None and effect_verdict >= 0.25 and composite_score < 55:
         return ("works, but not tested for your product"
-                if applicability_limited else "works, but weakly evidenced")
+                if limited else "works, but weakly evidenced")
     if effect_verdict is not None and effect_verdict <= -0.25 and composite_score >= 55:
         # The mirror case: never let a good form match read as "works" when the
-        # evidence itself is negative.
+        # evidence itself is negative. Unreachable under v14 (applicability
+        # never lifts a negative signal) and kept as a guard.
         return "does not work"
 
-    if composite_score >= 70:
+    if composite_score >= 65:
         return "works"
     if composite_score >= 55:
         return "probably works"
     if composite_score >= 45:
         return "unclear"
-    if composite_score >= 25:
+    if composite_score >= 30:
         return "probably does not work"
     return "does not work"

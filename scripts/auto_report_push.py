@@ -76,8 +76,9 @@ Deterministic (`pipeline/scoring.py`). Models extract fields only.
      form      d over trials using YOUR form      + share of evidence
      dose      d over trials in YOUR dose band    + share of evidence
      evidence  c (pure quantity, no direction)
-6. composite = 100 × c × mean(effect, form, dose)   [the 0–100 shown]
-   a MISSING subset is penalised at its transfer tier, never dropped
+6. composite = 50 + signed/2 × (A if signed > 0 else 1)   [the 0–100 shown]
+   A = mean(form strength, dose closeness) — applicability to YOUR product;
+   a MISSING axis is priced at its transfer tier, never dropped
 7. Gate if almost no human clinical weight → no number at all
 ```
 
@@ -401,7 +402,8 @@ def _section_ecu_this_run(ctx: dict) -> str:
             effect_verdict=((r.get("arcs") or {}).get("effect") or {}).get("verdict"),
             applicability_limited=any(
                 ((r.get("arcs") or {}).get(k) or {}).get("verdict") is None
-                for k in ("form", "dose")))
+                for k in ("form", "dose")),
+            applicability_score=(r.get("components") or {}).get("applicability"))
         lines.append(
             f"| {r.get('outcome_vocab_id')} | {shown} | {verdict} | "
             f"{arc(r, 'effect')} | {arc(r, 'form')} | {arc(r, 'dose')} | "
@@ -409,10 +411,12 @@ def _section_ecu_this_run(ctx: dict) -> str:
             f"{r.get('n_primaries', r.get('evidence_n', (r.get('evidence') or {}).get('n_primaries', '?')))} |"
         )
     lines.append("")
-    lines.append("_0–100 = 100 × c × mean(effect, form, dose). Each arc shows its "
-                 "verdict and the share of evidence behind it. A low number with a "
-                 "FULL evidence arc means 'does not work'; with an EMPTY one it "
-                 "means 'barely studied'._\n")
+    lines.append("_0–100 = 50 + signed/2, with a positive signal discounted by "
+                 "applicability A = mean(form strength, dose closeness); a negative "
+                 "signal is never softened. 50 means the evidence points nowhere. "
+                 "Each arc shows its verdict and the share of evidence behind it; a "
+                 "number near 50 with a FULL evidence arc means 'no effect found', "
+                 "with an EMPTY one it means 'barely studied'._\n")
     lines.append("")
     lines.append("_Old rows from previous runs are not shown here._\n")
 

@@ -1211,18 +1211,63 @@ def main():
     # "take all the dosages where there was a positive effect, and see how close
     # our dose is"). Direction lives in the effect term alone; benefit trials
     # far from your dose stop voting FOR you and become the yardstick instead.
-    from pipeline.arcs import composite as _comp
+    from pipeline.arcs import composite as _comp, applicability as _fit
+    from pipeline import arcs as _arcs
     check("a product close to the benefit range outscores one far below it",
-          _comp(0.2, 0.8, 0.85, 0.9) > _comp(0.2, 0.8, 0.10, 0.9),
+          _comp(0.2, 0.8, 0.85, 0.9, 0.0) > _comp(0.2, 0.8, 0.10, 0.9, 0.0),
           "4.4 g against a 4.8-5 g range (0.85) vs against a 20 g range (0.10)")
-    check("closeness arrives on 0..1 and is NOT _unit()ed",
-          _comp(1.0, 1.0, 1.0, 1.0) == 100 and _comp(1.0, 1.0, 0.0, 1.0) == 67,
-          "closeness 0.0 must read as 'far from the working range', not as 0.5 "
-          "'no effect' -- the same trap the form term documents")
+    check("closeness arrives on 0..1 and is NOT read as a verdict",
+          _comp(1.0, 1.0, 1.0, 1.0, 0.0) == 100 and _comp(1.0, 1.0, 0.0, 1.0, 0.0) == 75,
+          "closeness 0.0 must read as 'far from the working range' (A = 0.5, "
+          "75), not as 0.5 'no effect' -- the same trap the form term documents")
     check("no benefit range falls back to the missing-dose penalty",
-          _comp(1.0, 1.0, None, 1.0) < _comp(1.0, 1.0, 1.0, 1.0),
+          _comp(1.0, 1.0, None, 1.0, 0.0) < _comp(1.0, 1.0, 1.0, 1.0, 0.0)
+          and _fit(1.0, None) == (1.0 + _arcs.MISSING_DOSE_PENALTY) / 2,
           "silence is not a pass: either nothing worked anywhere or no benefit "
-          "trial carried a dose, and both cap the dose term at eff x 0.10")
+          "trial carried a dose, and both price the dose axis at 0.10")
+
+    # SCORING_MODEL v14 (founder 2026-09-04, "too strict, make it make sense").
+    # The headline is the SIGNED score rescaled onto 0-100 and discounted for
+    # applicability. Pinned: the identity, the asymmetry, and the two readings
+    # the old mean got backwards.
+    print("\nV14 COMPOSITE = 50 + signed/2 x applicability")
+    check("at full applicability the composite IS the signed score rescaled",
+          all(_comp(d, 1.0, 1.0, 1.0, 0.0) == round(50 + 50 * d)
+              for d in (-1.0, -0.35, -0.1, 0.0, 0.1, 0.38, 0.5, 1.0)),
+          "composite = 50 + signed/2 when A = 1 -- SPEC 9's bands map arithmetically")
+    check("no effect reads 50 whatever the form and dose match",
+          _comp(0.0, 1.0, 1.0, 1.0, 0.0) == 50 == _comp(0.0, 0.0, None, 1.0, 0.0),
+          "under the old mean d = 0 with full form and dose read 77 'works'")
+    check("harm is not softened by a poor product match",
+          _comp(-1.0, 0.0, None, 1.0, 0.0) == 0 == _comp(-1.0, 1.0, 1.0, 1.0, 0.0),
+          "under the old mean unanimous harm with full form and dose read 60")
+    check("a null verdict is not softened either",
+          _comp(-0.35, 0.0, None, 1.0, 0.0) == _comp(-0.35, 1.0, 1.0, 1.0, 0.0) == 32,
+          "an untested form is no reason to read 'does not work' as 'unclear'")
+    check("applicability only ever pulls a positive signal toward 50",
+          _comp(1.0, 0.0, None, 1.0, 0.0) == 52 and 50 <= _comp(0.5, 0.0, None, 1.0, 0.0) <= 52,
+          "untested form + no dose range: A = 0.05, so even d = +1 reads 'unclear'")
+    check("heterogeneity reaches the headline through the signed score",
+          _comp(0.8, 1.0, 1.0, 1.0, 1.0) < _comp(0.8, 1.0, 1.0, 1.0, 0.0),
+          "H_PENALTY is in `signed`; the display must not drop it")
+    check("the composite is clamped to 0..100",
+          _comp(-1.0, 1.0, 1.0, 1.0, 0.0) == 0 and _comp(1.0, 1.0, 1.0, 1.0, 0.0) == 100)
+    # Labels are SPEC 9's signed bands, mapped: +30 -> 65, +10 -> 55, -10 -> 45,
+    # -40 -> 30. No new threshold.
+    _lab = _arcs.label
+    check("labels are the signed bands rescaled",
+          _lab(65, 0.9) == "works" and _lab(64, 0.9) == "probably works"
+          and _lab(55, 0.9) == "probably works" and _lab(54, 0.9) == "unclear"
+          and _lab(45, 0.9) == "unclear" and _lab(44, 0.9) == "probably does not work"
+          and _lab(30, 0.9) == "probably does not work" and _lab(29, 0.9) == "does not work")
+    check("20 unanimous well-run nulls read 'probably does not work'",
+          _lab(_comp(-0.35, 1.0, 1.0, 1.0, 0.0), 1.0) == "probably does not work",
+          "the fixture S_VALUE['null_effect'] was chosen on: -35 = 'weak evidence against'")
+    check("a low applicability score turns a shrunk positive into 'not tested for your product'",
+          _lab(52, 0.9, effect_verdict=1.0, applicability_score=0.05)
+          == "works, but not tested for your product"
+          and _lab(52, 0.9, effect_verdict=1.0, applicability_score=0.9)
+          == "works, but weakly evidenced")
     # FOUNDER CALL 2026-08-12 ("don't fix that thing we lose"), pinned so the
     # limitation is a decision, not an oversight: the SCORE does not distinguish
     # "your dose was tested and failed" from "your dose was never tested" --
@@ -1230,7 +1275,7 @@ def main():
     # null_range and the arc's verdict/coverage still show the difference to a
     # READER; it does not move the number.
     check("tested-and-failed and never-tested doses score the SAME by design",
-          _comp(0.5, 0.5, 0.2, 0.9) == _comp(0.5, 0.5, 0.2, 0.9),
+          _comp(0.5, 0.5, 0.2, 0.9, 0.0) == _comp(0.5, 0.5, 0.2, 0.9, 0.0),
           "trivially true -- this pin exists to hold the comment above")
 
     check("dose inside the band", dosemod.dose_match_for(250, 250, band) == "in_band")
@@ -1443,16 +1488,19 @@ def main():
     # The composite must not unit-map a strength. Passing 0.0 through _unit()
     # would read it as 0.5 -- "no effect" -- and hand an untested form half credit.
     check("composite treats the form term as a strength, not a signed verdict",
-          A.composite(1.0, 0.0, None, 1.0) == 37,
-          "eff 1.0 + form 0.0 + dose 0.1 over 3; unit-mapping form would give 53")
+          A.composite(1.0, 0.0, None, 1.0, 0.0) == 52,
+          "A = (0.0 + 0.1)/2 = 0.05 -> 52; reading form 0.0 as a 0.5 verdict "
+          "would give A = 0.3 -> 65 'works' for a form nobody tested")
 
     thin = _b([_s("benefit", "exact", "in_band", "meaningful", n=20,
                        oa="abstract_only", rob={f"i{i}": 0 for i in range(1, 7)})])
     nulls = _b([_s("null_effect", "exact", "in_band") for _ in range(20)],
                closeness=None)  # all null -> no benefit range exists
     check("confidence MULTIPLIES -- one weak trial cannot score well",
-          thin["composite"] < 10,
-          f"{thin['composite']}/100; as a fourth term in a mean it scored 76")
+          45 <= thin["composite"] <= 54 and A.label(thin["composite"], thin["c"]) == "barely studied",
+          f"{thin['composite']}/100; as a fourth term in a mean it scored 76, "
+          f"and under the old composite it read 3 -- 'unstudied' now sits at 50, "
+          f"not beside 'harmful'")
     check("'barely studied' and 'does not work' stay distinguishable",
           A.label(thin["composite"], thin["c"]) != A.label(nulls["composite"], nulls["c"]),
           f"{A.label(thin['composite'], thin['c'])!r} vs "
@@ -2848,7 +2896,7 @@ def main():
     # composite exactly. If this drifts, the recompute has stopped agreeing with
     # arcs.composite and every number the upload flow shows is its own invention.
     _row = {"outcome_vocab_id": "x", "composite": 45, "outcome": {},
-            "components": {"c": 0.9}, "evidence": {"n_primaries": 30},
+            "components": {"c": 0.9, "H": 0.0}, "evidence": {"n_primaries": 30},
             "arcs": {"effect": {"verdict": 0.1, "coverage": 1.0},
                      "form": {"verdict": 0.2, "coverage": 0.5, "strength": 0.8},
                      "dose": {"verdict": None, "coverage": 0.0, "closeness": None},
@@ -2860,13 +2908,13 @@ def main():
     check("benefit range is read off the row",
           (_band["low"], _band["high"]) == (5000.0, 20000.0))
     check("no dose reproduces the run's own composite",
-          _A.composite(0.1, 0.8, None, 0.9)
-          == _A.composite(0.1, 0.8, _ps.dosemod.dose_factor_for(None, None, _band), 0.9),
+          _A.composite(0.1, 0.8, None, 0.9, 0.0)
+          == _A.composite(0.1, 0.8, _ps.dosemod.dose_factor_for(None, None, _band), 0.9, 0.0),
           "a missing dose must take MISSING_DOSE_PENALTY, not a recomputed term")
 
     # The dose axis must actually discriminate, or the whole feature is theatre.
-    _inb = _A.composite(0.1, 0.8, _ps.dosemod.dose_factor_for(6000, 6000, _band), 0.9)
-    _low = _A.composite(0.1, 0.8, _ps.dosemod.dose_factor_for(1000, 1000, _band), 0.9)
+    _inb = _A.composite(0.1, 0.8, _ps.dosemod.dose_factor_for(6000, 6000, _band), 0.9, 0.0)
+    _low = _A.composite(0.1, 0.8, _ps.dosemod.dose_factor_for(1000, 1000, _band), 0.9, 0.0)
     check("a dose inside the benefit range outscores one far below it",
           _inb > _low, f"6000 mg -> {_inb}, 1000 mg -> {_low}")
 
@@ -2911,6 +2959,21 @@ def main():
     check("known compound product conversion is accepted",
           _exact["status"] == "scored",
           "known-form compound input is converted inside score_product")
+    # v14: the composite is the signed score rescaled, and the signed score
+    # carries the heterogeneity discount. A row without H is refused on the
+    # same footing as one without a form strength -- defaulting H to 0 would
+    # silently inflate a disputed outcome.
+    _no_h = dict(_row, components={"c": 0.9})
+    with _patch.object(_ps, "_pick_artifact",
+                       return_value=({"run": {}, "product": {}, "ecu_rows": [_no_h]}, {})):
+        _refused_h = _ps.score_product("magnesium", "magnesium_oxide", 400.0,
+                                       dose_basis="compound")
+    check("a row without heterogeneity is refused, not scored at H = 0",
+          _refused_h["status"] == "recompute_refused"
+          and _refused_h["refused"][0]["reason"] == "artifact_lacks_heterogeneity",
+          str(_refused_h.get("refused")))
+    check("a recomposed row reports the applicability it was discounted by",
+          all(0.0 <= r["applicability"] <= 1.0 for r in _exact["rows"]))
     _hcl = _ps.score_product("creatine", "creatine_hcl", 3000.0)
     check("a form with no run is distinguished from an ingredient with no run",
           _hcl["status"] == "form_not_scored", str(_hcl.get("scored_forms")))

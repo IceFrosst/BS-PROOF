@@ -103,59 +103,90 @@ export function doseMatchFor(
   return tLow === tHigh ? tLow : "unspecified";
 }
 
-/** pipeline/arcs.py _unit: signed verdict -1..+1 -> 0..1; 0.5 is "no effect". */
-function unit(d: number): number {
-  return (d + 1.0) / 2.0;
+/** pipeline/scoring.py H_PENALTY — founder-owned; the heterogeneity discount inside the signed score. */
+export const H_PENALTY = 0.4;
+
+/**
+ * Applicability A, 0..1 — mean(form strength, dose closeness). Port of
+ * pipeline/arcs.py applicability (SCORING_MODEL v14). A missing form
+ * contributes 0.0; a missing benefit dose range contributes the
+ * MISSING_DOSE_PENALTY tier, so silence is priced rather than dropped.
+ */
+export function applicability(
+  formStrengthScore: number | null,
+  doseCloseness: number | null,
+): number {
+  const form = formStrengthScore === null ? 0.0 : formStrengthScore;
+  const dose = doseCloseness !== null ? doseCloseness : MISSING_DOSE_PENALTY;
+  return Math.max(0, Math.min(1, (form + dose) / 2));
 }
 
 /**
- * The 0-100 headline: 100 x c x mean(effect, form, dose).
- * Port of pipeline/arcs.py composite. The form term arrives already on 0..1
- * (an evidence-strength score, NOT unit()ed — a strength of 0.0 must read as
- * zero credit, not "no effect"). The dose term is v12 closeness, also 0..1;
- * null means no benefit range exists and takes the missing-dose penalty so
- * silence is not a pass.
+ * Python's round() is round-half-to-even; Math.round is round-half-up. The
+ * composite is an integer the Python original produces with round(), so the
+ * port must tie-break the same way or a x.5 headline differs by one between
+ * the run report and the label analyzer.
+ */
+function roundHalfEven(x: number): number {
+  const floor = Math.floor(x);
+  const diff = x - floor;
+  if (Math.abs(diff - 0.5) < 1e-9) return floor % 2 === 0 ? floor : floor + 1;
+  return Math.round(x);
+}
+
+/**
+ * The 0-100 headline (SCORING_MODEL v14-applicability-discount). Port of
+ * pipeline/arcs.py composite:
+ *
+ *   signal    = d x c x (1 - H_PENALTY x H)     (= signed score / 100)
+ *   composite = 50 + 50 x signal x (A if signal > 0 else 1)
+ *
+ * The headline is the signed score rescaled onto 0-100 and pulled back toward
+ * 50 by however much of the evidence is NOT about this product. A negative
+ * signal is never softened: harm and null are the burden of proof unmet, and an
+ * untested form is no reason to read them as "unclear".
  */
 export function composite(
   effectD: number | null,
   formStrengthScore: number | null,
   doseCloseness: number | null,
   c: number,
+  h: number,
 ): number | null {
   if (effectD === null) return null;
-  const eff = unit(effectD);
-  const form = formStrengthScore === null ? 0.0 : formStrengthScore;
-  const dose = doseCloseness !== null ? doseCloseness : eff * MISSING_DOSE_PENALTY;
-  return Math.round(100 * c * ((eff + form + dose) / 3));
+  let signal = effectD * c * (1.0 - H_PENALTY * (h ?? 0));
+  if (signal > 0) signal *= applicability(formStrengthScore, doseCloseness);
+  return Math.max(0, Math.min(100, roundHalfEven(50.0 + 50.0 * signal)));
 }
 
 /**
- * Plain words for a composite. Port of pipeline/arcs.py label, including the
- * applicability guard: a positive effect dragged below 45 by form/dose
- * applicability must never read as "probably does not work".
+ * Plain words for a composite. Port of pipeline/arcs.py label. Thresholds are
+ * SPEC §9's signed bands mapped onto 0-100 (65 / 55 / 45 / 30), and the
+ * applicability guard keeps a positive verdict pulled toward 50 by form/dose
+ * from ever reading as a finding against the product.
  */
 export function verdictLabel(
   compositeScore: number | null,
   c: number | null,
   effectVerdict: number | null = null,
   applicabilityLimited = false,
+  applicabilityScore: number | null = null,
 ): string {
   if (compositeScore === null) return "not enough human evidence";
   if (c === null) return "confidence unknown";
   if (c < 0.15) return "barely studied";
 
-  if (effectVerdict !== null && effectVerdict >= 0.25 && compositeScore < 45) {
-    return applicabilityLimited
-      ? "works, but not tested for your product"
-      : "works, but weakly evidenced";
+  const limited = applicabilityLimited || (applicabilityScore !== null && applicabilityScore < 0.5);
+  if (effectVerdict !== null && effectVerdict >= 0.25 && compositeScore < 55) {
+    return limited ? "works, but not tested for your product" : "works, but weakly evidenced";
   }
   if (effectVerdict !== null && effectVerdict <= -0.25 && compositeScore >= 55) {
     return "does not work";
   }
 
-  if (compositeScore >= 70) return "works";
+  if (compositeScore >= 65) return "works";
   if (compositeScore >= 55) return "probably works";
   if (compositeScore >= 45) return "unclear";
-  if (compositeScore >= 25) return "probably does not work";
+  if (compositeScore >= 30) return "probably does not work";
   return "does not work";
 }

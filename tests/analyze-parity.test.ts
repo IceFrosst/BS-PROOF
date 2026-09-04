@@ -5,8 +5,8 @@
  * the label-upload route can run on Vercel, where there is no Python. CLAUDE.md
  * warns that "two copies of the same number is how they disagree later" — this
  * file is the mitigation. Every case in tests/golden_scoring_parity.json was
- * COMPUTED BY THE PYTHON ORIGINALS (regenerate with the snippet in that file's
- * git history / the commit that added it). If a founder retunes a constant or
+ * COMPUTED BY THE PYTHON ORIGINALS (regenerate with
+ * `python3 scripts/golden_parity.py`). If a founder retunes a constant or
  * reshapes a ramp in Python, this test fails until the TS port is updated —
  * a loud disagreement instead of a silent drift.
  *
@@ -48,25 +48,27 @@ describe("dose_match_for parity", () => {
 
 describe("composite parity", () => {
   it.each(golden.composite.map((c, i) => [i, c] as const))("case %i", (_i, c) => {
-    const [effect, form, dose, conf] = c.args as [
+    const [effect, form, dose, conf, h] = c.args as [
       number | null,
       number | null,
       number | null,
       number,
+      number,
     ];
-    expect(composite(effect, form, dose, conf)).toBe(c.expect);
+    expect(composite(effect, form, dose, conf, h)).toBe(c.expect);
   });
 });
 
 describe("verdict label parity", () => {
   it.each(golden.label.map((c, i) => [i, c] as const))("case %i", (_i, c) => {
-    const [comp, conf, effect, limited] = c.args as [
+    const [comp, conf, effect, limited, fit] = c.args as [
       number | null,
       number | null,
       number | null,
       boolean,
+      number | null,
     ];
-    expect(verdictLabel(comp, conf, effect, limited)).toBe(c.expect);
+    expect(verdictLabel(comp, conf, effect, limited, fit ?? null)).toBe(c.expect);
   });
 });
 

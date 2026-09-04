@@ -21,7 +21,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { composite, doseFactorFor, doseMatchFor, verdictLabel, type DoseBand } from "./scoring";
+import { applicability, composite, doseFactorFor, doseMatchFor, verdictLabel, type DoseBand } from "./scoring";
 
 const ROOT = process.cwd();
 const RUNS_DIR = path.join(ROOT, "reports", "runs");
@@ -180,6 +180,7 @@ export function scoreProduct(ingredient: string, form: string, doseMg: number | 
     const components = (raw.components ?? {}) as Json;
     const effectD = (effectArc.verdict as number | null) ?? null;
     const c = (components.c as number | null) ?? null;
+    const h = (components.H as number | null) ?? null;
     const strength = (formArc.strength as number | null) ?? null;
 
     if (raw.composite === null || raw.composite === undefined || effectD === null || c === null) {
@@ -190,12 +191,21 @@ export function scoreProduct(ingredient: string, form: string, doseMg: number | 
       refused.push({ outcome: raw.outcome_vocab_id, reason: "artifact_predates_form_strength" });
       continue;
     }
+    if (h === null) {
+      // v14's composite is the signed score rescaled, and the signed score
+      // carries the heterogeneity discount. Defaulting H to 0 would silently
+      // inflate a disputed outcome, so the row is refused like one without a
+      // form strength (same rule as pipeline/product_score.py).
+      refused.push({ outcome: raw.outcome_vocab_id, reason: "artifact_lacks_heterogeneity" });
+      continue;
+    }
 
     const band = benefitRange(raw);
     const closeness = doseFactorFor(doseMg, doseMg, band);
     const match = doseMatchFor(doseMg, doseMg, band);
-    const comp = composite(effectD, strength, closeness, c);
-    const verdict = verdictLabel(comp, c, effectD, strength === null || closeness === null);
+    const fit = applicability(strength, closeness);
+    const comp = composite(effectD, strength, closeness, c, h);
+    const verdict = verdictLabel(comp, c, effectD, strength === null || closeness === null, fit);
 
     rows.push({
       outcome: raw.outcome_vocab_id,
@@ -224,6 +234,7 @@ export function scoreProduct(ingredient: string, form: string, doseMg: number | 
       null_dose_range_mg: ((raw.dose ?? {}) as Json).null_range ?? null,
       run_composite: raw.composite,
       run_dose_closeness: doseArc.closeness ?? null,
+      applicability: Math.round(fit * 1000) / 1000,
     });
   }
 

@@ -291,6 +291,29 @@ strongest argument for deciding C and D per-outcome-aware rather than globally.
 
 ---
 
+### 5. v14 composite — founder decision recorded 2026-09-04; two sub-questions open
+
+**Decided (founder: "it's too strict, make it make sense"):** the 0–100 display is
+now `50 + signed/2`, with a *positive* signal multiplied by applicability
+`A = mean(form strength, dose closeness or 0.10)` and a negative signal left
+whole. `SCORING_MODEL` v13 → v14. No scoring constant moved; the display
+thresholds are §9's signed bands mapped arithmetically (65 / 55 / 45 / 30).
+Rationale and the measured failure of the old mean are in `docs/SPEC.md` §9 and
+§13. Retained v13 runs were re-composed (`scripts/rescore_run.py --recompose`),
+not re-extracted.
+
+**Open for the founder, both calibration questions rather than bugs:**
+
+1. `A` weighs form and dose **equally**. Whether an untested form should cost
+   the same as a dose far from the benefit range is a Tier-3 question; the two
+   axes are founder-owned and the mean was chosen as the constant-free option.
+2. `A` does **not** discount a null or harm verdict (under-count direction,
+   consistent with invariants 6/7/9). If the founder prefers "your form was never
+   tested" to soften a null toward 50 as well, that is one line in
+   `arcs.composite` and a selftest pin — but it moves the burden of proof.
+
+---
+
 ## RESOLVED — kept only as pointers
 
 | was | outcome |

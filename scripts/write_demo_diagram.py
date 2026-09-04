@@ -301,9 +301,9 @@ arrow(MID, y + 140, MID, y + 180)
 # ---- 15 composite
 y = 2600
 box(L, y, W, 110,
-    "13 · DISPLAYED SCORE  0–100  =  100 × c × mean(effect, form, dose)\n"
+    "13 · DISPLAYED SCORE  0–100  =  50 + signed/2 × (A if positive)\n"
     f"internal signed −100…+100 = 100 × d × c × (1 − {H_PENALTY}H)\n"
-    "confidence MULTIPLIES: if we barely know anything, nothing else matters", GREEN, size=15)
+    "A = mean(form strength, dose closeness): applicability qualifies a verdict, never supplies one", GREEN, size=15)
 arrow(MID, y + 110, MID, y + 150)
 
 y = 2760

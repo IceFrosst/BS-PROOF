@@ -555,23 +555,58 @@ answer rests on two studies. Both are needed, so each renders as filled
 (verdict), solid (assessable) and hatched (never reported).
 
 ```
-composite = 100 × c × mean(effect, form, dose)      each mapped −1…+1 → 0…1
+signal    = d × c × (1 − 0.4H)                       (= SCORE / 100)
+A         = mean(form strength, dose closeness)      applicability, 0…1
+composite = 50 + 50 × signal × (A if signal > 0 else 1)
 ```
 
-Two things were measured and rejected on the way:
+**SCORING_MODEL v14-applicability-discount (founder, 2026-09-04: "it's too
+strict, make it make sense").** The headline is the signed score rescaled onto
+0–100, then pulled back toward 50 by however much of that evidence is NOT about
+the product in front of you. At full applicability the identity is exact —
+`composite = 50 + SCORE/2` — so the signed bands above map one-to-one onto the
+display: +30 → 65 "works", +10 → 55 "probably works", −10 → 45, −40 → 30.
+No display threshold is a new constant.
 
-**Confidence cannot be a fourth term in a mean.** As a peer it let a single tiny
-abstract-only trial score **76/100**, because three direction terms outvoted it.
-It multiplies instead — if we barely know anything, nothing else matters.
+What it replaced, and why. From 2026-08-07 to 2026-09-04 the composite was
+`100 × c × mean(effect, form, dose)` with each term mapped onto 0…1. That made
+two APPLICABILITY terms peers of the one DIRECTION term, so the number was set
+mostly by form and dose match and only a third by what the trials found.
+Measured on the 155-study creatine run (v13):
 
-**A missing subset cannot be dropped from the mean.** Averaging over "available"
-arcs gave **99/100** to a product no trial had ever used that form for, identical
-to one whose form was tested and worked. Silence is not a pass, so a missing
-subset is penalised at the transfer tier that situation already implies.
+| case | old composite | v14 |
+|---|---:|---:|
+| d = +0.04, c = 0.82, form 0.80, no benefit dose range | 38 "probably does not work" | 51 "unclear" |
+| the same d with the dose term at 1.0 | 63 "probably works" | 52 |
+| d = 0.00 (nothing works), form 0.80, dose 1.0, c = 1 | 77 "works" | 50 |
+| d = −1.00 (harm), form 0.80, dose 1.0, c = 1 | 60 "probably works" | 0 |
+| one tiny abstract-only trial, d = +1 | 3 | ~50 "barely studied" |
+| 20 well-run nulls, c → 1 | 15 | 32 "probably does not work" |
 
-The 0–100 scale does not reintroduce §9's collapse, because the evidence arc
-carries what the number cannot: *"barely studied"* scores 3 with an empty
-evidence arc, *"20 solid trials, all null"* scores 15 with a full one.
+Three properties, each pinned in `selftest`:
+
+- **Confidence still multiplies**, inside the signed score. One weak trial still
+  cannot score well — it now lands at ~50 "barely studied" instead of ~3 beside
+  "harmful". Low confidence means *we do not know*, and the middle of the scale
+  is where *we do not know* belongs. The evidence arc still separates "barely
+  studied" (50, empty arc) from "no effect found" (50, full arc).
+- **Applicability discounts benefit only.** A positive verdict for an ingredient
+  does not transfer to an untested form or dose, so it is pulled toward 50. A
+  negative verdict is never softened by a poor match: harm is a safety signal,
+  a null is the burden of proof unmet, and "your form was never tested" is no
+  reason to read either as "unclear" — the same under-count direction as
+  invariants 6, 7 and 9.
+- **Silence is still not a pass.** The 2026-08-07 measurement stands (averaging
+  over *available* axes gave 99/100 to a form no trial had used): a missing form
+  contributes 0.0 to A and a missing benefit dose range contributes the 0.10
+  transfer tier, so an untested product caps a positive verdict near 50 rather
+  than lifting it. The founder's 2026-08-12 call stands too: "dosed where trials
+  failed" and "dosed where nobody looked" both read as outside the range that
+  worked; `null_range` and the dose arc show a reader the difference.
+
+Retained v13 rows carry every input (d, c, H, form strength, dose closeness), so
+they are re-composed from their rows (`scripts/rescore_run.py --recompose`)
+rather than re-extracted; `components.applicability` now travels on each row.
 
 ### Sufficiency gate
 
@@ -699,6 +734,7 @@ it's the most common trick in the industry and no consumer can currently detect 
 
 | Item | Status |
 |---|---|
+| **Composite = signed score rescaled × applicability (v14)** | **Founder decision 2026-09-04 ("too strict, make it make sense").** `composite = 50 + 50·d·c·(1−0.4H)·(A if positive else 1)`, `A = mean(form strength, dose closeness or 0.10)`. Replaces `100·c·mean(effect, form, dose)`, under which d = 0 with full form/dose read 77 "works", unanimous harm read 60, and the creatine run's d = +0.04 read 38 "probably does not work" because no benefit dose range existed — applicability was a peer of direction instead of a qualifier. No scoring constant moved; display thresholds are §9's signed bands mapped arithmetically (65/55/45/30). **Open beside it:** A is an unweighted mean of two founder-owned axes — whether form and dose should weigh equally, and whether A should also discount a *null* (today it does not, by design), are calibration questions for Tier 3 |
 | `k` value | **1.5 since 2026-08-11** (founder). Was 3.0. Measured basis: ECU granularity fragments a 143-study corpus into cells of 4–17, while c=0.8 at K=3.0 needed ~51 studies per cell — confidence, not evidence, capped every score. Every run now prints a K A/B (stored vs 3.0). Still a guess until Tier-3 |
 | `FORM_LADDER` (13 values) | **New 2026-08-11**, founder design. The form arc's composite term is the mean of the top-3 ladder scores among NON-NEGATIVE evidence in the product's own form: umbrella 1.00, SR+MA 0.95, SR 0.90, RCT 0.80, observational 0.55→0.15, animal 0.10, cell 0.05. Replaces `effect × 0.15` when no exact-form trial existed, which punished a literature for omitting the form: 54% of 149 creatine studies said only "creatine". Ranks are `pipeline.classify` design_rank, so no new taxonomy. All 13 values are founder-initialised guesses |
 | `FORM_LADDER_TOP` = 3 | **New 2026-08-11.** Aggregation width, chosen by measurement (`scripts/form_experiment.py`), not preference. top-1 scored "1 RCT + 9 animal studies" at 0.800 — identical to ten RCTs, so one paper bought a replicated literature's credit. top-10 dragged that same real RCT to 0.170, animal tier. top-3 (0.333) is the only width separating all five fixtures monotonically. Pinned by selftest so it cannot move silently |
@@ -939,6 +975,8 @@ system that are currently exact.
      MULTIPLIES (as a fourth term in a mean, one tiny abstract-only trial scored
      76/100). A missing subset is PENALISED at its transfer tier (dropping it
      gave 99/100 to a product no trial had used that form for).
+     **Superseded 2026-09-04 by v14** — `50 + SCORE/2`, positive signal
+     discounted by applicability; see §9.
   4. The signed score is retained internally; only the display is 0–100. It does
      not reintroduce the §9 collapse because the evidence arc separates
      "barely studied" (3, empty arc) from "does not work" (15, full arc).

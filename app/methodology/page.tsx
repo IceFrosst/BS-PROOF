@@ -101,37 +101,44 @@ export default function MethodologyPage() {
               score like a replicated literature.
             </p>
 
-            <h3>5. The displayed 0–100 answers three questions at once</h3>
+            <h3>5. The displayed 0–100 is the verdict, re-priced for your bottle</h3>
             <p>
-              <strong>Does it work?</strong> (the signed verdict over all
-              evidence) · <strong>Was your form tested?</strong> (the best
-              three non-negative studies in your exact form, ranked by
-              evidence hierarchy: an umbrella review in your form scores 1.0,
-              an RCT 0.8, an animal study 0.1) ·{" "}
-              <strong>Is your dose in the range that worked?</strong> (how
-              close your dose sits to the doses at which trials actually found
-              benefit). The composite is the average of those three, times
-              confidence.
+              The signed verdict (−100…+100) is rescaled so that 50 means
+              &ldquo;the evidence points nowhere&rdquo;. A <em>positive</em>{" "}
+              verdict is then pulled back toward 50 by how much of that evidence
+              is actually about your product: <strong>was your form tested?</strong>{" "}
+              (the best three non-negative studies in your exact form, ranked by
+              evidence hierarchy: an umbrella review in your form scores 1.0, an
+              RCT 0.8, an animal study 0.1) and{" "}
+              <strong>is your dose in the range that worked?</strong> (how close
+              your dose sits to the doses at which trials actually found
+              benefit). The mean of those two is the applicability, 0–1. A
+              negative verdict is never softened: an untested form is no reason
+              to read &ldquo;does not work&rdquo; as &ldquo;unclear&rdquo;.
             </p>
             <div className="method-example">
               <strong>Worked example.</strong> An outcome where the evidence
-              leans mildly positive (+0.30), your form has solid RCT backing
-              (0.80), and your dose sits just under the range that worked
-              (closeness 0.85), with good confidence (0.80), scores{" "}
-              <em>61 / 100</em>. Identical evidence but a dose far below where
-              benefits occurred (closeness 0.10) scores <em>41</em> — the
-              same science, honestly re-priced for <em>your</em> bottle.
-              Creatine power is the live case: benefits were shown at 20 g
-              loading doses, so a 4.4 g product is scored against that fact
-              rather than credited for it.
+              leans mildly positive (+0.30) with good confidence (0.80) has a
+              signed verdict of +24. With solid RCT backing in your form (0.80)
+              and a dose just under the range that worked (closeness 0.85),
+              applicability is 0.83 and the score is <em>60 / 100</em>. Identical
+              evidence but a dose far below where benefits occurred (closeness
+              0.10) gives applicability 0.45 and <em>55</em> — the same science,
+              honestly re-priced for <em>your</em> bottle. Creatine power is the
+              live case: benefits were shown at 20 g loading doses, so a 4.4 g
+              product is scored against that fact rather than credited for it.
             </div>
             <div className="method-example">
-              <strong>What a low score does NOT mean.</strong> 50 means
-              &ldquo;no effect either way&rdquo;, not &ldquo;half good.&rdquo;
-              A well-studied useless product lands near 0–25 <em>with a full
-              evidence ring</em>; a barely-studied one lands low <em>with an
-              empty evidence ring</em>. The ring is what tells those two
-              stories apart — the number alone never could.
+              <strong>What the number means.</strong> 50 means &ldquo;the
+              evidence points nowhere&rdquo;, not &ldquo;half good&rdquo; — and
+              it is where both a neutral literature and a barely-studied one
+              land. The evidence ring tells those two apart: full ring, no
+              effect found; empty ring, nobody has looked. Below 45 the evidence
+              itself leans against the product; below 30 it is clearly against.
+              Labels follow the signed bands exactly: 65 and up &ldquo;works&rdquo;,
+              55–64 &ldquo;probably works&rdquo;, 45–54 &ldquo;unclear&rdquo;,
+              30–44 &ldquo;probably does not work&rdquo;, under 30 &ldquo;does
+              not work&rdquo;.
             </div>
           </section>
           <section id="score"><p className="eyebrow">Composite</p><h2>The displayed score</h2><p>The 0–100 composite is the run’s retained display field. The signed internal score is preserved separately for audit. This site never derives one from the other and never averages discrepancies.</p></section>

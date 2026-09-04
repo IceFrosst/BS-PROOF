@@ -24,8 +24,9 @@ product number, and there deliberately cannot be one.
 ## Output: a number and four arcs, never the number alone
 
 ```
-displayed   0…100      = 100 × c × mean(effect, form, dose)
 internal    −100…+100  = 100 × d × c × (1 − 0.4H)
+displayed   0…100      = 50 + internal/2 × (A if internal > 0 else 1)
+A = mean(form strength, dose closeness)   applicability to YOUR product, 0 … 1
 
 d = Σ(wᵢ·sᵢ) / Σ(wᵢ)      direction       −1 … +1
 c = 1 − e^(−E′/k)          confidence       0 … 1

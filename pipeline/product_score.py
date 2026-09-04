@@ -227,6 +227,7 @@ def score_product(ingredient: str, form: str, dose_mg: float | None,
         components = raw.get("components") or {}
         effect_d = effect_arc.get("verdict")
         c = components.get("c")
+        h = components.get("H")
         strength = form_arc.get("strength")
 
         if raw.get("composite") is None or effect_d is None or c is None:
@@ -239,14 +240,24 @@ def score_product(ingredient: str, form: str, dose_mg: float | None,
             refused.append({"outcome": raw.get("outcome_vocab_id"),
                             "reason": "artifact_predates_form_strength"})
             continue
+        if h is None:
+            # v14's composite is the signed score rescaled, and the signed
+            # score carries the heterogeneity discount. Defaulting H to 0 here
+            # would silently INFLATE a disputed outcome, so a row without it is
+            # refused on the same footing as one without a form strength.
+            refused.append({"outcome": raw.get("outcome_vocab_id"),
+                            "reason": "artifact_lacks_heterogeneity"})
+            continue
 
         band = _benefit_range(raw)
         closeness = dosemod.dose_factor_for(dose_mg, dose_mg, band)
         match = dosemod.dose_match_for(dose_mg, dose_mg, band)
-        composite = arcsmod.composite(effect_d, strength, closeness, c)
+        fit = arcsmod.applicability(strength, closeness)
+        composite = arcsmod.composite(effect_d, strength, closeness, c, h)
         verdict = arcsmod.label(
             composite, c, effect_verdict=effect_d,
             applicability_limited=(strength is None or closeness is None),
+            applicability_score=fit,
         )
         rows.append({
             "outcome": raw.get("outcome_vocab_id"),
@@ -274,6 +285,9 @@ def score_product(ingredient: str, form: str, dose_mg: float | None,
             # was recomputed and by how much it moved.
             "run_composite": raw.get("composite"),
             "run_dose_closeness": (arcs.get("dose") or {}).get("closeness"),
+            # The v14 applicability term for THIS dose, so a reader can see how
+            # much of the signed evidence was allowed to reach the headline.
+            "applicability": round(fit, 3),
         })
 
     rows.sort(key=lambda r: (r["composite"] is None, -(r["composite"] or 0)))

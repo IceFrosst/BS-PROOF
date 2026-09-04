@@ -960,7 +960,8 @@ def main(argv: list[str]) -> int:
         print(f"\n{tag}ECU ROWS — {ingredient}, form={form}, scope={scope}")
         if outcome_allowlist:
             print(f"  showcase top-{len(outcome_allowlist)} by published RCT count")
-        print("  0-100 = 100 x c x mean(effect, form, dose)")
+        print("  0-100 = 50 + signed/2, a positive signal discounted by applicability "
+              "A = mean(form strength, dose closeness)")
         print("-" * 74)
         for row in rows:
             o = vocab.outcome(row["outcome_vocab_id"]) or {}
@@ -971,7 +972,8 @@ def main(argv: list[str]) -> int:
                 effect_verdict=((row.get("arcs") or {}).get("effect") or {}).get("verdict"),
                 applicability_limited=any(
                     ((row.get("arcs") or {}).get(k) or {}).get("verdict") is None
-                    for k in ("form", "dose")))
+                    for k in ("form", "dose")),
+                applicability_score=(row.get("components") or {}).get("applicability"))
             print(f"{tag}{o.get('label', row['outcome_vocab_id']):<30}{shown:>9}  "
                   f"{verdict:<24} n={row['evidence']['n_primaries']}"
                   f"   (signed {row.get('score')})")
@@ -1006,7 +1008,8 @@ def main(argv: list[str]) -> int:
                 top["composite"], c,
                 effect_verdict=(a.get("effect") or {}).get("verdict"),
                 applicability_limited=any((a.get(k) or {}).get("verdict") is None
-                                          for k in ("form", "dose")))
+                                          for k in ("form", "dose")),
+                applicability_score=(top.get("components") or {}).get("applicability"))
             print(f"  SCORE          : {top['composite']}/100   {_lab}")
             print(f"  arcs           : effect {_a('effect')} | form {_a('form')} "
                   f"| dose {_a('dose')} | evidence {_a('evidence')}")

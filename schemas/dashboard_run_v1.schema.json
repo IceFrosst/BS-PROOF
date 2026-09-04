@@ -1169,6 +1169,9 @@
             },
             "coverage": {
               "$ref": "#/$defs/nullableNumber"
+            },
+            "applicability": {
+              "$ref": "#/$defs/nullableNumber"
             }
           }
         },

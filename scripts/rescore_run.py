@@ -38,6 +38,28 @@ human evidence, and every outcome gates.)
 
     python scripts/rescore_run.py 20260824_113359 --verify
     python scripts/rescore_run.py 20260824_113359 --write
+
+Two modes, because two kinds of scoring change exist
+----------------------------------------------------
+--verify / --write RE-ASSEMBLE: worker JSON -> Study objects -> scored rows,
+through build_ecus. That is the right tool when the change is in assembly or
+in s_value / w_study. It needs the context artifact to carry everything the
+assembler reads, and since the v1.24 contract it does not: the studies_list
+projection drops `extraction_version` and the per-arm S3/S5/S7 facts, so every
+v13 study is refused by the contract check and every outcome gates. Measured
+2026-09-04 on run 20260825_175339: --verify reproduces 1/5 outcomes.
+
+--recompose RE-DISPLAYS: it takes the parent's retained ECU rows exactly as
+scored and recomputes only the 0-100 composite (and the v14 applicability term)
+from the fields every row already carries -- d, c, H, form strength, dose
+closeness. That is the right tool when the change is in `arcs.composite`
+alone, which is what SCORING_MODEL v14 is: the signed score, w_study, s_value
+and every constant are untouched, so re-assembly would reproduce the same rows
+and only the display differs. It is the same recomputation
+`pipeline.product_score` performs at lookup time, through the same functions.
+
+    python scripts/rescore_run.py 20260825_175339 --recompose
+    python scripts/rescore_run.py 20260825_175339 --recompose --write
 """
 from __future__ import annotations
 
@@ -132,6 +154,39 @@ def _score(context: dict, ranks: dict, dose_mg) -> list:
     )
 
 
+def _recompose(context: dict) -> list:
+    """
+    The parent's rows with ONLY the display recomputed (SCORING_MODEL v14).
+
+    Refuses rather than guesses: a scored row missing d, c, H or the form
+    strength cannot be recomposed -- H defaulted to 0 would inflate a disputed
+    outcome, and a strength inverted out of the rounded headline invents
+    precision (pipeline/product_score.py documents both refusals).
+    """
+    from pipeline import arcs as arcsmod
+    rows = []
+    for raw in context.get("ecu_rows", []):
+        row = json.loads(json.dumps(raw))          # never mutate the parent
+        comps = row.get("components") or {}
+        arcs = row.get("arcs") or {}
+        if row.get("composite") is None:
+            rows.append(row)                         # gated stays gated
+            continue
+        d, c, h = comps.get("d"), comps.get("c"), comps.get("H")
+        strength = (arcs.get("form") or {}).get("strength")
+        closeness = (arcs.get("dose") or {}).get("closeness")
+        missing = [k for k, v in (("d", d), ("c", c), ("H", h),
+                                  ("arcs.form.strength", strength)) if v is None]
+        if missing:
+            raise SystemExit(f"{row.get('outcome_vocab_id')}: cannot recompose, "
+                             f"row lacks {missing}; re-assemble instead")
+        row["composite"] = arcsmod.composite(d, strength, closeness, c, h)
+        comps["applicability"] = round(arcsmod.applicability(strength, closeness), 3)
+        row["components"] = comps
+        rows.append(row)
+    return rows
+
+
 def _table(published: dict, rows: list):
     got = {row["outcome_vocab_id"]: row for row in rows}
     lines = ["%-20s %9s %9s %8s %8s"
@@ -158,6 +213,9 @@ def main(argv: list) -> int:
                         help="write a new run (summary, full, dashboard artifact)")
     parser.add_argument("--dose", type=float, default=None,
                         help="override the product dose in ELEMENTAL mg")
+    parser.add_argument("--recompose", action="store_true",
+                        help="keep the parent's scored rows; recompute only the "
+                             "0-100 display from their retained fields (v14)")
     args = parser.parse_args(argv)
 
     context_path, dashboard_path = _find(args.run)
@@ -165,14 +223,23 @@ def main(argv: list) -> int:
     ranks = _design_ranks(dashboard_path)
 
     print("parent:       ", context_path.name)
-    print("design ranks: ", f"{len(ranks)} recovered"
-          + ("" if dashboard_path else "   (NO dashboard artifact -- expect gating)"))
+    print("mode:         ", "RECOMPOSE (display only)" if args.recompose
+          else "RE-ASSEMBLE (build_ecus)")
+    if not args.recompose:
+        print("design ranks: ", f"{len(ranks)} recovered"
+              + ("" if dashboard_path else "   (NO dashboard artifact -- expect gating)"))
     print("studies:      ", len(context.get("studies_list", [])))
     print("prompt:       ", context.get("prompt_version"),
           "  (unchanged: nothing was re-extracted)")
     print()
 
-    rows = _score(context, ranks, args.dose)
+    if args.recompose:
+        if args.dose is not None or args.verify:
+            raise SystemExit("--recompose keeps the parent's rows as scored; "
+                             "--dose and --verify apply to re-assembly only")
+        rows = _recompose(context)
+    else:
+        rows = _score(context, ranks, args.dose)
     published = {row["outcome_vocab_id"]: row for row in context.get("ecu_rows", [])}
     table, identical, total = _table(published, rows)
     print(table)
@@ -199,11 +266,29 @@ def main(argv: list) -> int:
     out = dict(context)
     out["ecu_rows"] = rows
     out["rescored_from"] = context_path.name.replace("_context.json", "")
-    out["rescore_note"] = (
-        "Deterministic re-score of the parent run's cached extractions. No model "
-        "calls were made, so the parent's telemetry is NOT repeated here -- those "
-        "calls were spent once and counting them again would double-count them."
-    )
+    if args.recompose:
+        out["rescore_note"] = (
+            "Deterministic RE-DISPLAY of the parent run's scored rows under the "
+            "current SCORING_MODEL: every signed score, weight and study "
+            "contribution is the parent's; only the 0-100 composite and its "
+            "applicability term were recomputed from retained row fields. No "
+            "model calls were made, so the parent's telemetry is NOT repeated."
+        )
+    else:
+        out["rescore_note"] = (
+            "Deterministic re-score of the parent run's cached extractions. No model "
+            "calls were made, so the parent's telemetry is NOT repeated here -- those "
+            "calls were spent once and counting them again would double-count them."
+        )
+    # The parent's scoring_model / source_commit describe the PARENT. Drop them
+    # so write_report stamps the model this pass actually applied; keeping them
+    # would file a v14 display under a v13 label -- the cross-model comparison
+    # archive_reports.py exists to prevent.
+    for key in ("scoring_model", "source_commit"):
+        out.pop(key, None)
+    # The A/B blocks quote the parent's composites and are comparison-only.
+    for key in ("population_ab", "k_ab"):
+        out.pop(key, None)
     # Telemetry belongs to the parent. Dropping these routes the artifact to its
     # honest "unavailable" path instead of claiming calls this pass never made.
     for key in ("usage", "speed_report", "agent_stats"):

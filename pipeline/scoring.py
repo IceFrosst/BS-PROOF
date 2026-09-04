@@ -261,10 +261,28 @@ APPLY_DOSE_IN_WEIGHT = False
 # must never be read side by side as if the numbers meant the same thing, and
 # scripts/archive_reports.py enforces that by sweeping old-model runs out of
 # reports/runs/ into reports/archive/<model>/.
-SCORING_MODEL = "v13-universal-negative-contract"
+SCORING_MODEL = "v14-applicability-discount"
 
 # What each model meant, so an archived report can still be understood:
 SCORING_MODEL_HISTORY = {
+    "v14-applicability-discount":
+        "the 0-100 composite is the SIGNED score rescaled onto 0-100 and "
+        "discounted for applicability (founder 2026-09-04: 'it's too strict, "
+        "make it make sense'): composite = 50 + 50 x d x c x (1 - 0.4H) x A "
+        "for a positive signal, undiscounted for a negative one, where A = "
+        "mean(form strength, dose closeness or the 0.10 missing-dose tier). "
+        "Replaces 100 x c x mean(effect, form, dose), which made two "
+        "applicability terms peers of the one direction term: measured on the "
+        "155-study creatine run, d = +0.04 read 38 'probably does not work' "
+        "because no benefit dose range existed, while d = 0.00 with full form "
+        "and dose read 77 'works' and unanimous harm read 60. Labels are now "
+        "SPEC 9's signed bands mapped arithmetically (65/55/45/30), so no new "
+        "threshold was invented; 'barely studied' now sits at ~50 with an "
+        "empty evidence arc instead of ~3. Signed score, w_study, s_value, K, "
+        "S_VALUE, H_PENALTY and every transfer factor are UNCHANGED -- this "
+        "changes only how the retained signed score is displayed and "
+        "qualified, so retained v13 runs are re-composed from their rows "
+        "(scripts/rescore_run.py --recompose) rather than re-extracted.",
     "v13-universal-negative-contract":
         "universal negative-effect contract: S3 precedes dependent workers and "
         "passes exact arm facts; v1.24 contracts require explicit provenance; "

@@ -92,8 +92,9 @@ Deterministic path in `pipeline/scoring.py` + `pipeline/assemble.py`.
      form      d over trials using YOUR form      + share of evidence
      dose      d over trials in YOUR dose band    + share of evidence
      evidence  c (pure quantity, no direction)
-6. composite = 100 × c × mean(effect, form, dose)   [the 0–100 shown]
-   a MISSING subset is penalised at its transfer tier, never dropped
+6. composite = 50 + signed/2 × (A if signed > 0 else 1)   [the 0–100 shown]
+   A = mean(form strength, dose closeness) — applicability to YOUR product;
+   a MISSING axis is priced at its transfer tier, never dropped
 7. Gate if almost no human clinical weight → no number at all
 ```
 """

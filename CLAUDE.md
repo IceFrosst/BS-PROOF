@@ -572,16 +572,34 @@ and population are no longer in the weight; they are arcs.
 | evidence | — (pure quantity) | c |
 
 ```
-composite (0–100, displayed) = 100 × c × mean(effect, form, dose)
 signed (−100…+100, internal) = 100 × d × c × (1 − 0.4H)
+A (applicability, 0…1)       = mean(form strength, dose closeness or 0.10)
+composite (0–100, displayed) = 50 + signed/2 × (A if signed > 0 else 1)
 ```
 
-A missing subset is penalised at its transfer tier, never dropped. Confidence
-multiplies rather than averaging in — both were measured, see `docs/SPEC.md` §9.
+**SCORING_MODEL v14-applicability-discount (founder decision 2026-09-04: "it's
+too strict, make it make sense"). Supersedes `100 × c × mean(effect, form,
+dose)` everywhere below.** The headline is the signed score rescaled so 50 means
+"the evidence points nowhere", then pulled back toward 50 by however much of the
+evidence is NOT about your product. At full applicability `composite = 50 +
+signed/2` exactly, so SPEC §9's signed bands ARE the labels (65 works / 55
+probably works / 45 unclear / 30 probably does not work) — no new threshold.
 
-`0–100` does not collapse "useless" into "unstudied", because the evidence arc
-separates them: 1 weak trial → **3** with an empty evidence arc; 20 solid null
-trials → **15** with a full one.
+Why the mean had to go, measured on the 155-study creatine run: two
+APPLICABILITY terms sat as peers of the one DIRECTION term, so the number was set
+mostly by form/dose match. `d = +0.04` read **38 "probably does not work"** because
+no benefit dose range existed; the same `d` with a full dose term read 63; `d = 0`
+with full form and dose read **77 "works"**; unanimous harm read **60**. Under v14
+those read 51 / 52 / 50 / 0. Three properties, all pinned: confidence still
+multiplies (inside `signed` — one weak trial lands at ~50 "barely studied", not
+3 beside "harmful"); applicability discounts BENEFIT ONLY (a null or harm is
+never softened by an untested form — the under-count direction of invariants 6,
+7, 9); silence is still not a pass (untested form + no dose range caps a positive
+verdict at ~52). No scoring constant changed; v13 rows re-compose from their
+retained fields (`scripts/rescore_run.py --recompose`), no re-extraction.
+
+`0–100` does not collapse "useless" into "unstudied": both sit near 50, and the
+evidence arc separates them — empty arc, nobody looked; full arc, no effect found.
 
 **Demo runs are FULL-TEXT ONLY** (`--pilot` / `--grok` default on). An
 abstract-only study lands near `w = 0.023` and needs ~300 of its kind to reach
@@ -1164,6 +1182,26 @@ extraction was spent on the fix; the first real `--with-sr` production run is
 still the unmeasured SR-uplift experiment (Next item 3).
 
 ## Next
+
+**Changed 2026-09-04: SCORING_MODEL v14-applicability-discount** (see the
+composite block under Current state). The creatine run `20260825_175339` was
+re-composed as `20260904_185830`: muscle_strength 38 → 51 "unclear",
+muscle_power 35 → 54, lean_body_mass 30 → 51, exercise_endurance 30 → 60
+"probably works". Signed scores are unchanged, so this is a display repair, not
+new evidence. What is now visibly the binding problem is the funnel, not the
+formula: of 45 studies with a mapped muscle_strength claim, 19 are refused as
+ineligible (11 self-declared underpowered, 5 combination arms, 3 no
+ingredient-free arm), 8 as off-population, 6 more at the arm firewall / S7
+join, leaving 12 — of which 10 are `inconclusive_unquantified` nulls at s = 0
+(raw kg/N/Nm differences with no SD). Only 3 of those 16 nulls carry a stated
+sign, a numeric p and an n, so the Altman–Bland SMD reconstruction (SPEC §13)
+would recover few of them; the SD lever (v1.20) and the S7 replay are the real
+unlocks. **`scripts/rescore_run.py --verify` cannot re-assemble a v13 run**:
+the `studies_list` projection in `run_pipeline._study_extraction` drops
+`extraction_version` and the per-arm S3/S5/S7 facts, so every study fails the
+contract check and gates. `--recompose` (display only) is the workaround; the
+projection needs those fields before the next assembly-level fix can be
+re-scored from a retained run.
 
 **Clean resume point (2026-08-25):** `origin/main` is clean with no open PRs,
 no stashes, and no topic branches or extra worktrees. Historical merged or

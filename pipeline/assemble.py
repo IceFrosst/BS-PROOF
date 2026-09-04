@@ -1237,6 +1237,22 @@ def build_ecus(extractions: list[dict], product: dict, *,
         studies = [s for s, _ in pairs]
         outcome_id = pairs[0][1]["outcome_id"]
         result = score_ecu(studies, syntheses or [])
+        # The four arcs and the 0-100 headline. Each arc carries a verdict
+        # AND the coverage behind it, so "your form failed" and "nobody
+        # tested your form" never collapse into the same picture.
+        # form_syntheses stays empty until the SR path runs: a review only
+        # counts as FORM evidence once its own direction is extracted, and an
+        # unread review must never be credited as non-negative. The ladder
+        # therefore caps at rank 4 (0.80) on a primaries-only corpus, which is
+        # honest rather than convenient -- see arcs.FORM_LADDER.
+        built = arcsmod.build(
+            studies, syntheses or [], form_top=form_top,
+            # The composite's dose term (v12): the product's closeness to
+            # the range where positive effects occurred. Same number the
+            # row reports as dose.product_factor.
+            dose_closeness=dosemod.dose_factor_for(
+                product.get("dose_low_mg"), product.get("dose_high_mg"),
+                bands.get(outcome_id, {"low": None})))
         rows.append({
             "ecu_key": key,
             "ingredient": ingredient,
@@ -1249,8 +1265,17 @@ def build_ecus(extractions: list[dict], product: dict, *,
             "score": result["score"],
             "band": result["band"],
             "gate_fired": result["gate_fired"],
-            "components": {k: result[k] for k in ("d", "c", "H", "E", "E_prime",
-                                                  "coverage") if k in result},
+            "components": {
+                **{k: result[k] for k in ("d", "c", "H", "E", "E_prime",
+                                          "coverage") if k in result},
+                # The v14 applicability term A -- mean(form strength, dose
+                # closeness) -- the ONLY input to the headline that is not
+                # already in the signed score. Travels with the row so the
+                # composite can be re-derived from stored fields and so a label
+                # can say "not tested for your product" instead of blaming the
+                # evidence. None when the ECU gated.
+                "applicability": built.get("applicability"),
+            },
             "dose": {
                 **{k: v for k, v in bands.get(outcome_id, {}).items()
                    if k in ("low", "high", "n_benefit", "n_null", "null_range",
@@ -1295,23 +1320,8 @@ def build_ecus(extractions: list[dict], product: dict, *,
             # tiny trials outvote one large one; the arcs must agree with the
             # evidence mass the centre number was built from.
             "applicability": _applicability(pairs),
-            # The four arcs and the 0-100 headline. Each arc carries a verdict
-            # AND the coverage behind it, so "your form failed" and "nobody
-            # tested your form" never collapse into the same picture.
-            # form_syntheses stays empty until the SR path runs: a review only
-            # counts as FORM evidence once its own direction is extracted, and an
-            # unread review must never be credited as non-negative. The ladder
-            # therefore caps at rank 4 (0.80) on a primaries-only corpus, which is
-            # honest rather than convenient -- see arcs.FORM_LADDER.
-            **{k: v for k, v in arcsmod.build(
-                   studies, syntheses or [], form_top=form_top,
-                   # The composite's dose term (v12): the product's closeness to
-                   # the range where positive effects occurred. Same number the
-                   # row reports as dose.product_factor.
-                   dose_closeness=dosemod.dose_factor_for(
-                       product.get("dose_low_mg"), product.get("dose_high_mg"),
-                       bands.get(outcome_id, {"low": None}))).items()
-               if k in ("arcs", "composite")},
+            "arcs": built["arcs"],
+            "composite": built["composite"],
             "flags": sorted({f for s in studies for f in _flags(s, rec=None)}),
             "provenance": {
                 "prompt_version": prompt_version,
