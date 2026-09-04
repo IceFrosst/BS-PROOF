@@ -11,6 +11,8 @@ sweeps `runs/` whenever `scoring.SCORING_MODEL` changes.
 
 | When (UTC) | Mode | Ingredient | Form | Selftest | File |
 |---|---|---|---|---|---|
+| 2026-09-04 15:13 UTC | claude-sr-ft-top5-per_o | `magnesium` | `magnesium_glycinate` | summary | [runs/20260904_151333_magnesium_magnesium-glycinate_claude-sr-ft-top5-per-o_summary.md](runs/20260904_151333_magnesium_magnesium-glycinate_claude-sr-ft-top5-per-o_summary.md) |
+| 2026-09-04 15:13 UTC | claude-sr-ft-top5-per_o | `magnesium` | `magnesium_glycinate` | full | [runs/20260904_151333_magnesium_magnesium-glycinate_claude-sr-ft-top5-per-o_full.md](runs/20260904_151333_magnesium_magnesium-glycinate_claude-sr-ft-top5-per-o_full.md) |
 | 2026-09-04 14:33 UTC | claude-sr-ft-top5-suppl | `omega_3` | `fish_oil_triglyceride` | summary | [runs/20260904_143259_omega-3_fish-oil-triglyceride_claude-sr-ft-top5-suppl_summary.md](runs/20260904_143259_omega-3_fish-oil-triglyceride_claude-sr-ft-top5-suppl_summary.md) |
 | 2026-09-04 14:33 UTC | claude-sr-ft-top5-suppl | `omega_3` | `fish_oil_triglyceride` | full | [runs/20260904_143259_omega-3_fish-oil-triglyceride_claude-sr-ft-top5-suppl_full.md](runs/20260904_143259_omega-3_fish-oil-triglyceride_claude-sr-ft-top5-suppl_full.md) |
 | 2026-08-28 15:24 UTC | claude-sr-ft-top5-suppl | `omega_3` | `fish_oil_triglyceride` | summary | [runs/20260828_152434_omega-3_fish-oil-triglyceride_claude-sr-ft-top5-suppl_summary.md](runs/20260828_152434_omega-3_fish-oil-triglyceride_claude-sr-ft-top5-suppl_summary.md) |

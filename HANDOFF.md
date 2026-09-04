@@ -6,6 +6,90 @@
 
 ---
 
+## 2026-09-04 (Claude Code session — first magnesium run: INVALID, two actionable defects)
+
+Run `20260904_151333_magnesium_magnesium-glycinate_claude-sr-ft-top5-per-o`,
+registered **invalid** in `reports/run_statuses.json`. Third ingredient attempted;
+**do not read its numbers as a magnesium score.** Retained because the two
+defects it exposes are reproducible and worth fixing, not because the output
+means anything.
+
+    run_pipeline.py magnesium --form magnesium_glycinate --dose 200 \
+      --full-text-only --per-outcome --with-sr --limit 130
+
+Funnel: 96 syntheses + 300 primaries discovered -> 170 units after dedup (43%
+collapsed; per-outcome queries legitimately overlap) -> 70 RCT-rank full-text
+magnesium studies -> all 70 extracted (under the 130 limit). 523 live calls,
+44 cache hits, $0 metered, 13 min.
+
+### Defect 1: S7 failed 101 of 144 calls (70%)
+
+Every other agent was healthy -- S8 0/70, S6B 2/66, S4 6/76, S3 15/83, S5 15/84 --
+so this is specific to S7, and S7 supplies FORM and DOSE. Consequence: every row
+reads `not tested in your form` as an **artifact of the failure**, not a fact
+about the literature.
+
+Cause, measured:
+
+| ingredient | forms declared | `form_vocabulary` payload |
+|---|--:|--:|
+| omega_3 | 5 | 1,404 chars |
+| **magnesium** | **14** | **4,296 chars** |
+
+S7 carries a strict prompt + schema against a ~30k envelope and the extra 2.9k of
+form vocabulary pushes it over -- the same `max_turns` failure already documented
+for v1.28. **The fix is to send only the relevant salt family's forms rather than
+all 14**, which is code, not a constant, and helps every multi-form ingredient.
+
+Ruled out along the way: this is NOT session-limit exhaustion. A usage-limit
+error is in the adapter's `_FATAL` set and would have killed the run; the run
+completed, so these were per-call failures. The partial rate climbing 30% -> 47%
+-> settling at 41% looked like throughput pressure and was not.
+
+### Defect 2: the showcase omitted sleep, the outcome magnesium is bought for
+
+    showcase top-5 by RCT count: blood_pressure 138, serum_magnesium 135,
+      adverse_events_any 117, glycaemic_control 104, energy_levels 67
+
+`serum_magnesium` is a COMPLIANCE BIOMARKER -- it confirms the pill was absorbed
+-- and it displaced `sleep_quality` entirely. CLAUDE.md records that sleep is the
+main reason people buy magnesium glycinate and that a generic query starved it to
+n=1; `--per-outcome` was the fix for that, but it fixes RETRIEVAL QUOTAS and the
+**showcase selection is upstream of it**. Selecting showcase outcomes by raw
+published-RCT count will keep picking biomarkers over the outcomes a buyer cares
+about. Next magnesium run must pass an explicit outcome list.
+
+### What it scored (do not use)
+
+| outcome | 0-100 | n | c |
+|---|--:|--:|--:|
+| serum_magnesium | 21 | 3 | 0.50 |
+| blood_pressure | 6 | 1 | 0.16 |
+| glycaemic_control | 6 | 1 | 0.19 |
+| adverse_events_any | gated | 0 | — |
+| energy_levels | gated | 0 | — |
+
+Three scored rows resting on n=3, n=1, n=1 out of 70 extracted studies, with the
+form axis unusable. SR inheritance: 44/60 reviews ok, 493 trials named -- fourth
+consecutive ingredient where SR-derived trials contributed **zero** to evidence
+mass.
+
+Dose 200 mg elemental was a stated assumption, not a real product label.
+
+### Also noticed: "dropped N noise" needs an ingredient-scoped denominator
+
+The run logged `447 RCT-rank after OA filters; 70 after relevance gate (dropped
+377 noise)`, which reads like a catastrophic gate failure and is not one:
+`out/bsproof.sqlite` is shared across ingredients, so 377 of those are the
+**omega-3 corpus being correctly excluded from a magnesium run**. Audited
+deterministically: of the 70 magnesium rows the gate kept 68, and both drops were
+correct (a transdermal cream -- this pipeline scores oral supplementation -- and a
+mineral-water trial with no supplement signal). The log line conflates "another
+ingredient's studies" with "noise", which is exactly why omega-3's `dropped 360`
+did not look alarming when it genuinely was a bug.
+
+---
+
 ## 2026-08-28 evening (Claude Code session — SCORING_MODEL v14, form term reads near-form evidence)
 
 Founder instruction, verbatim: **"make the algorithm less strict but at the same

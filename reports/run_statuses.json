@@ -101,11 +101,11 @@
         "synthetic_demo_fixture"
       ],
       "limitations": [
-        "SYNTHETIC DEMO — hand-written data for previewing the reviewer UI; every number, study and quote is invented.",
+        "SYNTHETIC DEMO \u2014 hand-written data for previewing the reviewer UI; every number, study and quote is invented.",
         "Exists so the per-study attribution and extraction-detail views can be seen populated before the next real pipeline run.",
         "Regenerate with python3 scripts/write_demo_artifact.py; this fixture is deliberately overwritable, unlike real run records."
       ],
-      "note": "SYNTHETIC DEMO — not evidence. Every number is invented."
+      "note": "SYNTHETIC DEMO \u2014 not evidence. Every number is invented."
     },
     "20260812_180548_creatine_creatine-monohydrate_claude-top5-per-o": {
       "status": "experimental",
@@ -152,9 +152,30 @@
     "20260825_072759": {
       "status": "invalid",
       "public_claims_allowed": false,
-      "reason_codes": ["legacy_short_run_id_alias"],
-      "limitations": ["Use the exact full run id entry above for status lookup."],
+      "reason_codes": [
+        "legacy_short_run_id_alias"
+      ],
+      "limitations": [
+        "Use the exact full run id entry above for status lookup."
+      ],
       "note": "Legacy short alias; no claim validity is implied."
+    },
+    "20260904_151333_magnesium_magnesium-glycinate_claude-sr-ft-top5-per-o": {
+      "status": "invalid",
+      "public_claims_allowed": false,
+      "reason_codes": [
+        "s7_failed_70_percent_form_and_dose_axes_unusable",
+        "showcase_omitted_sleep_quality_the_primary_commercial_outcome",
+        "n_per_outcome_1_to_3_of_70_extracted",
+        "not_anchor_validated"
+      ],
+      "limitations": [
+        "S7 failed 101 of 144 calls (70%). S7 supplies form and dose, so every row reads 'not tested in your form' as an ARTIFACT of the failure, not a fact about the literature. Cause: magnesium declares 14 forms, so the form_vocabulary payload is 4,296 chars against omega-3's 1,404, and S7's strict prompt+schema exceeds its ~30k envelope (same max_turns failure documented for v1.28). Other agents were healthy: S8 0/70, S6B 2/66, S4 6/76, S3 15/83, S5 15/84.",
+        "The showcase selected the top 5 outcomes by published RCT count, which returned serum_magnesium (a compliance biomarker) and omitted sleep_quality -- the outcome magnesium glycinate is actually bought for. --per-outcome fixes retrieval quotas but the showcase selection is upstream of it, so sleep was never scored.",
+        "Scored rows rest on n=3, n=1 and n=1 of 70 extracted studies.",
+        "Dose 200 mg elemental is a stated assumption, not a real product label."
+      ],
+      "note": "Diagnostic run. Retained because the two defects it exposes are actionable and reproducible, NOT because the numbers mean anything."
     }
   }
 }
