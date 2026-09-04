@@ -908,10 +908,16 @@ product composite 62 under v11; under v12 they define a ~20 g range the product
 is far below (closeness 0.10, composite 44), while lean_body_mass rose 46 → 57
 because 4.4 g sits just under its 4.8–5 g range.
 
-Two founder calls recorded with it: the score deliberately does NOT distinguish
-"dosed where trials failed" from "dosed where nobody looked" (both are outside
-the range that worked; `null_range` and the arc still show a reader the
-difference), and the KNOWN FRAGILITY stands unfixed — the range is a min–max of
+Two founder calls recorded with it. The first — that the score deliberately does
+NOT distinguish "dosed where trials failed" from "dosed where nobody looked" —
+was **SUPERSEDED 2026-08-28 by `SCORING_MODEL` v15-dose-unassessable-neutral**
+(founder: "the algo is too strict, make it less strict"). `dose.dose_axis_state`
+now names three states and only two are punished: a product dose measured far
+from the benefit range still is, and a WITHHELD product dose still is (relaxing
+that would be gameable), but "no benefit trial carried a usable dose" takes the
+neutral `DOSE_UNASSESSABLE_TERM` 0.50 — when nothing worked anywhere the effect
+term already prices it, so the old fallback double-counted the same evidence.
+The second call stands: the KNOWN FRAGILITY is still unfixed — the range is a min–max of
 benefit doses, so one extreme benefit trial stretches it and a 2-trial range
 reads identically to a 15-trial one. Also verified the same day: the 20–21 g
 muscle_power range is an extraction artifact, not the literature — 14 of 22

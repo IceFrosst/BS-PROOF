@@ -29,6 +29,34 @@ FUNDING_FACTOR = {"independent":1.00, "industry_other":0.90,
 # Kept for form_mix reporting and the form arc — NOT applied in weight().
 FORM_FACTOR = {"exact":1.00, "salt_family":0.50, "different":0.15, "unspecified":0.30}
 DOSE_FACTOR = {"in_band":1.00, "low_50_99":0.45, "below_50":0.10, "above_200":0.60}
+
+# FOUNDER INSTRUCTION 2026-08-28 ("the algo is too strict, make it less strict").
+# The dose term when the axis cannot be assessed FROM THE EVIDENCE: the product's
+# dose is known, but no benefit trial carried a usable dose, so no range exists to
+# measure closeness against.
+#
+# 0.5 is the neutral midpoint of the same 0..1 scale `arcs._unit` defines, where
+# 0.5 already means "no effect either way" -- so an unanswerable sub-question
+# contributes neither credit nor punishment. It is NOT a free pass: 0.5 sits well
+# below the 1.00 an in-range dose earns, so the 99/100-on-an-untested-product
+# failure that "silence is not a pass" was adopted for cannot recur.
+#
+# WHY THE OLD VALUE WAS DOUBLE-COUNTING, which is what makes this a correction and
+# not merely a loosening. The previous fallback was `effect x DOSE_FACTOR
+# ["below_50"]` (0.10). "No benefit trial had a usable dose" has two causes, and
+# in the first the effect term ALREADY carries the fact:
+#   * nothing worked anywhere -> `d` is low, priced once in the effect term;
+#     pricing it again in the dose slot punishes the same evidence twice.
+#   * benefit trials exist but none reported a convertible dose -> genuine
+#     ignorance about OUR axis, which is not evidence against the product.
+# Measured on omega-3 run 20260828_152434, inflammation_crp: 23 -> 33.
+#
+# THE INPUT-SIDE CASE IS DELIBERATELY EXCLUDED and stays punitive: when the
+# PRODUCT's own dose is unknown (no --dose, or an unconvertible label), rewarding
+# the silence would be gameable -- omit your dose, score better than a product
+# honestly dosed far from where the evidence sits. `dose.dose_term` returns None
+# there so the caller keeps the old penalty. Pinned by selftest.
+DOSE_UNASSESSABLE_TERM = 0.50
 POP_FACTOR  = {"exact":1.00, "adjacent":0.70, "different":0.35}
 OA_FACTOR   = {"full_text":1.00, "sr_table":0.85, "abstract_only":0.55}
 
@@ -261,10 +289,26 @@ APPLY_DOSE_IN_WEIGHT = False
 # must never be read side by side as if the numbers meant the same thing, and
 # scripts/archive_reports.py enforces that by sweeping old-model runs out of
 # reports/runs/ into reports/archive/<model>/.
-SCORING_MODEL = "v14-form-transfer-ladder"
+SCORING_MODEL = "v15-dose-unassessable-neutral"
 
 # What each model meant, so an archived report can still be understood:
 SCORING_MODEL_HISTORY = {
+    "v15-dose-unassessable-neutral":
+        "the composite's DOSE term stops punishing an unassessable axis. "
+        "`dose_factor_for` returned None for two unrelated reasons and the "
+        "composite treated them alike; `dose.dose_term` now separates three "
+        "states. `assessable` is unchanged. `no_benefit_range` (product dose "
+        "KNOWN, but no benefit trial carried a usable dose) takes the neutral "
+        "DOSE_UNASSESSABLE_TERM 0.50 instead of effect x 0.10 -- when nothing "
+        "worked anywhere the effect term already prices it, so the old fallback "
+        "double-counted the same evidence. `product_dose_unknown` STAYS punitive "
+        "and returns None, because rewarding a product for withholding its own "
+        "dose is gameable; selftest pins that declaring a bad dose beats hiding "
+        "one. Founder instruction 2026-08-28, 'the algo is too strict'. Measured "
+        "on omega-3 20260828_152434: inflammation_crp 23 -> 33. Signed score "
+        "unchanged (dose is not in w_study). `composite` itself is untouched, so "
+        "the TS parity ports need no resync; the decision lives in dose.py and "
+        "is applied identically by the run path and by product_score.",
     "v14-form-transfer-ladder":
         "the composite's FORM term reads near-form evidence at the transfer "
         "factor FORM_FACTOR already defines, instead of exact-form-or-nothing. "

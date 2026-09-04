@@ -15,6 +15,57 @@ Last swept: **2026-08-08**.
 
 ## OPEN
 
+### 0b. `SCORING_MODEL` v14 → v15-dose-unassessable-neutral — DONE ON FOUNDER INSTRUCTION, needs confirmation
+
+**Founder instruction 2026-08-28: "rn i think the algo is too strict, make it
+less strict."** Second relaxation of the same day; the first is item 0 below.
+**One new constant: `DOSE_UNASSESSABLE_TERM = 0.50`.**
+
+**What changed.** `dose_factor_for` returns `None` for two unrelated reasons and
+the composite punished both at `effect × DOSE_FACTOR["below_50"]` (0.10).
+`dose.dose_axis_state` now names three states and `dose.dose_term` prices them:
+
+| state | before | after |
+|---|---|---|
+| `assessable` | closeness | **unchanged** |
+| `no_benefit_range` — product dose KNOWN, no benefit trial had a usable dose | effect × 0.10 | **0.50 (neutral)** |
+| `product_dose_unknown` — no `--dose`, or an unconvertible label | effect × 0.10 | **unchanged (still punitive)** |
+
+**Why the middle row was a defect, not strictness.** "No benefit trial carried a
+usable dose" has two causes, and in the first the effect term *already* carries
+the fact: if nothing worked anywhere, `d` is low and priced once in the effect
+term — pricing it again in the dose slot **punishes the same evidence twice**. In
+the second (benefit trials exist but none reported a convertible dose) it punishes
+ignorance about our own axis, which is not evidence against the product.
+
+**Why the last row is deliberately NOT relaxed, and this is the load-bearing
+part:** rewarding a missing product dose would be **gameable** — omit your dose
+and outscore a product honestly dosed far from the evidence. `dose_term` returns
+`None` there so the caller's existing penalty still fires, and two selftests pin
+it: *"declaring a bad dose beats hiding it"* and *"an unassessable axis outscores
+a dose measured far from the evidence"*.
+
+**Not a free pass.** 0.50 is the neutral midpoint of the same 0..1 scale
+`arcs._unit` defines (where 0.5 already means "no effect either way"), and sits
+well below the 1.00 an in-range dose earns — so the 99/100-on-an-untested-product
+failure that "silence is not a pass" was adopted for cannot recur.
+
+**Measured** on omega-3 `20260828_152434` → `20260828_…` re-run: inflammation_crp
+**23 → 33**. Signed scores unchanged (dose is not in `w_study`).
+
+**`composite` itself is untouched**, so the TS parity ports (`lib/analyze/
+scoring.ts`) need no resync; the decision lives in `dose.py` and is applied
+identically by the run path (`assemble`) and by `product_score`, so a scanned
+label and a run score a product by the same rule.
+
+**This supersedes the "founder call, not taken" line in item 0** and the
+CLAUDE.md note that the score "deliberately does NOT distinguish 'dosed where
+trials failed' from 'dosed where nobody looked'" — that distinction is now made,
+on founder instruction. **Still NOT taken:** the composite's equal-weight mean
+over effect/form/dose (a new constant; ceiling was 67/100 with a zero form term).
+
+**Confirm or revert.** Revert is one commit; recomputable from cache in ~4 min.
+
 ### 0. `SCORING_MODEL` v13 → v14-form-transfer-ladder — DONE ON FOUNDER INSTRUCTION, needs confirmation
 
 **Founder instruction 2026-08-28, verbatim: "make the algorithm less strict but at

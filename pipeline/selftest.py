@@ -2995,6 +2995,40 @@ def main():
     check("a dose inside the benefit range outscores one far below it",
           _inb > _low, f"6000 mg -> {_inb}, 1000 mg -> {_low}")
 
+    # v15 DOSE AXIS STATES (founder instruction 2026-08-28, "make it less
+    # strict"). dose_factor_for returns None for two unrelated reasons and the
+    # composite used to punish both. dose_term separates them.
+    _dt, _st = _ps.dosemod.dose_term, _ps.dosemod.dose_axis_state
+    _no_band = {"low": None, "high": None}
+    check("three dose-axis states, not two",
+          (_st(4400, 4400, _band), _st(4400, 4400, _no_band), _st(None, None, _band))
+          == ("assessable", "no_benefit_range", "product_dose_unknown"))
+    check("an assessable axis is unchanged by v15",
+          _dt(6000, 6000, _band) == _ps.dosemod.dose_factor_for(6000, 6000, _band),
+          "v15 must move ONLY the unassessable case")
+    check("no derivable benefit range is neutral, not punished",
+          _dt(4400, 4400, _no_band) == _sc.DOSE_UNASSESSABLE_TERM == 0.50,
+          "the effect term already prices 'nothing worked'; punishing it again "
+          "in the dose slot double-counts the same evidence")
+
+    # THE ANTI-GAMING PIN, and it is the reason this is a correction rather than
+    # a loosening. Withholding the product's own dose must never outscore an
+    # honestly-declared dose sitting far from the evidence.
+    check("withholding the product dose is still punished",
+          _dt(None, None, _band) is None,
+          "None keeps the caller's MISSING_DOSE_PENALTY fallback")
+    _withheld = _A.composite(0.1, 0.8, _dt(None, None, _band), 0.9)
+    _honest_far = _A.composite(0.1, 0.8, _dt(1000, 1000, _band), 0.9)
+    _unassessable = _A.composite(0.1, 0.8, _dt(4400, 4400, _no_band), 0.9)
+    check("declaring a bad dose beats hiding it",
+          _honest_far >= _withheld,
+          f"far-but-declared {_honest_far} vs withheld {_withheld} -- a product "
+          f"must not profit from silence about its own label")
+    check("an unassessable axis outscores a dose measured far from the evidence",
+          _unassessable > _honest_far,
+          f"unassessable {_unassessable} vs measured-far {_honest_far}: not "
+          f"knowing is not the same finding as knowing it is wrong")
+
     # A synthetic fixture must never answer a product question. Every number in
     # the demo artifact is invented; it is marked invalid AND caught by name.
     check("the synthetic demo artifact can never back a product answer",

@@ -241,9 +241,13 @@ def score_product(ingredient: str, form: str, dose_mg: float | None,
             continue
 
         band = _benefit_range(raw)
+        # `product_factor` on the row keeps reporting raw closeness; the headline
+        # eats dose_term, so a scanned label is scored by the same rule a run is
+        # (v15). Two copies of one rule is how they disagree later.
         closeness = dosemod.dose_factor_for(dose_mg, dose_mg, band)
         match = dosemod.dose_match_for(dose_mg, dose_mg, band)
-        composite = arcsmod.composite(effect_d, strength, closeness, c)
+        composite = arcsmod.composite(
+            effect_d, strength, dosemod.dose_term(dose_mg, dose_mg, band), c)
         verdict = arcsmod.label(
             composite, c, effect_verdict=effect_d,
             applicability_limited=(strength is None or closeness is None),

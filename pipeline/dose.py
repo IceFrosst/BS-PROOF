@@ -170,6 +170,54 @@ def dose_factor_for(dose_low: float | None, dose_high: float | None,
     return round(min(f(float(dose_low)), f(float(dose_high))), 4)
 
 
+def dose_axis_state(dose_low: float | None, dose_high: float | None,
+                    band: dict) -> str:
+    """
+    Why the dose axis is or is not assessable. Three states, never two.
+
+    `dose_factor_for` returns None for TWO unrelated reasons and the composite
+    used to treat them alike. They are not alike:
+
+      "assessable"            product dose known, benefit range known
+      "no_benefit_range"      product dose KNOWN, but no benefit trial carried a
+                              usable dose -- ignorance about our own axis
+      "product_dose_unknown"  the PRODUCT's dose is missing or unconvertible
+
+    The distinction is the whole point of `dose_term`: the middle case must not
+    be punished (see scoring.DOSE_UNASSESSABLE_TERM) and the last one must,
+    because rewarding a product for withholding its own dose is gameable.
+    """
+    if dose_low is None or dose_high is None:
+        return "product_dose_unknown"
+    lo, hi = band.get("low"), band.get("high")
+    if lo is None or hi is None or float(lo) <= 0 or float(hi) <= 0:
+        return "no_benefit_range"
+    return "assessable"
+
+
+def dose_term(dose_low: float | None, dose_high: float | None,
+              band: dict) -> float | None:
+    """
+    The COMPOSITE's dose input, as opposed to the arc's picture of the dose axis.
+
+    Same split as the form arc's verdict-vs-strength: `dose_factor_for` stays the
+    number the row reports as `product_factor`, and this is what the headline
+    eats. Returns None ONLY for `product_dose_unknown`, so the caller's existing
+    punitive fallback still fires there and withholding a dose can never pay.
+
+    FOUNDER INSTRUCTION 2026-08-28 ("the algo is too strict, make it less
+    strict"). Full reasoning, including why the old behaviour double-counted a
+    null result, is on scoring.DOSE_UNASSESSABLE_TERM.
+    """
+    from pipeline.scoring import DOSE_UNASSESSABLE_TERM
+    state = dose_axis_state(dose_low, dose_high, band)
+    if state == "product_dose_unknown":
+        return None
+    if state == "no_benefit_range":
+        return DOSE_UNASSESSABLE_TERM
+    return dose_factor_for(dose_low, dose_high, band)
+
+
 def dose_match_for(product_low: float | None, product_high: float | None,
                    band: dict) -> str:
     """

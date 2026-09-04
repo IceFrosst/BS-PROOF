@@ -1308,7 +1308,12 @@ def build_ecus(extractions: list[dict], product: dict, *,
                    # The composite's dose term (v12): the product's closeness to
                    # the range where positive effects occurred. Same number the
                    # row reports as dose.product_factor.
-                   dose_closeness=dosemod.dose_factor_for(
+                   # v15: dose_term, not dose_factor_for. Same number whenever
+                   # the axis is assessable; the difference is that "no benefit
+                   # trial carried a usable dose" is no longer punished as if
+                   # the product were dosed where trials failed. The row still
+                   # reports dose_factor_for as product_factor.
+                   dose_closeness=dosemod.dose_term(
                        product.get("dose_low_mg"), product.get("dose_high_mg"),
                        bands.get(outcome_id, {"low": None}))).items()
                if k in ("arcs", "composite")},
