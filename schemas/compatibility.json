@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Ingredient compatibility fill-in (model prior)",
+  "description": "Pairwise interaction judgements for actives the curated table (vocab/compatibility.json) did not cover. Displayed under a 'model knowledge, unverified' badge; never enters a score.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["pairs", "overall"],
+  "properties": {
+    "pairs": {
+      "type": "array",
+      "maxItems": 40,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["a", "b", "interaction", "severity", "confidence"],
+        "properties": {
+          "a": {"type": "string", "maxLength": 120},
+          "b": {"type": "string", "maxLength": 120},
+          "interaction": {
+            "type": "string",
+            "enum": ["none", "absorption_competition", "synergy", "timing_separate", "caution", "unknown"]
+          },
+          "severity": {"type": "string", "enum": ["info", "moderate", "high"]},
+          "mechanism": {"type": ["string", "null"], "maxLength": 300},
+          "confidence": {"type": "string", "enum": ["high", "medium", "low"]}
+        }
+      }
+    },
+    "form_notes": {
+      "type": "array",
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["active", "note", "confidence"],
+        "properties": {
+          "active": {"type": "string", "maxLength": 120},
+          "note": {"type": "string", "maxLength": 300},
+          "confidence": {"type": "string", "enum": ["high", "medium", "low"]}
+        }
+      }
+    },
+    "overall": {"type": "string", "maxLength": 400}
+  }
+}

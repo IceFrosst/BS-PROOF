@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Company background (model prior)",
+  "description": "What a model recalls about a supplement company. Displayed under a 'model knowledge, unverified' badge; never enters a score. Regulatory items are cross-checked against openFDA by lib/analyze/company.ts.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["brand", "known", "summary", "confidence"],
+  "properties": {
+    "brand": {"type": "string", "maxLength": 120},
+    "known": {"type": "boolean"},
+    "summary": {"type": "string", "maxLength": 600},
+    "founded_year": {"type": ["integer", "null"], "minimum": 1700, "maximum": 2100},
+    "headquarters_country": {"type": ["string", "null"], "maxLength": 80},
+    "parent_company": {"type": ["string", "null"], "maxLength": 120},
+    "ownership_type": {"type": "string", "enum": ["private", "public", "subsidiary", "unknown"]},
+    "third_party_testing": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "program": {"type": ["string", "null"], "maxLength": 120},
+        "status": {"type": "string", "enum": ["documented", "claimed", "unknown"]}
+      },
+      "required": ["status"]
+    },
+    "transparency": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "coa_published": {"type": "string", "enum": ["yes", "no", "unknown"]}
+      },
+      "required": ["coa_published"]
+    },
+    "regulatory_history": {
+      "type": "array",
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "summary", "confidence"],
+        "properties": {
+          "kind": {"type": "string", "enum": ["fda_warning_letter", "recall", "class_action", "ftc_action", "other"]},
+          "year": {"type": ["integer", "null"], "minimum": 1900, "maximum": 2100},
+          "summary": {"type": "string", "maxLength": 300},
+          "confidence": {"type": "string", "enum": ["high", "medium", "low"]}
+        }
+      }
+    },
+    "reputation_notes": {
+      "type": "array",
+      "maxItems": 5,
+      "items": {"type": "string", "maxLength": 200}
+    },
+    "confidence": {"type": "string", "enum": ["high", "medium", "low"]},
+    "caveats": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {"type": "string", "maxLength": 200}
+    }
+  }
+}

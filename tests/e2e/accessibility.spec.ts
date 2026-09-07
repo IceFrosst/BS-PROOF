@@ -39,7 +39,7 @@ function outcomeId(row: Artifact["ecu_rows"][number]): string {
 function auditedRoutes(): string[] {
   // "/" is the waitlist alone; /tester carries the analyzer and the archive.
   // Both are front doors for different people, so both get audited.
-  const routes = ["/", "/tester", "/methodology", "/runs/not-a-real-run"];
+  const routes = ["/", "/tester", "/scan", "/methodology", "/runs/not-a-real-run"];
   for (const artifact of loadArtifacts()) {
     const runId = artifact.run.id;
     routes.push(`/runs/${runId}`);

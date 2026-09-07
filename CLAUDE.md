@@ -27,14 +27,18 @@ Allowed model boundaries (nothing else):
 | `pilot_adapter.py` | Claude subscription pilot (not production) |
 | `grok_adapter.py` | Grok pure-function path (separate backend) |
 | `label_adapter.py` | Reads a supplement LABEL off an uploaded image, via the local CLI (added 2026-08-21) |
-| `lib/analyze/vision.ts` | The same label read over an OpenAI-compatible HTTP API for the deployed app (added 2026-08-22). Default: the FREE Gemini flash tier (`GEMINI_API_KEY`, ~1,500 reads/day); `VISION_API_URL`/`LABEL_MODEL` swap providers (DeepSeek, Groq, OpenRouter) with no code change. Same `prompts/label.md` |
+| `lib/analyze/llm.ts` | **The deployed app's ONE model transport (since 2026-09-07).** Every model call the site makes goes through `chat`/`chatJson` here: the label vision read (prompt and contract in `lib/analyze/vision.ts`, same `prompts/label.md` as `label_adapter`), the ingredient-compatibility fill-in (`prompts/compatibility.md`) and the company profile (`prompts/company.md`) behind `POST /api/scan`. Default provider is **DeepSeek** (`DEEPSEEK_API_KEY`; `VISION_API_KEY`/`GEMINI_API_KEY` still read); `MODEL_API_URL`/`LABEL_MODEL`/`TEXT_MODEL` swap providers with no code change. Temperature 0, one shot, JSON validated by Ajv against `schemas/*.json`. Model text from the two text prompts is displayed under a "model knowledge — unverified" badge and **never enters a score** — see `docs/SYSTEM_DESIGN.md` |
 
 `pipeline.invariants` enforces the Python side by AST and the TS side by scan:
 model-API markers (`chat/completions`, provider SDK imports, key env vars) may
-appear only in `lib/analyze/vision.ts`; a second call site fails the gate.
+appear only in `lib/analyze/llm.ts`; a second call site fails the gate.
 Everything else under `lib/analyze/` is deterministic — ports of `pipeline/`
 functions, pinned to Python-computed golden values by
-`tests/analyze-parity.test.ts`.
+`tests/analyze-parity.test.ts` — plus the curated, cited
+`vocab/compatibility.json` lookup and the openFDA registry fetch, neither of
+which touches a model. Each prompt has its own version constant and cache
+domain (`LABEL_PROMPT_VERSION`, `COMPAT_PROMPT_VERSION`,
+`COMPANY_PROMPT_VERSION`), the same discipline as the label domain below.
 
 Everything in `pipeline/` and `sources/` is deterministic. If you find yourself
 importing an adapter into `scoring.py` or `dedup.py`, stop.
@@ -1182,6 +1186,31 @@ extraction was spent on the fix; the first real `--with-sr` production run is
 still the unmeasured SR-uplift experiment (Next item 3).
 
 ## Next
+
+**Changed 2026-09-07: the SCAN is the product surface (`/scan`, `POST
+/api/scan`; design in `docs/SYSTEM_DESIGN.md`).** Founder: "a finalized version
+of the product where users scan a supplement and they get a result through
+deepseek api … dose effectiveness, company background, supplement type
+compatibility". One photo → five blocks, each stamped with its basis: what the
+label says (`label`), the evidence verdicts with their arcs (`evidence_run`),
+dose effectiveness — your DAILY dose (per-serving × printed servings/day) against
+the range where trials found benefit (`evidence_run`), form and combination
+compatibility (a curated, cited table in `vocab/compatibility.json` plus a
+DeepSeek fill-in for uncovered pairs, `model_prior`), and company background
+(printed seals, openFDA recalls as `registry`, a DeepSeek profile as
+`model_prior`, cross-checked so an asserted recall the registry does not hold is
+marked uncorroborated). Stages 4 and 5 run in parallel inside the 60 s budget
+and each degrades alone; below 6 s of remaining budget the text calls are
+skipped with a caveat, so a slow label read never costs the score. The one rule:
+**a model's recollection never becomes a measurement** — only the evidence run
+produces a number. `lib/analyze/llm.ts` replaced `vision.ts` as the TS model
+boundary; `prompts/label.md` is **label-v1.1** (whole-panel fields: actives,
+certifications, manufacturer, country, warnings, claims — bumped in both
+`vision.ts` and `label_adapter.py`). `/scan` is unlisted like `/tester`; wiring
+it into the front door is one link and a founder call. Not built, on purpose: no
+FDA warning-letter lookup (no API), no drug interactions, no per-user "what else
+do you take" input yet. The whole orchestration is unit-tested against fakes
+(`tests/scan.test.ts`), zero model calls.
 
 **Changed 2026-09-04: SCORING_MODEL v14-applicability-discount** (see the
 composite block under Current state). The creatine run `20260825_175339` was

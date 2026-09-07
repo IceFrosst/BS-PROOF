@@ -25,6 +25,21 @@ const nextConfig: NextConfig = {
       "./reports/run_statuses.json",
       "./vocab/form.json",
       "./prompts/label.md",
+      "./schemas/label.json",
+    ],
+    // /api/scan reads everything the label route does plus the compatibility
+    // table and the two text prompts with their schemas (lib/analyze/scan.ts).
+    "/api/scan": [
+      "./reports/runs/*_dashboard.json",
+      "./reports/run_statuses.json",
+      "./vocab/form.json",
+      "./vocab/compatibility.json",
+      "./prompts/label.md",
+      "./prompts/company.md",
+      "./prompts/compatibility.md",
+      "./schemas/label.json",
+      "./schemas/company.json",
+      "./schemas/compatibility.json",
     ],
   },
 };

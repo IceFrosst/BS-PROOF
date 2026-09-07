@@ -58,6 +58,34 @@ legible. `low` when you are reconstructing any of them from a partial view.
 `evidence_spans` — verbatim strings you copied from the label, enough to justify
 each non-null field. Copy exactly, including the unit.
 
+## The rest of the panel (label-v1.1)
+
+These fields describe the WHOLE product, not just the main active. Same rule:
+copy what is printed, never what is typical. Empty list and null are correct
+answers.
+
+`actives` — EVERY dosed active on the Supplement Facts panel, one entry each,
+including the main active. `name` as printed; `compound_dose_mg` the per-serving
+mass converted to mg (unit conversion only, never salt-to-moiety); `form_text`
+the form or salt as printed ("as magnesium bisglycinate", "as ferrous sulfate")
+or null. An active inside a proprietary blend with no mass of its own has
+`compound_dose_mg: null`. Do not list excipients, flavours or "other
+ingredients".
+
+`certifications` — third-party seals and testing statements AS PRINTED: "NSF
+Certified for Sport", "Informed Sport", "USP Verified", "cGMP", "Third-party
+tested", "Non-GMO Project Verified". Verbatim. These are claims the label makes;
+downstream code labels them as claims, so do not judge them.
+
+`manufacturer` — the company named after "Manufactured by/for", "Distributed
+by" or similar. `country_of_origin` — from "Made in", "Product of". Null when not
+printed. Do not infer a country from the brand.
+
+`warnings_printed` — short verbatim warnings ("Consult a physician if
+pregnant", "Not for children"). `claims_printed` — short verbatim marketing or
+structure/function claims ("Supports muscle strength", "Clinically studied").
+Keep each under 160 characters; at most ten of each.
+
 ## Allowed ids
 
 Use ONLY these. An ingredient outside this list is `ingredient_vocab_id: null`

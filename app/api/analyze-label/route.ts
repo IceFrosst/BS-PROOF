@@ -41,6 +41,7 @@
  */
 import { NextResponse } from "next/server";
 
+import { census, enqueue } from "@/lib/analyze/census";
 import { scoreProduct, availableProducts } from "@/lib/analyze/product-score";
 import { readLabel, analyzerEnabled, LabelReadError, type LabelMediaType } from "@/lib/analyze/vision";
 import { elementalDoseRangeMg, ingredientIds, resolveIngredientForm } from "@/lib/analyze/vocab";
@@ -59,128 +60,7 @@ const ALLOWED_TYPES: ReadonlySet<string> = new Set([
 
 type Json = Record<string, unknown>;
 
-/*
- * How much literature EXISTS for an ingredient we have not scored. A count,
- * explicitly labelled as one — it answers "is there anything to read", never
- * "does it work". Query shape mirrors sources/europepmc.py `_query` at
- * supplement scope (field-scoped since the 2026-08-19 fix). Fails soft: a
- * census is a nice-to-have on a path that already has an honest answer.
- */
-async function census(ingredient: string): Promise<Json> {
-  const ing = ingredient.split("_").join(" ").trim();
-  const supplementScoped = [
-    "TITLE:supplementation",
-    "ABSTRACT:supplementation",
-    'TITLE:"dietary supplement"',
-    'ABSTRACT:"dietary supplement"',
-    'TITLE:"oral supplement"',
-    'ABSTRACT:"oral supplement"',
-    "TITLE:oral",
-    "ABSTRACT:oral",
-  ].join(" OR ");
-  const exclusions =
-    "eclampsia OR anesthesia OR anaesthesia OR surgery OR intravenous OR infusion " +
-    "OR intubation OR ventilation OR sedation OR perioperative OR postoperative " +
-    "OR preoperative OR ketamine";
-
-  const count = async (kinds: string): Promise<number> => {
-    const query =
-      `("${ing}") AND (SRC:"MED") AND (${kinds}) ` +
-      `AND (${supplementScoped}) NOT (${exclusions})`;
-    const url =
-      "https://www.ebi.ac.uk/europepmc/webservices/rest/search?" +
-      new URLSearchParams({ query, format: "json", pageSize: "1" }).toString();
-    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
-    if (!res.ok) throw new Error(`Europe PMC ${res.status}`);
-    const page = (await res.json()) as { hitCount?: number };
-    return page.hitCount ?? 0;
-  };
-
-  try {
-    const [rcts, syntheses] = await Promise.all([
-      count('PUB_TYPE:"Randomized Controlled Trial"'),
-      count(
-        'PUB_TYPE:"Meta-Analysis" OR PUB_TYPE:"Systematic Review" ' +
-          'OR TITLE:"umbrella review" OR TITLE:"overview of reviews"',
-      ),
-    ]);
-    return {
-      available: true,
-      rcts_indexed: rcts,
-      syntheses_indexed: syntheses,
-      source: "Europe PMC",
-      scope: "supplement",
-      is_a_score: false,
-      means:
-        "How many trials EXIST. Not what they found — direction and quality " +
-        "require extraction, which has not been run for this product.",
-    };
-  } catch (err) {
-    return { available: false, reason: String(err), is_a_score: false };
-  }
-}
-
-/*
- * Record demand for a product we cannot score yet. On Vercel the filesystem is
- * read-only outside /tmp and functions are ephemeral, so a durable queue needs
- * a store this app deliberately does not have (no Supabase — handoff decision).
- * Best-effort: try the repo's out/ dir (works locally / self-hosted), fall
- * back to /tmp (survives warm invocations only), and never fail the request
- * over it. `durable: false` tells the UI not to promise anything.
- */
-async function enqueue(ingredient: string | null, form: string | null, labelText: string | null): Promise<Json> {
-  if (!ingredient && !labelText) return { queued: false, reason: "nothing identifiable to queue" };
-  const { mkdir, readFile, writeFile } = await import("node:fs/promises");
-  const path = await import("node:path");
-  const key = ingredient ?? `?${labelText}`;
-  const candidates = [
-    path.join(process.cwd(), "out", "analysis_queue.json"),
-    path.join("/tmp", "bsproof_analysis_queue.json"),
-  ];
-  for (const file of candidates) {
-    try {
-      let data: { schema_version: string; requests: Json[] } = {
-        schema_version: "AnalysisQueueV1",
-        requests: [],
-      };
-      try {
-        // turbopackIgnore: the path is a runtime queue location (repo out/ or
-        // /tmp), not an asset to bundle — without the annotation this variable
-        // path makes the bundler trace the ENTIRE project into the function.
-        data = JSON.parse(await readFile(/* turbopackIgnore: true */ file, "utf8"));
-      } catch {
-        /* first write */
-      }
-      const now = new Date().toISOString().replace(/\.\d+Z$/, "Z");
-      const existing = data.requests.find((r) => r.ingredient === key && r.form === form);
-      if (existing) {
-        existing.count = Number(existing.count ?? 1) + 1;
-        existing.last_requested_at = now;
-      } else {
-        data.requests.push({
-          ingredient: key,
-          form,
-          label_text: labelText,
-          in_vocab: Boolean(ingredient),
-          count: 1,
-          first_requested_at: now,
-          last_requested_at: now,
-          status: "pending",
-        });
-      }
-      await mkdir(path.dirname(file), { recursive: true });
-      await writeFile(file, JSON.stringify(data, null, 2) + "\n", "utf8");
-      return {
-        queued: true,
-        durable: !file.startsWith("/tmp"),
-        note: "recorded for a future run; nothing runs automatically",
-      };
-    } catch {
-      /* next candidate */
-    }
-  }
-  return { queued: false, reason: "no writable queue location on this host" };
-}
+// The census and the demand queue are shared with /api/scan (lib/analyze/census).
 
 export async function POST(request: Request): Promise<NextResponse> {
   if (!analyzerEnabled()) {

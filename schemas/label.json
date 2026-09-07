@@ -46,6 +46,40 @@
       "maxItems": 30,
       "items": {"type": "string", "maxLength": 80}
     },
+    "actives": {
+      "description": "label-v1.1: EVERY dosed active on the panel, main active included, as printed. Feeds the deterministic compatibility check; never a dose used for scoring.",
+      "type": "array",
+      "maxItems": 40,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name"],
+        "properties": {
+          "name": {"type": "string", "maxLength": 120},
+          "compound_dose_mg": {"type": ["number", "null"], "minimum": 0},
+          "dose_unit_as_printed": {"type": ["string", "null"], "maxLength": 60},
+          "form_text": {"type": ["string", "null"], "maxLength": 120}
+        }
+      }
+    },
+    "certifications": {
+      "description": "label-v1.1: third-party seals and testing statements AS PRINTED. Claims, not verifications -- the UI says so.",
+      "type": "array",
+      "maxItems": 12,
+      "items": {"type": "string", "maxLength": 80}
+    },
+    "manufacturer": {"type": ["string", "null"], "maxLength": 120},
+    "country_of_origin": {"type": ["string", "null"], "maxLength": 80},
+    "warnings_printed": {
+      "type": "array",
+      "maxItems": 10,
+      "items": {"type": "string", "maxLength": 200}
+    },
+    "claims_printed": {
+      "type": "array",
+      "maxItems": 10,
+      "items": {"type": "string", "maxLength": 160}
+    },
     "brand": {"type": ["string", "null"], "maxLength": 80},
     "product_name": {"type": ["string", "null"], "maxLength": 120},
     "is_supplement_label": {

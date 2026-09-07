@@ -1,0 +1,151 @@
+{
+  "vocab": "compatibility",
+  "version": "v1",
+  "status": "curated 2026-09-07 -- every entry cites a regulator fact sheet or a position stand. Adding an interaction means adding an entry WITH a source; an entry without a source is a model prior wearing a table's clothes and belongs in the model fill-in instead.",
+  "policy": {
+    "scope": "Interactions between actives that can appear together on ONE label, and notes about a specific form or salt. Drug interactions are out of scope: this reads a label, not a medicine cabinet.",
+    "severity": "info = worth knowing, no action; moderate = timing or dose matters at label-typical doses; high = documented risk at doses this product could deliver.",
+    "matching": "Aliases are matched as whole words on the normalised printed name. An active that matches no alias is passed to the model fill-in and shown as model knowledge, never as curated."
+  },
+  "aliases": {
+    "calcium": ["calcium", "calcium carbonate", "calcium citrate", "calcium citrate malate"],
+    "iron": ["iron", "ferrous sulfate", "ferrous sulphate", "ferrous fumarate", "ferrous gluconate", "ferrous bisglycinate", "iron bisglycinate", "ferric"],
+    "zinc": ["zinc", "zinc picolinate", "zinc citrate", "zinc gluconate", "zinc oxide", "zinc bisglycinate", "zinc acetate"],
+    "copper": ["copper", "cupric", "copper gluconate", "copper bisglycinate"],
+    "magnesium": ["magnesium", "magnesium oxide", "magnesium citrate", "magnesium glycinate", "magnesium bisglycinate", "magnesium chloride", "magnesium malate", "magnesium taurate", "magnesium threonate"],
+    "vitamin_c": ["vitamin c", "ascorbic acid", "ascorbate", "sodium ascorbate", "calcium ascorbate"],
+    "vitamin_d": ["vitamin d", "vitamin d3", "vitamin d2", "cholecalciferol", "ergocalciferol"],
+    "vitamin_e": ["vitamin e", "tocopherol", "alpha tocopherol", "d alpha tocopherol", "tocopheryl acetate", "tocotrienol"],
+    "vitamin_k": ["vitamin k", "vitamin k1", "vitamin k2", "phylloquinone", "menaquinone", "mk 7", "mk 4"],
+    "folic_acid": ["folic acid", "folate", "methylfolate", "l methylfolate", "5 mthf", "methyltetrahydrofolate"],
+    "vitamin_b12": ["vitamin b12", "b12", "cobalamin", "methylcobalamin", "cyanocobalamin", "adenosylcobalamin", "hydroxocobalamin"],
+    "creatine": ["creatine", "creatine monohydrate", "creatine hcl", "creatine hydrochloride", "buffered creatine", "creatine nitrate"],
+    "caffeine": ["caffeine", "caffeine anhydrous", "guarana", "green tea extract caffeine"],
+    "melatonin": ["melatonin"],
+    "omega_3": ["omega 3", "omega 3 fatty acids", "fish oil", "epa", "dha", "krill oil", "algal oil"],
+    "selenium": ["selenium", "selenomethionine", "sodium selenite", "selenium yeast"],
+    "ashwagandha": ["ashwagandha", "withania somnifera", "ksm 66", "sensoril"],
+    "curcumin": ["curcumin", "turmeric", "curcuminoids", "curcuma longa"],
+    "collagen": ["collagen", "collagen peptides", "hydrolysed collagen", "hydrolyzed collagen"],
+    "glucosamine": ["glucosamine", "glucosamine sulfate", "glucosamine sulphate", "glucosamine hcl"],
+    "ginkgo_biloba": ["ginkgo", "ginkgo biloba", "egb 761"],
+    "probiotics": ["probiotic", "probiotics", "lactobacillus", "bifidobacterium", "saccharomyces boulardii"],
+    "beta_carotene": ["beta carotene", "betacarotene"],
+    "piperine": ["piperine", "black pepper extract", "bioperine"]
+  },
+  "interactions": [
+    {
+      "a": "calcium", "b": "iron",
+      "kind": "absorption_competition", "severity": "moderate",
+      "advice": "Take the iron and the calcium at different times of day.",
+      "mechanism": "Calcium taken with iron reduces absorption of both heme and non-heme iron in single-meal studies; the effect is smaller over whole diets, so separation matters most for a supplement dose.",
+      "source": {"title": "NIH ODS — Iron, Fact Sheet for Health Professionals", "url": "https://ods.od.nih.gov/factsheets/Iron-HealthProfessional/"}
+    },
+    {
+      "a": "vitamin_c", "b": "iron",
+      "kind": "synergy", "severity": "info",
+      "advice": "Taking them together helps: vitamin C improves non-heme iron absorption.",
+      "mechanism": "Ascorbic acid reduces ferric to ferrous iron and forms a soluble chelate, increasing non-heme iron absorption.",
+      "source": {"title": "NIH ODS — Iron, Fact Sheet for Health Professionals", "url": "https://ods.od.nih.gov/factsheets/Iron-HealthProfessional/"}
+    },
+    {
+      "a": "zinc", "b": "copper",
+      "kind": "caution", "severity": "moderate",
+      "advice": "Long-term zinc at or above 50 mg/day can induce copper deficiency; check the total zinc across everything you take.",
+      "mechanism": "High zinc intake up-regulates intestinal metallothionein, which binds copper and blocks its absorption; sustained intakes of 50 mg/day and above have produced copper deficiency.",
+      "source": {"title": "NIH ODS — Zinc, Fact Sheet for Health Professionals", "url": "https://ods.od.nih.gov/factsheets/Zinc-HealthProfessional/"}
+    },
+    {
+      "a": "iron", "b": "zinc",
+      "kind": "absorption_competition", "severity": "info",
+      "advice": "High-dose iron taken without food can lower zinc absorption; taking both with a meal or hours apart avoids it.",
+      "mechanism": "Iron at supplemental doses (about 25 mg and above) taken in solution without food reduces zinc absorption; the effect is not seen when taken with a meal.",
+      "source": {"title": "NIH ODS — Zinc, Fact Sheet for Health Professionals", "url": "https://ods.od.nih.gov/factsheets/Zinc-HealthProfessional/"}
+    },
+    {
+      "a": "zinc", "b": "magnesium",
+      "kind": "absorption_competition", "severity": "info",
+      "advice": "Only very high zinc doses interfere with magnesium absorption; label-typical zinc does not.",
+      "mechanism": "Zinc at 142 mg/day interfered with magnesium absorption and balance in a controlled study; ordinary supplemental zinc has not shown this.",
+      "source": {"title": "NIH ODS — Magnesium, Fact Sheet for Health Professionals", "url": "https://ods.od.nih.gov/factsheets/Magnesium-HealthProfessional/"}
+    },
+    {
+      "a": "vitamin_e", "b": "vitamin_k",
+      "kind": "caution", "severity": "moderate",
+      "advice": "High-dose vitamin E can work against vitamin K; relevant if you take anticoagulants or the vitamin E dose is far above the RDA.",
+      "mechanism": "Vitamin E at high doses inhibits vitamin K-dependent carboxylation and can potentiate anticoagulant effects, increasing bleeding risk.",
+      "source": {"title": "NIH ODS — Vitamin E, Fact Sheet for Health Professionals", "url": "https://ods.od.nih.gov/factsheets/VitaminE-HealthProfessional/"}
+    },
+    {
+      "a": "folic_acid", "b": "vitamin_b12",
+      "kind": "caution", "severity": "moderate",
+      "advice": "High folic acid intake can hide a vitamin B12 deficiency by correcting the anaemia while nerve damage continues; the pairing on one label is fine, the concern is folic acid alone at high doses.",
+      "mechanism": "Folic acid corrects megaloblastic anaemia regardless of cause, masking the haematological sign of B12 deficiency while neurological damage progresses.",
+      "source": {"title": "NIH ODS — Folate, Fact Sheet for Health Professionals", "url": "https://ods.od.nih.gov/factsheets/Folate-HealthProfessional/"}
+    },
+    {
+      "a": "vitamin_d", "b": "calcium",
+      "kind": "synergy", "severity": "info",
+      "advice": "A sensible pairing: vitamin D is needed to absorb calcium in the gut.",
+      "mechanism": "1,25-dihydroxyvitamin D increases intestinal calcium absorption; without adequate vitamin D only 10-15% of dietary calcium is absorbed.",
+      "source": {"title": "NIH ODS — Vitamin D, Fact Sheet for Health Professionals", "url": "https://ods.od.nih.gov/factsheets/VitaminD-HealthProfessional/"}
+    },
+    {
+      "a": "curcumin", "b": "piperine",
+      "kind": "synergy", "severity": "info",
+      "advice": "Piperine is added to raise curcumin's otherwise very low oral bioavailability.",
+      "mechanism": "Piperine inhibits hepatic and intestinal glucuronidation of curcumin, raising plasma curcumin severalfold in human pharmacokinetic studies.",
+      "source": {"title": "Shoba G et al. Influence of piperine on the pharmacokinetics of curcumin in animals and human volunteers. Planta Med 1998", "url": "https://doi.org/10.1055/s-2006-957450"}
+    }
+  ],
+  "form_notes": [
+    {
+      "ingredient": "magnesium", "form_id": "magnesium_oxide",
+      "kind": "low_bioavailability",
+      "note": "Magnesium oxide is absorbed less completely than the citrate, chloride, lactate and aspartate forms; a high printed mg figure overstates what is absorbed.",
+      "source": {"title": "NIH ODS — Magnesium, Fact Sheet for Health Professionals", "url": "https://ods.od.nih.gov/factsheets/Magnesium-HealthProfessional/"}
+    },
+    {
+      "ingredient": "magnesium", "form_id": "magnesium_citrate",
+      "kind": "well_absorbed",
+      "note": "Citrate is among the better-absorbed magnesium forms; it also has a laxative effect at higher doses.",
+      "source": {"title": "NIH ODS — Magnesium, Fact Sheet for Health Professionals", "url": "https://ods.od.nih.gov/factsheets/Magnesium-HealthProfessional/"}
+    },
+    {
+      "ingredient": "magnesium", "form_id": "magnesium_chloride",
+      "kind": "well_absorbed",
+      "note": "Chloride is among the better-absorbed magnesium forms; note that its hydration state is often unstated, which makes the elemental dose ambiguous.",
+      "source": {"title": "NIH ODS — Magnesium, Fact Sheet for Health Professionals", "url": "https://ods.od.nih.gov/factsheets/Magnesium-HealthProfessional/"}
+    },
+    {
+      "ingredient": "creatine", "form_id": "creatine_monohydrate",
+      "kind": "reference_form",
+      "note": "Monohydrate is the form used in the large majority of trials and the reference against which other creatine forms are compared; no other form has shown superior uptake or effect.",
+      "source": {"title": "Kreider RB et al. ISSN position stand: safety and efficacy of creatine supplementation. JISSN 2017;14:18", "url": "https://doi.org/10.1186/s12970-017-0173-z"}
+    },
+    {
+      "ingredient": "creatine", "form_id": "creatine_buffered",
+      "kind": "no_demonstrated_advantage",
+      "note": "Buffered creatine has not shown greater muscle creatine retention or performance benefit than monohydrate at equal doses.",
+      "source": {"title": "Kreider RB et al. ISSN position stand: safety and efficacy of creatine supplementation. JISSN 2017;14:18", "url": "https://doi.org/10.1186/s12970-017-0173-z"}
+    },
+    {
+      "ingredient": "vitamin_d", "form_id": null,
+      "kind": "form_matters",
+      "note": "Both D2 and D3 raise serum 25(OH)D; at higher doses D3 appears to raise and sustain it more than D2.",
+      "source": {"title": "NIH ODS — Vitamin D, Fact Sheet for Health Professionals", "url": "https://ods.od.nih.gov/factsheets/VitaminD-HealthProfessional/"}
+    },
+    {
+      "ingredient": "iron", "form_id": null,
+      "kind": "form_matters",
+      "note": "Ferrous (Fe2+) salts are absorbed better than ferric (Fe3+) forms; the elemental iron per tablet differs several-fold between salts, so compare elemental amounts, not compound mass.",
+      "source": {"title": "NIH ODS — Iron, Fact Sheet for Health Professionals", "url": "https://ods.od.nih.gov/factsheets/Iron-HealthProfessional/"}
+    },
+    {
+      "ingredient": "zinc", "form_id": null,
+      "kind": "form_matters",
+      "note": "Zinc forms differ in elemental content and absorption; zinc oxide is poorly soluble and less well absorbed than gluconate, citrate or picolinate at equal elemental dose.",
+      "source": {"title": "NIH ODS — Zinc, Fact Sheet for Health Professionals", "url": "https://ods.od.nih.gov/factsheets/Zinc-HealthProfessional/"}
+    }
+  ]
+}

@@ -306,14 +306,16 @@ def agent_wiring_problems(root: Path | None = None) -> list[str]:
 # --------------------------------------------------------------------------- #
 # invariant 1, TypeScript side
 
-# The one TS file allowed to call a model API. lib/analyze/vision.ts is the
-# deployed label read (model boundary 5, added 2026-08-22, provider-configurable
-# via VISION_API_URL since the founder moved it Anthropic -> DeepSeek -> free
-# Gemini tier the same day); everything else under lib/ and app/ is
-# deterministic rendering or the injection layer, exactly like pipeline/ and
-# sources/ on the Python side. A second call site would be a second model
-# boundary added without the CLAUDE.md table changing -- the silent drift this
-# file exists to catch.
+# The one TS file allowed to call a model API. lib/analyze/llm.ts is the
+# deployed app's transport for EVERY model call -- the label read
+# (lib/analyze/vision.ts owns only the prompt and contract since 2026-09-07),
+# the compatibility fill-in and the company profile -- provider-configurable via
+# MODEL_API_URL / VISION_API_URL (founder moved it Anthropic -> DeepSeek -> free
+# Gemini tier -> DeepSeek again, 2026-08-22 .. 2026-09-07). Everything else
+# under lib/ and app/ is deterministic rendering or the injection layer, exactly
+# like pipeline/ and sources/ on the Python side. A second call site would be a
+# second model boundary added without the CLAUDE.md table changing -- the
+# silent drift this file exists to catch.
 #
 # Text scan, not AST: TS has no stdlib parser here. The markers are the strings
 # a model call cannot avoid -- the chat-completions endpoint path, a provider
@@ -327,7 +329,7 @@ def agent_wiring_problems(root: Path | None = None) -> list[str]:
 TS_MODEL_MARKERS = ("chat/completions", "@anthropic-ai/sdk",
                     "process.env.VISION_API_KEY", "process.env.GEMINI_API_KEY",
                     "process.env.DEEPSEEK_API_KEY", "process.env.ANTHROPIC_API_KEY")
-TS_MODEL_BOUNDARY = "lib/analyze/vision.ts"
+TS_MODEL_BOUNDARY = "lib/analyze/llm.ts"
 TS_CHECKED_DIRS = ("lib", "app", "components")
 
 
