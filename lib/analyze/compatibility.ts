@@ -120,8 +120,13 @@ export function resolveActives(ingredient: string, actives: LabelActive[], other
   for (const name of otherActives) push(name, null, null);
   if (!out.some((a) => a.canonical === ingredient)) {
     // The main active always takes part, even when the model's actives list
-    // omitted it -- the label read already named it.
-    out.unshift({ printed: ingredient.replace(/_/g, " "), canonical: ingredient, compound_dose_mg: null, form_text: null });
+    // omitted it -- the label read already named it. `ingredient` may be a
+    // vocabulary id ("vitamin_d") or, for an ingredient outside the vocabulary,
+    // the printed text ("Shilajit"), so resolve it the same way as any other
+    // printed name rather than trusting it to be a canonical id.
+    const printed = ingredient.replace(/_/g, " ");
+    const canonical = loadCompatVocab().aliases[ingredient] ? ingredient : normaliseActive(printed);
+    out.unshift({ printed, canonical, compound_dose_mg: null, form_text: null });
   }
   return out;
 }

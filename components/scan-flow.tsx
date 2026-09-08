@@ -324,6 +324,7 @@ export function ScanFlow() {
     | { status: string; rows?: EvidenceRow[]; scored_forms?: string[]; run?: Record<string, unknown>; validity?: { status: string | null; public_claims_allowed: boolean; note: string | null; limitations?: string[] } }
     | undefined;
   const rows = evidence?.rows ?? [];
+  const prior = data?.evidence_prior;
   const dose = data?.dose_effectiveness;
   const compat = data?.compatibility;
   const company = data?.company;
@@ -566,6 +567,86 @@ export function ScanFlow() {
                   </dl>
                 </details>
               ) : null}
+            </Section>
+          ) : null}
+
+          {/* -------- evidence orientation (only when no run exists) -------- */}
+          {prior ? (
+            <Section
+              id="prior"
+              eyebrow="Evidence orientation"
+              title="What the literature says"
+              basis={["model_prior"]}
+              legend={legend}
+            >
+              <p className="scan-disclaimer">{prior.disclaimer}</p>
+              {prior.status === "ok" && prior.data ? (
+                <>
+                  <p className="scan-note">{prior.data.summary}</p>
+                  {prior.data.evidence_landscape ? (
+                    <p className="la-dim">
+                      Systematic reviews: {prior.data.evidence_landscape.syntheses_exist}
+                      {prior.data.evidence_landscape.note ? ` · ${prior.data.evidence_landscape.note}` : ""}
+                    </p>
+                  ) : null}
+
+                  {prior.data.outcomes.length ? (
+                    <ul className="scan-list">
+                      {prior.data.outcomes.map((o, i) => (
+                        <li key={`${o.outcome}-${i}`} className="scan-item scan-item-model_prior scan-prior">
+                          <div className="scan-item-head">
+                            <strong>{o.outcome}</strong>
+                            <span className={`scan-dirchip scan-dir-${o.direction}`}>{o.direction.replace(/_/g, " ")}</span>
+                            <span className={`scan-strength scan-strength-${o.evidence_strength}`}>
+                              {o.evidence_strength} evidence
+                            </span>
+                          </div>
+                          {o.note ? <p>{o.note}</p> : null}
+                          {o.pooled_effect_recalled ? (
+                            <p className="la-dim">Pooled estimate recalled: {o.pooled_effect_recalled}</p>
+                          ) : null}
+                          {o.population ? <p className="la-dim">Population: {o.population}</p> : null}
+                          {o.dose_reading ? (
+                            <p className={o.dose_closeness != null && o.dose_closeness >= 0.999 ? "scan-dose-hit" : "scan-dose-miss"}>
+                              {o.dose_reading}
+                            </p>
+                          ) : null}
+                          <span className="la-dim">model confidence: {o.confidence}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="la-dim">The model named no outcome with describable evidence for this ingredient.</p>
+                  )}
+
+                  {prior.data.form_assessment ? (
+                    <div className="scan-item scan-item-model_prior">
+                      <div className="scan-item-head">
+                        <strong>This form</strong>
+                        <span className="scan-strength">{prior.data.form_assessment.verdict.replace(/_/g, " ")}</span>
+                      </div>
+                      {prior.data.form_assessment.note ? <p>{prior.data.form_assessment.note}</p> : null}
+                    </div>
+                  ) : null}
+
+                  {prior.data.safety_notes?.length ? (
+                    <div className="scan-item scan-item-model_prior">
+                      <div className="scan-item-head">
+                        <strong>Safety</strong>
+                      </div>
+                      <ul className="scan-plain">
+                        {prior.data.safety_notes.map((s) => (
+                          <li key={s}>{s}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+
+                  {prior.data.caveats?.length ? <p className="la-dim">Model is unsure about: {prior.data.caveats.join("; ")}</p> : null}
+                </>
+              ) : (
+                <p className="la-dim">Orientation unavailable: {prior.reason ?? "skipped"}</p>
+              )}
             </Section>
           ) : null}
 

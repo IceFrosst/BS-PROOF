@@ -6,14 +6,22 @@
  *   0  label read            vision model     -> what is PRINTED          [MODEL]
  *   1  identity + dose       deterministic    -> ingredient, form, elemental mg
  *   2  evidence score        deterministic    -> rows + four arcs (retained run)
+ *   2b evidence ORIENTATION  model            -> only when 2 found no run   [MODEL]
  *   3  dose effectiveness    deterministic    -> reading per outcome from stage 2
  *   4  form & compatibility  curated + model  -> cited interactions + fill-in   [MODEL]
  *   5  company background    label + registry + model                         [MODEL]
  *
  * Stage 0 gates everything. Stages 2-3 are pure functions of the label read
- * and the retained artifacts. Stages 4 and 5 run IN PARALLEL after stage 1 and
- * each degrades to `unavailable` on its own -- a company profile that times out
- * never costs the user the evidence score.
+ * and the retained artifacts. Stages 2b, 4 and 5 run IN PARALLEL after stage 1
+ * and each degrades to `unavailable` on its own -- a company profile that times
+ * out never costs the user the evidence score.
+ *
+ * EVERY SUPPLEMENT GETS AN ANSWER (founder 2026-09-08). A retained run always
+ * wins; when there is none -- which today is everything except creatine
+ * monohydrate -- stage 2b asks the model what the literature says, and the
+ * result is rendered as a clearly-marked ESTIMATE with no 0-100 score. Stage 2b
+ * runs for ingredients outside the vocabulary too, so a shilajit tub still gets
+ * an orientation, a compatibility read and a company background.
  *
  * TIME BUDGET. The route allows 60 s. The vision read takes 10-20 s on DeepSeek
  * (measured 2026-08-24). Whatever remains, minus a safety margin, is the
@@ -44,6 +52,7 @@ import {
   type DoseEffectivenessSection,
   type DoseRowInput,
 } from "./dose-effectiveness";
+import { evidencePriorSection, type EvidencePriorSection } from "./evidence-prior";
 import { chatJson, providerConfigured, type ChatJsonFn } from "./llm";
 import { availableProducts, scoreProduct } from "./product-score";
 import { readLabel, type LabelMediaType, type LabelRead } from "./vision";
@@ -126,6 +135,8 @@ export interface ScanAnalysis {
     other_actives: string[];
   };
   evidence?: Json;
+  /** Stage 2b. Present ONLY when no retained run could answer (see scan.ts header). */
+  evidence_prior?: EvidencePriorSection;
   dose_effectiveness?: DoseEffectivenessSection;
   compatibility?: CompatibilitySection;
   company?: CompanySection;
@@ -158,7 +169,13 @@ export async function analyzeScan(
   deps: ScanDeps = defaultDeps(),
 ): Promise<ScanAnalysis> {
   const t0 = deps.now();
-  const stages: Record<string, number | null> = { label: null, evidence: null, compatibility: null, company: null };
+  const stages: Record<string, number | null> = {
+    label: null,
+    evidence: null,
+    evidence_prior: null,
+    compatibility: null,
+    company: null,
+  };
   const out: ScanAnalysis = {
     schema_version: SCAN_SCHEMA_VERSION,
     analyzed_at: stamp(),
@@ -223,14 +240,48 @@ export async function analyzeScan(
     return section;
   })();
 
+  // An ingredient outside the vocabulary has no elemental conversion, no
+  // scorer and no curated form ladder -- but it still has a literature, a
+  // combination and a manufacturer, so it gets stages 2b, 4 and 5 rather than
+  // a dead end (founder 2026-09-08).
   if (!ingredient) {
+    const printedName = label.ingredient_label_text ?? label.ingredient_vocab_id ?? "this ingredient";
+    const asPrinted = scoredDose(label.compound_dose_mg, label.servings_per_day);
+    const tPrior = deps.now();
+    const [prior, compat, company] = await Promise.all([
+      evidencePriorSection(
+        {
+          ingredientText: printedName,
+          formText: label.form_vocab_id ?? null,
+          scoredDoseMg: asPrinted.dose,
+          doseIsElemental: false,
+        },
+        { chatJson: deps.chatJson, timeoutMs: Math.max(1000, modelBudget), allowModel },
+      ),
+      compatibilitySection(
+        {
+          ingredient: printedName,
+          formId: null,
+          actives: label.actives ?? [],
+          otherActives: label.other_actives ?? [],
+          evidenceFormFit: { status: "ingredient_not_scored", scored_forms: [], form_strength: null, form_basis: null },
+        },
+        { chatJson: deps.chatJson, timeoutMs: Math.max(1000, modelBudget), allowModel },
+      ),
+      companyPromise,
+    ]);
+    stages.evidence_prior = seconds(deps.now() - tPrior);
     out.status = "ingredient_not_supported";
     out.ingredient_label_text = label.ingredient_label_text;
     out.supported_ingredients = ingredientIds().sort();
+    out.evidence_prior = prior;
+    out.compatibility = compat;
+    out.company = company;
     out.queue = await enqueue(null, null, label.ingredient_label_text);
-    out.company = await companyPromise;
-    if (out.company.profile.model) out.meta.models.text = out.company.profile.model;
-    out.meta.prompt_versions.company = out.company.profile.prompt_version;
+    out.meta.models.text = prior.model ?? compat.model.model ?? company.profile.model ?? null;
+    out.meta.prompt_versions.evidence_prior = prior.prompt_version;
+    out.meta.prompt_versions.compatibility = compat.model.prompt_version;
+    out.meta.prompt_versions.company = company.profile.prompt_version;
     return finish("ingredient_not_supported");
   }
 
@@ -295,12 +346,37 @@ export async function analyzeScan(
     return section;
   })();
 
-  const [compat, company] = await Promise.all([compatPromise, companyPromise]);
+  // Stage 2b: no retained run could answer, so ask the model what the
+  // literature says. In parallel with 4 and 5, and never when a run exists.
+  const priorPromise = (async (): Promise<EvidencePriorSection | null> => {
+    if (result.status === "scored") return null;
+    const t = deps.now();
+    const section = await evidencePriorSection(
+      {
+        ingredientText: label.ingredient_label_text ?? ingredient.replace(/_/g, " "),
+        formText: formId ? formId.replace(/_/g, " ") : null,
+        // Prefer the elemental daily dose; fall back to the printed mass when
+        // the conversion refused, flagged so the prompt does not read a
+        // compound mass as an elemental one.
+        scoredDoseMg: scored.dose ?? scoredDose(label.compound_dose_mg, label.servings_per_day).dose,
+        doseIsElemental: scored.dose !== null,
+      },
+      { chatJson: deps.chatJson, timeoutMs: Math.max(1000, modelBudget), allowModel },
+    );
+    stages.evidence_prior = seconds(deps.now() - t);
+    return section;
+  })();
+
+  const [compat, company, prior] = await Promise.all([compatPromise, companyPromise, priorPromise]);
   out.compatibility = compat;
   out.company = company;
+  if (prior) {
+    out.evidence_prior = prior;
+    out.meta.prompt_versions.evidence_prior = prior.prompt_version;
+  }
   out.meta.prompt_versions.compatibility = compat.model.prompt_version;
   out.meta.prompt_versions.company = company.profile.prompt_version;
-  out.meta.models.text = compat.model.model ?? company.profile.model ?? null;
+  out.meta.models.text = compat.model.model ?? company.profile.model ?? prior?.model ?? null;
 
   if (result.status !== "scored") {
     out.census = await census(ingredient, deps.fetch);

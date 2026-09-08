@@ -28,6 +28,7 @@ import {
   uncoveredPairs,
 } from "@/lib/analyze/compatibility";
 import { doseEffectivenessSection, scoredDose } from "@/lib/analyze/dose-effectiveness";
+import { readPriorDose, type PriorOutcome } from "@/lib/analyze/evidence-prior";
 import { ModelCallError, extractJson, validateAgainstSchema, type ChatJsonFn } from "@/lib/analyze/llm";
 import { analyzeScan, type ScanDeps } from "@/lib/analyze/scan";
 import { scoreProduct } from "@/lib/analyze/product-score";
@@ -80,6 +81,41 @@ const companyFixture = {
   caveats: ["Recall details not confirmed."],
 };
 
+const priorFixture = {
+  ingredient: "Magnesium",
+  recognised: true,
+  summary: "An essential mineral taken for sleep, cramps and migraine prophylaxis.",
+  evidence_landscape: { syntheses_exist: "many", note: "Multiple meta-analyses exist." },
+  outcomes: [
+    {
+      outcome: "sleep quality",
+      direction: "benefit",
+      evidence_strength: "limited",
+      effective_daily_dose_low_mg: 200,
+      effective_daily_dose_high_mg: 400,
+      pooled_effect_recalled: "SMD 0.30 [0.10, 0.50]",
+      population: "older adults with insomnia",
+      note: "A few small RCTs, heterogeneous.",
+      confidence: "medium",
+    },
+    {
+      outcome: "migraine frequency",
+      direction: "insufficient",
+      evidence_strength: "limited",
+      effective_daily_dose_low_mg: null,
+      effective_daily_dose_high_mg: null,
+      pooled_effect_recalled: null,
+      population: null,
+      note: "Mixed trials.",
+      confidence: "low",
+    },
+  ],
+  form_assessment: { form: "magnesium glycinate", verdict: "well_absorbed", note: "Chelated forms are better tolerated." },
+  safety_notes: ["Supplemental magnesium above 350 mg/day can cause diarrhoea."],
+  confidence: "medium",
+  caveats: [],
+};
+
 const compatFixture = {
   pairs: [
     { a: "Creatine Monohydrate", b: "Beta-Alanine", interaction: "none", severity: "info", mechanism: "", confidence: "high" },
@@ -127,7 +163,7 @@ function deps(overrides: Partial<ScanDeps> = {}): ScanDeps {
   let t = 0;
   return {
     readLabel: async () => label(),
-    chatJson: fakeChatJson({ "company profile": companyFixture, compatibility: compatFixture }),
+    chatJson: fakeChatJson({ "company profile": companyFixture, compatibility: compatFixture, "evidence prior": priorFixture }),
     fetch: fakeFetch({}),
     scoreProduct,
     budgetMs: 55_000,
@@ -341,7 +377,7 @@ describe("analyzeScan end to end (fakes only)", () => {
     expect(slow.caveats?.some((c) => c.code === "model_sections_skipped")).toBe(true);
   });
 
-  it("an unsupported ingredient still gets its company background and a queue entry", async () => {
+  it("an unsupported ingredient still gets an orientation, compatibility, company and a queue entry", async () => {
     const out = await analyzeScan(
       "aW1n",
       "image/png",
@@ -349,8 +385,71 @@ describe("analyzeScan end to end (fakes only)", () => {
     );
     expect(out.status).toBe("ingredient_not_supported");
     expect(out.company?.status).toBe("ok");
+    expect(out.compatibility?.status).toBeTruthy();
+    // The whole point of stage 2b: no run, but still an answer.
+    expect(out.evidence_prior?.status).toBe("ok");
+    expect(out.evidence_prior?.basis).toBe("model_prior");
     expect(out.evidence).toBeUndefined();
     expect(out.supported_ingredients).toContain("creatine");
+  });
+
+  it("an in-vocabulary ingredient with no run gets the orientation, with dose placed against the recalled range", async () => {
+    const out = await analyzeScan(
+      "aW1n",
+      "image/png",
+      deps({
+        readLabel: async () =>
+          label({
+            ingredient_vocab_id: "magnesium",
+            ingredient_label_text: "Magnesium Bisglycinate",
+            form_vocab_id: "magnesium_glycinate",
+            compound_dose_mg: 2000,
+            servings_per_day: 1,
+            actives: [{ name: "Magnesium (as magnesium bisglycinate)", compound_dose_mg: 2000, dose_unit_as_printed: "2000 mg", form_text: "bisglycinate" }],
+          }),
+      }),
+    );
+    expect(out.status).toBe("not_scored");
+    expect(out.evidence_prior?.status).toBe("ok");
+    const sleep = out.evidence_prior?.data?.outcomes[0];
+    // The dose the model is asked about, and placed against, is ELEMENTAL:
+    // 2000 mg of bisglycinate is 282 mg of magnesium, inside the recalled
+    // 200-400 mg range. Comparing the printed 2000 mg would have read as
+    // wildly above it -- the salt-mass error the conversion exists to stop.
+    expect(out.evidence_prior?.scored_dose_mg).toBeCloseTo(282.1, 0);
+    expect(sleep?.dose_closeness).toBe(1);
+    expect(sleep?.dose_reading).toMatch(/inside the range/);
+    // An outcome with no recalled range gets no comparison rather than a guess.
+    expect(out.evidence_prior?.data?.outcomes[1].dose_closeness).toBeNull();
+    expect(out.meta.prompt_versions.evidence_prior).toBe("evidence-prior-v1.0");
+  });
+
+  it("a scored ingredient never gets the model orientation", async () => {
+    const out = await analyzeScan("aW1n", "image/png", deps());
+    expect(out.status).toBe("scored");
+    expect(out.evidence_prior).toBeUndefined();
+  });
+
+  it("places a dose against a recalled range with the same ramp as the scored path", () => {
+    const row = (low: number | null, high: number | null): PriorOutcome => ({
+      outcome: "x",
+      direction: "benefit",
+      evidence_strength: "moderate",
+      effective_daily_dose_low_mg: low,
+      effective_daily_dose_high_mg: high,
+      pooled_effect_recalled: null,
+      population: null,
+      note: null,
+      confidence: "medium",
+    });
+    expect(readPriorDose(row(200, 400), 300).closeness).toBe(1);
+    expect(readPriorDose(row(200, 400), 300).reading).toMatch(/inside the range/);
+    expect(readPriorDose(row(200, 400), 50).closeness).toBe(0.1);
+    expect(readPriorDose(row(200, 400), 900).reading).toMatch(/above the range/);
+    // A one-sided recall is a floor, not a refusal.
+    expect(readPriorDose(row(200, null), 300).closeness).not.toBeNull();
+    expect(readPriorDose(row(null, null), 300).closeness).toBeNull();
+    expect(readPriorDose(row(200, 400), null).closeness).toBeNull();
   });
 
   it("a non-label image stops after the read", async () => {

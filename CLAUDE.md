@@ -1187,6 +1187,35 @@ still the unmeasured SR-uplift experiment (Next item 3).
 
 ## Next
 
+**Changed 2026-09-08: EVERY supplement gets an answer — stage 2b, the no-run
+fallback.** Founder: "the retained runs, you can access them if you have them,
+but even if you don't, do the analysis through the system prompt of the API
+itself." Exactly one product has a retained run (creatine monohydrate), so a
+magnesium scan used to dead-end at "no evidence run exists" beside a census of
+1195 trials — measured live on production 2026-09-08, and the refusal was
+CORRECT (no magnesium run exists; the selftest pins it) but useless. Now
+`scoreProduct` returning not_scored / form_not_scored / recompute_refused
+triggers `lib/analyze/evidence-prior.ts`: DeepSeek reports, per outcome, a
+DIRECTION (benefit / no effect / harm / insufficient) and the STRENGTH of the
+literature (strong / moderate / limited / none), plus the effective daily dose
+range and any pooled effect it recalls. It runs for ingredients OUTSIDE the
+vocabulary too, so an unknown botanical still gets an orientation, a
+compatibility read and a company background.
+
+**It deliberately mints no 0-100.** That number means "computed from extracted
+trials with quoted spans"; a model-derived one would be indistinguishable on
+screen from a measured one, which is the failure this project exists to
+prevent. Direction and evidence-strength are what a model can honestly recall,
+and they separate "large well-replicated null" from "three small trials
+pointing up". The dose comparison stays OURS: the model supplies the effective
+range, `dose.doseFactorFor` — the same pinned ramp the scored path uses —
+places the label's dose against it, and the dose sent is the ELEMENTAL daily
+amount (2000 mg of magnesium bisglycinate is 282 mg of magnesium, inside a
+200–400 mg range; comparing the printed salt mass would have read as wildly
+above it). `prompts/evidence_prior.md` / `schemas/evidence_prior.json`, own
+cache domain `EVIDENCE_PRIOR_PROMPT_VERSION`. Rendered dashed under a "model
+estimate — unverified" badge, never as a scored card.
+
 **Changed 2026-09-07: the SCAN is the product surface (`/scan`, `POST
 /api/scan`; design in `docs/SYSTEM_DESIGN.md`).** Founder: "a finalized version
 of the product where users scan a supplement and they get a result through

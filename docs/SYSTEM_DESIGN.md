@@ -15,11 +15,33 @@ with **where it came from**:
 |---|---|---|
 | What the label says | ingredient, form, dose, servings, actives, seals, brand, manufacturer | `label` — as printed |
 | Does it work? | per outcome: 0–100 headline with its four arcs and verdict | `evidence_run` — retained scored run |
+| What the literature says | *fallback when no run exists:* per outcome direction, strength of the literature, effective daily dose range, recalled pooled effect | `model_prior` — estimate, no score |
 | Is your dose the dose that worked? | your daily dose vs the range where trials found benefit, and where they found nothing | `evidence_run` + `label` |
 | Does the form and the mix hold up? | is your form the scored form; cited form notes; pairwise interactions among the actives | `evidence_run`, `curated_table`, `model_prior` |
 | Who makes it, and what is on record? | printed seals; FDA recalls on file; the model's profile of the company | `label`, `registry`, `model_prior` |
 
 Only the evidence run produces a **number**. Everything else qualifies.
+
+**Every supplement gets an answer** (founder 2026-09-08: "even if you don't
+[have a retained run], do the analysis through the system prompt of the API
+itself"). A retained run always wins. Today exactly one product has one —
+creatine monohydrate — so in practice most scans take the fallback: stage 2b
+asks the model what the published literature says and renders it as a marked
+estimate. It works for ingredients outside the vocabulary too, so an unknown
+botanical still returns an orientation, a compatibility read and a company
+background instead of a dead end.
+
+**Why the fallback carries no 0–100.** That number means "50 + signed/2,
+discounted by applicability, computed from extracted trials each carrying a
+quoted span". Minting one from recollection would make an estimate and a
+measurement indistinguishable on screen, which is the failure the whole project
+exists to prevent. The fallback instead reports, per outcome, a **direction**
+(benefit / no effect / harm / insufficient) and the **strength of the
+literature** behind it (strong / moderate / limited / none) — two facts a model
+can honestly recall, and which separate "large well-replicated null" from
+"three small trials pointing up". The dose comparison stays deterministic: the
+model supplies the effective range, and `dose.doseFactorFor` — the same pinned
+ramp the scored path uses — places the label's dose against it.
 
 ## 2. The one rule
 
@@ -47,6 +69,12 @@ POST /api/scan  (multipart, one image, ≤12 MB, 60 s)
   │
   ├─ 2  evidence             product-score.scoreProduct                          [exact]
   │       → rows: composite (v14), four arcs, verdict, validity, run id
+  │       → not_scored / form_not_scored / recompute_refused triggers 2b
+  │
+  ├─ 2b evidence orientation evidence-prior.ts  prompts/evidence_prior.md   [MODEL text]
+  │       ONLY when 2 found no usable run. Per outcome: direction, evidence
+  │       strength, effective daily dose range, recalled pooled effect. No
+  │       composite. Dose placed by the deterministic ramp, not by the model.
   │
   ├─ 3  dose effectiveness   dose-effectiveness.ts                               [exact]
   │       → per outcome: benefit range, null range, closeness, tone, reading
@@ -130,6 +158,7 @@ registry.
 ```
 lib/analyze/llm.ts               the model boundary
 lib/analyze/vision.ts            label prompt + contract (uses llm)
+lib/analyze/evidence-prior.ts    the no-run fallback (stage 2b)
 lib/analyze/compatibility.ts     curated table + model fill-in
 lib/analyze/company.ts           label + openFDA + model profile
 lib/analyze/dose-effectiveness.ts readings off the scored rows
@@ -137,8 +166,10 @@ lib/analyze/census.ts            Europe PMC count + demand queue (shared)
 lib/analyze/scan.ts              the orchestrator; ScanAnalysisV1
 app/api/scan/route.ts            upload validation → analyzeScan
 app/scan/page.tsx, components/scan-flow.tsx   the UI
-prompts/label.md (v1.1), prompts/company.md, prompts/compatibility.md
-schemas/label.json, schemas/company.json, schemas/compatibility.json
+prompts/label.md (v1.1), prompts/company.md, prompts/compatibility.md,
+prompts/evidence_prior.md
+schemas/label.json, schemas/company.json, schemas/compatibility.json,
+schemas/evidence_prior.json
 vocab/compatibility.json         curated, cited interactions and form notes
 tests/scan.test.ts               the whole flow against fakes, zero model calls
 ```

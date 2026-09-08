@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Evidence orientation (model prior)",
+  "description": "What a model recalls of the published literature for one ingredient, used ONLY when no extraction run exists for it. Displayed under a 'model estimate, unverified' badge. It never produces a 0-100 composite: that scale means 'computed from extracted trials with provenance' and the two must stay distinguishable.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["ingredient", "recognised", "summary", "outcomes", "confidence"],
+  "properties": {
+    "ingredient": {"type": "string", "maxLength": 120},
+    "recognised": {"type": "boolean"},
+    "summary": {"type": "string", "maxLength": 800},
+    "evidence_landscape": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["syntheses_exist"],
+      "properties": {
+        "syntheses_exist": {"type": "string", "enum": ["many", "few", "none", "unknown"]},
+        "note": {"type": ["string", "null"], "maxLength": 300}
+      }
+    },
+    "outcomes": {
+      "type": "array",
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["outcome", "direction", "evidence_strength", "confidence"],
+        "properties": {
+          "outcome": {"type": "string", "maxLength": 120},
+          "direction": {"type": "string", "enum": ["benefit", "no_effect", "harm", "insufficient"]},
+          "evidence_strength": {"type": "string", "enum": ["strong", "moderate", "limited", "none"]},
+          "effective_daily_dose_low_mg": {"type": ["number", "null"], "minimum": 0},
+          "effective_daily_dose_high_mg": {"type": ["number", "null"], "minimum": 0},
+          "pooled_effect_recalled": {"type": ["string", "null"], "maxLength": 160},
+          "population": {"type": ["string", "null"], "maxLength": 160},
+          "note": {"type": ["string", "null"], "maxLength": 400},
+          "confidence": {"type": "string", "enum": ["high", "medium", "low"]}
+        }
+      }
+    },
+    "form_assessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["verdict"],
+      "properties": {
+        "form": {"type": ["string", "null"], "maxLength": 120},
+        "verdict": {
+          "type": "string",
+          "enum": ["well_absorbed", "poorly_absorbed", "no_established_difference", "unknown"]
+        },
+        "note": {"type": ["string", "null"], "maxLength": 400}
+      }
+    },
+    "safety_notes": {
+      "type": "array",
+      "maxItems": 4,
+      "items": {"type": "string", "maxLength": 300}
+    },
+    "confidence": {"type": "string", "enum": ["high", "medium", "low"]},
+    "caveats": {
+      "type": "array",
+      "maxItems": 5,
+      "items": {"type": "string", "maxLength": 200}
+    }
+  }
+}

@@ -983,3 +983,19 @@ thead th { color: var(--ink-soft); font-size: 0.7rem; text-transform: uppercase;
   .scan-meta { grid-template-columns: repeat(3, 1fr); }
   .scan-legend li { grid-template-columns: 1fr; gap: 4px; }
 }
+
+/* Evidence ORIENTATION (stage 2b): the model's recollection when no extraction
+ * run exists. Deliberately unlike a scored card -- dashed, no big number, no
+ * arcs -- so a reader can never mistake it for a measurement. */
+.scan-disclaimer { margin: 0; padding: 12px 14px; border-left: 4px solid var(--coral); background: var(--paper); color: var(--ink); font-size: 0.88rem; border-radius: 0 8px 8px 0; }
+.scan-prior { gap: 8px; }
+.scan-dirchip { padding: 2px 9px; border-radius: 999px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; border: 1px solid var(--line); }
+.scan-dir-benefit { border-color: var(--teal); color: var(--teal-text); }
+.scan-dir-no_effect { border-color: var(--ink-soft); color: var(--ink-soft); }
+.scan-dir-harm { border-color: var(--coral); color: var(--coral-text); }
+.scan-dir-insufficient { border-style: dashed; color: var(--ink-soft); }
+.scan-strength { color: var(--ink-soft); font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; }
+.scan-strength-strong { color: var(--teal-text); }
+.scan-strength-none { color: var(--coral-text); }
+.scan-dose-hit { margin: 0; color: var(--teal-text); font-size: 0.9rem; font-weight: 700; }
+.scan-dose-miss { margin: 0; color: var(--coral-text); font-size: 0.9rem; font-weight: 700; }

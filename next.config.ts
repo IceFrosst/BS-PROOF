@@ -37,9 +37,11 @@ const nextConfig: NextConfig = {
       "./prompts/label.md",
       "./prompts/company.md",
       "./prompts/compatibility.md",
+      "./prompts/evidence_prior.md",
       "./schemas/label.json",
       "./schemas/company.json",
       "./schemas/compatibility.json",
+      "./schemas/evidence_prior.json",
     ],
   },
 };
