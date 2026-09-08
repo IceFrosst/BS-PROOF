@@ -1045,6 +1045,16 @@ CLI — none of which a serverless function has. It now runs entirely in-process
   is unaffected; a free-tier 429 surfaces as "quota exhausted, try again in a
   minute", never as a broken upload. `GET /api/analyze-label` reports
   availability plus the scored-product catalogue.
+- **Collaborator deploy bridge added 2026-09-08.** Vercel rejects a private-repo
+  commit authored by `aykhanstoic` because GitHub collaborator access is not
+  Vercel team membership. The `dashboard` GitHub workflow now calls a main-branch
+  Deploy Hook only for that GitHub actor, only on the first push attempt, and
+  only after the deterministic, unit, typecheck, lint, build, browser, and
+  accessibility gates pass. The hook URL lives only in the repository Actions
+  secret `VERCEL_DEPLOY_HOOK_URL`; never print or commit it. Rerunning the
+  Actions workflow does not retrigger deployment; recovery is a new commit or
+  a manual hook trigger. Other actors retain the normal Vercel Git deployment
+  and do not get a duplicate hook deployment.
 - **The demand queue is best-effort on Vercel** (`/tmp`, warm invocations only,
   reported as `durable: false`) because the filesystem is read-only and this app
   deliberately has no database. A durable queue is a founder infrastructure
@@ -1369,6 +1379,10 @@ ownership table added under Multi-agent workflow.
     unit tests, typecheck, lint, and production build on relevant code pushes.
     Do not reduce release coverage—only avoid repeating the full browser matrix
     when changed paths cannot affect it.
+11. **DONE 2026-09-08 — collaborator deploy bridge.** A Vercel Deploy Hook for
+    `main` is stored as the GitHub Actions secret `VERCEL_DEPLOY_HOOK_URL` and is
+    triggered after the full dashboard gate only for direct pushes by
+    `aykhanstoic`. Normal owner pushes continue through the Git integration.
 
 ---
 

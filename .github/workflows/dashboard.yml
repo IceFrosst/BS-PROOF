@@ -63,3 +63,27 @@ jobs:
             test-results/
           if-no-files-found: ignore
           retention-days: 7
+
+  deploy-aykhan-main:
+    needs: dashboard
+    if: >-
+      ${{ success() &&
+          github.event_name == 'push' &&
+          github.ref == 'refs/heads/main' &&
+          github.actor == 'aykhanstoic' &&
+          github.run_attempt == 1 }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions: {}
+    steps:
+      - name: Trigger Vercel Deploy Hook
+        env:
+          VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$VERCEL_DEPLOY_HOOK_URL" ]; then
+            echo "::error::VERCEL_DEPLOY_HOOK_URL is missing"
+            exit 1
+          fi
+          curl --fail --silent --show-error --max-time 60 \
+            --request POST \
+            --url "$VERCEL_DEPLOY_HOOK_URL"
