@@ -1208,8 +1208,11 @@ still the unmeasured SR-uplift experiment (Next item 3).
 
 **Handoff: launch UI design review in progress on `launch/ai-wrapper-planning`.**
 Choose A/B/C in the local `/design-lab` before building the real research flow.
-Prototype validation: TypeScript, scoped ESLint, both Python gates and browser
-smoke at 1440px/390px passed; unit/build validation is recorded in the commit body.
+`/design-lab/mobile` adds the Claude Fable 5.1 "Field Notebook" phone concept
+(brief: `docs/design/2026-09-09-mobile-field-notebook-brief.md`; smoke:
+`scripts/check_mobile_design_lab.mjs`). Prototype validation: TypeScript, scoped
+ESLint, both Python gates and browser smoke at 1440px/390px (and 320px for the
+phone concept, incl. 44px touch targets) passed; unit/build validation is recorded in the commit body.
 No real upload, durable research job, AI scoring or provider configuration is wired.
 Keep the existing production scanner and historical scoring unchanged during review.
 
