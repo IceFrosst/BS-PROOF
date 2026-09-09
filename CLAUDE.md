@@ -560,6 +560,15 @@ do not drop it.
 
 ## Current state
 
+**2026-09-09 — launch UX prototypes (branch `launch/ai-wrapper-planning`).**
+`/design-lab` is a development-only interactive comparison of guided, workspace,
+and conversational layouts. Editable sample product confirmation, outcome selection,
+simulated research and four-ring result placeholders run entirely in browser state;
+no API calls, source claims, scores or production behavior are introduced. Production
+requests to this route return 404. Desktop/mobile smoke coverage lives in
+`scripts/check_design_lab.mjs` (run against `npm run dev`). The real AI-research
+pivot, scoring rubric and deployment consolidation are still pending.
+
 **Scoring was redesigned 2026-08-07 (founder decisions). This supersedes any
 earlier description of the score anywhere in the repo.**
 
@@ -1196,6 +1205,13 @@ extraction was spent on the fix; the first real `--with-sr` production run is
 still the unmeasured SR-uplift experiment (Next item 3).
 
 ## Next
+
+**Handoff: launch UI design review in progress on `launch/ai-wrapper-planning`.**
+Choose A/B/C in the local `/design-lab` before building the real research flow.
+Prototype validation: TypeScript, scoped ESLint, both Python gates and browser
+smoke at 1440px/390px passed; unit/build validation is recorded in the commit body.
+No real upload, durable research job, AI scoring or provider configuration is wired.
+Keep the existing production scanner and historical scoring unchanged during review.
 
 **Changed 2026-09-08: EVERY supplement gets an answer — stage 2b, the no-run
 fallback.** Founder: "the retained runs, you can access them if you have them,
