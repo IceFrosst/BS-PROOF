@@ -92,3 +92,6 @@ body:has(.ab-stage)>.site-header,body:has(.ab-stage)>.site-footer{display:none}
 .ab-split .ab-headline p{font-size:11px;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
 .ab-split .ab-number{width:72px;height:72px}
 .ab-split .ab-number strong{font-size:30px}
+
+.ab-bars.outcomes li>button{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr) auto 20px}
+.ab-bars.outcomes .ab-bar-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

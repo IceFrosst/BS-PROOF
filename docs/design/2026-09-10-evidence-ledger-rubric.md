@@ -51,6 +51,17 @@ product form untested and dose fit 1 (the A/B demo's "wrong form" case) →
 applicability (0.1 + 0.25)/2 = 0.175 → **54 "unclear"**; with dose fit 3 it would be
 0.425 → **61 "probably works"**. Same ledger with E 0 → **50** regardless of fit. E −3, C 4 → **0**.
 
+## Overall tab (founder direction 2026-09-11, prototype only)
+
+The result screen lands on an **Overall** tab: `overall = mean(headline of every
+scored outcome)`, unscored outcomes excluded and counted in the sentence ("Average
+of 3 scored outcomes · 1 not scored"). Each bar on that tab is one outcome at its
+own headline; tapping drills into that outcome's four dimensions. Recorded caveat
+(earlier design discussion): averaging unrelated outcomes can hide a strong
+result behind weak ones; the drill-down and the per-outcome tabs are the
+mitigation. Whether the average should be weighted (e.g. by certainty or by the
+outcomes the user selected) is an open founder call.
+
 ## What is deliberately NOT in the number
 
 Safety (always its own visible block), marketing red flags, company background,
