@@ -414,3 +414,42 @@ Open founder calls this raises:
 - **Region matters**: upper and lower body differ ~2x. One ratio cannot describe both.
 - Getting a properly weighted share with a real CI needs the extraction sheet from the authors of
   `10.3390/nu16213665`, or re-extraction of 23 primaries (8 not in Europe PMC).
+
+---
+
+## TODO — full-context critical review by Astra or Fable 5.1 before launch
+
+**Standing item. Do this whenever `openai-codex/gpt-6-astra` or
+`anthropic/claude-fable-5-1` is available** (Fable failed on expired OAuth on
+2026-09-11; Astra is the current session model).
+
+The brief is deliberately broad and adversarial:
+
+- Review **all of the launch work**, not one file: `prompts/research_audit.md`
+  (audit-v0.2), `schemas/research_audit.json`, `app/design-lab/ab/*`
+  (`ledger.ts`, `effect.ts`, `prototype.tsx`), the three audits in
+  `app/design-lab/ab/audits/`, the rubric doc, the two 2026-09-11 design notes,
+  and every open item in this file.
+- **Hold the whole product vision in mind**, not just code correctness: BS Proof
+  is a consumer-facing AI wrapper whose entire value is telling people the truth
+  about supplements, including "this does nothing for you" and "nobody has
+  studied someone like you". A technically correct score that misleads a buyer
+  is a product failure.
+- **Weigh it against the need to LAUNCH.** We pivoted to an AI wrapper for speed
+  and have twice drifted into research-grade depth (hand-extracting placebo arms;
+  reconciling meta-analyses). Say plainly which open items are launch blockers,
+  which are v2, and which should be dropped entirely. A recommendation that adds
+  scope without a launch date is not useful.
+- Be **critical, not agreeable**. Name what is over-engineered, what is
+  unvalidated, what will embarrass us in front of a user, and what we have
+  claimed more confidence in than the evidence supports.
+
+Specific things to attack:
+1. The effect bands in `effect.ts` are calibrated against four unverified
+   anchors (caffeine 3, creatine 2, melatonin 1, magnesium 0). Are they right?
+2. There is **no stopping rule** — one self-reported RCT produces a number, and
+   `rctCount` is never verified. Is that shippable with disclosure, or not?
+3. Overall averages across populations (vitamin D shows 56 by blending an 88
+   with four nulls). Ship, hide, or restrict to picked outcomes?
+4. Ten unresolved numeric founder calls above, all still unowned.
+5. Nothing has been human-verified, and nothing is wired to production.
