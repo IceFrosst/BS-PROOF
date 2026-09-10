@@ -382,3 +382,35 @@ Three conditions held for every verified 3, and each failure explains a rejectio
   weighted average of a 3, a 2 and three 0s.
 - **Lead with "are you short of it?"** before any number — cheap, non-clinical triage
   that converts a misleading 88 into an honest 88-for-you or 50-for-you.
+
+### Creatine "share of achievable gain" — extraction result (2026-09-11)
+
+Source: `docs/design/2026-09-11-creatine-share-of-gain.md` (Opus 5 xhigh, live retrieval,
+placebo arms extracted from 6 primary trials; 4 of 7 arms reproduce the meta-analysis forest-plot
+differences exactly).
+
+**"Two-thirds more than training alone" is NOT defensible.** It is `(20-12)/12` from a 2003
+narrative review that is abstract-only, unweighted, with no n, no CI and no bias test, and whose
+own abstract reports bench 1RM ranging 3-45%. Reconstructed from placebo-arm data the share is:
+
+| basis | upper body | lower body |
+|---|---|---|
+| PMID 39519498 (row's source) | **0.65** (MC 0.38-1.41) | **0.35** (0.23-0.58) |
+| + trim-and-fill (row's own correction) | **0.53** | n/a |
+| PMID 40944139 (69 studies, n=1937, NEWER/LARGER) | **0.21** | **0.10** leg press (NS) / 0.18 squat |
+| women | 0.23 (NS) → **0.02** on the newer meta | 0.25 (NS) → NS |
+| over-50s | ~0.10 | **-0.08** (pooled, my extraction) |
+
+Applied to the audit: added the missing meta-analysis, set `consistency` and `precision` to
+`concern` (two meta-analyses disagree threefold and neither flags it, I2=0% in both), rewrote the
+malformed sentence. **Creatine strength moved 58 -> 54 "Unclear", Evidence 2/4 -> 1/4.**
+
+Open founder calls this raises:
+- **-1 per concern is now visibly too blunt in the other direction**: a real, replicated, EFSA-
+  authorised effect reads "Very low". Two disagreeing meta-analyses SHOULD cost something, but
+  1/4 alongside "never studied" is not right either.
+- **No defensible non-responder rate exists** (only Syrotuik 2004: 11 men, creatine uptake not
+  strength, 3/11 absorbed almost none). Do not publish "1 in 3 are non-responders".
+- **Region matters**: upper and lower body differ ~2x. One ratio cannot describe both.
+- Getting a properly weighted share with a real CI needs the extraction sheet from the authors of
+  `10.3390/nu16213665`, or re-extraction of 23 primaries (8 not in Europe PMC).
