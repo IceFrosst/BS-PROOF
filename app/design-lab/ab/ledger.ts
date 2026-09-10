@@ -62,7 +62,7 @@ export function score(l: Ledger): Scored {
     firedGates: fired,
     applicability,
     headline,
-    label: headline === null ? (l.gates.rctCount === 0 ? "Not enough evidence to score" : "Unclear — no score") : bandLabel(headline),
+    label: headline === null ? (l.gates.rctCount === 0 ? "Not scored" : "Not scored") : bandLabel(headline),
     effectWord: EFFECT_WORDS[String(l.effectPoints)],
     certaintyWord: CERTAINTY_WORDS[certainty],
     formWord: l.formFit === "unknown" ? "Not tested" : FIT_WORDS[l.formFit],

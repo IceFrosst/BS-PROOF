@@ -38,6 +38,6 @@ describe("evidence ledger rubric v0.1 (proposed, demo only)", () => {
   it("no RCT -> no headline, never a low number", () => {
     const r = score({ ...base, effectPoints: "unclear", gates: { ...base.gates, rctCount: 0 } });
     expect(r.headline).toBeNull();
-    expect(r.label).toMatch(/Not enough evidence/);
+    expect(r.label).toBe("Not scored");
   });
 });
