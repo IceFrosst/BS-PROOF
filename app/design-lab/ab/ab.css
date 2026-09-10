@@ -1,5 +1,5 @@
 body:has(.ab-stage)>.site-header,body:has(.ab-stage)>.site-footer{display:none}
-.ab-stage{--ab-bg:#f6f3ea;--ab-surface:#fffdf7;--ab-soft:#eef0e3;--ab-ink:#1f3a2d;--ab-muted:#5f6b60;--ab-line:#d9dccc;--ab-accent:#2f5d45;--ab-track:#e3e5d6;--ab-r1:#2f5d45;--ab-r2:#6f9b6b;--ab-r3:#98a953;--ab-r4:#bb8a30;--ab-warn:#963d26;--ab-warn-bg:#fbeddf;min-height:100svh;background:#e8eadf;color:var(--ab-ink);font-family:ui-rounded,"SF Pro Rounded",-apple-system,"Segoe UI",sans-serif;display:flex;justify-content:center;align-items:center;gap:48px;padding:40px 28px}
+.ab-stage{--ab-bg:#f6f3ea;--ab-surface:#fffdf7;--ab-soft:#eef0e3;--ab-ink:#1f3a2d;--ab-muted:#5f6b60;--ab-line:#d9dccc;--ab-accent:#2f5d45;--ab-track:#e3e5d6;--ab-r1:#2f5d45;--ab-r2:#6f9b6b;--ab-r3:#98a953;--ab-r5:#7c6a9c;--ab-r4:#bb8a30;--ab-warn:#963d26;--ab-warn-bg:#fbeddf;min-height:100svh;background:#e8eadf;color:var(--ab-ink);font-family:ui-rounded,"SF Pro Rounded",-apple-system,"Segoe UI",sans-serif;display:flex;justify-content:center;align-items:center;gap:48px;padding:40px 28px}
 .ab-stage button{font:inherit;cursor:pointer;color:inherit}
 .ab-stage button:focus-visible{outline:3px solid #bc8344;outline-offset:3px}
 .ab-stage h1,.ab-stage h2,.ab-stage h3,.ab-stage p{margin:0}
@@ -109,3 +109,11 @@ body:has(.ab-stage)>.site-header,body:has(.ab-stage)>.site-footer{display:none}
 .ab-forwhom p{font-size:12.5px;line-height:1.35;color:var(--ab-muted);margin:0}
 .ab-forwhom b{color:var(--ab-ink);font-weight:650}
 .ab-bar-name small{display:block;font-size:11px;font-weight:450;color:var(--ab-muted);line-height:1.2;margin-top:1px}
+
+.ab-profile{margin:6px 0 16px}
+.ab-profile>div{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:6px 0 4px}
+.ab-profile input{width:74px;min-height:44px;padding:0 10px;border:1px solid var(--ab-line);border-radius:11px;background:#fff;font:inherit;font-size:13px}
+.ab-profile button{min-height:44px;padding:0 14px;border:1px solid var(--ab-line);border-radius:11px;background:#fff;font:inherit;font-size:13px;cursor:pointer}
+.ab-profile button[aria-pressed=true]{background:var(--ab-accent);color:#fff;border-color:var(--ab-accent)}
+.ab-profile .ab-clear{border:0;background:none;color:var(--ab-muted);text-decoration:underline;padding:0 6px}
+.ab-profile small{display:block;font-size:11.5px;color:var(--ab-muted);line-height:1.35}

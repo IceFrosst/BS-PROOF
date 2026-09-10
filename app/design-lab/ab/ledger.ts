@@ -16,6 +16,49 @@ export interface Ledger {
   doseFit: Fit;
 }
 
+/** Who the studies behind a row actually enrolled. */
+export interface StudiedIn {
+  sex: "male" | "female" | "mixed" | "unknown";
+  sex_note?: string;
+  age_min: number | null;
+  age_max: number | null;
+  age_note?: string;
+  ethnicity?: string;
+  confidence?: "verified" | "inferred" | "unknown";
+}
+/** What the person in front of us said about themselves. */
+export interface Profile { age: number | null; sex: "male" | "female" | null }
+
+/**
+ * Fifth dimension — "studied in people like you". Founder scale (2026-09-11), 0-3:
+ *   3 same sex as you AND similar age
+ *   2 mixed-sex trials AND similar age, OR same sex but the age is off
+ *   1 other sex but similar age
+ *   0 other sex and the age is off
+ * "Similar age" = your age falls inside the enrolled range, widened by AGE_SLACK
+ * years at each end. Returns "unknown" when we do not know who was enrolled or
+ * the user has not told us - never a guessed number.
+ */
+export const AGE_SLACK = 5;
+export type PersonFit = 0 | 1 | 2 | 3 | "unknown";
+export function personFit(p: Profile | null, st: StudiedIn | null | undefined): PersonFit {
+  if (!p || !st || (p.age === null && p.sex === null)) return "unknown";
+  if (st.sex === "unknown" && st.age_min === null && st.age_max === null) return "unknown";
+  const sexKnown = st.sex !== "unknown" && p.sex !== null;
+  const sexMatch = sexKnown ? (st.sex === "mixed" ? "mixed" : st.sex === p.sex ? "same" : "other") : "unknown";
+  let ageMatch: "similar" | "off" | "unknown" = "unknown";
+  if (p.age !== null && (st.age_min !== null || st.age_max !== null)) {
+    const lo = (st.age_min ?? 0) - AGE_SLACK;
+    const hi = (st.age_max ?? 200) + AGE_SLACK;
+    ageMatch = p.age >= lo && p.age <= hi ? "similar" : "off";
+  }
+  if (sexMatch === "unknown" || ageMatch === "unknown") return "unknown";
+  if (sexMatch === "same") return ageMatch === "similar" ? 3 : 2;
+  if (sexMatch === "mixed") return ageMatch === "similar" ? 2 : 1;
+  return ageMatch === "similar" ? 1 : 0;
+}
+const PERSON_WORDS = ["Different group", "Weak match", "Partial match", "People like you"];
+
 export interface Scored {
   effect: number | "unclear";
   certainty: number;
@@ -27,6 +70,8 @@ export interface Scored {
   certaintyWord: string;
   formWord: string;
   doseWord: string;
+  person: PersonFit;
+  personWord: string;
 }
 
 const EFFECT_WORDS: Record<string, string> = { "-3": "Harm reported", "0": "No meaningful effect", "1": "Small benefit", "2": "Moderate benefit", "3": "Large benefit", unclear: "Unclear" };
@@ -37,7 +82,7 @@ export function bandLabel(h: number): string {
   return h >= 65 ? "Works" : h >= 55 ? "Probably works" : h >= 45 ? "Unclear" : h >= 30 ? "Probably does not work" : "Evidence against";
 }
 
-export function score(l: Ledger): Scored {
+export function score(l: Ledger, person: PersonFit = "unknown"): Scored {
   const fired: string[] = [];
   let certainty = l.bodyIsRct ? 4 : 2;
   for (const [k, v] of Object.entries(l.checklist)) if (v === "concern") { certainty -= 1; void k; }
@@ -50,7 +95,12 @@ export function score(l: Ledger): Scored {
   if (l.gates.allPositiveIndustryOrOneLab) { fired.push("All positive trials industry-funded or one lab"); caps.push(2); }
   if (caps.length) certainty = Math.min(certainty, ...caps);
   const fit = (f: Fit) => (f === "unknown" ? 0.1 : f / 4);
-  const applicability = (fit(l.formFit) + fit(l.doseFit)) / 2;
+  // Person fit joins form and dose as a THIRD applicability term when we know it.
+  // It can dampen a positive result but can never create one: applicability only
+  // multiplies a signal that is already positive.
+  const parts = [fit(l.formFit), fit(l.doseFit)];
+  if (person !== "unknown") parts.push(person / 3);
+  const applicability = parts.reduce((a, b) => a + b, 0) / parts.length;
   let headline: number | null = null;
   if (l.effectPoints !== "unclear" && certainty > 0 && l.gates.rctCount > 0) {
     const signal = (l.effectPoints / 3) * (certainty / 4);
@@ -65,6 +115,8 @@ export function score(l: Ledger): Scored {
     label: headline === null ? "Not scored" : (l.effectPoints === 0 && certainty >= 3 ? "No meaningful benefit" : bandLabel(headline)),
     effectWord: EFFECT_WORDS[String(l.effectPoints)],
     certaintyWord: CERTAINTY_WORDS[certainty],
+    person,
+    personWord: person === "unknown" ? "Not reported" : PERSON_WORDS[person],
     formWord: l.formFit === "unknown" ? "Not tested" : FIT_WORDS[l.formFit],
     doseWord: l.doseFit === "unknown" ? "Unknown" : FIT_WORDS[l.doseFit],
   };
@@ -79,6 +131,7 @@ export interface AuditFile {
     name: string; population?: string; sentence: string;
     ledger: { effectPoints: string; effect_basis: string; bodyIsRct: boolean; checklist: Ledger["checklist"]; gates: Ledger["gates"]; formFit: string; doseFit: string; effective_daily_range: string };
     detail: Record<"effect" | "evidence" | "form" | "dose", Record<string, string>>;
+    studied_in?: StudiedIn;
     inventory: Array<{ id: string; year: number; design: string; n: number; direction: string; access: string; note: string }>;
     strongest_study: string; strongest_doubt: string; study_that_would_move_this: string;
   }>;

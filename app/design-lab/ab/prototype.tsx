@@ -1,21 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { bandLabel, detailFromAudit, ledgerFromAudit, score, type AuditFile, type Ledger } from "./ledger";
+import { bandLabel, detailFromAudit, ledgerFromAudit, personFit, score, type AuditFile, type Ledger, type Profile, type StudiedIn } from "./ledger";
 import creatineAudit from "./audits/creatine.json";
 import vitaminDAudit from "./audits/vitamin-d.json";
 import magnesiumAudit from "./audits/magnesium.json";
 import "./ab.css";
 
-type DimKey = "effect" | "evidence" | "form" | "dose";
+type DimKey = "effect" | "evidence" | "form" | "dose" | "person";
 interface Detail { found: string; missing: string; move: string }
 
 /* HYPOTHETICAL ledgers. Fictional products; hand-written inputs to exercise the rubric. No search or study lookup was performed. */
-interface OutcomeCase { name: string; sentence: string; ledger: Ledger; detail: Record<DimKey, Detail>; population?: string }
+interface OutcomeCase { name: string; sentence: string; ledger: Ledger; detail: Record<Exclude<DimKey, "person">, Detail>; population?: string; studiedIn?: StudiedIn }
 interface Scenario { title: string; product: string; outcomes: OutcomeCase[]; forWhom?: { reasonable: string; not_shown: string; source: string }; live?: { runAt: string; model: string; sources: number; doseNote: string; confidence: string; confidenceNote: string; couldNotAccess: string[] } }
 const okChecklist: Ledger["checklist"] = { risk_of_bias: "supported", consistency: "concern", precision: "supported", directness: "supported", publication_bias: "unknown" };
 const strongGates: Ledger["gates"] = { rctCount: 24, largestRctN: 120, longestRctWeeks: 12, chronicOutcome: true, surrogate: false, allPositiveIndustryOrOneLab: false };
-const thinDetail = (what: string): Record<DimKey, Detail> => ({
+const thinDetail = (what: string): Record<Exclude<DimKey, "person">, Detail> => ({
   effect: { found: what, missing: "Few trials measured this directly.", move: "A trial with this as the primary outcome." },
   evidence: { found: "A handful of small trials.", missing: "Imprecise; results vary.", move: "A preregistered replication." },
   form: { found: "Same preparation as the strength trials.", missing: "—", move: "—" },
@@ -59,11 +59,22 @@ const scenarios: Record<string, Scenario> = {
   },
 };
 
+function personDetail(st: StudiedIn | undefined, p: Profile): Detail {
+  if (!st) return { found: "This audit has not recorded who the trials enrolled.", missing: "Enrolled sex and age range per study.", move: "Re-reading the trials for their demographics." };
+  const who = [st.sex === "unknown" ? "sex not reported" : st.sex === "mixed" ? "men and women" : st.sex === "male" ? "men only" : "women only", st.age_min !== null || st.age_max !== null ? `ages ${st.age_min ?? "?"}-${st.age_max ?? "?"}` : "age range not reported"].join(", ");
+  const you = p.age === null && p.sex === null ? "Tell us your age and sex to see how well this transfers." : `You: ${p.sex ?? "sex not given"}${p.age !== null ? `, ${p.age}` : ""}.`;
+  return {
+    found: `Trials enrolled ${who}. ${st.sex_note ?? ""} ${st.age_note ?? ""}`.trim(),
+    missing: `Ethnicity: ${st.ethnicity ?? "not reported"}.${st.confidence && st.confidence !== "verified" ? ` Demographics ${st.confidence}, not read from every paper.` : ""}`,
+    move: you,
+  };
+}
+
 function fromAudit(title: string, a: AuditFile): Scenario {
   return {
     title, product: a.product.replace(/,?\s*(softgel|powder|capsules)[^,]*/i, "").replace(" per day", "/day"),
     forWhom: a.for_whom,
-    outcomes: a.outcomes.map((o) => ({ name: o.name, sentence: o.sentence, population: o.population, ledger: ledgerFromAudit(o), detail: { effect: detailFromAudit(o.detail.effect), evidence: detailFromAudit(o.detail.evidence), form: detailFromAudit(o.detail.form), dose: detailFromAudit(o.detail.dose) } })),
+    outcomes: a.outcomes.map((o) => ({ name: o.name, sentence: o.sentence, population: o.population, studiedIn: o.studied_in, ledger: ledgerFromAudit(o), detail: { effect: detailFromAudit(o.detail.effect), evidence: detailFromAudit(o.detail.evidence), form: detailFromAudit(o.detail.form), dose: detailFromAudit(o.detail.dose) } })),
     live: { runAt: a.meta.run_at, model: a.meta.model, sources: new Set(a.outcomes.flatMap((o) => o.inventory.map((i) => i.id))).size, doseNote: a.dose_note, confidence: a.self_confidence, confidenceNote: a.confidence_note, couldNotAccess: a.could_not_access },
   };
 }
@@ -74,12 +85,13 @@ const liveScenarios: Record<string, Scenario> = {
 };
 const allScenarios: Record<string, Scenario> = { ...liveScenarios, ...scenarios };
 
-const DIMS: { key: DimKey; name: string; color: string }[] = [
+const DIMS_BASE: { key: DimKey; name: string; color: string }[] = [
   { key: "effect", name: "Effect", color: "var(--ab-r1)" },
   { key: "evidence", name: "Evidence", color: "var(--ab-r4)" },
   { key: "form", name: "Form", color: "var(--ab-r2)" },
   { key: "dose", name: "Dose", color: "var(--ab-r3)" },
 ];
+const PERSON_DIM = { key: "person" as const, name: "Studied in you", color: "var(--ab-r5)" };
 
 type Layout = "hero" | "middle" | "overlap" | "split";
 const LAYOUTS: { id: Layout; name: string; blurb: string }[] = [
@@ -94,11 +106,12 @@ export default function AbPrototype() {
   const [key, setKey] = useState("creatine");
   const [tab, setTab] = useState<number>(-1); // -1 = Overall
   const [open, setOpen] = useState<string | null>(null);
+  const [profile, setProfile] = useState<Profile>({ age: null, sex: null });
   const [unpicked, setUnpicked] = useState<Record<string, boolean>>({}); // outcomes the user did NOT pick at the interests step
   const s = allScenarios[key];
   const isPicked = (name: string) => !unpicked[`${key}:${name}`];
   const togglePick = (name: string) => setUnpicked((u) => ({ ...u, [`${key}:${name}`]: !u[`${key}:${name}`] }));
-  const scored = s.outcomes.map((o) => ({ o, r: score(o.ledger) }));
+  const scored = s.outcomes.map((o) => ({ o, r: score(o.ledger, personFit(profile, o.studiedIn)) }));
   const pickedCount = s.outcomes.filter((o) => isPicked(o.name)).length;
   const withScore = scored.filter((x) => x.r.headline !== null && isPicked(x.o.name));
   const overall = withScore.length ? Math.round(withScore.reduce((a, x) => a + (x.r.headline as number), 0) / withScore.length) : null;
@@ -110,12 +123,13 @@ export default function AbPrototype() {
     ? (overall === null ? (pickedCount === 0 ? "Pick at least one outcome to see an overall score." : "None of the outcomes you picked has a scorable trial base yet.") : `Average of the ${withScore.length} outcome${withScore.length === 1 ? "" : "s"} you picked${pickedCount - withScore.length > 0 ? ` · ${pickedCount - withScore.length} not scored` : ""}. Tap one to see why.`)
     : cur!.o.sentence;
   const effectNum = cur ? (cur.r.effect === "unclear" ? null : cur.r.effect) : null;
+  const DIMS = [...DIMS_BASE, PERSON_DIM];
   const dimRows = cur ? DIMS.map((d) => {
     const L = cur.o.ledger; const r = cur.r;
-    const fill = d.key === "effect" ? (effectNum === null ? null : Math.abs(effectNum) / 3) : d.key === "evidence" ? r.certainty / 4 : d.key === "form" ? (L.formFit === "unknown" ? null : L.formFit / 4) : (L.doseFit === "unknown" ? null : L.doseFit / 4);
-    const pts = d.key === "effect" ? (effectNum === null ? "—" : `${effectNum}/3`) : d.key === "evidence" ? `${r.certainty}/4` : d.key === "form" ? (L.formFit === "unknown" ? "—" : `${L.formFit}/4`) : (L.doseFit === "unknown" ? "—" : `${L.doseFit}/4`);
-    const word = d.key === "effect" ? r.effectWord : d.key === "evidence" ? r.certaintyWord : d.key === "form" ? r.formWord : r.doseWord;
-    return { id: d.key, name: d.name, sub: undefined as string | undefined, color: d.color, fill, pts, word, negative: d.key === "effect" && (effectNum ?? 0) < 0, detail: cur.o.detail[d.key] as Detail | null, jump: null as number | null, dim: false };
+    const fill = d.key === "effect" ? (effectNum === null ? null : Math.abs(effectNum) / 3) : d.key === "evidence" ? r.certainty / 4 : d.key === "form" ? (L.formFit === "unknown" ? null : L.formFit / 4) : d.key === "dose" ? (L.doseFit === "unknown" ? null : L.doseFit / 4) : (r.person === "unknown" ? null : r.person / 3);
+    const pts = d.key === "effect" ? (effectNum === null ? "—" : `${effectNum}/3`) : d.key === "evidence" ? `${r.certainty}/4` : d.key === "form" ? (L.formFit === "unknown" ? "—" : `${L.formFit}/4`) : d.key === "dose" ? (L.doseFit === "unknown" ? "—" : `${L.doseFit}/4`) : (r.person === "unknown" ? "—" : `${r.person}/3`);
+    const word = d.key === "effect" ? r.effectWord : d.key === "evidence" ? r.certaintyWord : d.key === "form" ? r.formWord : d.key === "dose" ? r.doseWord : r.personWord;
+    return { id: d.key, name: d.name, sub: undefined as string | undefined, color: d.color, fill, pts, word, negative: d.key === "effect" && (effectNum ?? 0) < 0, detail: (d.key === "person" ? personDetail(cur.o.studiedIn, profile) : cur.o.detail[d.key as Exclude<DimKey, "person">]) as Detail | null, jump: null as number | null, dim: false };
   }) : [];
   const outcomeRows = scored.map((x, i) => ({ id: `o${i}`, name: x.o.name, sub: x.o.population, color: isPicked(x.o.name) ? "var(--ab-r1)" : "var(--ab-track)", fill: x.r.headline === null ? null : x.r.headline / 100, pts: x.r.headline === null ? "—" : String(x.r.headline), word: isPicked(x.o.name) ? x.r.label : "Not picked", negative: isPicked(x.o.name) && (x.r.headline ?? 50) < 45, detail: null as Detail | null, jump: i as number | null, dim: !isPicked(x.o.name) }));
   const rowsToShow = isOverall ? outcomeRows : dimRows;
@@ -124,6 +138,7 @@ export default function AbPrototype() {
   const pick = (k: string) => { setKey(k); setTab(-1); setOpen(null); };
   const go = (i: number) => { setTab(i); setOpen(null); };
 
+  const profileRow = <div className="ab-profile"><span className="ab-kicker">WHO IS ASKING</span><div><input type="number" min={12} max={110} placeholder="Age" aria-label="Your age" value={profile.age ?? ""} onChange={(e) => setProfile((v) => ({ ...v, age: e.target.value === "" ? null : Number(e.target.value) }))} />{(["female", "male"] as const).map((x) => <button key={x} type="button" aria-pressed={profile.sex === x} onClick={() => setProfile((v) => ({ ...v, sex: v.sex === x ? null : x }))}>{x === "female" ? "Female" : "Male"}</button>)}<button type="button" className="ab-clear" onClick={() => setProfile({ age: null, sex: null })}>Clear</button></div><small>Only changes how well the studies transfer to you — it can lower a score, never invent one.</small></div>;
   const photo = <div className={`ab-photo-hero${layout === "overlap" ? " bleed" : ""}`} role="img" aria-label="Illustrated sample product (placeholder)"><div className="ab-jar"><div className="ab-jar-lid" /><span>FIELD NOTES / 001</span><strong>{(s.live ? s.title : s.product).split(" · ")[0].replace(/^Sample /, "").toLowerCase()}</strong><i>Pure. Simple. Studied.</i><div>{s.live ? "DAILY" : "SAMPLE"} <b>{(s.live ? s.title : s.product).split(" · ")[1] ?? ""}</b></div></div></div>;
   const scoreBlock = <div className={`ab-headline ${tone}${layout === "overlap" ? " float" : ""}`}><div className="ab-number"><strong>{headline ?? "—"}</strong>{headline === null && <span>no score</span>}</div><div><h2>{label}</h2><p>{sentence}</p></div></div>;
   const forWhom = isOverall && s.forWhom ? <div className="ab-forwhom"><p><b>Worth it if</b> {s.forWhom.reasonable}</p><p><b>Not shown to help if</b> {s.forWhom.not_shown}</p></div> : null;
@@ -132,7 +147,7 @@ export default function AbPrototype() {
   const tabs = <div className="ab-tabs" aria-label="Outcome"><button type="button" aria-pressed={isOverall} onClick={() => go(-1)}>Overall</button>{s.outcomes.map((o, i) => <button key={o.name} type="button" aria-pressed={tab === i} onClick={() => go(i)}>{o.name}</button>)}</div>;
   const header = <header className="ab-top"><button type="button" className="ab-back" aria-label="Back">‹</button><div className="ab-title"><strong>{s.product}</strong>{s.live && <small>Researched {s.live.runAt} · {s.live.sources} sources</small>}</div></header>;
 
-  return <main id="main-content" className="ab-stage"><aside className="ab-side"><a href="/design-lab/mobile">← Field Notebook</a><span className="ab-kicker">RESULT CARD</span><h1>Show the tub.<br />Then the <em>truth.</em></h1><p>Photo takes a third of the phone. Four placements to compare; the rows and the number are identical in all of them.</p><span className="ab-kicker">PHOTO PLACEMENT</span><div className="ab-layouts" role="tablist" aria-label="Layout">{LAYOUTS.map((l) => <button key={l.id} role="tab" aria-selected={layout === l.id} onClick={() => { setLayout(l.id); setOpen(null); }}><b>{l.name}</b><small>{l.blurb}</small></button>)}</div><span className="ab-kicker">LIVE AUDITS · REAL SOURCES</span><div className="ab-scenarios">{Object.entries(liveScenarios).map(([k, v]) => <button key={k} aria-pressed={key === k} onClick={() => pick(k)}>{v.title}<small>{v.outcomes.length} outcomes · {v.live?.sources} sources</small></button>)}</div><span className="ab-kicker">WHAT THE USER PICKED</span><div className="ab-picks">{s.outcomes.map((o) => <label key={o.name}><input type="checkbox" checked={isPicked(o.name)} onChange={() => togglePick(o.name)} />{o.name}</label>)}</div><details className="ab-provenance"><summary>Fictional test ledgers</summary><div className="ab-scenarios">{Object.entries(scenarios).map(([k, v]) => <button key={k} aria-pressed={key === k} onClick={() => pick(k)}>{v.title}<small>{v.product}</small></button>)}</div></details>{s.live ? <p className="ab-fine"><strong>Live audit</strong> run {s.live.runAt} by {s.live.model}. The model searched, read sources and classified effect/fit per the rubric; the number is computed by code. Model confidence: {s.live.confidence}. {s.live.doseNote} Not yet human-verified.</p> : <p className="ab-fine">Hand-written inputs to exercise the rubric; no search or model call produced this card.</p>}</aside>
+  return <main id="main-content" className="ab-stage"><aside className="ab-side"><a href="/design-lab/mobile">← Field Notebook</a><span className="ab-kicker">RESULT CARD</span><h1>Show the tub.<br />Then the <em>truth.</em></h1><p>Photo takes a third of the phone. Four placements to compare; the rows and the number are identical in all of them.</p><span className="ab-kicker">PHOTO PLACEMENT</span><div className="ab-layouts" role="tablist" aria-label="Layout">{LAYOUTS.map((l) => <button key={l.id} role="tab" aria-selected={layout === l.id} onClick={() => { setLayout(l.id); setOpen(null); }}><b>{l.name}</b><small>{l.blurb}</small></button>)}</div><span className="ab-kicker">LIVE AUDITS · REAL SOURCES</span><div className="ab-scenarios">{Object.entries(liveScenarios).map(([k, v]) => <button key={k} aria-pressed={key === k} onClick={() => pick(k)}>{v.title}<small>{v.outcomes.length} outcomes · {v.live?.sources} sources</small></button>)}</div>{profileRow}<span className="ab-kicker">WHAT THE USER PICKED</span><div className="ab-picks">{s.outcomes.map((o) => <label key={o.name}><input type="checkbox" checked={isPicked(o.name)} onChange={() => togglePick(o.name)} />{o.name}</label>)}</div><details className="ab-provenance"><summary>Fictional test ledgers</summary><div className="ab-scenarios">{Object.entries(scenarios).map(([k, v]) => <button key={k} aria-pressed={key === k} onClick={() => pick(k)}>{v.title}<small>{v.product}</small></button>)}</div></details>{s.live ? <p className="ab-fine"><strong>Live audit</strong> run {s.live.runAt} by {s.live.model}. The model searched, read sources and classified effect/fit per the rubric; the number is computed by code. Model confidence: {s.live.confidence}. {s.live.doseNote} Not yet human-verified.</p> : <p className="ab-fine">Hand-written inputs to exercise the rubric; no search or model call produced this card.</p>}</aside>
   <div className="ab-phone"><div className="ab-status"><b>9:41</b><i /><span>▮▮▮ ▰</span></div><div className={`ab-screen layout-${layout}`}>
     {layout === "hero" && <>{header}{photo}{tabs}<section className="ab-card">{scoreBlock}{forWhom}{bars}{gates}</section></>}
     {layout === "middle" && <>{header}{tabs}{scoreBlock}{photo}<section className="ab-card">{forWhom}{bars}{gates}</section></>}
