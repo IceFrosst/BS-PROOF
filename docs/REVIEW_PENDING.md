@@ -324,3 +324,61 @@ not re-extracted.
 | S8 model id `grok-4.3` invalid | **Fixed** — all Grok tiers default `grok-4.5`, preflight blocks placeholder ids. Grok found this; it was my error. See CLAUDE.md "Grok model tiers". |
 | Creatine scores 22–32 for strength | **Diagnosed, not fixed.** The dominant cause is retrieval specificity: disease trials (Parkinson's, HIV, cancer) land in consumer outcomes through S6, and a null scores −0.7. This is `Next` item 2 in CLAUDE.md and the single most important open problem in the system. |
 | SR path returns 0 resolved | **Fixed, unmeasured.** Six defects: prose payload instead of tables, a table filter matching 0/14 real tables, `q_s` measuring our own retrieval, an arbitrary cap slice, pilot-only backend, and no per-study direction. All in SPEC §13. Nothing has run end to end yet. |
+
+---
+
+## OPEN — Evidence Ledger (design-lab prototype) · what earns a LARGE effect
+
+Source: `docs/design/2026-09-11-what-earns-a-large-effect.md` (Claude Opus 5 xhigh,
+live Europe PMC + WHO/CDC, every headline computed by the real
+`app/design-lab/ab/ledger.ts`). **No constants were changed.** Each item below is a
+founder call.
+
+### The finding that drives the rest
+**No enhancement-in-healthy-people claim reached `effectPoints: 3` anywhere in the
+searched literature.** Caffeine time-trial SMD 0.52; melatonin 7.06 min; red yeast
+rice 13.2%; nicotinamide 23%; vitamin C in the general population RR 0.97; creatine
+E=1. The empirical ceiling for "make a working system work better" is **2**. Every
+verified 3 was replacement of a missing nutrient, or a pharmacological action in a
+host under active challenge (rhinovirus, antibiotic disruption, bacterial adherence).
+
+Three conditions held for every verified 3, and each failure explains a rejection:
+1. Replacement, not enhancement.
+2. A population defined by deficiency or high baseline risk (so a 2-fold ratio is
+   also a large *absolute* effect: iron 18.4%→5.0%; probiotic AAD 19%→8%, NNT 9).
+3. The outcome IS the deficiency syndrome, not a distal composite. Night blindness
+   RR 0.32 (E=3) vs all-cause mortality RR 0.88 (E=1) — *same review, same children*.
+
+### Calibration inversion (all real `score()` outputs)
+| claim | verified effect | headline |
+|---|---|---|
+| Zinc → diarrhoea duration, malnourished children | −26.4 h, high certainty | **83 Works** |
+| Caffeine → cycling time trial | SMD −0.52 | **67 Works** |
+| Vitamin A → all-cause child mortality | RR 0.88, high certainty, n=1,202,382 | **63 Probably works** |
+| Vitamin E → NASH histology | 43% vs 19%, NNT 4.2 | **63 Probably works** |
+| Oral iron → anaemia in anaemic pregnant women | RR 0.38 | **63 Probably works** |
+| Melatonin → sleep onset, adults | **7.06 min** | **57 Probably works** |
+
+### Founder calls (numeric — none taken)
+| # | Issue | Proposal |
+|---|---|---|
+| F1 | `rctCount 0` renders scurvy/beriberi/pernicious anaemia/rickets as "Not scored", identical to an untested herb. Placebo trials are unethical, so this never resolves. | A `dramatic_response` / unstudiable route, mirroring GRADE's rate-up-for-large-effect (PMID 21802902). |
+| F2 | Large effect on a pure surrogate renders **88 "Works"**. Oral B12 → serum B12 computes **63** where Cochrane says no trial measured any clinical sign or QoL. | Surrogate should cap the *headline* or force the missing link into the label. |
+| F3 | No `-1` / `-2`. Zinc's own vomiting harm (RR 1.57) must flatten to 0 or jump to "Evidence against" (headline 0). | Add moderate/small harm grades. |
+| F4 | Undefined whether the band reads the point estimate or the CI. Worth 5–17 headline points (folic acid 88 vs 75). Blocks stable golden tests. | Write the rule down before pinning tests. |
+| F5 | `largestRctN < 50` misfires on **crossover** designs (caffeine: 48 studies, mean n≈14, adequately powered). | A `within_subject` gate field. |
+| F6 | `subgroup_hypothesis_only` (audit-v0.2 rule) has **no field** in `Ledger` and is dropped at the scoring boundary — yet nearly every verified 3 is a subgroup. | Add the field and price it. |
+| F7 | Unknown form AND unknown dose still yields **55 "Probably works"** (0.10 price too weak). | Raise the price of an unknown axis. |
+| F8 | `bandLabel` reads the headline alone, so E=1 + clean evidence → **67 "Works"** while the same card says "Small benefit". | Gate the word "Works" on E ≥ 2. |
+| F9 | `bodyIsRct:false` with `rctCount:5` is accepted silently (yields 75 "Works"). | Consistency assertion in `ledgerFromAudit`. |
+| F10 | Single-mega-RCT cap bites large benefits too (PIVENS NNT 4.2 → 63), not just nulls. | Already open for VITAL-DEP; same fix. |
+
+### Product implications (not code)
+- **The score belongs to a person, not a bottle.** Vitamin C 1 g computes **100** for a
+  marathon runner and **50** for a desk worker. Cranberry has six populations and five
+  different answers (RR 0.46 → 1.06). Folic acid is a 3 for women with a prior NTD
+  pregnancy and *unscoreable* for everyone else.
+- **Overall averaging is worse than already recorded**: cranberry's pooled RR 0.70 is a
+  weighted average of a 3, a 2 and three 0s.
+- **Lead with "are you short of it?"** before any number — cheap, non-clinical triage
+  that converts a misleading 88 into an honest 88-for-you or 50-for-you.
