@@ -1208,6 +1208,10 @@ still the unmeasured SR-uplift experiment (Next item 3).
 
 **Handoff: launch UI design review in progress on `launch/ai-wrapper-planning`.**
 Choose A/B/C in the local `/design-lab` before building the real research flow.
+`/design-lab/ab` compares the result card as WORDS vs a computed SCORE on the
+same hypothetical ledger; the proposed rubric (`prompts/research_audit.md`,
+`docs/design/2026-09-10-evidence-ledger-rubric.md`, demo `app/design-lab/ab/ledger.ts`,
+pinned by `tests/evidence-ledger-demo.test.ts`) is NOT approved and not wired.
 `/design-lab/mobile` adds the Claude Fable 5.1 "Field Notebook" phone concept
 (brief: `docs/design/2026-09-09-mobile-field-notebook-brief.md`; smoke:
 `scripts/check_mobile_design_lab.mjs`). Prototype validation: TypeScript, scoped
