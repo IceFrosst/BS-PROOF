@@ -3,7 +3,7 @@
   "run_at": "2026-09-10",
   "model": "claude-opus-5 (pi delegate subagent, anthropic provider)",
   "prompt": "audit-v0.2",
-  "note": "FRESH live run. Every source below was retrieved during this session via Europe PMC REST search, Europe PMC fullTextXML, NCBI efetch (db=pmc) and the Crossref works API. No prior audit JSON was read; no Grok/xAI output was used. All 29 PMIDs were re-queried one at a time against Europe PMC (EXT_ID:<pmid> AND SRC:MED) and each returned the DOI, PMCID and title cited here; the two EFSA opinions were verified through api.crossref.org, which also served their abstracts. Access level is stated per source in every inventory row. RCT/SR dedup: every RCT row carries either 'standalone' or 'pooled_in: <sr id>'. Subgroup claims are labelled subgroup_hypothesis_only unless a formal interaction test is quoted."
+  "note": "FRESH live run. Every source below was retrieved during this session via Europe PMC REST search, Europe PMC fullTextXML, NCBI efetch (db=pmc) and the Crossref works API. No prior audit JSON was read; no Grok/xAI output was used. All 29 PMIDs were re-queried one at a time against Europe PMC (EXT_ID:<pmid> AND SRC:MED) and each returned the DOI, PMCID and title cited here; the two EFSA opinions were verified through api.crossref.org, which also served their abstracts. Access level is stated per source in every inventory row. RCT/SR dedup: every RCT row carries either 'standalone' or 'pooled_in: <sr id>'. Subgroup claims are labelled subgroup_hypothesis_only unless a formal interaction test is quoted. This audit has not been verified by a human; it is model output computed into a score by code."
  },
  "product": "Creatine monohydrate powder, 4 g per day",
  "ingredient": "Creatine monohydrate",
@@ -28,7 +28,7 @@
     "ethnicity": "not reported in any of the 23 trials or in the review",
     "confidence": "verified"
    },
-   "sentence": "On top of the same training, creatine adds about 4.4 kg to upper-body and 11.4 kg to lower-body 1RM - roughly a third more gain than training alone, more on upper body than legs.",
+   "sentence": "On top of the same training, creatine adds about 4.4 kg to upper-body and 11.4 kg to leg 1RM - roughly a third more than training alone.",
    "ledger": {
     "effectPoints": "1",
     "effect_basis": "Two meta-analyses disagree ~3-fold on upper body and are not reconciled: PMID 39519498 (23 RCTs, n=509) gives +4.43 kg upper / +11.35 kg lower, I2=0%; PMID 40944139 (69 studies, n=1937, 2025) gives +1.43 kg bench and a NON-SIGNIFICANT leg press (p=0.11). Both report significant funnel asymmetry on upper body (Egger p=0.048 and p=0.0003). Effect remains a small-to-moderate real benefit in men who lift; the magnitude is unsettled.",

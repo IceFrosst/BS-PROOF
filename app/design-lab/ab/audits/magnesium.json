@@ -1,1094 +1,1094 @@
 {
-  "meta": {
-    "run_at": "2026-09-10",
-    "model": "claude (pi harness worker)",
-    "prompt": "audit-v0.2",
-    "note": "FRESH live run. Every source below was retrieved during this session via Europe PMC REST (search + fullTextXML), NCBI efetch (db=pmc) and direct HTTP; no prior audit JSON was read and no third-party model output was used. Access level is stated per source. The elemental-vs-compound question is resolved explicitly in dose_note and every dose verdict names the interpretation it assumes."
-  },
-  "product": "Magnesium bisglycinate 300 mg/day",
-  "ingredient": "Magnesium",
-  "form": "Magnesium bisglycinate (bis-glycinate chelate, Mg(C2H4NO2)2)",
-  "daily_dose": "300 mg/day as printed",
-  "dose_note": "CRITICAL AMBIGUITY. Magnesium bisglycinate is only ~14% magnesium by weight, verified live two ways: the one RCT on this form used capsules of 893 mg bisglycinate = 125 mg magnesium (14.0%; PMID 40918053, full text), and a 2026 clinical review tabulates 'magnesium glycinate / bisglycinate ~14-15% elemental magnesium, typical dose 100-400 mg/day' (PMID 41872423, full text). READING A (assumed by every verdict below unless stated): the label follows the usual convention and 300 mg is ELEMENTAL magnesium, delivered by ~2,100 mg of chelate plus ~1,800 mg of glycine. READING B: 300 mg is the COMPOUND, i.e. ~42 mg elemental magnesium = ~10-13% of the adult RDA, ~17% of the lowest dose ever tested for sleep and ~7% of the migraine dose; under Reading B every doseFit in this file drops to 0-1 and no row keeps a positive verdict. 300 mg elemental is just under the US supplemental upper limit of 350 mg/day (IOM 1997, set on diarrhoea, LOAEL 360 mg/day; verified via PMID 37487817 full text, ODS itself was unreachable).",
-  "for_whom": {
-    "reasonable": "Adults whose magnesium intake or blood level is actually low: 300 mg/day of ELEMENTAL magnesium is inside the 200-400 mg/day elemental range a 2026 clinical update names as first-line oral repletion for mild-to-moderate hypomagnesaemia, and bisglycinate is one of the salts it lists (PMID 41872423, full text; up to 48% of US adults eat below the EAR per the NHANES figure it cites). Adults who already sleep badly may get a small subjective improvement - the only trial on this exact form found a 1.6-point Insomnia Severity Index gain (PMID 40918053, full text).",
-    "not_shown": "Night leg cramps in older adults (Cochrane: unlikely to help, and a 2026 independent trial at this elemental dose found nothing). Anxiety or stress in healthy adults (null on this exact form). Sleep in people without a sleep complaint (never tested). Migraine at this dose (the positive trials used 600 mg elemental of other salts). Constipation with this form (the evidence is magnesium oxide at ~900 mg elemental). Nobody has shown this chelate raises magnesium status in a human trial - the one human head-to-head found no plasma rise at all.",
-    "source": "Cochrane CD009402.pub3 (PMID 32956536) for cramps; AAN/AHS 2012 guideline (PMID 22529203) for migraine Level B 'probably effective'; Curr Nutr Rep 2026 hypomagnesaemia update (PMID 41872423) for repletion dosing and elemental content; IOM upper limit 350 mg/day supplemental via PMID 37487817."
-  },
-  "outcomes": [
-    {
-      "name": "Sleep quality (poor sleepers)",
-      "population": "Adults 18-65 with self-rated poor sleep",
-      "studied_in": {
-        "sex": "mixed",
-        "sex_note": "pivotal exact-form RCT 122/153 women (80%); the 12-RCT body is mixed-sex",
-        "age_min": 18,
-        "age_max": 65,
-        "age_note": "pivotal trial eligible 18-65, mean 41.5 (SD 13.1); no one over 65 studied",
-        "ethnicity": "not reported; nationwide German sample, no race/ethnicity data collected",
-        "confidence": "verified"
-      },
-      "sentence": "The one trial on this exact form (n=155): insomnia score fell 1.6 pts more than placebo (CI 0.0-3.3); the 6-pt \"meaningful\" mark was not reached.",
-      "ledger": {
-        "effectPoints": "1",
-        "effect_basis": "Schuster 2025 (PMID 40918053, full text, n=153 ITT, 4 wk, 250 mg elemental Mg as bisglycinate + 1523 mg glycine): Insomnia Severity Index -3.9 vs -2.3, between-group difference 1.6 points (95% CI 0.0 to 3.3), p=0.049, Cohen's d 0.20; responders reaching the 6-point MCID 26/69 (38%) vs 15/65 (23%), no significance test reported. Every secondary sleep measure was null (RIS p=0.19, single-item sleep quality p=0.069, Epworth p=0.62). Body-level: Lopresti 2026 systematic review of 12 RCTs (PMID 42661485, abstract) - findings inconsistent across subjective, EEG, actigraphy and wearable outcomes, certainty low to very low, 'current evidence does not support oral magnesium as a routine treatment for insomnia'.",
-        "bodyIsRct": true,
-        "checklist": {
-          "risk_of_bias": "concern",
-          "consistency": "concern",
-          "precision": "concern",
-          "directness": "supported",
-          "publication_bias": "unknown"
-        },
-        "gates": {
-          "rctCount": 12,
-          "largestRctN": 155,
-          "longestRctWeeks": 8,
-          "chronicOutcome": true,
-          "surrogate": false,
-          "allPositiveIndustryOrOneLab": false
-        },
-        "formFit": "4",
-        "doseFit": "4",
-        "effective_daily_range": "250-500 mg/day ELEMENTAL magnesium (bisglycinate 250 mg in the exact-form trial; oxide/citrate 320-500 mg in the older-adult trials). Reading A puts 300 mg inside that range (doseFit 4). Reading B (42 mg elemental) is 17% of the low end and would be doseFit 0-1."
-      },
-      "detail": {
-        "effect": {
-          "found": "A statistically significant but small primary-endpoint gain on this exact form: 1.6 ISI points, d=0.20, most of it in the first 14 days.",
-          "missing": "The 95% CI lower bound is 0.0, so the trial only just excludes no effect, and the mean gain is well under the 6-point ISI change the trial itself named as clinically significant.",
-          "move": "A responder analysis powered on the 6-point ISI threshold, pre-registered rather than 'data not shown'."
-        },
-        "evidence": {
-          "found": "12 RCTs in the newest systematic review (search to June 2026), including the largest magnesium-sleep trial ever run (n=155) on this form.",
-          "missing": "Certainty is low to very low: forms, elemental doses, durations and instruments all differ, and the review found no consistent signal across objective measures. A co-author of the exact-form trial is first author of that review.",
-          "move": "A 12-week, 300+ participant trial with actigraphy or PSG alongside the ISI."
-        },
-        "form": {
-          "found": "Exact form. Magnesium bisglycinate capsules taken 30-60 min before bed - the same regimen a consumer would use.",
-          "missing": "The capsules also deliver ~1,523 mg of glycine, which has its own sleep literature, so the trial cannot separate magnesium from glycine. It is a fair test of the product, not of magnesium.",
-          "move": "A three-arm trial: bisglycinate vs an equal-glycine placebo vs inert placebo."
-        },
-        "dose": {
-          "found": "Under Reading A, 300 mg elemental is 20% above the 250 mg elemental dose that produced the signal and inside the 250-500 mg tested band.",
-          "missing": "Nothing was tested above 500 mg for this outcome in adults under 65, and Reading B (42 mg elemental) is below anything ever tested.",
-          "move": "A dose-ranging trial (150 vs 300 vs 450 mg elemental) on ISI."
-        }
-      },
-      "inventory": [
-        {
-          "id": "PMID 40918053 / 10.2147/NSS.S524348",
-          "year": 2025,
-          "design": "rct",
-          "n": 155,
-          "direction": "benefit",
-          "access": "full_text",
-          "note": "standalone (also pooled_in PMID 42661485). Exact form, 250 mg elemental + 1523 mg glycine, 4 wk, DRKS00031494, institute-funded, product from Biogena."
-        },
-        {
-          "id": "PMID 42661485 / 10.1080/19390211.2026.2719670",
-          "year": 2026,
-          "design": "sr_ma",
-          "n": 12,
-          "direction": "unclear",
-          "access": "abstract",
-          "note": "Narrative SR of 12 RCTs, RoB2 + GRADE, search to 1 Jun 2026: inconsistent, low/very-low certainty, no pooled estimate. Umbrella row for the RCTs below."
-        },
-        {
-          "id": "PMID 39252819 / 10.1016/j.sleepx.2024.100121",
-          "year": 2024,
-          "design": "rct",
-          "n": 80,
-          "direction": "benefit",
-          "access": "abstract",
-          "note": "pooled_in PMID 42661485. DIFFERENT SALT: magnesium L-threonate 1 g/day, 21 days, Oura-ring endpoints; has a published corrigendum."
-        },
-        {
-          "id": "PMID 41697399 / 10.1007/s00394-026-03910-2",
-          "year": 2026,
-          "design": "cohort",
-          "n": 3887,
-          "direction": "none",
-          "access": "abstract",
-          "note": "standalone. CoLaus|PsyColaus, 3 follow-ups, PSG substudy: no consistent association between magnesium supplement use and subjective or objective sleep."
-        }
-      ],
-      "absolute_effect": "ISI 1.6 points better than placebo at 4 weeks (95% CI 0.0 to 3.3) on a 0-28 scale; 38% vs 23% of completers achieved a 6-point drop.",
-      "clinically_meaningful": "unknown - the mean difference is far below the 6-point ISI improvement the trial pre-named as clinically significant (Yang et al., cited by the authors), but the responder gap (38% vs 23%, ~7 people treated per extra responder) was reported without a significance test.",
-      "strongest_study": "Schuster 2025 (PMID 40918053): 155 adults, registered, double-blind, ITT + per-protocol agreement, this exact form and near this dose - the largest magnesium sleep trial that exists.",
-      "strongest_doubt": "Its CI lower bound is 0.0 at p=0.049, all seven secondary measures were null, and the newest systematic review (whose first author co-authored the trial) still concludes magnesium should not be used routinely for insomnia.",
-      "study_that_would_move_this": "A 12-week, 300+ person trial of 300 mg elemental bisglycinate against an equal-glycine placebo, primary endpoint = proportion reaching a 6-point ISI improvement."
+ "meta": {
+  "run_at": "2026-09-10",
+  "model": "claude (pi harness worker)",
+  "prompt": "audit-v0.2",
+  "note": "FRESH live run. Every source below was retrieved during this session via Europe PMC REST (search + fullTextXML), NCBI efetch (db=pmc) and direct HTTP; no prior audit JSON was read and no third-party model output was used. Access level is stated per source. The elemental-vs-compound question is resolved explicitly in dose_note and every dose verdict names the interpretation it assumes. This audit has not been verified by a human; it is model output computed into a score by code."
+ },
+ "product": "Magnesium bisglycinate 300 mg/day",
+ "ingredient": "Magnesium",
+ "form": "Magnesium bisglycinate (bis-glycinate chelate, Mg(C2H4NO2)2)",
+ "daily_dose": "300 mg/day as printed",
+ "dose_note": "CRITICAL AMBIGUITY. Magnesium bisglycinate is only ~14% magnesium by weight, verified live two ways: the one RCT on this form used capsules of 893 mg bisglycinate = 125 mg magnesium (14.0%; PMID 40918053, full text), and a 2026 clinical review tabulates 'magnesium glycinate / bisglycinate ~14-15% elemental magnesium, typical dose 100-400 mg/day' (PMID 41872423, full text). READING A (assumed by every verdict below unless stated): the label follows the usual convention and 300 mg is ELEMENTAL magnesium, delivered by ~2,100 mg of chelate plus ~1,800 mg of glycine. READING B: 300 mg is the COMPOUND, i.e. ~42 mg elemental magnesium = ~10-13% of the adult RDA, ~17% of the lowest dose ever tested for sleep and ~7% of the migraine dose; under Reading B every doseFit in this file drops to 0-1 and no row keeps a positive verdict. 300 mg elemental is just under the US supplemental upper limit of 350 mg/day (IOM 1997, set on diarrhoea, LOAEL 360 mg/day; verified via PMID 37487817 full text, ODS itself was unreachable).",
+ "for_whom": {
+  "reasonable": "Adults whose magnesium intake or blood level is actually low: 300 mg/day of ELEMENTAL magnesium is inside the 200-400 mg/day elemental range a 2026 clinical update names as first-line oral repletion for mild-to-moderate hypomagnesaemia, and bisglycinate is one of the salts it lists (PMID 41872423, full text; up to 48% of US adults eat below the EAR per the NHANES figure it cites). Adults who already sleep badly may get a small subjective improvement - the only trial on this exact form found a 1.6-point Insomnia Severity Index gain (PMID 40918053, full text).",
+  "not_shown": "Night leg cramps in older adults (Cochrane: unlikely to help, and a 2026 independent trial at this elemental dose found nothing). Anxiety or stress in healthy adults (null on this exact form). Sleep in people without a sleep complaint (never tested). Migraine at this dose (the positive trials used 600 mg elemental of other salts). Constipation with this form (the evidence is magnesium oxide at ~900 mg elemental). Nobody has shown this chelate raises magnesium status in a human trial - the one human head-to-head found no plasma rise at all.",
+  "source": "Cochrane CD009402.pub3 (PMID 32956536) for cramps; AAN/AHS 2012 guideline (PMID 22529203) for migraine Level B 'probably effective'; Curr Nutr Rep 2026 hypomagnesaemia update (PMID 41872423) for repletion dosing and elemental content; IOM upper limit 350 mg/day supplemental via PMID 37487817."
+ },
+ "outcomes": [
+  {
+   "name": "Sleep quality (poor sleepers)",
+   "population": "Adults 18-65 with self-rated poor sleep",
+   "studied_in": {
+    "sex": "mixed",
+    "sex_note": "pivotal exact-form RCT 122/153 women (80%); the 12-RCT body is mixed-sex",
+    "age_min": 18,
+    "age_max": 65,
+    "age_note": "pivotal trial eligible 18-65, mean 41.5 (SD 13.1); no one over 65 studied",
+    "ethnicity": "not reported; nationwide German sample, no race/ethnicity data collected",
+    "confidence": "verified"
+   },
+   "sentence": "The one trial on this exact form (n=155): insomnia score fell 1.6 pts more than placebo (CI 0.0-3.3); the 6-pt \"meaningful\" mark was not reached.",
+   "ledger": {
+    "effectPoints": "1",
+    "effect_basis": "Schuster 2025 (PMID 40918053, full text, n=153 ITT, 4 wk, 250 mg elemental Mg as bisglycinate + 1523 mg glycine): Insomnia Severity Index -3.9 vs -2.3, between-group difference 1.6 points (95% CI 0.0 to 3.3), p=0.049, Cohen's d 0.20; responders reaching the 6-point MCID 26/69 (38%) vs 15/65 (23%), no significance test reported. Every secondary sleep measure was null (RIS p=0.19, single-item sleep quality p=0.069, Epworth p=0.62). Body-level: Lopresti 2026 systematic review of 12 RCTs (PMID 42661485, abstract) - findings inconsistent across subjective, EEG, actigraphy and wearable outcomes, certainty low to very low, 'current evidence does not support oral magnesium as a routine treatment for insomnia'.",
+    "bodyIsRct": true,
+    "checklist": {
+     "risk_of_bias": "concern",
+     "consistency": "concern",
+     "precision": "concern",
+     "directness": "supported",
+     "publication_bias": "unknown"
     },
-    {
-      "name": "Falling asleep faster, age 55+",
-      "population": "Adults 55+ with insomnia",
-      "studied_in": {
-        "sex": "mixed",
-        "sex_note": "only Nielsen reports sex: 78/100 women; Abbasi and Held report no sex split",
-        "age_min": 51,
-        "age_max": 85,
-        "age_note": "Nielsen 51-85 (mean 59), Abbasi 60-75 (mean 65), Held 60-80 (mean 69)",
-        "ethnicity": "not reported; trials run in USA, Iran and Germany",
-        "confidence": "verified"
-      },
-      "sentence": "Three small trials of magnesium oxide/citrate at 320-729 mg elemental pooled to 17 min faster sleep onset (CI 7-27 min); none used bisglycinate.",
-      "ledger": {
-        "effectPoints": "1",
-        "effect_basis": "Mah & Pitre 2021 meta-analysis (PMID 33865376, full text; 2024 correction is editorial only): 3 RCTs, 151 older adults, elemental doses 320-729 mg/day as magnesium OXIDE or CITRATE. Pooled sleep-onset latency -17.36 min (95% CI -27.27 to -7.44, p=0.0006) from 2 trials totalling 55 participants, I2=0. Total sleep time +16.06 min (95% CI -5.99 to +38.12, p=0.15) - not significant. All 3 trials moderate-to-high risk of bias; certainty low to very low; the authors themselves call the clinical significance of 17 minutes 'debateable'.",
-        "bodyIsRct": true,
-        "checklist": {
-          "risk_of_bias": "concern",
-          "consistency": "concern",
-          "precision": "concern",
-          "directness": "supported",
-          "publication_bias": "unknown"
-        },
-        "gates": {
-          "rctCount": 3,
-          "largestRctN": 100,
-          "longestRctWeeks": 8,
-          "chronicOutcome": true,
-          "surrogate": false,
-          "allPositiveIndustryOrOneLab": false
-        },
-        "formFit": "2",
-        "doseFit": "3",
-        "effective_daily_range": "320-500 mg/day ELEMENTAL magnesium as oxide or citrate (Abbasi 500 mg, Nielsen 320 mg; Held used 729 mg in 12 people). Reading A puts 300 mg just under the low end (doseFit 3); Reading B (42 mg) would be doseFit 1."
-      },
-      "detail": {
-        "effect": {
-          "found": "17 minutes faster sleep onset, pooled, with no heterogeneity between the two trials that measured it.",
-          "missing": "Total sleep time, sleep efficiency and the PSQI questionnaire were not improved, and the review states the true effect lies somewhere between a positive and a null effect.",
-          "move": "A trial reporting sleep onset latency against a pre-stated minimal important difference."
-        },
-        "evidence": {
-          "found": "A published meta-analysis with RoB 2.0 and GRADE, three countries, independent of manufacturers.",
-          "missing": "The pooled sleep-onset estimate rests on 55 people in two trials, one of which is a 12-person crossover; two of three trials are high risk of bias; no trial reported randomisation method, allocation concealment or blinding procedure.",
-          "move": "One adequately powered trial in adults 55+ (n>=200) with polysomnography."
-        },
-        "form": {
-          "found": "Nothing. Both salts tested (oxide, citrate) are different from bisglycinate; transfer assumes the active is elemental magnesium.",
-          "missing": "No head-to-head of bisglycinate against oxide or citrate on any sleep outcome. The one human absorption comparison that included bisglycinate found no plasma rise from it (PMID 39770988).",
-          "move": "A comparative trial of bisglycinate vs citrate at matched elemental dose in older adults."
-        },
-        "dose": {
-          "found": "300 mg elemental is within 20% of the 320 mg citrate dose used in the largest of the three trials.",
-          "missing": "The trial that drove the sleep-onset result used 500 mg elemental (oxide) and the EEG crossover used 729 mg - both well above this product.",
-          "move": "A dose comparison at 300 vs 500 mg elemental in this age group."
-        }
-      },
-      "inventory": [
-        {
-          "id": "PMID 33865376 / 10.1186/s12906-021-03297-z",
-          "year": 2021,
-          "design": "sr_ma",
-          "n": 151,
-          "direction": "benefit",
-          "access": "full_text",
-          "note": "Umbrella row; the 3 RCTs below are pooled_in this review and must not be counted twice. Correction PMID 39702257 is editorial (PRISMA counts, MeSH spelling)."
-        },
-        {
-          "id": "Abbasi 2012 (via PMID 33865376 table 1)",
-          "year": 2012,
-          "design": "rct",
-          "n": 46,
-          "direction": "benefit",
-          "access": "snippet",
-          "note": "pooled_in PMID 33865376. DIFFERENT SALT: 414 mg MgO twice daily = 500 mg elemental, 8 wk, Iran, adults 60-75 with insomnia; 'some concern' RoB."
-        },
-        {
-          "id": "Nielsen 2010 (via PMID 33865376 table 1)",
-          "year": 2010,
-          "design": "rct",
-          "n": 100,
-          "direction": "none",
-          "access": "snippet",
-          "note": "pooled_in PMID 33865376. DIFFERENT SALT: magnesium citrate 320 mg elemental, adults >51 with PSQI>5; PSQI improved equally in both arms; high RoB (selective reporting)."
-        },
-        {
-          "id": "Held 2002 (via PMID 33865376 table 1)",
-          "year": 2002,
-          "design": "rct",
-          "n": 12,
-          "direction": "benefit",
-          "access": "snippet",
-          "note": "pooled_in PMID 33865376. DIFFERENT SALT: 729 mg elemental as MgO, crossover EEG in HEALTHY older adults, high RoB, all participants had soft stools."
-        }
-      ],
-      "absolute_effect": "Sleep onset 17.4 minutes faster than placebo (95% CI 7.4 to 27.3); total sleep time +16 minutes, not significant.",
-      "clinically_meaningful": "unknown - the review declines to call 17 minutes clinically significant and names no threshold; no MCID for sleep-onset latency was pre-specified in any included trial.",
-      "strongest_study": "Abbasi 2012 (n=46, 8 weeks, 500 mg elemental as oxide): the only included trial rated better than high risk of bias, with both ISI and sleep-log improvement.",
-      "strongest_doubt": "The pooled sleep-onset result comes from 55 people, the 100-person trial in the same review found no PSQI difference, and a 2026 prospective cohort (n=3,887) found no association between magnesium use and objective sleep.",
-      "study_that_would_move_this": "A 200+ person, 8-week RCT in adults 55+ comparing 300 mg elemental bisglycinate with placebo, with PSG-measured sleep-onset latency as the primary endpoint."
+    "gates": {
+     "rctCount": 12,
+     "largestRctN": 155,
+     "longestRctWeeks": 8,
+     "chronicOutcome": true,
+     "surrogate": false,
+     "allPositiveIndustryOrOneLab": false
     },
-    {
-      "name": "Sleep if you sleep fine already",
-      "population": "Adults with no sleep complaint",
-      "studied_in": {
-        "sex": "unknown",
-        "sex_note": "Held (n=12) reports no sex split; the CoLaus cohort beside it is 52.6% women",
-        "age_min": 60,
-        "age_max": 80,
-        "age_note": "the only RCT enrolled healthy 60-80 year olds; cohort mean 57.2 (SD 10.4)",
-        "ethnicity": "not reported; German EEG crossover and a Swiss (Lausanne) cohort",
-        "confidence": "verified"
-      },
-      "sentence": "Untested: every trial recruited poor sleepers or insomnia patients. The only exception is a 12-person EEG crossover at 729 mg in healthy older adults.",
-      "ledger": {
-        "effectPoints": "unclear",
-        "effect_basis": "No RCT asks whether magnesium improves sleep in adults who sleep normally. Inclusion criteria are explicitly the opposite: RIS>12 (PMID 40918053), ISI-defined insomnia (Abbasi 2012), PSQI>5 (Nielsen 2010), self-reported sleep problems (PMID 39252819). The nearest thing is Held 2002 (n=12 crossover, 729 mg elemental as oxide, healthy 60-80 year olds, EEG) - too small and too high risk of bias to support any verdict, and at 2.4x this product's elemental dose. Zinc-magnesium-aspartate trials in athletes without sleep disturbance exist but co-administer zinc and are not a test of magnesium.",
-        "bodyIsRct": false,
-        "checklist": {
-          "risk_of_bias": "unknown",
-          "consistency": "unknown",
-          "precision": "unknown",
-          "directness": "concern",
-          "publication_bias": "unknown"
-        },
-        "gates": {
-          "rctCount": 1,
-          "largestRctN": 12,
-          "longestRctWeeks": 3,
-          "chronicOutcome": true,
-          "surrogate": false,
-          "allPositiveIndustryOrOneLab": false
-        },
-        "formFit": "unknown",
-        "doseFit": "unknown",
-        "effective_daily_range": "unknown - no effective range can be derived because the population has not been studied."
-      },
-      "detail": {
-        "effect": {
-          "found": "Nothing measurable. This is missing evidence, not evidence of no benefit.",
-          "missing": "Any placebo-controlled trial in adults without a sleep complaint. The one 12-person EEG crossover cannot answer it.",
-          "move": "A trial recruiting normal sleepers, with a floor-effect-aware endpoint."
-        },
-        "evidence": {
-          "found": "A 2026 prospective cohort (n=3,887, PSG substudy) found no association between magnesium supplement use and sleep in a general population sample - weakly against, and confounded by why people start supplements.",
-          "missing": "Randomised data in this population, at any dose, in any form.",
-          "move": "Any adequately powered RCT in good sleepers."
-        },
-        "form": {
-          "found": "Nothing on any form in this population.",
-          "missing": "Everything.",
-          "move": "See above."
-        },
-        "dose": {
-          "found": "Nothing.",
-          "missing": "No tested range exists for this population, so 300 mg cannot be judged inside or outside it.",
-          "move": "See above."
-        }
-      },
-      "inventory": [
-        {
-          "id": "Held 2002 (via PMID 33865376 table 1)",
-          "year": 2002,
-          "design": "rct",
-          "n": 12,
-          "direction": "unclear",
-          "access": "snippet",
-          "note": "standalone for this population (pooled_in PMID 33865376 for the insomnia row). Healthy 60-80 year olds, 729 mg elemental as MgO, EEG, high RoB, 20-day periods."
-        },
-        {
-          "id": "PMID 41697399 / 10.1007/s00394-026-03910-2",
-          "year": 2026,
-          "design": "cohort",
-          "n": 3887,
-          "direction": "none",
-          "access": "abstract",
-          "note": "standalone. General-population cohort with PSG: no consistent association with subjective or objective sleep parameters; users had MORE night cramps (confounding by indication)."
-        }
-      ],
-      "absolute_effect": "none available",
-      "clinically_meaningful": "unknown - no effect estimate exists in this population.",
-      "strongest_study": "None qualifies. Held 2002 (n=12) is the only randomised data in people without a sleep complaint.",
-      "strongest_doubt": "Both magnesium-sleep trial programmes deliberately excluded good sleepers, so the marketing claim 'better sleep' has never been tested on people who sleep normally.",
-      "study_that_would_move_this": "A placebo-controlled trial in adults with normal sleep (ISI<8) measuring actigraphy and next-day function, powered for a small effect."
+    "formFit": "4",
+    "doseFit": "4",
+    "effective_daily_range": "250-500 mg/day ELEMENTAL magnesium (bisglycinate 250 mg in the exact-form trial; oxide/citrate 320-500 mg in the older-adult trials). Reading A puts 300 mg inside that range (doseFit 4). Reading B (42 mg elemental) is 17% of the low end and would be doseFit 0-1."
+   },
+   "detail": {
+    "effect": {
+     "found": "A statistically significant but small primary-endpoint gain on this exact form: 1.6 ISI points, d=0.20, most of it in the first 14 days.",
+     "missing": "The 95% CI lower bound is 0.0, so the trial only just excludes no effect, and the mean gain is well under the 6-point ISI change the trial itself named as clinically significant.",
+     "move": "A responder analysis powered on the 6-point ISI threshold, pre-registered rather than 'data not shown'."
     },
-    {
-      "name": "Anxiety and stress (healthy)",
-      "population": "Healthy adults, no anxiety diagnosis",
-      "studied_in": {
-        "sex": "mixed",
-        "sex_note": "exact-form RCT 80% women; 9 of Boyle's 18 studies were female-only (PMS, postpartum)",
-        "age_min": 18,
-        "age_max": 82,
-        "age_note": "exact-form RCT 18-65 (mean 41.5); review samples mean 27-51, ranges 18-82",
-        "ethnicity": "not reported in the exact-form trial or in any of the 18 review studies",
-        "confidence": "verified"
-      },
-      "sentence": "On this form, anxiety moved 0.0 (CI -0.4 to 0.4) and stress 0.4 (CI -1.7 to 2.5) vs placebo; the 18-study review calls the wider field poor quality.",
-      "ledger": {
-        "effectPoints": "0",
-        "effect_basis": "Schuster 2025 (PMID 40918053, full text, exact form, 250 mg elemental, 4 wk, n=153): PHQ-4 anxiety subscale between-group difference 0.0 (95% CI -0.4 to 0.4, p=0.86), Perceived Stress Scale 0.4 (95% CI -1.7 to 2.5, p=0.71, d=0.04), PANAS negative affect 0.1 (-1.8 to 2.0). Boyle 2017 systematic review (PMID 28445426, full text): 18 studies, ALL in anxiety-vulnerable samples (mildly anxious, PMS, postpartum, hypertensive); 4 of 8 in anxious samples positive, 4 of 7 in PMS samples positive, no effect on postpartum anxiety, no study used a validated stress measure, and 'the quality of the existing evidence is poor'; the positive PMS results were largest when magnesium was combined with vitamin B6, i.e. not a test of magnesium alone. Rawji 2024 (PMID 38817505, full text) reports 'modest positive' findings across 15 studies but is PubMed-only, has no risk-of-bias or GRADE assessment and vote-counts.",
-        "bodyIsRct": true,
-        "checklist": {
-          "risk_of_bias": "concern",
-          "consistency": "concern",
-          "precision": "supported",
-          "directness": "supported",
-          "publication_bias": "unknown"
-        },
-        "gates": {
-          "rctCount": 9,
-          "largestRctN": 155,
-          "longestRctWeeks": 8,
-          "chronicOutcome": true,
-          "surrogate": false,
-          "allPositiveIndustryOrOneLab": false
-        },
-        "formFit": "4",
-        "doseFit": "4",
-        "effective_daily_range": "No effective range exists. The exact-form null was at 250 mg elemental; the trials in Boyle 2017 ran roughly 150-400 mg elemental, several with vitamin B6. Reading A: 300 mg is inside the tested (null) band. Reading B (42 mg) is below anything tested."
-      },
-      "detail": {
-        "effect": {
-          "found": "A tight null on this exact form: anxiety 0.0 points (CI -0.4 to 0.4) on the PHQ-4 anxiety subscale, and no movement in perceived stress or negative affect.",
-          "missing": "The participants were not anxious to begin with (PHQ-4 total 4.7/12), so a floor effect cannot be excluded; anxiety was a secondary endpoint measured with a 2-item screener.",
-          "move": "A trial in people with elevated but sub-clinical anxiety using a full instrument (GAD-7, STAI) as the primary endpoint."
-        },
-        "evidence": {
-          "found": "One well-run trial on the exact form, plus an 18-study systematic review of the wider field.",
-          "missing": "Of the review's positive studies, several co-administered vitamin B6 and none recruited a magnesium-deficient sample; the review says the quality is poor and calls for well-designed RCTs. The 2024 review that sounds more positive has no risk-of-bias assessment.",
-          "move": "A registered, adequately powered trial with anxiety as the pre-specified primary outcome."
-        },
-        "form": {
-          "found": "Exact form tested - and it was the arm that produced the null.",
-          "missing": "Nothing for form: this is the rare row where the null is on your own preparation. Note the capsules also carry ~1.5 g glycine, so even that did not move anxiety.",
-          "move": "Nothing needed on form for this outcome."
-        },
-        "dose": {
-          "found": "Under Reading A the product's dose sits inside the band that produced no effect - your dose was tested and did nothing.",
-          "missing": "Whether a higher elemental dose (400-500 mg) would do anything is untested in healthy adults.",
-          "move": "A dose-ranging anxiety trial."
-        }
-      },
-      "inventory": [
-        {
-          "id": "PMID 40918053 / 10.2147/NSS.S524348",
-          "year": 2025,
-          "design": "rct",
-          "n": 155,
-          "direction": "none",
-          "access": "full_text",
-          "note": "standalone. Exact form; anxiety/stress/mood were pre-listed secondary endpoints and all were null with narrow CIs."
-        },
-        {
-          "id": "PMID 28445426 / 10.3390/nu9050429",
-          "year": 2017,
-          "design": "sr_ma",
-          "n": 18,
-          "direction": "unclear",
-          "access": "full_text",
-          "note": "Umbrella row (narrative, no pooling). All 18 studies in anxiety-vulnerable samples; quality poor; combination products with vitamin B6 outperformed magnesium alone."
-        },
-        {
-          "id": "PMID 38817505 / 10.7759/cureus.59317",
-          "year": 2024,
-          "design": "sr_ma",
-          "n": 15,
-          "direction": "benefit",
-          "access": "full_text",
-          "note": "Umbrella row; overlaps Boyle 2017 - do not add. PubMed-only, no RoB/GRADE, vote-counted; mostly magnesium oxide; allowed up to 3 other active compounds per formula."
-        },
-        {
-          "id": "PMID 33864354 / 10.1002/smi.3051",
-          "year": 2021,
-          "design": "rct",
-          "n": 264,
-          "direction": "benefit",
-          "access": "abstract",
-          "note": "standalone but NOT a test of magnesium alone: magnesium + vitamin B6 in stressed healthy adults, post-hoc analysis. Recorded for completeness, excluded from the verdict."
-        }
-      ],
-      "absolute_effect": "0.0 points on the PHQ-4 anxiety subscale (95% CI -0.4 to 0.4) and 0.4 points on the 40-point Perceived Stress Scale (95% CI -1.7 to 2.5) after 4 weeks on this exact form.",
-      "clinically_meaningful": "no - the CI excludes even a 0.5-point change on a 6-point anxiety subscale, far below any anxiety response threshold; no MCID was pre-specified, so the judgement rests on the CI being narrower than the smallest plausible meaningful change.",
-      "strongest_study": "Schuster 2025 (PMID 40918053): 153 adults, exact form, anxiety and stress pre-registered as secondary endpoints, both flat.",
-      "strongest_doubt": "The participants had little anxiety to lose, so the null may be a floor effect; separately, 4 of 8 trials in mildly anxious samples did report benefit (Boyle 2017), which is why this reads 'not shown' rather than 'disproven'.",
-      "study_that_would_move_this": "An 8-12 week RCT of 300 mg elemental bisglycinate in adults with GAD-7 scores of 5-9, primary endpoint GAD-7 change."
+    "evidence": {
+     "found": "12 RCTs in the newest systematic review (search to June 2026), including the largest magnesium-sleep trial ever run (n=155) on this form.",
+     "missing": "Certainty is low to very low: forms, elemental doses, durations and instruments all differ, and the review found no consistent signal across objective measures. A co-author of the exact-form trial is first author of that review.",
+     "move": "A 12-week, 300+ participant trial with actigraphy or PSG alongside the ISI."
     },
-    {
-      "name": "Diagnosed anxiety disorder",
-      "population": "Adults with a diagnosed anxiety disorder",
-      "studied_in": {
-        "sex": "mixed",
-        "sex_note": "no eligible trial exists; nearest (Hanus combination) was 213/264 women, 81%",
-        "age_min": 18,
-        "age_max": 82,
-        "age_note": "Hanus 2004 enrolled 18-82, mean 44.6; no diagnosed-anxiety trial to describe",
-        "ethnicity": "not reported; the nearest trial was a French multicentre study",
-        "confidence": "verified"
-      },
-      "sentence": "No trial gave magnesium alone to people with a diagnosed anxiety disorder; the 18-study review found only mildly anxious, PMS and postpartum samples.",
-      "ledger": {
-        "effectPoints": "unclear",
-        "effect_basis": "Boyle 2017 (PMID 28445426, full text) searched Medline, PsycInfo, Embase, CINAHL, Cochrane and grey literature and found that every one of its 18 studies recruited on 'existing vulnerability to anxiety' - mild anxiety, PMS, postpartum status or hypertension - not a DSM anxiety-disorder diagnosis. The one trial in the field that comes closest used a fixed plant-extract combination (hawthorn, California poppy, magnesium; PMID 14741074, abstract), which cannot attribute anything to magnesium. Rawji 2024 (PMID 38817505) adds no diagnosed-disorder RCT. So: no evidence found, not evidence of no effect.",
-        "bodyIsRct": false,
-        "checklist": {
-          "risk_of_bias": "unknown",
-          "consistency": "unknown",
-          "precision": "unknown",
-          "directness": "concern",
-          "publication_bias": "unknown"
-        },
-        "gates": {
-          "rctCount": 0,
-          "largestRctN": 0,
-          "longestRctWeeks": 0,
-          "chronicOutcome": true,
-          "surrogate": false,
-          "allPositiveIndustryOrOneLab": false
-        },
-        "formFit": "unknown",
-        "doseFit": "unknown",
-        "effective_daily_range": "unknown - no trial in this population, so no range can be derived."
-      },
-      "detail": {
-        "effect": {
-          "found": "Nothing. Zero randomised trials of magnesium alone in diagnosed anxiety disorders.",
-          "missing": "Everything. The extrapolation from 'mildly anxious volunteers' to a clinical diagnosis is not supported.",
-          "move": "One RCT in diagnosed generalised anxiety disorder."
-        },
-        "evidence": {
-          "found": "A systematic review that looked for exactly this and did not find it, which is a stronger statement than 'we did not search'.",
-          "missing": "Any trial. The one nearby trial is a three-herb combination product.",
-          "move": "A registered add-on trial in GAD patients on stable treatment."
-        },
-        "form": {
-          "found": "Nothing on any form in this population.",
-          "missing": "Everything.",
-          "move": "See above."
-        },
-        "dose": {
-          "found": "Nothing.",
-          "missing": "No dose has been tested in this population.",
-          "move": "See above."
-        }
-      },
-      "inventory": [
-        {
-          "id": "PMID 28445426 / 10.3390/nu9050429",
-          "year": 2017,
-          "design": "sr_ma",
-          "n": 18,
-          "direction": "unclear",
-          "access": "full_text",
-          "note": "Umbrella row. Explicitly states all included samples were anxiety-vulnerable rather than diagnosed; used here as evidence of absence of trials, not as an effect estimate."
-        },
-        {
-          "id": "PMID 14741074 / 10.1185/030079903125002603",
-          "year": 2004,
-          "design": "rct",
-          "n": 264,
-          "direction": "benefit",
-          "access": "abstract",
-          "note": "standalone but ineligible: fixed combination of two plant extracts plus magnesium in mild-to-moderate anxiety disorders - no magnesium-only arm, so it cannot support a magnesium claim."
-        }
-      ],
-      "absolute_effect": "none available",
-      "clinically_meaningful": "unknown - no effect estimate exists in this population.",
-      "strongest_study": "None. The strongest relevant fact is a systematic review reporting that no such trial exists.",
-      "strongest_doubt": "Nothing here argues magnesium cannot help clinical anxiety; the honest statement is that it has never been tested, and combination products are the only positive signal.",
-      "study_that_would_move_this": "A 12-week placebo-controlled trial of 300 mg elemental bisglycinate in DSM-5 generalised anxiety disorder, GAD-7 or HAM-A primary."
+    "form": {
+     "found": "Exact form. Magnesium bisglycinate capsules taken 30-60 min before bed - the same regimen a consumer would use.",
+     "missing": "The capsules also deliver ~1,523 mg of glycine, which has its own sleep literature, so the trial cannot separate magnesium from glycine. It is a fair test of the product, not of magnesium.",
+     "move": "A three-arm trial: bisglycinate vs an equal-glycine placebo vs inert placebo."
     },
-    {
-      "name": "Night leg cramps (age 50+)",
-      "population": "Adults 50+ with idiopathic night cramps",
-      "studied_in": {
-        "sex": "mixed",
-        "sex_note": "women predominate where reported: Kuusipalo 72%, Barna 75%, Roguin Maor 61%",
-        "age_min": 21,
-        "age_max": 85,
-        "age_note": "trial means 57-69; Kuusipalo strata 50-85, Roguin Maor eligible 21+ (mean 65)",
-        "ethnicity": "not reported in any cramp trial (Finland, Israel, Ukraine, Argentina, UK)",
-        "confidence": "verified"
-      },
-      "sentence": "Cochrane: -0.18 cramps/week (CI -0.84 to 0.49) and no responder gain (RR 1.04); a 2026 independent trial at 250 mg elemental also found nothing.",
-      "ledger": {
-        "effectPoints": "0",
-        "effect_basis": "Cochrane CD009402.pub3 (PMID 32956536, abstract + plain-language summary; full review body not downloadable): idiopathic-cramp subset, mean ages 61.6-69.3. Cramps per week at 4 weeks -0.18 (95% CI -0.84 to 0.49; 5 studies, 307 participants, MODERATE certainty); percentage change from baseline -9.59% (95% CI -23.14 to +3.97; 3 studies, 177); proportion achieving >=25% reduction RR 1.04 (95% CI 0.84 to 1.29; 3 studies, 177, HIGH certainty); I2 0-12%; 4 of 5 trials not at high risk of bias; authors' conclusion 'it is unlikely that magnesium supplementation provides clinically meaningful cramp prophylaxis to older adults'. Reproduced by a 2026 SR/MA (PMID 41812583, full text, PROSPERO CRD420251120631): nocturnal/persistent leg cramps in adults, 4 trials, N approx 396, MD -0.42 cramps/week (95% CI -1.15 to +0.31, p=0.26), risk of bias generally low to moderate. Post-Cochrane RCT: Kuusipalo 2026 (PMID 41680812, full text, n=121, 250 mg elemental as magnesium hydrochloride, independent foundation funding) adjusted difference -0.20 cramps/week (95% CI -1.49 to 1.09, p=0.93) while compression stockings in the same trial gave -1.43 (-2.36 to -0.50, p=0.001). Roguin Maor 2017 (PMID 28241153, abstract; dose 865 mg magnesium oxide/day per PMID 41812583 table, ~520 mg elemental at MgO's ~60% elemental content per PMID 41872423 table 2) also null (p=0.67). All forms tested are DIFFERENT SALTS: citrate, oxide, aspartate, hydrochloride - no bisglycinate trial exists for cramps outside pregnancy.",
-        "bodyIsRct": true,
-        "checklist": {
-          "risk_of_bias": "supported",
-          "consistency": "supported",
-          "precision": "supported",
-          "directness": "supported",
-          "publication_bias": "supported"
-        },
-        "gates": {
-          "rctCount": 7,
-          "largestRctN": 184,
-          "longestRctWeeks": 8,
-          "chronicOutcome": true,
-          "surrogate": false,
-          "allPositiveIndustryOrOneLab": false
-        },
-        "formFit": "2",
-        "doseFit": "4",
-        "effective_daily_range": "No effective range exists: the null trials span roughly 250-520 mg/day elemental magnesium (Kuusipalo 250 mg hydrochloride, Roguin Maor ~520 mg as 865 mg oxide, Cochrane trials citrate/oxide/aspartate). Reading A places 300 mg squarely inside the band that failed."
-      },
-      "detail": {
-        "effect": {
-          "found": "A well-measured absence: 0.18 fewer cramps a week, and the high-certainty responder analysis puts the chance of a 25% improvement at 1.04 times placebo.",
-          "missing": "Nothing important. The CI is narrow enough to exclude the benefit people buy magnesium for, and a 2026 independent trial reproduced the null at this product's elemental dose.",
-          "move": "Nothing would rescue a benefit here short of a large trial on this exact chelate."
-        },
-        "evidence": {
-          "found": "A Cochrane review that obtained participant-level data for 4 trials including one unpublished, a 2026 meta-analysis that reproduces the null (-0.42 cramps/week), two post-Cochrane RCTs and a 2026 cohort where supplement users had MORE cramps.",
-          "missing": "Bisglycinate specifically has never been tested in this population.",
-          "move": "A 200+ person RCT of 300 mg elemental bisglycinate in nocturnal leg cramps."
-        },
-        "form": {
-          "found": "Four different magnesium salts have been tested and all failed; the active in all of them is elemental magnesium.",
-          "missing": "A form-specific trial. The only clearly positive cramp trial used a proprietary magnesium-oxide-monohydrate and was funded by its manufacturer (PMID 34719399) - a positive-signal reliability problem, not a reason to doubt the null.",
-          "move": "An independent replication of the magnesium-oxide-monohydrate result, and any bisglycinate trial."
-        },
-        "dose": {
-          "found": "Your elemental dose is inside the range that has been tested and failed - this is 'tested and did not work', not 'never tested'.",
-          "missing": "Nothing meaningful; higher doses were also null and cause diarrhoea in 11-37% of users.",
-          "move": "Nothing."
-        }
-      },
-      "inventory": [
-        {
-          "id": "PMID 32956536 / 10.1002/14651858.CD009402.pub3",
-          "year": 2020,
-          "design": "sr_ma",
-          "n": 735,
-          "direction": "none",
-          "access": "abstract",
-          "note": "Umbrella row; publisher blocks full-text XML, abstract + plain-language summary read in full. Idiopathic subset 5 RCTs/307 participants. Its included RCTs are pooled_in and are not counted separately."
-        },
-        {
-          "id": "PMID 41680812 / 10.1186/s13063-025-09370-z",
-          "year": 2026,
-          "design": "rct",
-          "n": 121,
-          "direction": "none",
-          "access": "full_text",
-          "note": "standalone (post-Cochrane). DIFFERENT SALT: 620 mg magnesium hydrochloride = 250 mg elemental, 4 wk, Finland, independent funding; compression stockings beat placebo in the same trial."
-        },
-        {
-          "id": "PMID 28241153 / 10.1001/jamainternmed.2016.9261",
-          "year": 2017,
-          "design": "rct",
-          "n": 94,
-          "direction": "none",
-          "access": "abstract",
-          "note": "pooled_in PMID 32956536. DIFFERENT SALT: magnesium oxide 865 mg (~520 mg elemental), 4 wk, Israel."
-        },
-        {
-          "id": "PMID 34719399 / 10.1186/s12937-021-00747-9",
-          "year": 2021,
-          "design": "rct",
-          "n": 184,
-          "direction": "benefit",
-          "access": "full_text",
-          "note": "standalone, post-Cochrane, the ONLY positive trial: proprietary Mg oxide monohydrate 226 mg, 60 d, -3.4 vs -2.6 episodes (p=0.01). Funded by Naveh Pharma; registered retrospectively."
-        },
-        {
-          "id": "PMID 41697399 / 10.1007/s00394-026-03910-2",
-          "year": 2026,
-          "design": "cohort",
-          "n": 3887,
-          "direction": "harm",
-          "access": "abstract",
-          "note": "standalone. Prospective: magnesium users had a HIGHER incidence of night cramps - almost certainly confounding by indication, recorded because it is the opposite of the marketing claim."
-        },
-        {
-          "id": "PMID 41812583 / 10.1016/j.identj.2026.109488",
-          "year": 2026,
-          "design": "sr_ma",
-          "n": 396,
-          "direction": "none",
-          "access": "full_text",
-          "note": "Umbrella row; its 4 nocturnal-cramp trials overlap Cochrane and Barna - do not add. RoB2, random-effects, PROSPERO CRD420251120631, search to Aug 2025. Source for Roguin Maor's 865 mg dose."
-        }
-      ],
-      "absolute_effect": "-0.18 cramps per week vs placebo (95% CI -0.84 to +0.49) at 4 weeks (Cochrane); -0.42 cramps/week (95% CI -1.15 to +0.31) in the 2026 meta-analysis; 25%-responder RR 1.04 (95% CI 0.84 to 1.29).",
-      "clinically_meaningful": "no - the high-certainty responder analysis excludes the >=25% reduction in cramp rate Cochrane pre-specified as the clinically relevant threshold, and the authors state the effect is unlikely to be clinically meaningful.",
-      "strongest_study": "Cochrane CD009402.pub3 (PMID 32956536): 5 idiopathic-cramp RCTs, 307 participants, participant-level data obtained for 4 trials, I2 0-12%, high-certainty null on the responder endpoint - and a 2026 meta-analysis of 4 trials reaches the same answer.",
-      "strongest_doubt": "One 175-person trial of a proprietary magnesium oxide monohydrate did beat placebo (PMID 34719399), but it was funded by that product's manufacturer and registered retrospectively; no independent group has reproduced it.",
-      "study_that_would_move_this": "An independent, registered 200+ person RCT of magnesium bisglycinate 300 mg elemental for nocturnal leg cramps, with the >=25% responder rate as primary endpoint."
-    },
-    {
-      "name": "Leg cramps in pregnancy",
-      "population": "Pregnant women with 2+ leg cramps a week",
-      "studied_in": {
-        "sex": "female",
-        "sex_note": "100% female by definition: pregnant women in Thailand, Brazil, Norway, Sweden",
-        "age_min": null,
-        "age_max": null,
-        "age_note": "maternal ages not reported by the exact-form trial or the 2026 pooled table",
-        "ethnicity": "not reported; exact-form trial run in Thailand, pooled trials Nordic/Brazil",
-        "confidence": "verified"
-      },
-      "sentence": "On this exact form at 300 mg elemental: one 86-woman trial and a 2026 pooled RR of 1.35 (CI 1.05-1.74) favour it; an earlier pooled analysis found nothing.",
-      "ledger": {
-        "effectPoints": "1",
-        "effect_basis": "Supakatisant & Phupong 2015 (PMID 22909270, abstract; dose verified independently from the Adv Nutr 2023 table as 'Mg bisglycinate chelate 300 mg (12.3 mmol)', i.e. 300 mg ELEMENTAL, PMID 37487817 full text): 86 pregnant women, 4 wk, 50% reduction in cramp frequency 86.0% vs 60.5% (p=0.007), 50% reduction in intensity 69.8% vs 48.8% (p=0.048). NEWEST SYNTHESIS: 2026 SR/MA (PMID 41812583, full text, PROSPERO CRD420251120631, RoB2, random-effects) pools 4 pregnancy trials, N approx 364: RR 1.35 (95% CI 1.05 to 1.74, p=0.02) for reduced cramp frequency, and rates Supakatisant at LOW risk of bias. THE REVIEWS DISAGREE: Cochrane CD009402.pub3 rates all 5 pregnancy trials at HIGH risk of bias and could not pool them; Cochrane CD010655.pub3 (PMID 33275278, abstract via NCBI efetch, 8 trials/576 women) calls the magnesium results inconsistent - RR 1.42 (95% CI 1.09 to 1.86) for a 50% reduction in the 86-woman trial at LOW certainty, pain VAS -17.5 mm (95% CI -34.7 to -0.3, 69 women), alongside other analyses showing little or no difference; and Hsu 2021 (PMID 34247796, abstract, 4 RCTs, 332 women) pools cramp frequency as a continuous outcome and finds WMD -0.47 (95% CI -1.14 to 0.20, p=0.167), concluding magnesium is not effective. The positive signal is consistently on the DICHOTOMOUS >=50%-responder endpoint and the null on continuous frequency.",
-        "bodyIsRct": true,
-        "checklist": {
-          "risk_of_bias": "concern",
-          "consistency": "concern",
-          "precision": "concern",
-          "directness": "supported",
-          "publication_bias": "unknown"
-        },
-        "gates": {
-          "rctCount": 5,
-          "largestRctN": 86,
-          "longestRctWeeks": 4,
-          "chronicOutcome": true,
-          "surrogate": false,
-          "allPositiveIndustryOrOneLab": false
-        },
-        "formFit": "4",
-        "doseFit": "4",
-        "effective_daily_range": "300 mg/day ELEMENTAL magnesium as bisglycinate is exactly the dose of the one positive trial (12.3 mmol). Reading A therefore gives a perfect dose match; Reading B (42 mg elemental) would be 14% of it, doseFit 0-1."
-      },
-      "detail": {
-        "effect": {
-          "found": "The only trial using this exact chelate at this exact elemental dose had 86% vs 60.5% of women halve their cramp frequency, and a 2026 meta-analysis of 4 pregnancy trials pools to RR 1.35 (1.05-1.74).",
-          "missing": "An earlier meta-analysis pooling frequency as a continuous outcome found nothing (-0.47/week, CI -1.14 to 0.20), and Cochrane rates every pregnancy trial at high risk of bias with inconsistent results across endpoints and time points.",
-          "move": "One adequately powered, registered trial (n>=300) in pregnancy with a pre-stated responder definition."
-        },
-        "evidence": {
-          "found": "Two Cochrane reviews and two meta-analyses have looked at this question since 2020 - the search is not the problem.",
-          "missing": "They disagree. Cochrane calls the pregnancy trials high risk of bias, the 2026 review calls the key trial low risk; one pooled analysis is positive on responders and one is null on mean frequency. Certainty stays low to very low: small trials, incompatible endpoints.",
-          "move": "A single trial big enough to settle it, with cramp diaries and blinding described."
-        },
-        "form": {
-          "found": "Exact form. This is the only population where magnesium bisglycinate itself was the tested intervention outside the sleep trial.",
-          "missing": "Independent replication on this form; one trial that two review teams grade differently for bias is not a form verdict.",
-          "move": "A replication of Supakatisant 2015 by an independent group."
-        },
-        "dose": {
-          "found": "Exact elemental dose match (300 mg = 12.3 mmol), verified from a second source because the trial's own full text was paywalled.",
-          "missing": "Nothing on dose - but pregnancy is a distinct population and pregnant women should follow their clinician, not a label.",
-          "move": "Nothing on dose."
-        }
-      },
-      "inventory": [
-        {
-          "id": "PMID 22909270 / 10.1111/j.1740-8709.2012.00440.x",
-          "year": 2015,
-          "design": "rct",
-          "n": 86,
-          "direction": "benefit",
-          "access": "abstract",
-          "note": "pooled_in PMID 33275278 + 32956536 (probably 34247796, unverified). EXACT FORM: Mg bisglycinate chelate 300 mg elemental, 4 wk, Thailand; Cochrane rates it high risk of bias."
-        },
-        {
-          "id": "PMID 33275278 / 10.1002/14651858.CD010655.pub3",
-          "year": 2020,
-          "design": "sr_ma",
-          "n": 576,
-          "direction": "unclear",
-          "access": "abstract",
-          "note": "Umbrella row (abstract read in full via NCBI efetch). 8 trials, no meta-analysis possible; magnesium results inconsistent, low/very-low certainty."
-        },
-        {
-          "id": "PMID 34247796 / 10.1016/j.tjog.2021.05.006",
-          "year": 2021,
-          "design": "sr_ma",
-          "n": 332,
-          "direction": "none",
-          "access": "abstract",
-          "note": "Umbrella row, overlaps the two Cochrane reviews - do not add. Pooled frequency WMD -0.47 (-1.14 to 0.20), p=0.167; PROSPERO CRD42020196572."
-        },
-        {
-          "id": "PMID 41812583 / 10.1016/j.identj.2026.109488",
-          "year": 2026,
-          "design": "sr_ma",
-          "n": 364,
-          "direction": "benefit",
-          "access": "full_text",
-          "note": "Umbrella row, overlaps the rows above - do not add. Pregnancy cramps RR 1.35 (1.05-1.74), p=0.02, 4 trials; rates Supakatisant LOW risk of bias, directly contradicting Cochrane CD009402."
-        },
-        {
-          "id": "PMID 31923242 / 10.1371/journal.pone.0227497",
-          "year": 2020,
-          "design": "nrct",
-          "n": 165,
-          "direction": "benefit",
-          "access": "abstract",
-          "note": "standalone, observational controlled trial (not randomised) - listed for completeness and excluded from the verdict."
-        }
-      ],
-      "absolute_effect": "Pooled RR 1.35 (95% CI 1.05 to 1.74) for reduced cramp frequency across 4 trials (N approx 364); in the exact-form trial 86.0% vs 60.5% halved their cramp frequency, a 25-point absolute gain, about 4 women treated per extra responder.",
-      "clinically_meaningful": "unknown - halving cramp frequency is the threshold the trials themselves used and would matter to a patient, and the 2026 pooled RR excludes 1.0; but the competing pooled analysis of mean frequency includes zero, and all certainty ratings are low or very low.",
-      "strongest_study": "Supakatisant & Phupong 2015 (PMID 22909270): the only RCT anywhere using this exact chelate at this exact elemental dose, with a pre-defined 50%-responder endpoint - and the 2026 meta-analysis (PMID 41812583) grades it low risk of bias and pools 4 trials to RR 1.35.",
-      "strongest_doubt": "Cochrane grades the same trial HIGH risk of bias and refuses to pool it; the meta-analysis that pooled mean cramp frequency instead of responders found nothing (-0.47/week, CI -1.14 to 0.20). Two teams reading the same papers reach opposite conclusions.",
-      "study_that_would_move_this": "A registered 300-woman RCT of 300 mg elemental bisglycinate vs placebo in pregnancy with cramp diaries and a pre-stated 50%-responder primary endpoint."
-    },
-    {
-      "name": "Raising a low magnesium level",
-      "population": "Adults with low or borderline magnesium",
-      "studied_in": {
-        "sex": "mixed",
-        "sex_note": "repletion RCT 34/71 men (48%); the bisglycinate PK study gives no sex split",
-        "age_min": 20,
-        "age_max": null,
-        "age_note": "PK study 20-55; repletion RCT mean 68.7 (SD 6.0), upper age limit not stated",
-        "ethnicity": "repletion RCT all older Chinese adults; Spanish PK study reports no breakdown",
-        "confidence": "verified"
-      },
-      "sentence": "360 mg/day of oxide raised plasma magnesium 0.056 mmol/L in deficient elders; 300 mg elemental is inside the 200-400 mg range clinicians use to repletion.",
-      "ledger": {
-        "effectPoints": "2",
-        "effect_basis": "Direct repletion evidence: 2026 RCT in hypomagnesaemic older adults with pre-diabetes (PMID 41756632, full text, n=71, plasma Mg <=0.80 mmol/L at entry, 360 mg elemental/day as magnesium OXIDE for 4 months) raised plasma magnesium by 0.056 mmol/L vs placebo (95% CI 0.028 to 0.085, p<0.001) and cut fasting glucose by 0.497 mmol/L (95% CI -0.818 to -0.176). Clinical practice anchor: Curr Nutr Rep 2026 hypomagnesaemia update (PMID 41872423, full text) - first-line oral options for mild-to-moderate hypomagnesaemia are organic salts including glycinate/bisglycinate at 200-400 mg elemental/day in divided doses, and it tabulates bisglycinate at ~14-15% elemental magnesium; hypomagnesaemia affects 1.5-15% of the general population and up to 48% of US adults eat below the EAR. FORM CAVEAT: the only human study that put bisglycinate head-to-head found NO significant plasma rise from it over 6 hours at a 375 mg elemental single dose, while oxide and citrate did rise (PMID 39770988, full text) - a competitor-funded acute PK study, so weak in both directions, but it is the only human comparison that exists.",
-        "bodyIsRct": true,
-        "checklist": {
-          "risk_of_bias": "supported",
-          "consistency": "concern",
-          "precision": "supported",
-          "directness": "concern",
-          "publication_bias": "unknown"
-        },
-        "gates": {
-          "rctCount": 2,
-          "largestRctN": 71,
-          "longestRctWeeks": 16,
-          "chronicOutcome": true,
-          "surrogate": true,
-          "allPositiveIndustryOrOneLab": false
-        },
-        "formFit": "2",
-        "doseFit": "4",
-        "effective_daily_range": "200-400 mg/day ELEMENTAL magnesium for oral repletion (clinical review), with the verified RCT at 360 mg elemental. Reading A puts 300 mg inside it; Reading B (42 mg elemental) is a fifth of the low end and would not repletion anyone."
-      },
-      "detail": {
-        "effect": {
-          "found": "Oral magnesium does what it is supposed to do: +0.056 mmol/L plasma magnesium over 4 months in people who started below 0.80 mmol/L, with the CI well clear of zero.",
-          "missing": "This is a blood number, not a symptom. No trial shows that correcting a borderline level makes an asymptomatic person feel different - that missing link is the whole reason this row is capped.",
-          "move": "A trial that enrols people by measured magnesium status and reports symptoms (sleep, cramps, fatigue), not just serum."
-        },
-        "evidence": {
-          "found": "One clean 4-month RCT in a genuinely deficient population, plus a 2026 clinical review that names the same dose range as first-line care.",
-          "missing": "I verified 2 RCTs live for this outcome; dozens more report serum magnesium as a secondary endpoint and were not individually checked. Serum magnesium is also a poor marker of body stores (~1% of body magnesium is extracellular) - a 2026 narrative review is titled 'Why Serum Magnesium Fails'.",
-          "move": "An RBC-magnesium or magnesium-retention-test endpoint in a repletion RCT of this chelate."
-        },
-        "form": {
-          "found": "A 2026 clinical review lists bisglycinate as a first-line organic salt with high bioavailability and minimal GI upset.",
-          "missing": "That listing is expert judgement, not a trial. The one human head-to-head found no significant plasma rise from bisglycinate at all - and it was funded by the maker of the comparator product, so treat it as a warning, not a refutation.",
-          "move": "An independent crossover PK/retention study of bisglycinate vs citrate at matched elemental dose."
-        },
-        "dose": {
-          "found": "Under Reading A, 300 mg elemental sits inside both the guideline range (200-400 mg) and under the 350 mg/day supplemental upper limit.",
-          "missing": "Under Reading B the product delivers ~42 mg elemental and cannot correct a deficiency at all. This single label ambiguity decides the row.",
-          "move": "A label that states the elemental magnesium content explicitly."
-        }
-      },
-      "inventory": [
-        {
-          "id": "PMID 41756632 / 10.3389/fnut.2026.1765308",
-          "year": 2026,
-          "design": "rct",
-          "n": 71,
-          "direction": "benefit",
-          "access": "full_text",
-          "note": "standalone. DIFFERENT SALT: magnesium oxide 360 mg elemental, 16 wk, hypomagnesaemic pre-diabetic elders; tablets supplied by Amway, funded by Chinese CDC institutes; 91.6% compliance."
-        },
-        {
-          "id": "PMID 39770988 / 10.3390/nu16244367",
-          "year": 2024,
-          "design": "rct",
-          "n": 40,
-          "direction": "none",
-          "access": "full_text",
-          "note": "standalone. Acute crossover PK, single 375 mg elemental dose: bisglycinate produced NO significant plasma rise; oxide +7.1% at 1 h, citrate +7.5% at 4 h. Funded by Lubrizol (comparator's maker)."
-        },
-        {
-          "id": "PMID 41872423 / 10.1007/s13668-026-00745-5",
-          "year": 2026,
-          "design": "other",
-          "n": 0,
-          "direction": "benefit",
-          "access": "full_text",
-          "note": "Narrative clinical/nutritional update, not evidence mass. Source for the ~14-15% elemental content of bisglycinate and the 200-400 mg elemental/day first-line repletion range."
-        },
-        {
-          "id": "PMID 42709016 / 10.1080/19390211.2026.2727023",
-          "year": 2026,
-          "design": "other",
-          "n": 0,
-          "direction": "unclear",
-          "access": "abstract",
-          "note": "IN VITRO only (SHIME gut simulator) comparison of two bisglycinate brands. No human data; recorded so it is not mistaken for clinical evidence."
-        }
-      ],
-      "absolute_effect": "+0.056 mmol/L plasma magnesium (95% CI 0.028 to 0.085) after 16 weeks at 360 mg elemental/day in adults starting at or below 0.80 mmol/L.",
-      "clinically_meaningful": "unknown - the rise is enough to lift many people over the 0.80 mmol/L hypomagnesaemia cut-off used in that trial and in the 2026 clinical update, but no trial has shown that crossing it changes how an asymptomatic person feels.",
-      "strongest_study": "PMID 41756632 (2026): 16-week double-blind RCT in genuinely hypomagnesaemic older adults, ICP-MS plasma magnesium, ITT with 91.6% compliance.",
-      "strongest_doubt": "It used magnesium oxide, not this chelate, and the only human study to test bisglycinate's absorption directly found no plasma rise at all - so the 'highly absorbable' selling point is unproven in humans.",
-      "study_that_would_move_this": "A 12-week RCT of 300 mg elemental bisglycinate vs citrate vs placebo in adults with serum magnesium below 0.80 mmol/L, reporting serum AND red-cell magnesium plus symptoms."
-    },
-    {
-      "name": "Migraine prevention",
-      "population": "Adults with episodic migraine",
-      "studied_in": {
-        "sex": "mixed",
-        "sex_note": "Pfaffenrath 64/69 women (93%); Peikert and Koseoglu report no sex split",
-        "age_min": 18,
-        "age_max": 65,
-        "age_note": "Peikert 18-65, Pfaffenrath 18-64, Koseoglu 20-55; nobody over 65 enrolled",
-        "ethnicity": "not reported; German multicentre and Turkish single-centre trials",
-        "confidence": "verified"
-      },
-      "sentence": "Level B \"probably effective\" rests on 600 mg/day of citrate salts (attacks -42% vs -16%); 300 mg elemental is half that, and one trial found nothing.",
-      "ledger": {
-        "effectPoints": "1",
-        "effect_basis": "Guideline: AAN/AHS 2012 (PMID 22529203, abstract) rates magnesium Level B, 'probably effective for migraine prevention'. Positive pivotal trial: Peikert 1996 (PMID 8792038, abstract) n=81, 600 mg elemental/day as TRIMAGNESIUM DICITRATE, 12 wk - attack frequency -41.6% vs -15.8% at weeks 9-12 (p<0.05), diarrhoea 18.6%. Null trial: Pfaffenrath 1996 (PMID 8902254, abstract) n=69, 20 mmol/day (~486 mg elemental) as magnesium aspartate hydrochloride, 12 wk - responders 28.6% vs 29.4%, stopped at interim analysis, diarrhoea 45.7% vs 23.5%. Koseoglu 2008 (PMID 18705538, abstract) n=40 with only 10 controls, 600 mg citrate, positive. Meta-analyses disagree: Rajapakse & Pringsheim 2019 (PMID 30764890) severity ratio of means -0.17 (95% CI -0.36 to +0.02), 3 trials/226 participants, LOW strength, 'it is unknown if magnesium is effective'; Chiu 2016 (PMID 26752497) reports oral magnesium reduced frequency and intensity (ORs 0.20, 0.27) but with weak randomisation in included trials; a 2025 dose-response meta-analysis (PMID 39404918) gives magnesium -2.51 attacks and -1.66 monthly migraine days (no CIs in the abstract). Cochrane CD016307 (PMID 41216917, full text) is a PROTOCOL published Nov 2025 - no Cochrane answer exists yet. NO trial has used bisglycinate for migraine.",
-        "bodyIsRct": true,
-        "checklist": {
-          "risk_of_bias": "concern",
-          "consistency": "concern",
-          "precision": "concern",
-          "directness": "supported",
-          "publication_bias": "unknown"
-        },
-        "gates": {
-          "rctCount": 5,
-          "largestRctN": 81,
-          "longestRctWeeks": 12,
-          "chronicOutcome": true,
-          "surrogate": false,
-          "allPositiveIndustryOrOneLab": false
-        },
-        "formFit": "2",
-        "doseFit": "2",
-        "effective_daily_range": "600 mg/day ELEMENTAL magnesium as citrate/dicitrate in the positive trials; the null trial used ~486 mg as aspartate hydrochloride. Reading A makes 300 mg exactly half the effective dose (doseFit 2); Reading B (42 mg) is 7% of it (doseFit 0-1)."
-      },
-      "detail": {
-        "effect": {
-          "found": "A guideline body calls magnesium probably effective, and the pivotal trial cut attack frequency by 42% vs 16% over 12 weeks.",
-          "missing": "A same-era multicentre trial at a similar dose found nothing and was stopped early; the 2019 meta-analysis of severity cannot exclude no effect; no trial reports the absolute reduction in monthly migraine days with a CI at this product's dose.",
-          "move": "A modern registered RCT with monthly migraine days as the primary endpoint."
-        },
-        "evidence": {
-          "found": "Five placebo-controlled RCTs, three meta-analyses, and a live Cochrane review in progress.",
-          "missing": "The trials are 1996-2008, small (largest n=81), and disagree; the newest Cochrane record is only a protocol, so there is no current high-quality synthesis. Meta-analyses that report benefit include trials with inadequate randomisation.",
-          "move": "The completed Cochrane review (CD016307) and one adequately powered modern trial."
-        },
-        "form": {
-          "found": "Nothing. Every trial used dicitrate, citrate or aspartate hydrochloride.",
-          "missing": "Any bisglycinate migraine trial. Transfer assumes only elemental magnesium matters, which is plausible but untested for this outcome.",
-          "move": "A trial of a chelated form at 600 mg elemental."
-        },
-        "dose": {
-          "found": "Under Reading A, this product provides half the elemental dose used in the positive trials.",
-          "missing": "No migraine trial has tested 300 mg elemental, so the product's dose is an extrapolation downward from where benefit was seen. Note the effective dose caused diarrhoea in 19-46% of participants.",
-          "move": "A dose-ranging trial at 300 vs 600 mg elemental."
-        }
-      },
-      "inventory": [
-        {
-          "id": "PMID 22529203 / 10.1212/WNL.0b013e3182535d0c",
-          "year": 2012,
-          "design": "other",
-          "n": 0,
-          "direction": "benefit",
-          "access": "abstract",
-          "note": "AAN/AHS evidence-based guideline update; magnesium Level B (probably effective). Guideline, not evidence mass; evidence base is the trials below."
-        },
-        {
-          "id": "PMID 8792038 / 10.1046/j.1468-2982.1996.1604257.x",
-          "year": 1996,
-          "design": "rct",
-          "n": 81,
-          "direction": "benefit",
-          "access": "abstract",
-          "note": "standalone; pooled_in PMID 30764890 and PMID 26752497. DIFFERENT SALT: trimagnesium dicitrate 600 mg elemental, 12 wk, multicentre."
-        },
-        {
-          "id": "PMID 8902254 / 10.1046/j.1468-2982.1996.1606436.x",
-          "year": 1996,
-          "design": "rct",
-          "n": 69,
-          "direction": "none",
-          "access": "abstract",
-          "note": "standalone; pooled_in PMID 30764890. DIFFERENT SALT: magnesium aspartate hydrochloride ~486 mg elemental; stopped at interim for futility (10 vs 10 responders)."
-        },
-        {
-          "id": "PMID 30764890 / 10.1017/cjn.2018.394",
-          "year": 2019,
-          "design": "sr_ma",
-          "n": 226,
-          "direction": "none",
-          "access": "abstract",
-          "note": "Umbrella row. Severity ratio of means -0.17 (95% CI -0.36 to 0.02), 3 trials, low strength of evidence; frequency not poolable."
-        },
-        {
-          "id": "PMID 39404918 / 10.1007/s10072-024-07794-0",
-          "year": 2025,
-          "design": "sr_ma",
-          "n": 22,
-          "direction": "benefit",
-          "access": "abstract",
-          "note": "Umbrella row (22 trials across all supplements). Magnesium: -2.51 attacks, -1.66 monthly migraine days, -0.88 severity; no CIs or per-nutrient GRADE in the abstract."
-        },
-        {
-          "id": "PMID 41216917 / 10.1002/14651858.CD016307",
-          "year": 2025,
-          "design": "other",
-          "n": 0,
-          "direction": "unclear",
-          "access": "full_text",
-          "note": "PROTOCOL ONLY, published 11 Nov 2025 - 'Data sharing is not applicable to this article as it is a protocol'. Recorded so nobody cites it as a Cochrane conclusion."
-        },
-        {
-          "id": "PMID 33827421 / 10.1186/s10194-021-01234-6",
-          "year": 2021,
-          "design": "rct",
-          "n": 222,
-          "direction": "benefit",
-          "access": "abstract",
-          "note": "standalone but INELIGIBLE for a placebo comparison: all three arms received active treatment (magnesium, sodium valproate, or both) - no placebo arm, so it cannot show magnesium beats nothing."
-        }
-      ],
-      "absolute_effect": "Attack frequency fell 41.6% vs 15.8% from baseline over 12 weeks at 600 mg elemental/day (no between-group CI published); the 2025 dose-response meta-analysis reports -1.66 monthly migraine days without a CI in the abstract.",
-      "clinically_meaningful": "unknown - the field's usual bar is a 50% responder rate or >=1.5 fewer monthly migraine days (the standard preventive-trial threshold); the pivotal trial reports neither with a confidence interval, and no trial tested this product's dose.",
-      "strongest_study": "Peikert 1996 (PMID 8792038): 81 patients, 12 weeks, prospective 4-week baseline, multicentre, double-blind, and the trial that carries the guideline's Level B rating.",
-      "strongest_doubt": "A same-year multicentre trial at a similar dose was stopped early for futility, and the 2019 meta-analysis's severity estimate cannot exclude no effect; the only Cochrane record is a 2025 protocol.",
-      "study_that_would_move_this": "A registered, 200+ person, 3-month RCT of magnesium bisglycinate 300 mg vs 600 mg elemental vs placebo with monthly migraine days as the primary endpoint."
-    },
-    {
-      "name": "Constipation relief",
-      "population": "Adults with chronic constipation",
-      "studied_in": {
-        "sex": "mixed",
-        "sex_note": "93% women in the single pivotal trial (84 of 90); about 6 men studied in total",
-        "age_min": null,
-        "age_max": null,
-        "age_note": "mean age 42; no age range in the abstract, full text not accessible",
-        "ethnicity": "not reported; single-centre trial in Japan",
-        "confidence": "verified"
-      },
-      "sentence": "The laxative evidence is magnesium oxide 1.5 g/day (~900 mg elemental): 68% vs 12% improved. An absorbed chelate at 300 mg is a different thing entirely.",
-      "ledger": {
-        "effectPoints": "2",
-        "effect_basis": "Morishita 2021 (PMID 32969946, abstract): 90 adults with chronic idiopathic constipation, double-blind, randomised, placebo-controlled, 28 days - overall improvement 68.3% on magnesium OXIDE 1.5 g/day (~900 mg elemental) vs 11.7% on placebo (p<0.0001), with significant gains in spontaneous bowel movements and constipation quality of life; senna performed the same (69.2%). Graded 2 rather than 3 because the body is a single placebo-controlled trial in adults: no meta-analysis, and the rest of the literature is retrospective or in opioid-induced/paediatric populations. Mechanism matters here in the wrong direction for this product: the laxative action is osmotic and depends on magnesium staying in the bowel, whereas a bisglycinate chelate is marketed and formulated to be absorbed. Consistent with that, the exact-form sleep trial recorded 2 adverse events on 250 mg elemental bisglycinate vs 7 on placebo (PMID 40918053). Chronic magnesium oxide at laxative doses also carries a real hypermagnesaemia risk (PMID 31379418).",
-        "bodyIsRct": true,
-        "checklist": {
-          "risk_of_bias": "unknown",
-          "consistency": "unknown",
-          "precision": "supported",
-          "directness": "supported",
-          "publication_bias": "unknown"
-        },
-        "gates": {
-          "rctCount": 1,
-          "largestRctN": 90,
-          "longestRctWeeks": 4,
-          "chronicOutcome": true,
-          "surrogate": false,
-          "allPositiveIndustryOrOneLab": false
-        },
-        "formFit": "1",
-        "doseFit": "1",
-        "effective_daily_range": "~900 mg/day ELEMENTAL magnesium as poorly absorbed magnesium OXIDE (1.5 g of the salt). Reading A makes this product one third of that in a form designed not to act osmotically; Reading B (42 mg elemental) is ~5%."
-      },
-      "detail": {
-        "effect": {
-          "found": "A large, clean effect for magnesium oxide: 68.3% vs 11.7% overall improvement, equal to senna, with better quality-of-life scores.",
-          "missing": "That effect belongs to a poorly absorbed salt at roughly three times this product's elemental dose. Nothing shows an absorbed chelate at 300 mg does the same; if anything the exact-form trial reported fewer GI events than placebo.",
-          "move": "A placebo-controlled trial of magnesium bisglycinate 300 mg elemental with spontaneous bowel movements as the primary endpoint."
-        },
-        "evidence": {
-          "found": "One properly randomised, double-blind, placebo-controlled trial in adults - the trial the authors themselves call the first of its kind - plus wide clinical use of magnesium oxide as an osmotic laxative.",
-          "missing": "Only one such trial exists, at a single centre with 93% women, and I could read only its abstract, so risk of bias could not be assessed. There is no systematic review of oral magnesium salts vs placebo for chronic constipation.",
-          "move": "A meta-analysis or a second placebo-controlled trial, ideally comparing salts head-to-head."
-        },
-        "form": {
-          "found": "Nothing transferable. The tested form is magnesium oxide; the mechanism is osmotic retention in the gut.",
-          "missing": "The chelate's whole design point - absorption - works against the laxative mechanism, so this is not a form mismatch that can be waved through as 'plausible equivalence'.",
-          "move": "A direct comparison of bisglycinate vs oxide on stool frequency at matched elemental dose."
-        },
-        "dose": {
-          "found": "Nothing at 300 mg elemental. The tested dose is ~900 mg elemental.",
-          "missing": "300 mg elemental is below the US supplemental upper limit precisely because it is below the dose where magnesium reliably loosens stools; the effective laxative dose is also the dose that causes diarrhoea by design.",
-          "move": "A dose-ranging bowel-movement trial."
-        }
-      },
-      "inventory": [
-        {
-          "id": "PMID 32969946 / 10.14309/ajg.0000000000000942",
-          "year": 2021,
-          "design": "rct",
-          "n": 90,
-          "direction": "benefit",
-          "access": "abstract",
-          "note": "standalone. DIFFERENT SALT AND DOSE: magnesium oxide 1.5 g/day (~900 mg elemental), 28 days, three arms (senna / MgO / placebo), all 90 completed."
-        },
-        {
-          "id": "PMID 33136565 / 10.14309/ajg.0000000000001041",
-          "year": 2021,
-          "design": "other",
-          "n": 0,
-          "direction": "unclear",
-          "access": "abstract",
-          "note": "Correspondence about PMID 32969946 - same data, no new evidence. Recorded to prevent double counting."
-        },
-        {
-          "id": "PMID 31379418 / 10.3164/jcbn.18-117",
-          "year": 2019,
-          "design": "case_series",
-          "n": 0,
-          "direction": "harm",
-          "access": "abstract",
-          "note": "standalone safety signal: hypermagnesaemia in patients on daily magnesium oxide for functional constipation. Relevant to the high-dose oxide route, not to 300 mg of chelate."
-        },
-        {
-          "id": "PMID 33481179 / 10.1007/s12519-020-00401-0",
-          "year": 2021,
-          "design": "rct",
-          "n": 0,
-          "direction": "benefit",
-          "access": "abstract",
-          "note": "DIFFERENT POPULATION (children with spastic cerebral palsy) - excluded from this row's count, listed so the search trail is complete."
-        }
-      ],
-      "absolute_effect": "68.3% vs 11.7% of patients reported overall improvement after 28 days on magnesium oxide 1.5 g/day (~900 mg elemental), p<0.0001 - a ~57 percentage-point absolute gain.",
-      "clinically_meaningful": "yes for magnesium oxide at that dose - the endpoint was patient-reported overall improvement plus spontaneous bowel movements, the thresholds used in constipation drug trials. Unknown for this product, which was never tested.",
-      "strongest_study": "Morishita 2021 (PMID 32969946): the first double-blind, placebo-controlled trial of an osmotic magnesium salt for chronic idiopathic constipation, 90 patients, no dropouts.",
-      "strongest_doubt": "It tells you nothing about this product: different salt, ~3x the elemental dose, and a mechanism (staying in the bowel) that a bisglycinate chelate is specifically formulated to avoid.",
-      "study_that_would_move_this": "A placebo-controlled trial of magnesium bisglycinate 300 mg elemental in chronic idiopathic constipation with complete spontaneous bowel movements as the primary endpoint."
+    "dose": {
+     "found": "Under Reading A, 300 mg elemental is 20% above the 250 mg elemental dose that produced the signal and inside the 250-500 mg tested band.",
+     "missing": "Nothing was tested above 500 mg for this outcome in adults under 65, and Reading B (42 mg elemental) is below anything ever tested.",
+     "move": "A dose-ranging trial (150 vs 300 vs 450 mg elemental) on ISI."
     }
-  ],
-  "searches_run": [
-    "Europe PMC REST search: 'magnesium bisglycinate' (130 hits, resultType=core, pageSize=25)",
-    "Europe PMC REST search: 'magnesium AND sleep quality AND randomized' (5,085 hits, scoped)",
-    "Europe PMC REST search: 'TITLE:\"magnesium\" AND (TITLE:\"sleep\" OR TITLE:\"insomnia\")' (60 hits)",
-    "Europe PMC REST search: 'TITLE:\"Oral magnesium supplementation for insomnia in older adults\"' (3 hits incl. 2024 correction)",
-    "Europe PMC REST search: 'TITLE:\"magnesium\" AND TITLE:\"cramps\"' (33 hits)",
-    "Europe PMC REST search: '(TITLE:\"magnesium\" AND TITLE:\"anxiety\") AND (PUB_TYPE Systematic Review OR Meta-Analysis OR RCT)' (4 hits)",
-    "Europe PMC REST search: 'magnesium AND anxiety AND (Systematic Review OR Meta-Analysis)' (590 hits, triaged)",
-    "Europe PMC REST search: 'TITLE:\"magnesium\" AND (TITLE:\"migraine\" OR TITLE:\"headache\") AND (Meta-Analysis OR Systematic Review)' (4 hits)",
-    "Europe PMC REST search: 'magnesium AND migraine AND prophylaxis AND (RCT OR Meta-Analysis OR Guideline)' (58 hits)",
-    "Europe PMC REST search: 'TITLE:\"magnesium\" AND TITLE:\"prophylaxis of migraine\"' and 'AUTH:\"Peikert\" AND magnesium AND migraine'",
-    "Europe PMC REST search: 'TITLE:\"complementary treatments for episodic migraine prevention\"' (AAN/AHS guideline)",
-    "Europe PMC REST search: 'TITLE:\"magnesium\" AND (TITLE:\"bioavailability\" OR TITLE:\"absorption\" OR TITLE:\"serum magnesium\" OR TITLE:\"magnesium status\")' (1,844 hits, triaged)",
-    "Europe PMC REST search: '(magnesium AND glycine AND (absorption OR bioavailability)) AND (RCT OR Clinical Trial)' (107 hits)",
-    "Europe PMC REST search: 'magnesium supplementation AND hypomagnesemia AND oral AND randomized AND serum magnesium' (925 hits, triaged)",
-    "Europe PMC REST search: '(TITLE:\"magnesium\" AND TITLE:\"constipation\")' (36 hits)",
-    "Europe PMC REST search: 'TITLE:\"tolerable upper intake level\" AND magnesium' (8 hits)",
-    "Europe PMC REST search: 'Supakatisant' (full-text search, 9 hits - used to verify the elemental dose of the bisglycinate pregnancy trial)",
-    "Europe PMC REST search: '(magnesium AND (bisglycinate OR glycinate)) AND (anxiety OR stress OR sleep OR cramp) AND (RCT OR Clinical Trial)' (12 hits - confirms only 2 bisglycinate RCTs exist on these outcomes)",
-    "Europe PMC fullTextXML fetched: PMC12412596 (bisglycinate sleep RCT), PMC12604082 (Cochrane migraine protocol), PMC8053283 + PMC11660779 (Mah & Pitre + correction), PMC5452159 (Boyle 2017), PMC11136869 (Rawji 2024), PMC8559389 (Barna 2021), PMC13005370 (Kuusipalo 2026), PMC12994056 (2026 electrolytes SR/MA), PMC11677548 (MAGSHAPE PK), PMC13009017 (hypomagnesaemia update), PMC10509448 (UL perspective), PMC12932175 (2026 repletion RCT)",
-    "NCBI efetch db=pmc: PMC8094171 (Cochrane CD009402.pub3) and PMC8094374 (Cochrane CD010655.pub3) - abstract + plain-language summary only; publisher blocks full XML",
-    "Europe PMC EXT_ID lookups to verify every cited PMID/DOI resolves to the title quoted: 40918053, 42661485, 33865376, 32956536, 33275278, 22909270, 34247796, 28241153, 34719399, 41680812, 41812583, 28445426, 38817505, 41216917, 22529203, 8792038, 8902254, 18705538, 30764890, 39404918, 26752497, 29131326, 32969946, 33136565, 39770988, 41872423, 41756632, 37487817, 41697399, 39252819, 31379418, 42709016, 33827421",
-    "Europe PMC full-text search: 'Roguin Maor' (10 hits) - used to source the 865 mg/day magnesium oxide dose of PMID 28241153, which its own abstract does not state",
-    "HTTP: https://ods.od.nih.gov/factsheets/Magnesium-HealthProfessional/ - BLOCKED by Cloudflare challenge (recorded in could_not_access)"
-  ],
-  "could_not_access": [
-    "NIH Office of Dietary Supplements magnesium fact sheet - Cloudflare JS challenge; the 350 mg/day supplemental upper limit and its diarrhoea basis were instead verified in the full text of Adv Nutr 2023 (PMID 37487817), which quotes the 1997 IOM derivation directly",
-    "Cochrane CD009402.pub3 (cramps) and CD010655.pub3 (pregnancy leg cramps) full review bodies - 'the publisher of this article does not allow downloading of the full text in XML form'. Read the complete abstract, results paragraphs and plain-language summary; per-trial characteristics tables were NOT seen",
-    "Lopresti 2026 systematic review of magnesium for sleep (PMID 42661485) - abstract only; the identity of all 12 included RCTs and their individual doses could not be read",
-    "Hsu 2021 pregnancy leg-cramp meta-analysis (PMID 34247796) - abstract only; which 4 RCTs were pooled could not be verified, so the overlap with Supakatisant 2015 is stated as probable, not confirmed",
-    "Supakatisant & Phupong 2015 (PMID 22909270) full text - abstract only; the 300 mg = 12.3 mmol ELEMENTAL reading was verified from a second full-text source (PMID 37487817 table)",
-    "Peikert 1996, Pfaffenrath 1996, Koseoglu 2008, Roguin Maor 2017 (JAMA Intern Med), Morishita 2021 (Am J Gastroenterol), Rajapakse 2019, Chiu 2016, von Luckner 2018, AAN/AHS 2012 guideline, 2025 Neurol Sci dose-response meta-analysis - abstracts only; between-group CIs and risk-of-bias detail unavailable for several",
-    "No product label or certificate of analysis was available, so whether '300 mg' on this label means elemental or compound magnesium could not be resolved from the product itself"
-  ],
-  "self_confidence": "medium",
-  "confidence_note": "High confidence on the two facts that matter most, because both were verified twice from full text: magnesium bisglycinate is ~14% elemental magnesium (893 mg chelate = 125 mg Mg in the exact-form trial; ~14-15% in a 2026 clinical review), and only TWO randomised trials anywhere have used this form on these outcomes - sleep (PMID 40918053) and pregnancy leg cramps (PMID 22909270, at 300 mg elemental, the printed number). Medium overall for three reasons. (1) Reading A vs Reading B of the label swings every dose verdict; under Reading B nothing in this file supports the product. (2) Several pivotal sources were abstract-only, including both Cochrane review bodies and the newest sleep systematic review. (3) Two judgement calls are mine and are worth checking: I set allPositiveIndustryOrOneLab=false on the night-cramps row even though the single positive cramp trial is manufacturer-funded, because that gate would cap a moderate-to-high-certainty Cochrane NULL at certainty 2 and turn 'no meaningful benefit' into 'unclear' - audit-v0.2 rule 4 says a biased positive literature must not down-rate a clean null, so the funding fact is recorded in strongest_doubt instead; and I scored non-bisglycinate salts as formFit 2 ('different form, plausible equivalence') everywhere except constipation, where the tested salt's mechanism depends on NOT being absorbed and formFit is therefore 1. Pregnancy leg cramps is the row I would most want a second reader on: it is the only row where form AND elemental dose match the product exactly, and two review teams reading the same trials disagree both on its risk of bias (Cochrane high vs 2026 SR low) and on the pooled direction (responder RR 1.35 positive vs mean-frequency WMD null). I scored it 1 (small benefit, certainty 1) because the newest pooled estimate excludes no effect, not because the question is settled."
+   },
+   "inventory": [
+    {
+     "id": "PMID 40918053 / 10.2147/NSS.S524348",
+     "year": 2025,
+     "design": "rct",
+     "n": 155,
+     "direction": "benefit",
+     "access": "full_text",
+     "note": "standalone (also pooled_in PMID 42661485). Exact form, 250 mg elemental + 1523 mg glycine, 4 wk, DRKS00031494, institute-funded, product from Biogena."
+    },
+    {
+     "id": "PMID 42661485 / 10.1080/19390211.2026.2719670",
+     "year": 2026,
+     "design": "sr_ma",
+     "n": 12,
+     "direction": "unclear",
+     "access": "abstract",
+     "note": "Narrative SR of 12 RCTs, RoB2 + GRADE, search to 1 Jun 2026: inconsistent, low/very-low certainty, no pooled estimate. Umbrella row for the RCTs below."
+    },
+    {
+     "id": "PMID 39252819 / 10.1016/j.sleepx.2024.100121",
+     "year": 2024,
+     "design": "rct",
+     "n": 80,
+     "direction": "benefit",
+     "access": "abstract",
+     "note": "pooled_in PMID 42661485. DIFFERENT SALT: magnesium L-threonate 1 g/day, 21 days, Oura-ring endpoints; has a published corrigendum."
+    },
+    {
+     "id": "PMID 41697399 / 10.1007/s00394-026-03910-2",
+     "year": 2026,
+     "design": "cohort",
+     "n": 3887,
+     "direction": "none",
+     "access": "abstract",
+     "note": "standalone. CoLaus|PsyColaus, 3 follow-ups, PSG substudy: no consistent association between magnesium supplement use and subjective or objective sleep."
+    }
+   ],
+   "absolute_effect": "ISI 1.6 points better than placebo at 4 weeks (95% CI 0.0 to 3.3) on a 0-28 scale; 38% vs 23% of completers achieved a 6-point drop.",
+   "clinically_meaningful": "unknown - the mean difference is far below the 6-point ISI improvement the trial pre-named as clinically significant (Yang et al., cited by the authors), but the responder gap (38% vs 23%, ~7 people treated per extra responder) was reported without a significance test.",
+   "strongest_study": "Schuster 2025 (PMID 40918053): 155 adults, registered, double-blind, ITT + per-protocol agreement, this exact form and near this dose - the largest magnesium sleep trial that exists.",
+   "strongest_doubt": "Its CI lower bound is 0.0 at p=0.049, all seven secondary measures were null, and the newest systematic review (whose first author co-authored the trial) still concludes magnesium should not be used routinely for insomnia.",
+   "study_that_would_move_this": "A 12-week, 300+ person trial of 300 mg elemental bisglycinate against an equal-glycine placebo, primary endpoint = proportion reaching a 6-point ISI improvement."
+  },
+  {
+   "name": "Falling asleep faster, age 55+",
+   "population": "Adults 55+ with insomnia",
+   "studied_in": {
+    "sex": "mixed",
+    "sex_note": "only Nielsen reports sex: 78/100 women; Abbasi and Held report no sex split",
+    "age_min": 51,
+    "age_max": 85,
+    "age_note": "Nielsen 51-85 (mean 59), Abbasi 60-75 (mean 65), Held 60-80 (mean 69)",
+    "ethnicity": "not reported; trials run in USA, Iran and Germany",
+    "confidence": "verified"
+   },
+   "sentence": "Three small trials of magnesium oxide/citrate at 320-729 mg elemental pooled to 17 min faster sleep onset (CI 7-27 min); none used bisglycinate.",
+   "ledger": {
+    "effectPoints": "1",
+    "effect_basis": "Mah & Pitre 2021 meta-analysis (PMID 33865376, full text; 2024 correction is editorial only): 3 RCTs, 151 older adults, elemental doses 320-729 mg/day as magnesium OXIDE or CITRATE. Pooled sleep-onset latency -17.36 min (95% CI -27.27 to -7.44, p=0.0006) from 2 trials totalling 55 participants, I2=0. Total sleep time +16.06 min (95% CI -5.99 to +38.12, p=0.15) - not significant. All 3 trials moderate-to-high risk of bias; certainty low to very low; the authors themselves call the clinical significance of 17 minutes 'debateable'.",
+    "bodyIsRct": true,
+    "checklist": {
+     "risk_of_bias": "concern",
+     "consistency": "concern",
+     "precision": "concern",
+     "directness": "supported",
+     "publication_bias": "unknown"
+    },
+    "gates": {
+     "rctCount": 3,
+     "largestRctN": 100,
+     "longestRctWeeks": 8,
+     "chronicOutcome": true,
+     "surrogate": false,
+     "allPositiveIndustryOrOneLab": false
+    },
+    "formFit": "2",
+    "doseFit": "3",
+    "effective_daily_range": "320-500 mg/day ELEMENTAL magnesium as oxide or citrate (Abbasi 500 mg, Nielsen 320 mg; Held used 729 mg in 12 people). Reading A puts 300 mg just under the low end (doseFit 3); Reading B (42 mg) would be doseFit 1."
+   },
+   "detail": {
+    "effect": {
+     "found": "17 minutes faster sleep onset, pooled, with no heterogeneity between the two trials that measured it.",
+     "missing": "Total sleep time, sleep efficiency and the PSQI questionnaire were not improved, and the review states the true effect lies somewhere between a positive and a null effect.",
+     "move": "A trial reporting sleep onset latency against a pre-stated minimal important difference."
+    },
+    "evidence": {
+     "found": "A published meta-analysis with RoB 2.0 and GRADE, three countries, independent of manufacturers.",
+     "missing": "The pooled sleep-onset estimate rests on 55 people in two trials, one of which is a 12-person crossover; two of three trials are high risk of bias; no trial reported randomisation method, allocation concealment or blinding procedure.",
+     "move": "One adequately powered trial in adults 55+ (n>=200) with polysomnography."
+    },
+    "form": {
+     "found": "Nothing. Both salts tested (oxide, citrate) are different from bisglycinate; transfer assumes the active is elemental magnesium.",
+     "missing": "No head-to-head of bisglycinate against oxide or citrate on any sleep outcome. The one human absorption comparison that included bisglycinate found no plasma rise from it (PMID 39770988).",
+     "move": "A comparative trial of bisglycinate vs citrate at matched elemental dose in older adults."
+    },
+    "dose": {
+     "found": "300 mg elemental is within 20% of the 320 mg citrate dose used in the largest of the three trials.",
+     "missing": "The trial that drove the sleep-onset result used 500 mg elemental (oxide) and the EEG crossover used 729 mg - both well above this product.",
+     "move": "A dose comparison at 300 vs 500 mg elemental in this age group."
+    }
+   },
+   "inventory": [
+    {
+     "id": "PMID 33865376 / 10.1186/s12906-021-03297-z",
+     "year": 2021,
+     "design": "sr_ma",
+     "n": 151,
+     "direction": "benefit",
+     "access": "full_text",
+     "note": "Umbrella row; the 3 RCTs below are pooled_in this review and must not be counted twice. Correction PMID 39702257 is editorial (PRISMA counts, MeSH spelling)."
+    },
+    {
+     "id": "Abbasi 2012 (via PMID 33865376 table 1)",
+     "year": 2012,
+     "design": "rct",
+     "n": 46,
+     "direction": "benefit",
+     "access": "snippet",
+     "note": "pooled_in PMID 33865376. DIFFERENT SALT: 414 mg MgO twice daily = 500 mg elemental, 8 wk, Iran, adults 60-75 with insomnia; 'some concern' RoB."
+    },
+    {
+     "id": "Nielsen 2010 (via PMID 33865376 table 1)",
+     "year": 2010,
+     "design": "rct",
+     "n": 100,
+     "direction": "none",
+     "access": "snippet",
+     "note": "pooled_in PMID 33865376. DIFFERENT SALT: magnesium citrate 320 mg elemental, adults >51 with PSQI>5; PSQI improved equally in both arms; high RoB (selective reporting)."
+    },
+    {
+     "id": "Held 2002 (via PMID 33865376 table 1)",
+     "year": 2002,
+     "design": "rct",
+     "n": 12,
+     "direction": "benefit",
+     "access": "snippet",
+     "note": "pooled_in PMID 33865376. DIFFERENT SALT: 729 mg elemental as MgO, crossover EEG in HEALTHY older adults, high RoB, all participants had soft stools."
+    }
+   ],
+   "absolute_effect": "Sleep onset 17.4 minutes faster than placebo (95% CI 7.4 to 27.3); total sleep time +16 minutes, not significant.",
+   "clinically_meaningful": "unknown - the review declines to call 17 minutes clinically significant and names no threshold; no MCID for sleep-onset latency was pre-specified in any included trial.",
+   "strongest_study": "Abbasi 2012 (n=46, 8 weeks, 500 mg elemental as oxide): the only included trial rated better than high risk of bias, with both ISI and sleep-log improvement.",
+   "strongest_doubt": "The pooled sleep-onset result comes from 55 people, the 100-person trial in the same review found no PSQI difference, and a 2026 prospective cohort (n=3,887) found no association between magnesium use and objective sleep.",
+   "study_that_would_move_this": "A 200+ person, 8-week RCT in adults 55+ comparing 300 mg elemental bisglycinate with placebo, with PSG-measured sleep-onset latency as the primary endpoint."
+  },
+  {
+   "name": "Sleep if you sleep fine already",
+   "population": "Adults with no sleep complaint",
+   "studied_in": {
+    "sex": "unknown",
+    "sex_note": "Held (n=12) reports no sex split; the CoLaus cohort beside it is 52.6% women",
+    "age_min": 60,
+    "age_max": 80,
+    "age_note": "the only RCT enrolled healthy 60-80 year olds; cohort mean 57.2 (SD 10.4)",
+    "ethnicity": "not reported; German EEG crossover and a Swiss (Lausanne) cohort",
+    "confidence": "verified"
+   },
+   "sentence": "Untested: every trial recruited poor sleepers or insomnia patients. The only exception is a 12-person EEG crossover at 729 mg in healthy older adults.",
+   "ledger": {
+    "effectPoints": "unclear",
+    "effect_basis": "No RCT asks whether magnesium improves sleep in adults who sleep normally. Inclusion criteria are explicitly the opposite: RIS>12 (PMID 40918053), ISI-defined insomnia (Abbasi 2012), PSQI>5 (Nielsen 2010), self-reported sleep problems (PMID 39252819). The nearest thing is Held 2002 (n=12 crossover, 729 mg elemental as oxide, healthy 60-80 year olds, EEG) - too small and too high risk of bias to support any verdict, and at 2.4x this product's elemental dose. Zinc-magnesium-aspartate trials in athletes without sleep disturbance exist but co-administer zinc and are not a test of magnesium.",
+    "bodyIsRct": false,
+    "checklist": {
+     "risk_of_bias": "unknown",
+     "consistency": "unknown",
+     "precision": "unknown",
+     "directness": "concern",
+     "publication_bias": "unknown"
+    },
+    "gates": {
+     "rctCount": 1,
+     "largestRctN": 12,
+     "longestRctWeeks": 3,
+     "chronicOutcome": true,
+     "surrogate": false,
+     "allPositiveIndustryOrOneLab": false
+    },
+    "formFit": "unknown",
+    "doseFit": "unknown",
+    "effective_daily_range": "unknown - no effective range can be derived because the population has not been studied."
+   },
+   "detail": {
+    "effect": {
+     "found": "Nothing measurable. This is missing evidence, not evidence of no benefit.",
+     "missing": "Any placebo-controlled trial in adults without a sleep complaint. The one 12-person EEG crossover cannot answer it.",
+     "move": "A trial recruiting normal sleepers, with a floor-effect-aware endpoint."
+    },
+    "evidence": {
+     "found": "A 2026 prospective cohort (n=3,887, PSG substudy) found no association between magnesium supplement use and sleep in a general population sample - weakly against, and confounded by why people start supplements.",
+     "missing": "Randomised data in this population, at any dose, in any form.",
+     "move": "Any adequately powered RCT in good sleepers."
+    },
+    "form": {
+     "found": "Nothing on any form in this population.",
+     "missing": "Everything.",
+     "move": "See above."
+    },
+    "dose": {
+     "found": "Nothing.",
+     "missing": "No tested range exists for this population, so 300 mg cannot be judged inside or outside it.",
+     "move": "See above."
+    }
+   },
+   "inventory": [
+    {
+     "id": "Held 2002 (via PMID 33865376 table 1)",
+     "year": 2002,
+     "design": "rct",
+     "n": 12,
+     "direction": "unclear",
+     "access": "snippet",
+     "note": "standalone for this population (pooled_in PMID 33865376 for the insomnia row). Healthy 60-80 year olds, 729 mg elemental as MgO, EEG, high RoB, 20-day periods."
+    },
+    {
+     "id": "PMID 41697399 / 10.1007/s00394-026-03910-2",
+     "year": 2026,
+     "design": "cohort",
+     "n": 3887,
+     "direction": "none",
+     "access": "abstract",
+     "note": "standalone. General-population cohort with PSG: no consistent association with subjective or objective sleep parameters; users had MORE night cramps (confounding by indication)."
+    }
+   ],
+   "absolute_effect": "none available",
+   "clinically_meaningful": "unknown - no effect estimate exists in this population.",
+   "strongest_study": "None qualifies. Held 2002 (n=12) is the only randomised data in people without a sleep complaint.",
+   "strongest_doubt": "Both magnesium-sleep trial programmes deliberately excluded good sleepers, so the marketing claim 'better sleep' has never been tested on people who sleep normally.",
+   "study_that_would_move_this": "A placebo-controlled trial in adults with normal sleep (ISI<8) measuring actigraphy and next-day function, powered for a small effect."
+  },
+  {
+   "name": "Anxiety and stress (healthy)",
+   "population": "Healthy adults, no anxiety diagnosis",
+   "studied_in": {
+    "sex": "mixed",
+    "sex_note": "exact-form RCT 80% women; 9 of Boyle's 18 studies were female-only (PMS, postpartum)",
+    "age_min": 18,
+    "age_max": 82,
+    "age_note": "exact-form RCT 18-65 (mean 41.5); review samples mean 27-51, ranges 18-82",
+    "ethnicity": "not reported in the exact-form trial or in any of the 18 review studies",
+    "confidence": "verified"
+   },
+   "sentence": "On this form, anxiety moved 0.0 (CI -0.4 to 0.4) and stress 0.4 (CI -1.7 to 2.5) vs placebo; the 18-study review calls the wider field poor quality.",
+   "ledger": {
+    "effectPoints": "0",
+    "effect_basis": "Schuster 2025 (PMID 40918053, full text, exact form, 250 mg elemental, 4 wk, n=153): PHQ-4 anxiety subscale between-group difference 0.0 (95% CI -0.4 to 0.4, p=0.86), Perceived Stress Scale 0.4 (95% CI -1.7 to 2.5, p=0.71, d=0.04), PANAS negative affect 0.1 (-1.8 to 2.0). Boyle 2017 systematic review (PMID 28445426, full text): 18 studies, ALL in anxiety-vulnerable samples (mildly anxious, PMS, postpartum, hypertensive); 4 of 8 in anxious samples positive, 4 of 7 in PMS samples positive, no effect on postpartum anxiety, no study used a validated stress measure, and 'the quality of the existing evidence is poor'; the positive PMS results were largest when magnesium was combined with vitamin B6, i.e. not a test of magnesium alone. Rawji 2024 (PMID 38817505, full text) reports 'modest positive' findings across 15 studies but is PubMed-only, has no risk-of-bias or GRADE assessment and vote-counts.",
+    "bodyIsRct": true,
+    "checklist": {
+     "risk_of_bias": "concern",
+     "consistency": "concern",
+     "precision": "supported",
+     "directness": "supported",
+     "publication_bias": "unknown"
+    },
+    "gates": {
+     "rctCount": 9,
+     "largestRctN": 155,
+     "longestRctWeeks": 8,
+     "chronicOutcome": true,
+     "surrogate": false,
+     "allPositiveIndustryOrOneLab": false
+    },
+    "formFit": "4",
+    "doseFit": "4",
+    "effective_daily_range": "No effective range exists. The exact-form null was at 250 mg elemental; the trials in Boyle 2017 ran roughly 150-400 mg elemental, several with vitamin B6. Reading A: 300 mg is inside the tested (null) band. Reading B (42 mg) is below anything tested."
+   },
+   "detail": {
+    "effect": {
+     "found": "A tight null on this exact form: anxiety 0.0 points (CI -0.4 to 0.4) on the PHQ-4 anxiety subscale, and no movement in perceived stress or negative affect.",
+     "missing": "The participants were not anxious to begin with (PHQ-4 total 4.7/12), so a floor effect cannot be excluded; anxiety was a secondary endpoint measured with a 2-item screener.",
+     "move": "A trial in people with elevated but sub-clinical anxiety using a full instrument (GAD-7, STAI) as the primary endpoint."
+    },
+    "evidence": {
+     "found": "One well-run trial on the exact form, plus an 18-study systematic review of the wider field.",
+     "missing": "Of the review's positive studies, several co-administered vitamin B6 and none recruited a magnesium-deficient sample; the review says the quality is poor and calls for well-designed RCTs. The 2024 review that sounds more positive has no risk-of-bias assessment.",
+     "move": "A registered, adequately powered trial with anxiety as the pre-specified primary outcome."
+    },
+    "form": {
+     "found": "Exact form tested - and it was the arm that produced the null.",
+     "missing": "Nothing for form: this is the rare row where the null is on your own preparation. Note the capsules also carry ~1.5 g glycine, so even that did not move anxiety.",
+     "move": "Nothing needed on form for this outcome."
+    },
+    "dose": {
+     "found": "Under Reading A the product's dose sits inside the band that produced no effect - your dose was tested and did nothing.",
+     "missing": "Whether a higher elemental dose (400-500 mg) would do anything is untested in healthy adults.",
+     "move": "A dose-ranging anxiety trial."
+    }
+   },
+   "inventory": [
+    {
+     "id": "PMID 40918053 / 10.2147/NSS.S524348",
+     "year": 2025,
+     "design": "rct",
+     "n": 155,
+     "direction": "none",
+     "access": "full_text",
+     "note": "standalone. Exact form; anxiety/stress/mood were pre-listed secondary endpoints and all were null with narrow CIs."
+    },
+    {
+     "id": "PMID 28445426 / 10.3390/nu9050429",
+     "year": 2017,
+     "design": "sr_ma",
+     "n": 18,
+     "direction": "unclear",
+     "access": "full_text",
+     "note": "Umbrella row (narrative, no pooling). All 18 studies in anxiety-vulnerable samples; quality poor; combination products with vitamin B6 outperformed magnesium alone."
+    },
+    {
+     "id": "PMID 38817505 / 10.7759/cureus.59317",
+     "year": 2024,
+     "design": "sr_ma",
+     "n": 15,
+     "direction": "benefit",
+     "access": "full_text",
+     "note": "Umbrella row; overlaps Boyle 2017 - do not add. PubMed-only, no RoB/GRADE, vote-counted; mostly magnesium oxide; allowed up to 3 other active compounds per formula."
+    },
+    {
+     "id": "PMID 33864354 / 10.1002/smi.3051",
+     "year": 2021,
+     "design": "rct",
+     "n": 264,
+     "direction": "benefit",
+     "access": "abstract",
+     "note": "standalone but NOT a test of magnesium alone: magnesium + vitamin B6 in stressed healthy adults, post-hoc analysis. Recorded for completeness, excluded from the verdict."
+    }
+   ],
+   "absolute_effect": "0.0 points on the PHQ-4 anxiety subscale (95% CI -0.4 to 0.4) and 0.4 points on the 40-point Perceived Stress Scale (95% CI -1.7 to 2.5) after 4 weeks on this exact form.",
+   "clinically_meaningful": "no - the CI excludes even a 0.5-point change on a 6-point anxiety subscale, far below any anxiety response threshold; no MCID was pre-specified, so the judgement rests on the CI being narrower than the smallest plausible meaningful change.",
+   "strongest_study": "Schuster 2025 (PMID 40918053): 153 adults, exact form, anxiety and stress pre-registered as secondary endpoints, both flat.",
+   "strongest_doubt": "The participants had little anxiety to lose, so the null may be a floor effect; separately, 4 of 8 trials in mildly anxious samples did report benefit (Boyle 2017), which is why this reads 'not shown' rather than 'disproven'.",
+   "study_that_would_move_this": "An 8-12 week RCT of 300 mg elemental bisglycinate in adults with GAD-7 scores of 5-9, primary endpoint GAD-7 change."
+  },
+  {
+   "name": "Diagnosed anxiety disorder",
+   "population": "Adults with a diagnosed anxiety disorder",
+   "studied_in": {
+    "sex": "mixed",
+    "sex_note": "no eligible trial exists; nearest (Hanus combination) was 213/264 women, 81%",
+    "age_min": 18,
+    "age_max": 82,
+    "age_note": "Hanus 2004 enrolled 18-82, mean 44.6; no diagnosed-anxiety trial to describe",
+    "ethnicity": "not reported; the nearest trial was a French multicentre study",
+    "confidence": "verified"
+   },
+   "sentence": "No trial gave magnesium alone to people with a diagnosed anxiety disorder; the 18-study review found only mildly anxious, PMS and postpartum samples.",
+   "ledger": {
+    "effectPoints": "unclear",
+    "effect_basis": "Boyle 2017 (PMID 28445426, full text) searched Medline, PsycInfo, Embase, CINAHL, Cochrane and grey literature and found that every one of its 18 studies recruited on 'existing vulnerability to anxiety' - mild anxiety, PMS, postpartum status or hypertension - not a DSM anxiety-disorder diagnosis. The one trial in the field that comes closest used a fixed plant-extract combination (hawthorn, California poppy, magnesium; PMID 14741074, abstract), which cannot attribute anything to magnesium. Rawji 2024 (PMID 38817505) adds no diagnosed-disorder RCT. So: no evidence found, not evidence of no effect.",
+    "bodyIsRct": false,
+    "checklist": {
+     "risk_of_bias": "unknown",
+     "consistency": "unknown",
+     "precision": "unknown",
+     "directness": "concern",
+     "publication_bias": "unknown"
+    },
+    "gates": {
+     "rctCount": 0,
+     "largestRctN": 0,
+     "longestRctWeeks": 0,
+     "chronicOutcome": true,
+     "surrogate": false,
+     "allPositiveIndustryOrOneLab": false
+    },
+    "formFit": "unknown",
+    "doseFit": "unknown",
+    "effective_daily_range": "unknown - no trial in this population, so no range can be derived."
+   },
+   "detail": {
+    "effect": {
+     "found": "Nothing. Zero randomised trials of magnesium alone in diagnosed anxiety disorders.",
+     "missing": "Everything. The extrapolation from 'mildly anxious volunteers' to a clinical diagnosis is not supported.",
+     "move": "One RCT in diagnosed generalised anxiety disorder."
+    },
+    "evidence": {
+     "found": "A systematic review that looked for exactly this and did not find it, which is a stronger statement than 'we did not search'.",
+     "missing": "Any trial. The one nearby trial is a three-herb combination product.",
+     "move": "A registered add-on trial in GAD patients on stable treatment."
+    },
+    "form": {
+     "found": "Nothing on any form in this population.",
+     "missing": "Everything.",
+     "move": "See above."
+    },
+    "dose": {
+     "found": "Nothing.",
+     "missing": "No dose has been tested in this population.",
+     "move": "See above."
+    }
+   },
+   "inventory": [
+    {
+     "id": "PMID 28445426 / 10.3390/nu9050429",
+     "year": 2017,
+     "design": "sr_ma",
+     "n": 18,
+     "direction": "unclear",
+     "access": "full_text",
+     "note": "Umbrella row. Explicitly states all included samples were anxiety-vulnerable rather than diagnosed; used here as evidence of absence of trials, not as an effect estimate."
+    },
+    {
+     "id": "PMID 14741074 / 10.1185/030079903125002603",
+     "year": 2004,
+     "design": "rct",
+     "n": 264,
+     "direction": "benefit",
+     "access": "abstract",
+     "note": "standalone but ineligible: fixed combination of two plant extracts plus magnesium in mild-to-moderate anxiety disorders - no magnesium-only arm, so it cannot support a magnesium claim."
+    }
+   ],
+   "absolute_effect": "none available",
+   "clinically_meaningful": "unknown - no effect estimate exists in this population.",
+   "strongest_study": "None. The strongest relevant fact is a systematic review reporting that no such trial exists.",
+   "strongest_doubt": "Nothing here argues magnesium cannot help clinical anxiety; the honest statement is that it has never been tested, and combination products are the only positive signal.",
+   "study_that_would_move_this": "A 12-week placebo-controlled trial of 300 mg elemental bisglycinate in DSM-5 generalised anxiety disorder, GAD-7 or HAM-A primary."
+  },
+  {
+   "name": "Night leg cramps (age 50+)",
+   "population": "Adults 50+ with idiopathic night cramps",
+   "studied_in": {
+    "sex": "mixed",
+    "sex_note": "women predominate where reported: Kuusipalo 72%, Barna 75%, Roguin Maor 61%",
+    "age_min": 21,
+    "age_max": 85,
+    "age_note": "trial means 57-69; Kuusipalo strata 50-85, Roguin Maor eligible 21+ (mean 65)",
+    "ethnicity": "not reported in any cramp trial (Finland, Israel, Ukraine, Argentina, UK)",
+    "confidence": "verified"
+   },
+   "sentence": "Cochrane: -0.18 cramps/week (CI -0.84 to 0.49) and no responder gain (RR 1.04); a 2026 independent trial at 250 mg elemental also found nothing.",
+   "ledger": {
+    "effectPoints": "0",
+    "effect_basis": "Cochrane CD009402.pub3 (PMID 32956536, abstract + plain-language summary; full review body not downloadable): idiopathic-cramp subset, mean ages 61.6-69.3. Cramps per week at 4 weeks -0.18 (95% CI -0.84 to 0.49; 5 studies, 307 participants, MODERATE certainty); percentage change from baseline -9.59% (95% CI -23.14 to +3.97; 3 studies, 177); proportion achieving >=25% reduction RR 1.04 (95% CI 0.84 to 1.29; 3 studies, 177, HIGH certainty); I2 0-12%; 4 of 5 trials not at high risk of bias; authors' conclusion 'it is unlikely that magnesium supplementation provides clinically meaningful cramp prophylaxis to older adults'. Reproduced by a 2026 SR/MA (PMID 41812583, full text, PROSPERO CRD420251120631): nocturnal/persistent leg cramps in adults, 4 trials, N approx 396, MD -0.42 cramps/week (95% CI -1.15 to +0.31, p=0.26), risk of bias generally low to moderate. Post-Cochrane RCT: Kuusipalo 2026 (PMID 41680812, full text, n=121, 250 mg elemental as magnesium hydrochloride, independent foundation funding) adjusted difference -0.20 cramps/week (95% CI -1.49 to 1.09, p=0.93) while compression stockings in the same trial gave -1.43 (-2.36 to -0.50, p=0.001). Roguin Maor 2017 (PMID 28241153, abstract; dose 865 mg magnesium oxide/day per PMID 41812583 table, ~520 mg elemental at MgO's ~60% elemental content per PMID 41872423 table 2) also null (p=0.67). All forms tested are DIFFERENT SALTS: citrate, oxide, aspartate, hydrochloride - no bisglycinate trial exists for cramps outside pregnancy.",
+    "bodyIsRct": true,
+    "checklist": {
+     "risk_of_bias": "supported",
+     "consistency": "supported",
+     "precision": "supported",
+     "directness": "supported",
+     "publication_bias": "supported"
+    },
+    "gates": {
+     "rctCount": 7,
+     "largestRctN": 184,
+     "longestRctWeeks": 8,
+     "chronicOutcome": true,
+     "surrogate": false,
+     "allPositiveIndustryOrOneLab": false
+    },
+    "formFit": "2",
+    "doseFit": "4",
+    "effective_daily_range": "No effective range exists: the null trials span roughly 250-520 mg/day elemental magnesium (Kuusipalo 250 mg hydrochloride, Roguin Maor ~520 mg as 865 mg oxide, Cochrane trials citrate/oxide/aspartate). Reading A places 300 mg squarely inside the band that failed."
+   },
+   "detail": {
+    "effect": {
+     "found": "A well-measured absence: 0.18 fewer cramps a week, and the high-certainty responder analysis puts the chance of a 25% improvement at 1.04 times placebo.",
+     "missing": "Nothing important. The CI is narrow enough to exclude the benefit people buy magnesium for, and a 2026 independent trial reproduced the null at this product's elemental dose.",
+     "move": "Nothing would rescue a benefit here short of a large trial on this exact chelate."
+    },
+    "evidence": {
+     "found": "A Cochrane review that obtained participant-level data for 4 trials including one unpublished, a 2026 meta-analysis that reproduces the null (-0.42 cramps/week), two post-Cochrane RCTs and a 2026 cohort where supplement users had MORE cramps.",
+     "missing": "Bisglycinate specifically has never been tested in this population.",
+     "move": "A 200+ person RCT of 300 mg elemental bisglycinate in nocturnal leg cramps."
+    },
+    "form": {
+     "found": "Four different magnesium salts have been tested and all failed; the active in all of them is elemental magnesium.",
+     "missing": "A form-specific trial. The only clearly positive cramp trial used a proprietary magnesium-oxide-monohydrate and was funded by its manufacturer (PMID 34719399) - a positive-signal reliability problem, not a reason to doubt the null.",
+     "move": "An independent replication of the magnesium-oxide-monohydrate result, and any bisglycinate trial."
+    },
+    "dose": {
+     "found": "Your elemental dose is inside the range that has been tested and failed - this is 'tested and did not work', not 'never tested'.",
+     "missing": "Nothing meaningful; higher doses were also null and cause diarrhoea in 11-37% of users.",
+     "move": "Nothing."
+    }
+   },
+   "inventory": [
+    {
+     "id": "PMID 32956536 / 10.1002/14651858.CD009402.pub3",
+     "year": 2020,
+     "design": "sr_ma",
+     "n": 735,
+     "direction": "none",
+     "access": "abstract",
+     "note": "Umbrella row; publisher blocks full-text XML, abstract + plain-language summary read in full. Idiopathic subset 5 RCTs/307 participants. Its included RCTs are pooled_in and are not counted separately."
+    },
+    {
+     "id": "PMID 41680812 / 10.1186/s13063-025-09370-z",
+     "year": 2026,
+     "design": "rct",
+     "n": 121,
+     "direction": "none",
+     "access": "full_text",
+     "note": "standalone (post-Cochrane). DIFFERENT SALT: 620 mg magnesium hydrochloride = 250 mg elemental, 4 wk, Finland, independent funding; compression stockings beat placebo in the same trial."
+    },
+    {
+     "id": "PMID 28241153 / 10.1001/jamainternmed.2016.9261",
+     "year": 2017,
+     "design": "rct",
+     "n": 94,
+     "direction": "none",
+     "access": "abstract",
+     "note": "pooled_in PMID 32956536. DIFFERENT SALT: magnesium oxide 865 mg (~520 mg elemental), 4 wk, Israel."
+    },
+    {
+     "id": "PMID 34719399 / 10.1186/s12937-021-00747-9",
+     "year": 2021,
+     "design": "rct",
+     "n": 184,
+     "direction": "benefit",
+     "access": "full_text",
+     "note": "standalone, post-Cochrane, the ONLY positive trial: proprietary Mg oxide monohydrate 226 mg, 60 d, -3.4 vs -2.6 episodes (p=0.01). Funded by Naveh Pharma; registered retrospectively."
+    },
+    {
+     "id": "PMID 41697399 / 10.1007/s00394-026-03910-2",
+     "year": 2026,
+     "design": "cohort",
+     "n": 3887,
+     "direction": "harm",
+     "access": "abstract",
+     "note": "standalone. Prospective: magnesium users had a HIGHER incidence of night cramps - almost certainly confounding by indication, recorded because it is the opposite of the marketing claim."
+    },
+    {
+     "id": "PMID 41812583 / 10.1016/j.identj.2026.109488",
+     "year": 2026,
+     "design": "sr_ma",
+     "n": 396,
+     "direction": "none",
+     "access": "full_text",
+     "note": "Umbrella row; its 4 nocturnal-cramp trials overlap Cochrane and Barna - do not add. RoB2, random-effects, PROSPERO CRD420251120631, search to Aug 2025. Source for Roguin Maor's 865 mg dose."
+    }
+   ],
+   "absolute_effect": "-0.18 cramps per week vs placebo (95% CI -0.84 to +0.49) at 4 weeks (Cochrane); -0.42 cramps/week (95% CI -1.15 to +0.31) in the 2026 meta-analysis; 25%-responder RR 1.04 (95% CI 0.84 to 1.29).",
+   "clinically_meaningful": "no - the high-certainty responder analysis excludes the >=25% reduction in cramp rate Cochrane pre-specified as the clinically relevant threshold, and the authors state the effect is unlikely to be clinically meaningful.",
+   "strongest_study": "Cochrane CD009402.pub3 (PMID 32956536): 5 idiopathic-cramp RCTs, 307 participants, participant-level data obtained for 4 trials, I2 0-12%, high-certainty null on the responder endpoint - and a 2026 meta-analysis of 4 trials reaches the same answer.",
+   "strongest_doubt": "One 175-person trial of a proprietary magnesium oxide monohydrate did beat placebo (PMID 34719399), but it was funded by that product's manufacturer and registered retrospectively; no independent group has reproduced it.",
+   "study_that_would_move_this": "An independent, registered 200+ person RCT of magnesium bisglycinate 300 mg elemental for nocturnal leg cramps, with the >=25% responder rate as primary endpoint."
+  },
+  {
+   "name": "Leg cramps in pregnancy",
+   "population": "Pregnant women with 2+ leg cramps a week",
+   "studied_in": {
+    "sex": "female",
+    "sex_note": "100% female by definition: pregnant women in Thailand, Brazil, Norway, Sweden",
+    "age_min": null,
+    "age_max": null,
+    "age_note": "maternal ages not reported by the exact-form trial or the 2026 pooled table",
+    "ethnicity": "not reported; exact-form trial run in Thailand, pooled trials Nordic/Brazil",
+    "confidence": "verified"
+   },
+   "sentence": "On this exact form at 300 mg elemental: one 86-woman trial and a 2026 pooled RR of 1.35 (CI 1.05-1.74) favour it; an earlier pooled analysis found nothing.",
+   "ledger": {
+    "effectPoints": "1",
+    "effect_basis": "Supakatisant & Phupong 2015 (PMID 22909270, abstract; dose verified independently from the Adv Nutr 2023 table as 'Mg bisglycinate chelate 300 mg (12.3 mmol)', i.e. 300 mg ELEMENTAL, PMID 37487817 full text): 86 pregnant women, 4 wk, 50% reduction in cramp frequency 86.0% vs 60.5% (p=0.007), 50% reduction in intensity 69.8% vs 48.8% (p=0.048). NEWEST SYNTHESIS: 2026 SR/MA (PMID 41812583, full text, PROSPERO CRD420251120631, RoB2, random-effects) pools 4 pregnancy trials, N approx 364: RR 1.35 (95% CI 1.05 to 1.74, p=0.02) for reduced cramp frequency, and rates Supakatisant at LOW risk of bias. THE REVIEWS DISAGREE: Cochrane CD009402.pub3 rates all 5 pregnancy trials at HIGH risk of bias and could not pool them; Cochrane CD010655.pub3 (PMID 33275278, abstract via NCBI efetch, 8 trials/576 women) calls the magnesium results inconsistent - RR 1.42 (95% CI 1.09 to 1.86) for a 50% reduction in the 86-woman trial at LOW certainty, pain VAS -17.5 mm (95% CI -34.7 to -0.3, 69 women), alongside other analyses showing little or no difference; and Hsu 2021 (PMID 34247796, abstract, 4 RCTs, 332 women) pools cramp frequency as a continuous outcome and finds WMD -0.47 (95% CI -1.14 to 0.20, p=0.167), concluding magnesium is not effective. The positive signal is consistently on the DICHOTOMOUS >=50%-responder endpoint and the null on continuous frequency.",
+    "bodyIsRct": true,
+    "checklist": {
+     "risk_of_bias": "concern",
+     "consistency": "concern",
+     "precision": "concern",
+     "directness": "supported",
+     "publication_bias": "unknown"
+    },
+    "gates": {
+     "rctCount": 5,
+     "largestRctN": 86,
+     "longestRctWeeks": 4,
+     "chronicOutcome": true,
+     "surrogate": false,
+     "allPositiveIndustryOrOneLab": false
+    },
+    "formFit": "4",
+    "doseFit": "4",
+    "effective_daily_range": "300 mg/day ELEMENTAL magnesium as bisglycinate is exactly the dose of the one positive trial (12.3 mmol). Reading A therefore gives a perfect dose match; Reading B (42 mg elemental) would be 14% of it, doseFit 0-1."
+   },
+   "detail": {
+    "effect": {
+     "found": "The only trial using this exact chelate at this exact elemental dose had 86% vs 60.5% of women halve their cramp frequency, and a 2026 meta-analysis of 4 pregnancy trials pools to RR 1.35 (1.05-1.74).",
+     "missing": "An earlier meta-analysis pooling frequency as a continuous outcome found nothing (-0.47/week, CI -1.14 to 0.20), and Cochrane rates every pregnancy trial at high risk of bias with inconsistent results across endpoints and time points.",
+     "move": "One adequately powered, registered trial (n>=300) in pregnancy with a pre-stated responder definition."
+    },
+    "evidence": {
+     "found": "Two Cochrane reviews and two meta-analyses have looked at this question since 2020 - the search is not the problem.",
+     "missing": "They disagree. Cochrane calls the pregnancy trials high risk of bias, the 2026 review calls the key trial low risk; one pooled analysis is positive on responders and one is null on mean frequency. Certainty stays low to very low: small trials, incompatible endpoints.",
+     "move": "A single trial big enough to settle it, with cramp diaries and blinding described."
+    },
+    "form": {
+     "found": "Exact form. This is the only population where magnesium bisglycinate itself was the tested intervention outside the sleep trial.",
+     "missing": "Independent replication on this form; one trial that two review teams grade differently for bias is not a form verdict.",
+     "move": "A replication of Supakatisant 2015 by an independent group."
+    },
+    "dose": {
+     "found": "Exact elemental dose match (300 mg = 12.3 mmol), verified from a second source because the trial's own full text was paywalled.",
+     "missing": "Nothing on dose - but pregnancy is a distinct population and pregnant women should follow their clinician, not a label.",
+     "move": "Nothing on dose."
+    }
+   },
+   "inventory": [
+    {
+     "id": "PMID 22909270 / 10.1111/j.1740-8709.2012.00440.x",
+     "year": 2015,
+     "design": "rct",
+     "n": 86,
+     "direction": "benefit",
+     "access": "abstract",
+     "note": "pooled_in PMID 33275278 + 32956536 (probably 34247796, unverified). EXACT FORM: Mg bisglycinate chelate 300 mg elemental, 4 wk, Thailand; Cochrane rates it high risk of bias."
+    },
+    {
+     "id": "PMID 33275278 / 10.1002/14651858.CD010655.pub3",
+     "year": 2020,
+     "design": "sr_ma",
+     "n": 576,
+     "direction": "unclear",
+     "access": "abstract",
+     "note": "Umbrella row (abstract read in full via NCBI efetch). 8 trials, no meta-analysis possible; magnesium results inconsistent, low/very-low certainty."
+    },
+    {
+     "id": "PMID 34247796 / 10.1016/j.tjog.2021.05.006",
+     "year": 2021,
+     "design": "sr_ma",
+     "n": 332,
+     "direction": "none",
+     "access": "abstract",
+     "note": "Umbrella row, overlaps the two Cochrane reviews - do not add. Pooled frequency WMD -0.47 (-1.14 to 0.20), p=0.167; PROSPERO CRD42020196572."
+    },
+    {
+     "id": "PMID 41812583 / 10.1016/j.identj.2026.109488",
+     "year": 2026,
+     "design": "sr_ma",
+     "n": 364,
+     "direction": "benefit",
+     "access": "full_text",
+     "note": "Umbrella row, overlaps the rows above - do not add. Pregnancy cramps RR 1.35 (1.05-1.74), p=0.02, 4 trials; rates Supakatisant LOW risk of bias, directly contradicting Cochrane CD009402."
+    },
+    {
+     "id": "PMID 31923242 / 10.1371/journal.pone.0227497",
+     "year": 2020,
+     "design": "nrct",
+     "n": 165,
+     "direction": "benefit",
+     "access": "abstract",
+     "note": "standalone, observational controlled trial (not randomised) - listed for completeness and excluded from the verdict."
+    }
+   ],
+   "absolute_effect": "Pooled RR 1.35 (95% CI 1.05 to 1.74) for reduced cramp frequency across 4 trials (N approx 364); in the exact-form trial 86.0% vs 60.5% halved their cramp frequency, a 25-point absolute gain, about 4 women treated per extra responder.",
+   "clinically_meaningful": "unknown - halving cramp frequency is the threshold the trials themselves used and would matter to a patient, and the 2026 pooled RR excludes 1.0; but the competing pooled analysis of mean frequency includes zero, and all certainty ratings are low or very low.",
+   "strongest_study": "Supakatisant & Phupong 2015 (PMID 22909270): the only RCT anywhere using this exact chelate at this exact elemental dose, with a pre-defined 50%-responder endpoint - and the 2026 meta-analysis (PMID 41812583) grades it low risk of bias and pools 4 trials to RR 1.35.",
+   "strongest_doubt": "Cochrane grades the same trial HIGH risk of bias and refuses to pool it; the meta-analysis that pooled mean cramp frequency instead of responders found nothing (-0.47/week, CI -1.14 to 0.20). Two teams reading the same papers reach opposite conclusions.",
+   "study_that_would_move_this": "A registered 300-woman RCT of 300 mg elemental bisglycinate vs placebo in pregnancy with cramp diaries and a pre-stated 50%-responder primary endpoint."
+  },
+  {
+   "name": "Raising a low magnesium level",
+   "population": "Adults with low or borderline magnesium",
+   "studied_in": {
+    "sex": "mixed",
+    "sex_note": "repletion RCT 34/71 men (48%); the bisglycinate PK study gives no sex split",
+    "age_min": 20,
+    "age_max": null,
+    "age_note": "PK study 20-55; repletion RCT mean 68.7 (SD 6.0), upper age limit not stated",
+    "ethnicity": "repletion RCT all older Chinese adults; Spanish PK study reports no breakdown",
+    "confidence": "verified"
+   },
+   "sentence": "360 mg/day of oxide raised plasma magnesium 0.056 mmol/L in deficient elders; 300 mg elemental is inside the 200-400 mg range clinicians use to repletion.",
+   "ledger": {
+    "effectPoints": "2",
+    "effect_basis": "Direct repletion evidence: 2026 RCT in hypomagnesaemic older adults with pre-diabetes (PMID 41756632, full text, n=71, plasma Mg <=0.80 mmol/L at entry, 360 mg elemental/day as magnesium OXIDE for 4 months) raised plasma magnesium by 0.056 mmol/L vs placebo (95% CI 0.028 to 0.085, p<0.001) and cut fasting glucose by 0.497 mmol/L (95% CI -0.818 to -0.176). Clinical practice anchor: Curr Nutr Rep 2026 hypomagnesaemia update (PMID 41872423, full text) - first-line oral options for mild-to-moderate hypomagnesaemia are organic salts including glycinate/bisglycinate at 200-400 mg elemental/day in divided doses, and it tabulates bisglycinate at ~14-15% elemental magnesium; hypomagnesaemia affects 1.5-15% of the general population and up to 48% of US adults eat below the EAR. FORM CAVEAT: the only human study that put bisglycinate head-to-head found NO significant plasma rise from it over 6 hours at a 375 mg elemental single dose, while oxide and citrate did rise (PMID 39770988, full text) - a competitor-funded acute PK study, so weak in both directions, but it is the only human comparison that exists.",
+    "bodyIsRct": true,
+    "checklist": {
+     "risk_of_bias": "supported",
+     "consistency": "concern",
+     "precision": "supported",
+     "directness": "concern",
+     "publication_bias": "unknown"
+    },
+    "gates": {
+     "rctCount": 2,
+     "largestRctN": 71,
+     "longestRctWeeks": 16,
+     "chronicOutcome": true,
+     "surrogate": true,
+     "allPositiveIndustryOrOneLab": false
+    },
+    "formFit": "2",
+    "doseFit": "4",
+    "effective_daily_range": "200-400 mg/day ELEMENTAL magnesium for oral repletion (clinical review), with the verified RCT at 360 mg elemental. Reading A puts 300 mg inside it; Reading B (42 mg elemental) is a fifth of the low end and would not repletion anyone."
+   },
+   "detail": {
+    "effect": {
+     "found": "Oral magnesium does what it is supposed to do: +0.056 mmol/L plasma magnesium over 4 months in people who started below 0.80 mmol/L, with the CI well clear of zero.",
+     "missing": "This is a blood number, not a symptom. No trial shows that correcting a borderline level makes an asymptomatic person feel different - that missing link is the whole reason this row is capped.",
+     "move": "A trial that enrols people by measured magnesium status and reports symptoms (sleep, cramps, fatigue), not just serum."
+    },
+    "evidence": {
+     "found": "One clean 4-month RCT in a genuinely deficient population, plus a 2026 clinical review that names the same dose range as first-line care.",
+     "missing": "I verified 2 RCTs live for this outcome; dozens more report serum magnesium as a secondary endpoint and were not individually checked. Serum magnesium is also a poor marker of body stores (~1% of body magnesium is extracellular) - a 2026 narrative review is titled 'Why Serum Magnesium Fails'.",
+     "move": "An RBC-magnesium or magnesium-retention-test endpoint in a repletion RCT of this chelate."
+    },
+    "form": {
+     "found": "A 2026 clinical review lists bisglycinate as a first-line organic salt with high bioavailability and minimal GI upset.",
+     "missing": "That listing is expert judgement, not a trial. The one human head-to-head found no significant plasma rise from bisglycinate at all - and it was funded by the maker of the comparator product, so treat it as a warning, not a refutation.",
+     "move": "An independent crossover PK/retention study of bisglycinate vs citrate at matched elemental dose."
+    },
+    "dose": {
+     "found": "Under Reading A, 300 mg elemental sits inside both the guideline range (200-400 mg) and under the 350 mg/day supplemental upper limit.",
+     "missing": "Under Reading B the product delivers ~42 mg elemental and cannot correct a deficiency at all. This single label ambiguity decides the row.",
+     "move": "A label that states the elemental magnesium content explicitly."
+    }
+   },
+   "inventory": [
+    {
+     "id": "PMID 41756632 / 10.3389/fnut.2026.1765308",
+     "year": 2026,
+     "design": "rct",
+     "n": 71,
+     "direction": "benefit",
+     "access": "full_text",
+     "note": "standalone. DIFFERENT SALT: magnesium oxide 360 mg elemental, 16 wk, hypomagnesaemic pre-diabetic elders; tablets supplied by Amway, funded by Chinese CDC institutes; 91.6% compliance."
+    },
+    {
+     "id": "PMID 39770988 / 10.3390/nu16244367",
+     "year": 2024,
+     "design": "rct",
+     "n": 40,
+     "direction": "none",
+     "access": "full_text",
+     "note": "standalone. Acute crossover PK, single 375 mg elemental dose: bisglycinate produced NO significant plasma rise; oxide +7.1% at 1 h, citrate +7.5% at 4 h. Funded by Lubrizol (comparator's maker)."
+    },
+    {
+     "id": "PMID 41872423 / 10.1007/s13668-026-00745-5",
+     "year": 2026,
+     "design": "other",
+     "n": 0,
+     "direction": "benefit",
+     "access": "full_text",
+     "note": "Narrative clinical/nutritional update, not evidence mass. Source for the ~14-15% elemental content of bisglycinate and the 200-400 mg elemental/day first-line repletion range."
+    },
+    {
+     "id": "PMID 42709016 / 10.1080/19390211.2026.2727023",
+     "year": 2026,
+     "design": "other",
+     "n": 0,
+     "direction": "unclear",
+     "access": "abstract",
+     "note": "IN VITRO only (SHIME gut simulator) comparison of two bisglycinate brands. No human data; recorded so it is not mistaken for clinical evidence."
+    }
+   ],
+   "absolute_effect": "+0.056 mmol/L plasma magnesium (95% CI 0.028 to 0.085) after 16 weeks at 360 mg elemental/day in adults starting at or below 0.80 mmol/L.",
+   "clinically_meaningful": "unknown - the rise is enough to lift many people over the 0.80 mmol/L hypomagnesaemia cut-off used in that trial and in the 2026 clinical update, but no trial has shown that crossing it changes how an asymptomatic person feels.",
+   "strongest_study": "PMID 41756632 (2026): 16-week double-blind RCT in genuinely hypomagnesaemic older adults, ICP-MS plasma magnesium, ITT with 91.6% compliance.",
+   "strongest_doubt": "It used magnesium oxide, not this chelate, and the only human study to test bisglycinate's absorption directly found no plasma rise at all - so the 'highly absorbable' selling point is unproven in humans.",
+   "study_that_would_move_this": "A 12-week RCT of 300 mg elemental bisglycinate vs citrate vs placebo in adults with serum magnesium below 0.80 mmol/L, reporting serum AND red-cell magnesium plus symptoms."
+  },
+  {
+   "name": "Migraine prevention",
+   "population": "Adults with episodic migraine",
+   "studied_in": {
+    "sex": "mixed",
+    "sex_note": "Pfaffenrath 64/69 women (93%); Peikert and Koseoglu report no sex split",
+    "age_min": 18,
+    "age_max": 65,
+    "age_note": "Peikert 18-65, Pfaffenrath 18-64, Koseoglu 20-55; nobody over 65 enrolled",
+    "ethnicity": "not reported; German multicentre and Turkish single-centre trials",
+    "confidence": "verified"
+   },
+   "sentence": "Level B \"probably effective\" rests on 600 mg/day of citrate salts (attacks -42% vs -16%); 300 mg elemental is half that, and one trial found nothing.",
+   "ledger": {
+    "effectPoints": "1",
+    "effect_basis": "Guideline: AAN/AHS 2012 (PMID 22529203, abstract) rates magnesium Level B, 'probably effective for migraine prevention'. Positive pivotal trial: Peikert 1996 (PMID 8792038, abstract) n=81, 600 mg elemental/day as TRIMAGNESIUM DICITRATE, 12 wk - attack frequency -41.6% vs -15.8% at weeks 9-12 (p<0.05), diarrhoea 18.6%. Null trial: Pfaffenrath 1996 (PMID 8902254, abstract) n=69, 20 mmol/day (~486 mg elemental) as magnesium aspartate hydrochloride, 12 wk - responders 28.6% vs 29.4%, stopped at interim analysis, diarrhoea 45.7% vs 23.5%. Koseoglu 2008 (PMID 18705538, abstract) n=40 with only 10 controls, 600 mg citrate, positive. Meta-analyses disagree: Rajapakse & Pringsheim 2019 (PMID 30764890) severity ratio of means -0.17 (95% CI -0.36 to +0.02), 3 trials/226 participants, LOW strength, 'it is unknown if magnesium is effective'; Chiu 2016 (PMID 26752497) reports oral magnesium reduced frequency and intensity (ORs 0.20, 0.27) but with weak randomisation in included trials; a 2025 dose-response meta-analysis (PMID 39404918) gives magnesium -2.51 attacks and -1.66 monthly migraine days (no CIs in the abstract). Cochrane CD016307 (PMID 41216917, full text) is a PROTOCOL published Nov 2025 - no Cochrane answer exists yet. NO trial has used bisglycinate for migraine.",
+    "bodyIsRct": true,
+    "checklist": {
+     "risk_of_bias": "concern",
+     "consistency": "concern",
+     "precision": "concern",
+     "directness": "supported",
+     "publication_bias": "unknown"
+    },
+    "gates": {
+     "rctCount": 5,
+     "largestRctN": 81,
+     "longestRctWeeks": 12,
+     "chronicOutcome": true,
+     "surrogate": false,
+     "allPositiveIndustryOrOneLab": false
+    },
+    "formFit": "2",
+    "doseFit": "2",
+    "effective_daily_range": "600 mg/day ELEMENTAL magnesium as citrate/dicitrate in the positive trials; the null trial used ~486 mg as aspartate hydrochloride. Reading A makes 300 mg exactly half the effective dose (doseFit 2); Reading B (42 mg) is 7% of it (doseFit 0-1)."
+   },
+   "detail": {
+    "effect": {
+     "found": "A guideline body calls magnesium probably effective, and the pivotal trial cut attack frequency by 42% vs 16% over 12 weeks.",
+     "missing": "A same-era multicentre trial at a similar dose found nothing and was stopped early; the 2019 meta-analysis of severity cannot exclude no effect; no trial reports the absolute reduction in monthly migraine days with a CI at this product's dose.",
+     "move": "A modern registered RCT with monthly migraine days as the primary endpoint."
+    },
+    "evidence": {
+     "found": "Five placebo-controlled RCTs, three meta-analyses, and a live Cochrane review in progress.",
+     "missing": "The trials are 1996-2008, small (largest n=81), and disagree; the newest Cochrane record is only a protocol, so there is no current high-quality synthesis. Meta-analyses that report benefit include trials with inadequate randomisation.",
+     "move": "The completed Cochrane review (CD016307) and one adequately powered modern trial."
+    },
+    "form": {
+     "found": "Nothing. Every trial used dicitrate, citrate or aspartate hydrochloride.",
+     "missing": "Any bisglycinate migraine trial. Transfer assumes only elemental magnesium matters, which is plausible but untested for this outcome.",
+     "move": "A trial of a chelated form at 600 mg elemental."
+    },
+    "dose": {
+     "found": "Under Reading A, this product provides half the elemental dose used in the positive trials.",
+     "missing": "No migraine trial has tested 300 mg elemental, so the product's dose is an extrapolation downward from where benefit was seen. Note the effective dose caused diarrhoea in 19-46% of participants.",
+     "move": "A dose-ranging trial at 300 vs 600 mg elemental."
+    }
+   },
+   "inventory": [
+    {
+     "id": "PMID 22529203 / 10.1212/WNL.0b013e3182535d0c",
+     "year": 2012,
+     "design": "other",
+     "n": 0,
+     "direction": "benefit",
+     "access": "abstract",
+     "note": "AAN/AHS evidence-based guideline update; magnesium Level B (probably effective). Guideline, not evidence mass; evidence base is the trials below."
+    },
+    {
+     "id": "PMID 8792038 / 10.1046/j.1468-2982.1996.1604257.x",
+     "year": 1996,
+     "design": "rct",
+     "n": 81,
+     "direction": "benefit",
+     "access": "abstract",
+     "note": "standalone; pooled_in PMID 30764890 and PMID 26752497. DIFFERENT SALT: trimagnesium dicitrate 600 mg elemental, 12 wk, multicentre."
+    },
+    {
+     "id": "PMID 8902254 / 10.1046/j.1468-2982.1996.1606436.x",
+     "year": 1996,
+     "design": "rct",
+     "n": 69,
+     "direction": "none",
+     "access": "abstract",
+     "note": "standalone; pooled_in PMID 30764890. DIFFERENT SALT: magnesium aspartate hydrochloride ~486 mg elemental; stopped at interim for futility (10 vs 10 responders)."
+    },
+    {
+     "id": "PMID 30764890 / 10.1017/cjn.2018.394",
+     "year": 2019,
+     "design": "sr_ma",
+     "n": 226,
+     "direction": "none",
+     "access": "abstract",
+     "note": "Umbrella row. Severity ratio of means -0.17 (95% CI -0.36 to 0.02), 3 trials, low strength of evidence; frequency not poolable."
+    },
+    {
+     "id": "PMID 39404918 / 10.1007/s10072-024-07794-0",
+     "year": 2025,
+     "design": "sr_ma",
+     "n": 22,
+     "direction": "benefit",
+     "access": "abstract",
+     "note": "Umbrella row (22 trials across all supplements). Magnesium: -2.51 attacks, -1.66 monthly migraine days, -0.88 severity; no CIs or per-nutrient GRADE in the abstract."
+    },
+    {
+     "id": "PMID 41216917 / 10.1002/14651858.CD016307",
+     "year": 2025,
+     "design": "other",
+     "n": 0,
+     "direction": "unclear",
+     "access": "full_text",
+     "note": "PROTOCOL ONLY, published 11 Nov 2025 - 'Data sharing is not applicable to this article as it is a protocol'. Recorded so nobody cites it as a Cochrane conclusion."
+    },
+    {
+     "id": "PMID 33827421 / 10.1186/s10194-021-01234-6",
+     "year": 2021,
+     "design": "rct",
+     "n": 222,
+     "direction": "benefit",
+     "access": "abstract",
+     "note": "standalone but INELIGIBLE for a placebo comparison: all three arms received active treatment (magnesium, sodium valproate, or both) - no placebo arm, so it cannot show magnesium beats nothing."
+    }
+   ],
+   "absolute_effect": "Attack frequency fell 41.6% vs 15.8% from baseline over 12 weeks at 600 mg elemental/day (no between-group CI published); the 2025 dose-response meta-analysis reports -1.66 monthly migraine days without a CI in the abstract.",
+   "clinically_meaningful": "unknown - the field's usual bar is a 50% responder rate or >=1.5 fewer monthly migraine days (the standard preventive-trial threshold); the pivotal trial reports neither with a confidence interval, and no trial tested this product's dose.",
+   "strongest_study": "Peikert 1996 (PMID 8792038): 81 patients, 12 weeks, prospective 4-week baseline, multicentre, double-blind, and the trial that carries the guideline's Level B rating.",
+   "strongest_doubt": "A same-year multicentre trial at a similar dose was stopped early for futility, and the 2019 meta-analysis's severity estimate cannot exclude no effect; the only Cochrane record is a 2025 protocol.",
+   "study_that_would_move_this": "A registered, 200+ person, 3-month RCT of magnesium bisglycinate 300 mg vs 600 mg elemental vs placebo with monthly migraine days as the primary endpoint."
+  },
+  {
+   "name": "Constipation relief",
+   "population": "Adults with chronic constipation",
+   "studied_in": {
+    "sex": "mixed",
+    "sex_note": "93% women in the single pivotal trial (84 of 90); about 6 men studied in total",
+    "age_min": null,
+    "age_max": null,
+    "age_note": "mean age 42; no age range in the abstract, full text not accessible",
+    "ethnicity": "not reported; single-centre trial in Japan",
+    "confidence": "verified"
+   },
+   "sentence": "The laxative evidence is magnesium oxide 1.5 g/day (~900 mg elemental): 68% vs 12% improved. An absorbed chelate at 300 mg is a different thing entirely.",
+   "ledger": {
+    "effectPoints": "2",
+    "effect_basis": "Morishita 2021 (PMID 32969946, abstract): 90 adults with chronic idiopathic constipation, double-blind, randomised, placebo-controlled, 28 days - overall improvement 68.3% on magnesium OXIDE 1.5 g/day (~900 mg elemental) vs 11.7% on placebo (p<0.0001), with significant gains in spontaneous bowel movements and constipation quality of life; senna performed the same (69.2%). Graded 2 rather than 3 because the body is a single placebo-controlled trial in adults: no meta-analysis, and the rest of the literature is retrospective or in opioid-induced/paediatric populations. Mechanism matters here in the wrong direction for this product: the laxative action is osmotic and depends on magnesium staying in the bowel, whereas a bisglycinate chelate is marketed and formulated to be absorbed. Consistent with that, the exact-form sleep trial recorded 2 adverse events on 250 mg elemental bisglycinate vs 7 on placebo (PMID 40918053). Chronic magnesium oxide at laxative doses also carries a real hypermagnesaemia risk (PMID 31379418).",
+    "bodyIsRct": true,
+    "checklist": {
+     "risk_of_bias": "unknown",
+     "consistency": "unknown",
+     "precision": "supported",
+     "directness": "supported",
+     "publication_bias": "unknown"
+    },
+    "gates": {
+     "rctCount": 1,
+     "largestRctN": 90,
+     "longestRctWeeks": 4,
+     "chronicOutcome": true,
+     "surrogate": false,
+     "allPositiveIndustryOrOneLab": false
+    },
+    "formFit": "1",
+    "doseFit": "1",
+    "effective_daily_range": "~900 mg/day ELEMENTAL magnesium as poorly absorbed magnesium OXIDE (1.5 g of the salt). Reading A makes this product one third of that in a form designed not to act osmotically; Reading B (42 mg elemental) is ~5%."
+   },
+   "detail": {
+    "effect": {
+     "found": "A large, clean effect for magnesium oxide: 68.3% vs 11.7% overall improvement, equal to senna, with better quality-of-life scores.",
+     "missing": "That effect belongs to a poorly absorbed salt at roughly three times this product's elemental dose. Nothing shows an absorbed chelate at 300 mg does the same; if anything the exact-form trial reported fewer GI events than placebo.",
+     "move": "A placebo-controlled trial of magnesium bisglycinate 300 mg elemental with spontaneous bowel movements as the primary endpoint."
+    },
+    "evidence": {
+     "found": "One properly randomised, double-blind, placebo-controlled trial in adults - the trial the authors themselves call the first of its kind - plus wide clinical use of magnesium oxide as an osmotic laxative.",
+     "missing": "Only one such trial exists, at a single centre with 93% women, and I could read only its abstract, so risk of bias could not be assessed. There is no systematic review of oral magnesium salts vs placebo for chronic constipation.",
+     "move": "A meta-analysis or a second placebo-controlled trial, ideally comparing salts head-to-head."
+    },
+    "form": {
+     "found": "Nothing transferable. The tested form is magnesium oxide; the mechanism is osmotic retention in the gut.",
+     "missing": "The chelate's whole design point - absorption - works against the laxative mechanism, so this is not a form mismatch that can be waved through as 'plausible equivalence'.",
+     "move": "A direct comparison of bisglycinate vs oxide on stool frequency at matched elemental dose."
+    },
+    "dose": {
+     "found": "Nothing at 300 mg elemental. The tested dose is ~900 mg elemental.",
+     "missing": "300 mg elemental is below the US supplemental upper limit precisely because it is below the dose where magnesium reliably loosens stools; the effective laxative dose is also the dose that causes diarrhoea by design.",
+     "move": "A dose-ranging bowel-movement trial."
+    }
+   },
+   "inventory": [
+    {
+     "id": "PMID 32969946 / 10.14309/ajg.0000000000000942",
+     "year": 2021,
+     "design": "rct",
+     "n": 90,
+     "direction": "benefit",
+     "access": "abstract",
+     "note": "standalone. DIFFERENT SALT AND DOSE: magnesium oxide 1.5 g/day (~900 mg elemental), 28 days, three arms (senna / MgO / placebo), all 90 completed."
+    },
+    {
+     "id": "PMID 33136565 / 10.14309/ajg.0000000000001041",
+     "year": 2021,
+     "design": "other",
+     "n": 0,
+     "direction": "unclear",
+     "access": "abstract",
+     "note": "Correspondence about PMID 32969946 - same data, no new evidence. Recorded to prevent double counting."
+    },
+    {
+     "id": "PMID 31379418 / 10.3164/jcbn.18-117",
+     "year": 2019,
+     "design": "case_series",
+     "n": 0,
+     "direction": "harm",
+     "access": "abstract",
+     "note": "standalone safety signal: hypermagnesaemia in patients on daily magnesium oxide for functional constipation. Relevant to the high-dose oxide route, not to 300 mg of chelate."
+    },
+    {
+     "id": "PMID 33481179 / 10.1007/s12519-020-00401-0",
+     "year": 2021,
+     "design": "rct",
+     "n": 0,
+     "direction": "benefit",
+     "access": "abstract",
+     "note": "DIFFERENT POPULATION (children with spastic cerebral palsy) - excluded from this row's count, listed so the search trail is complete."
+    }
+   ],
+   "absolute_effect": "68.3% vs 11.7% of patients reported overall improvement after 28 days on magnesium oxide 1.5 g/day (~900 mg elemental), p<0.0001 - a ~57 percentage-point absolute gain.",
+   "clinically_meaningful": "yes for magnesium oxide at that dose - the endpoint was patient-reported overall improvement plus spontaneous bowel movements, the thresholds used in constipation drug trials. Unknown for this product, which was never tested.",
+   "strongest_study": "Morishita 2021 (PMID 32969946): the first double-blind, placebo-controlled trial of an osmotic magnesium salt for chronic idiopathic constipation, 90 patients, no dropouts.",
+   "strongest_doubt": "It tells you nothing about this product: different salt, ~3x the elemental dose, and a mechanism (staying in the bowel) that a bisglycinate chelate is specifically formulated to avoid.",
+   "study_that_would_move_this": "A placebo-controlled trial of magnesium bisglycinate 300 mg elemental in chronic idiopathic constipation with complete spontaneous bowel movements as the primary endpoint."
+  }
+ ],
+ "searches_run": [
+  "Europe PMC REST search: 'magnesium bisglycinate' (130 hits, resultType=core, pageSize=25)",
+  "Europe PMC REST search: 'magnesium AND sleep quality AND randomized' (5,085 hits, scoped)",
+  "Europe PMC REST search: 'TITLE:\"magnesium\" AND (TITLE:\"sleep\" OR TITLE:\"insomnia\")' (60 hits)",
+  "Europe PMC REST search: 'TITLE:\"Oral magnesium supplementation for insomnia in older adults\"' (3 hits incl. 2024 correction)",
+  "Europe PMC REST search: 'TITLE:\"magnesium\" AND TITLE:\"cramps\"' (33 hits)",
+  "Europe PMC REST search: '(TITLE:\"magnesium\" AND TITLE:\"anxiety\") AND (PUB_TYPE Systematic Review OR Meta-Analysis OR RCT)' (4 hits)",
+  "Europe PMC REST search: 'magnesium AND anxiety AND (Systematic Review OR Meta-Analysis)' (590 hits, triaged)",
+  "Europe PMC REST search: 'TITLE:\"magnesium\" AND (TITLE:\"migraine\" OR TITLE:\"headache\") AND (Meta-Analysis OR Systematic Review)' (4 hits)",
+  "Europe PMC REST search: 'magnesium AND migraine AND prophylaxis AND (RCT OR Meta-Analysis OR Guideline)' (58 hits)",
+  "Europe PMC REST search: 'TITLE:\"magnesium\" AND TITLE:\"prophylaxis of migraine\"' and 'AUTH:\"Peikert\" AND magnesium AND migraine'",
+  "Europe PMC REST search: 'TITLE:\"complementary treatments for episodic migraine prevention\"' (AAN/AHS guideline)",
+  "Europe PMC REST search: 'TITLE:\"magnesium\" AND (TITLE:\"bioavailability\" OR TITLE:\"absorption\" OR TITLE:\"serum magnesium\" OR TITLE:\"magnesium status\")' (1,844 hits, triaged)",
+  "Europe PMC REST search: '(magnesium AND glycine AND (absorption OR bioavailability)) AND (RCT OR Clinical Trial)' (107 hits)",
+  "Europe PMC REST search: 'magnesium supplementation AND hypomagnesemia AND oral AND randomized AND serum magnesium' (925 hits, triaged)",
+  "Europe PMC REST search: '(TITLE:\"magnesium\" AND TITLE:\"constipation\")' (36 hits)",
+  "Europe PMC REST search: 'TITLE:\"tolerable upper intake level\" AND magnesium' (8 hits)",
+  "Europe PMC REST search: 'Supakatisant' (full-text search, 9 hits - used to verify the elemental dose of the bisglycinate pregnancy trial)",
+  "Europe PMC REST search: '(magnesium AND (bisglycinate OR glycinate)) AND (anxiety OR stress OR sleep OR cramp) AND (RCT OR Clinical Trial)' (12 hits - confirms only 2 bisglycinate RCTs exist on these outcomes)",
+  "Europe PMC fullTextXML fetched: PMC12412596 (bisglycinate sleep RCT), PMC12604082 (Cochrane migraine protocol), PMC8053283 + PMC11660779 (Mah & Pitre + correction), PMC5452159 (Boyle 2017), PMC11136869 (Rawji 2024), PMC8559389 (Barna 2021), PMC13005370 (Kuusipalo 2026), PMC12994056 (2026 electrolytes SR/MA), PMC11677548 (MAGSHAPE PK), PMC13009017 (hypomagnesaemia update), PMC10509448 (UL perspective), PMC12932175 (2026 repletion RCT)",
+  "NCBI efetch db=pmc: PMC8094171 (Cochrane CD009402.pub3) and PMC8094374 (Cochrane CD010655.pub3) - abstract + plain-language summary only; publisher blocks full XML",
+  "Europe PMC EXT_ID lookups to verify every cited PMID/DOI resolves to the title quoted: 40918053, 42661485, 33865376, 32956536, 33275278, 22909270, 34247796, 28241153, 34719399, 41680812, 41812583, 28445426, 38817505, 41216917, 22529203, 8792038, 8902254, 18705538, 30764890, 39404918, 26752497, 29131326, 32969946, 33136565, 39770988, 41872423, 41756632, 37487817, 41697399, 39252819, 31379418, 42709016, 33827421",
+  "Europe PMC full-text search: 'Roguin Maor' (10 hits) - used to source the 865 mg/day magnesium oxide dose of PMID 28241153, which its own abstract does not state",
+  "HTTP: https://ods.od.nih.gov/factsheets/Magnesium-HealthProfessional/ - BLOCKED by Cloudflare challenge (recorded in could_not_access)"
+ ],
+ "could_not_access": [
+  "NIH Office of Dietary Supplements magnesium fact sheet - Cloudflare JS challenge; the 350 mg/day supplemental upper limit and its diarrhoea basis were instead verified in the full text of Adv Nutr 2023 (PMID 37487817), which quotes the 1997 IOM derivation directly",
+  "Cochrane CD009402.pub3 (cramps) and CD010655.pub3 (pregnancy leg cramps) full review bodies - 'the publisher of this article does not allow downloading of the full text in XML form'. Read the complete abstract, results paragraphs and plain-language summary; per-trial characteristics tables were NOT seen",
+  "Lopresti 2026 systematic review of magnesium for sleep (PMID 42661485) - abstract only; the identity of all 12 included RCTs and their individual doses could not be read",
+  "Hsu 2021 pregnancy leg-cramp meta-analysis (PMID 34247796) - abstract only; which 4 RCTs were pooled could not be verified, so the overlap with Supakatisant 2015 is stated as probable, not confirmed",
+  "Supakatisant & Phupong 2015 (PMID 22909270) full text - abstract only; the 300 mg = 12.3 mmol ELEMENTAL reading was verified from a second full-text source (PMID 37487817 table)",
+  "Peikert 1996, Pfaffenrath 1996, Koseoglu 2008, Roguin Maor 2017 (JAMA Intern Med), Morishita 2021 (Am J Gastroenterol), Rajapakse 2019, Chiu 2016, von Luckner 2018, AAN/AHS 2012 guideline, 2025 Neurol Sci dose-response meta-analysis - abstracts only; between-group CIs and risk-of-bias detail unavailable for several",
+  "No product label or certificate of analysis was available, so whether '300 mg' on this label means elemental or compound magnesium could not be resolved from the product itself"
+ ],
+ "self_confidence": "medium",
+ "confidence_note": "High confidence on the two facts that matter most, because both were verified twice from full text: magnesium bisglycinate is ~14% elemental magnesium (893 mg chelate = 125 mg Mg in the exact-form trial; ~14-15% in a 2026 clinical review), and only TWO randomised trials anywhere have used this form on these outcomes - sleep (PMID 40918053) and pregnancy leg cramps (PMID 22909270, at 300 mg elemental, the printed number). Medium overall for three reasons. (1) Reading A vs Reading B of the label swings every dose verdict; under Reading B nothing in this file supports the product. (2) Several pivotal sources were abstract-only, including both Cochrane review bodies and the newest sleep systematic review. (3) Two judgement calls are mine and are worth checking: I set allPositiveIndustryOrOneLab=false on the night-cramps row even though the single positive cramp trial is manufacturer-funded, because that gate would cap a moderate-to-high-certainty Cochrane NULL at certainty 2 and turn 'no meaningful benefit' into 'unclear' - audit-v0.2 rule 4 says a biased positive literature must not down-rate a clean null, so the funding fact is recorded in strongest_doubt instead; and I scored non-bisglycinate salts as formFit 2 ('different form, plausible equivalence') everywhere except constipation, where the tested salt's mechanism depends on NOT being absorbed and formFit is therefore 1. Pregnancy leg cramps is the row I would most want a second reader on: it is the only row where form AND elemental dose match the product exactly, and two review teams reading the same trials disagree both on its risk of bias (Cochrane high vs 2026 SR low) and on the pooled direction (responder RR 1.35 positive vs mean-frequency WMD null). I scored it 1 (small benefit, certainty 1) because the newest pooled estimate excludes no effect, not because the question is settled."
 }
