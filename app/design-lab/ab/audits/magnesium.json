@@ -19,6 +19,15 @@
     {
       "name": "Sleep quality (poor sleepers)",
       "population": "Adults 18-65 with self-rated poor sleep",
+      "studied_in": {
+        "sex": "mixed",
+        "sex_note": "pivotal exact-form RCT 122/153 women (80%); the 12-RCT body is mixed-sex",
+        "age_min": 18,
+        "age_max": 65,
+        "age_note": "pivotal trial eligible 18-65, mean 41.5 (SD 13.1); no one over 65 studied",
+        "ethnicity": "not reported; nationwide German sample, no race/ethnicity data collected",
+        "confidence": "verified"
+      },
       "sentence": "The one trial on this exact form (n=155): insomnia score fell 1.6 pts more than placebo (CI 0.0-3.3); the 6-pt \"meaningful\" mark was not reached.",
       "ledger": {
         "effectPoints": "1",
@@ -112,6 +121,15 @@
     {
       "name": "Falling asleep faster, age 55+",
       "population": "Adults 55+ with insomnia",
+      "studied_in": {
+        "sex": "mixed",
+        "sex_note": "only Nielsen reports sex: 78/100 women; Abbasi and Held report no sex split",
+        "age_min": 51,
+        "age_max": 85,
+        "age_note": "Nielsen 51-85 (mean 59), Abbasi 60-75 (mean 65), Held 60-80 (mean 69)",
+        "ethnicity": "not reported; trials run in USA, Iran and Germany",
+        "confidence": "verified"
+      },
       "sentence": "Three small trials of magnesium oxide/citrate at 320-729 mg elemental pooled to 17 min faster sleep onset (CI 7-27 min); none used bisglycinate.",
       "ledger": {
         "effectPoints": "1",
@@ -205,6 +223,15 @@
     {
       "name": "Sleep if you sleep fine already",
       "population": "Adults with no sleep complaint",
+      "studied_in": {
+        "sex": "unknown",
+        "sex_note": "Held (n=12) reports no sex split; the CoLaus cohort beside it is 52.6% women",
+        "age_min": 60,
+        "age_max": 80,
+        "age_note": "the only RCT enrolled healthy 60-80 year olds; cohort mean 57.2 (SD 10.4)",
+        "ethnicity": "not reported; German EEG crossover and a Swiss (Lausanne) cohort",
+        "confidence": "verified"
+      },
       "sentence": "Untested: every trial recruited poor sleepers or insomnia patients. The only exception is a 12-person EEG crossover at 729 mg in healthy older adults.",
       "ledger": {
         "effectPoints": "unclear",
@@ -280,6 +307,15 @@
     {
       "name": "Anxiety and stress (healthy)",
       "population": "Healthy adults, no anxiety diagnosis",
+      "studied_in": {
+        "sex": "mixed",
+        "sex_note": "exact-form RCT 80% women; 9 of Boyle's 18 studies were female-only (PMS, postpartum)",
+        "age_min": 18,
+        "age_max": 82,
+        "age_note": "exact-form RCT 18-65 (mean 41.5); review samples mean 27-51, ranges 18-82",
+        "ethnicity": "not reported in the exact-form trial or in any of the 18 review studies",
+        "confidence": "verified"
+      },
       "sentence": "On this form, anxiety moved 0.0 (CI -0.4 to 0.4) and stress 0.4 (CI -1.7 to 2.5) vs placebo; the 18-study review calls the wider field poor quality.",
       "ledger": {
         "effectPoints": "0",
@@ -373,6 +409,15 @@
     {
       "name": "Diagnosed anxiety disorder",
       "population": "Adults with a diagnosed anxiety disorder",
+      "studied_in": {
+        "sex": "mixed",
+        "sex_note": "no eligible trial exists; nearest (Hanus combination) was 213/264 women, 81%",
+        "age_min": 18,
+        "age_max": 82,
+        "age_note": "Hanus 2004 enrolled 18-82, mean 44.6; no diagnosed-anxiety trial to describe",
+        "ethnicity": "not reported; the nearest trial was a French multicentre study",
+        "confidence": "verified"
+      },
       "sentence": "No trial gave magnesium alone to people with a diagnosed anxiety disorder; the 18-study review found only mildly anxious, PMS and postpartum samples.",
       "ledger": {
         "effectPoints": "unclear",
@@ -448,6 +493,15 @@
     {
       "name": "Night leg cramps (age 50+)",
       "population": "Adults 50+ with idiopathic night cramps",
+      "studied_in": {
+        "sex": "mixed",
+        "sex_note": "women predominate where reported: Kuusipalo 72%, Barna 75%, Roguin Maor 61%",
+        "age_min": 21,
+        "age_max": 85,
+        "age_note": "trial means 57-69; Kuusipalo strata 50-85, Roguin Maor eligible 21+ (mean 65)",
+        "ethnicity": "not reported in any cramp trial (Finland, Israel, Ukraine, Argentina, UK)",
+        "confidence": "verified"
+      },
       "sentence": "Cochrane: -0.18 cramps/week (CI -0.84 to 0.49) and no responder gain (RR 1.04); a 2026 independent trial at 250 mg elemental also found nothing.",
       "ledger": {
         "effectPoints": "0",
@@ -559,6 +613,15 @@
     {
       "name": "Leg cramps in pregnancy",
       "population": "Pregnant women with 2+ leg cramps a week",
+      "studied_in": {
+        "sex": "female",
+        "sex_note": "100% female by definition: pregnant women in Thailand, Brazil, Norway, Sweden",
+        "age_min": null,
+        "age_max": null,
+        "age_note": "maternal ages not reported by the exact-form trial or the 2026 pooled table",
+        "ethnicity": "not reported; exact-form trial run in Thailand, pooled trials Nordic/Brazil",
+        "confidence": "verified"
+      },
       "sentence": "On this exact form at 300 mg elemental: one 86-woman trial and a 2026 pooled RR of 1.35 (CI 1.05-1.74) favour it; an earlier pooled analysis found nothing.",
       "ledger": {
         "effectPoints": "1",
@@ -661,6 +724,15 @@
     {
       "name": "Raising a low magnesium level",
       "population": "Adults with low or borderline magnesium",
+      "studied_in": {
+        "sex": "mixed",
+        "sex_note": "repletion RCT 34/71 men (48%); the bisglycinate PK study gives no sex split",
+        "age_min": 20,
+        "age_max": null,
+        "age_note": "PK study 20-55; repletion RCT mean 68.7 (SD 6.0), upper age limit not stated",
+        "ethnicity": "repletion RCT all older Chinese adults; Spanish PK study reports no breakdown",
+        "confidence": "verified"
+      },
       "sentence": "360 mg/day of oxide raised plasma magnesium 0.056 mmol/L in deficient elders; 300 mg elemental is inside the 200-400 mg range clinicians use to repletion.",
       "ledger": {
         "effectPoints": "2",
@@ -754,6 +826,15 @@
     {
       "name": "Migraine prevention",
       "population": "Adults with episodic migraine",
+      "studied_in": {
+        "sex": "mixed",
+        "sex_note": "Pfaffenrath 64/69 women (93%); Peikert and Koseoglu report no sex split",
+        "age_min": 18,
+        "age_max": 65,
+        "age_note": "Peikert 18-65, Pfaffenrath 18-64, Koseoglu 20-55; nobody over 65 enrolled",
+        "ethnicity": "not reported; German multicentre and Turkish single-centre trials",
+        "confidence": "verified"
+      },
       "sentence": "Level B \"probably effective\" rests on 600 mg/day of citrate salts (attacks -42% vs -16%); 300 mg elemental is half that, and one trial found nothing.",
       "ledger": {
         "effectPoints": "1",
@@ -874,6 +955,15 @@
     {
       "name": "Constipation relief",
       "population": "Adults with chronic constipation",
+      "studied_in": {
+        "sex": "mixed",
+        "sex_note": "93% women in the single pivotal trial (84 of 90); about 6 men studied in total",
+        "age_min": null,
+        "age_max": null,
+        "age_note": "mean age 42; no age range in the abstract, full text not accessible",
+        "ethnicity": "not reported; single-centre trial in Japan",
+        "confidence": "verified"
+      },
       "sentence": "The laxative evidence is magnesium oxide 1.5 g/day (~900 mg elemental): 68% vs 12% improved. An absorbed chelate at 300 mg is a different thing entirely.",
       "ledger": {
         "effectPoints": "2",

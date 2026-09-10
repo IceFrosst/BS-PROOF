@@ -19,6 +19,15 @@
     {
       "name": "Raising a low blood level",
       "population": "Adults with 25(OH)D below 20 ng/mL (50 nmol/L)",
+      "studied_in": {
+        "sex": "mixed",
+        "sex_note": "VITAL 50.6% women; Heaney n=67 all men; Gallagher n=163 all women; Iran RCT 76% men",
+        "age_min": 18,
+        "age_max": null,
+        "age_note": "Iran RCT 18-70 (mean 46); VITAL 50+ (mean 67); Gallagher postmenopausal; Heaney age NR",
+        "ethnicity": "VITAL 71% White/20% Black; Gallagher White women only; Iran trial not reported",
+        "confidence": "verified"
+      },
       "sentence": "2000 IU/day reliably raises 25(OH)D by about 12 ng/mL (30 nmol/L) in 8-12 weeks, which lifts most deficient people over the 20 ng/mL line.",
       "ledger": {
         "effectPoints": "3",
@@ -81,6 +90,15 @@
     {
       "name": "Treating rickets or osteomalacia",
       "population": "Rickets/osteomalacia from vitamin D deficiency",
+      "studied_in": {
+        "sex": "unknown",
+        "sex_note": "Neither the 1984 (n=41) nor the 1973 (n=226) trial reports a sex breakdown",
+        "age_min": null,
+        "age_max": null,
+        "age_note": "Guideline is paediatric; RCTs in 'elderly' inpatients and epilepsy outpatients, ages NR",
+        "ethnicity": "not reported",
+        "confidence": "unknown"
+      },
       "sentence": "Vitamin D cures it, but the guideline treatment dose is 2000 IU/day only under age 1; from 12 months up it is 3000-6000 IU/day for 12+ weeks.",
       "ledger": {
         "effectPoints": "3",
@@ -143,6 +161,15 @@
     {
       "name": "Preventing fractures (D alone)",
       "population": "Community adults 50+, not deficient, no calcium",
+      "studied_in": {
+        "sex": "mixed",
+        "sex_note": "VITAL 50.6% women (13,085/25,871); DO-HEALTH 61.7% women",
+        "age_min": 50,
+        "age_max": null,
+        "age_note": "VITAL men 50+/women 55+, mean 67.1, no upper limit; DO-HEALTH 70+, mean 74.9",
+        "ethnicity": "VITAL 71.3% non-Hispanic White, 20.2% Black, 4.0% Hispanic, 1.5% Asian",
+        "confidence": "verified"
+      },
       "sentence": "VITAL gave 25,871 adults this exact dose for 5.3 years: total fractures HR 0.98 (0.89-1.08), hip 1.01 - and no benefit at any baseline level.",
       "ledger": {
         "effectPoints": "0",
@@ -205,6 +232,15 @@
     {
       "name": "Fractures with calcium, frail 70+",
       "population": "Frail/care-home elderly on D + 1200 mg calcium",
+      "studied_in": {
+        "sex": "female",
+        "sex_note": "Decalyos I (n=3270) and II (n=583) all women; pooled WHI arm all postmenopausal women",
+        "age_min": 50,
+        "age_max": null,
+        "age_note": "Decalyos mean age 84 and 85.2, institutionalised; pooled WHI arm 50-79; men barely studied",
+        "ethnicity": "not reported in the French care-home trials",
+        "confidence": "verified"
+      },
       "sentence": "800 IU plus 1200 mg calcium cut hip fractures ~16% (RR 0.84) - 9 fewer per 1000/year in care homes. That regimen is not 2000 IU alone.",
       "ledger": {
         "effectPoints": "1",
@@ -267,6 +303,15 @@
     {
       "name": "Preventing falls",
       "population": "Community adults 65+, incl. those at risk of falls",
+      "studied_in": {
+        "sex": "mixed",
+        "sex_note": "VITAL 50.6% women; STURDY 43.6% women (300/688)",
+        "age_min": 50,
+        "age_max": null,
+        "age_note": "VITAL 50+ mean 67.1; STURDY 70+ mean 77.2 (SD 5.4), enriched for fall risk",
+        "ethnicity": "STURDY 79.7% White, 18.2% Black; VITAL 71.3% White, 20.2% Black",
+        "confidence": "verified"
+      },
       "sentence": "At this exact dose VITAL found 2+ falls OR 0.97 (0.90-1.05). USPSTF recommends against vitamin D for falls; 1000-4000 IU may raise serious falls.",
       "ledger": {
         "effectPoints": "0",
@@ -329,6 +374,15 @@
     {
       "name": "Colds and flu, general adults",
       "population": "General population, mostly vitamin D replete",
+      "studied_in": {
+        "sex": "mixed",
+        "sex_note": "46 pooled trials enrolled both sexes; VITAL URI 51% women; Aglipay 57.7% boys",
+        "age_min": 0,
+        "age_max": 100,
+        "age_note": "Pooled birth to 100 y; on-dose trials VITAL mean 68 y, Aglipay children mean 2.7 y",
+        "ethnicity": "Jolliffe 2025 lacked race data; VITAL URI 76% White, 16% Black",
+        "confidence": "verified"
+      },
       "sentence": "Updated meta of 61,589 people: ARI odds 0.94 (0.88-1.00). At this dose VITAL's URI odds were 0.96 (0.86-1.06) - at best ~1 person in 100 spared.",
       "ledger": {
         "effectPoints": "0",
@@ -392,6 +446,15 @@
     {
       "name": "Colds if severely deficient",
       "population": "People with 25(OH)D under 10 ng/mL (25 nmol/L)",
+      "studied_in": {
+        "sex": "mixed",
+        "sex_note": "IPD trials both sexes; the 234-person deficient stratum is mostly schoolchildren",
+        "age_min": 0,
+        "age_max": 95,
+        "age_note": "IPD spans 0-95 y but the aOR 0.30 stratum is mostly Mongolian children aged 7-13",
+        "ethnicity": "race missing for 34% of IPD and never analysed; VITAL subgroup not reported",
+        "confidence": "verified"
+      },
       "sentence": "One 2017 IPD meta found a big effect here (aOR 0.30, interaction p=0.006); two larger updates found none, and 2000 IU/day is barely tested in this group.",
       "ledger": {
         "effectPoints": "0",
@@ -454,6 +517,15 @@
     {
       "name": "Preventing depression",
       "population": "Adults 50+ with no current depression",
+      "studied_in": {
+        "sex": "mixed",
+        "sex_note": "VITAL-DEP 49.2% women of 18,353",
+        "age_min": 50,
+        "age_max": null,
+        "age_note": "Men 50+/women 55+, mean 67.5 (SD 7.1), no upper limit; nobody under 50 studied",
+        "ethnicity": "not stated in the accessible record; parent VITAL 71.3% White, 20.2% Black",
+        "confidence": "verified"
+      },
       "sentence": "VITAL-DEP tested this exact dose in 18,353 adults for 5.3 years: depression HR 0.97 (0.87-1.09) and a 0.01-point mood change against a 0.5-point threshold.",
       "ledger": {
         "effectPoints": "0",
@@ -513,6 +585,15 @@
     {
       "name": "Treating depression",
       "population": "Depressed adults, including those with low levels",
+      "studied_in": {
+        "sex": "mixed",
+        "sex_note": "D-Vitaal 57% women; the other trials give no sex split in accessible records",
+        "age_min": 10,
+        "age_max": 80,
+        "age_note": "D-Vitaal 60-80, DepFuD 18-65, Taiwan trial 10-24; nothing above 80",
+        "ethnicity": "not reported; trials run in Netherlands, Finland, Norway, Kerala and Taiwan",
+        "confidence": "verified"
+      },
       "sentence": "Trials in depressed people with low vitamin D are null (D-Vitaal n=155 at 1200 IU; DepFuD n=281); a 41-trial meta shows g -0.32, very low certainty.",
       "ledger": {
         "effectPoints": "0",
@@ -577,6 +658,15 @@
     {
       "name": "Living longer (any cause)",
       "population": "Adults 50+ taking it for several years",
+      "studied_in": {
+        "sex": "mixed",
+        "sex_note": "VITAL 50.6% women; D-Health 45.9% women; Cochrane 2014 pool 77% women",
+        "age_min": 18,
+        "age_max": 107,
+        "age_note": "Cochrane pool 18-107, mostly women over 70; VITAL 50+ mean 67; D-Health 60-84",
+        "ethnicity": "VITAL 71.3% White/20.2% Black; D-Health (Australian electoral roll) not reported",
+        "confidence": "verified"
+      },
       "sentence": "VITAL death HR 0.99 (0.87-1.12), D-Health 1.04 (0.93-1.18), a 52-trial meta RR 0.98 (0.95-1.02): no all-cause mortality benefit at this dose.",
       "ledger": {
         "effectPoints": "0",
@@ -639,6 +729,15 @@
     {
       "name": "Dying of cancer",
       "population": "Adults 50+ on daily dosing for 4+ years",
+      "studied_in": {
+        "sex": "mixed",
+        "sex_note": "14 pooled RCTs both sexes incl. all-female WHI arm; signal only in men (HR 0.73)",
+        "age_min": 30,
+        "age_max": null,
+        "age_note": "Main trials 50+/60+/70+ (WHI 50-79); AMATERASU from 30; signal only at 70+",
+        "ethnicity": "1437 cancer deaths in non-Hispanic Whites vs 161 in all other groups combined",
+        "confidence": "verified"
+      },
       "sentence": "Daily-dosing trials pool to 12% lower cancer death (RR 0.88, 0.78-0.98; daily-vs-bolus interaction p=0.042); the fullest IPD analysis is 0.93 (0.84-1.02).",
       "ledger": {
         "effectPoints": "1",
@@ -701,6 +800,15 @@
     {
       "name": "Pregnancy outcomes",
       "population": "Pregnant women (any baseline vitamin D level)",
+      "studied_in": {
+        "sex": "female",
+        "sex_note": "All 8 pooled trials enrolled pregnant women only (2313 women)",
+        "age_min": null,
+        "age_max": null,
+        "age_note": "Maternal ages not reported in the accessible Cochrane 2024 record",
+        "ethnicity": "not reported in the accessible Cochrane record",
+        "confidence": "verified"
+      },
       "sentence": "Cochrane 2024 (10 trials): may cut low birthweight (RR 0.69, 0.44-1.08) and severe bleeding; pre-eclampsia and preterm birth remain very uncertain.",
       "ledger": {
         "effectPoints": "1",

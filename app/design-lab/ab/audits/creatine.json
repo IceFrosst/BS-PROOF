@@ -19,6 +19,15 @@
     {
       "name": "Strength when you lift weights",
       "population": "Adults under 50 doing resistance training",
+      "studied_in": {
+        "sex": "male",
+        "sex_note": "20 of 23 trials male-only; 469 men vs 49 women (92% male participants)",
+        "age_min": 17,
+        "age_max": 27,
+        "age_note": "trial mean ages 17.1-26.8 (1 NR); cap was <50 but no trial mean over 27",
+        "ethnicity": "not reported in any of the 23 trials or in the review",
+        "confidence": "verified"
+      },
       "sentence": "On top of training, creatine adds about 4.4 kg to upper-body 1RM and 11.4 kg to lower-body 1RM - a 20% vs 12% strength gain instead of 12%.",
       "ledger": {
         "effectPoints": "1",
@@ -139,6 +148,15 @@
     {
       "name": "Sprint power without lifting",
       "population": "Active adults not doing resistance training",
+      "studied_in": {
+        "sex": "male",
+        "sex_note": "pivotal review male-only by eligibility: 39 trials, zero women; 3 side RCTs mixed",
+        "age_min": 18,
+        "age_max": 30,
+        "age_note": "pooled estimate 18-30 y only; the mixed side RCTs add 23-24, 45-65 and 68 y",
+        "ethnicity": "not reported; the pooled review records no race or ethnicity data",
+        "confidence": "verified"
+      },
       "sentence": "Short-burst power still rises without weights (+71 W Wingate peak, about +8%), but lean mass does not: +3.39 kg with training vs -0.89 kg without.",
       "ledger": {
         "effectPoints": "1",
@@ -241,6 +259,15 @@
     {
       "name": "Lean mass (part is water)",
       "population": "Adults doing resistance training",
+      "studied_in": {
+        "sex": "mixed",
+        "sex_note": "male-skewed: of 54 fat-free-mass effect sizes, 32 male-only, 9 female-only, 13 both",
+        "age_min": 18,
+        "age_max": null,
+        "age_note": "eligibility >=18; trial mean ages 19-71; 37 of 54 effect sizes at mean age <=40",
+        "ethnicity": "not reported in the 61-trial pool or the direct-imaging review",
+        "confidence": "verified"
+      },
       "sentence": "About +1.1 to 1.4 kg of DXA lean mass over training alone - but 0.5-1.0 L of that is water, and direct muscle imaging shows almost nothing.",
       "ledger": {
         "effectPoints": "1",
@@ -370,6 +397,15 @@
     {
       "name": "Thinking and memory, young",
       "population": "Healthy adults roughly 18-45",
+      "studied_in": {
+        "sex": "mixed",
+        "sex_note": "pivotal n=123 trial 57% female; of the pooled young trials 1 male-only, 1 female-only",
+        "age_min": 11,
+        "age_max": null,
+        "age_note": "pooled young subgroup 11-31 y; pivotal trial mean 30.6 (SD 10.1), range unreported",
+        "ethnicity": "not reported; pivotal trial run in Bonn, Germany, no ethnicity data given",
+        "confidence": "verified"
+      },
       "sentence": "The biggest trial (n=123, 5 g/day, 6 weeks) missed both preregistered outcomes, and EFSA rejected the cognition claim in 2024 after reviewing 23 studies.",
       "ledger": {
         "effectPoints": "0",
@@ -490,6 +526,15 @@
     {
       "name": "Staying sharp after no sleep",
       "population": "Healthy adults after a night without sleep",
+      "studied_in": {
+        "sex": "mixed",
+        "sex_note": "25 of 44 participants female (57%); both trials mixed-sex, same single lab",
+        "age_min": 20,
+        "age_max": 40,
+        "age_note": "ranges 20-28 (mean 23, n=15) and 20-40 (mean 27, n=29); nobody over 40",
+        "ethnicity": "not reported by either trial",
+        "confidence": "verified"
+      },
       "sentence": "Two small trials found up to 12% less cognitive decline overnight - but from a single 14-25 g dose, roughly 4-6x what this product provides.",
       "ledger": {
         "effectPoints": "1",
@@ -583,6 +628,15 @@
     {
       "name": "Memory in older adults",
       "population": "Healthy adults 60 and over",
+      "studied_in": {
+        "sex": "mixed",
+        "sex_note": "41 of 57 are women: one trial 25 women only, the other 16 men and 16 women",
+        "age_min": 60,
+        "age_max": 85,
+        "age_note": "Alves 60-80 y (arms 61-73), McMorris 68-85 y; nobody under 60",
+        "ethnicity": "not reported by either trial",
+        "confidence": "verified"
+      },
       "sentence": "One meta-analysis found a large gain in over-66s - from two trials totalling 57 people, no interaction test, and a published statistics challenge.",
       "ledger": {
         "effectPoints": "unclear",
@@ -694,6 +748,15 @@
     {
       "name": "Strength in muscular dystrophy",
       "population": "People with a muscular dystrophy",
+      "studied_in": {
+        "sex": "male",
+        "sex_note": "120 of 126 in the trials I read were boys (DMD is X-linked); FSHD trial 6/13 female",
+        "age_min": null,
+        "age_max": null,
+        "age_note": "children/adolescents; FSHD trial 7-15 y (mean 12.2); DMD trials' ages not stated",
+        "ethnicity": "not reported; Cochrane full text blocked, the four trials give no ethnicity",
+        "confidence": "inferred"
+      },
       "sentence": "Cochrane found +8.5% muscle strength and 4.5x the odds of feeling better - but the largest single trial (n=50) found nothing on strength.",
       "ledger": {
         "effectPoints": "1",
@@ -805,6 +868,15 @@
     {
       "name": "Vegetarians: bigger response?",
       "population": "Vegetarians and very low meat intake",
+      "studied_in": {
+        "sex": "mixed",
+        "sex_note": "cognition trials female-heavy (128 women; 57% of n=123); Burke muscle trial sex NR",
+        "age_min": 19,
+        "age_max": 55,
+        "age_note": "Burke enrolled 19-55 y; cognition trials young adults, largest mean 30.6 (SD 10.1)",
+        "ethnicity": "not reported in any of the vegetarian-diet trials",
+        "confidence": "inferred"
+      },
       "sentence": "Vegetarians start 13 mmol/kg lower in muscle creatine and load more; the muscle claim rests on n=42, and the cognition version was refuted at n=123.",
       "ledger": {
         "effectPoints": "unclear",
