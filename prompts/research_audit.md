@@ -1,6 +1,26 @@
 # Evidence audit — one claim, one product, live sources
 
-**Status: PROPOSED (2026-09-10). Not wired into any route. Version `audit-v0.1`.**
+**Status: PROPOSED (2026-09-11). Not wired into any route. Version `audit-v0.2`.**
+
+> **v0.2 changes (after the first live run produced useless output).** v0.1 asked
+> "does X work?" and got "50 · Unclear" for questions that are actually settled.
+> Four structural fixes, no new numeric constants:
+> 1. **STEP 0 — who is this for.** The audit must open with `for_whom_reasonable`
+>    and `for_whom_not`, quoting a guideline where one exists.
+> 2. **Population is a first-class axis.** One row per population the evidence
+>    distinguishes. Never average a null in healthy adults with a benefit in
+>    deficient or high-risk people; never merge prevention with treatment.
+> 3. **Dedup is enforced.** Tag every RCT `standalone` or `pooled_in: {sr_id}`.
+>    A meta-analysis and a trial inside it may not both raise certainty.
+> 4. **Bias in the positive literature must not down-rate a clean null.** If a
+>    large low-bias trial establishes no effect, small biased positive trials
+>    *support* that null — record them in `why_positive_signal_is_unreliable`,
+>    not as `consistency: concern`. This is what dropped VITAL (n=25,871) to
+>    "Low" certainty and produced "Unclear" for a settled question.
+> 5. **Magnitude and threshold are carried fields.** `absolute_effect` and
+>    `clinically_meaningful (yes|no|unknown)` with the named threshold and its
+>    source. A subgroup effect needs an INTERACTION test, not a bare subgroup
+>    p-value; otherwise label it `subgroup_hypothesis_only`.
 Rubric constants live in `docs/design/2026-09-10-evidence-ledger-rubric.md` and
 need founder sign-off before a number is shown to a user.
 

@@ -103,6 +103,23 @@ Observations to take to calibration:
 5. Elemental-vs-compound on the magnesium label is flagged by the model and
    would move dose fit 3 → 1 if the label means compound mass.
 
+## Second live run (2026-09-11, Claude Opus, audit-v0.2) — two rubric flaws now visible
+
+Vitamin D was re-audited population-by-population. Splitting populations fixed the
+*content*, but exposed two scoring flaws that I did NOT patch (invariant 4: no
+invented constants without sign-off):
+
+1. **The "one RCT caps certainty at 1" gate misfires on mega-trials.**
+   VITAL-DEP (n=18,353, exact dose, 5.3 y) is a single trial, so certainty is
+   capped at 1 and a definitively answered question renders "50 · Unclear".
+   The gate was written for small single trials. It needs a size/precision-aware
+   rewrite, not a floor.
+2. **Averaging across populations is now demonstrably misleading.** The vitamin D
+   Overall (53) blends "fixing a low level: 58" with "no fracture benefit in
+   healthy under-75s: 50" and "unknown for depressed+deficient". These are
+   different people. Options: score per selected population, or drop Overall when
+   rows disagree on population. Founder decision needed.
+
 ## What is deliberately NOT in the number
 
 Safety (always its own visible block), marketing red flags, company background,

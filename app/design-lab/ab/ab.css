@@ -104,3 +104,8 @@ body:has(.ab-stage)>.site-header,body:has(.ab-stage)>.site-footer{display:none}
 .ab-provenance{margin:6px 0 14px}
 .ab-provenance summary{font-size:12px;color:var(--ab-muted);cursor:pointer;min-height:40px;display:flex;align-items:center}
 .ab-bars li.dim .ab-bar-name,.ab-bars li.dim .ab-bar-word,.ab-bars li.dim .ab-bar-pts{color:var(--ab-muted);opacity:.7}
+
+.ab-forwhom{border-bottom:1px solid var(--ab-line);padding:0 0 10px;margin:0 0 6px;display:grid;gap:3px}
+.ab-forwhom p{font-size:12.5px;line-height:1.35;color:var(--ab-muted);margin:0}
+.ab-forwhom b{color:var(--ab-ink);font-weight:650}
+.ab-bar-name small{display:block;font-size:11px;font-weight:450;color:var(--ab-muted);line-height:1.2;margin-top:1px}

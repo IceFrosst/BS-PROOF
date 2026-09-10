@@ -74,8 +74,9 @@ export function score(l: Ledger): Scored {
 export interface AuditFile {
   meta: { run_at: string; model: string; prompt: string; note: string };
   product: string; ingredient: string; form: string; daily_dose: string; dose_note: string;
+  for_whom?: { reasonable: string; not_shown: string; source: string };
   outcomes: Array<{
-    name: string; population: string; sentence: string;
+    name: string; population?: string; sentence: string;
     ledger: { effectPoints: string; effect_basis: string; bodyIsRct: boolean; checklist: Ledger["checklist"]; gates: Ledger["gates"]; formFit: string; doseFit: string; effective_daily_range: string };
     detail: Record<"effect" | "evidence" | "form" | "dose", Record<string, string>>;
     inventory: Array<{ id: string; year: number; design: string; n: number; direction: string; access: string; note: string }>;
