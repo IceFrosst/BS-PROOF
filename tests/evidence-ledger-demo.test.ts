@@ -24,8 +24,12 @@ describe("evidence ledger rubric v0.1 (proposed, demo only)", () => {
     expect(score({ ...base, formFit: "unknown", doseFit: 1 }).headline).toBe(54);
     expect(score({ ...base, formFit: "unknown", doseFit: 3 }).headline).toBe(61);
   });
-  it("no meaningful effect reads 50 whatever the fit", () => {
-    expect(score({ ...base, effectPoints: 0 }).headline).toBe(50);
+  it("no meaningful effect reads 50 whatever the fit, and a HIGH-certainty null says so", () => {
+    const r = score({ ...base, effectPoints: 0 });
+    expect(r.headline).toBe(50);
+    expect(r.label).toBe("No meaningful benefit");
+    // low certainty null stays 'Unclear' -- we do not know, rather than 'we know it does nothing'
+    expect(score({ ...base, effectPoints: 0, checklist: { ...base.checklist, precision: "concern", risk_of_bias: "concern" } }).label).toBe("Unclear");
   });
   it("harm is never softened by applicability", () => {
     expect(score({ ...base, effectPoints: -3, checklist: { ...base.checklist, consistency: "supported" }, formFit: "unknown", doseFit: "unknown" }).headline).toBe(0);

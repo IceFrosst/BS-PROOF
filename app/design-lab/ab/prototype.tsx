@@ -1,7 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { bandLabel, score, type Ledger } from "./ledger";
+import { bandLabel, detailFromAudit, ledgerFromAudit, score, type AuditFile, type Ledger } from "./ledger";
+import creatineAudit from "./audits/creatine.json";
+import vitaminDAudit from "./audits/vitamin-d.json";
+import magnesiumAudit from "./audits/magnesium.json";
 import "./ab.css";
 
 type DimKey = "effect" | "evidence" | "form" | "dose";
@@ -9,7 +12,7 @@ interface Detail { found: string; missing: string; move: string }
 
 /* HYPOTHETICAL ledgers. Fictional products; hand-written inputs to exercise the rubric. No search or study lookup was performed. */
 interface OutcomeCase { name: string; sentence: string; ledger: Ledger; detail: Record<DimKey, Detail> }
-interface Scenario { title: string; product: string; outcomes: OutcomeCase[] }
+interface Scenario { title: string; product: string; outcomes: OutcomeCase[]; live?: { runAt: string; model: string; sources: number; doseNote: string; confidence: string; confidenceNote: string; couldNotAccess: string[] } }
 const okChecklist: Ledger["checklist"] = { risk_of_bias: "supported", consistency: "concern", precision: "supported", directness: "supported", publication_bias: "unknown" };
 const strongGates: Ledger["gates"] = { rctCount: 24, largestRctN: 120, longestRctWeeks: 12, chronicOutcome: true, surrogate: false, allPositiveIndustryOrOneLab: false };
 const thinDetail = (what: string): Record<DimKey, Detail> => ({
@@ -56,6 +59,20 @@ const scenarios: Record<string, Scenario> = {
   },
 };
 
+function fromAudit(title: string, a: AuditFile): Scenario {
+  return {
+    title, product: a.product.replace(/,?\s*(softgel|powder|capsules)[^,]*/i, "").replace(" per day", "/day"),
+    outcomes: a.outcomes.map((o) => ({ name: o.name, sentence: o.sentence, ledger: ledgerFromAudit(o), detail: { effect: detailFromAudit(o.detail.effect), evidence: detailFromAudit(o.detail.evidence), form: detailFromAudit(o.detail.form), dose: detailFromAudit(o.detail.dose) } })),
+    live: { runAt: a.meta.run_at, model: a.meta.model, sources: new Set(a.outcomes.flatMap((o) => o.inventory.map((i) => i.id))).size, doseNote: a.dose_note, confidence: a.self_confidence, confidenceNote: a.confidence_note, couldNotAccess: a.could_not_access },
+  };
+}
+const liveScenarios: Record<string, Scenario> = {
+  creatine: fromAudit("Creatine monohydrate · 4 g", creatineAudit as AuditFile),
+  vitaminD: fromAudit("Vitamin D3 · 2000 IU", vitaminDAudit as AuditFile),
+  magnesium: fromAudit("Magnesium glycinate · 300 mg", magnesiumAudit as AuditFile),
+};
+const allScenarios: Record<string, Scenario> = { ...liveScenarios, ...scenarios };
+
 const DIMS: { key: DimKey; name: string; color: string }[] = [
   { key: "effect", name: "Effect", color: "var(--ab-r1)" },
   { key: "evidence", name: "Evidence", color: "var(--ab-r4)" },
@@ -73,19 +90,23 @@ const LAYOUTS: { id: Layout; name: string; blurb: string }[] = [
 
 export default function AbPrototype() {
   const [layout, setLayout] = useState<Layout>("middle");
-  const [key, setKey] = useState("solid");
+  const [key, setKey] = useState("creatine");
   const [tab, setTab] = useState<number>(-1); // -1 = Overall
   const [open, setOpen] = useState<string | null>(null);
-  const s = scenarios[key];
+  const [unpicked, setUnpicked] = useState<Record<string, boolean>>({}); // outcomes the user did NOT pick at the interests step
+  const s = allScenarios[key];
+  const isPicked = (name: string) => !unpicked[`${key}:${name}`];
+  const togglePick = (name: string) => setUnpicked((u) => ({ ...u, [`${key}:${name}`]: !u[`${key}:${name}`] }));
   const scored = s.outcomes.map((o) => ({ o, r: score(o.ledger) }));
-  const withScore = scored.filter((x) => x.r.headline !== null);
+  const pickedCount = s.outcomes.filter((o) => isPicked(o.name)).length;
+  const withScore = scored.filter((x) => x.r.headline !== null && isPicked(x.o.name));
   const overall = withScore.length ? Math.round(withScore.reduce((a, x) => a + (x.r.headline as number), 0) / withScore.length) : null;
   const isOverall = tab < 0;
   const cur = isOverall ? null : scored[tab];
   const headline = isOverall ? overall : cur!.r.headline;
   const label = isOverall ? (overall === null ? "Not scored" : bandLabel(overall)) : cur!.r.label;
   const sentence = isOverall
-    ? (overall === null ? "No outcome of this product has a human controlled trial behind it yet." : `Average of ${withScore.length} scored outcome${withScore.length === 1 ? "" : "s"}${withScore.length < s.outcomes.length ? ` · ${s.outcomes.length - withScore.length} not scored` : ""}. Tap one to see why.`)
+    ? (overall === null ? (pickedCount === 0 ? "Pick at least one outcome to see an overall score." : "None of the outcomes you picked has a scorable trial base yet.") : `Average of the ${withScore.length} outcome${withScore.length === 1 ? "" : "s"} you picked${pickedCount - withScore.length > 0 ? ` · ${pickedCount - withScore.length} not scored` : ""}. Tap one to see why.`)
     : cur!.o.sentence;
   const effectNum = cur ? (cur.r.effect === "unclear" ? null : cur.r.effect) : null;
   const dimRows = cur ? DIMS.map((d) => {
@@ -93,23 +114,23 @@ export default function AbPrototype() {
     const fill = d.key === "effect" ? (effectNum === null ? null : Math.abs(effectNum) / 3) : d.key === "evidence" ? r.certainty / 4 : d.key === "form" ? (L.formFit === "unknown" ? null : L.formFit / 4) : (L.doseFit === "unknown" ? null : L.doseFit / 4);
     const pts = d.key === "effect" ? (effectNum === null ? "—" : `${effectNum}/3`) : d.key === "evidence" ? `${r.certainty}/4` : d.key === "form" ? (L.formFit === "unknown" ? "—" : `${L.formFit}/4`) : (L.doseFit === "unknown" ? "—" : `${L.doseFit}/4`);
     const word = d.key === "effect" ? r.effectWord : d.key === "evidence" ? r.certaintyWord : d.key === "form" ? r.formWord : r.doseWord;
-    return { id: d.key, name: d.name, color: d.color, fill, pts, word, negative: d.key === "effect" && (effectNum ?? 0) < 0, detail: cur.o.detail[d.key] as Detail | null, jump: null as number | null };
+    return { id: d.key, name: d.name, color: d.color, fill, pts, word, negative: d.key === "effect" && (effectNum ?? 0) < 0, detail: cur.o.detail[d.key] as Detail | null, jump: null as number | null, dim: false };
   }) : [];
-  const outcomeRows = scored.map((x, i) => ({ id: `o${i}`, name: x.o.name, color: "var(--ab-r1)", fill: x.r.headline === null ? null : x.r.headline / 100, pts: x.r.headline === null ? "—" : String(x.r.headline), word: x.r.label, negative: (x.r.headline ?? 50) < 45, detail: null as Detail | null, jump: i as number | null }));
+  const outcomeRows = scored.map((x, i) => ({ id: `o${i}`, name: x.o.name, color: isPicked(x.o.name) ? "var(--ab-r1)" : "var(--ab-track)", fill: x.r.headline === null ? null : x.r.headline / 100, pts: x.r.headline === null ? "—" : String(x.r.headline), word: isPicked(x.o.name) ? x.r.label : "Not picked", negative: isPicked(x.o.name) && (x.r.headline ?? 50) < 45, detail: null as Detail | null, jump: i as number | null, dim: !isPicked(x.o.name) }));
   const rowsToShow = isOverall ? outcomeRows : dimRows;
   const firedGates = cur ? cur.r.firedGates : [];
   const tone = headline === null ? "muted" : headline >= 55 ? "good" : headline >= 45 ? "neutral" : "bad";
   const pick = (k: string) => { setKey(k); setTab(-1); setOpen(null); };
   const go = (i: number) => { setTab(i); setOpen(null); };
 
-  const photo = <div className={`ab-photo-hero${layout === "overlap" ? " bleed" : ""}`} role="img" aria-label="Illustrated sample product (placeholder)"><div className="ab-jar"><div className="ab-jar-lid" /><span>FIELD NOTES / 001</span><strong>{s.product.split(" · ")[0].replace(/^Sample /, "").toLowerCase()}</strong><i>Pure. Simple. Studied.</i><div>SAMPLE <b>{s.product.split(" · ")[1] ?? ""}</b></div></div></div>;
+  const photo = <div className={`ab-photo-hero${layout === "overlap" ? " bleed" : ""}`} role="img" aria-label="Illustrated sample product (placeholder)"><div className="ab-jar"><div className="ab-jar-lid" /><span>FIELD NOTES / 001</span><strong>{(s.live ? s.title : s.product).split(" · ")[0].replace(/^Sample /, "").toLowerCase()}</strong><i>Pure. Simple. Studied.</i><div>{s.live ? "DAILY" : "SAMPLE"} <b>{(s.live ? s.title : s.product).split(" · ")[1] ?? ""}</b></div></div></div>;
   const scoreBlock = <div className={`ab-headline ${tone}${layout === "overlap" ? " float" : ""}`}><div className="ab-number"><strong>{headline ?? "—"}</strong>{headline === null && <span>no score</span>}</div><div><h2>{label}</h2><p>{sentence}</p></div></div>;
-  const bars = <ul className={isOverall ? "ab-bars outcomes" : "ab-bars"}>{rowsToShow.map((d) => { const isOpen = open === d.id; const onTap = () => (d.jump !== null ? go(d.jump) : setOpen(isOpen ? null : d.id)); return <li key={d.id} className={isOpen ? "open" : ""}><button type="button" aria-expanded={d.jump === null ? isOpen : undefined} aria-controls={d.jump === null ? `ab-det-${d.id}` : undefined} onClick={onTap}><span className="ab-bar-name">{d.name}</span><span className="ab-bar-word">{d.word}</span><span className="ab-bar-pts">{d.pts}</span><span className="ab-chev" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16"><path d={d.jump !== null ? "M6 3l5 5-5 5" : "M3 6l5 5 5-5"} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg></span><span className={`ab-bar-track${d.fill === null ? " unknown" : ""}`}>{d.fill !== null && <i style={{ width: `${Math.round(d.fill * 100)}%`, background: d.negative ? "var(--ab-warn)" : d.color }} />}</span></button>{isOpen && d.detail && <div id={`ab-det-${d.id}`} className="ab-bar-detail"><p><b>Found</b> {d.detail.found}</p><p><b>Missing</b> {d.detail.missing}</p><p><b>Would move it</b> {d.detail.move}</p></div>}</li>; })}</ul>;
+  const bars = <ul className={isOverall ? "ab-bars outcomes" : "ab-bars"}>{rowsToShow.map((d) => { const isOpen = open === d.id; const onTap = () => (d.jump !== null ? go(d.jump) : setOpen(isOpen ? null : d.id)); return <li key={d.id} className={`${isOpen ? "open" : ""}${d.dim ? " dim" : ""}`}><button type="button" aria-expanded={d.jump === null ? isOpen : undefined} aria-controls={d.jump === null ? `ab-det-${d.id}` : undefined} onClick={onTap}><span className="ab-bar-name">{d.name}</span><span className="ab-bar-word">{d.word}</span><span className="ab-bar-pts">{d.pts}</span><span className="ab-chev" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16"><path d={d.jump !== null ? "M6 3l5 5-5 5" : "M3 6l5 5 5-5"} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg></span><span className={`ab-bar-track${d.fill === null ? " unknown" : ""}`}>{d.fill !== null && <i style={{ width: `${Math.round(d.fill * 100)}%`, background: d.negative ? "var(--ab-warn)" : d.color }} />}</span></button>{isOpen && d.detail && <div id={`ab-det-${d.id}`} className="ab-bar-detail"><p><b>Found</b> {d.detail.found}</p><p><b>Missing</b> {d.detail.missing}</p><p><b>Would move it</b> {d.detail.move}</p></div>}</li>; })}</ul>;
   const gates = firedGates.length > 0 && <details className="ab-gates"><summary>⚑ {firedGates.length === 1 ? firedGates[0] : `${firedGates.length} limits · ${firedGates[0]}`}</summary><ul>{firedGates.map((g) => <li key={g}>{g}</li>)}</ul></details>;
   const tabs = <div className="ab-tabs" aria-label="Outcome"><button type="button" aria-pressed={isOverall} onClick={() => go(-1)}>Overall</button>{s.outcomes.map((o, i) => <button key={o.name} type="button" aria-pressed={tab === i} onClick={() => go(i)}>{o.name}</button>)}</div>;
-  const header = <header className="ab-top"><button type="button" className="ab-back" aria-label="Back">‹</button><strong>{s.product}</strong></header>;
+  const header = <header className="ab-top"><button type="button" className="ab-back" aria-label="Back">‹</button><div className="ab-title"><strong>{s.product}</strong>{s.live && <small>Researched {s.live.runAt} · {s.live.sources} sources</small>}</div></header>;
 
-  return <main id="main-content" className="ab-stage"><aside className="ab-side"><a href="/design-lab/mobile">← Field Notebook</a><span className="ab-kicker">RESULT CARD</span><h1>Show the tub.<br />Then the <em>truth.</em></h1><p>Photo takes a third of the phone. Four placements to compare; the rows and the number are identical in all of them.</p><span className="ab-kicker">PHOTO PLACEMENT</span><div className="ab-layouts" role="tablist" aria-label="Layout">{LAYOUTS.map((l) => <button key={l.id} role="tab" aria-selected={layout === l.id} onClick={() => { setLayout(l.id); setOpen(null); }}><b>{l.name}</b><small>{l.blurb}</small></button>)}</div><span className="ab-kicker">SAMPLE LEDGERS · FICTIONAL PRODUCTS</span><div className="ab-scenarios">{Object.entries(scenarios).map(([k, v]) => <button key={k} aria-pressed={key === k} onClick={() => pick(k)}>{v.title}<small>{v.product}</small></button>)}</div><p className="ab-fine">Hand-written inputs to exercise the rubric; no search or model call produced these cards. The jar is an illustration standing in for the fetched product photo.</p></aside>
+  return <main id="main-content" className="ab-stage"><aside className="ab-side"><a href="/design-lab/mobile">← Field Notebook</a><span className="ab-kicker">RESULT CARD</span><h1>Show the tub.<br />Then the <em>truth.</em></h1><p>Photo takes a third of the phone. Four placements to compare; the rows and the number are identical in all of them.</p><span className="ab-kicker">PHOTO PLACEMENT</span><div className="ab-layouts" role="tablist" aria-label="Layout">{LAYOUTS.map((l) => <button key={l.id} role="tab" aria-selected={layout === l.id} onClick={() => { setLayout(l.id); setOpen(null); }}><b>{l.name}</b><small>{l.blurb}</small></button>)}</div><span className="ab-kicker">LIVE AUDITS · REAL SOURCES</span><div className="ab-scenarios">{Object.entries(liveScenarios).map(([k, v]) => <button key={k} aria-pressed={key === k} onClick={() => pick(k)}>{v.title}<small>{v.outcomes.length} outcomes · {v.live?.sources} sources</small></button>)}</div><span className="ab-kicker">WHAT THE USER PICKED</span><div className="ab-picks">{s.outcomes.map((o) => <label key={o.name}><input type="checkbox" checked={isPicked(o.name)} onChange={() => togglePick(o.name)} />{o.name}</label>)}</div><details className="ab-provenance"><summary>Fictional test ledgers</summary><div className="ab-scenarios">{Object.entries(scenarios).map(([k, v]) => <button key={k} aria-pressed={key === k} onClick={() => pick(k)}>{v.title}<small>{v.product}</small></button>)}</div></details>{s.live ? <p className="ab-fine"><strong>Live audit</strong> run {s.live.runAt} by {s.live.model}. The model searched, read sources and classified effect/fit per the rubric; the number is computed by code. Model confidence: {s.live.confidence}. {s.live.doseNote} Not yet human-verified.</p> : <p className="ab-fine">Hand-written inputs to exercise the rubric; no search or model call produced this card.</p>}</aside>
   <div className="ab-phone"><div className="ab-status"><b>9:41</b><i /><span>▮▮▮ ▰</span></div><div className={`ab-screen layout-${layout}`}>
     {layout === "hero" && <>{header}{photo}{tabs}<section className="ab-card">{scoreBlock}{bars}{gates}</section></>}
     {layout === "middle" && <>{header}{tabs}{scoreBlock}{photo}<section className="ab-card">{bars}{gates}</section></>}

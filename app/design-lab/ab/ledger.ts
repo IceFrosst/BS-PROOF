@@ -62,10 +62,35 @@ export function score(l: Ledger): Scored {
     firedGates: fired,
     applicability,
     headline,
-    label: headline === null ? (l.gates.rctCount === 0 ? "Not scored" : "Not scored") : bandLabel(headline),
+    label: headline === null ? "Not scored" : (l.effectPoints === 0 && certainty >= 3 ? "No meaningful benefit" : bandLabel(headline)),
     effectWord: EFFECT_WORDS[String(l.effectPoints)],
     certaintyWord: CERTAINTY_WORDS[certainty],
     formWord: l.formFit === "unknown" ? "Not tested" : FIT_WORDS[l.formFit],
     doseWord: l.doseFit === "unknown" ? "Unknown" : FIT_WORDS[l.doseFit],
   };
+}
+
+/** Shape of app/design-lab/ab/audits/*.json — a live audit written by the model against audit-v0.1. */
+export interface AuditFile {
+  meta: { run_at: string; model: string; prompt: string; note: string };
+  product: string; ingredient: string; form: string; daily_dose: string; dose_note: string;
+  outcomes: Array<{
+    name: string; population: string; sentence: string;
+    ledger: { effectPoints: string; effect_basis: string; bodyIsRct: boolean; checklist: Ledger["checklist"]; gates: Ledger["gates"]; formFit: string; doseFit: string; effective_daily_range: string };
+    detail: Record<"effect" | "evidence" | "form" | "dose", Record<string, string>>;
+    inventory: Array<{ id: string; year: number; design: string; n: number; direction: string; access: string; note: string }>;
+    strongest_study: string; strongest_doubt: string; study_that_would_move_this: string;
+  }>;
+  searches_run: string[]; could_not_access: string[]; self_confidence: string; confidence_note: string;
+}
+
+const EFFECT_ENUM: Record<string, Ledger["effectPoints"]> = { "-3": -3, "0": 0, "1": 1, "2": 2, "3": 3, unclear: "unclear" };
+function fit(v: string): Fit { return v === "unknown" ? "unknown" : (Math.max(0, Math.min(4, Number(v))) as 0 | 1 | 2 | 3 | 4); }
+
+/** Convert the model's string enums into the typed Ledger; tolerate missing detail keys. */
+export function ledgerFromAudit(o: AuditFile["outcomes"][number]): Ledger {
+  return { effectPoints: EFFECT_ENUM[o.ledger.effectPoints] ?? "unclear", bodyIsRct: o.ledger.bodyIsRct, checklist: o.ledger.checklist, gates: o.ledger.gates, formFit: fit(o.ledger.formFit), doseFit: fit(o.ledger.doseFit) };
+}
+export function detailFromAudit(d: Record<string, string> | undefined): { found: string; missing: string; move: string } {
+  return { found: d?.found ?? d?.body ?? d?.match ?? "—", missing: d?.missing ?? d?.quality ?? "—", move: d?.move ?? "—" };
 }

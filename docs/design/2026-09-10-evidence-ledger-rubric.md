@@ -62,6 +62,47 @@ result behind weak ones; the drill-down and the per-outcome tabs are the
 mitigation. Whether the average should be weighted (e.g. by certainty or by the
 outcomes the user selected) is an open founder call.
 
+## Overall averages only what the user picked (founder 2026-09-11)
+
+`overall = mean(headline of picked AND scored outcomes)`. Unpicked outcomes stay
+visible, dimmed, marked "Not picked", and are excluded from the average.
+
+## First live audits (2026-09-11) — calibration observations, not fixes
+
+Three products were audited by grok-4.6 with live web search against audit-v0.1
+(`app/design-lab/ab/audits/*.json`, not yet human-verified). Code computed:
+
+| product | outcome | E | C | F | D | headline |
+|---|---|---|---|---|---|---|
+| Creatine monohydrate 4 g | muscle strength | 1 | 2 | 4 | 4 | 58 probably works |
+| | lean body mass | 1 | 2 | 4 | 4 | 58 |
+| | cognitive function | 0 | 0 | 4 | 2 | not scored (C=0) |
+| Vitamin D3 2000 IU | fractures | 0 | 4 | 4 | 4 | 50 no meaningful benefit |
+| | respiratory infections | 0 | 2 | 4 | 3 | 50 unclear |
+| | depressive symptoms | 0 | 2 | 4 | 4 | 50 unclear |
+| Magnesium glycinate 300 mg | sleep quality | 1 | 1 | 4 | 3 | 54 unclear |
+| | anxiety | 0 | 0 | 2 | 3 | not scored (C=0) |
+| | muscle cramps | 0 | 3 | 2 | 4 | 50 no meaningful benefit |
+
+Observations to take to calibration:
+1. **−1 per concern is harsh on huge trial bases.** VITAL (n=25,871, exact dose)
+   lands at Certainty 2 "Low" for infections/mood because the model flagged
+   inconsistency with older pooled analyses and possible publication bias. A
+   high-certainty null then reads "Unclear" instead of "No meaningful benefit".
+   Candidate fix: a large-precise-RCT floor (e.g. largest RCT n ≥ 5,000 → C ≥ 3),
+   or make `precision: supported` on a very large trial offset one concern.
+2. **C = 0 → "Not scored" hides a real null.** Creatine/cognition has 8 RCTs and
+   an EFSA rejection, but four concerns zero out certainty. "Not scored" is
+   indistinguishable from "never studied". Candidate: floor C at 1 whenever
+   `rctCount ≥ 3`, so the card reads "Unclear / very low" instead.
+3. **Label fix already applied:** E = 0 with C ≥ 3 now reads "No meaningful
+   benefit" (was "Unclear", which is the wrong message for a well-shown null).
+4. **The model classifies effect/fit categories itself** in this first pass. The
+   rubric intends code to derive them from `best_estimate` numbers; the audit
+   JSON keeps `effect_basis` and `effective_daily_range` so that can be checked.
+5. Elemental-vs-compound on the magnesium label is flagged by the model and
+   would move dose fit 3 → 1 if the label means compound mass.
+
 ## What is deliberately NOT in the number
 
 Safety (always its own visible block), marketing red flags, company background,
