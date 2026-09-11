@@ -76,6 +76,26 @@ describe("the landing tab is Outcomes, and there is no overall number", () => {
     }
   });
 
+  /* Founder call 2026-09-11: every product reads under the CURRENT rubric. The
+   * old composite headline and its band were produced by the rubric we rejected
+   * (noticeability tiers, funding penalty), so they are shown nowhere - not as a
+   * product verdict and not beside a row either. */
+  it("shows the old composite score nowhere, for any product", () => {
+    for (const product of ["creatine", "vitaminD", "magnesium", "caffeine"]) {
+      const m = renderToStaticMarkup(createElement(AbPrototype, { initial: { product } }));
+      expect(m).not.toContain("prev. rubric");
+      expect(m).not.toContain("ab-number");
+      for (const band of ["Probably works", "Probably does not work", "Evidence against", "Works"]) {
+        expect(m).not.toContain(`<span class="ab-bar-word">${band}</span>`);
+      }
+    }
+  });
+
+  it("labels an outcome row by what its effect evidence says, not by a score", () => {
+    expect(markup).toMatch(/ab-bar-word">(Size not graded|No meaningful benefit|Reported estimate|Estimate, no interval)/);
+    expect(markup).not.toMatch(/ab-bar-pts">\d+</); // no bare 0-100 number beside a row
+  });
+
   it("qualifies every outcome row by its population and says suggestions are not a promise", () => {
     expect(markup).toContain("Adults under 50 doing resistance training");
     expect(markup).toContain("not a measure of how many people buy it");

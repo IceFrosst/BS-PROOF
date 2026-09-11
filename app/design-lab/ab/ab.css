@@ -1,5 +1,5 @@
 body:has(.ab-stage)>.site-header,body:has(.ab-stage)>.site-footer{display:none}
-.ab-stage{--ab-bg:#f6f3ea;--ab-surface:#fffdf7;--ab-soft:#eef0e3;--ab-ink:#1f3a2d;--ab-muted:#5f6b60;--ab-line:#d9dccc;--ab-accent:#2f5d45;--ab-track:#e3e5d6;--ab-r1:#2f5d45;--ab-r2:#6f9b6b;--ab-r3:#98a953;--ab-r5:#7c6a9c;--ab-r4:#bb8a30;--ab-warn:#963d26;--ab-warn-bg:#fbeddf;min-height:100svh;background:#e8eadf;color:var(--ab-ink);font-family:ui-rounded,"SF Pro Rounded",-apple-system,"Segoe UI",sans-serif;display:flex;justify-content:center;align-items:center;gap:48px;padding:40px 28px}
+.ab-stage{--ab-bg:#f6f3ea;--ab-surface:#fffdf7;--ab-soft:#eef0e3;--ab-ink:#1f3a2d;--ab-muted:#5f6b60;--ab-line:#d9dccc;--ab-accent:#2f5d45;--ab-track:#e3e5d6;--ab-r1:#2f5d45;--ab-r2:#6f9b6b;--ab-r3:#98a953;--ab-r5:#7c6a9c;--ab-r4:#bb8a30;--ab-warn:#963d26;--ab-warn-bg:#fbeddf;min-height:100svh;background:#e8eadf;color:var(--ab-ink);font-family:ui-rounded,"SF Pro Rounded",-apple-system,"Segoe UI",sans-serif;display:flex;justify-content:center;align-items:flex-start;gap:48px;padding:40px 28px}
 .ab-stage button{font:inherit;cursor:pointer;color:inherit}
 .ab-stage button:focus-visible{outline:3px solid #bc8344;outline-offset:3px}
 .ab-stage h1,.ab-stage h2,.ab-stage h3,.ab-stage p{margin:0}
@@ -24,9 +24,9 @@ body:has(.ab-stage)>.site-header,body:has(.ab-stage)>.site-footer{display:none}
 .ab-top strong{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ab-top small{font-size:11px;color:var(--ab-muted)}
 .ab-back{width:44px;height:44px;border-radius:50%;border:1px solid var(--ab-line);background:var(--ab-surface);font-size:20px}
-.ab-tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:10px;scrollbar-width:none}
-.ab-tabs button{white-space:nowrap;min-height:44px;padding:8px 13px;border:1px solid var(--ab-line);border-radius:11px;background:var(--ab-surface);font-size:12px;display:flex;flex-direction:column;align-items:flex-start;gap:1px;max-width:210px}
-.ab-tabs button small{font-size:10px;color:var(--ab-muted);overflow:hidden;text-overflow:ellipsis;max-width:190px}
+/* flex-shrink:0 or the column squashes the strip and the heading overlaps it */
+.ab-tabs{display:flex;flex-shrink:0;gap:6px;overflow-x:auto;padding-bottom:10px;scrollbar-width:none}
+.ab-tabs button{white-space:nowrap;min-height:44px;padding:8px 13px;border:1px solid var(--ab-line);border-radius:11px;background:var(--ab-surface);font-size:12px;display:flex;align-items:center;flex-shrink:0;max-width:210px;overflow:hidden;text-overflow:ellipsis}
 .ab-tabs button[aria-pressed=true]{background:var(--ab-accent);border-color:var(--ab-accent);color:#f7f9f1}
 .ab-tabs button[aria-pressed=true] small{color:#dfe8d6}
 /* The card is the phone's REAL scroll region: every outcome row must be
@@ -39,7 +39,9 @@ body:has(.ab-stage)>.site-header,body:has(.ab-stage)>.site-footer{display:none}
 .ab-notes{width:260px;flex-shrink:0;font-size:13px;line-height:1.6;color:var(--ab-muted)}
 .ab-notes h3{font-size:15px;color:var(--ab-ink);margin:18px 0 6px;font-weight:650}
 @media(max-width:1200px){.ab-notes{display:none}}
-@media(max-width:900px){.ab-stage{flex-direction:column;align-items:stretch;padding:16px}.ab-side{width:auto}.ab-phone{width:100%;max-width:390px;margin:0 auto;height:auto;min-height:760px}}
+/* Stacked: the phone comes FIRST. It used to sit ~2000px below the controls,
+   so the thing being previewed was the last thing you could see. */
+@media(max-width:900px){.ab-stage{flex-direction:column;align-items:stretch;padding:16px}.ab-side{width:auto;order:2}.ab-phone{order:1;width:100%;max-width:390px;margin:0 auto;height:auto;min-height:760px}}
 @media(prefers-reduced-motion:reduce){.ab-stage *{transition:none!important;animation:none!important}}
 
 .ab-headline{display:flex;gap:14px;align-items:flex-start;padding:14px;border-radius:15px;background:var(--ab-soft)}
@@ -103,7 +105,8 @@ body:has(.ab-stage)>.site-header,body:has(.ab-stage)>.site-footer{display:none}
 .ab-jar{width:150px;height:196px;background:#f6f6e5;border-radius:14px 14px 26px 26px;box-shadow:inset -12px 0 14px #b6b89940,10px 14px 0 #304b2620;transform:rotate(-7deg);position:relative;padding:34px 15px 12px;text-align:left;color:#223f2b;border:1px solid #b3b99a}
 .ab-jar-lid{position:absolute;top:-14px;left:-3px;right:-3px;height:32px;border-radius:9px 9px 3px 3px;background:repeating-linear-gradient(90deg,#38533c,#38533c 4px,#46634a 5px,#46634a 7px)}
 .ab-jar>span{font-size:7px;letter-spacing:.1em;font-weight:700}
-.ab-jar>strong{font-size:24px;line-height:1;display:block;margin:12px 0 14px;letter-spacing:-1px;font-weight:800;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+/* break between words, never mid-word: "caffeine anhydro/us" was a real bug */
+.ab-jar>strong{font-size:24px;line-height:1.05;display:block;margin:12px 0 14px;letter-spacing:-1px;font-weight:800;overflow-wrap:break-word;word-break:normal;hyphens:auto;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .ab-jar>i{font:italic 11px Georgia,serif}
 .ab-jar>div:last-child{display:flex;justify-content:space-between;align-items:center;border-top:1px solid #bdc7a5;padding-top:8px;margin-top:12px;font-size:7px}
 .ab-jar b{font-size:11px}

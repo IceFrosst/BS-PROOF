@@ -179,9 +179,9 @@ const TRACK_FOR: Record<EffectBar["kind"], TrackState> = {
 type Layout = "hero" | "middle" | "overlap" | "split";
 const LAYOUTS: { id: Layout; name: string; blurb: string }[] = [
   { id: "hero", name: "1 · Hero", blurb: "photo on top" },
-  { id: "middle", name: "2 · Middle", blurb: "score, photo, rows" },
-  { id: "overlap", name: "3 · Overlap", blurb: "score floats on photo" },
-  { id: "split", name: "4 · Split", blurb: "photo beside score" },
+  { id: "middle", name: "2 · Middle", blurb: "outcomes, photo, rows" },
+  { id: "overlap", name: "3 · Overlap", blurb: "text floats on photo" },
+  { id: "split", name: "4 · Split", blurb: "photo beside text" },
 ];
 
 function Interval({ scale }: { scale: IntervalScale }) {
@@ -255,21 +255,21 @@ export default function AbPrototype({ initial }: AbPrototypeProps = {}) {
     };
   }) : [];
 
+  /* Every product now reads under the CURRENT rubric: the row carries what the
+   * effect evidence says, never the old composite number or its band label. */
   const outcomeRows: Row[] = scored.map((x, i): Row => ({
     id: `o${i}`, name: x.o.name, sub: x.o.population, color: isPicked(x.o) ? "var(--ab-r1)" : "var(--ab-track)",
     fill: null, track: "none", scale: null,
-    pts: x.r && x.r.headline !== null ? String(x.r.headline) : "—",
-    word: isPicked(x.o) ? (x.r ? x.r.label : x.o.effect.word) : "Not picked",
+    pts: "",
+    word: isPicked(x.o) ? x.o.effect.word : "Not picked",
     negative: false, detail: null, lines: [], sourceLinks: [], provenance: null, jump: x.k, dim: !isPicked(x.o),
   }));
   const rowsToShow = isList ? outcomeRows : dimRows;
   const firedGates = cur?.r?.firedGates ?? [];
-  const headline = cur?.r?.headline ?? null;
-  const tone = headline === null ? "muted" : headline >= 55 ? "good" : headline >= 45 ? "neutral" : "bad";
   const pick = (k: string) => { setKey(k); setTab(null); setOpen(null); };
   const go = (k: string | null) => { setTab(k); setOpen(null); };
 
-  const profileRow = <div className="ab-profile"><span className="ab-kicker">WHO IS ASKING</span><div><input type="number" min={12} max={110} placeholder="Age" aria-label="Your age" value={profile.age ?? ""} onChange={(e) => setProfile((v) => ({ ...v, age: e.target.value === "" ? null : Number(e.target.value) }))} />{(["female", "male"] as const).map((x) => <button key={x} type="button" aria-pressed={profile.sex === x} onClick={() => setProfile((v) => ({ ...v, sex: v.sex === x ? null : x }))}>{x === "female" ? "Female" : "Male"}</button>)}<button type="button" className="ab-clear" onClick={() => setProfile({ age: null, sex: null })}>Clear</button></div><small>Only changes how well the studies transfer to you — it can lower a previous-rubric score, never invent one.</small></div>;
+  const profileRow = <div className="ab-profile"><span className="ab-kicker">WHO IS ASKING</span><div><input type="number" min={12} max={110} placeholder="Age" aria-label="Your age" value={profile.age ?? ""} onChange={(e) => setProfile((v) => ({ ...v, age: e.target.value === "" ? null : Number(e.target.value) }))} />{(["female", "male"] as const).map((x) => <button key={x} type="button" aria-pressed={profile.sex === x} onClick={() => setProfile((v) => ({ ...v, sex: v.sex === x ? null : x }))}>{x === "female" ? "Female" : "Male"}</button>)}<button type="button" className="ab-clear" onClick={() => setProfile({ age: null, sex: null })}>Clear</button></div><small>Describes how well the studies transfer to you. It never changes what a source reported.</small></div>;
   const photo = <div className={`ab-photo-hero${layout === "overlap" ? " bleed" : ""}`} role="img" aria-label="Illustrated sample product (placeholder)"><div className="ab-jar"><div className="ab-jar-lid" /><span>FIELD NOTES / 001</span><strong>{(s.kind === "fictional" ? s.product : s.title).split(" · ")[0].replace(/^Sample /, "").toLowerCase()}</strong><i>Pure. Simple. Studied.</i><div>{s.kind === "fictional" ? "SAMPLE" : "DAILY"} <b>{(s.kind === "fictional" ? s.product : s.title).split(" · ")[1] ?? ""}</b></div></div></div>;
 
   /* THE LANDING TAB. No average, no overall number, no band label: a product is
@@ -278,19 +278,18 @@ export default function AbPrototype({ initial }: AbPrototypeProps = {}) {
     <div className="ab-listhead">
       <h2>Outcomes</h2>
       <p>Each row below is a separate question, in the population it was studied in. Tap one to see what was found. These suggestions help you choose a question — they are <b>not</b> a promise of benefit and not a measure of how many people buy it.</p>
-      {legacy && <p className="ab-stamp">{PREVIOUS_RUBRIC_LABEL} — the numbers beside each row are the earlier rubric&rsquo;s, shown as they were. Nothing here was recomputed.</p>}
+      {legacy && <p className="ab-stamp">{PREVIOUS_RUBRIC_LABEL} — the effect text and sources below come from the earlier audit and were not reverified. No composite score is shown for any product.</p>}
       {s.kind === "research" && <p className="ab-stamp">Effect-only research pass. No overall number, no certainty, form, dose or person score exists for this product.</p>}
     </div>
   );
   const detailBlock = cur ? (
-    <div className={`ab-headline ${legacy ? tone : "muted"}${layout === "overlap" ? " float" : ""}`}>
-      {legacy && <div className="ab-number"><strong>{headline ?? "—"}</strong><span>{headline === null ? "no score" : "prev. rubric"}</span></div>}
+    <div className={`ab-headline muted${layout === "overlap" ? " float" : ""}`}>
       <div>
         <h2>{cur.o.name}</h2>
         <p className="ab-pop"><b>Population</b> {cur.o.population ?? "not recorded by this run"}</p>
         {cur.o.sentence && <p>{cur.o.sentence}</p>}
         {legacy
-          ? <p className="ab-stamp">{PREVIOUS_RUBRIC_LABEL} — {cur.r?.label ?? "Not scored"}. Not recomputed in this pass.</p>
+          ? <p className="ab-stamp">{PREVIOUS_RUBRIC_LABEL} — effect text and sources as written then, not reverified. No composite score is shown.</p>
           : <p className="ab-stamp">Effect only. No overall number for this product; the other bars were not assessed.</p>}
       </div>
     </div>
@@ -318,7 +317,7 @@ export default function AbPrototype({ initial }: AbPrototypeProps = {}) {
     </li>;
   })}</ul>;
   const gates = legacy && firedGates.length > 0 && <details className="ab-gates"><summary>⚑ {firedGates.length === 1 ? firedGates[0] : `${firedGates.length} limits · ${firedGates[0]}`}</summary><ul>{firedGates.map((g) => <li key={g}>{g}</li>)}</ul></details>;
-  const tabs = <div className="ab-tabs" aria-label="Outcome"><button type="button" aria-pressed={isList} onClick={() => go(null)}>Outcomes</button>{scored.map((x) => <button key={x.k} type="button" aria-pressed={tab === x.k} onClick={() => go(x.k)}>{x.o.name}{x.o.population && <small>{x.o.population}</small>}</button>)}</div>;
+  const tabs = <div className="ab-tabs" aria-label="Outcome"><button type="button" aria-pressed={isList} onClick={() => go(null)}>Outcomes</button>{scored.map((x) => <button key={x.k} type="button" aria-pressed={tab === x.k} onClick={() => go(x.k)} title={x.o.population ?? undefined}>{x.o.name}</button>)}</div>;
   const header = <header className="ab-top"><button type="button" className="ab-back" aria-label="Back" onClick={() => go(null)}>‹</button><div className="ab-title"><strong>{s.product}</strong>{s.live && <small>Researched {s.live.runAt} · {s.live.sources} sources</small>}{s.research && <small>Effect-only pass {s.research.meta.run_at} · {s.research.sources.length} sources</small>}</div></header>;
   const block = isList ? listBlock : detailBlock;
 
@@ -329,5 +328,5 @@ export default function AbPrototype({ initial }: AbPrototypeProps = {}) {
     {layout === "overlap" && <>{photo}<div className="ab-overlap-wrap">{header}{block}</div>{tabs}<section className="ab-card">{bars}{gates}</section></>}
     {layout === "split" && <>{header}{tabs}<div className="ab-split">{photo}<div className="ab-split-score">{block}</div></div><section className="ab-card">{bars}{gates}</section></>}
   </div></div>
-  <aside className="ab-notes"><span className="ab-kicker">THE FOUR PLACEMENTS</span><h3>1 · Hero</h3><p>Photo first, big and calm. The outcome list sits under it. Most “product page” feeling.</p><h3>2 · Middle</h3><p>Outcomes first, photo between the intro and the rows — the founder’s “a third, in the middle”.</p><h3>3 · Overlap</h3><p>Full-bleed photo; the block floats over its bottom edge. Most editorial, least whitespace.</p><h3>4 · Split</h3><p>Photo left, text right, side by side. Shortest; leaves room below the rows.</p><h3>Outcomes first</h3><p>Landing tab. <b>There is no overall number and no overall band.</b> A product is not one benefit: each row is a question in a named population, and tapping it drills in. Numbers beside a row are the earlier rubric, shown unchanged.</p><h3>The Effect bar</h3><p>Never a tier fill. When a source reported an estimate and an interval, the interval is drawn in its own unit and labelled <i>reported estimate, not a grade</i>. With an estimate and no interval, the point is drawn and the interval is called unavailable. Otherwise the track is hatched and reads <i>size not graded</i> — which is not the same as <i>no evidence found</i> or <i>no meaningful benefit</i>.</p></aside></main>;
+  <aside className="ab-notes"><span className="ab-kicker">THE FOUR PLACEMENTS</span><h3>1 · Hero</h3><p>Photo first, big and calm. The outcome list sits under it. Most “product page” feeling.</p><h3>2 · Middle</h3><p>Outcomes first, photo between the intro and the rows — the founder’s “a third, in the middle”.</p><h3>3 · Overlap</h3><p>Full-bleed photo; the block floats over its bottom edge. Most editorial, least whitespace.</p><h3>4 · Split</h3><p>Photo left, text right, side by side. Shortest; leaves room below the rows.</p><h3>Outcomes first</h3><p>Landing tab. <b>There is no overall number and no overall band.</b> A product is not one benefit: each row is a question in a named population, and tapping it drills in. Every product reads under the current rubric, so no row carries the old composite score.</p><h3>The Effect bar</h3><p>Never a tier fill. When a source reported an estimate and an interval, the interval is drawn in its own unit and labelled <i>reported estimate, not a grade</i>. With an estimate and no interval, the point is drawn and the interval is called unavailable. Otherwise the track is hatched and reads <i>size not graded</i> — which is not the same as <i>no evidence found</i> or <i>no meaningful benefit</i>.</p></aside></main>;
 }
