@@ -560,6 +560,31 @@ do not drop it.
 
 ## Current state
 
+**2026-09-11 — Effect bar + Outcomes tab on `/design-lab/ab` (development only).**
+See `docs/design/2026-09-11-effect-bar-and-outcomes-tab.md`. The landing tab is
+now **Outcomes**: a list of clickable rows keyed by **name + population**, with
+**no overall average, no overall number and no overall band** — averaging a
+deficiency row, a clinical row and a healthy-adult row produced a number about
+nobody. The Effect bar no longer draws `effectPoints / 3`; it has five states
+(`reported_interval`, `reported_point`, `not_graded`, `no_evidence`,
+`no_meaningful_benefit`) and the three empty ones never render alike. **The three
+existing audits were not re-run and not re-scored**: `app/design-lab/ab/audits/*.json`,
+`prompts/research_audit.md` and `schemas/research_audit.json` are untouched, their
+prior outcome scores show unchanged under "Previous rubric · unchanged", and their
+`absolute_effect` / `clinically_meaningful` / `strongest_doubt` / `inventory` text
+is reused verbatim under "Previous AI audit · not reverified". **Caffeine is a new,
+effect-only, freshly researched pass** (`prompts/effect_research.md`
+`effect-research-v0.1`, `schemas/effect_research.json`,
+`app/design-lab/ab/effect-contract.ts`, `app/design-lab/ab/effect-research/caffeine.json`,
+its own cache domain and its own directory so the audit schema tests are
+unaffected): attention g = 0.28 with **no interval** (point drawn, interval
+called unavailable), endurance SMD −0.34 (−0.62 to −0.06) at **≤ 3 mg/kg, not
+200 mg**, practical importance **unknown** for both, no pooling, no MCID, no unit
+conversion, funding as disclosure. It has **no numeric headline** and its other
+four bars read "Not assessed in this run". Still deferred, still open: the
+**funding penalty in `ledger.ts`**, **person-fit**, and **any production
+wiring** — nothing here is reachable outside `NODE_ENV=development`.
+
 **2026-09-11 — independent launch review of `70a3955`.**
 See `docs/design/2026-09-11-independent-launch-review.md`. The live-audit
 prototype, audit-v0.2 prompt/schema and unused `effect.ts` exist, but the new
@@ -1217,13 +1242,22 @@ still the unmeasured SR-uplift experiment (Next item 3).
 
 ## Next
 
-**Handoff: independent launch review on `launch/ai-wrapper-planning`; findings
-in `docs/design/2026-09-11-independent-launch-review.md`.** Next: agree the
-narrow effect contract (healthy goal, published estimate, practical-importance
-unknown state, cross-source checks without automatic pooling), then implement
-prompt/schema/UI together and validate the three-product slice. Do not tune
-bands to yesterday's desired caffeine/creatine rankings or start a catalogue
-batch. Earlier prototype handoff below is historical and partly superseded.
+**Handoff: the narrow effect contract is IMPLEMENTED for the design lab only
+(`docs/design/2026-09-11-effect-bar-and-outcomes-tab.md`).** `effect-research-v0.1`
+(prompt + schema + `effect-contract.ts` + the caffeine fixture) and the honest
+Effect presentation ship behind `/design-lab/ab`, which 404s outside development.
+Next, in this order and none of it done here: (1) decide whether the **funding
+penalty in `ledger.ts`** survives at all, since the new surface treats funding as
+disclosure and the legacy numbers were computed with the penalty; (2) settle
+**person-fit** (`personFit`, `AGE_SLACK`) or drop the bar; (3) only then discuss
+production wiring — there is still no endpoint, no job and no consumer score
+reading any of this. Do **not** back-fill the three existing audits into
+`effect-research-v0.1` by transcription: that file family requires quotes,
+intervals and overlap status read from sources, and the audits do not carry them.
+Do not tune bands to a desired caffeine/creatine ranking or start a catalogue
+batch. Findings from the review that opened this work are in
+`docs/design/2026-09-11-independent-launch-review.md`; the earlier prototype
+handoff below is historical and partly superseded.
 
 **Earlier handoff: launch UI design review.**
 Choose A/B/C in the local `/design-lab` before building the real research flow.

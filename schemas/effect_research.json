@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Effect-only research pass (effect-research-v0.1)",
+  "description": "One product, EFFECT ONLY. Produced by prompts/effect_research.md. It carries reported effect estimates in their own metric and unit, the quote they came from, the comparator, population, timeframe, dose applicability, source methods, cross-checks with their overlap status and funding as disclosure. It carries NO ledger, certainty, form, dose or person score, and no overall number: the bars it did not assess are named in not_assessed. Separate file family and separate schema from schemas/research_audit.json — the audit files in app/design-lab/ab/audits/ are unaffected by this contract.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["meta", "product", "ingredient", "dose_studied", "not_assessed", "sources", "outcomes", "access_failures", "guards"],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["prompt", "run_at", "model", "human_verified", "note"],
+      "properties": {
+        "prompt": { "const": "effect-research-v0.1" },
+        "run_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "model": { "type": "string", "maxLength": 200 },
+        "human_verified": { "const": false, "description": "This pass is never human-verified. Claiming otherwise is the failure this project exists to prevent." },
+        "note": { "type": "string", "maxLength": 1600 },
+        "reopened_at_source": { "type": "string", "maxLength": 400, "description": "Which sources were re-opened to check the numbers. Checking numbers is not verification of the pass." }
+      }
+    },
+    "product": { "type": "string", "maxLength": 200 },
+    "ingredient": { "type": "string", "maxLength": 120 },
+    "dose_studied": { "type": "string", "maxLength": 800 },
+    "not_assessed": {
+      "type": "array",
+      "description": "Every bar this pass did not look at. The UI must render each as 'Not assessed in this run' — never as zero, and never inferred from the effect.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["bar", "reason"],
+        "properties": {
+          "bar": { "enum": ["evidence", "form", "dose", "person"] },
+          "reason": { "type": "string", "maxLength": 600 }
+        }
+      }
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "label", "title", "year", "design", "access", "pmid", "pmcid", "doi", "trials", "participants", "methods_strengths", "methods_limits", "funding"],
+        "properties": {
+          "id": { "type": "string", "maxLength": 12, "description": "Local id every reference in this file resolves to, e.g. S1." },
+          "label": { "type": "string", "maxLength": 120 },
+          "title": { "type": "string", "maxLength": 400 },
+          "year": { "type": "integer", "minimum": 1900, "maximum": 2100 },
+          "design": { "enum": ["sr_ma", "nma", "narrative_review", "rct"] },
+          "access": { "enum": ["full_text", "abstract", "snippet", "not_retrieved"] },
+          "pmid": { "type": ["string", "null"], "maxLength": 20 },
+          "pmcid": { "type": ["string", "null"], "maxLength": 20 },
+          "doi": { "type": ["string", "null"], "maxLength": 120 },
+          "trials": { "type": ["integer", "null"], "minimum": 0 },
+          "participants": { "type": ["integer", "null"], "minimum": 0 },
+          "methods_strengths": { "type": "array", "items": { "type": "string", "maxLength": 700 } },
+          "methods_limits": { "type": "array", "items": { "type": "string", "maxLength": 700 } },
+          "funding": { "type": "string", "maxLength": 700, "description": "Disclosure only. Funding is never a score penalty and never a quality point." }
+        }
+      }
+    },
+    "outcomes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "population", "primary_source", "estimate", "also_reported", "quote", "comparator", "timeframe", "dose_applicability", "practical_importance", "limits", "cross_checks"],
+        "properties": {
+          "id": { "type": "string", "maxLength": 12 },
+          "name": { "type": "string", "maxLength": 120 },
+          "population": { "type": "string", "maxLength": 400, "description": "Required. An outcome without a population is not a finding." },
+          "primary_source": { "type": "string", "maxLength": 12 },
+          "estimate": { "$ref": "#/$defs/estimate" },
+          "also_reported": {
+            "type": "array",
+            "description": "Other numbers the same source reports. Shown separately and NEVER combined with the primary estimate.",
+            "items": { "$ref": "#/$defs/estimate" }
+          },
+          "quote": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["text", "source"],
+            "properties": {
+              "text": { "type": "string", "maxLength": 900, "description": "Verbatim. The sentence the estimate was read from." },
+              "source": { "type": "string", "maxLength": 12 }
+            }
+          },
+          "comparator": { "type": "string", "maxLength": 600 },
+          "timeframe": { "type": "string", "maxLength": 600 },
+          "dose_applicability": { "type": "string", "maxLength": 900, "description": "State the gap between the product's printed dose and the dose the evidence tested, in words. Never as a fit score." },
+          "practical_importance": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["status", "note"],
+            "properties": {
+              "status": { "enum": ["unknown", "reported_by_source"], "description": "Unknown stays unknown even when the result is statistically significant." },
+              "note": { "type": "string", "maxLength": 900 }
+            }
+          },
+          "limits": { "type": "array", "items": { "type": "string", "maxLength": 700 } },
+          "cross_checks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["source", "relation", "overlap", "independent_replication", "estimate", "note"],
+              "properties": {
+                "source": { "type": "string", "maxLength": 12 },
+                "relation": { "enum": ["same_question", "different_population", "different_endpoint"] },
+                "overlap": { "enum": ["unknown", "none", "partial", "likely_substantial"] },
+                "independent_replication": { "type": "boolean", "description": "Only true when overlap is 'none'. Two reviews of one literature are the same evidence seen twice." },
+                "estimate": { "oneOf": [{ "$ref": "#/$defs/estimate" }, { "type": "null" }] },
+                "note": { "type": "string", "maxLength": 900 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "access_failures": { "type": "array", "items": { "type": "string", "maxLength": 500 } },
+    "guards": { "type": "array", "items": { "type": "string", "maxLength": 400 } }
+  },
+  "$defs": {
+    "estimate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["what", "metric", "unit", "value", "ciLow", "ciHigh", "interval_note", "direction", "source"],
+      "description": "A number a source reported, in its own metric. SMD stays SMD, RR stays RR: no conversion, no anchor table, no 0-3 tier. ciLow <= value <= ciHigh when an interval exists; both bounds or neither; a ratio must be positive. Runtime checks live in app/design-lab/ab/effect-contract.ts.",
+      "properties": {
+        "what": { "type": "string", "maxLength": 200 },
+        "metric": { "enum": ["smd", "rr"] },
+        "unit": { "type": "string", "maxLength": 60, "description": "The natural unit as printed, e.g. 'Hedges g', 'SMD', 'risk ratio'." },
+        "value": { "type": "number" },
+        "ciLow": { "type": ["number", "null"] },
+        "ciHigh": { "type": ["number", "null"] },
+        "interval_note": { "type": "string", "maxLength": 500, "description": "Required when no interval exists: why. An absent interval is reported as absent, never drawn." },
+        "direction": { "enum": ["higher_better", "lower_better", "unclear"] },
+        "source": { "type": "string", "maxLength": 12 }
+      }
+    }
+  }
+}

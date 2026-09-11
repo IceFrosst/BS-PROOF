@@ -25,9 +25,13 @@ body:has(.ab-stage)>.site-header,body:has(.ab-stage)>.site-footer{display:none}
 .ab-top small{font-size:11px;color:var(--ab-muted)}
 .ab-back{width:44px;height:44px;border-radius:50%;border:1px solid var(--ab-line);background:var(--ab-surface);font-size:20px}
 .ab-tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:10px;scrollbar-width:none}
-.ab-tabs button{white-space:nowrap;min-height:44px;padding:8px 13px;border:1px solid var(--ab-line);border-radius:11px;background:var(--ab-surface);font-size:12px}
+.ab-tabs button{white-space:nowrap;min-height:44px;padding:8px 13px;border:1px solid var(--ab-line);border-radius:11px;background:var(--ab-surface);font-size:12px;display:flex;flex-direction:column;align-items:flex-start;gap:1px;max-width:210px}
+.ab-tabs button small{font-size:10px;color:var(--ab-muted);overflow:hidden;text-overflow:ellipsis;max-width:190px}
 .ab-tabs button[aria-pressed=true]{background:var(--ab-accent);border-color:var(--ab-accent);color:#f7f9f1}
-.ab-card{flex:0 1 auto;display:flex;flex-direction:column;background:var(--ab-surface);border:1px solid var(--ab-line);border-bottom-width:3px;border-radius:22px;padding:14px;min-height:0;overflow:auto;scrollbar-width:none}
+.ab-tabs button[aria-pressed=true] small{color:#dfe8d6}
+/* The card is the phone's REAL scroll region: every outcome row must be
+ * reachable by scrolling instead of being clipped by the 844px shell. */
+.ab-card{flex:1 1 auto;display:flex;flex-direction:column;background:var(--ab-surface);border:1px solid var(--ab-line);border-bottom-width:3px;border-radius:22px;padding:14px;min-height:120px;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 .ab-gates{flex:1;min-width:0;background:var(--ab-warn-bg);color:var(--ab-warn);border-radius:10px;font-size:11px}
 .ab-gates summary{list-style:none;cursor:pointer;min-height:44px;display:flex;align-items:center;padding:0 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ab-gates summary::-webkit-details-marker{display:none}
@@ -47,9 +51,9 @@ body:has(.ab-stage)>.site-header,body:has(.ab-stage)>.site-footer{display:none}
 .ab-number strong{font-size:36px;line-height:1;font-weight:700;font-variant-numeric:tabular-nums}
 .ab-number span{font-size:10px;color:var(--ab-muted);margin-top:4px}
 .ab-bars{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:2px}
-.ab-bars li{border-bottom:1px solid var(--ab-line)}
+.ab-bars li{border-bottom:1px solid var(--ab-line);min-width:0}
 .ab-bars li:last-child{border-bottom:0}
-.ab-bars li>button{width:100%;border:0;background:none;padding:5px 2px 7px;min-height:50px;display:grid;grid-template-columns:72px 1fr auto 20px;grid-template-rows:auto auto;column-gap:8px;row-gap:6px;align-items:start;text-align:left}
+.ab-bars li>button{width:100%;min-width:0;border:0;background:none;padding:5px 2px 7px;min-height:50px;display:grid;grid-template-columns:72px minmax(0,1fr) auto 20px;grid-template-rows:auto auto;column-gap:8px;row-gap:6px;align-items:start;text-align:left}
 .ab-bar-name,.ab-bar-word,.ab-bar-pts{align-self:center}
 .ab-bar-name{font-size:13px;font-weight:700}
 .ab-bar-word{font-size:12px;color:var(--ab-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -57,11 +61,35 @@ body:has(.ab-stage)>.site-header,body:has(.ab-stage)>.site-footer{display:none}
 .ab-chev{grid-column:4;grid-row:1;align-self:start;justify-self:end;color:var(--ab-muted);display:flex;margin-top:1px}
 .ab-chev svg{transition:transform .18s ease}
 .ab-bars li.open .ab-chev svg{transform:rotate(180deg)}
-.ab-bar-track{grid-column:1/4;grid-row:2;height:10px;border-radius:6px;background:var(--ab-track);overflow:hidden;display:block}
-.ab-bar-track.unknown{background:repeating-linear-gradient(135deg,var(--ab-track) 0 5px,transparent 5px 9px);border:1px dashed var(--ab-line)}
+.ab-bar-track{grid-column:1/4;grid-row:2;height:10px;border-radius:6px;background:var(--ab-track);overflow:hidden;display:block;position:relative}
+.ab-bar-track.unknown,.ab-bar-track.hatch{background:repeating-linear-gradient(135deg,var(--ab-track) 0 5px,transparent 5px 9px);border:1px dashed var(--ab-line)}
+/* Three states that must never look alike: nothing graded (hatched), nothing
+ * measured (empty outline), and a measured null (a flat line with a tick). */
+.ab-bar-track.no-evidence{background:transparent;border:1px dotted var(--ab-line)}
+.ab-bar-track.null-result{background:transparent;border:0;border-top:2px solid var(--ab-line);border-radius:0;height:10px}
+.ab-bar-track.null-result .ab-null-tick{position:absolute;left:50%;top:-4px;width:2px;height:10px;background:var(--ab-muted);border-radius:0}
 .ab-bar-track i{display:block;height:100%;border-radius:6px}
-.ab-bar-detail{padding:2px 2px 12px;font-size:12px;line-height:1.5;color:var(--ab-muted);display:grid;gap:5px}
+.ab-bar-detail{padding:2px 2px 12px;font-size:12px;line-height:1.5;color:var(--ab-muted);display:grid;gap:5px;overflow-wrap:anywhere}
 .ab-bar-detail b{color:var(--ab-ink);font-weight:700;margin-right:4px}
+.ab-srcs a{color:var(--ab-accent);text-decoration:underline;overflow-wrap:anywhere}
+.ab-srcs span{margin-right:6px}
+
+/* Reported estimate, not a grade: a plain interval on a data-derived axis with
+ * a no-effect line. No threshold, no anchor, no tier anywhere on it. */
+.ab-interval{grid-column:1/4;grid-row:2;display:block}
+.ab-interval-axis{position:relative;display:block;height:12px;border-radius:6px;background:var(--ab-soft);border:1px solid var(--ab-line)}
+.ab-interval-null{position:absolute;top:-2px;bottom:-2px;width:1px;background:var(--ab-muted);opacity:.75}
+.ab-interval-range{position:absolute;top:4px;height:4px;background:var(--ab-r1);border-radius:3px;min-width:2px}
+.ab-interval-marker{position:absolute;top:1px;width:8px;height:8px;margin-left:-4px;border-radius:50%;background:var(--ab-r1);border:1.5px solid var(--ab-surface)}
+.ab-interval-labels{display:flex;justify-content:space-between;gap:6px;margin-top:3px;font-size:10px;color:var(--ab-muted)}
+.ab-interval-read{font-weight:650;color:var(--ab-ink);font-variant-numeric:tabular-nums;text-align:center;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.ab-listhead{display:grid;gap:6px;padding:0 0 10px;border-bottom:1px solid var(--ab-line);margin-bottom:4px}
+.ab-listhead h2{font-size:22px}
+.ab-listhead p{font-size:12px;line-height:1.45;color:var(--ab-muted)}
+.ab-stamp{font-size:11px;line-height:1.4;color:var(--ab-muted);background:var(--ab-soft);border-radius:8px;padding:5px 8px}
+.ab-pop{font-size:11.5px;line-height:1.35;color:var(--ab-muted);margin-bottom:4px}
+.ab-headline .ab-stamp{margin-top:6px}
 .ab-bars li.open>button{padding-bottom:4px}
 
 .ab-layouts{display:grid;gap:6px;margin:10px 0 22px}
@@ -95,11 +123,13 @@ body:has(.ab-stage)>.site-header,body:has(.ab-stage)>.site-footer{display:none}
 .ab-split .ab-number{width:72px;height:72px}
 .ab-split .ab-number strong{font-size:30px}
 
-.ab-bars.outcomes li>button{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr) auto 20px}
-.ab-bars.outcomes .ab-bar-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ab-bars.outcomes li>button{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr) auto 20px;grid-template-rows:auto;row-gap:0;min-height:56px}
+.ab-bars.outcomes .ab-bar-name{overflow:hidden}
+.ab-bars.outcomes .ab-bar-name>small{white-space:normal}
 
 .ab-picks{display:grid;gap:4px;margin:8px 0 18px}
-.ab-picks label{display:flex;align-items:center;gap:10px;min-height:44px;font-size:13px;cursor:pointer}
+.ab-picks label{display:flex;align-items:center;gap:10px;min-height:44px;font-size:13px;cursor:pointer;flex-wrap:wrap}
+.ab-picks label small{flex-basis:100%;padding-left:28px;font-size:11px;color:var(--ab-muted)}
 .ab-picks input{width:18px;height:18px;accent-color:var(--ab-accent)}
 .ab-provenance{margin:6px 0 14px}
 .ab-provenance summary{font-size:12px;color:var(--ab-muted);cursor:pointer;min-height:40px;display:flex;align-items:center}
