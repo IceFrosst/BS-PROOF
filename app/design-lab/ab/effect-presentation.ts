@@ -37,6 +37,10 @@ export const REPORTED_ESTIMATE_LABEL = "Reported estimate, not a grade";
 export const FICTIONAL_LABEL = "Fictional demo ledger · invented numbers";
 export const NOT_ASSESSED_WORD = "Not assessed in this run";
 export const SIZE_NOT_GRADED_WORD = "Size not graded";
+/** The previous rubric's own effect words, shown for the audits that carry a tier. */
+export const LEGACY_EFFECT_WORDS: Record<string, string> = {
+  "-3": "Harm reported", "1": "Small benefit", "2": "Moderate benefit", "3": "Large benefit",
+};
 export const NO_EVIDENCE_WORD = "No evidence found";
 export const NO_MEANINGFUL_BENEFIT_WORD = "No meaningful benefit";
 
@@ -174,25 +178,36 @@ export function legacyEffectBar(input: LegacyEffectInput): EffectBar {
     access: row.access ?? "unknown",
   }));
 
+  /* Founder call 2026-09-11: the previous audits keep the bar they shipped with.
+   * Blanking a graded row to "size not graded" threw away the audit's own
+   * judgement and read as a downgrade of the product rather than of our rubric.
+   * The tier is the PREVIOUS audit's, stamped as such, not a fresh measurement;
+   * the reported effect and its sources stay under the expansion. */
   const noEvidence = input.rctCount === 0 && input.inventory.length === 0;
+  const graded = typeof input.effectPoints === "number";
   const kind: EffectBarKind = noEvidence
     ? "no_evidence"
     : input.effectPoints === 0
       ? "no_meaningful_benefit"
-      : "not_graded";
+      : graded
+        ? "fictional_points"
+        : "not_graded";
   const word = kind === "no_evidence"
     ? NO_EVIDENCE_WORD
     : kind === "no_meaningful_benefit"
       ? NO_MEANINGFUL_BENEFIT_WORD
-      : typeof input.effectPoints === "number" && input.effectPoints < 0
-        ? `Harm reported · ${SIZE_NOT_GRADED_WORD.toLowerCase()}`
+      : graded
+        ? LEGACY_EFFECT_WORDS[String(input.effectPoints)] ?? SIZE_NOT_GRADED_WORD
         : SIZE_NOT_GRADED_WORD;
+  // effectPoints 0 IS a number, but a null result must never draw a zero-width
+  // fill: "no meaningful benefit" is a finding, not a small effect.
+  const points = graded && input.effectPoints !== 0 ? (input.effectPoints as number) : null;
   return {
     kind,
     word,
-    pts: "—",
+    pts: points === null ? "—" : `${points}/3`,
     provenance: PREVIOUS_AUDIT_LABEL,
-    fill: null,
+    fill: points === null ? null : Math.abs(points) / 3,
     scale: null,
     lines,
     sourceLinks,

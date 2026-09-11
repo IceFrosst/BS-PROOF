@@ -27,6 +27,7 @@ body:has(.ab-stage)>.site-header,body:has(.ab-stage)>.site-footer{display:none}
 /* flex-shrink:0 or the column squashes the strip and the heading overlaps it */
 .ab-tabs{display:flex;flex-shrink:0;gap:6px;overflow-x:auto;padding-bottom:10px;scrollbar-width:none}
 .ab-tabs button{white-space:nowrap;min-height:44px;padding:8px 13px;border:1px solid var(--ab-line);border-radius:11px;background:var(--ab-surface);font-size:12px;display:flex;align-items:center;flex-shrink:0;max-width:210px;overflow:hidden;text-overflow:ellipsis}
+.ab-tabs button small{font-size:10px;color:var(--ab-muted);overflow:hidden;text-overflow:ellipsis;max-width:190px}
 .ab-tabs button[aria-pressed=true]{background:var(--ab-accent);border-color:var(--ab-accent);color:#f7f9f1}
 .ab-tabs button[aria-pressed=true] small{color:#dfe8d6}
 /* The card is the phone's REAL scroll region: every outcome row must be

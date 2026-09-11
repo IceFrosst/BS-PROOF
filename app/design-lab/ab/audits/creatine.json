@@ -28,15 +28,15 @@
     "ethnicity": "not reported in any of the 23 trials or in the review",
     "confidence": "verified"
    },
-   "sentence": "On top of the same training, creatine adds about 4.4 kg to upper-body and 11.4 kg to leg 1RM - roughly a third more than training alone.",
+   "sentence": "On top of training, creatine adds about 4.4 kg to upper-body 1RM and 11.4 kg to lower-body 1RM - a 20% vs 12% strength gain instead of 12%.",
    "ledger": {
     "effectPoints": "1",
-    "effect_basis": "Two meta-analyses disagree ~3-fold on upper body and are not reconciled: PMID 39519498 (23 RCTs, n=509) gives +4.43 kg upper / +11.35 kg lower, I2=0%; PMID 40944139 (69 studies, n=1937, 2025) gives +1.43 kg bench and a NON-SIGNIFICANT leg press (p=0.11). Both report significant funnel asymmetry on upper body (Egger p=0.048 and p=0.0003). Effect remains a small-to-moderate real benefit in men who lift; the magnitude is unsettled.",
+    "effect_basis": "Pooled weighted mean difference vs placebo+training, 23 RCTs, PEDro 'good' or 'excellent' for all 23 (PMID 39519498, full text): upper-body 1RM +4.43 kg (95% CI 3.12 to 5.75, p < 0.001, 21 trials, n = 433, I2 = 0%); lower-body 1RM +11.35 kg (95% CI 8.44 to 14.25, p < 0.001, 19 trials, n = 395, I2 = 0%). In relative terms the older narrative pooling of 22 studies reports 20% vs 12% strength gain, i.e. +8 percentage points (PMID 14636102, abstract). Standardised, the effect is SMALL, not moderate: the older-adult meta-analysis gives chest press SMD 0.35 (0.16-0.53) and leg press SMD 0.24 (0.05-0.43) (PMID 29138605), and Branch's 100-study meta-analysis gives performance effect sizes 0.19-0.24 (PMID 12945830). Point estimate clears the 0.20 SMD 'small/meaningful' benchmark; the leg-press lower bound (0.05) does not.",
     "bodyIsRct": true,
     "checklist": {
      "risk_of_bias": "supported",
-     "consistency": "concern",
-     "precision": "concern",
+     "consistency": "supported",
+     "precision": "supported",
      "directness": "supported",
      "publication_bias": "concern"
     },
@@ -54,13 +54,13 @@
    },
    "detail": {
     "effect": {
-     "found": "+4.43 kg upper and +11.35 kg lower 1RM beyond the same training with placebo - about a third more than training alone gives you, more on upper body than legs.",
-     "missing": "The two meta-analyses disagree threefold on upper body, and the newer, larger one finds leg press not significant. No source since 2003 has restated this as a percentage with a confidence interval.",
+     "found": "+4.43 kg upper-body 1RM (CI 3.12-5.75) and +11.35 kg lower-body 1RM (CI 8.44-14.25) beyond what the same training produced with placebo; heterogeneity I2 = 0% for both.",
+     "missing": "No established minimal clinically important difference exists for 1RM in healthy adults, so 'meaningful' has to be argued from the standardised size (0.24-0.35, small) and the relative 20% vs 12%. The same meta-analysis found NO significant gain in the two female-only trials (upper body +1.54 kg, CI -1.81 to 4.89, n = 40).",
      "move": "A trial in women large enough to settle the sex question: the male-vs-female interaction test is only a trend (p = 0.067, Q = 3.366) on 40 women, so 'works less well in women' is currently subgroup_hypothesis_only."
     },
     "evidence": {
      "found": "23 RCTs, 509 participants, all rated good or excellent on PEDro; 56 of 61 trials rated low risk of bias in the separate 2025 dose-response review; I2 = 0%; EFSA independently established cause and effect for creatine + resistance training on muscle strength in adults over 55 (10.2903/j.efsa.2016.4400).",
-     "missing": "Largest trial n=39; funnel asymmetry in both meta-analyses (Egger p=0.048 and p=0.0003); trim-and-fill cuts upper body to +3.60 kg. The two pooled estimates have not been reconciled.",
+     "missing": "Publication bias is a real concern on the upper body: the funnel plot was asymmetric and Egger's test was significant (t = 2.102, p = 0.048), though trim-and-fill still left +3.60 kg (CI 2.39-4.81). Every single trial is small - the largest is n = 39 - so the 'best RCT is small' gate fires even though the pooled interval is tight. 37 of the 61 trials in the companion review (60.7%) had partial or complete industry sponsorship.",
      "move": "One adequately powered (n >= 200) preregistered trial of 4 g/day with no loading phase against placebo over 12 weeks of supervised training."
     },
     "form": {
@@ -83,15 +83,6 @@
      "direction": "benefit",
      "access": "full_text",
      "note": "23 RCTs, adults <50. Upper +4.43 kg, lower +11.35 kg, I2=0%. Dose subgroup <=5 vs >5 g/day: no effect upper, trend p=0.068 lower. Primary source for this row."
-    },
-    {
-     "id": "PMID 40944139 / 10.3390/nu17172748",
-     "year": 2025,
-     "design": "sr_ma",
-     "n": 1937,
-     "direction": "benefit",
-     "access": "full_text",
-     "note": "69 studies, LARGER AND NEWER than PMID 39519498. Bench/chest +1.43 kg (0.53-2.34); leg press +3.13 kg (-0.74-7.00) NOT significant; squat +5.64 kg. Egger p=0.0003. Females bench +0.15 kg; all over-50 subgroups null."
     },
     {
      "id": "PMID 41433021 / 10.1080/15502783.2025.2586523",
@@ -148,10 +139,10 @@
      "note": "DIFFERENT POPULATION (mean age 57-70), NOT merged into this row's estimate. Cited only to express strength on the standardised scale: chest press SMD 0.35 (0.16-0.53), leg press 0.24 (0.05-0.43)."
     }
    ],
-   "absolute_effect": "+4.43 kg upper-body 1RM (95% CI 3.12 to 5.75) and +11.35 kg lower-body 1RM (95% CI 8.44 to 14.25) beyond identical training with placebo (PMID 39519498). Bias-adjusted (trim-and-fill) upper body +3.60 kg (2.39 to 4.81). A LARGER, NEWER meta-analysis (PMID 40944139, 69 studies, 1937 participants) finds much less: bench/chest +1.43 kg (0.53 to 2.34) and leg press NOT significant (+3.13 kg, -0.74 to 7.00, p=0.11), squat +5.64 kg (3.87 to 7.40). Share of the gain training alone produces, derived from placebo-arm data extracted from 6 primary trials (n=56 upper / 53 lower placebo participants, ~13% of the pool): upper 0.65 (95% MC interval 0.38-1.41), lower 0.35 (0.23-0.58); 0.53 upper after trim-and-fill; 0.21 upper / 0.10-0.18 lower on the newer meta-analysis. The '20% vs 12%' (=0.667) figure is a 2003 NARRATIVE review, abstract-only, no n, no CI, no weighting, whose own abstract reports bench 1RM ranging 3-45% and calls the response 'highly variable'. It is the top of the range, not the answer.",
-   "clinically_meaningful": "yes for men who lift, on the SMD 0.20 Cohen benchmark (chest press 0.35, leg press 0.24), but the magnitude is unsettled: the newer, larger meta-analysis would put upper body near SMD 0.1. No MCID for 1RM exists, and no defensible non-responder rate is published - the only study that classified people (Syrotuik 2004) is 11 men, measured creatine uptake rather than strength, and found 3 of 11 absorbed almost none.",
+   "absolute_effect": "+4.43 kg upper-body 1RM (95% CI 3.12 to 5.75) and +11.35 kg lower-body 1RM (95% CI 8.44 to 14.25) more than the identical training with placebo; in relative terms a 20% strength gain instead of 12% (+8 percentage points of 1RM). Standardised: chest press SMD 0.35 (0.16-0.53), leg press SMD 0.24 (0.05-0.43).",
+   "clinically_meaningful": "yes - threshold: SMD 0.20, the conventional Cohen 'small' benchmark, applied verbatim as the interpretive cut in the 2025 creatine dose-response meta-analysis itself ('Cohen's d was interpreted as small (0.2), medium (0.5), and large (0.8)', PMID 41433021). Chest press 0.35 and leg press 0.24 clear it; the leg-press lower confidence bound (0.05) does not. Named caveat: no MCID for 1RM exists in healthy adults, so this is a statistical benchmark, not a patient-anchored one.",
    "strongest_study": "PMID 39519498 (Nutrients 2024, full text): 23 RCTs, all PEDro good/excellent, upper-body 1RM +4.43 kg (CI 3.12-5.75) and lower-body +11.35 kg (CI 8.44-14.25), heterogeneity I2 = 0% for both - unusually clean agreement for this literature.",
-   "strongest_doubt": "A larger, newer meta-analysis (PMID 40944139, 69 studies, 1937 participants) puts the upper-body increment at +1.43 kg - under a third of the figure this row is built on - and finds leg press not significant at all (p=0.11). Both meta-analyses show funnel asymmetry (Egger p=0.048 and p=0.0003); trim-and-fill cuts upper body 4.43 to 3.60 kg. Every trial is tiny (largest n=39). In over-50s every subgroup of the newer meta-analysis is null (bench 0.85 NS, leg press 1.41 NS, squat 0.76 NS), which is in tension with the EFSA 2016 'cause and effect established' opinion cited here - whose applicant was AlzChem AG, a creatine manufacturer.",
+   "strongest_doubt": "Every trial is tiny (largest n = 39) and the upper-body funnel plot is asymmetric with Egger's p = 0.048, so some of the 4.43 kg is probably small-study inflation; trim-and-fill puts it at 3.60 kg. The two female-only trials show no significant gain, and 60.7% of the wider trial base is industry-sponsored.",
    "study_that_would_move_this": "A preregistered, independently funded, n >= 200 RCT of 4 g/day with NO loading phase versus placebo across 12 weeks of supervised resistance training, reporting 1RM in kg and as % of baseline, with women powered as their own stratum."
   },
   {

@@ -76,26 +76,6 @@ describe("the landing tab is Outcomes, and there is no overall number", () => {
     }
   });
 
-  /* Founder call 2026-09-11: every product reads under the CURRENT rubric. The
-   * old composite headline and its band were produced by the rubric we rejected
-   * (noticeability tiers, funding penalty), so they are shown nowhere - not as a
-   * product verdict and not beside a row either. */
-  it("shows the old composite score nowhere, for any product", () => {
-    for (const product of ["creatine", "vitaminD", "magnesium", "caffeine"]) {
-      const m = renderToStaticMarkup(createElement(AbPrototype, { initial: { product } }));
-      expect(m).not.toContain("prev. rubric");
-      expect(m).not.toContain("ab-number");
-      for (const band of ["Probably works", "Probably does not work", "Evidence against", "Works"]) {
-        expect(m).not.toContain(`<span class="ab-bar-word">${band}</span>`);
-      }
-    }
-  });
-
-  it("labels an outcome row by what its effect evidence says, not by a score", () => {
-    expect(markup).toMatch(/ab-bar-word">(Size not graded|No meaningful benefit|Reported estimate|Estimate, no interval)/);
-    expect(markup).not.toMatch(/ab-bar-pts">\d+</); // no bare 0-100 number beside a row
-  });
-
   it("qualifies every outcome row by its population and says suggestions are not a promise", () => {
     expect(markup).toContain("Adults under 50 doing resistance training");
     expect(markup).toContain("not a measure of how many people buy it");
@@ -109,18 +89,30 @@ describe("the landing tab is Outcomes, and there is no overall number", () => {
 });
 
 describe("three states that must never render the same", () => {
-  it("size not graded, no evidence and no meaningful benefit are distinct", () => {
-    const graded = legacyEffectBar({ effectPoints: 2, rctCount: 8, inventory: [{ id: "PMID 1234567" }], absoluteEffect: "prose" });
+  /* Founder revert 2026-09-11: a previous audit that graded its effect keeps
+   * that grade, stamped as the previous audit's. Only an UNGRADED row reads
+   * "size not graded" - blanking graded rows read as a downgrade of the
+   * product when it was only ever a downgrade of our own rubric. */
+  it("ungraded, no evidence and no meaningful benefit are distinct", () => {
+    const ungraded = legacyEffectBar({ effectPoints: "unclear", rctCount: 8, inventory: [{ id: "PMID 1234567" }], absoluteEffect: "prose" });
     const nothing = legacyEffectBar({ effectPoints: "unclear", rctCount: 0, inventory: [] });
     const nullResult = legacyEffectBar({ effectPoints: 0, rctCount: 9, inventory: [{ id: "PMID 1234567" }] });
-    expect([graded.kind, nothing.kind, nullResult.kind]).toEqual(["not_graded", "no_evidence", "no_meaningful_benefit"]);
-    expect([graded.word, nothing.word, nullResult.word]).toEqual([SIZE_NOT_GRADED_WORD, NO_EVIDENCE_WORD, NO_MEANINGFUL_BENEFIT_WORD]);
-    expect(new Set([graded.word, nothing.word, nullResult.word]).size).toBe(3);
+    expect([ungraded.kind, nothing.kind, nullResult.kind]).toEqual(["not_graded", "no_evidence", "no_meaningful_benefit"]);
+    expect([ungraded.word, nothing.word, nullResult.word]).toEqual([SIZE_NOT_GRADED_WORD, NO_EVIDENCE_WORD, NO_MEANINGFUL_BENEFIT_WORD]);
+    expect(new Set([ungraded.word, nothing.word, nullResult.word]).size).toBe(3);
   });
 
-  it("a missing size is NEVER a zero fill", () => {
+  it("a graded previous audit keeps its own tier, stamped as that audit's", () => {
+    const graded = legacyEffectBar({ effectPoints: 2, rctCount: 8, inventory: [{ id: "PMID 1" }] });
+    expect(graded.word).toBe("Moderate benefit");
+    expect(graded.pts).toBe("2/3");
+    expect(graded.fill).toBeCloseTo(2 / 3);
+    expect(graded.provenance).toBe(PREVIOUS_AUDIT_LABEL);
+  });
+
+  it("an UNGRADED size is never a zero fill, and a null result never fills either", () => {
     for (const bar of [
-      legacyEffectBar({ effectPoints: 2, rctCount: 8, inventory: [{ id: "PMID 1" }] }),
+      legacyEffectBar({ effectPoints: "unclear", rctCount: 8, inventory: [{ id: "PMID 1" }] }),
       legacyEffectBar({ effectPoints: "unclear", rctCount: 0, inventory: [] }),
       legacyEffectBar({ effectPoints: 0, rctCount: 9, inventory: [{ id: "PMID 1" }] }),
     ]) {
@@ -151,7 +143,10 @@ describe("the three shipped audits keep their own text, stamped and not reverifi
         expect(label).toMatch(/AS CLAIMED|not reverified/);
       }
       expect(bar.sourceLinks.map((s) => s.id)).toEqual(o.inventory.map((s) => s.id));
-      expect(bar.fill).toBeNull();
+      // A graded row fills by its own tier; an ungraded or null row never fills.
+      const pts = Number(o.ledger.effectPoints);
+      if (Number.isFinite(pts) && pts !== 0) expect(bar.fill).toBeCloseTo(Math.abs(pts) / 3);
+      else expect(bar.fill).toBeNull();
     }
   });
 
@@ -175,7 +170,6 @@ describe("the three shipped audits keep their own text, stamped and not reverifi
     expect(opened).toContain(PREVIOUS_AUDIT_LABEL);
     expect(opened).toContain("Reported effect, previous audit");
     expect(opened).toContain("pubmed.ncbi.nlm.nih.gov/39519498");
-    expect(opened).toMatch(/Size not graded/);
   });
 });
 
