@@ -419,9 +419,21 @@ Open founder calls this raises:
 
 ## TODO — full-context critical review by Astra or Fable 5.1 before launch
 
-**Standing item. Do this whenever `openai-codex/gpt-6-astra` or
-`anthropic/claude-fable-5-1` is available** (Fable failed on expired OAuth on
-2026-09-11; Astra is the current session model).
+**Independent review delivered (2026-09-11):**
+`docs/design/2026-09-11-independent-launch-review.md` records the main-session
+review with official methods references and a separate code-review pass.
+The previous prompt's model identity/availability assertions were not verified
+and are not prerequisites for independent reasoning. A specifically requested
+Astra/Fable pass can still be recorded separately when actually run.
+
+**Result: do not wire the existing effect engine into the cards.** Its points
+are not AMSTAR-2, its review pooling/interval widening is unvalidated, and its
+supplement anchors are synthetic, not calibrated. Next is a narrow healthy-goal
+contract using published estimates and cross-checks, not forced anchor rankings.
+Funding must also be removed from the older displayed ledger's combined gate
+and kept as disclosure; it is currently excluded only from the unused module.
+
+Original review brief retained below for traceability:
 
 The brief is deliberately broad and adversarial:
 

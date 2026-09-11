@@ -560,6 +560,17 @@ do not drop it.
 
 ## Current state
 
+**2026-09-11 — independent launch review of `70a3955`.**
+See `docs/design/2026-09-11-independent-launch-review.md`. The live-audit
+prototype, audit-v0.2 prompt/schema and unused `effect.ts` exist, but the new
+methodology points, overlap handling, pooled intervals and effect anchors are
+not scientifically validated. Do not wire that module into consumer scores as
+is. Funding remains a penalty in the older displayed ledger despite its absence
+from the new module. Healthy-population eligibility, prompt/schema alignment,
+Overall semantics and demographic extrapolation are unresolved launch risks.
+Baseline validation: 238 unit tests and both Python gates pass; no fresh browser
+or supplement-source validation in this review. Production remains unchanged.
+
 **2026-09-09 — launch UX prototypes (branch `launch/ai-wrapper-planning`).**
 `/design-lab` is a development-only interactive comparison of guided, workspace,
 and conversational layouts. Editable sample product confirmation, outcome selection,
@@ -1206,7 +1217,15 @@ still the unmeasured SR-uplift experiment (Next item 3).
 
 ## Next
 
-**Handoff: launch UI design review in progress on `launch/ai-wrapper-planning`.**
+**Handoff: independent launch review on `launch/ai-wrapper-planning`; findings
+in `docs/design/2026-09-11-independent-launch-review.md`.** Next: agree the
+narrow effect contract (healthy goal, published estimate, practical-importance
+unknown state, cross-source checks without automatic pooling), then implement
+prompt/schema/UI together and validate the three-product slice. Do not tune
+bands to yesterday's desired caffeine/creatine rankings or start a catalogue
+batch. Earlier prototype handoff below is historical and partly superseded.
+
+**Earlier handoff: launch UI design review.**
 Choose A/B/C in the local `/design-lab` before building the real research flow.
 `/design-lab/ab` compares the result card as WORDS vs a computed SCORE on the
 same hypothetical ledger; the proposed rubric (`prompts/research_audit.md`,
