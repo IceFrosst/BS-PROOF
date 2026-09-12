@@ -1,0 +1,116 @@
+{
+ "meta": {
+  "prompt": "effect-research-v0.2",
+  "run_at": "2026-09-11",
+  "model": "claude-opus-5 (xhigh) — bounded EFFECT-ONLY best-shot test",
+  "human_verified": false,
+  "note": "EFFECT ONLY. This is the case the ladder exists for: a published threshold EXISTS for this outcome, was applied by the review authors themselves, and the effect FAILED it. Most products would render this as 'reduces soreness, p = 0.0004'. Not human verified.",
+  "reopened_at_source": "S1 full text via Europe PMC"
+ },
+ "product": "Omega-3 (EPA/DHA) · ~1 g/day",
+ "ingredient": "Omega-3 (EPA + DHA)",
+ "dose_studied": "About 1 g/day combined EPA+DHA, which straddles the review's own dose split (<1000 mg/day and >1000 mg/day). Dose match is good.",
+ "sources": [
+  {
+   "id": "S1",
+   "label": "PMID 32382573 / PMC7195643",
+   "title": "Omega-3 PUFA supplementation for reducing muscle soreness after eccentric exercise: systematic review and meta-analysis (BioMed Research International 2020)",
+   "year": 2020,
+   "design": "sr_ma",
+   "access": "full_text",
+   "pmid": "32382573",
+   "pmcid": "PMC7195643",
+   "doi": null,
+   "trials": 12,
+   "participants": 301,
+   "methods_strengths": [
+    "Prospectively registered (PROSPERO CRD42018085869).",
+    "Healthy, recreationally active participants — the population a consumer product is sold to.",
+    "Reports the magnitude on a 0–10 visual analogue scale, a unit a person can picture.",
+    "Names a published threshold and applies it to its own pooled estimate rather than leaving the reader to guess."
+   ],
+   "methods_limits": [
+    "Small base: 9 studies in the soreness pool, 145 supplemented vs 156 control participants overall.",
+    "The authors rate their own evidence as low quality.",
+    "Medium heterogeneity (I² = 39%).",
+    "The threshold's own provenance could not be opened: it is cited to a Cochrane cold-water-immersion review, so it is domain-matched, but whether it was anchor-derived in healthy exercisers is unresolved."
+   ],
+   "funding": "Recorded as disclosure only, never a score penalty: no industry funder identified in the retrieved text."
+  }
+ ],
+ "outcomes": [
+  {
+   "id": "O1",
+   "name": "Muscle soreness after hard exercise",
+   "population": "Healthy, recreationally active adults, 2 days after eccentric exercise",
+   "primary_source": "S1",
+   "estimate": {
+    "what": "delayed-onset muscle soreness 2 days after eccentric exercise, omega-3 vs placebo",
+    "metric": "raw",
+    "unit": "points on a 0–10 soreness scale",
+    "value": -0.93,
+    "ciLow": -1.44,
+    "ciHigh": -0.42,
+    "interval_note": "95% CI as reported; I² = 39%, 9 studies.",
+    "direction": "lower_better",
+    "source": "S1"
+   },
+   "also_reported": [
+    {
+     "what": "isometric muscle strength after eccentric exercise",
+     "metric": "smd",
+     "unit": "SMD",
+     "value": -0.03,
+     "ciLow": -0.36,
+     "ciHigh": 0.31,
+     "interval_note": "95% CI as reported; the interval spans no effect.",
+     "direction": "higher_better",
+     "source": "S1"
+    }
+   ],
+   "quote": {
+    "text": "In our current study, we used 1.4 as the minimal clinically important difference (MCID) for pain reduction based on the 10-unit VAS. It should be noticed that the effect size of less muscle soreness with n-3 PUFA was lower than the MCID, suggesting that the statistically significant difference in pain reduction was very unlikely to represent meaningful or important differences in clinical practice.",
+    "source": "S1"
+   },
+   "comparator": "Omega-3 versus placebo, both after the same eccentric exercise protocol.",
+   "timeframe": "Measured 2 days after the exercise bout.",
+   "dose_applicability": "Good. A consumer dose of about 1 g/day sits on the review's own dose boundary, and both the above-1000 mg and below-1000 mg subgroups were reported.",
+   "outcome_kind": "lived",
+   "threshold": {
+    "value": 1.4,
+    "unit": "points on a 0–10 scale",
+    "source": "S1",
+    "derived_in": "exercise soreness literature, cited by the review to a Cochrane cold-water-immersion review; whether it was anchor-derived in healthy exercisers is unresolved",
+    "anchor_based": false,
+    "population_match": "comparable",
+    "verdict": "failed",
+    "note": "This is the rare outcome where a threshold exists AND was applied to this exact pooled estimate by the authors themselves. The effect is 0.93 points against a 1.4-point bar, so it is real, statistically clear, and below what was defined as mattering."
+   },
+   "practical_importance": {
+    "status": "reported_by_source",
+    "note": "The source itself concludes the effect is below the threshold: 'does not result in a clinically important reduction of muscle soreness'. We report that verdict rather than the p-value."
+   },
+   "limits": [
+    "Low-quality evidence by the authors' own GRADE rating.",
+    "Strength and range-of-motion outcomes were null.",
+    "The threshold's derivation population could not be independently opened; it is domain-matched but its anchor basis is unresolved. Since the effect fails the bar either way, a more permissive threshold is the only thing that could change the verdict, and none was found."
+   ],
+   "cross_checks": []
+  }
+ ],
+ "not_assessed": [
+  {"bar": "evidence", "reason": "This pass graded no certainty rubric, so no certainty bar exists to show."},
+  {"bar": "form", "reason": "Triglyceride form (ethyl ester vs re-esterified) was out of scope for this effect-only test."},
+  {"bar": "dose", "reason": "No dose score was computed; dose match is stated in words."},
+  {"bar": "person", "reason": "No demographic transfer was computed."}
+ ],
+ "access_failures": [
+  "The threshold's origin (Cochrane CD008262) could not be opened: Europe PMC returned an empty full text and the Cochrane PDF endpoint returned an HTML interstitial."
+ ],
+ "guards": [
+  "A confidence interval crossing the null would mean uncertainty, not evidence of no effect.",
+  "The blood-lipid effect of omega-3 is a surrogate and is not used to support a lived claim here.",
+  "No magnitude is converted into a claim about what anyone would notice.",
+  "Funding is disclosure only and never a score penalty."
+ ]
+}

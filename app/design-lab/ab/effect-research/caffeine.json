@@ -1,0 +1,317 @@
+{
+ "meta": {
+  "prompt": "effect-research-v0.2",
+  "run_at": "2026-09-11",
+  "model": "claude-opus-5 (xhigh) — bounded EFFECT-ONLY research pass",
+  "human_verified": false,
+  "note": "EFFECT ONLY. No ledger, certainty, form, dose or person-fit score was produced for this product and none may be inferred from this file: those bars render 'Not assessed in this run' and the card shows no numeric headline. Every number below was re-opened at its source (S1 abstract; S2 and S3 full text) and matched to the quote carried here, but this file has NOT been through human verification and must not be presented as if it had. The two outcomes are separate evidence bases and are never merged into one 'caffeine works' claim.",
+  "reopened_at_source": "S1 abstract, S2 full text, S3 full text"
+ },
+ "product": "Caffeine anhydrous · 200 mg",
+ "ingredient": "Caffeine (anhydrous)",
+ "dose_studied": "200 mg, single acute oral dose, healthy adults. This is the dose the product prints; it is NOT automatically the dose the evidence below tested — see dose_applicability on each outcome.",
+ "not_assessed": [
+  {
+   "bar": "evidence",
+   "reason": "This pass graded no certainty rubric. No risk-of-bias, consistency, precision, directness or publication-bias judgement was made, so no certainty bar exists to show."
+  },
+  {
+   "bar": "form",
+   "reason": "Form fit was out of scope. Pure caffeine anhydrous versus coffee, capsules, gum or energy drinks was not compared in this pass."
+  },
+  {
+   "bar": "dose",
+   "reason": "No dose score was computed. The dose gap is stated in words per outcome instead, because the endurance comparator is mg/kg and the attention comparator is a pooled dose stratum — neither converts to a fit score."
+  },
+  {
+   "bar": "person",
+   "reason": "No demographic transfer was computed. Who was enrolled is recorded per source as a limit, not as a match score."
+  }
+ ],
+ "sources": [
+  {
+   "id": "S1",
+   "label": "PMID 40335666",
+   "title": "A systematic review and meta-analysis of the acute effect of caffeine on attention (Klove & Petersen, Psychopharmacology 2025)",
+   "year": 2025,
+   "design": "sr_ma",
+   "access": "abstract",
+   "pmid": "40335666",
+   "pmcid": null,
+   "doi": "10.1007/s00213-025-06775-1",
+   "trials": 31,
+   "participants": 1455,
+   "methods_strengths": [
+    "Randomized, double-blind, placebo-controlled trials only.",
+    "Pure caffeine only; the sleep-deprivation literature was explicitly excluded, so the pooled result is about RESTED healthy adults.",
+    "Random-effects pooling across 31 trials and 1455 participants."
+   ],
+   "methods_limits": [
+    "ABSTRACT ONLY: paywalled, Unpaywall oa_status = closed, no repository copy found.",
+    "No confidence interval is reported in the abstract, so the precision of g = 0.28 is unverified.",
+    "Heterogeneity, risk of bias, publication bias and the included-trial list could not be checked.",
+    "The pooled g is a composite that collapses multiple attention outcomes per trial.",
+    "The '>= 200 mg' finding is a pooled DOSE STRATUM, not an exact 200 mg dose, and its numeric subgroup effect is not recoverable from the abstract.",
+    "Subjective alertness was not synthesised, so this is not evidence that anyone 'feels more alert'."
+   ],
+   "funding": "Independent Research Fund Denmark grant 9037-00169b (Crossref funder metadata). No industry funder listed. The conflict-of-interest statement sits behind the paywall and could not be read. Recorded as disclosure only."
+  },
+  {
+   "id": "S2",
+   "label": "PMID 41374083 / PMC12694421",
+   "title": "Effects of Caffeine Dose and Administration Method on Time-Trial Performance: A Systematic Review and Network Meta-Analysis (Nutrients 2025)",
+   "year": 2025,
+   "design": "nma",
+   "access": "full_text",
+   "pmid": "41374083",
+   "pmcid": "PMC12694421",
+   "doi": "10.3390/nu17233792",
+   "trials": 48,
+   "participants": 612,
+   "methods_strengths": [
+    "Full text read via Europe PMC JATS XML.",
+    "PRISMA-NMA, five databases searched to July 2025, duplicate screening, RoB 2.0 applied in duplicate.",
+    "Risk of bias, verbatim: 'Of the 48 studies included, none were judged to be at high risk of bias. A total of 39 were rated as having some concerns, while 9 were assessed as low risk of bias.'"
+   ],
+   "methods_limits": [
+    "89% male: 546 of 612 participants.",
+    "Trained and recreationally active cyclists and exercisers, not general sedentary adults.",
+    "Single-blind trials were permitted and placebo/expectancy effects were not isolated.",
+    "Supplement S3, the list of the 48 included studies, was not retrieved — which is exactly why the overlap with S3 below is unknown."
+   ],
+   "funding": "Shanghai University of Sport / Shanghai Key Laboratory grants; the authors declare no conflict of interest. Recorded as disclosure only."
+  },
+  {
+   "id": "S3",
+   "label": "PMID 42445506 / PMC13357162",
+   "title": "Caffeine and cycling time-trial performance: systematic review and meta-analysis of randomized double-blind trials (Front Physiol 2026)",
+   "year": 2026,
+   "design": "sr_ma",
+   "access": "full_text",
+   "pmid": "42445506",
+   "pmcid": "PMC13357162",
+   "doi": "10.3389/fphys.2026.1853564",
+   "trials": 23,
+   "participants": null,
+   "methods_strengths": [
+    "Full text read. Prospectively registered: PROSPERO CRD420261334904.",
+    "Randomized DOUBLE-blind trials only."
+   ],
+   "methods_limits": [
+    "Cycling time trials only — a narrower slice than S2.",
+    "Some crossover trials were analysed as independent groups where paired standard deviations were missing; per the paper's own text this 'may have reduced statistical precision and influenced the weighting'. That is a precision and weighting issue; it is NOT a claim that the point estimate is biased toward the null."
+   ],
+   "funding": "The authors declare no financial support and no commercial or financial relationships. Recorded as disclosure only."
+  },
+  {
+   "id": "S4",
+   "label": "Cochrane CD008508 / PMID 20464765",
+   "title": "Caffeine for the prevention of injuries and errors in shift workers (Cochrane Database of Systematic Reviews)",
+   "year": 2010,
+   "design": "sr_ma",
+   "access": "abstract",
+   "pmid": "20464765",
+   "pmcid": null,
+   "doi": null,
+   "trials": 13,
+   "participants": null,
+   "methods_strengths": [
+    "Cochrane review, 13 trials."
+   ],
+   "methods_limits": [
+    "ABSTRACT ONLY: the PDF was downloaded but could not be extracted with the tooling available.",
+    "The population is shift workers and jet lag — circadian-disordered, not rested daytime adults.",
+    "The sign convention behind the reported SMD is not recoverable from the abstract, so the direction of the number is left unclear here rather than guessed."
+   ],
+   "funding": "Not recorded in this pass."
+  },
+  {
+   "id": "S5",
+   "label": "PMID 42196950 / PMC13209804",
+   "title": "Caffeine and event-related potentials: a systematic review with narrative synthesis",
+   "year": 2026,
+   "design": "narrative_review",
+   "access": "full_text",
+   "pmid": "42196950",
+   "pmcid": "PMC13209804",
+   "doi": null,
+   "trials": null,
+   "participants": null,
+   "methods_strengths": [
+    "Full text read."
+   ],
+   "methods_limits": [
+    "Narrative synthesis only (SWiM); nothing was pooled, so there is no estimate to carry.",
+    "Event-related potentials are neurophysiological intermediates on a different endpoint and in a different context from behavioural attention tasks."
+   ],
+   "funding": "Not recorded in this pass."
+  }
+ ],
+ "outcomes": [
+  {
+   "id": "O1",
+   "name": "Acute attention performance",
+   "population": "Rested healthy adults, behavioural attention tasks (the sleep-deprivation literature was excluded)",
+   "primary_source": "S1",
+   "estimate": {
+    "what": "reaction time on attention tasks",
+    "metric": "smd",
+    "unit": "Hedges g",
+    "value": 0.28,
+    "ciLow": null,
+    "ciHigh": null,
+    "interval_note": "No confidence interval is available: the abstract does not report one and the full text is paywalled. Precision is therefore unknown, and no interval is drawn.",
+    "direction": "higher_better",
+    "source": "S1"
+   },
+   "also_reported": [
+    {
+     "what": "accuracy on attention tasks",
+     "metric": "smd",
+     "unit": "Hedges g",
+     "value": 0.27,
+     "ciLow": null,
+     "ciHigh": null,
+     "interval_note": "No confidence interval reported in the abstract.",
+     "direction": "higher_better",
+     "source": "S1"
+    }
+   ],
+   "quote": {
+    "text": "Significant effects in favor of caffeine were found for both accuracy, g = 0.27, and reaction time, g = 0.28. Subgroup analyses showed that higher doses of caffeine (>= 200 mg) improved both reaction time and accuracy more than lower doses",
+    "source": "S1"
+   },
+   "comparator": "Single acute oral dose of pure caffeine versus placebo, randomized and double-blind.",
+   "timeframe": "Acute, single dose. The post-dose measurement timing is not recoverable from the abstract.",
+   "dose_applicability": "The review reports that doses >= 200 mg improved reaction time and accuracy more than lower doses, but that is a POOLED DOSE STRATUM, not an exact 200 mg dose, and the stratum's own numeric effect is not recoverable from the abstract. So this row is consistent with a 200 mg product; it is not a measurement of 200 mg.",
+   "practical_importance": {
+    "status": "unknown",
+    "note": "A standardized effect size only. No raw units (milliseconds) are recoverable, no minimum clinically important difference for attention reaction time was identified, and with no interval the precision is unknown. Statistically significant is not the same as practically important, and g = 0.28 is NOT converted into milliseconds or into any claim about what a person would notice."
+   },
+   "limits": [
+    "Abstract-only access, so the interval, heterogeneity, risk of bias, publication bias and the included-trial list are all unverified.",
+    "The pooled g collapses several different attention outcomes per trial into one composite.",
+    "Rested adults only. This says nothing about caffeine after a night without sleep.",
+    "Subjective alertness was not synthesised, so 'feels more alert' is not a finding this row supports."
+   ],
+   "cross_checks": [
+    {
+     "source": "S4",
+     "relation": "different_population",
+     "overlap": "unknown",
+     "independent_replication": false,
+     "estimate": {
+      "what": "orientation and attention in shift workers / jet lag",
+      "metric": "smd",
+      "unit": "SMD",
+      "value": -0.55,
+      "ciLow": -0.83,
+      "ciHigh": -0.27,
+      "interval_note": "Interval as reported in the Cochrane abstract.",
+      "direction": "unclear",
+      "source": "S4"
+     },
+     "note": "Recorded as POPULATION SEPARATION only. Shift workers and jet lag are circadian-disordered; this number is not the effect for a rested daytime user and must never be used to size the row above. The sign convention is not recoverable from the abstract."
+    },
+    {
+     "source": "S5",
+     "relation": "different_endpoint",
+     "overlap": "unknown",
+     "independent_replication": false,
+     "estimate": null,
+     "note": "Event-related potentials: P300 amplitude findings are 'mixed and context-dependent', narrative synthesis only with no pooling. A neurophysiological intermediate on a different endpoint and in a different context — non-comparable, and NOT evidence against the behavioural attention finding."
+    }
+   ],
+   "outcome_kind": "surrogate",
+   "threshold": {
+    "value": null,
+    "unit": "",
+    "source": null,
+    "derived_in": "no published important-difference threshold was found for this outcome in a healthy population",
+    "anchor_based": false,
+    "population_match": "unknown",
+    "verdict": "none",
+    "note": "Searched Karolinska Sleepiness, Epworth, Profile of Mood States, alertness VAS, Borg and smallest worthwhile change: every hit was a patient population (OSA, COPD, cancer, fibromyalgia). A behavioural reaction-time task is a stand-in for attention in daily life."
+   }
+  },
+  {
+   "id": "O2",
+   "name": "Endurance time-trial completion time",
+   "population": "Trained and recreationally active adults doing time trials; 546 of 612 participants (89%) were male",
+   "primary_source": "S2",
+   "estimate": {
+    "what": "completion time, LOW-DOSE CAPSULES (<= 3 mg/kg body mass) versus placebo",
+    "metric": "smd",
+    "unit": "SMD",
+    "value": -0.34,
+    "ciLow": -0.62,
+    "ciHigh": -0.06,
+    "interval_note": "95% CI as reported in the network meta-analysis; I2 = 0%.",
+    "direction": "lower_better",
+    "source": "S2"
+   },
+   "also_reported": [],
+   "quote": {
+    "text": "Low-dose capsules most effectively reduced completion time (standardized mean differences [SMD] = -0.34; 95% confidence interval [CI] -0.62, -0.06)",
+    "source": "S2"
+   },
+   "comparator": "Low-dose caffeine capsules, defined by the review as <= 3 mg/kg body mass, versus placebo, inside a network meta-analysis of dose and administration method.",
+   "timeframe": "Acute pre-exercise dosing before a time trial.",
+   "dose_applicability": "THE COMPARATOR IS mg/kg, NOT A FIXED 200 mg DOSE. A flat 200 mg is about 2.0 mg/kg at 100 kg, 2.9 mg/kg at 70 kg and 3.3 mg/kg at 60 kg, and most included trials used higher mg/kg than the low-dose stratum. This row is therefore NOT 'the effect of 200 mg on endurance'; whether a 200 mg capsule lands inside the low-dose stratum depends on the person's body mass.",
+   "practical_importance": {
+    "status": "unknown",
+    "note": "The review separately derives a 2.2% reduction in completion time, but reports it with NO confidence interval and anchors its meaningfulness to elite competition margins (the Paris 2024 Olympic time-trial podium). That is an elite-sport framing, not a validated minimum clinically important difference for a general healthy adult, and it is not adopted as a threshold here. The SMD is not converted into minutes or seconds."
+   },
+   "limits": [
+    "89% male (546 of 612 participants).",
+    "Trained or recreationally active cyclists and exercisers, not general sedentary adults.",
+    "Single-blind trials were permitted and placebo/expectancy was not isolated.",
+    "The interval's upper bound (-0.06) sits close to the null, so the effect is small and imprecise."
+   ],
+   "cross_checks": [
+    {
+     "source": "S3",
+     "relation": "same_question",
+     "overlap": "unknown",
+     "independent_replication": false,
+     "estimate": {
+      "what": "cycling time-trial completion time",
+      "metric": "smd",
+      "unit": "SMD",
+      "value": -0.32,
+      "ciLow": -0.49,
+      "ciHigh": -0.16,
+      "interval_note": "95% CI as reported; I2 = 0%.",
+      "direction": "lower_better",
+      "source": "S3"
+     },
+     "note": "LIKELY THE SAME EVIDENCE SEEN TWICE, not independent replication: S2 keeps its 48-study list in a supplement that was not retrieved, so the two trial sets could not be compared, and both reviews cover the same endurance time-trial literature. The two estimates are shown side by side and are NEVER combined or re-pooled."
+    }
+   ],
+   "outcome_kind": "lived",
+   "threshold": {
+    "value": null,
+    "unit": "",
+    "source": null,
+    "derived_in": "no published important-difference threshold was found for this outcome in a healthy population",
+    "anchor_based": false,
+    "population_match": "unknown",
+    "verdict": "none",
+    "note": "Searched Karolinska Sleepiness, Epworth, Profile of Mood States, alertness VAS, Borg and smallest worthwhile change: every hit was a patient population (OSA, COPD, cancer, fibromyalgia). Finishing a time trial faster is something the person experiences."
+   }
+  }
+ ],
+ "access_failures": [
+  "S1 full text is paywalled (Unpaywall oa_status = closed); only the abstract was read.",
+  "S4 (Cochrane CD008508) PDF was downloaded but could not be extracted with the tooling available, so it is abstract-only.",
+  "The EFSA 2011 opinion (10.2903/j.efsa.2011.2054) returned HTTP 403 from both Wiley and efsa.europa.eu, so it is cited nowhere in this file.",
+  "S2 Supplement S3, the 48-study list, was not retrieved — which is why the S2/S3 overlap status is unknown."
+ ],
+ "guards": [
+  "A confidence interval crossing the null would mean UNCERTAINTY, not evidence of no effect.",
+  "No minimum clinically important difference is assumed for either outcome.",
+  "No standardized effect size is converted into minutes, milliseconds or a claim about what someone would notice.",
+  "Estimates from different reviews are never combined, averaged or re-pooled.",
+  "Attention and endurance are separate evidence bases and never merge into one 'caffeine works' claim."
+ ]
+}

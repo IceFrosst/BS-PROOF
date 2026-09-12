@@ -1,0 +1,1380 @@
+{
+ "meta": {
+  "run_at": "2026-09-10",
+  "model": "claude-opus-5 (pi delegate subagent, PI_MODEL=claude-opus-5)",
+  "prompt": "audit-v0.2",
+  "note": "FRESH live run. Every source below was retrieved in this session by bash curl against Europe PMC REST (search + fullTextXML), NCBI ESearch/EFetch (db=pubmed, db=pmc) and PMC. No prior audit JSON was read; no Grok/xAI output used. Access level is stated per source and per inventory row: full_text = article body retrieved and read; abstract = structured abstract retrieved from the API (Cochrane/JAMA/Lancet/NEJM/Annals paywalls). Every PMID/DOI cited was resolved through the API and the returned title matched the title cited. One pivotal full text (VITAL fractures, PMC9716639) was read in full and is the backbone of the fracture, falls and biomarker rows. This audit has not been verified by a human; it is model output computed into a score by code."
+ },
+ "product": "Vitamin D3 2000 IU (50 mcg) daily, taken alone",
+ "ingredient": "Cholecalciferol (vitamin D3)",
+ "form": "Cholecalciferol (D3), oral daily capsule/tablet",
+ "daily_dose": "2000 IU/day (50 mcg)",
+ "dose_note": "2000 IU/day is the exact dose of the two largest daily-dosing trials in existence — VITAL (n=25,871, 5.3 y; PMID 35939577/30415629) and DO-HEALTH (n=2,157, 3 y; PMID 33170239) — so form and dose fit is unusually good for most rows. It is 2.5-3.3x the IOM RDA (600 IU age 1-70, 800 IU age 71+, target 25(OH)D >=20 ng/mL; Ross 2011, PMID 21118827) and about 2.5x the 800 IU used in the fracture trials that worked, which also gave 1200 mg/day calcium. 'Taken alone' matters: the only fracture benefit in the literature comes from vitamin D PLUS calcium, and this product supplies no calcium. Daily dosing (rather than monthly/annual bolus) is the regimen that guidelines and the cancer-mortality meta-analysis favour. Safety at this dose: in VITAL there were no substantial differences in hypercalcaemia or kidney stones vs placebo over 5.3 years (full text, PMC9716639).",
+ "for_whom": {
+  "reasonable": "People with a measured low 25(OH)D or a clear reason to be low (little sun, covered/dark skin, housebound, malabsorption); children and adolescents 1-18 y and adults 75+ (Endocrine Society 2024 suggests empiric supplementation in both, for rickets/respiratory infection and for mortality respectively); pregnancy; high-risk prediabetes. For frail/care-home elderly the fracture evidence supports vitamin D WITH 1000-1200 mg/day calcium, not vitamin D alone.",
+  "not_shown": "Healthy, vitamin-D-replete adults under 75 taking 2000 IU/day to prevent fractures, falls, colds, depression or death. The Endocrine Society 2024 guideline suggests AGAINST empiric supplementation above the DRI in healthy adults <75 and against routine 25(OH)D screening; USPSTF 2018 recommends AGAINST vitamin D to prevent falls in community-dwelling adults 65+ (D grade). Also not shown: 2000 IU/day as a TREATMENT dose for rickets/osteomalacia in anyone over 12 months old (guideline treatment dose is 3000-6000 IU/day for >=12 weeks).",
+  "source": "Endocrine Society Clinical Practice Guideline 2024, PMID 38828931 (abstract); USPSTF 2018 falls recommendation, PMID 29710141 (abstract); IOM 2011 DRIs summarised in Ross 2011, PMID 21118827 (abstract); global consensus on nutritional rickets treatment doses, PMID 26745253 via full text of PMC8061584 (Box III)."
+ },
+ "outcomes": [
+  {
+   "name": "Raising a low blood level",
+   "population": "Adults with 25(OH)D below 20 ng/mL (50 nmol/L)",
+   "studied_in": {
+    "sex": "mixed",
+    "sex_note": "VITAL 50.6% women; Heaney n=67 all men; Gallagher n=163 all women; Iran RCT 76% men",
+    "age_min": 18,
+    "age_max": null,
+    "age_note": "Iran RCT 18-70 (mean 46); VITAL 50+ (mean 67); Gallagher postmenopausal; Heaney age NR",
+    "ethnicity": "VITAL 71% White/20% Black; Gallagher White women only; Iran trial not reported",
+    "confidence": "verified"
+   },
+   "sentence": "2000 IU/day reliably raises 25(OH)D by about 12 ng/mL (30 nmol/L) in 8-12 weeks, which lifts most deficient people over the 20 ng/mL line.",
+   "ledger": {
+    "effectPoints": "3",
+    "effect_basis": "Direct on-dose measurements: in deficient adults (baseline 10-20 ng/mL) 2000 IU/day for 12 wk raised 25(OH)D by beta = +12.5 ng/mL (p<0.001, n=62, PMID 37481570, full text); in VITAL 2-year bloods on the same dose 29.2 -> 41.2 ng/mL (+12.0) vs 30.0 -> 29.4 on placebo (PMC9716639, full text); Heaney's dosing study gives a slope of 0.70 nmol/L per mcg/day, i.e. +35 nmol/L (+14 ng/mL) for 50 mcg (PMID 12499343, abstract); Gallagher's 8-arm dose-response RCT in insufficient postmenopausal women shows the curve plateauing near 112 nmol/L only above 3200 IU/day (PMID 22431675, abstract). This is a biomarker, not a felt outcome.",
+    "bodyIsRct": true,
+    "checklist": {
+     "risk_of_bias": "supported",
+     "consistency": "supported",
+     "precision": "supported",
+     "directness": "supported",
+     "publication_bias": "unknown"
+    },
+    "gates": {
+     "rctCount": 5,
+     "largestRctN": 2655,
+     "longestRctWeeks": 104,
+     "chronicOutcome": true,
+     "surrogate": true,
+     "allPositiveIndustryOrOneLab": false
+    },
+    "formFit": "4",
+    "doseFit": "4",
+    "effective_daily_range": "1000-4000 IU/day raises 25(OH)D dose-dependently; 2000 IU/day gives roughly +10-15 ng/mL (25-37 nmol/L) and is inside the tested range"
+   },
+   "detail": {
+    "effect": {
+     "found": "A +12 ng/mL rise at this exact dose, measured in three independent settings (deficient stone formers, replete US adults in VITAL, controlled dosing study).",
+     "missing": "Nobody has shown that the rise itself makes a deficient person feel or function better; the biomarker is the endpoint here.",
+     "move": "A trial in people with 25(OH)D <12 ng/mL and symptoms (bone pain, weakness) reporting symptom change alongside the blood level."
+    },
+    "evidence": {
+     "found": "Randomised dose-response data plus a 25,871-person trial that measured the same dose's biomarker effect; consistent slope across studies.",
+     "missing": "Response varies with body weight (obese women sat 17.8 nmol/L lower at the same dose, PMID 22431675) and baseline; individual response is not guaranteed.",
+     "move": "A dose-response RCT restricted to 25(OH)D <12 ng/mL with a 2000 IU/day arm and per-BMI response reported."
+    },
+    "form": {
+     "found": "Cholecalciferol (D3) is the exact form tested in every trial cited here.",
+     "missing": "Nothing material. D2 raises 25(OH)D less well but is not what this product is.",
+     "move": "Nothing needed."
+    },
+    "dose": {
+     "found": "2000 IU/day is directly tested; it sits mid-range and is enough to clear 20 ng/mL for nearly everyone.",
+     "missing": "It is not enough to guarantee 30 ng/mL or above from a very low baseline; that took 3200+ IU/day in Gallagher's curve.",
+     "move": "A trial reporting the fraction of people crossing 20 and 30 ng/mL on 2000 IU/day by baseline level and BMI."
+    }
+   },
+   "inventory": [
+    {
+     "id": "PMID 37481570",
+     "year": 2023,
+     "design": "rct",
+     "n": 62,
+     "direction": "benefit",
+     "access": "full_text",
+     "note": "standalone; 2000 IU/d x12wk vs 50,000 IU/wk in deficient (10-20 ng/mL) stone formers; 25(OH)D beta +12.53; 24-h urine calcium rose in both arms"
+    },
+    {
+     "id": "PMID 35939577",
+     "year": 2022,
+     "design": "rct",
+     "n": 25871,
+     "direction": "benefit",
+     "access": "full_text",
+     "note": "standalone; VITAL biomarker substudy (2-y bloods n=2655): 29.2->41.2 ng/mL on 2000 IU/d, PTH 40.8->37.2"
+    },
+    {
+     "id": "PMID 22431675",
+     "year": 2012,
+     "design": "rct",
+     "n": 163,
+     "direction": "benefit",
+     "access": "abstract",
+     "note": "standalone; 8 dose arms 400-4800 IU/d for 1 y in insufficient postmenopausal women; plateau ~112 nmol/L above 3200 IU/d"
+    },
+    {
+     "id": "PMID 12499343",
+     "year": 2003,
+     "design": "rct",
+     "n": 67,
+     "direction": "benefit",
+     "access": "abstract",
+     "note": "standalone; controlled dosing 0/1000/5000/10000 IU/d, slope 0.70 nmol/L per mcg/d"
+    },
+    {
+     "id": "PMID 21118827",
+     "year": 2011,
+     "design": "other",
+     "n": 0,
+     "direction": "unclear",
+     "access": "abstract",
+     "note": "IOM DRI summary: RDA 600/800 IU, sufficiency 25(OH)D >=20 ng/mL; supplies the threshold, not an effect"
+    }
+   ],
+   "absolute_effect": "+12.5 ng/mL (95% CI not reported; p<0.001) after 12 weeks at 2000 IU/day from a 10-20 ng/mL baseline (n=62); +12.0 ng/mL at 2 years in VITAL (29.2 -> 41.2 ng/mL) vs -0.6 on placebo.",
+   "clinically_meaningful": "Yes for the blood level itself: it moves a typical deficient person from ~15 to ~27 ng/mL, past the IOM sufficiency threshold of 20 ng/mL (50 nmol/L) (threshold source: IOM 2011 via Ross 2011, PMID 21118827). No patient-felt benefit follows automatically - the surrogate gate is flagged for exactly that reason.",
+   "strongest_study": "PMID 37481570 (2023, full text): randomised, on-dose, in genuinely deficient adults (10-20 ng/mL), 2000 IU/day for 12 weeks, 25(OH)D beta +12.53 ng/mL, PTH fell.",
+   "strongest_doubt": "This is a biomarker row. The same 2000 IU/day that reliably fixes the number failed to change fractures, falls, infections, mood or death in trials of 18,000-25,871 people, so 'corrected the level' must not be read as 'delivered a health benefit'. Also, the on-dose deficiency trial is small (n=62) and in kidney-stone formers, where 24-h urine calcium rose.",
+   "study_that_would_move_this": "A trial in adults with 25(OH)D <12 ng/mL randomised to 2000 IU/day vs placebo reporting both the blood level and symptoms (musculoskeletal pain, muscle strength) at 12 and 26 weeks."
+  },
+  {
+   "name": "Treating rickets or osteomalacia",
+   "population": "Rickets/osteomalacia from vitamin D deficiency",
+   "studied_in": {
+    "sex": "unknown",
+    "sex_note": "Neither the 1984 (n=41) nor the 1973 (n=226) trial reports a sex breakdown",
+    "age_min": null,
+    "age_max": null,
+    "age_note": "Guideline is paediatric; RCTs in 'elderly' inpatients and epilepsy outpatients, ages NR",
+    "ethnicity": "not reported",
+    "confidence": "unknown"
+   },
+   "sentence": "Vitamin D cures it, but the guideline treatment dose is 2000 IU/day only under age 1; from 12 months up it is 3000-6000 IU/day for 12+ weeks.",
+   "ledger": {
+    "effectPoints": "3",
+    "effect_basis": "Treatment doses in the global consensus on nutritional rickets (PMID 26745253) as tabulated in the full text of PMC8061584 Box III: 2000 IU/day for infants <12 months, 3000-6000 IU/day for 12 months-12 years, 6000 IU/day for >12 years, each for a minimum of 12 weeks, plus 200-500 mg/day calcium. The effect of repletion on the disease is dramatic (biochemical and radiographic healing) but rests on consensus, historical series and two old small controlled trials, not on a modern RCT: a 1984 BMJ randomised trial in 41 elderly inpatients with subclinical osteomalacia (D2 25 mcg/day or alfacalcidol vs placebo) saw osteoid values fall to normal within 3 months in most patients (PMID 6434081), and a 1973 controlled therapeutic trial in 226 epileptic outpatients on anticonvulsants gave 2000 IU/day of vitamin D2 for 3 months with a +4% bone mineral content gain vs no change on placebo (PMID 4776883).",
+    "bodyIsRct": false,
+    "checklist": {
+     "risk_of_bias": "concern",
+     "consistency": "supported",
+     "precision": "unknown",
+     "directness": "supported",
+     "publication_bias": "unknown"
+    },
+    "gates": {
+     "rctCount": 2,
+     "largestRctN": 226,
+     "longestRctWeeks": 12,
+     "chronicOutcome": true,
+     "surrogate": false,
+     "allPositiveIndustryOrOneLab": false
+    },
+    "formFit": "4",
+    "doseFit": "2",
+    "effective_daily_range": "2000 IU/day if under 12 months; 3000-6000 IU/day if over 12 months (to adult), minimum 12 weeks, with calcium (global consensus PMID 26745253 via PMC8061584 Box III)"
+   },
+   "detail": {
+    "effect": {
+     "found": "Repletion heals nutritional rickets/osteomalacia - the one place vitamin D is a treatment rather than a hopeful preventive.",
+     "missing": "No modern randomised trial of nutritional osteomalacia treatment in adults exists (searched; see note). Healing evidence is guideline consensus, cohort/series and two trials from 1973 and 1984.",
+     "move": "A randomised trial in biopsy- or biochemistry-confirmed nutritional osteomalacia comparing 2000 IU/day with a guideline dose on bone pain, mobility and healing."
+    },
+    "evidence": {
+     "found": "An 11-organisation GRADE-based international consensus (2016) that defines diagnosis and treatment, and a practical management review reproducing its dose table in full text.",
+     "missing": "A dedicated osteomalacia treatment RCT. A Europe PMC search for TITLE:osteomalacia AND PUB_TYPE:Randomized Controlled Trial returns 5 records, none of them a modern nutritional-osteomalacia treatment trial (two are 1980s subclinical-osteomalacia trials, one 1973 anticonvulsant trial, one 1965 gastrectomy survey, one 2010 anticonvulsant prophylaxis study). Recent osteomalacia literature is dominated by tumour-induced osteomalacia.",
+     "move": "Any randomised comparison of repletion regimens in confirmed nutritional osteomalacia with patient-important outcomes."
+    },
+    "form": {
+     "found": "D3 is the preferred form in the consensus, including for high-dose (stoss) therapy, because of its longer half-life.",
+     "missing": "Nothing material.",
+     "move": "Nothing needed."
+    },
+    "dose": {
+     "found": "2000 IU/day IS the consensus treatment dose - but only for infants under 12 months.",
+     "missing": "For anyone from 12 months to adulthood, 2000 IU/day is 33-67% of the recommended treatment dose (3000-6000 IU/day), so this product under-doses active disease.",
+     "move": "A dose-comparison trial (2000 vs 3000-6000 IU/day) in confirmed rickets/osteomalacia over 12 weeks with healing as the endpoint."
+    }
+   },
+   "inventory": [
+    {
+     "id": "PMID 26745253",
+     "year": 2016,
+     "design": "other",
+     "n": 0,
+     "direction": "benefit",
+     "access": "abstract",
+     "note": "global consensus (GRADE) on nutritional rickets; abstract only, treatment dose table read from PMC8061584 Box III"
+    },
+    {
+     "id": "PMID 33380700 (PMC8061584)",
+     "year": 2020,
+     "design": "other",
+     "n": 0,
+     "direction": "benefit",
+     "access": "full_text",
+     "note": "narrative review reproducing consensus treatment doses: 2000 IU/d <12 mo, 3000-6000 IU/d 1-12 y, 6000 IU/d >12 y, min 12 wk + calcium"
+    },
+    {
+     "id": "PMID 6434081",
+     "year": 1984,
+     "design": "rct",
+     "n": 41,
+     "direction": "benefit",
+     "access": "abstract",
+     "note": "standalone; elderly inpatients with subclinical osteomalacia, D2 25 mcg/d or alfacalcidol vs placebo; osteoid normalised in most within 3 mo"
+    },
+    {
+     "id": "PMID 4776883",
+     "year": 1973,
+     "design": "rct",
+     "n": 226,
+     "direction": "benefit",
+     "access": "abstract",
+     "note": "standalone; anticonvulsant osteomalacia; 2000 IU/d D2 x3 mo, bone mineral content +4% vs unchanged on placebo"
+    },
+    {
+     "id": "PMID 41886805",
+     "year": 2026,
+     "design": "other",
+     "n": 0,
+     "direction": "benefit",
+     "access": "abstract",
+     "note": "narrative review of adult osteomalacia treatment pathways; confirms vitamin D repletion is first-line, cites no RCT"
+    }
+   ],
+   "absolute_effect": "Not quantifiable as a risk difference from randomised data. Nearest measured quantities: osteoid volume returning to normal within 3 months in most of 41 treated elderly patients (1984), and +4% bone mineral content vs 0% on placebo after 3 months of 2000 IU/day D2 in anticonvulsant osteomalacia (1973).",
+   "clinically_meaningful": "Yes - healing a mineralisation disease that causes bone pain, deformity, hypocalcaemic seizures and fractures. No formal MCID exists; the threshold used here is the consensus definition of biochemical/radiographic healing (PMID 26745253 via PMC8061584).",
+   "strongest_study": "PMID 26745253 / PMC8061584 Box III: an 11-organisation GRADE consensus that sets the treatment dose and duration, read in full text for the dose table.",
+   "strongest_doubt": "There is no modern RCT of vitamin D treatment for nutritional osteomalacia in adults - I searched for one and it does not exist. And at 2000 IU/day this product is below the consensus treatment dose for everyone older than 12 months, so 'vitamin D treats osteomalacia' is not the same claim as 'this bottle treats osteomalacia'.",
+   "study_that_would_move_this": "A randomised trial in adults with confirmed nutritional osteomalacia comparing 2000 IU/day against 4000-6000 IU/day for 12-24 weeks, with bone pain, walking speed, alkaline phosphatase and healing on imaging."
+  },
+  {
+   "name": "Preventing fractures (D alone)",
+   "population": "Community adults 50+, not deficient, no calcium",
+   "studied_in": {
+    "sex": "mixed",
+    "sex_note": "VITAL 50.6% women (13,085/25,871); DO-HEALTH 61.7% women",
+    "age_min": 50,
+    "age_max": null,
+    "age_note": "VITAL men 50+/women 55+, mean 67.1, no upper limit; DO-HEALTH 70+, mean 74.9",
+    "ethnicity": "VITAL 71.3% non-Hispanic White, 20.2% Black, 4.0% Hispanic, 1.5% Asian",
+    "confidence": "verified"
+   },
+   "sentence": "VITAL gave 25,871 adults this exact dose for 5.3 years: total fractures HR 0.98 (0.89-1.08), hip 1.01 - and no benefit at any baseline level.",
+   "ledger": {
+    "effectPoints": "0",
+    "effect_basis": "VITAL fracture ancillary, read in full text (PMC9716639): 2000 IU/day D3 with no co-administered calcium, 25,871 US adults (mean age 67.1, 50.6% women, 20.2% Black), median 5.3 y, 1991 adjudicated fractures. First incident total fracture HR 0.98 (0.89-1.08, p=0.70); nonvertebral 0.97 (0.87-1.07); hip 1.01 (0.70-1.47); major osteoporotic 0.99 (0.83-1.17). Prespecified subgroup analysis found NO effect modification by baseline 25(OH)D (median split or quartiles) and exploratory analysis found none at clinically relevant thresholds (<12, <20, <30, >=50 ng/mL), nor by age, sex, race, BMI, calcium/vitamin D supplement use, osteoporosis medication or prior fragility fracture. Consistent with Cochrane 2014 (vitamin D alone: hip fracture RR 1.12, 0.98-1.29, 11 trials/27,693; any fracture RR 1.03, 0.96-1.11, 15 trials/28,271; rated high-quality evidence) and Bolland 2018 (total fracture RR 1.00, 0.93-1.07, 36 trials/44,790; effect estimate inside the futility boundary for a 5-15% relative reduction).",
+    "bodyIsRct": true,
+    "checklist": {
+     "risk_of_bias": "supported",
+     "consistency": "supported",
+     "precision": "supported",
+     "directness": "supported",
+     "publication_bias": "supported"
+    },
+    "gates": {
+     "rctCount": 16,
+     "largestRctN": 25871,
+     "longestRctWeeks": 276,
+     "chronicOutcome": true,
+     "surrogate": false,
+     "allPositiveIndustryOrOneLab": false
+    },
+    "formFit": "4",
+    "doseFit": "4",
+    "effective_daily_range": "None exists for vitamin D alone: 400-2000 IU/day and monthly/annual bolus regimens have all been tested and none reduced fractures; 2000 IU/day is directly tested and null"
+   },
+   "detail": {
+    "effect": {
+     "found": "A precise null. Over 5.3 years, 769/12,927 vs 782/12,944 people had a first fracture (5.9% vs 6.0%); hip fractures 57 vs 56.",
+     "missing": "Nothing important. The confidence interval rules out anything better than roughly an 11% relative reduction, and trial sequential analysis in Bolland 2018 crossed the futility boundary for a 5% reduction.",
+     "move": "Nothing realistic. This question is answered for community-dwelling, non-deficient adults."
+    },
+    "evidence": {
+     "found": "The largest daily-dose trial ever run (n=25,871, centrally adjudicated fractures, 5.3 y) plus two independent syntheses that agree; deduplicated: VITAL is standalone, the 15 vitamin-D-alone trials are pooled_in Cochrane 2014/Bolland 2018.",
+     "missing": "Small positive trials do exist in this literature (mostly older, smaller, often with calcium or in institutions). They do not weaken the null - they are the kind of study a large precise trial supersedes, and Bolland's trial sequential analysis shows the accumulated data have passed futility. Note this is why consistency is marked supported despite scattered positive reports.",
+     "move": "Nothing. A new 25,000-person trial at this dose would be unethical to justify and could not change the pooled estimate materially."
+    },
+    "form": {
+     "found": "Cholecalciferol, the exact form and daily schedule VITAL used.",
+     "missing": "Nothing.",
+     "move": "Nothing needed."
+    },
+    "dose": {
+     "found": "2000 IU/day is the tested dose; it was also tested against baseline-level subgroups and remained null.",
+     "missing": "Nothing. Higher doses (up to 4000 IU/day, and bolus regimens) do no better and bolus dosing has raised fracture/fall risk in some trials.",
+     "move": "Nothing needed."
+    }
+   },
+   "inventory": [
+    {
+     "id": "PMID 35939577",
+     "year": 2022,
+     "design": "rct",
+     "n": 25871,
+     "direction": "none",
+     "access": "full_text",
+     "note": "standalone (post-dates both meta-analyses); VITAL, 2000 IU/d alone, 5.3 y; total fx HR 0.98, hip 1.01; no interaction with baseline 25(OH)D"
+    },
+    {
+     "id": "PMID 24729336",
+     "year": 2014,
+     "design": "sr_ma",
+     "n": 91791,
+     "direction": "none",
+     "access": "abstract",
+     "note": "Cochrane 53 trials; vitamin D ALONE: hip RR 1.12 (0.98-1.29), any fx RR 1.03 (0.96-1.11), high-quality evidence"
+    },
+    {
+     "id": "PMID 30293909",
+     "year": 2018,
+     "design": "sr_ma",
+     "n": 53537,
+     "direction": "none",
+     "access": "abstract",
+     "note": "81 RCTs; total fracture RR 1.00 (0.93-1.07), hip 1.11 (0.97-1.26); futility boundary crossed; overlaps Cochrane (documented, counted once)"
+    },
+    {
+     "id": "PMID 29677308",
+     "year": 2018,
+     "design": "sr_ma",
+     "n": 51419,
+     "direction": "none",
+     "access": "abstract",
+     "note": "USPSTF evidence report; vitamin D alone vs placebo, hip fracture pooled ARD -0.01% (-0.80 to 0.78)"
+    },
+    {
+     "id": "PMID 33170239",
+     "year": 2020,
+     "design": "rct",
+     "n": 2157,
+     "direction": "none",
+     "access": "abstract",
+     "note": "standalone; DO-HEALTH, 2000 IU/d for 3 y in adults 70+; nonvertebral fracture one of 6 primary endpoints, no significant benefit"
+    }
+   ],
+   "absolute_effect": "5.9% vs 6.0% of participants had a first fracture over 5.3 years (769/12,927 vs 782/12,944): absolute risk difference about -0.1 percentage points, 95% CI compatible with -0.7 to +0.5 pp. Hip fractures 57 vs 56.",
+   "clinically_meaningful": "No. The CI excludes more than about an 11% relative reduction, and Bolland 2018's trial sequential analysis crossed the futility boundary for relative reductions of 5-15% (threshold source: the 15%/10%/7.5%/5% futility boundaries pre-specified in PMID 30293909).",
+   "strongest_study": "PMID 35939577 (VITAL fractures, NEJM 2022, read in full text): 25,871 adults, exactly 2000 IU/day with no calcium, 5.3 years, adjudicated fractures, prespecified baseline-25(OH)D subgroups all null.",
+   "strongest_doubt": "VITAL enrolled generally healthy adults not selected for deficiency (mean baseline 30.7 ng/mL; only 2.4% below 12 ng/mL), so the profoundly deficient are thinly represented - though the prespecified subgroup analyses at <12, <20 and <30 ng/mL still showed no effect modification, and only ~10% had a prior fragility fracture.",
+   "study_that_would_move_this": "An RCT restricted to adults with 25(OH)D below 12 ng/mL and low bone mass, randomised to 2000 IU/day vs placebo, powered for hip fracture - the one population VITAL could not answer."
+  },
+  {
+   "name": "Fractures with calcium, frail 70+",
+   "population": "Frail/care-home elderly on D + 1200 mg calcium",
+   "studied_in": {
+    "sex": "female",
+    "sex_note": "Decalyos I (n=3270) and II (n=583) all women; pooled WHI arm all postmenopausal women",
+    "age_min": 50,
+    "age_max": null,
+    "age_note": "Decalyos mean age 84 and 85.2, institutionalised; pooled WHI arm 50-79; men barely studied",
+    "ethnicity": "not reported in the French care-home trials",
+    "confidence": "verified"
+   },
+   "sentence": "800 IU plus 1200 mg calcium cut hip fractures ~16% (RR 0.84) - 9 fewer per 1000/year in care homes. That regimen is not 2000 IU alone.",
+   "ledger": {
+    "effectPoints": "1",
+    "effect_basis": "Cochrane 2014 (PMID 24729336, structured abstract): vitamin D plus calcium reduced hip fracture, RR 0.84 (0.74-0.96), 9 trials, 49,853 participants, rated high-quality evidence; any fracture RR 0.95 (0.90-0.99), 10 trials, 49,976. Absolute effects given by the review: about 1 fewer hip fracture per 1000 older adults per year in community populations (8/1000/y baseline) and 9 fewer per 1000 per year in institutions (54/1000/y baseline). The pivotal trial is Decalyos (PMID 1331788): 3270 ambulatory institutionalised women, mean age 84, 800 IU D3 + 1.2 g elemental calcium daily for 18 months, hip fractures 43% lower (p=0.043) and nonvertebral fractures 32% lower (p=0.015). This row is the CO-SUPPLEMENT regimen; it is kept separate from the monotherapy row on purpose.",
+    "bodyIsRct": true,
+    "checklist": {
+     "risk_of_bias": "supported",
+     "consistency": "supported",
+     "precision": "supported",
+     "directness": "supported",
+     "publication_bias": "unknown"
+    },
+    "gates": {
+     "rctCount": 9,
+     "largestRctN": 36282,
+     "longestRctWeeks": 364,
+     "chronicOutcome": true,
+     "surrogate": false,
+     "allPositiveIndustryOrOneLab": false
+    },
+    "formFit": "4",
+    "doseFit": "1",
+    "effective_daily_range": "700-800 IU/day TOGETHER WITH 1000-1200 mg/day calcium in frail or institutionalised elderly; 2000 IU/day alone is 2.5x the vitamin D and supplies none of the calcium"
+   },
+   "detail": {
+    "effect": {
+     "found": "A real but small benefit, concentrated where fracture risk is high: 9 fewer hip fractures per 1000 per year in institutions, 1 per 1000 per year in the community.",
+     "missing": "The benefit belongs to the combination. Cochrane's own conclusion is that vitamin D alone is unlikely to prevent fractures in the doses tested.",
+     "move": "A trial of 2000 IU/day WITHOUT calcium in care-home residents; the co-supplement trials cannot answer what this product does."
+    },
+    "evidence": {
+     "found": "Nine RCTs, 49,853 participants, high-quality GRADE rating for hip fracture, anchored by a 3270-woman trial in institutionalised women aged 84.",
+     "missing": "Whether the calcium, the vitamin D, or the pair is doing the work is not separable from these trials. Calcium co-supplementation also carried harms: renal disease RR 1.16 (1.02-1.33) and nephrolithiasis RR 1.17 (1.02-1.34).",
+     "move": "A three-arm trial (D alone / calcium alone / both) in frail elderly with hip fracture as the endpoint."
+    },
+    "form": {
+     "found": "D3, the same molecule.",
+     "missing": "The tested product was a vitamin D + calcium regimen, not a lone D3 capsule.",
+     "move": "Nothing on form; the mismatch is the missing calcium."
+    },
+    "dose": {
+     "found": "Effective dosing was 700-800 IU/day plus 1000-1200 mg/day calcium.",
+     "missing": "This product gives 2.5x the vitamin D and zero calcium - a different regimen from the one that worked, and more vitamin D did not help in the monotherapy trials.",
+     "move": "A head-to-head of 800 IU + calcium vs 2000 IU alone in high-risk elderly."
+    }
+   },
+   "inventory": [
+    {
+     "id": "PMID 24729336",
+     "year": 2014,
+     "design": "sr_ma",
+     "n": 49853,
+     "direction": "benefit",
+     "access": "abstract",
+     "note": "Cochrane; D+calcium hip fx RR 0.84 (0.74-0.96), any fx RR 0.95 (0.90-0.99); high-quality evidence; also reports renal harms"
+    },
+    {
+     "id": "PMID 1331788",
+     "year": 1992,
+     "design": "rct",
+     "n": 3270,
+     "direction": "benefit",
+     "access": "abstract",
+     "note": "pooled_in PMID 24729336 (Decalyos I); 800 IU D3 + 1.2 g calcium, institutionalised women mean age 84; hip fx -43%"
+    },
+    {
+     "id": "PMID 11991447",
+     "year": 2002,
+     "design": "rct",
+     "n": 583,
+     "direction": "benefit",
+     "access": "abstract",
+     "note": "pooled_in PMID 24729336 (Decalyos II); same regimen; reversed secondary hyperparathyroidism, femoral neck BMD preserved"
+    },
+    {
+     "id": "PMID 29677308",
+     "year": 2018,
+     "design": "sr_ma",
+     "n": 36727,
+     "direction": "none",
+     "access": "abstract",
+     "note": "USPSTF report; in COMMUNITY-dwelling adults D+calcium showed no fracture benefit (total fx ARD -0.35%, hip ARD -0.14%) - the risk gradient matters"
+    },
+    {
+     "id": "PMID 30293909",
+     "year": 2018,
+     "design": "sr_ma",
+     "n": 53537,
+     "direction": "none",
+     "access": "abstract",
+     "note": "pooled analyses including co-calcium trials found no fracture benefit overall; disagrees with Cochrane on where the signal lives"
+    }
+   ],
+   "absolute_effect": "Hip fracture RR 0.84 (0.74-0.96) with calcium: about 1 fewer hip fracture per 1000 older adults per year in the community (95% CI 0 to 2) and 9 fewer per 1000 per year in institutions (95% CI 2 to 14).",
+   "clinically_meaningful": "Yes in institutions (9 hip fractures prevented per 1000 residents per year is large in absolute terms), essentially not in the community (1 per 1000 per year). Threshold source: the absolute risk differences Cochrane 2014 itself reports for low- and high-risk populations (PMID 24729336).",
+   "strongest_study": "PMID 1331788 (Decalyos, NEJM 1992): 3270 institutionalised women aged 84, 800 IU D3 + 1.2 g calcium daily, hip fractures 43% lower and nonvertebral fractures 32% lower over 18 months.",
+   "strongest_doubt": "This is not the product's regimen. Every trial in this row co-administered 1000-1200 mg/day calcium, USPSTF found no fracture benefit for the same combination in community-dwelling adults, and Bolland 2018's pooled analysis (which included co-calcium trials) found no fracture benefit at all - so the signal is confined to frail, institutionalised, calcium-deficient elderly.",
+   "study_that_would_move_this": "A randomised trial of 2000 IU/day vitamin D alone versus 800 IU + 1200 mg calcium versus placebo in care-home residents, with hip fracture as the primary endpoint."
+  },
+  {
+   "name": "Preventing falls",
+   "population": "Community adults 65+, incl. those at risk of falls",
+   "studied_in": {
+    "sex": "mixed",
+    "sex_note": "VITAL 50.6% women; STURDY 43.6% women (300/688)",
+    "age_min": 50,
+    "age_max": null,
+    "age_note": "VITAL 50+ mean 67.1; STURDY 70+ mean 77.2 (SD 5.4), enriched for fall risk",
+    "ethnicity": "STURDY 79.7% White, 18.2% Black; VITAL 71.3% White, 20.2% Black",
+    "confidence": "verified"
+   },
+   "sentence": "At this exact dose VITAL found 2+ falls OR 0.97 (0.90-1.05). USPSTF recommends against vitamin D for falls; 1000-4000 IU may raise serious falls.",
+   "ledger": {
+    "effectPoints": "0",
+    "effect_basis": "VITAL falls ancillary (PMID 32492153, abstract): 25,871 adults, 2000 IU/day, 5 years - 2+ falls in 9.8% vs 9.4%, OR 0.97 (0.90-1.05); falls needing a doctor OR 1.03 (0.94-1.13); needing hospital OR 1.04 (0.90-1.19); results did not differ for baseline 25(OH)D <50 vs >=50 nmol/L or other cut points. Bolland 2018 (PMID 30293909): falls RR 0.97 (0.93-1.02), 37 trials, 34,144 participants, inside the futility boundary for a 7.5-10% reduction. STURDY (PMID 33284677): 688 adults 70+ with elevated fall risk and 25(OH)D 25-72.5 nmol/L randomised to 200/1000/2000/4000 IU/day - the 2000 and 4000 IU/day arms had HIGHER event rates than 1000 IU/day, and the best dose (1000 IU/day) did not beat 200 IU/day (HR 0.94, 0.76-1.15), with more serious falls (HR 1.87, 1.03-3.41) and fall hospitalisations (HR 2.48, 1.13-5.46). USPSTF 2018 (PMID 29710141) gives vitamin D a D recommendation for falls prevention in community-dwelling adults 65+.",
+    "bodyIsRct": true,
+    "checklist": {
+     "risk_of_bias": "supported",
+     "consistency": "supported",
+     "precision": "supported",
+     "directness": "supported",
+     "publication_bias": "supported"
+    },
+    "gates": {
+     "rctCount": 39,
+     "largestRctN": 25871,
+     "longestRctWeeks": 276,
+     "chronicOutcome": true,
+     "surrogate": false,
+     "allPositiveIndustryOrOneLab": false
+    },
+    "formFit": "4",
+    "doseFit": "4",
+    "effective_daily_range": "None: 200-4000 IU/day has been tested head-to-head (STURDY) and monthly bolus regimens too; no dose reduced falls and doses >=1000 IU/day carried a harm signal"
+   },
+   "detail": {
+    "effect": {
+     "found": "A precise null at exactly this dose (9.8% vs 9.4% with 2+ falls over 5 years) plus a 37-trial pooled null.",
+     "missing": "Nothing on the benefit side. What is present is a harm signal at 1000 IU/day and above in a dedicated dose-finding trial.",
+     "move": "Nothing to establish benefit. A trial designed to test the harm signal (serious falls at 2000 vs 400-800 IU/day) would be the useful one."
+    },
+    "evidence": {
+     "found": "A 25,871-person trial at this dose, a purpose-built 4-dose response-adaptive trial, a 37-trial meta-analysis, and a national task-force recommendation against use.",
+     "missing": "Trials in care-home residents with severe deficiency are older and were often bundled with calcium; the deficient/institutional stratum is not as cleanly answered as the community one.",
+     "move": "A placebo-controlled trial in care-home residents with 25(OH)D <30 nmol/L, vitamin D alone, falls as the primary endpoint."
+    },
+    "form": {
+     "found": "D3, daily - the exact form and schedule of both VITAL and STURDY.",
+     "missing": "Nothing.",
+     "move": "Nothing needed."
+    },
+    "dose": {
+     "found": "2000 IU/day was one of STURDY's four randomised arms and VITAL's dose; both null, and STURDY's dose-finding stage picked 1000 IU/day over 2000 and 4000 because event rates were higher at the higher doses.",
+     "missing": "Whether the higher-dose harm signal is causal - STURDY's control arm was 200 IU/day, not placebo, and the safety findings came from multiple secondary analyses.",
+     "move": "A placebo-controlled trial powered for injurious falls at 2000 IU/day."
+    }
+   },
+   "inventory": [
+    {
+     "id": "PMID 32492153",
+     "year": 2020,
+     "design": "rct",
+     "n": 25871,
+     "direction": "none",
+     "access": "abstract",
+     "note": "standalone; VITAL falls, 2000 IU/d, 5 y; 2+ falls OR 0.97 (0.90-1.05); no difference by baseline 25(OH)D <50 vs >=50 nmol/L"
+    },
+    {
+     "id": "PMID 33284677",
+     "year": 2021,
+     "design": "rct",
+     "n": 688,
+     "direction": "harm",
+     "access": "abstract",
+     "note": "standalone; STURDY 200/1000/2000/4000 IU/d in high-fall-risk 70+; no benefit, serious falls HR 1.87 and fall hospitalisation HR 2.48 at >=1000 IU/d"
+    },
+    {
+     "id": "PMID 30293909",
+     "year": 2018,
+     "design": "sr_ma",
+     "n": 34144,
+     "direction": "none",
+     "access": "abstract",
+     "note": "37 trials; falls RR 0.97 (0.93-1.02); futility boundary crossed for 7.5-10% reductions"
+    },
+    {
+     "id": "PMID 29710141",
+     "year": 2018,
+     "design": "other",
+     "n": 0,
+     "direction": "none",
+     "access": "abstract",
+     "note": "USPSTF: 'recommends against vitamin D supplementation to prevent falls in community-dwelling adults 65 years or older' (D recommendation)"
+    },
+    {
+     "id": "PMID 38833246",
+     "year": 2024,
+     "design": "other",
+     "n": 0,
+     "direction": "unclear",
+     "access": "abstract",
+     "note": "USPSTF 2024 falls update recommends exercise (B) and selective multifactorial intervention (C); the statement's abstract does not mention vitamin D at all"
+    }
+   ],
+   "absolute_effect": "9.8% (vitamin D) vs 9.4% (placebo) of 25,871 adults had 2 or more falls over 5 years - a 0.4 percentage-point excess, OR 0.97 (0.90-1.05). Pooled falls RR 0.97 (0.93-1.02) across 37 trials.",
+   "clinically_meaningful": "No. Bolland 2018's pre-specified futility boundaries (5-15% relative reduction) were crossed, i.e. the data exclude even a 7.5% relative reduction in falls (threshold source: PMID 30293909).",
+   "strongest_study": "PMID 32492153 (VITAL falls, JCEM 2020): 25,871 adults on exactly 2000 IU/day for 5 years, three fall endpoints all null, with baseline-level subgroups checked.",
+   "strongest_doubt": "The harm direction, not the benefit direction, is the live question: STURDY saw more serious falls and fall hospitalisations at 1000-4000 IU/day than at 200 IU/day, though its comparator was low-dose vitamin D rather than placebo and those were secondary analyses.",
+   "study_that_would_move_this": "A placebo-controlled trial of 2000 IU/day in fall-prone older adults powered for injurious falls, which would settle whether STURDY's harm signal is real."
+  },
+  {
+   "name": "Colds and flu, general adults",
+   "population": "General population, mostly vitamin D replete",
+   "studied_in": {
+    "sex": "mixed",
+    "sex_note": "46 pooled trials enrolled both sexes; VITAL URI 51% women; Aglipay 57.7% boys",
+    "age_min": 0,
+    "age_max": 100,
+    "age_note": "Pooled birth to 100 y; on-dose trials VITAL mean 68 y, Aglipay children mean 2.7 y",
+    "ethnicity": "Jolliffe 2025 lacked race data; VITAL URI 76% White, 16% Black",
+    "confidence": "verified"
+   },
+   "sentence": "Updated meta of 61,589 people: ARI odds 0.94 (0.88-1.00). At this dose VITAL's URI odds were 0.96 (0.86-1.06) - at best ~1 person in 100 spared.",
+   "ledger": {
+    "effectPoints": "0",
+    "effect_basis": "Jolliffe 2025 update (PMID 39993397, full text): 40 studies, 61,589 participants - any vitamin D vs placebo, ARI OR 0.94 (0.88-1.00, p=0.057), I2=26.4%; pre-specified subgroup analysis showed NO effect modification by age, baseline vitamin D status, dosing frequency or dose size; funnel plot left-sided asymmetry (Egger p=0.0020). Its 2021 predecessor (PMID 33798465) had OR 0.92 (0.86-0.99), 14,332/23,364 (61.3%) vs 14,217/22,802 (62.3%) with >=1 ARI, and explicitly reported NO significant interaction between allocation and dose, dose frequency, duration or age - so the widely quoted 'daily 400-1000 IU works' subgroup is subgroup_hypothesis_only. On-dose trials: VITAL URI prespecified analysis (PMID 38113446), 15,804 adults on 2000 IU/day, recent URI OR 0.96 (0.86-1.06); DO-HEALTH (PMID 33170239), 2000 IU/day for 3 y in 2157 adults 70+, infection rate one of six primary endpoints, no significant difference; Aglipay 2017 (PMID 28719693), 2000 IU/day vs 400 IU/day in 703 children 1-5 y, lab-confirmed URI incidence rate ratio 0.97 (0.80-1.16).",
+    "bodyIsRct": true,
+    "checklist": {
+     "risk_of_bias": "supported",
+     "consistency": "supported",
+     "precision": "supported",
+     "directness": "supported",
+     "publication_bias": "concern"
+    },
+    "gates": {
+     "rctCount": 40,
+     "largestRctN": 15804,
+     "longestRctWeeks": 156,
+     "chronicOutcome": true,
+     "surrogate": false,
+     "allPositiveIndustryOrOneLab": false
+    },
+    "formFit": "4",
+    "doseFit": "4",
+    "effective_daily_range": "No effective range established. 2000 IU/day is directly tested (VITAL, DO-HEALTH, Aglipay) and null; the 2021 meta's daily 400-1000 IU signal failed its interaction test and did not survive the 2025 update"
+   },
+   "detail": {
+    "effect": {
+     "found": "At most a sliver: 61.3% vs 62.3% of people had at least one infection in the 2021 pooled analysis - about 1 percentage point, NNT roughly 100 - and the updated CI now touches 1.00.",
+     "missing": "Any benefit at this specific dose. The three trials that used 2000 IU/day (two of them large) found nothing.",
+     "move": "A trial randomising 2000 IU/day vs placebo with laboratory-confirmed ARI as the primary endpoint in a deficient population (see the next row)."
+    },
+    "evidence": {
+     "found": "40 double-blind RCTs, 61,589 participants, individual-participant and aggregate-data syntheses by the same group across three cycles, most trials at low risk of bias.",
+     "missing": "The positive literature is asymmetric (Egger p=0.0020) and a separate analysis (PMID 39808630) shows the protective signals came disproportionately from small trials - that inflates the benefit estimate and therefore strengthens, not weakens, the null reading. Certainty is not down-rated for it; it is recorded here.",
+     "move": "Pre-registered, adequately powered trials in the profoundly deficient; nothing further is needed for replete adults."
+    },
+    "form": {
+     "found": "D3 daily, as used in the on-dose trials.",
+     "missing": "Nothing.",
+     "move": "Nothing needed."
+    },
+    "dose": {
+     "found": "2000 IU/day directly tested in three trials (15,804 adults, 2157 older adults, 703 children) - all null.",
+     "missing": "Nothing. Higher and lower daily doses and bolus regimens have all been tested; the 2025 subgroup analysis found no dose-size effect modification.",
+     "move": "Nothing needed for this population."
+    }
+   },
+   "inventory": [
+    {
+     "id": "PMID 39993397",
+     "year": 2025,
+     "design": "sr_ma",
+     "n": 61589,
+     "direction": "none",
+     "access": "full_text",
+     "note": "40 RCTs; ARI OR 0.94 (0.88-1.00) p=0.057; no effect modification by age, baseline status, dose or frequency; Egger p=0.0020"
+    },
+    {
+     "id": "PMID 33798465",
+     "year": 2021,
+     "design": "sr_ma",
+     "n": 48488,
+     "direction": "benefit",
+     "access": "abstract",
+     "note": "superseded by PMID 39993397 (same team, same protocol); OR 0.92 (0.86-0.99); no significant interaction for any subgroup"
+    },
+    {
+     "id": "PMID 38113446",
+     "year": 2024,
+     "design": "rct",
+     "n": 15804,
+     "direction": "none",
+     "access": "abstract",
+     "note": "pooled_in PMID 39993397; VITAL URI prespecified analysis, 2000 IU/d, OR 0.96 (0.86-1.06); deficient (<12 ng/mL, n=255) subgroup OR 0.60 (0.28-1.30)"
+    },
+    {
+     "id": "PMID 33170239",
+     "year": 2020,
+     "design": "rct",
+     "n": 2157,
+     "direction": "none",
+     "access": "abstract",
+     "note": "standalone; DO-HEALTH 2000 IU/d for 3 y, infection rate a primary endpoint, no significant difference"
+    },
+    {
+     "id": "PMID 28719693",
+     "year": 2017,
+     "design": "rct",
+     "n": 703,
+     "direction": "none",
+     "access": "abstract",
+     "note": "pooled_in PMID 39993397; 2000 vs 400 IU/d in children 1-5 y; lab-confirmed URI IRR 0.97 (0.80-1.16) despite 48.7 vs 36.8 ng/mL achieved"
+    },
+    {
+     "id": "PMID 42037591",
+     "year": 2026,
+     "design": "sr_ma",
+     "n": 31521,
+     "direction": "none",
+     "access": "abstract",
+     "note": "Cochrane, children <=5 y: ARI healthcare visits RR 0.95 (0.91-1.00) low certainty; higher vs lower dose RR 0.94 (0.81-1.10)"
+    }
+   ],
+   "absolute_effect": "In the 2021 pooled analysis 61.3% vs 62.3% of participants had at least one ARI: about 1 percentage point absolute, NNT roughly 100 per season. In the 2025 update the CI (OR 0.88-1.00) includes no effect at all. At 2000 IU/day in VITAL: OR 0.96 (0.86-1.06) for a recent URI at one year.",
+   "clinically_meaningful": "No. Even the most favourable pooled estimate is about one fewer person in a hundred having any infection, and the current CI includes zero effect. Threshold used: a 10% relative reduction in the proportion having >=1 ARI, the scale the meta-analyses themselves report and power against (PMID 39993397).",
+   "strongest_study": "PMID 39993397 (Lancet Diabetes Endocrinol 2025, read in full text): 40 double-blind RCTs, 61,589 participants, pooled OR 0.94 (0.88-1.00) with all pre-specified subgroup interactions null - the same team's third and largest pass at the question.",
+   "strongest_doubt": "The point estimate has sat at 0.92-0.94 across three analysis cycles and only lost significance when large null trials were added; a genuine 6% relative reduction cannot be excluded, and funnel asymmetry means the true value is more likely nearer 1.00 than further from it.",
+   "study_that_would_move_this": "A pre-registered trial of 2000 IU/day vs placebo, powered for laboratory-confirmed ARI, in adults with 25(OH)D below 25 nmol/L - the only stratum where the hypothesis is still alive."
+  },
+  {
+   "name": "Colds if severely deficient",
+   "population": "People with 25(OH)D under 10 ng/mL (25 nmol/L)",
+   "studied_in": {
+    "sex": "mixed",
+    "sex_note": "IPD trials both sexes; the 234-person deficient stratum is mostly schoolchildren",
+    "age_min": 0,
+    "age_max": 95,
+    "age_note": "IPD spans 0-95 y but the aOR 0.30 stratum is mostly Mongolian children aged 7-13",
+    "ethnicity": "race missing for 34% of IPD and never analysed; VITAL subgroup not reported",
+    "confidence": "verified"
+   },
+   "sentence": "One 2017 IPD meta found a big effect here (aOR 0.30, interaction p=0.006); two larger updates found none, and 2000 IU/day is barely tested in this group.",
+   "ledger": {
+    "effectPoints": "0",
+    "effect_basis": "Martineau 2017 IPD meta (PMID 28202713, full text): 25 RCTs, 10,933 participants with IPD - overall adjusted OR 0.88 (0.81-0.96); among those given daily/weekly vitamin D, aOR 0.30 (0.17-0.53) if baseline 25(OH)D <25 nmol/L vs 0.75 (0.60-0.95) if >=25 nmol/L, p for interaction = 0.006 (a real interaction test, which is why this row exists at all). But Jolliffe 2021 (PMID 33798465) reported 'no significant effect of vitamin D supplementation on the risk of having one or more ARIs ... for any of the subgroups defined by baseline 25(OH)D concentration', and Jolliffe 2025 (PMID 39993397, full text) again found no effect modification by baseline vitamin D status across 40 trials/61,589 participants. On-dose evidence in the deficient is thin: VITAL's prespecified <12 ng/mL subgroup had 255 participants, OR 0.60 (0.28-1.30) (PMID 38113446).",
+    "bodyIsRct": true,
+    "checklist": {
+     "risk_of_bias": "supported",
+     "consistency": "concern",
+     "precision": "concern",
+     "directness": "supported",
+     "publication_bias": "unknown"
+    },
+    "gates": {
+     "rctCount": 8,
+     "largestRctN": 255,
+     "longestRctWeeks": 52,
+     "chronicOutcome": true,
+     "surrogate": false,
+     "allPositiveIndustryOrOneLab": false
+    },
+    "formFit": "4",
+    "doseFit": "unknown",
+    "effective_daily_range": "Unknown for this stratum: the 2017 signal came from mixed daily/weekly regimens (400-2000 IU/day equivalents) in trials that mostly enrolled children; 2000 IU/day has only been tested in a 255-person VITAL subgroup"
+   },
+   "detail": {
+    "effect": {
+     "found": "A genuinely large signal in one individual-participant analysis with a significant interaction test (aOR 0.30, p for interaction 0.006) - the strongest subgroup claim anywhere in the vitamin D literature.",
+     "missing": "Replication. The same team's two later, larger aggregate-data analyses found no effect modification by baseline level, and the largest on-dose deficient subgroup (n=255) is far too small to settle it.",
+     "move": "A dedicated RCT in people with 25(OH)D <25 nmol/L randomised to 2000 IU/day vs placebo with ARI as the primary endpoint."
+    },
+    "evidence": {
+     "found": "IPD from 10,933 participants (2017) plus stratified aggregate data from 61,589 (2025) - unusually strong machinery for a subgroup question.",
+     "missing": "The 2017 result rested on relatively few profoundly deficient participants, and the later analyses used trial-level stratified data rather than IPD, so a real interaction could in principle be diluted. Not resolvable from the published data.",
+     "move": "An updated IPD (not aggregate) analysis restricted to the <25 nmol/L stratum, or the trial above."
+    },
+    "form": {
+     "found": "D3 daily is the regimen the 2017 subgroup favoured (bolus dosing showed nothing, p for interaction 0.05).",
+     "missing": "Nothing on form.",
+     "move": "Nothing needed."
+    },
+    "dose": {
+     "found": "Daily dosing matches the favourable subgroup; the dose itself is essentially untested here.",
+     "missing": "A tested effective dose in severely deficient people. Marked unknown rather than guessed.",
+     "move": "Dose-ranging (800 vs 2000 IU/day) in a deficient population with an infection endpoint."
+    }
+   },
+   "inventory": [
+    {
+     "id": "PMID 28202713",
+     "year": 2017,
+     "design": "sr_ma",
+     "n": 10933,
+     "direction": "benefit",
+     "access": "full_text",
+     "note": "IPD, 25 RCTs; <25 nmol/L subgroup aOR 0.30 (0.17-0.53), interaction p=0.006; bolus vs daily interaction p=0.05"
+    },
+    {
+     "id": "PMID 39993397",
+     "year": 2025,
+     "design": "sr_ma",
+     "n": 61589,
+     "direction": "none",
+     "access": "full_text",
+     "note": "supersedes/extends PMID 28202713 and 33798465; no effect modification by baseline vitamin D status"
+    },
+    {
+     "id": "PMID 33798465",
+     "year": 2021,
+     "design": "sr_ma",
+     "n": 48488,
+     "direction": "none",
+     "access": "abstract",
+     "note": "no significant effect in ANY baseline-25(OH)D subgroup; pooled_in the 2025 update"
+    },
+    {
+     "id": "PMID 38113446",
+     "year": 2024,
+     "design": "rct",
+     "n": 255,
+     "direction": "unclear",
+     "access": "abstract",
+     "note": "standalone (subgroup of VITAL); <12 ng/mL and no outside vitamin D: OR 0.60 (0.28-1.30) - the only on-dose data in this stratum"
+    },
+    {
+     "id": "PMID 39808630",
+     "year": 2025,
+     "design": "sr_ma",
+     "n": 0,
+     "direction": "none",
+     "access": "abstract",
+     "note": "shows the ARI/COVID protective signals were concentrated in small trials with strong publication bias (LFK index); explains part of the 2017 subgroup effect"
+    }
+   ],
+   "absolute_effect": "Not reliably estimable. If the 2017 subgroup estimate were true (aOR 0.30) it would be enormous - roughly 30-40 fewer people per 100 having an infection - which is itself a reason for caution; the later analyses are compatible with no effect at all in this stratum.",
+   "clinically_meaningful": "Unknown. The candidate effect would be highly meaningful if real, but the direction and size are unresolved; no threshold is applied because there is no stable estimate to compare against.",
+   "strongest_study": "PMID 28202713 (Martineau, BMJ 2017, read in full text): IPD from 25 RCTs with a pre-specified, significant interaction test on baseline 25(OH)D - the only formal interaction evidence for a deficiency subgroup.",
+   "strongest_doubt": "The same group's larger 2021 and 2025 analyses, which include those trials plus 50,000 more participants, found no effect modification by baseline status - and the 2017 deficient stratum was small and drawn largely from trials in children in high-deficiency settings.",
+   "study_that_would_move_this": "A single adequately powered RCT (n>=2000) restricted to 25(OH)D <25 nmol/L, 2000 IU/day vs placebo, with laboratory-confirmed ARI as the primary endpoint."
+  },
+  {
+   "name": "Preventing depression",
+   "population": "Adults 50+ with no current depression",
+   "studied_in": {
+    "sex": "mixed",
+    "sex_note": "VITAL-DEP 49.2% women of 18,353",
+    "age_min": 50,
+    "age_max": null,
+    "age_note": "Men 50+/women 55+, mean 67.5 (SD 7.1), no upper limit; nobody under 50 studied",
+    "ethnicity": "not stated in the accessible record; parent VITAL 71.3% White, 20.2% Black",
+    "confidence": "verified"
+   },
+   "sentence": "VITAL-DEP tested this exact dose in 18,353 adults for 5.3 years: depression HR 0.97 (0.87-1.09) and a 0.01-point mood change against a 0.5-point threshold.",
+   "ledger": {
+    "effectPoints": "0",
+    "effect_basis": "VITAL-DEP (PMID 32749491, abstract + JAMA key points): 18,353 adults 50+ without depression or clinically relevant depressive symptoms at baseline, 2000 IU/day D3 vs placebo, median 5.3 y, 90.5% completion. Incident/recurrent depression or clinically relevant depressive symptoms: 609 events (12.9/1000 person-years) vs 625 (13.3/1000 person-years), HR 0.97 (0.87-1.09), p=0.62; no significant difference in incidence or recurrence separately; PHQ-8 mean difference for change 0.01 points (95% CI -0.04 to 0.05) against a stated minimal clinically important difference of 0.5 points. The trial's own conclusion: 'These findings do not support the use of vitamin D3 in adults to prevent depression.'",
+    "bodyIsRct": true,
+    "checklist": {
+     "risk_of_bias": "supported",
+     "consistency": "supported",
+     "precision": "supported",
+     "directness": "supported",
+     "publication_bias": "supported"
+    },
+    "gates": {
+     "rctCount": 1,
+     "largestRctN": 18353,
+     "longestRctWeeks": 276,
+     "chronicOutcome": true,
+     "surrogate": false,
+     "allPositiveIndustryOrOneLab": false
+    },
+    "formFit": "4",
+    "doseFit": "4",
+    "effective_daily_range": "None established for prevention; 2000 IU/day is the tested dose and it is null over 5.3 years"
+   },
+   "detail": {
+    "effect": {
+     "found": "A precise null on both endpoints: 0.4 fewer events per 1000 person-years (HR 0.97) and a mood change 50x smaller than the pre-specified meaningful difference.",
+     "missing": "Nothing for this population. The interval excludes anything better than a 13% relative reduction in new depression.",
+     "move": "Nothing realistic; this is the largest depression-prevention supplement trial ever run."
+    },
+    "evidence": {
+     "found": "One trial - but 18,353 people, 5.3 years, exact dose, 90.5% retention, pre-specified MCID, published in JAMA.",
+     "missing": "Independent replication at this scale does not exist, which is why the rubric's 'only one RCT' gate fires and caps certainty at 1 despite the trial's size and precision. That cap understates what is known here.",
+     "move": "A second large prevention trial, or an IPD pooling of VITAL-DEP with the smaller prevention arms of other trials."
+    },
+    "form": {
+     "found": "D3 daily, exactly as sold.",
+     "missing": "Nothing.",
+     "move": "Nothing needed."
+    },
+    "dose": {
+     "found": "2000 IU/day, the product's dose, for 5.3 years.",
+     "missing": "Nothing.",
+     "move": "Nothing needed."
+    }
+   },
+   "inventory": [
+    {
+     "id": "PMID 32749491",
+     "year": 2020,
+     "design": "rct",
+     "n": 18353,
+     "direction": "none",
+     "access": "abstract",
+     "note": "standalone; VITAL-DEP; HR 0.97 (0.87-1.09); PHQ-8 difference 0.01 pt (MCID 0.5); full text paywalled (PMC7403921 abstract-only)"
+    },
+    {
+     "id": "PMID 35816192",
+     "year": 2023,
+     "design": "sr_ma",
+     "n": 53235,
+     "direction": "benefit",
+     "access": "abstract",
+     "note": "41 RCTs of depressive SYMPTOMS (treatment-flavoured populations, not prevention); g -0.317, GRADE very low; listed for contrast, not merged into this row"
+    }
+   ],
+   "absolute_effect": "12.9 vs 13.3 depression events per 1000 person-years (609 vs 625 events over a median 5.3 years): about 0.4 fewer events per 1000 person-years, HR 0.97 (0.87-1.09). Mood: PHQ-8 change difference 0.01 points (95% CI -0.04 to 0.05).",
+   "clinically_meaningful": "No. The mood difference is 0.01 points against the trial's pre-specified minimal clinically important difference of 0.5 points on the PHQ-8 (threshold source: VITAL-DEP, PMID 32749491), and the depression-incidence CI excludes more than a 13% relative reduction.",
+   "strongest_study": "PMID 32749491 (VITAL-DEP, JAMA 2020): 18,353 adults, exactly 2000 IU/day, 5.3 years, pre-specified MCID, null on both incidence and mood.",
+   "strongest_doubt": "Participants averaged 67.5 years and were largely vitamin-D-replete US volunteers with no depression history requirement, and I could only read the abstract and key points (JAMA full text paywalled), so I could not verify whether a low-baseline-25(OH)D subgroup was formally tested for interaction.",
+   "study_that_would_move_this": "A prevention trial in younger, deficient adults (25(OH)D <20 ng/mL) at 2000 IU/day with incident depression as the primary endpoint - or published interaction tests from VITAL-DEP by baseline level."
+  },
+  {
+   "name": "Treating depression",
+   "population": "Depressed adults, including those with low levels",
+   "studied_in": {
+    "sex": "mixed",
+    "sex_note": "D-Vitaal 57% women; the other trials give no sex split in accessible records",
+    "age_min": 10,
+    "age_max": 80,
+    "age_note": "D-Vitaal 60-80, DepFuD 18-65, Taiwan trial 10-24; nothing above 80",
+    "ethnicity": "not reported; trials run in Netherlands, Finland, Norway, Kerala and Taiwan",
+    "confidence": "verified"
+   },
+   "sentence": "Trials in depressed people with low vitamin D are null (D-Vitaal n=155 at 1200 IU; DepFuD n=281); a 41-trial meta shows g -0.32, very low certainty.",
+   "ledger": {
+    "effectPoints": "0",
+    "effect_basis": "Dedicated depressed-and-deficient treatment RCTs DO exist and are null: D-Vitaal (PMID 31340012, full text) randomised 155 adults aged 60-80 with clinically relevant depressive symptoms (CES-D >=16), >=1 functional limitation and 25(OH)D 15-50/70 nmol/L to 1200 IU/day vs placebo for 12 months - 25(OH)D rose to 85 vs 43 nmol/L and there were 'no relevant differences between the treatment groups' in depressive symptoms or any secondary outcome; Kjaergaard 2012 (PMID 22790678) randomised 230 people with low 25(OH)D to 40,000 IU/week vs placebo for 6 months - low levels tracked with more symptoms but supplementation had no effect; a 2022 trial (PMID 35843459) in MDD with severe deficiency (mean 25(OH)D 11.5 ng/mL, n=59) added 60,000 IU/5 days to escitalopram - HDRS fell 25.7->5.7 vs 25.8->5.0, p=0.92; DepFuD (PMID 41933624) randomised 281 outpatients with a major depressive episode (42-46% deficient) to 4000 vs 400 IU/day for 6 months - MADRS Cohen's d -0.09 (-0.32 to 0.14); a 2026 partially randomised trial in 108 young people with major depression plus insufficiency/deficiency gave 4800 IU/day for 8 weeks - no difference in depression vs placebo (B -0.30, -1.81 to 1.21), anxiety improved (PMID 42489742). Against that, Mikola 2023 (PMID 35816192) pools 41 RCTs (n=53,235) at Hedges g -0.317 (-0.405 to -0.230) with I2=88% and GRADE very low certainty, noting RoB was 'concerning in most studies'. The most-cited positive trial in deficient MDD patients (PMID 26609167, 50,000 IU/week, n=40) carries a journal Expression of Concern (PMID 33097954). No trial has tested 2000 IU/day against placebo in depressed adults.",
+    "bodyIsRct": true,
+    "checklist": {
+     "risk_of_bias": "concern",
+     "consistency": "concern",
+     "precision": "concern",
+     "directness": "supported",
+     "publication_bias": "unknown"
+    },
+    "gates": {
+     "rctCount": 6,
+     "largestRctN": 281,
+     "longestRctWeeks": 52,
+     "chronicOutcome": true,
+     "surrogate": false,
+     "allPositiveIndustryOrOneLab": false
+    },
+    "formFit": "4",
+    "doseFit": "3",
+    "effective_daily_range": "None established. Null trials in depressed people used 1200-4800 IU/day (or weekly equivalents); the pooled meta suggests >=2000 IU/day as the subgroup where symptoms moved, at very low certainty and without an interaction test"
+   },
+   "detail": {
+    "effect": {
+     "found": "Every reasonably conducted trial in depressed people - including three that specifically selected low vitamin D - found no benefit, while a large heterogeneous meta-analysis finds a moderate pooled improvement at very low certainty.",
+     "missing": "A placebo-controlled trial at 2000 IU/day in depressed adults with measured deficiency. Nobody has run it; the closest are 1200 IU/day (null) and 4000-4800 IU/day (null).",
+     "move": "That trial: 2000 IU/day vs placebo, adults with MDD and 25(OH)D <20 ng/mL, HDRS/MADRS at 12 weeks, adequately powered (n>=400)."
+    },
+    "evidence": {
+     "found": "Six deduplicated treatment RCTs, three of which enrolled depressed AND vitamin-D-low participants - so the answer to 'does the depressed-and-deficient trial exist?' is yes, and it is null.",
+     "missing": "Certainty is genuinely low here, unlike the prevention row: the largest trial is 281 people, the most positive small trial has an Expression of Concern, meta-analytic heterogeneity is 88%, and the pooled positive estimate comes largely from small, high-risk-of-bias studies.",
+     "move": "One adequately powered, pre-registered, placebo-controlled trial would settle it."
+    },
+    "form": {
+     "found": "D3 in all the trials cited.",
+     "missing": "Nothing.",
+     "move": "Nothing needed."
+    },
+    "dose": {
+     "found": "2000 IU/day sits inside the tested span (1200-4800 IU/day) and matches the meta-analysis's >=2000 IU/day subgroup remark.",
+     "missing": "That subgroup remark has no interaction test behind it - subgroup_hypothesis_only - and no trial has used exactly 2000 IU/day against placebo in depressed adults.",
+     "move": "A dose-ranging trial (1000 vs 2000 vs 4000 IU/day vs placebo) in depressed, deficient adults."
+    }
+   },
+   "inventory": [
+    {
+     "id": "PMID 31340012",
+     "year": 2019,
+     "design": "rct",
+     "n": 155,
+     "direction": "none",
+     "access": "full_text",
+     "note": "standalone; D-Vitaal: depressed AND low 25(OH)D, 1200 IU/d x12 mo; 25(OH)D 85 vs 43 nmol/L, no difference in depressive symptoms"
+    },
+    {
+     "id": "PMID 41933624",
+     "year": 2026,
+     "design": "rct",
+     "n": 281,
+     "direction": "none",
+     "access": "abstract",
+     "note": "standalone; DepFuD, major depressive episode, 4000 vs 400 IU/d x6 mo; MADRS d -0.09 (-0.32 to 0.14)"
+    },
+    {
+     "id": "PMID 22790678",
+     "year": 2012,
+     "design": "rct",
+     "n": 230,
+     "direction": "none",
+     "access": "abstract",
+     "note": "standalone; low 25(OH)D participants, 40,000 IU/wk x6 mo; association present, supplementation ineffective"
+    },
+    {
+     "id": "PMID 35843459",
+     "year": 2022,
+     "design": "rct",
+     "n": 59,
+     "direction": "none",
+     "access": "abstract",
+     "note": "standalone; MDD + severe deficiency (11.5 ng/mL) on escitalopram, 60,000 IU/5 d x12 wk; HDRS p=0.92"
+    },
+    {
+     "id": "PMID 42489742",
+     "year": 2026,
+     "design": "rct",
+     "n": 108,
+     "direction": "none",
+     "access": "abstract",
+     "note": "standalone; partially randomised preference trial, ages 10-24, depression + insufficiency/deficiency, 4800 IU/d x8 wk; depression B -0.30 (-1.81 to 1.21); PubMed record carries a mismatched DOI, so cited by PMID only"
+    },
+    {
+     "id": "PMID 26609167",
+     "year": 2016,
+     "design": "rct",
+     "n": 40,
+     "direction": "benefit",
+     "access": "abstract",
+     "note": "standalone; MDD, 50,000 IU/wk x8 wk, BDI improved - but the journal issued an Expression of Concern (PMID 33097954); treated as unreliable, not as counter-evidence"
+    },
+    {
+     "id": "PMID 35816192",
+     "year": 2023,
+     "design": "sr_ma",
+     "n": 53235,
+     "direction": "benefit",
+     "access": "abstract",
+     "note": "41 RCTs; g -0.317 (-0.405 to -0.230), I2=88%, GRADE very low; contains most of the trials above (dedup: trials counted once, review adds no mass)"
+    }
+   ],
+   "absolute_effect": "Best on-dose-adjacent estimate: no measurable change. D-Vitaal reported no relevant between-group difference in CES-D at 12 months; DepFuD's MADRS difference was Cohen's d -0.09 (-0.32 to 0.14), i.e. under 1 point on a 0-60 scale. The pooled meta estimate (g -0.317) would correspond to roughly 2-3 points on a 17-item Hamilton scale if it were real.",
+   "clinically_meaningful": "Unknown. The pooled g -0.32 would be borderline meaningful (a ~3-point HDRS-17 change; commonly cited MCID 3 points), but GRADE certainty is very low and every trial that selected depressed-and-deficient patients found nothing. Threshold source: the standardised-difference scale reported in PMID 35816192 converted to HDRS points; no trial-defined MCID was available in the accessible records.",
+   "strongest_study": "PMID 31340012 (D-Vitaal, AJCN 2019, read in full text): the cleanest depressed-and-deficient design - CES-D >=16 plus 25(OH)D 15-50/70 nmol/L, 12 months, biochemically confirmed repletion (85 vs 43 nmol/L) and no effect on mood.",
+   "strongest_doubt": "No trial has tested 2000 IU/day against placebo in depressed adults, the largest treatment trial is only 281 people, and a 41-trial meta-analysis does point to benefit - so 'not shown' here is much weaker than the 'shown absent' of the prevention row.",
+   "study_that_would_move_this": "A pre-registered, placebo-controlled RCT of 2000 IU/day for 12-24 weeks in >=400 adults with major depression and 25(OH)D below 20 ng/mL, with HDRS/MADRS as the primary endpoint."
+  },
+  {
+   "name": "Living longer (any cause)",
+   "population": "Adults 50+ taking it for several years",
+   "studied_in": {
+    "sex": "mixed",
+    "sex_note": "VITAL 50.6% women; D-Health 45.9% women; Cochrane 2014 pool 77% women",
+    "age_min": 18,
+    "age_max": 107,
+    "age_note": "Cochrane pool 18-107, mostly women over 70; VITAL 50+ mean 67; D-Health 60-84",
+    "ethnicity": "VITAL 71.3% White/20.2% Black; D-Health (Australian electoral roll) not reported",
+    "confidence": "verified"
+   },
+   "sentence": "VITAL death HR 0.99 (0.87-1.12), D-Health 1.04 (0.93-1.18), a 52-trial meta RR 0.98 (0.95-1.02): no all-cause mortality benefit at this dose.",
+   "ledger": {
+    "effectPoints": "0",
+    "effect_basis": "VITAL (PMID 30415629, abstract): 978 deaths among 25,871 adults on 2000 IU/day for a median 5.3 y, HR 0.99 (0.87-1.12). D-Health (PMID 35026158, abstract): 21,315 Australians 60+, 60,000 IU monthly for 5 y (median follow-up 5.7 y), 1100 deaths, all-cause HR 1.04 (0.93-1.18), cardiovascular 0.96 (0.72-1.28) - note the bolus regimen. Zhang 2019 (PMID 31405892, abstract): 52 trials, 75,454 participants, all-cause mortality RR 0.98 (0.95-1.02), I2=0. Older evidence points slightly the other way: Cochrane 2014 (PMID 24414552, structured abstract) found vitamin D3 specifically reduced mortality, RR 0.94 (0.91-0.98), 38 trials/75,927, trial sequential monitoring boundary crossed, NNT ~150 over 5 years - but that body was dominated by trials in elderly women, many institutionalised and co-supplemented with calcium, and it pre-dates VITAL and D-Health.",
+    "bodyIsRct": true,
+    "checklist": {
+     "risk_of_bias": "supported",
+     "consistency": "supported",
+     "precision": "supported",
+     "directness": "supported",
+     "publication_bias": "supported"
+    },
+    "gates": {
+     "rctCount": 52,
+     "largestRctN": 25871,
+     "longestRctWeeks": 276,
+     "chronicOutcome": true,
+     "surrogate": false,
+     "allPositiveIndustryOrOneLab": false
+    },
+    "formFit": "4",
+    "doseFit": "4",
+    "effective_daily_range": "None established for all-cause mortality; 2000 IU/day is directly tested (VITAL) and null, and pooled estimates across 400-4000 IU/day and bolus regimens sit on 1.00"
+   },
+   "detail": {
+    "effect": {
+     "found": "Two mega-trials and a 52-trial meta-analysis all sitting on no effect, with a tight interval (RR 0.98, 0.95-1.02) that excludes more than a 5% relative reduction.",
+     "missing": "A benefit. The older Cochrane estimate for D3 (RR 0.94) has not been reproduced by the trials run since.",
+     "move": "Nothing realistic for the general 50+ population; the remaining question is age-specific (below)."
+    },
+    "evidence": {
+     "found": "75,454 randomised participants in the 2019 meta plus 47,186 in the two subsequent mega-trials; low heterogeneity (I2=0).",
+     "missing": "Adults 75+ are the live subgroup: the Endocrine Society 2024 guideline suggests empiric supplementation at 75+ 'because of its potential to lower the risk of mortality', but no trial randomised only that age band and no significant age interaction has been demonstrated - subgroup_hypothesis_only, so it is not scored as its own row.",
+     "move": "An RCT restricted to adults 75+ (or a published IPD age-interaction test) with all-cause mortality as the primary endpoint."
+    },
+    "form": {
+     "found": "D3 daily - the form both the positive older meta and the null modern trials used.",
+     "missing": "Nothing.",
+     "move": "Nothing needed."
+    },
+    "dose": {
+     "found": "2000 IU/day tested directly in VITAL over 5.3 years.",
+     "missing": "Daily-versus-bolus matters elsewhere (see cancer death); for all-cause mortality both regimens are null in the modern trials.",
+     "move": "Nothing needed."
+    }
+   },
+   "inventory": [
+    {
+     "id": "PMID 30415629",
+     "year": 2019,
+     "design": "rct",
+     "n": 25871,
+     "direction": "none",
+     "access": "abstract",
+     "note": "standalone; VITAL primary paper, 2000 IU/d; all-cause death HR 0.99 (0.87-1.12); cancer incidence 0.96, major CV events 0.97"
+    },
+    {
+     "id": "PMID 35026158",
+     "year": 2022,
+     "design": "rct",
+     "n": 21315,
+     "direction": "none",
+     "access": "abstract",
+     "note": "standalone; D-Health, 60,000 IU monthly (bolus, not this product's regimen); all-cause HR 1.04 (0.93-1.18)"
+    },
+    {
+     "id": "PMID 31405892",
+     "year": 2019,
+     "design": "sr_ma",
+     "n": 75454,
+     "direction": "none",
+     "access": "abstract",
+     "note": "52 trials; all-cause RR 0.98 (0.95-1.02); cancer death RR 0.84 (0.74-0.95); D3 vs D2 interaction p=0.04"
+    },
+    {
+     "id": "PMID 24414552",
+     "year": 2014,
+     "design": "sr_ma",
+     "n": 95286,
+     "direction": "benefit",
+     "access": "abstract",
+     "note": "Cochrane; vitamin D3 all-cause RR 0.94 (0.91-0.98), NNT ~150/5 y, mostly elderly women incl. institutional care; superseded by the later trials, not merged with them"
+    },
+    {
+     "id": "PMID 38828931",
+     "year": 2024,
+     "design": "other",
+     "n": 0,
+     "direction": "unclear",
+     "access": "abstract",
+     "note": "Endocrine Society: suggests empiric supplementation at 75+ for potential mortality benefit; suggests AGAINST empiric supplementation in healthy adults <75"
+    }
+   ],
+   "absolute_effect": "978 deaths among 25,871 people over 5.3 years, HR 0.99 (0.87-1.12) - an absolute difference under 0.2 percentage points in either direction. Pooled RR 0.98 (0.95-1.02) across 75,454 participants.",
+   "clinically_meaningful": "No. The pooled interval excludes more than a 5% relative reduction in death; the older Cochrane D3 estimate implied an NNT of about 150 over five years, and that estimate has not survived the trials run since (threshold: the 5% relative-reduction bound of the modern pooled CI, PMID 31405892).",
+   "strongest_study": "PMID 30415629 (VITAL, NEJM 2019): 25,871 adults, exactly 2000 IU/day, 5.3 years, all-cause mortality HR 0.99 (0.87-1.12) alongside null primary endpoints for cancer and cardiovascular disease.",
+   "strongest_doubt": "Cochrane 2014 found a 6% mortality reduction specifically for vitamin D3 (RR 0.94, 0.91-0.98) with the trial-sequential boundary crossed, and the Endocrine Society still suggests supplementation at 75+ on mortality grounds - so 'no benefit' may be truer for healthy 60-somethings than for the very old, where no trial has been run in isolation.",
+   "study_that_would_move_this": "An RCT of daily vitamin D in adults 75+ or in nursing-home residents, powered for all-cause mortality, or a published formal age-interaction test from the existing mega-trials."
+  },
+  {
+   "name": "Dying of cancer",
+   "population": "Adults 50+ on daily dosing for 4+ years",
+   "studied_in": {
+    "sex": "mixed",
+    "sex_note": "14 pooled RCTs both sexes incl. all-female WHI arm; signal only in men (HR 0.73)",
+    "age_min": 30,
+    "age_max": null,
+    "age_note": "Main trials 50+/60+/70+ (WHI 50-79); AMATERASU from 30; signal only at 70+",
+    "ethnicity": "1437 cancer deaths in non-Hispanic Whites vs 161 in all other groups combined",
+    "confidence": "verified"
+   },
+   "sentence": "Daily-dosing trials pool to 12% lower cancer death (RR 0.88, 0.78-0.98; daily-vs-bolus interaction p=0.042); the fullest IPD analysis is 0.93 (0.84-1.02).",
+   "ledger": {
+    "effectPoints": "1",
+    "effect_basis": "Kuznia 2023 (PMID 37004841, abstract): 14 RCTs, 104,727 participants, 2015 cancer deaths - overall RR 0.94 (0.86-1.02); 10 trials with a DAILY dosing regimen RR 0.88 (0.78-0.98) vs 4 bolus trials RR 1.07 (0.91-1.24), p for interaction = 0.042 (a formal interaction test, so the daily-dosing claim is not merely a subgroup guess); IPD across 7 trials (94,068 participants) RR 0.93 (0.84-1.02); no effect modification by age, sex, BMI, ethnicity or baseline 25(OH)D in all-trial analyses, with a post-hoc daily-dosing signal at age >=70 (RR 0.83). Supporting: Zhang 2019 (PMID 31405892) cancer death RR 0.84 (0.74-0.95) across 52 trials with I2=0; Cochrane 2014 (PMID 24414552) vitamin D3 cancer mortality RR 0.88 (0.78-0.98), 4 trials/44,492; VITAL (PMID 30415629) death from cancer HR 0.83 (0.67-1.02) among 341 cancer deaths, while cancer INCIDENCE was flat (HR 0.96, 0.88-1.06).",
+    "bodyIsRct": true,
+    "checklist": {
+     "risk_of_bias": "supported",
+     "consistency": "supported",
+     "precision": "concern",
+     "directness": "supported",
+     "publication_bias": "unknown"
+    },
+    "gates": {
+     "rctCount": 14,
+     "largestRctN": 25871,
+     "longestRctWeeks": 276,
+     "chronicOutcome": true,
+     "surrogate": false,
+     "allPositiveIndustryOrOneLab": false
+    },
+    "formFit": "4",
+    "doseFit": "4",
+    "effective_daily_range": "Daily dosing of roughly 400-4000 IU/day (2000 IU/day is VITAL's dose and inside the range); monthly/annual bolus regimens show no effect (interaction p=0.042)"
+   },
+   "detail": {
+    "effect": {
+     "found": "A consistent 6-16% relative reduction in cancer death across four independent syntheses, strongest and statistically significant when restricted to daily dosing - which is what this product is.",
+     "missing": "A trial designed for this endpoint. Cancer death was a secondary or exploratory outcome everywhere, cancer incidence is flat, and the most complete IPD analysis still crosses 1.00.",
+     "move": "An RCT with cancer mortality as the pre-specified primary endpoint, daily dosing, 5+ years - or a pre-registered IPD update."
+    },
+    "evidence": {
+     "found": "14 RCTs and 104,727 participants with IPD for 90% of them, plus a formal daily-vs-bolus interaction test (p=0.042) rather than a bare subgroup p-value.",
+     "missing": "Multiplicity: cancer death is one of many secondary endpoints in these trials, so selective emphasis is a real risk; and the significant daily-dosing subgroup is defined post hoc relative to each trial's own design.",
+     "move": "Pre-specified replication in a daily-dosing trial, ideally with baseline 25(OH)D measured (Kuznia notes baseline levels were too sparsely measured to analyse)."
+    },
+    "form": {
+     "found": "D3 - the only form these analyses credit (Zhang 2019 found D3 vs D2 differed, p for interaction 0.04).",
+     "missing": "Nothing.",
+     "move": "Nothing needed."
+    },
+    "dose": {
+     "found": "Daily dosing at this magnitude is exactly the regimen with the signal; VITAL's 2000 IU/day is one of the constituent trials.",
+     "missing": "No dose-response gradient within the daily trials has been demonstrated, so 2000 IU/day is inside a tested range rather than an identified optimum.",
+     "move": "A dose-comparison trial (e.g. 800 vs 2000 IU/day) with cancer mortality as the endpoint - unlikely to be run."
+    }
+   },
+   "inventory": [
+    {
+     "id": "PMID 37004841",
+     "year": 2023,
+     "design": "sr_ma",
+     "n": 104727,
+     "direction": "benefit",
+     "access": "abstract",
+     "note": "14 RCTs + IPD (94,068); overall RR 0.94 (0.86-1.02); daily dosing 0.88 (0.78-0.98) vs bolus 1.07, interaction p=0.042"
+    },
+    {
+     "id": "PMID 31405892",
+     "year": 2019,
+     "design": "sr_ma",
+     "n": 75454,
+     "direction": "benefit",
+     "access": "abstract",
+     "note": "52 trials; cancer death RR 0.84 (0.74-0.95), I2=0; overlaps Kuznia (counted once for certainty)"
+    },
+    {
+     "id": "PMID 24414552",
+     "year": 2014,
+     "design": "sr_ma",
+     "n": 44492,
+     "direction": "benefit",
+     "access": "abstract",
+     "note": "Cochrane; vitamin D3 cancer mortality RR 0.88 (0.78-0.98), 4 trials; earliest of the concordant syntheses"
+    },
+    {
+     "id": "PMID 30415629",
+     "year": 2019,
+     "design": "rct",
+     "n": 25871,
+     "direction": "unclear",
+     "access": "abstract",
+     "note": "pooled_in PMID 37004841; VITAL, 2000 IU/d: cancer death HR 0.83 (0.67-1.02) as a secondary endpoint; cancer incidence HR 0.96 (0.88-1.06)"
+    },
+    {
+     "id": "PMID 35026158",
+     "year": 2022,
+     "design": "rct",
+     "n": 21315,
+     "direction": "none",
+     "access": "abstract",
+     "note": "pooled_in PMID 37004841; D-Health bolus regimen - contributes the null side of the daily-vs-bolus interaction"
+    }
+   ],
+   "absolute_effect": "Derived, not reported per arm: 341 cancer deaths among 25,871 VITAL participants (1.3%) over 5.3 years; an HR of 0.83 corresponds to roughly 2 fewer cancer deaths per 1000 people over 5 years. The pooled daily-dosing RR of 0.88 implies about a 12% relative reduction on a base rate of 1-2% over 5 years.",
+   "clinically_meaningful": "Yes if real - death is the outcome - but small in absolute terms (about 2 fewer cancer deaths per 1000 people over 5 years). No formal MCID exists for mortality; the threshold applied here is 'any true reduction in deaths matters', and the honest caveat is that the confidence intervals of the two most complete analyses include no effect.",
+   "strongest_study": "PMID 37004841 (Ageing Research Reviews 2023): 14 RCTs, 104,727 participants, individual patient data for 90%, with a pre-planned daily-vs-bolus interaction test (p=0.042) that supports the daily regimen this product uses.",
+   "strongest_doubt": "Cancer death was a secondary endpoint in every contributing trial, cancer incidence did not move at all (VITAL HR 0.96), and the fullest analyses (overall RR 0.94, IPD 0.93) include no effect - so this is a plausible small benefit, not an established one, and it is the only row in this audit that scores above 'nothing'.",
+   "study_that_would_move_this": "A pre-registered trial of daily vitamin D3 with cancer mortality as the primary endpoint over 5-10 years - or an IPD analysis restricted to daily-dosing trials with baseline 25(OH)D measured."
+  },
+  {
+   "name": "Pregnancy outcomes",
+   "population": "Pregnant women (any baseline vitamin D level)",
+   "studied_in": {
+    "sex": "female",
+    "sex_note": "All 8 pooled trials enrolled pregnant women only (2313 women)",
+    "age_min": null,
+    "age_max": null,
+    "age_note": "Maternal ages not reported in the accessible Cochrane 2024 record",
+    "ethnicity": "not reported in the accessible Cochrane record",
+    "confidence": "verified"
+   },
+   "sentence": "Cochrane 2024 (10 trials): may cut low birthweight (RR 0.69, 0.44-1.08) and severe bleeding; pre-eclampsia and preterm birth remain very uncertain.",
+   "ledger": {
+    "effectPoints": "1",
+    "effect_basis": "Cochrane 2024 update (PMID 39077939, structured abstract read in full): after applying a trustworthiness screen the review dropped 20 previously included studies, leaving 10 - vitamin D alone vs placebo/no intervention in 8 studies/2313 women. Evidence 'very uncertain' for pre-eclampsia (RR 0.53, 0.21-1.33; 1 study, 165 women), gestational diabetes (RR 0.53, 0.03-8.28), preterm birth <37 wk (RR 0.76, 0.25-2.33; 3 studies, 1368 women); 'may reduce' severe postpartum haemorrhage (RR 0.68, 0.51-0.91; 1 study, 1134 women, low certainty) and low birthweight (RR 0.69, 0.44-1.08; 3 studies, 371 infants, low certainty, upper CI does not exclude harm). The Endocrine Society 2024 guideline (PMID 38828931) nonetheless suggests empiric supplementation in pregnancy for potential reductions in pre-eclampsia, intra-uterine mortality, preterm birth, small-for-gestational-age birth and neonatal mortality, while noting doses in the trials 'varied considerably' and the optimal dose is unclear.",
+    "bodyIsRct": true,
+    "checklist": {
+     "risk_of_bias": "concern",
+     "consistency": "concern",
+     "precision": "concern",
+     "directness": "supported",
+     "publication_bias": "unknown"
+    },
+    "gates": {
+     "rctCount": 8,
+     "largestRctN": 1134,
+     "longestRctWeeks": 28,
+     "chronicOutcome": true,
+     "surrogate": false,
+     "allPositiveIndustryOrOneLab": false
+    },
+    "formFit": "4",
+    "doseFit": "3",
+    "effective_daily_range": "Not established; the surviving trials used roughly 400-4000 IU/day (many as weekly equivalents) and the guideline explicitly says the optimal dose is unclear - 2000 IU/day is inside the tested span"
+   },
+   "detail": {
+    "effect": {
+     "found": "Point estimates favour vitamin D for low birthweight (RR 0.69) and severe postpartum haemorrhage (RR 0.68), and a major guideline body recommends supplementation in pregnancy.",
+     "missing": "Precision and reliability. The pre-eclampsia estimate rests on 165 women, the postpartum-haemorrhage result on a single trial, and the low-birthweight CI still allows harm.",
+     "move": "A large, trustworthy RCT (n>=2000) of a defined daily dose from early pregnancy with pre-eclampsia, preterm birth and birthweight as pre-specified endpoints."
+    },
+    "evidence": {
+     "found": "A 2024 Cochrane update with an explicit trustworthiness assessment - which is why it is the source of record here rather than the older, larger-looking versions.",
+     "missing": "Two-thirds of the previously pooled evidence was removed as untrustworthy or awaiting classification (20 studies moved out, 34 awaiting assessment), so the effective evidence base shrank rather than grew, and all certainty ratings fell to low or very low.",
+     "move": "Publication of the 34 awaiting-classification studies' integrity assessments, plus one adequately powered new trial."
+    },
+    "form": {
+     "found": "Cholecalciferol is the usual form in the included trials.",
+     "missing": "Nothing material on form.",
+     "move": "Nothing needed."
+    },
+    "dose": {
+     "found": "2000 IU/day sits inside the doses trialled and above the pregnancy RDA (600 IU).",
+     "missing": "No effective dose has been identified; the Endocrine Society says so explicitly, so this is dose-plausible rather than dose-matched.",
+     "move": "A dose-defined trial (e.g. 600 vs 2000 IU/day) in pregnancy with clinical endpoints."
+    }
+   },
+   "inventory": [
+    {
+     "id": "PMID 39077939",
+     "year": 2024,
+     "design": "sr_ma",
+     "n": 2313,
+     "direction": "unclear",
+     "access": "abstract",
+     "note": "Cochrane 2024 (trustworthiness-screened, 10 studies); low birthweight RR 0.69 (0.44-1.08) and severe PPH RR 0.68 (0.51-0.91) low certainty; pre-eclampsia/preterm very uncertain"
+    },
+    {
+     "id": "PMID 31348529",
+     "year": 2019,
+     "design": "sr_ma",
+     "n": 0,
+     "direction": "benefit",
+     "access": "abstract",
+     "note": "previous Cochrane version (30 studies) superseded by PMID 39077939 after 20 studies were removed for trustworthiness; NOT counted as separate evidence"
+    },
+    {
+     "id": "PMID 38828931",
+     "year": 2024,
+     "design": "other",
+     "n": 0,
+     "direction": "benefit",
+     "access": "abstract",
+     "note": "Endocrine Society suggests empiric supplementation in pregnancy; states the optimal dose is unclear because trial doses varied and participants could take their own supplements"
+    },
+    {
+     "id": "PMID 42037591",
+     "year": 2026,
+     "design": "sr_ma",
+     "n": 31521,
+     "direction": "none",
+     "access": "abstract",
+     "note": "Cochrane on pregnancy/early-childhood dosing for child ARI: no hypercalcaemia in pregnant women vs placebo; higher vs lower dose RR 1.61 (0.60-4.31) low certainty (safety context)"
+    }
+   ],
+   "absolute_effect": "Low birthweight: RR 0.69 (0.44-1.08) across 371 infants - on a 10% baseline that is about 3 fewer per 100, with an interval that also allows 1 more per 100. Severe postpartum haemorrhage: RR 0.68 (0.51-0.91) in a single 1134-woman trial. Pre-eclampsia: RR 0.53 (0.21-1.33) in 165 women.",
+   "clinically_meaningful": "Unknown. The point estimates would be clearly meaningful if real (a third fewer low-birthweight babies or severe haemorrhages), but Cochrane rates them low certainty and the intervals include no effect; no formal MCID applies to these binary outcomes beyond 'any real reduction matters' (threshold source: PMID 39077939 GRADE ratings).",
+   "strongest_study": "PMID 39077939 (Cochrane 2024): the only synthesis that applied a trustworthiness screen before pooling, which is why its 'low certainty, may reduce low birthweight and severe postpartum haemorrhage' is the honest headline rather than the older reviews' firmer claims.",
+   "strongest_doubt": "The evidence base shrank by two-thirds on integrity grounds in 2024, key results come from single trials, and the Endocrine Society's own recommendation admits the optimal dose is unknown - so this row is a guideline-backed 'reasonable to take', not a demonstrated benefit of 2000 IU/day.",
+   "study_that_would_move_this": "A pre-registered RCT of 2000 IU/day from the first trimester in at least 2000 women, with pre-eclampsia, preterm birth, birthweight and neonatal outcomes pre-specified, run in a setting with meaningful baseline deficiency."
+  }
+ ],
+ "searches_run": [
+  "Europe PMC REST search: DOI:\"10.1056/NEJMoa2202106\" (VITAL fractures) -> PMID 35939577 / PMC9716639, then NCBI EFetch db=pmc id=9716639 for FULL TEXT",
+  "Europe PMC: DOI:\"10.1002/14651858.CD000227.pub4\", DOI:\"10.1016/S2213-8587(18)30265-1\", DOI:\"10.1016/S2213-8587(21)00051-6\", DOI:\"10.1001/jama.2020.10224\" (Cochrane fractures, Bolland musculoskeletal, Jolliffe 2021 ARI, VITAL-DEP)",
+  "Europe PMC: TITLE:\"vitamin D\" AND TITLE:fracture AND PUB_TYPE:\"Randomized Controlled Trial\" (26 hits, scanned)",
+  "Europe PMC: TITLE:\"Interventions to Prevent Falls in Community-Dwelling Older Adults\" (USPSTF 2018 + 2024); TITLE:\"Vitamin D, Calcium, or Combined Supplementation for the Primary Prevention of Fractures\" (USPSTF evidence report)",
+  "Europe PMC: TITLE:\"STURDY\" OR (TITLE:\"vitamin D\" AND TITLE:falls AND TITLE:randomized AND PUB_YEAR:2021) -> PMID 33284677",
+  "Europe PMC: (TITLE:\"VITAL\" OR ABSTRACT:\"VITamin D and OmegA-3 TriaL\") AND TITLE:falls -> PMID 32492153",
+  "Europe PMC: TITLE:\"D-Health\" AND TITLE:mortality; TITLE:\"Vitamin D supplementation for prevention of mortality in adults\" (Cochrane 2014); TITLE:\"Association between vitamin D supplementation and mortality\" AND PUB_YEAR:2019",
+  "Europe PMC: TITLE:\"vitamin D\" AND TITLE:\"cancer mortality\" AND PUB_TYPE:\"Meta-Analysis\" -> Kuznia 2023 IPD",
+  "Europe PMC: TITLE:\"acute respiratory\" AND TITLE:\"vitamin D\" AND PUB_TYPE:\"Meta-Analysis\" AND PUB_YEAR:[2023 TO 2026] -> Jolliffe 2025 (FULL TEXT via PMC12056739), Cochrane 2026 children, publication-bias analysis",
+  "Europe PMC: TITLE:\"Effect of High-Dose vs Standard-Dose Wintertime Vitamin D Supplementation on Viral Upper Respiratory Tract Infections in Young Healthy Children\" (2000 vs 400 IU/day)",
+  "Europe PMC: (ABSTRACT:\"2000 IU\" AND ABSTRACT:\"vitamin D deficiency\" AND ABSTRACT:\"25-hydroxyvitamin D\") AND PUB_TYPE:\"Randomized Controlled Trial\" (25 hits) -> VITAL URI analysis PMID 38113446, kidney-stone repletion RCT PMID 37481570 (FULL TEXT)",
+  "Europe PMC: (TITLE:osteomalacia) AND (PUB_TYPE:\"Randomized Controlled Trial\") - 5 hits, ALL checked: no modern nutritional-osteomalacia treatment RCT exists",
+  "Europe PMC: (TITLE:osteomalacia) AND (TITLE:\"vitamin D\" OR TITLE:nutritional OR TITLE:privational) AND (PUB_TYPE:Review OR PUB_TYPE:\"Randomized Controlled Trial\"); ABSTRACT:osteomalacia AND ABSTRACT:\"randomised controlled trial\" AND ABSTRACT:\"vitamin D\" AND PUB_TYPE:\"Randomized Controlled Trial\" (0 hits)",
+  "Europe PMC: TITLE:\"Global Consensus Recommendations on Prevention and Management of Nutritional Rickets\" -> PMID 26745253; treatment dose table read from FULL TEXT of PMC8061584 (Indian J Med Res 2020 practical management review) and PMC5532418",
+  "Europe PMC: (TITLE:depression OR TITLE:depressive) AND TITLE:\"vitamin D\" AND PUB_TYPE:\"Randomized Controlled Trial\" AND ABSTRACT:deficien* (16 hits, scanned for depressed+deficient designs)",
+  "Europe PMC: AUTH:\"Sepehrmanesh\"/\"Kjaergaard\"/\"de Koning\" + vitamin D + depress* -> PMID 26609167 (+Expression of Concern 33097954), 22790678, 31340012 (D-Vitaal FULL TEXT via PMC6821546)",
+  "Europe PMC: TITLE:\"vitamin D\" AND TITLE:\"depressive symptoms\" AND PUB_TYPE:\"Meta-Analysis\" AND PUB_YEAR:[2020 TO 2026] -> Mikola 2023",
+  "Europe PMC: TITLE:\"Vitamin D supplementation for women during pregnancy\" (Cochrane 2012/2016/2019/2024) -> PMID 39077939 via NCBI EFetch db=pmc id=11287789 (structured abstract)",
+  "Europe PMC: TITLE:\"Vitamin D for the Prevention of Disease\" AND TITLE:\"Endocrine Society\" -> PMID 38828931 (full recommendation set from abstract)",
+  "Europe PMC: AUTH:\"Gallagher JC\" dose response 2012; AUTH:\"Heaney RP\" 25-hydroxycholecalciferol oral dosing; TITLE:\"The 2011 report on dietary reference intakes for calcium and vitamin D from the Institute of Medicine\"",
+  "Europe PMC: TITLE:\"DO-HEALTH\" / long-title search -> PMID 33170239; AUTH:\"Chapuy MC\" -> Decalyos I (PMID 1331788) and II (PMID 11991447)",
+  "NCBI EFetch db=pubmed for structured abstracts of PMIDs 32749491, 30293909, 33798465, 28202713, 33284677, 38833246, 29677308, 29710141, 42489742, 41933624, 35843459, 35026158, 38828931, 22431675, 35816192, 30415629, 38113446",
+  "NCBI EFetch db=pmc FULL TEXT attempts: 9716639 (ok), 7032685 (abstract only), 7403921 (abstract only), 11287789 (abstract only), 4880117 (abstract only), 8240534/dohealth 7656284 (abstract only), 11285307 (abstract only), 11093666 (abstract only)",
+  "Europe PMC fullTextXML: PMC5310969 (Martineau 2017, ok), PMC12056739 (Jolliffe 2025, ok), PMC8061584 (ok), PMC5532418 (ok), PMC10362614 (ok), PMC6821546 (ok); empty for PMC9716639, PMC11287789, PMC4880117, PMC8240534, PMC11285307, PMC7656284, PMC11093666",
+  "https://ods.od.nih.gov/factsheets/VitaminD-HealthProfessional/ (blocked by Cloudflare challenge, twice, with and without browser UA)"
+ ],
+ "could_not_access": [
+  "NIH ODS Vitamin D Health Professional fact sheet - Cloudflare interstitial on both attempts (5.6 KB challenge page). Consequence: the 4000 IU/day adult tolerable upper intake level is NOT verified from a primary source in this run; the dose_note therefore relies on VITAL's measured safety data and on the IOM RDAs verified through Ross 2011 (PMID 21118827).",
+  "Full texts available only as structured abstracts (publisher paywalls; abstracts retrieved live and used as such): Cochrane 2014 fractures (PMID 24729336), Cochrane 2014 mortality (PMID 24414552), Cochrane 2024 pregnancy (PMID 39077939), Cochrane 2026 child ARI (PMID 42037591), VITAL primary (PMID 30415629), VITAL-DEP (PMID 32749491), VITAL falls (PMID 32492153), VITAL URI (PMID 38113446), DO-HEALTH (PMID 33170239), STURDY (PMID 33284677), Bolland 2018 (PMID 30293909), Jolliffe 2021 (PMID 33798465), D-Health (PMID 35026158), Kuznia 2023 (PMID 37004841), Zhang 2019 (PMID 31405892), Endocrine Society 2024 (PMID 38828931), Gallagher 2012 (PMID 22431675), Heaney 2003 (PMID 12499343), Munns 2016 (PMID 26745253), USPSTF statements (PMIDs 29710141, 29677308, 38833246), Chapuy 1992/2002, Mikola 2023 (PMID 35816192), DepFuD (PMID 41933624), MDD+deficiency 2022 (PMID 35843459), young-people trial (PMID 42489742), 1973/1984 osteomalacia trials (PMIDs 4776883, 6434081).",
+  "VITAL-DEP subgroup analyses by baseline 25(OH)D could not be checked (JAMA full text paywalled, PMC record is abstract-only), so no interaction claim is made for depressed-or-deficient prevention.",
+  "PMID 42489742's PubMed record carries a DOI (10.1080/19390211.2017.1334736) that belongs to a different 2017 article - a metadata error. The title/abstract/PMID were verified; the DOI is deliberately not cited.",
+  "Per-arm cancer-death counts in VITAL are not in the accessible abstract, so the absolute cancer-mortality effect in that row is derived from the reported total (341 deaths) and HR and is labelled as derived.",
+  "Exact count of trials contributing the <25 nmol/L stratum in the ARI meta-analyses is not extractable from the accessible records; the deficient-ARI row's rctCount (8) is an explicit approximation and its largestRctN (255) is the largest ON-DOSE subgroup, not the largest trial in the stratum."
+ ],
+ "self_confidence": "high",
+ "confidence_note": "High for the six rows that carry a large, on-dose trial: fractures without calcium, falls, colds in the general population, depression prevention, all-cause mortality and blood-level correction. All six rest on 2000 IU/day tested in 15,804-25,871 people, and I read the pivotal fracture paper's full text (including its subgroup and adherence analyses) rather than its abstract. Medium for four rows and I would flag them to a reader: (1) rickets/osteomalacia treatment - the dose table is guideline consensus read through a secondary full text, and no modern nutritional-osteomalacia treatment RCT exists in adults, which I verified by search rather than assuming; (2) cancer death - the only above-null row, resting on a secondary endpoint plus a daily-vs-bolus interaction test (p=0.042), with the two most complete estimates crossing 1.00; (3) treating depression - genuinely low certainty rather than a demonstrated null, since the largest treatment trial is 281 people and no trial used 2000 IU/day against placebo; (4) pregnancy - the 2024 Cochrane trustworthiness screen removed two-thirds of the prior evidence, so the base is small and low-certainty while a guideline still recommends supplementation. Two rubric artefacts a reader should be warned about: VITAL-DEP (n=18,353, exact dose, 5.3 y, pre-specified MCID) trips the 'only one RCT' gate and renders as certainty 1 'Unclear' when the question is in fact well answered; and the vitamin-D-plus-calcium fracture row will render as a positive number for a regimen this product is not (800 IU + 1200 mg calcium in care-home residents), which is why its dose fit is scored 1 and the mismatch is written into the sentence."
+}

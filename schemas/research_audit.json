@@ -1,0 +1,519 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Evidence audit (audit-v0.2)",
+  "description": "Population-aware live-source audit of ONE supplement product. Produced by prompts/research_audit.md. The model supplies classified findings only; app/design-lab/ab/ledger.ts computes every headline, band label and dimension the user sees. One outcomes[] entry per POPULATION the evidence distinguishes, never one per outcome.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "meta",
+    "product",
+    "ingredient",
+    "form",
+    "daily_dose",
+    "dose_note",
+    "for_whom",
+    "outcomes",
+    "searches_run",
+    "could_not_access",
+    "self_confidence",
+    "confidence_note"
+  ],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_at",
+        "model",
+        "prompt",
+        "note"
+      ],
+      "properties": {
+        "run_at": {
+          "type": "string",
+          "description": "ISO date of the run"
+        },
+        "model": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "prompt": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "Prompt version, e.g. audit-v0.2"
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 1200,
+          "description": "Access limits and whether a human has verified this. Never claim human verification that did not happen."
+        }
+      }
+    },
+    "product": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "ingredient": {
+      "type": "string",
+      "maxLength": 120
+    },
+    "form": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "daily_dose": {
+      "type": "string",
+      "maxLength": 120
+    },
+    "dose_note": {
+      "type": "string",
+      "maxLength": 2600,
+      "description": "Elemental vs compound mass, regimen ambiguity, loading phases. State which reading each verdict assumes."
+    },
+    "for_whom": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reasonable",
+        "not_shown",
+        "source"
+      ],
+      "properties": {
+        "reasonable": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Who has a defensible reason to take this. Aim for under 240 chars: it renders on the card."
+        },
+        "not_shown": {
+          "type": "string",
+          "maxLength": 1500,
+          "description": "For whom nothing has been demonstrated. Aim for under 240 chars: it renders on the card."
+        },
+        "source": {
+          "type": "string",
+          "maxLength": 700,
+          "description": "Guideline position with identifier, or an explicit statement that no body takes one."
+        }
+      }
+    },
+    "outcomes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 20,
+      "items": {
+        "$ref": "#/$defs/outcomeRow"
+      }
+    },
+    "searches_run": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 700
+      }
+    },
+    "could_not_access": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 1500
+      }
+    },
+    "self_confidence": {
+      "type": "string",
+      "enum": [
+        "high",
+        "medium-high",
+        "medium",
+        "medium-low",
+        "low"
+      ]
+    },
+    "confidence_note": {
+      "type": "string",
+      "maxLength": 3000
+    }
+  },
+  "$defs": {
+    "judgement": {
+      "type": "string",
+      "enum": [
+        "supported",
+        "concern",
+        "unknown"
+      ]
+    },
+    "fit": {
+      "type": "string",
+      "enum": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "unknown"
+      ]
+    },
+    "detailBlock": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "found",
+        "missing",
+        "move"
+      ],
+      "properties": {
+        "found": {
+          "type": "string",
+          "maxLength": 900
+        },
+        "missing": {
+          "type": "string",
+          "maxLength": 900,
+          "description": "Use an em dash when genuinely nothing is missing."
+        },
+        "move": {
+          "type": "string",
+          "maxLength": 900
+        }
+      }
+    },
+    "outcomeRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "population",
+        "sentence",
+        "ledger",
+        "detail",
+        "inventory",
+        "absolute_effect",
+        "clinically_meaningful",
+        "strongest_study",
+        "strongest_doubt",
+        "study_that_would_move_this"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 34,
+          "description": "Consumer words, e.g. 'Colds and flu'."
+        },
+        "population": {
+          "type": "string",
+          "maxLength": 52,
+          "description": "Who this row is about. Two rows may share a name but never a population."
+        },
+        "sentence": {
+          "type": "string",
+          "maxLength": 155,
+          "description": "Plain language with concrete numbers."
+        },
+        "ledger": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "effectPoints",
+            "effect_basis",
+            "bodyIsRct",
+            "checklist",
+            "gates",
+            "formFit",
+            "doseFit",
+            "effective_daily_range"
+          ],
+          "properties": {
+            "effectPoints": {
+              "type": "string",
+              "enum": [
+                "-3",
+                "0",
+                "1",
+                "2",
+                "3",
+                "unclear"
+              ],
+              "description": "3 large (noticed without being told) \u00b7 2 moderate (noticed over weeks) \u00b7 1 small (visible in data) \u00b7 0 no meaningful effect \u00b7 -3 net harm \u00b7 unclear."
+            },
+            "effect_basis": {
+              "type": "string",
+              "maxLength": 3200,
+              "description": "The estimate and why this tier, with source ids."
+            },
+            "bodyIsRct": {
+              "type": "boolean",
+              "description": "Must be false when rctCount is 0."
+            },
+            "checklist": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "risk_of_bias",
+                "consistency",
+                "precision",
+                "directness",
+                "publication_bias"
+              ],
+              "properties": {
+                "risk_of_bias": {
+                  "$ref": "#/$defs/judgement"
+                },
+                "consistency": {
+                  "$ref": "#/$defs/judgement"
+                },
+                "precision": {
+                  "$ref": "#/$defs/judgement"
+                },
+                "directness": {
+                  "$ref": "#/$defs/judgement"
+                },
+                "publication_bias": {
+                  "$ref": "#/$defs/judgement"
+                }
+              }
+            },
+            "gates": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "rctCount",
+                "largestRctN",
+                "longestRctWeeks",
+                "chronicOutcome",
+                "surrogate",
+                "allPositiveIndustryOrOneLab"
+              ],
+              "properties": {
+                "rctCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "DEDUPLICATED. A review and a trial inside it count once."
+                },
+                "largestRctN": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "longestRctWeeks": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "chronicOutcome": {
+                  "type": "boolean"
+                },
+                "surrogate": {
+                  "type": "boolean"
+                },
+                "allPositiveIndustryOrOneLab": {
+                  "type": "boolean",
+                  "description": "False when a clean independent null exists; this discounts a suspect positive, it never discredits a null."
+                }
+              }
+            },
+            "formFit": {
+              "$ref": "#/$defs/fit"
+            },
+            "doseFit": {
+              "$ref": "#/$defs/fit"
+            },
+            "effective_daily_range": {
+              "type": "string",
+              "maxLength": 500
+            }
+          }
+        },
+        "studied_in": {
+          "type": "object",
+          "description": "Who was ENROLLED in the studies behind this row. Drives the 'Studied in you' bar.",
+          "additionalProperties": false,
+          "required": [
+            "sex",
+            "age_min",
+            "age_max"
+          ],
+          "properties": {
+            "sex": {
+              "type": "string",
+              "enum": [
+                "male",
+                "female",
+                "mixed",
+                "unknown"
+              ]
+            },
+            "sex_note": {
+              "type": "string",
+              "maxLength": 90
+            },
+            "age_min": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 120
+            },
+            "age_max": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 120
+            },
+            "age_note": {
+              "type": "string",
+              "maxLength": 90
+            },
+            "ethnicity": {
+              "type": "string",
+              "maxLength": 90,
+              "description": "'not reported' is the expected answer. Never invent a distribution."
+            },
+            "confidence": {
+              "type": "string",
+              "enum": [
+                "verified",
+                "inferred",
+                "unknown"
+              ]
+            }
+          }
+        },
+        "detail": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "effect",
+            "evidence",
+            "form",
+            "dose"
+          ],
+          "properties": {
+            "effect": {
+              "$ref": "#/$defs/detailBlock"
+            },
+            "evidence": {
+              "$ref": "#/$defs/detailBlock"
+            },
+            "form": {
+              "$ref": "#/$defs/detailBlock"
+            },
+            "dose": {
+              "$ref": "#/$defs/detailBlock"
+            }
+          }
+        },
+        "inventory": {
+          "type": "array",
+          "description": "May be empty when the honest finding is that nothing was found.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "year",
+              "design",
+              "n",
+              "direction",
+              "access",
+              "note"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "maxLength": 120,
+                "description": "DOI or PMID that resolves to the cited title."
+              },
+              "year": {
+                "type": "integer",
+                "minimum": 1900,
+                "maximum": 2100
+              },
+              "design": {
+                "type": "string",
+                "enum": [
+                  "sr_ma",
+                  "rct",
+                  "nrct",
+                  "cohort",
+                  "case_series",
+                  "other"
+                ]
+              },
+              "n": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "direction": {
+                "type": "string",
+                "enum": [
+                  "benefit",
+                  "none",
+                  "harm",
+                  "unclear"
+                ]
+              },
+              "access": {
+                "type": "string",
+                "enum": [
+                  "full_text",
+                  "abstract",
+                  "snippet"
+                ]
+              },
+              "pooled_in": {
+                "type": "string",
+                "maxLength": 120,
+                "description": "Set on an RCT already inside a listed review, so certainty is not double counted."
+              },
+              "funding": {
+                "type": "string",
+                "enum": [
+                  "independent",
+                  "industry",
+                  "mixed",
+                  "unknown"
+                ]
+              },
+              "note": {
+                "type": "string",
+                "maxLength": 400
+              }
+            }
+          }
+        },
+        "absolute_effect": {
+          "type": "string",
+          "maxLength": 1600,
+          "description": "Natural units, verbatim with CI; ARR/NNT where derivable."
+        },
+        "clinically_meaningful": {
+          "type": "string",
+          "maxLength": 1200,
+          "description": "Starts yes / no / unknown, then names the threshold and its source. 'No MCID exists' is a valid and useful answer."
+        },
+        "why_positive_signal_is_unreliable": {
+          "type": "string",
+          "maxLength": 1200,
+          "description": "Where bias in the POSITIVE literature goes when the verdict is a null, so it does not wrongly become consistency: concern."
+        },
+        "subgroup_hypothesis_only": {
+          "type": "boolean",
+          "description": "True when the effect rests on a within-subgroup p-value with no interaction test."
+        },
+        "strongest_study": {
+          "type": "string",
+          "maxLength": 700
+        },
+        "strongest_doubt": {
+          "type": "string",
+          "maxLength": 1200
+        },
+        "study_that_would_move_this": {
+          "type": "string",
+          "maxLength": 700
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,154 @@
+{
+ "meta": {
+  "prompt": "effect-research-v0.2",
+  "run_at": "2026-09-11",
+  "model": "claude-opus-5 (xhigh) — bounded EFFECT-ONLY best-shot test",
+  "human_verified": false,
+  "note": "EFFECT ONLY, and a deliberate TEST of whether the top rung is reachable. No ledger, certainty, form, dose or person score was produced and none may be inferred. Scored in the population the trials ENROLLED, not a generic 'healthy adult' who does not appear in this literature. Not human verified.",
+  "reopened_at_source": "S1 and S2 full text via Europe PMC"
+ },
+ "product": "Creatine monohydrate · 3–5 g/day",
+ "ingredient": "Creatine monohydrate",
+ "dose_studied": "3–5 g/day maintenance, with or without a loading phase. This matches a typical consumer dose.",
+ "sources": [
+  {
+   "id": "S1",
+   "label": "PMID 40944139 / PMC12430374",
+   "title": "Creatine supplementation and strength outcomes: systematic review and meta-analysis (Nutrients 2025, 69 studies, 1937 participants)",
+   "year": 2025,
+   "design": "sr_ma",
+   "access": "full_text",
+   "pmid": "40944139",
+   "pmcid": "PMC12430374",
+   "doi": null,
+   "trials": 69,
+   "participants": 1937,
+   "methods_strengths": [
+    "Largest trial base of the two candidate reviews: 69 studies, 1937 participants.",
+    "Squat pool is the cleanest statistics in the whole creatine literature: I² = 4.12%, and Egger's test found no publication bias (p = 0.92).",
+    "Reports its estimate in kilograms on the bar, not as a standardised effect."
+   ],
+   "methods_limits": [
+    "Its bench/chest pool mixes 18 intervention arms with NO exercise at all, which drags the headline number down for someone who trains; the review's own resistance-training split is +2.16 kg (1.13 to 3.18).",
+    "Bench press shows significant publication bias in this review (Egger p = 0.0003), which is why squat is the honest headline and bench is not."
+   ],
+   "funding": "Recorded as disclosure only, never as a score penalty: no industry funder identified in the retrieved text."
+  },
+  {
+   "id": "S2",
+   "label": "PMID 39519498 / PMC11547435",
+   "title": "Creatine and resistance training in adults under 50: systematic review and meta-analysis (Nutrients 2024, 23 studies)",
+   "year": 2024,
+   "design": "sr_ma",
+   "access": "full_text",
+   "pmid": "39519498",
+   "pmcid": "PMC11547435",
+   "doi": null,
+   "trials": 23,
+   "participants": 509,
+   "methods_strengths": [
+    "Restricted to adults under 50 doing resistance training, so the population is tightly matched.",
+    "Reports kilograms with no heterogeneity on either pool (I² = 0%)."
+   ],
+   "methods_limits": [
+    "Its 23 trials are a subset of S1's 69, so this is not an independent estimate — it is the same literature seen twice, and the two must never be averaged.",
+    "Reports a much larger upper-body effect (+4.43 kg) than S1 (+1.43 kg pooled, +2.16 kg in the training-only split); the disagreement is unresolved and is itself reported."
+   ],
+   "funding": "Recorded as disclosure only: no industry funder identified in the retrieved text."
+  }
+ ],
+ "outcomes": [
+  {
+   "id": "O1",
+   "name": "Squat strength",
+   "population": "Adults who resistance-train, mostly younger; the trial base skews male",
+   "primary_source": "S1",
+   "estimate": {
+    "what": "back squat one-rep max, creatine + training vs training alone",
+    "metric": "raw",
+    "unit": "kg on the bar",
+    "value": 5.64,
+    "ciLow": 3.87,
+    "ciHigh": 7.4,
+    "interval_note": "95% CI as reported; I² = 4.12%, Egger p = 0.92 (no publication bias detected).",
+    "direction": "higher_better",
+    "source": "S1"
+   },
+   "also_reported": [
+    {
+     "what": "bench/chest press one-rep max, restricted to the arms that actually trained",
+     "metric": "raw",
+     "unit": "kg on the bar",
+     "value": 2.16,
+     "ciLow": 1.13,
+     "ciHigh": 3.18,
+     "interval_note": "95% CI as reported for the controlled-resistance-training split (52 interventions). The review's all-arms figure of +1.43 kg includes 18 arms with no exercise and understates the effect for someone who trains.",
+     "direction": "higher_better",
+     "source": "S1"
+    }
+   ],
+   "quote": {
+    "text": "creatine supplementation combined with exercise training resulted in significantly greater main effect increases in squat strength [WMD = 5.64 kg (95% CI: 3.87 to 7.40), p < 0.001] ... there was no significant heterogeneity (I 2 = 4.12%; p = 0.40) ... Egger's regression test confirmed the absence of publication bias (p = 0.92)",
+    "source": "S1"
+   },
+   "comparator": "Creatine plus resistance training versus the identical training with placebo. The training is doing most of the work; this is the extra on top.",
+   "timeframe": "Typically 6–12 weeks of training.",
+   "dose_applicability": "Good. The pooled trials use 3–5 g/day maintenance, with or without a loading phase, which is what a typical tub instructs.",
+   "outcome_kind": "lived",
+   "threshold": {
+    "value": null,
+    "unit": "",
+    "source": null,
+    "derived_in": "no anchor-based threshold for 1RM strength exists in a healthy adult population",
+    "anchor_based": false,
+    "population_match": "unknown",
+    "verdict": "none",
+    "note": "Searched for MCID, minimal important difference, responder threshold and smallest worthwhile change for 1RM. The only 1RM thresholds found are derived in COPD patients. Sport science offers the 'smallest worthwhile change', but it is distribution-based (a fraction of between-athlete variation), which is a convention like Cohen's, not a measure of whether anyone noticed."
+   },
+   "practical_importance": {
+    "status": "unknown",
+    "note": "+5.6 kg on a squat is a magnitude you can check against your own lifting, and that is deliberately how it is shown. But no published study has asked trained adults how much extra squat they must gain before they report noticing, so we do not claim you would."
+   },
+   "limits": [
+    "The trial base skews male and younger; the same review found the squat effect in younger adults (+6.46 kg) and not in older adults.",
+    "The two candidate reviews disagree roughly threefold on upper body, and that disagreement is unresolved.",
+    "Bench press carries significant publication bias in the larger review; squat does not, which is why squat is the headline here."
+   ],
+   "cross_checks": [
+    {
+     "source": "S2",
+     "relation": "same_question",
+     "overlap": "likely_substantial",
+     "independent_replication": false,
+     "estimate": {
+      "what": "lower-body one-rep max in adults under 50",
+      "metric": "raw",
+      "unit": "kg on the bar",
+      "value": 11.35,
+      "ciLow": 8.44,
+      "ciHigh": 14.25,
+      "interval_note": "95% CI as reported; I² = 0%.",
+      "direction": "higher_better",
+      "source": "S2"
+     },
+     "note": "A smaller, older review of the same literature reports roughly double the lower-body effect. Its 23 trials are contained in the larger review's 69, so this is the same evidence seen twice, NOT a replication, and the two are never averaged. The larger and cleaner pool is used as the headline; the disagreement is shown rather than hidden."
+    }
+   ]
+  }
+ ],
+ "not_assessed": [
+  {"bar": "evidence", "reason": "This pass graded no certainty rubric. No risk-of-bias, consistency, precision, directness or publication-bias judgement was made, so no certainty bar exists to show."},
+  {"bar": "form", "reason": "Form fit was out of scope for this effect-only test."},
+  {"bar": "dose", "reason": "No dose score was computed. Dose match is stated in words instead."},
+  {"bar": "person", "reason": "No demographic transfer was computed. Who was enrolled is recorded as a limit, not as a match score."}
+ ],
+ "access_failures": [
+  "No anchor-based 1RM threshold could be found for healthy adults; this is a genuine absence in the literature, not a retrieval failure."
+ ],
+ "guards": [
+  "A confidence interval crossing the null would mean uncertainty, not evidence of no effect.",
+  "The two reviews are not averaged: they share their trial base.",
+  "No magnitude is converted into a claim about what anyone would notice.",
+  "Funding is disclosure only and never a score penalty."
+ ]
+}

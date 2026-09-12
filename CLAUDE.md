@@ -560,6 +560,74 @@ do not drop it.
 
 ## Current state
 
+**2026-09-11 — `/tests/supplements` shipped to `main`. Handoff: `docs/HANDOFF-AYKHAN.md`.**
+A public-but-unlisted test page (`app/tests/supplements/page.tsx`) renders the design-lab card
+with `publicTest`. Six static fixtures, no API call, no research job, no survey, no user data;
+`/scan`, the dashboard and all of `pipeline/` are untouched. Page-level `noindex` plus the
+site-wide `robots.ts` disallow. **Two founder decisions are encoded:** (1) funding and publication
+bias are clickable disclosure warnings and no longer touch any number — `score()` skips
+`publication_bias` and the `allPositiveIndustryOrOneLab` cap is deleted, pinned by
+`tests/evidence-warnings.test.tsx` across every outcome of all three audits; the audits' own
+limitations prose (calcium harms, 88% heterogeneity, an Expression of Concern, n=55 pools) is still
+printed, with the live rule appended separately as `Current rubric:`. (2) The Effect axis means
+how much better a healthy person's life gets — `app/design-lab/ab/effect-impact.ts`, ladder
+3/2/1/0 where only a cleared **anchor-based** threshold from a comparable population reaches 3, a
+surrogate is capped at 1 however large the number, and a threshold from a different population may
+demote but never promote. Rung 3 is empty on all six products because anchor-based thresholds for
+healthy people barely exist (`docs/design/2026-09-11-effect-ladder-test.md`). Contract is now
+**`effect-research-v0.3`** (`raw` metric, required `outcome_kind` and `threshold`).
+`docs/design/2026-09-10-evidence-ledger-rubric.md` is **stale** where it describes the
+publication-bias deduction and the industry/one-lab cap: `ledger.ts` is rubric v0.2.
+The demo rubric in `ledger.ts` remains completely separate from Python `SCORING_MODEL`; do not sync
+them. Scores there are heuristic rubric outputs, not probabilities of benefit. Person fit
+(`personFit`, `AGE_SLACK`) is still unvalidated. Gates at ship: 305 unit tests, typecheck, ESLint,
+both Python gates, build, and the browser smoke at 390/1440px.
+
+**2026-09-11 — Effect bar + Outcomes tab on `/design-lab/ab` (development only).**
+See `docs/design/2026-09-11-effect-bar-and-outcomes-tab.md`. The landing tab is
+now **Outcomes**: a list of clickable rows keyed by **name + population**, with
+**no overall average, no overall number and no overall band** — averaging a
+deficiency row, a clinical row and a healthy-adult row produced a number about
+nobody. The Effect bar no longer draws `effectPoints / 3`; it has five states
+(`reported_interval`, `reported_point`, `not_graded`, `no_evidence`,
+`no_meaningful_benefit`) and the three empty ones never render alike. **The three
+existing audits were not re-run and not re-scored**: `app/design-lab/ab/audits/*.json`,
+`prompts/research_audit.md` and `schemas/research_audit.json` are untouched, their
+prior outcome scores show unchanged under "Previous rubric · unchanged", and their
+`absolute_effect` / `clinically_meaningful` / `strongest_doubt` / `inventory` text
+is reused verbatim under "Previous AI audit · not reverified". **Caffeine is a new,
+effect-only, freshly researched pass** (`prompts/effect_research.md`
+`effect-research-v0.1`, `schemas/effect_research.json`,
+`app/design-lab/ab/effect-contract.ts`, `app/design-lab/ab/effect-research/caffeine.json`,
+its own cache domain and its own directory so the audit schema tests are
+unaffected): attention g = 0.28 with **no interval** (point drawn, interval
+called unavailable), endurance SMD −0.34 (−0.62 to −0.06) at **≤ 3 mg/kg, not
+200 mg**, practical importance **unknown** for both, no pooling, no MCID, no unit
+conversion, funding as disclosure. It has **no numeric headline** and its other
+four bars read "Not assessed in this run". Still deferred, still open: the
+**funding penalty in `ledger.ts`**, **person-fit**, and **any production
+wiring** — nothing here is reachable outside `NODE_ENV=development`.
+
+**2026-09-11 — independent launch review of `70a3955`.**
+See `docs/design/2026-09-11-independent-launch-review.md`. The live-audit
+prototype, audit-v0.2 prompt/schema and unused `effect.ts` exist, but the new
+methodology points, overlap handling, pooled intervals and effect anchors are
+not scientifically validated. Do not wire that module into consumer scores as
+is. Funding remains a penalty in the older displayed ledger despite its absence
+from the new module. Healthy-population eligibility, prompt/schema alignment,
+Overall semantics and demographic extrapolation are unresolved launch risks.
+Baseline validation: 238 unit tests and both Python gates pass; no fresh browser
+or supplement-source validation in this review. Production remains unchanged.
+
+**2026-09-09 — launch UX prototypes (branch `launch/ai-wrapper-planning`).**
+`/design-lab` is a development-only interactive comparison of guided, workspace,
+and conversational layouts. Editable sample product confirmation, outcome selection,
+simulated research and four-ring result placeholders run entirely in browser state;
+no API calls, source claims, scores or production behavior are introduced. Production
+requests to this route return 404. Desktop/mobile smoke coverage lives in
+`scripts/check_design_lab.mjs` (run against `npm run dev`). The real AI-research
+pivot, scoring rubric and deployment consolidation are still pending.
+
 **Scoring was redesigned 2026-08-07 (founder decisions). This supersedes any
 earlier description of the score anywhere in the repo.**
 
@@ -1196,6 +1264,37 @@ extraction was spent on the fix; the first real `--with-sr` production run is
 still the unmeasured SR-uplift experiment (Next item 3).
 
 ## Next
+
+**Handoff: the narrow effect contract is IMPLEMENTED for the design lab only
+(`docs/design/2026-09-11-effect-bar-and-outcomes-tab.md`).** `effect-research-v0.1`
+(prompt + schema + `effect-contract.ts` + the caffeine fixture) and the honest
+Effect presentation ship behind `/design-lab/ab`, which 404s outside development.
+Next, in this order and none of it done here: (1) decide whether the **funding
+penalty in `ledger.ts`** survives at all, since the new surface treats funding as
+disclosure and the legacy numbers were computed with the penalty; (2) settle
+**person-fit** (`personFit`, `AGE_SLACK`) or drop the bar; (3) only then discuss
+production wiring — there is still no endpoint, no job and no consumer score
+reading any of this. Do **not** back-fill the three existing audits into
+`effect-research-v0.1` by transcription: that file family requires quotes,
+intervals and overlap status read from sources, and the audits do not carry them.
+Do not tune bands to a desired caffeine/creatine ranking or start a catalogue
+batch. Findings from the review that opened this work are in
+`docs/design/2026-09-11-independent-launch-review.md`; the earlier prototype
+handoff below is historical and partly superseded.
+
+**Earlier handoff: launch UI design review.**
+Choose A/B/C in the local `/design-lab` before building the real research flow.
+`/design-lab/ab` compares the result card as WORDS vs a computed SCORE on the
+same hypothetical ledger; the proposed rubric (`prompts/research_audit.md`,
+`docs/design/2026-09-10-evidence-ledger-rubric.md`, demo `app/design-lab/ab/ledger.ts`,
+pinned by `tests/evidence-ledger-demo.test.ts`) is NOT approved and not wired.
+`/design-lab/mobile` adds the Claude Fable 5.1 "Field Notebook" phone concept
+(brief: `docs/design/2026-09-09-mobile-field-notebook-brief.md`; smoke:
+`scripts/check_mobile_design_lab.mjs`). Prototype validation: TypeScript, scoped
+ESLint, both Python gates and browser smoke at 1440px/390px (and 320px for the
+phone concept, incl. 44px touch targets) passed; unit/build validation is recorded in the commit body.
+No real upload, durable research job, AI scoring or provider configuration is wired.
+Keep the existing production scanner and historical scoring unchanged during review.
 
 **Changed 2026-09-08: EVERY supplement gets an answer — stage 2b, the no-run
 fallback.** Founder: "the retained runs, you can access them if you have them,

@@ -892,11 +892,17 @@ def main():
     check("pdf extraction is OPTIONAL at runtime",
           isinstance(ft.pdf_available(), bool),
           "a machine without pypdf must still run the pipeline")
-    check("a stored oa_location (JSON string) is parsed, not crashed on",
-          ft.best_text({"pmcid": None, "abstract": "x",
-                        "oa_location": _json.dumps({"url": "http://nope/x.pdf"})})[1]
-          == "abstract_only",
-          "storage round-trips it as text; an unreadable copy stays abstract_only")
+    # This gate is offline. A fake URL is still a real network attempt when
+    # optional PDF support is installed; stub the transport, not the parser.
+    from unittest.mock import patch
+    with patch.object(ft, "fetch_pdf_text", return_value=None) as pdf_fetch:
+        check("a stored oa_location (JSON string) is parsed, not crashed on",
+              ft.best_text({"pmcid": None, "abstract": "x",
+                            "oa_location": _json.dumps({"url": "http://nope/x.pdf"})})[1]
+              == "abstract_only"
+              and pdf_fetch.call_args is not None
+              and pdf_fetch.call_args.args == ("http://nope/x.pdf",),
+              "storage round-trips it as text; an unreadable copy stays abstract_only")
     check("a too-short extraction is REFUSED",
           ft.MIN_USABLE_CHARS >= 1000,
           "a 200-char PDF is a cover page; handing it to S4 as methods "
