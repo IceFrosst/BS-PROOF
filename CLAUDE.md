@@ -560,6 +560,29 @@ do not drop it.
 
 ## Current state
 
+**2026-09-11 — `/tests/supplements` shipped to `main`. Handoff: `docs/HANDOFF-AYKHAN.md`.**
+A public-but-unlisted test page (`app/tests/supplements/page.tsx`) renders the design-lab card
+with `publicTest`. Six static fixtures, no API call, no research job, no survey, no user data;
+`/scan`, the dashboard and all of `pipeline/` are untouched. Page-level `noindex` plus the
+site-wide `robots.ts` disallow. **Two founder decisions are encoded:** (1) funding and publication
+bias are clickable disclosure warnings and no longer touch any number — `score()` skips
+`publication_bias` and the `allPositiveIndustryOrOneLab` cap is deleted, pinned by
+`tests/evidence-warnings.test.tsx` across every outcome of all three audits; the audits' own
+limitations prose (calcium harms, 88% heterogeneity, an Expression of Concern, n=55 pools) is still
+printed, with the live rule appended separately as `Current rubric:`. (2) The Effect axis means
+how much better a healthy person's life gets — `app/design-lab/ab/effect-impact.ts`, ladder
+3/2/1/0 where only a cleared **anchor-based** threshold from a comparable population reaches 3, a
+surrogate is capped at 1 however large the number, and a threshold from a different population may
+demote but never promote. Rung 3 is empty on all six products because anchor-based thresholds for
+healthy people barely exist (`docs/design/2026-09-11-effect-ladder-test.md`). Contract is now
+**`effect-research-v0.3`** (`raw` metric, required `outcome_kind` and `threshold`).
+`docs/design/2026-09-10-evidence-ledger-rubric.md` is **stale** where it describes the
+publication-bias deduction and the industry/one-lab cap: `ledger.ts` is rubric v0.2.
+The demo rubric in `ledger.ts` remains completely separate from Python `SCORING_MODEL`; do not sync
+them. Scores there are heuristic rubric outputs, not probabilities of benefit. Person fit
+(`personFit`, `AGE_SLACK`) is still unvalidated. Gates at ship: 305 unit tests, typecheck, ESLint,
+both Python gates, build, and the browser smoke at 390/1440px.
+
 **2026-09-11 — Effect bar + Outcomes tab on `/design-lab/ab` (development only).**
 See `docs/design/2026-09-11-effect-bar-and-outcomes-tab.md`. The landing tab is
 now **Outcomes**: a list of clickable rows keyed by **name + population**, with

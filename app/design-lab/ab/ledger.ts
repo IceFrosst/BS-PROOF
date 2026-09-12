@@ -1,8 +1,8 @@
 /*
- * Evidence Ledger rubric v0.1 — PROPOSED, demo-only implementation.
- * Mirrors docs/design/2026-09-10-evidence-ledger-rubric.md. Pure function so
- * the A/B page can show that the number is COMPUTED from the ledger, never
- * written by a model. Not imported by any production route.
+ * Evidence Ledger rubric v0.2 — experimental test-site implementation.
+ * Founder-approved: funding and publication bias are disclosures, never
+ * deductions or caps. Historical pipeline scoring is a separate contract.
+ * Numbers are heuristic rubric outputs, not benefit probabilities.
  */
 export type Judgement = "supported" | "concern" | "unknown";
 export type Fit = 0 | 1 | 2 | 3 | 4 | "unknown";
@@ -85,14 +85,17 @@ export function bandLabel(h: number): string {
 export function score(l: Ledger, person: PersonFit = "unknown"): Scored {
   const fired: string[] = [];
   let certainty = l.bodyIsRct ? 4 : 2;
-  for (const [k, v] of Object.entries(l.checklist)) if (v === "concern") { certainty -= 1; void k; }
+  for (const [k, v] of Object.entries(l.checklist)) {
+    if (k !== "publication_bias" && v === "concern") certainty -= 1;
+  }
   certainty = Math.max(0, certainty);
   const caps: number[] = [];
   if (l.gates.rctCount === 0) { fired.push("No human controlled trial"); caps.push(0); }
   else if (l.gates.rctCount === 1) { fired.push("Only one RCT"); caps.push(1); }
   if (l.gates.largestRctN < 50 || (l.gates.chronicOutcome && l.gates.longestRctWeeks < 4)) { fired.push("Best RCT is small or short"); caps.push(2); }
   if (l.gates.surrogate) { fired.push("Outcome is a surrogate marker"); caps.push(3); }
-  if (l.gates.allPositiveIndustryOrOneLab) { fired.push("All positive trials industry-funded or one lab"); caps.push(2); }
+  // The legacy combined funding/one-lab flag cannot distinguish the two.
+  // Keep it as a warning; neither branch of it caps this test-site score.
   if (caps.length) certainty = Math.min(certainty, ...caps);
   const fit = (f: Fit) => (f === "unknown" ? 0.1 : f / 4);
   // Person fit joins form and dose as a THIRD applicability term when we know it.

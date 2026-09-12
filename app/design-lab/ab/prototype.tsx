@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { detailFromAudit, ledgerFromAudit, personFit, score, type AuditFile, type Ledger, type Profile, type StudiedIn } from "./ledger";
 import { parseEffectResearch, type EffectResearchFile } from "./effect-contract";
 import {
@@ -13,13 +14,14 @@ import magnesiumAudit from "./audits/magnesium.json";
 import caffeineResearch from "./effect-research/caffeine.json";
 import creatineResearch from "./effect-research/creatine-effect.json";
 import omega3Research from "./effect-research/omega3-effect.json";
+import { auditWarnings, researchWarnings, evidenceDetail, type EvidenceWarning } from "./evidence-warnings";
 import "./ab.css";
 
 type DimKey = "effect" | "evidence" | "form" | "dose" | "person";
 interface Detail { found: string; missing: string; move: string }
 
 /* HYPOTHETICAL ledgers. Fictional products; hand-written inputs to exercise the rubric. No search or study lookup was performed. */
-interface OutcomeCase { name: string; sentence?: string; ledger?: Ledger; detail?: Record<Exclude<DimKey, "person">, Detail>; population?: string; studiedIn?: StudiedIn; effect: EffectBar }
+interface OutcomeCase { warnings?: EvidenceWarning[]; name: string; sentence?: string; ledger?: Ledger; detail?: Record<Exclude<DimKey, "person">, Detail>; population?: string; studiedIn?: StudiedIn; effect: EffectBar }
 interface Scenario {
   title: string; product: string;
   kind: "live" | "fictional" | "research";
@@ -103,7 +105,8 @@ function fromAudit(title: string, a: AuditFileWithEffect): Scenario {
      * text stays reachable in the Effect expansion, stamped as that run's. */
     outcomes: a.outcomes.map((o) => ({
       name: o.name, population: o.population, studiedIn: o.studied_in, ledger: ledgerFromAudit(o),
-      detail: { effect: detailFromAudit(o.detail.effect), evidence: detailFromAudit(o.detail.evidence), form: detailFromAudit(o.detail.form), dose: detailFromAudit(o.detail.dose) },
+      detail: { effect: detailFromAudit(o.detail.effect), evidence: evidenceDetail(ledgerFromAudit(o), detailFromAudit(o.detail.evidence).found, detailFromAudit(o.detail.evidence).move, detailFromAudit(o.detail.evidence).missing), form: detailFromAudit(o.detail.form), dose: detailFromAudit(o.detail.dose) },
+      warnings: auditWarnings(o),
       effect: legacyEffectBar({
         effectPoints: o.ledger.effectPoints === "unclear" ? "unclear" : Number(o.ledger.effectPoints),
         rctCount: o.ledger.gates.rctCount,
@@ -128,6 +131,7 @@ const researchScenario = (title: string, file: EffectResearchFile): Scenario => 
     name: o.name,
     population: o.population,
     sentence: o.comparator,
+    warnings: researchWarnings(file, o),
     effect: researchEffectBar(file, o),
   })),
 });
@@ -212,11 +216,13 @@ function Interval({ scale }: { scale: IntervalScale }) {
 }
 
 export interface AbPrototypeProps {
+  /** Dedicated public test endpoint: real fixtures only, normal page scrolling. */
+  publicTest?: boolean;
   /** Test/smoke seam only: which product, outcome row and expanded bar to start on. */
   initial?: { product?: string; outcome?: string; layout?: Layout; open?: string };
 }
 
-export default function AbPrototype({ initial }: AbPrototypeProps = {}) {
+export default function AbPrototype({ initial, publicTest = false }: AbPrototypeProps = {}) {
   const [layout, setLayout] = useState<Layout>(initial?.layout ?? "middle");
   const [key, setKey] = useState(initial?.product ?? "creatine");
   const [tab, setTab] = useState<string | null>(initial?.outcome ?? null); // null = the Outcomes list
@@ -275,7 +281,7 @@ export default function AbPrototype({ initial }: AbPrototypeProps = {}) {
   const pick = (k: string) => { setKey(k); setTab(null); setOpen(null); };
   const go = (k: string | null) => { setTab(k); setOpen(null); };
 
-  const profileRow = <div className="ab-profile"><span className="ab-kicker">WHO IS ASKING</span><div><input type="number" min={12} max={110} placeholder="Age" aria-label="Your age" value={profile.age ?? ""} onChange={(e) => setProfile((v) => ({ ...v, age: e.target.value === "" ? null : Number(e.target.value) }))} />{(["female", "male"] as const).map((x) => <button key={x} type="button" aria-pressed={profile.sex === x} onClick={() => setProfile((v) => ({ ...v, sex: v.sex === x ? null : x }))}>{x === "female" ? "Female" : "Male"}</button>)}<button type="button" className="ab-clear" onClick={() => setProfile({ age: null, sex: null })}>Clear</button></div><small>Only changes how well the studies transfer to you — it can lower a previous-rubric score, never invent one.</small></div>;
+  const profileRow = <div className="ab-profile"><span className="ab-kicker">WHO IS ASKING</span><div><input type="number" min={12} max={110} placeholder="Age" aria-label="Your age" value={profile.age ?? ""} onChange={(e) => setProfile((v) => ({ ...v, age: e.target.value === "" ? null : Number(e.target.value) }))} />{(["female", "male"] as const).map((x) => <button key={x} type="button" aria-pressed={profile.sex === x} onClick={() => setProfile((v) => ({ ...v, sex: v.sex === x ? null : x }))}>{x === "female" ? "Female" : "Male"}</button>)}<button type="button" className="ab-clear" onClick={() => setProfile({ age: null, sex: null })}>Clear</button></div><small>Optional experimental demographic match; changes the applicability term and can raise or lower an existing score. Not a validated prediction. Kept only in this page’s memory.</small></div>;
   const photo = <div className={`ab-photo-hero${layout === "overlap" ? " bleed" : ""}`} role="img" aria-label="Illustrated sample product (placeholder)"><div className="ab-jar"><div className="ab-jar-lid" /><span>FIELD NOTES / 001</span><strong>{(s.kind === "fictional" ? s.product : s.title).split(" · ")[0].replace(/^Sample /, "").toLowerCase()}</strong><i>Pure. Simple. Studied.</i><div>{s.kind === "fictional" ? "SAMPLE" : "DAILY"} <b>{(s.kind === "fictional" ? s.product : s.title).split(" · ")[1] ?? ""}</b></div></div></div>;
 
   /* THE LANDING TAB. No average, no overall number, no band label: a product is
@@ -284,19 +290,19 @@ export default function AbPrototype({ initial }: AbPrototypeProps = {}) {
     <div className="ab-listhead">
       <h2>Outcomes</h2>
       <p>Each row below is a separate question, in the population it was studied in. Tap one to see what was found. These suggestions help you choose a question — they are <b>not</b> a promise of benefit and not a measure of how many people buy it.</p>
-      {legacy && <p className="ab-stamp">{PREVIOUS_RUBRIC_LABEL} — the numbers beside each row are the earlier rubric&rsquo;s, shown as they were. Nothing here was recomputed.</p>}
+      {legacy && <p className="ab-stamp">{PREVIOUS_RUBRIC_LABEL} — earlier audit inputs, recalculated without funding or publication-bias penalties. Scores are heuristic, not probabilities of benefit.</p>}
       {s.kind === "research" && <p className="ab-stamp">Effect-only research pass. No overall number, no certainty, form, dose or person score exists for this product.</p>}
     </div>
   );
   const detailBlock = cur ? (
     <div className={`ab-headline ${legacy ? tone : "muted"}${layout === "overlap" ? " float" : ""}`}>
-      {legacy && <div className="ab-number"><strong>{headline ?? "—"}</strong><span>{headline === null ? "no score" : "prev. rubric"}</span></div>}
+      {legacy && <div className="ab-number"><strong>{headline ?? "—"}</strong><span>{headline === null ? "no score" : "test rubric"}</span></div>}
       <div>
         <h2>{cur.o.name}</h2>
         <p className="ab-pop"><b>Population</b> {cur.o.population ?? "not recorded by this run"}</p>
         {cur.o.sentence && <p>{cur.o.sentence}</p>}
         {legacy
-          ? <p className="ab-stamp">{PREVIOUS_RUBRIC_LABEL} — {cur.r?.label ?? "Not scored"}. Not recomputed in this pass.</p>
+          ? <p className="ab-stamp">{PREVIOUS_RUBRIC_LABEL} — {cur.r?.label ?? "Not scored"}. Recalculated without funding or publication-bias penalties.</p>
           : <p className="ab-stamp">Effect only. No overall number for this product; the other bars were not assessed.</p>}
       </div>
     </div>
@@ -324,16 +330,42 @@ export default function AbPrototype({ initial }: AbPrototypeProps = {}) {
     </li>;
   })}</ul>;
   const gates = legacy && firedGates.length > 0 && <details className="ab-gates"><summary>⚑ {firedGates.length === 1 ? firedGates[0] : `${firedGates.length} limits · ${firedGates[0]}`}</summary><ul>{firedGates.map((g) => <li key={g}>{g}</li>)}</ul></details>;
+  const warnings = cur?.o.warnings && <section className="ab-warnings" aria-label="Evidence warnings" key={`${key}:${tab}`}>
+    <p><b>⚠ Evidence warnings</b> · disclosure only, no score penalty</p>
+    {cur.o.warnings.map((w) => <details key={w.id} data-warning={w.id}>
+      <summary>{w.title} · {w.status}</summary>
+      <p>{w.explanation}</p>
+      <p className="ab-stamp">Retained AI source notes · not human-verified. Quoted audit commentary is not the current scoring rule.</p>
+      {w.reported.length ? w.reported.map((text, i) => <p key={i}>{text}</p>) : <p>No specific source detail was retained. That is unknown, not evidence that the literature is free of this concern.</p>}
+      {cur.o.effect.sourceLinks.length > 0 && <p><b>Sources for this outcome</b> {cur.o.effect.sourceLinks.map((l) => l.url ? <a key={l.id} href={l.url} target="_blank" rel="noreferrer">{l.label} ({l.access}) </a> : <span key={l.id}>{l.label} ({l.access}) </span>)}</p>}
+    </details>)}
+  </section>;
   const tabs = <div className="ab-tabs" aria-label="Outcome"><button type="button" aria-pressed={isList} onClick={() => go(null)}>Outcomes</button>{scored.map((x) => <button key={x.k} type="button" aria-pressed={tab === x.k} onClick={() => go(x.k)} title={x.o.population ?? undefined}>{x.o.name}</button>)}</div>;
   const header = <header className="ab-top"><button type="button" className="ab-back" aria-label="Back" onClick={() => go(null)}>‹</button><div className="ab-title"><strong>{s.product}</strong>{s.live && <small>Researched {s.live.runAt} · {s.live.sources} sources</small>}{s.research && <small>Effect-only pass {s.research.meta.run_at} · {s.research.sources.length} sources</small>}</div></header>;
   const block = isList ? listBlock : detailBlock;
 
-  return <main id="main-content" className="ab-stage"><aside className="ab-side"><a href="/design-lab/mobile">← Field Notebook</a><span className="ab-kicker">RESULT CARD</span><h1>Show the tub.<br />Then the <em>truth.</em></h1><p>Photo takes a third of the phone. Four placements to compare; the rows are identical in all of them, and none of them carries an overall score.</p><span className="ab-kicker">PHOTO PLACEMENT</span><div className="ab-layouts" role="tablist" aria-label="Layout">{LAYOUTS.map((l) => <button key={l.id} role="tab" aria-selected={layout === l.id} onClick={() => { setLayout(l.id); setOpen(null); }}><b>{l.name}</b><small>{l.blurb}</small></button>)}</div><span className="ab-kicker">PREVIOUS AUDITS · UNCHANGED</span><div className="ab-scenarios">{Object.entries(liveScenarios).map(([k, v]) => <button key={k} aria-pressed={key === k} onClick={() => pick(k)}>{v.title}<small>{v.outcomes.length} outcomes · {v.live?.sources} sources</small></button>)}</div><span className="ab-kicker">EFFECT-ONLY RESEARCH · NEW</span><div className="ab-scenarios">{Object.entries(researchScenarios).map(([k, v]) => <button key={k} aria-pressed={key === k} onClick={() => pick(k)}>{v.title}<small>{v.outcomes.length} outcomes · {v.research?.sources.length} sources · no score</small></button>)}</div>{profileRow}<span className="ab-kicker">WHAT THE USER PICKED</span><div className="ab-picks">{s.outcomes.map((o) => <label key={outcomeKey(o.name, o.population)}><input type="checkbox" checked={isPicked(o)} onChange={() => togglePick(o)} />{o.name}{o.population && <small>{o.population}</small>}</label>)}</div><details className="ab-provenance"><summary>Fictional test ledgers</summary><div className="ab-scenarios">{Object.entries(scenarios).map(([k, v]) => <button key={k} aria-pressed={key === k} onClick={() => pick(k)}>{v.title}<small>{v.product}</small></button>)}</div></details>{s.live ? <p className="ab-fine"><strong>Previous audit</strong> run {s.live.runAt} by {s.live.model}. Its effect text and sources are shown as written then and were <strong>not reverified</strong> in this pass; no number on this card was recomputed. Model confidence: {s.live.confidence}. {s.live.doseNote}</p> : s.research ? <p className="ab-fine"><strong>Effect-only research pass</strong> {s.research.meta.run_at}, {s.research.meta.model}. {s.research.meta.note} <b>Reading rules:</b> {s.research.guards.join(" ")}</p> : <p className="ab-fine">Hand-written inputs to exercise the rubric; no search or model call produced this card. The numeric bars here are invented.</p>}</aside>
+  if (publicTest) return <main id="main-content" className="ab-stage ab-public">
+    <div className="ab-public-wrap">
+      <header className="ab-public-intro"><Link href="/">BS Proof</Link><span className="ab-kicker">SUPPLEMENT TEST SITE</span><h1>What changes.<br /><em>What backs it up.</em></h1>
+        <p>Choose a saved product example, then an outcome to explore its Effect, Evidence, Form and Dose.</p>
+        <p className="ab-stamp"><b>Experimental results · AI research, not human-verified.</b> This is a test website, not a live research service or medical advice. Scores and impact labels are unvalidated rubric outputs—not personal benefit probabilities or promises that you will notice a change. No survey or follow-up is being collected.</p>
+      </header>
+      <section aria-label="Choose a product"><h2>Choose a product</h2><div className="ab-scenarios ab-product-grid">{Object.entries({ ...liveScenarios, ...researchScenarios }).map(([k, v]) => <button key={k} aria-pressed={key === k} onClick={() => pick(k)}>{v.title}<small>{v.kind === "research" ? "Effect-only · no composite score" : "Full card · experimental outcome scores"} · {v.outcomes.length} outcomes</small></button>)}</div></section>
+      <div className="ab-public-result">{header}
+        {s.live && <p className="ab-stamp">Model {s.live.model}, run {s.live.runAt} · AI research, not reverified and not human-verified.</p>}
+        {s.research && <p className="ab-stamp">Model {s.research.meta.model}, effect-only pass {s.research.meta.run_at} · AI research, not reverified and not human-verified.</p>}
+        {tabs}{block}{warnings}{photo}<section className="ab-card" aria-label="Outcome results">{bars}{gates}</section></div>
+      <details className="ab-public-options"><summary>Optional profile & outcome interests</summary>{profileRow}<div className="ab-picks">{s.outcomes.map((o) => <label key={keyOf(o)}><input type="checkbox" checked={isPicked(o)} onChange={() => togglePick(o)} />{o.name}{o.population && <small>{o.population}</small>}</label>)}</div></details>
+      <footer className="ab-fine">Saved research examples only. Sources and access limits are in the expandable Effect row. Funding and publication bias are warnings, not Evidence deductions. This test does not change the existing scanner or historical pipeline. Not medical advice.</footer>
+    </div>
+  </main>;
+
+  return <main id="main-content" className="ab-stage"><aside className="ab-side"><a href="/design-lab/mobile">← Field Notebook</a><span className="ab-kicker">RESULT CARD</span><h1>Show the tub.<br />Then the <em>truth.</em></h1><p>Photo takes a third of the phone. Four placements to compare; the rows are identical in all of them, and none of them carries an overall score.</p><span className="ab-kicker">PHOTO PLACEMENT</span><div className="ab-layouts" role="tablist" aria-label="Layout">{LAYOUTS.map((l) => <button key={l.id} role="tab" aria-selected={layout === l.id} onClick={() => { setLayout(l.id); setOpen(null); }}><b>{l.name}</b><small>{l.blurb}</small></button>)}</div><span className="ab-kicker">EARLIER AUDITS · UPDATED EVIDENCE POLICY</span><div className="ab-scenarios">{Object.entries(liveScenarios).map(([k, v]) => <button key={k} aria-pressed={key === k} onClick={() => pick(k)}>{v.title}<small>{v.outcomes.length} outcomes · {v.live?.sources} sources</small></button>)}</div><span className="ab-kicker">EFFECT-ONLY RESEARCH · NEW</span><div className="ab-scenarios">{Object.entries(researchScenarios).map(([k, v]) => <button key={k} aria-pressed={key === k} onClick={() => pick(k)}>{v.title}<small>{v.outcomes.length} outcomes · {v.research?.sources.length} sources · no score</small></button>)}</div>{profileRow}<span className="ab-kicker">WHAT THE USER PICKED</span><div className="ab-picks">{s.outcomes.map((o) => <label key={outcomeKey(o.name, o.population)}><input type="checkbox" checked={isPicked(o)} onChange={() => togglePick(o)} />{o.name}{o.population && <small>{o.population}</small>}</label>)}</div><details className="ab-provenance"><summary>Fictional test ledgers</summary><div className="ab-scenarios">{Object.entries(scenarios).map(([k, v]) => <button key={k} aria-pressed={key === k} onClick={() => pick(k)}>{v.title}<small>{v.product}</small></button>)}</div></details>{s.live ? <p className="ab-fine"><strong>Previous audit</strong> run {s.live.runAt} by {s.live.model}. Its effect text and sources are shown as written then and were <strong>not reverified</strong> in this pass; scores now exclude funding and publication-bias penalties. Model confidence: {s.live.confidence}. {s.live.doseNote}</p> : s.research ? <p className="ab-fine"><strong>Effect-only research pass</strong> {s.research.meta.run_at}, {s.research.meta.model}. {s.research.meta.note} <b>Reading rules:</b> {s.research.guards.join(" ")}</p> : <p className="ab-fine">Hand-written inputs to exercise the rubric; no search or model call produced this card. The numeric bars here are invented.</p>}</aside>
   <div className="ab-phone"><div className="ab-status"><b>9:41</b><i /><span>▮▮▮ ▰</span></div><div className={`ab-screen layout-${layout}`}>
-    {layout === "hero" && <>{header}{photo}{tabs}<section className="ab-card">{block}{bars}{gates}</section></>}
-    {layout === "middle" && <>{header}{tabs}{block}{photo}<section className="ab-card">{bars}{gates}</section></>}
-    {layout === "overlap" && <>{photo}<div className="ab-overlap-wrap">{header}{block}</div>{tabs}<section className="ab-card">{bars}{gates}</section></>}
-    {layout === "split" && <>{header}{tabs}<div className="ab-split">{photo}<div className="ab-split-score">{block}</div></div><section className="ab-card">{bars}{gates}</section></>}
+    {layout === "hero" && <>{header}{photo}{tabs}<section className="ab-card">{block}{warnings}{bars}{gates}</section></>}
+    {layout === "middle" && <>{header}{tabs}{block}{warnings}{photo}<section className="ab-card">{bars}{gates}</section></>}
+    {layout === "overlap" && <>{photo}<div className="ab-overlap-wrap">{header}{block}</div>{tabs}{warnings}<section className="ab-card">{bars}{gates}</section></>}
+    {layout === "split" && <>{header}{tabs}<div className="ab-split">{photo}<div className="ab-split-score">{block}</div></div>{warnings}<section className="ab-card">{bars}{gates}</section></>}
   </div></div>
   <aside className="ab-notes"><span className="ab-kicker">THE FOUR PLACEMENTS</span><h3>1 · Hero</h3><p>Photo first, big and calm. The outcome list sits under it. Most “product page” feeling.</p><h3>2 · Middle</h3><p>Outcomes first, photo between the intro and the rows — the founder’s “a third, in the middle”.</p><h3>3 · Overlap</h3><p>Full-bleed photo; the block floats over its bottom edge. Most editorial, least whitespace.</p><h3>4 · Split</h3><p>Photo left, text right, side by side. Shortest; leaves room below the rows.</p><h3>Outcomes first</h3><p>Landing tab. <b>There is no overall number and no overall band.</b> A product is not one benefit: each row is a question in a named population, and tapping it drills in. Numbers beside a row are the earlier rubric, shown unchanged.</p><h3>The Effect bar</h3><p>Never a tier fill. When a source reported an estimate and an interval, the interval is drawn in its own unit and labelled <i>reported estimate, not a grade</i>. With an estimate and no interval, the point is drawn and the interval is called unavailable. Otherwise the track is hatched and reads <i>size not graded</i> — which is not the same as <i>no evidence found</i> or <i>no meaningful benefit</i>.</p></aside></main>;
 }

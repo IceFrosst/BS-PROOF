@@ -33,7 +33,7 @@ import {
 } from "./effect-contract";
 
 export const PREVIOUS_AUDIT_LABEL = "Previous AI audit · not reverified";
-export const PREVIOUS_RUBRIC_LABEL = "Previous rubric · unchanged";
+export const PREVIOUS_RUBRIC_LABEL = "Test rubric · disclosure-only warnings";
 export const REPORTED_ESTIMATE_LABEL = "Reported estimate, not a grade";
 export const FICTIONAL_LABEL = "Fictional demo ledger · invented numbers";
 export const NOT_ASSESSED_WORD = "Not assessed in this run";

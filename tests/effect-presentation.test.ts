@@ -79,7 +79,7 @@ describe("the landing tab is Outcomes, and there is no overall number", () => {
   it("qualifies every outcome row by its population and says suggestions are not a promise", () => {
     expect(markup).toContain("Adults under 50 doing resistance training");
     expect(markup).toContain("not a measure of how many people buy it");
-    expect(markup).toContain("Previous rubric · unchanged");
+    expect(markup).toContain("Test rubric · disclosure-only warnings");
   });
 
   it("drops the product-level for-whom claim that implied one global benefit", () => {
@@ -160,7 +160,7 @@ describe("the three shipped audits keep their own text, stamped and not reverifi
     const key = outcomeKey(row.name, row.population);
     const summary = renderToStaticMarkup(createElement(AbPrototype, { initial: { product: "creatine", outcome: key } }));
     expect(summary).not.toMatch(/a third more than training alone/);
-    expect(summary).toContain("Previous rubric · unchanged");
+    expect(summary).toContain("Test rubric · disclosure-only warnings");
   });
 
   it("but the previous run's own effect text stays reachable under the expansion", () => {

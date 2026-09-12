@@ -1,12 +1,12 @@
 # Effect research — ONE product, ONE question per outcome, effect only
 
-**Version `effect-research-v0.1`. Output must validate against
+**Version `effect-research-v0.3`. Output must validate against
 `schemas/effect_research.json` and the runtime checks in
 `app/design-lab/ab/effect-contract.ts`.**
 
-Self-contained: everything you need is below. The caller injects the variables
-in ROLE and sends this file verbatim as the system prompt. Do not tell the model
-to read repository files.
+Caller contract: inject the variables in ROLE and provide the COMPLETE
+`schemas/effect_research.json` alongside this prompt. A repository path does not
+transmit the schema. Do not tell the model to read repository files.
 
 This prompt has its **own cache domain**
 (`EFFECT_RESEARCH_PROMPT_VERSION` in `app/design-lab/ab/effect-contract.ts`),
@@ -51,8 +51,9 @@ far that is from the person holding the bottle.
 6. **"No meaningful benefit", "no evidence found" and "size not graded" are
    three different findings.** Say which one you have, every time. A confidence
    interval that crosses the null means **uncertainty**, not proof of no effect.
-7. **Funding is disclosure, never a penalty.** Record who paid. Do not deduct,
-   discount or add anything for it.
+7. **Funding and publication bias are disclosures, never score penalties in
+   this test-site policy.** Record who paid and what publication-bias checks
+   found (or did not assess). Do not treat no detected bias as proof of absence.
 8. **Population is part of the finding.** An outcome without a population is not
    a finding. Never merge two populations into one row and never let a finding
    in one population size a row in another.
@@ -84,7 +85,7 @@ For each outcome:
 - `population` — who it was measured in, including clinical, deficiency or
   circadian context. Required.
 - `estimate` — the number the primary source reported:
-  - `what` (which endpoint), `metric` (`smd | rr`), `unit` as printed
+  - `what` (which endpoint), `metric` (`smd | rr | raw`), `unit` as printed
     ("Hedges g", "SMD", "risk ratio"), `value`,
   - `ciLow` / `ciHigh` — **both bounds or neither.** If the source does not
     report an interval, set both to `null` and explain in `interval_note`. Never
@@ -103,6 +104,19 @@ For each outcome:
 - `practical_importance` — `unknown` or `reported_by_source`, with a note. If a
   source anchors meaningfulness to elite competition, a surrogate marker or an
   unvalidated threshold, report that framing and do **not** adopt it.
+- `outcome_kind` — `lived | surrogate`: an experienced outcome versus a marker
+  or stand-in. This classification alone does not prove anyone notices a change.
+- `threshold` — required: `value` (number or null), `unit`, `source` (declared
+  source id or null), `derived_in`, `anchor_based` (boolean), `population_match`
+  (`same | comparable | different | unknown`), `verdict` (`cleared | failed | none`),
+  and `note`. With no threshold found, use null value/source, empty unit, verdict
+  `none`, and explain the bounded search; never claim none exists anywhere.
+  With a threshold, name its derivation population, anchor basis and limitations.
+  These verdicts describe a point-estimate comparison, not every individual or
+  the whole CI. Explicitly state when the CI crosses the threshold, the units
+  differ, the threshold is within-person but the effect is between-group, or the
+  derivation could not be verified. A minimum important difference is NOT a
+  large-benefit threshold. Unknown anchor basis must not be called verified.
 - `limits` — who was enrolled, blinding, sex balance, precision, access.
 - `cross_checks` — see step 3.
 
