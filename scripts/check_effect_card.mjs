@@ -1,7 +1,7 @@
 // Local-only smoke check for /design-lab/ab (development-only route).
 // Start `npm run dev` on 127.0.0.1:3000 first, then: node scripts/check_effect_card.mjs
 //
-// Covers all 4 products x 4 layouts at 390px and desktop. Per combination it
+// Covers every product x 4 layouts at 390px and desktop. Per combination it
 // asserts: the landing tab is Outcomes with NO overall number, EVERY outcome
 // row is reachable by scrolling inside the phone's scroll region, the Effect
 // bar expands and never shows a graded fill it did not earn, no horizontal
@@ -14,7 +14,9 @@ const PRODUCTS = [
   { name: 'Creatine monohydrate · 4 g', kind: 'legacy' },
   { name: 'Vitamin D3 · 2000 IU', kind: 'legacy' },
   { name: 'Magnesium glycinate · 300 mg', kind: 'legacy' },
+  { name: 'Creatine monohydrate · 3–5 g', kind: 'research' },
   { name: 'Caffeine anhydrous · 200 mg', kind: 'research' },
+  { name: 'Omega-3 (EPA/DHA) · 1 g', kind: 'research' },
 ];
 const LAYOUTS = ['1 · Hero', '2 · Middle', '3 · Overlap', '4 · Split'];
 const HONEST_EFFECT_STATES = new Set([
@@ -93,7 +95,7 @@ try {
     assert.deepEqual(errors, []);
     assert.deepEqual(apiRequests, []);
     await page.close();
-    console.log(`PASS ${viewport.width}px: 4 products x 4 layouts, every outcome row reachable, Effect expanded, no overflow, no API calls`);
+    console.log(`PASS ${viewport.width}px: ${PRODUCTS.length} products x ${LAYOUTS.length} layouts, every outcome row reachable, Effect expanded, no overflow, no API calls`);
   }
 } finally {
   await browser.close();

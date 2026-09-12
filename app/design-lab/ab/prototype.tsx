@@ -11,6 +11,8 @@ import creatineAudit from "./audits/creatine.json";
 import vitaminDAudit from "./audits/vitamin-d.json";
 import magnesiumAudit from "./audits/magnesium.json";
 import caffeineResearch from "./effect-research/caffeine.json";
+import creatineResearch from "./effect-research/creatine-effect.json";
+import omega3Research from "./effect-research/omega3-effect.json";
 import "./ab.css";
 
 type DimKey = "effect" | "evidence" | "form" | "dose" | "person";
@@ -118,6 +120,8 @@ function fromAudit(title: string, a: AuditFileWithEffect): Scenario {
 /* Effect-only research pass. Validated at module load: a malformed file throws
  * here rather than rendering a number nobody checked. */
 const caffeineFile = parseEffectResearch(caffeineResearch);
+const creatineEffectFile = parseEffectResearch(creatineResearch);
+const omega3File = parseEffectResearch(omega3Research);
 const researchScenario = (title: string, file: EffectResearchFile): Scenario => ({
   title, product: file.product, kind: "research", research: file,
   outcomes: file.outcomes.map((o) => ({
@@ -134,7 +138,9 @@ const liveScenarios: Record<string, Scenario> = {
   magnesium: fromAudit("Magnesium glycinate · 300 mg", magnesiumAudit as unknown as AuditFileWithEffect),
 };
 const researchScenarios: Record<string, Scenario> = {
+  creatineEffect: researchScenario("Creatine monohydrate · 3–5 g", creatineEffectFile),
   caffeine: researchScenario("Caffeine anhydrous · 200 mg", caffeineFile),
+  omega3: researchScenario("Omega-3 (EPA/DHA) · 1 g", omega3File),
 };
 const allScenarios: Record<string, Scenario> = { ...liveScenarios, ...researchScenarios, ...scenarios };
 

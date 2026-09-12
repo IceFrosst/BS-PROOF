@@ -21,9 +21,46 @@
  */
 
 /** Own cache domain (invariant 3). Not the shared pipeline PROMPT_VERSION. */
-export const EFFECT_RESEARCH_PROMPT_VERSION = "effect-research-v0.1";
+export const EFFECT_RESEARCH_PROMPT_VERSION = "effect-research-v0.2";
 
-export type EffectMetric = "smd" | "rr";
+/**
+ * v0.2 adds the two things the 2026-09-11 three-product test showed we needed:
+ *
+ *  - "raw": a magnitude in the unit a person lives in (kg on the bar, VAS
+ *    points, minutes). v0.1 only carried standardised units, which is exactly
+ *    the form nobody can feel.
+ *  - `outcome_kind` and `threshold`: a lab marker can never be a top-rung life
+ *    improvement, and a top rung needs a published bar that was actually
+ *    CLEARED. The test found published bars are nearly always derived in
+ *    patients, so `population_match` travels with the threshold and a
+ *    convention (Cohen, smallest worthwhile change) is NOT a threshold.
+ */
+export type EffectMetric = "smd" | "rr" | "raw";
+
+/**
+ * Does this outcome describe something the person LIVES, or a stand-in?
+ * Reaction time on a lab task and a blood level are surrogates however
+ * impressive the number.
+ */
+export type OutcomeKind = "lived" | "surrogate";
+
+/** Where a published important-difference threshold came from, and how it went. */
+export interface EffectThreshold {
+  /** null when no threshold exists: that is a finding, not a gap to fill. */
+  value: number | null;
+  unit: string;
+  /** Declared source id, or null when none exists. */
+  source: string | null;
+  /** The population the THRESHOLD was derived in, not the one we are scoring. */
+  derived_in: string;
+  /** Anchor-based (someone asked people if they noticed) beats distribution-based. */
+  anchor_based: boolean;
+  /** How the threshold relates to the population we are scoring. */
+  population_match: "same" | "comparable" | "different" | "unknown";
+  /** cleared / failed / none. "none" means no threshold was found at all. */
+  verdict: "cleared" | "failed" | "none";
+  note: string;
+}
 /**
  * Which side of the null is the BETTER outcome, on this metric as the source
  * reported it. "unclear" is a real answer: some abstracts do not let you
@@ -105,6 +142,10 @@ export interface EffectOutcome {
   comparator: string;
   timeframe: string;
   dose_applicability: string;
+  /** Lived or surrogate. Required in v0.2: it caps the ladder. */
+  outcome_kind: OutcomeKind;
+  /** The published bar, if one exists, and whether this effect cleared it. */
+  threshold: EffectThreshold;
   practical_importance: PracticalImportance;
   limits: string[];
   cross_checks: CrossCheck[];
@@ -141,7 +182,10 @@ const isStr = (v: unknown): v is string => typeof v === "string" && v.trim().len
 const isStrArray = (v: unknown): v is string[] => Array.isArray(v) && v.every(isStr);
 const isNumOrNull = (v: unknown): v is number | null => v === null || (typeof v === "number" && Number.isFinite(v));
 
-const METRICS: EffectMetric[] = ["smd", "rr"];
+const METRICS: EffectMetric[] = ["smd", "rr", "raw"];
+const OUTCOME_KINDS: OutcomeKind[] = ["lived", "surrogate"];
+const THRESHOLD_VERDICTS = ["cleared", "failed", "none"] as const;
+const POP_MATCHES = ["same", "comparable", "different", "unknown"] as const;
 const DIRECTIONS: EffectDirection[] = ["higher_better", "lower_better", "unclear"];
 const ACCESS: SourceAccess[] = ["full_text", "abstract", "snippet", "not_retrieved"];
 const DESIGNS: SourceDesign[] = ["sr_ma", "nma", "narrative_review", "rct"];
@@ -265,6 +309,33 @@ export function validateEffectResearch(raw: unknown): ValidationResult {
     else if (!ids.has(o.primary_source as string)) errors.push(`${where}.primary_source "${o.primary_source}" is not a declared source id`);
     for (const field of ["comparator", "timeframe", "dose_applicability"]) {
       if (!isStr(o[field])) errors.push(`${where}.${field} is required`);
+    }
+    if (!OUTCOME_KINDS.includes(o.outcome_kind as OutcomeKind)) {
+      errors.push(`${where}.outcome_kind must be ${OUTCOME_KINDS.join("|")} — a surrogate may never be sold as a lived improvement`);
+    }
+    const th = o.threshold;
+    if (!isRec(th)) errors.push(`${where}.threshold is required (use verdict "none" when no published bar exists)`);
+    else {
+      if (!THRESHOLD_VERDICTS.includes(th.verdict as typeof THRESHOLD_VERDICTS[number])) {
+        errors.push(`${where}.threshold.verdict must be ${THRESHOLD_VERDICTS.join("|")}`);
+      }
+      if (!POP_MATCHES.includes(th.population_match as typeof POP_MATCHES[number])) {
+        errors.push(`${where}.threshold.population_match must be ${POP_MATCHES.join("|")}`);
+      }
+      if (typeof th.anchor_based !== "boolean") errors.push(`${where}.threshold.anchor_based must be boolean`);
+      if (!isStr(th.derived_in)) errors.push(`${where}.threshold.derived_in is required`);
+      if (!isStr(th.note)) errors.push(`${where}.threshold.note is required`);
+      if (!isNumOrNull(th.value)) errors.push(`${where}.threshold.value must be a finite number or null`);
+      // A verdict of cleared/failed is a claim about a real number from a real source.
+      if (th.verdict !== "none") {
+        if (th.value === null) errors.push(`${where}.threshold: verdict "${th.verdict}" needs a value`);
+        if (!isStr(th.source) || !ids.has(th.source as string)) {
+          errors.push(`${where}.threshold.source must resolve to a declared source id when a threshold is claimed`);
+        }
+        if (!isStr(th.unit)) errors.push(`${where}.threshold.unit is required when a threshold is claimed`);
+      } else if (th.value !== null) {
+        errors.push(`${where}.threshold: verdict "none" must carry a null value`);
+      }
     }
     checkEstimate(o.estimate, `${where}.estimate`, ids, errors);
     const also = Array.isArray(o.also_reported) ? o.also_reported : [];

@@ -26,6 +26,7 @@
  * stamps it "Previous AI audit · not reverified". It does not regex-parse
  * clinical prose into a number and does not endorse a legacy MCID assertion.
  */
+import { impact } from "./effect-impact";
 import {
   findSource, sourceUrl,
   type EffectMetric, type EffectOutcome, type EffectResearchFile, type NotAssessedBar, type ReportedEstimate,
@@ -231,7 +232,17 @@ export function researchEffectBar(file: EffectResearchFile, outcome: EffectOutco
   const e = outcome.estimate;
   const hasInterval = e.ciLow !== null && e.ciHigh !== null;
   const primary = findSource(file, outcome.primary_source);
+  // The life-impact rung, computed from the outcome kind and the threshold.
+  const graded = impact({ outcome });
   const lines: EffectLine[] = [
+    { label: `How much better your life gets · ${graded.word}`, body: graded.because },
+    ...(graded.toMoveUp ? [{ label: "What would move it up", body: graded.toMoveUp }] : []),
+    {
+      label: "Published bar for noticing",
+      body: outcome.threshold.verdict === "none"
+        ? `None found. ${outcome.threshold.note}`
+        : `${outcome.threshold.value} ${outcome.threshold.unit} — ${outcome.threshold.verdict === "cleared" ? "CLEARED" : "NOT met by this effect"}. Derived in ${outcome.threshold.derived_in}. ${outcome.threshold.note}`,
+    },
     { label: "Quoted estimate", body: `“${outcome.quote.text}” — ${findSource(file, outcome.quote.source)?.label ?? outcome.quote.source}` },
     { label: "Comparator", body: outcome.comparator },
     { label: "Population", body: outcome.population },
@@ -290,7 +301,9 @@ export function researchEffectBar(file: EffectResearchFile, outcome: EffectOutco
 
   return {
     kind: hasInterval ? "reported_interval" : "reported_point",
-    word: hasInterval ? "Reported estimate" : "Estimate, no interval",
+    // The ROW now says how much better your life gets. The estimate and its
+    // interval stay visible underneath, in the unit the source printed.
+    word: graded.word,
     pts: `${fmt(e.value)} ${e.unit}`,
     provenance: hasInterval
       ? REPORTED_ESTIMATE_LABEL
