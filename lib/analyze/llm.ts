@@ -120,6 +120,19 @@ export interface ChatRequest {
   timeoutMs?: number;
   /** Ask for a JSON object; dropped automatically if the provider rejects it. */
   jsonMode?: boolean;
+  /**
+   * Chain-of-thought. DEFAULT "disabled", and that is invariant 2 applied to
+   * the transport: these are one-shot pure functions reading a panel or
+   * recalling a fact into a fixed schema, none of which needs a model to think
+   * out loud -- and on DeepSeek thinking is ON by default, unbounded, and
+   * BILLED AGAINST THE SAME max_tokens as the answer. Measured twice: at 2048
+   * the label read came back empty with finish_reason "length" (2026-08-23,
+   * fixed by raising to 8192), and at 8192 it came back empty again once
+   * prompts/label.md grew to label-v1.1's whole-panel fields (2026-09-14).
+   * Raising the ceiling only moves the cliff; removing the thinking budget
+   * removes the failure. Dropped automatically if the provider rejects it.
+   */
+  thinking?: "enabled" | "disabled";
 }
 
 export interface ChatResult {
@@ -202,12 +215,17 @@ export async function chat(request: ChatRequest): Promise<ChatResult> {
     messages: request.messages,
   };
   if (request.jsonMode) body.response_format = { type: "json_object" };
+  // OpenAI-format thinking switch (DeepSeek `thinking.type`); other providers
+  // ignore an unknown field, and the ones that 400 on it are handled below.
+  if ((request.thinking ?? "disabled") === "disabled") body.thinking = { type: "disabled" };
 
   let res = await post(url, key, body, timeoutMs, request.purpose);
-  if (res.status === 400 && request.jsonMode) {
-    // Not every compatible endpoint accepts response_format; the prompt already
-    // demands a bare JSON object, so retry once without it.
+  if (res.status === 400 && (body.response_format || body.thinking)) {
+    // Not every compatible endpoint accepts response_format or thinking. The
+    // prompt already demands a bare JSON object and a thinking model still
+    // answers, so drop both optional fields and retry once rather than fail.
     delete body.response_format;
+    delete body.thinking;
     res = await post(url, key, body, timeoutMs, request.purpose);
   }
 
@@ -232,7 +250,12 @@ export async function chat(request: ChatRequest): Promise<ChatResult> {
   const text = contentText(choice?.message?.content);
   if (!text) {
     const finish = choice?.finish_reason ?? "unknown";
-    const reasoned = choice?.message?.reasoning_content ? " after emitting reasoning_content" : "";
+    // reasoning_content + "length" means the budget went on chain-of-thought.
+    // Say so, and say which knob: the thinking switch above should have
+    // prevented it, so seeing this means the provider ignored or rejected it.
+    const reasoned = choice?.message?.reasoning_content
+      ? ` after emitting reasoning_content — the provider kept thinking mode on despite thinking.type=disabled; raise maxTokens for ${request.purpose} or point LABEL_MODEL/TEXT_MODEL at a non-thinking model`
+      : "";
     throw new ModelCallError(
       "empty",
       `${request.purpose}: the model returned no message content (finish_reason: ${finish}${reasoned})`,

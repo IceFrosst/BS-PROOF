@@ -195,9 +195,11 @@ export async function readLabel(
       purpose: "label read",
       model: visionModel(),
       timeoutMs: TIMEOUT_MS,
-      // A label read is a few hundred tokens of JSON, but reasoning models
-      // spend tokens thinking BEFORE the answer and count both against the
-      // cap (measured 2026-08-23: 2048 left an empty answer). 8192 fits both.
+      // A label read is a few hundred tokens of JSON. The cap is generous
+      // because a reasoning model spends its thinking against the SAME budget
+      // and empties the answer when it runs out (2048 failed 2026-08-23, 8192
+      // failed on label-v1.1 2026-09-14) — llm.ts now disables thinking, and
+      // this ceiling is the belt to that braces.
       maxTokens: 8192,
       jsonMode: false,
       messages: [
