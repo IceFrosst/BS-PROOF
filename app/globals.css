@@ -999,3 +999,110 @@ thead th { color: var(--ink-soft); font-size: 0.7rem; text-transform: uppercase;
 .scan-strength-none { color: var(--coral-text); }
 .scan-dose-hit { margin: 0; color: var(--teal-text); font-size: 0.9rem; font-weight: 700; }
 .scan-dose-miss { margin: 0; color: var(--coral-text); font-size: 0.9rem; font-weight: 700; }
+
+/* --------------------------------------------------------------------------
+   /scan REDESIGN (2026-09-15, founder-approved option 1) — pure white,
+   phone-first, scanning owns the first viewport.
+
+   Scoped two ways so nothing else moves: the page ground and the shared header
+   are recoloured through `body:has(.scan-page)` (the root layout is untouched;
+   browsers without :has() keep the paper header, which is still accessible),
+   and every new control is a .sc-* class. /tester keeps .analyze-hero and the
+   .la-* rules exactly as they were.
+
+   Contrast: text on white uses --ink / --ink-soft (6.4:1) or --teal-text; the
+   mark's green (#12B76A) is used only as a graphic accent, never for text.
+   -------------------------------------------------------------------------- */
+body:has(.scan-page) { background: #fff; }
+body:has(.scan-page) .site-header { background: #fff; border-bottom-color: #e6e6e6; }
+body:has(.scan-page) .site-footer { background: #fff; border-top-color: #e6e6e6; }
+.scan-page { background: #fff; color: var(--ink); }
+
+/* Sized so the whole capture stack -- mark, headline, both buttons, the divider
+   and the search control -- lands inside one viewport: measured 666 of 839 px on
+   a Pixel 7 and it must also fit a 720 px laptop window, hence the tight caps. */
+.scan-hero { display: grid; justify-items: center; text-align: center; padding-top: clamp(12px, 3vw, 22px); }
+.scan-mark { width: clamp(132px, 34vw, 152px); height: auto; margin-bottom: clamp(4px, 1.5vw, 6px); }
+.scan-headline { margin: 0; font-size: clamp(2rem, 8.5vw, 2.6rem); font-weight: 900; letter-spacing: -0.045em; line-height: 1.02; max-width: 14ch; }
+.scan-sub { max-width: 34ch; margin: 12px 0 0; color: var(--ink-soft); font-size: clamp(0.98rem, 3.8vw, 1.1rem); line-height: 1.5; }
+.scan-foot { margin: 0; padding-block: 28px 40px; color: var(--ink-soft); font-size: 0.85rem; text-align: center; }
+.scan-foot a { color: var(--ink); font-weight: 800; }
+
+.scan-page .la { width: 100%; max-width: 640px; padding-block: clamp(14px, 4vw, 16px) 0; }
+/* The hero centres its headline; the report below it is read, so it is left-aligned. */
+.scan-page .la-result { text-align: left; }
+.scan-page .la-alert { text-align: left; }
+.sc-capture { position: relative; display: grid; gap: 14px; justify-items: stretch; width: 100%; padding: 4px 0 0; border-radius: var(--radius); transition: background 120ms ease; }
+.sc-capture.is-dragging { background: #f2fbf6; outline: 2px dashed #12B76A; outline-offset: 8px; }
+.sc-capture.is-busy { opacity: 0.8; }
+
+.sc-actions, .sc-staged { display: grid; gap: 10px; justify-items: stretch; width: 100%; }
+.sc-secondary-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.sc-primary { min-height: 56px; font-size: 1.1rem; }
+.sc-secondary { min-height: 50px; color: var(--ink); border-color: #cfd4d1; background: #fff; }
+.sc-secondary:hover { background: #f5f7f6; }
+.sc-capture .button.is-disabled { opacity: 0.6; pointer-events: none; }
+.sc-hint { color: var(--ink-soft); font-size: 0.82rem; text-align: center; }
+.sc-preview { justify-self: center; max-height: 280px; }
+.sc-stage { text-align: center; }
+/* The <label> is the visible control; move the hidden input's focus ring onto it. */
+.sc-capture > #scan-capture:focus-visible ~ * label[for="scan-capture"],
+.sc-capture > #scan-file:focus-visible ~ * label[for="scan-file"] { outline: 3px solid var(--coral); outline-offset: 4px; }
+
+.sc-or { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 14px; margin-top: 6px; color: var(--ink-soft); font-size: 0.8rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+.sc-or::before, .sc-or::after { content: ""; height: 1px; background: #e2e5e3; }
+
+.sc-search-toggle {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  min-height: 54px; padding: 12px 18px;
+  color: var(--ink); background: #fff; border: 1px solid #cfd4d1; border-radius: 14px;
+  font-weight: 800; font-size: 1rem; text-align: left; cursor: pointer;
+}
+.sc-search-toggle:hover { background: #f5f7f6; }
+.sc-search-toggle[aria-expanded="true"] { border-color: var(--ink); border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.sc-search-toggle[aria-expanded="true"] .sc-chevron { transform: rotate(180deg); }
+.sc-chevron { flex: 0 0 auto; transition: transform 120ms ease; }
+.sc-search-panel { display: grid; gap: 14px; margin-top: -14px; padding: 18px; border: 1px solid var(--ink); border-top: 0; border-radius: 0 0 14px 14px; background: #fff; text-align: left; }
+.sc-search-panel[hidden] { display: none; }
+.sc-search-lede { margin: 0; color: var(--ink-soft); font-size: 0.9rem; line-height: 1.5; }
+
+.sc-search { display: grid; gap: 16px; }
+.sc-field { display: grid; gap: 6px; }
+.sc-field > label, .sc-dose legend { color: var(--ink-soft); font-size: 0.74rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.sc-field input, .sc-field select {
+  width: 100%; min-height: 48px; padding: 10px 14px;
+  color: var(--ink); background: #fff; border: 1px solid #cfd4d1; border-radius: 10px;
+  font-size: 1rem;
+}
+.sc-field input:disabled, .sc-field select:disabled { opacity: 0.6; }
+.sc-combo { position: relative; }
+.sc-listbox {
+  position: absolute; z-index: 30; inset: calc(100% + 4px) 0 auto 0;
+  margin: 0; padding: 6px; list-style: none;
+  background: #fff; border: 1px solid #cfd4d1; border-radius: 12px; box-shadow: 0 14px 40px rgb(20 30 24 / 12%);
+  max-height: 280px; overflow-y: auto;
+}
+.sc-listbox[hidden] { display: none; }
+.sc-option { display: grid; gap: 2px; min-height: 44px; padding: 10px 12px; border-radius: 8px; cursor: pointer; }
+.sc-option small { color: var(--ink-soft); font-size: 0.76rem; }
+.sc-option.is-active, .sc-option:hover { background: #eef8f2; }
+.sc-option[aria-selected="true"] { outline: 2px solid #12B76A; outline-offset: -2px; }
+.sc-help { margin: 0; color: var(--ink-soft); font-size: 0.8rem; line-height: 1.45; }
+.sc-dose { display: grid; gap: 12px; margin: 0; padding: 14px; border: 1px dashed #cfd4d1; border-radius: 12px; }
+.sc-dose-row { display: grid; grid-template-columns: 1.4fr 0.8fr 1fr; gap: 10px; }
+.sc-problem { margin: 0; padding: 10px 14px; border-left: 4px solid var(--danger); background: #fff5f3; color: var(--ink); font-size: 0.9rem; border-radius: 0 8px 8px 0; }
+.sc-submit { min-height: 52px; }
+.sc-submit[disabled] { opacity: 0.55; cursor: default; }
+
+/* Dotted gold edge, INK text: the badge sits on the --paper-2 identity card where
+   --gold-text measured 4.39:1 (axe, 2026-09-15). Ink clears AA on every tint. */
+.scan-badge-user_input { border-style: dotted; border-color: var(--gold); color: var(--ink); background: transparent; }
+.sc-entered { border-style: dashed; }
+.sc-typed-note { margin: 10px 0 0; font-size: 0.82rem; }
+
+@media (max-width: 620px) {
+  .scan-page .la { padding-top: 14px; }
+  .sc-secondary-row { grid-template-columns: 1fr; }
+  .sc-dose-row { grid-template-columns: 1fr 1fr; }
+  .sc-dose-row > .sc-field:first-child { grid-column: 1 / -1; }
+}

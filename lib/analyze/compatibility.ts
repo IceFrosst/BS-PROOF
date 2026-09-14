@@ -27,7 +27,13 @@ const ROOT = process.cwd();
 /** Bump together with prompts/compatibility.md. Its own cache domain (invariant 3). */
 export const COMPAT_PROMPT_VERSION = "compat-v1.0";
 
-export type Basis = "label" | "evidence_run" | "registry" | "curated_table" | "model_prior";
+/*
+ * `user_input` (2026-09-15): facts a person TYPED on the manual search path of
+ * /scan. Like `label` it is a claim about the product rather than a
+ * verification, but it is weaker still -- nothing was even photographed -- so
+ * it is its own basis and never renders as a label read.
+ */
+export type Basis = "label" | "user_input" | "evidence_run" | "registry" | "curated_table" | "model_prior";
 
 interface Source {
   title: string;

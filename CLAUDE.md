@@ -560,6 +560,39 @@ do not drop it.
 
 ## Current state
 
+**2026-09-15 — `/scan` redesigned (founder-approved option 1): pure white, phone-first, scanning owns
+the first viewport, plus a real manual search path.** The page is the transparent green-frame /
+white-bottle / blue-pixel mark (`public/scan-mark.svg`, derived from the app icon by
+`scripts/write_scan_mark.mjs`; a test pins the two together), one headline, **Take a photo**
+(primary) and **Upload an image** (secondary), an "or" divider and an expandable **Search for your
+supplement** control. Measured on a Pixel 7: the whole stack ends at 666 of 839 px; on a 1280×720
+window at 705 px. The white ground is scoped with `body:has(.scan-page)` so the shared header stays
+(white here) and the root layout, `/`, `/tester`, `.analyze-hero` and every `.la-*` rule are
+untouched. **Camera is the `capture="environment"` file input**: production's
+`Permissions-Policy: camera=()` blocks `getUserMedia`, so the in-page viewfinder is gone rather than
+silently failing; upload remains the fallback.
+
+The manual path is honest by construction. `lib/analyze/catalog.ts` derives a **slim catalog** from
+`vocab/form.json` (labels, aliases, the `*_unspecified` flag, `dose_conversion` ∈ exact / bounded /
+refused probed from the real converter, `scored` from the retained runs) — never molar masses or
+formulae; `GET /api/scan` exposes it and the page passes it to the client as a prop. The user picks
+an ingredient (ARIA combobox, keyboard-tested), then the **exact form** (required, no default), then
+an optional per-serving dose in **mg / g / mcg only** plus servings/day; **IU is refused** (its mass
+depends on the substance — invariant 5) and CFU-counted ingredients take no mass. The body posts as
+`application/json` to the **existing `POST /api/scan`**, which now branches on content type;
+`analyzeManual` validates against the catalog and calls **`analyzeFromLabel`**, extracted from
+`analyzeScan` so stages 1–5 have exactly one implementation (a typed and a photographed creatine tub
+produce identical `product`, `evidence` and `dose_effectiveness` blocks — pinned). Every answer now
+carries **`source: "photo" | "manual"`**; a manual answer has an `input` block under the new basis
+**`user_input`** ("Typed by you", rank 5, between `label` and `model_prior`), no `label`, no read
+confidence, no spans, no vision model, and a standing `typed_not_verified` caveat. The manual path
+needs no model key (the score is deterministic; model sections degrade alone), the photo path still
+503s without one, and `LABEL_ANALYZER_ENABLED=0` stops both. `product-score.ts`, `llm.ts`, scoring
+constants, prompts, schemas, `next.config.ts`, `app/page.tsx` and `vercel.json` are unchanged.
+Design: `docs/SYSTEM_DESIGN.md` §1a / §3a. Tests: `tests/scan-manual.test.ts`,
+`tests/scan-search.test.tsx` (346 unit tests total). Gates at hand-off: typecheck, ESLint, both
+Python gates, production build, front-door + `/scan` / `/tester` axe specs on desktop and mobile.
+
 **2026-09-14 — installable PWA shell implemented.** The Next.js manifest launches the installed app at
 `/scan/` in standalone mode, with separate mask-safe Android `any`/`maskable` assets, an opaque
 180 px Apple touch icon, dark browser chrome, and the requested one-color white vector mark. The
@@ -1275,7 +1308,18 @@ still the unmeasured SR-uplift experiment (Next item 3).
 
 ## Next
 
-**Handoff: the PWA install shell is implemented; after the validated `main` deploy, verify the icon,
+**Handoff (2026-09-15): the `/scan` redesign and manual search path are implemented and verified.**
+After the validated `main` deploy, verify on one iOS and one
+Android device: the `capture="environment"` button opens the platform camera from the installed app,
+upload still works, and the search combobox is usable with a screen reader. **Option 2 — a search
+over a catalogue of specific BRANDED PRODUCTS — is DEFERRED** until the algorithmic score satisfies
+LithuaniaBio acceptance. Those acceptance criteria are **not yet documented** anywhere in this repo,
+and nothing here claims the gate is met: every retained run is still `public_claims_allowed: false`
+and the composite has not passed anchor calibration. Do not start a branded catalogue, a product
+database or a barcode lookup before the criteria are written down and the score is measured against
+them. The manual path searches the ingredient × form *vocabulary* only, on purpose.
+
+**Earlier handoff: the PWA install shell is implemented; after the validated `main` deploy, verify the icon,
 standalone launch, and `/scan/` photo-capture/upload flow on one iOS and one Android device.** The narrow
 effect contract remains IMPLEMENTED for the design lab only
 (`docs/design/2026-09-11-effect-bar-and-outcomes-tab.md`). `effect-research-v0.1`

@@ -1,7 +1,8 @@
 "use client";
 
 /*
- * THE SCAN. Photograph a label, get the product's full analysis: the evidence
+ * THE SCAN. Photograph a label -- or, since 2026-09-15, search for the
+ * supplement by name -- and get the product's full analysis: the evidence
  * verdicts with their four arcs, dose effectiveness, form and ingredient
  * compatibility, and the company's background -- every block stamped with the
  * BASIS it rests on.
@@ -16,24 +17,45 @@
  *    carries a basis badge; model knowledge is dashed and says "unverified".
  * 4. The validity banner is not decoration: every retained run withholds public
  *    claims and the UI has to say so.
+ * 5. TYPED IS NOT READ. A manual entry renders under "What you entered" with
+ *    the `user_input` badge; it never shows a read confidence, quoted spans or a
+ *    vision model, because none exist. The server says which path ran
+ *    (`source`) and the UI keys off that, not off which button was pressed.
+ *
+ * CAMERA. "Take a photo" is a plain <input type="file" capture="environment">.
+ * Production sends `Permissions-Policy: camera=()`, which blocks
+ * navigator.mediaDevices.getUserMedia outright, so an in-page viewfinder can
+ * never open there; the capture attribute hands off to the platform camera
+ * instead and needs no permission policy. "Upload an image" is the same input
+ * without `capture`, for a photo already on the device or a desktop file.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
-import type { ScanAnalysis } from "@/lib/analyze/scan";
+import { SupplementSearch } from "@/components/supplement-search";
+import type { CatalogIngredient } from "@/lib/analyze/catalog";
+import type { ManualScanInput, ScanAnalysis } from "@/lib/analyze/scan";
 
 type Basis = keyof ScanAnalysis["basis_legend"];
 type NullableNumber = number | null;
 
 const MAX_BYTES = 12 * 1024 * 1024;
 
-const STAGES = [
+const PHOTO_STAGES = [
   "Reading the label…",
   "Converting the printed dose to its active moiety…",
   "Matching against retained evidence runs…",
   "Checking the FDA enforcement registry…",
   "Asking the model about the company and the combination…",
 ];
+
+const MANUAL_STAGES = [
+  "Converting the dose you entered to its active moiety…",
+  "Matching against retained evidence runs…",
+  "Asking the model what the literature says…",
+];
+
+const ACCEPTED_TYPES = "image/png,image/jpeg,image/webp,image/gif";
 
 function pct(value: NullableNumber): string {
   return value === null || value === undefined ? "—" : `${Math.round(value * 100)}%`;
@@ -198,23 +220,22 @@ function severityLabel(kind: string, severity: string): string {
   return severity === "high" ? `${k} · high` : severity === "moderate" ? `${k} · moderate` : k;
 }
 
-export function ScanFlow() {
+export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState(0);
+  const [stages, setStages] = useState<string[]>(PHOTO_STAGES);
   const [data, setData] = useState<ScanAnalysis | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
-  const [stream, setStream] = useState<MediaStream | null>(null);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const captureInputRef = useRef<HTMLInputElement | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   useEffect(() => {
     if (!busy) return;
-    const id = setInterval(() => setStage((s) => Math.min(s + 1, STAGES.length - 1)), 6000);
+    const id = setInterval(() => setStage((s) => Math.min(s + 1, stages.length - 1)), 6000);
     return () => clearInterval(id);
-  }, [busy]);
+  }, [busy, stages.length]);
 
   useEffect(() => () => {
     if (preview) URL.revokeObjectURL(preview);
@@ -228,6 +249,7 @@ export function ScanFlow() {
     setError(null);
     setData(null);
     setFile(picked);
+    setSearchOpen(false);
     setPreview((old) => {
       if (old) URL.revokeObjectURL(old);
       return URL.createObjectURL(picked);
@@ -242,83 +264,79 @@ export function ScanFlow() {
     [stageFile],
   );
 
-  const closeCamera = useCallback(() => {
-    setStream((old) => {
-      old?.getTracks().forEach((t) => t.stop());
+  const clearFile = useCallback(() => {
+    setFile(null);
+    setPreview((old) => {
+      if (old) URL.revokeObjectURL(old);
       return null;
     });
   }, []);
 
-  const openCamera = useCallback(async () => {
-    if (!navigator.mediaDevices?.getUserMedia) {
-      captureInputRef.current?.click();
+  const receive = useCallback(async (res: Response) => {
+    const json = (await res.json()) as ScanAnalysis & { error?: string };
+    if (!res.ok && !json.status) {
+      setError(json.error ?? `Request failed (${res.status}).`);
       return;
     }
-    try {
-      const media = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } },
-        audio: false,
-      });
-      setError(null);
-      setStream(media);
-    } catch {
-      captureInputRef.current?.click();
+    setData(json);
+    if (
+      json.status === "label_unreadable" ||
+      json.status === "analyzer_failed" ||
+      json.status === "bad_request" ||
+      json.status === "manual_input_invalid"
+    ) {
+      setError(json.error ?? "The analysis could not run.");
     }
   }, []);
 
-  useEffect(() => {
-    if (stream && videoRef.current) {
-      videoRef.current.srcObject = stream;
-      void videoRef.current.play().catch(() => undefined);
-    }
-    return () => stream?.getTracks().forEach((t) => t.stop());
-  }, [stream]);
-
-  const snap = useCallback(() => {
-    const video = videoRef.current;
-    if (!video || !video.videoWidth) return;
-    const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext("2d")?.drawImage(video, 0, 0);
-    canvas.toBlob(
-      (blob) => {
-        if (blob) stageFile(new File([blob], "camera-label.jpg", { type: "image/jpeg" }));
-        closeCamera();
-      },
-      "image/jpeg",
-      0.92,
-    );
-  }, [stageFile, closeCamera]);
-
-  const submit = useCallback(async () => {
+  const submitPhoto = useCallback(async () => {
     if (!file || busy) return;
     setError(null);
     setData(null);
+    setStages(PHOTO_STAGES);
     setStage(0);
     setBusy(true);
     try {
       const body = new FormData();
       body.append("image", file);
-      const res = await fetch("/api/scan", { method: "POST", body });
-      const json = (await res.json()) as ScanAnalysis & { error?: string };
-      if (!res.ok && !json.status) {
-        setError(json.error ?? `Request failed (${res.status}).`);
-      } else {
-        setData(json);
-        if (json.status === "label_unreadable" || json.status === "analyzer_failed" || json.status === "bad_request") {
-          setError(json.error ?? "The label could not be read.");
-        }
-      }
+      await receive(await fetch("/api/scan", { method: "POST", body }));
     } catch (err) {
       setError(`Could not reach the analyzer: ${String(err)}`);
     } finally {
       setBusy(false);
     }
-  }, [file, busy]);
+  }, [file, busy, receive]);
+
+  const submitManual = useCallback(
+    async (input: ManualScanInput) => {
+      if (busy) return;
+      setError(null);
+      setData(null);
+      clearFile();
+      setStages(MANUAL_STAGES);
+      setStage(0);
+      setBusy(true);
+      try {
+        await receive(
+          await fetch("/api/scan", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ source: "manual", ...input }),
+          }),
+        );
+      } catch (err) {
+        setError(`Could not reach the analyzer: ${String(err)}`);
+      } finally {
+        setBusy(false);
+      }
+    },
+    [busy, receive, clearFile],
+  );
 
   const legend = data?.basis_legend;
   const label = data?.label;
+  const entry = data?.input;
+  const typed = data?.source === "manual";
   const product = data?.product;
   const evidence = data?.evidence as
     | { status: string; rows?: EvidenceRow[]; scored_forms?: string[]; run?: Record<string, unknown>; validity?: { status: string | null; public_claims_allowed: boolean; note: string | null; limitations?: string[] } }
@@ -328,21 +346,12 @@ export function ScanFlow() {
   const dose = data?.dose_effectiveness;
   const compat = data?.compatibility;
   const company = data?.company;
+  const factsBasis: Basis = typed ? "user_input" : "label";
 
   return (
-    <section className="la scan" aria-labelledby="scan-title">
-      <div className="la-intro">
-        <p className="eyebrow">Scan a product</p>
-        <h2 id="scan-title">Photograph the label.</h2>
-        <p className="la-lede">
-          One photo of the Supplement Facts panel. You get the evidence verdicts with their arcs, whether your dose is
-          in the range that worked, how the form and the combination hold up, and what is on record about the company
-          — each part marked with where it came from.
-        </p>
-      </div>
-
+    <section className="la scan sc" aria-label="Scan a supplement">
       <div
-        className={`la-drop${dragging ? " is-dragging" : ""}${busy ? " is-busy" : ""}`}
+        className={`sc-capture${dragging ? " is-dragging" : ""}${busy ? " is-busy" : ""}`}
         onDragOver={(e) => {
           e.preventDefault();
           setDragging(true);
@@ -354,70 +363,77 @@ export function ScanFlow() {
           if (!busy) pick(e.dataTransfer.files);
         }}
       >
-        <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="la-input" id="scan-file" disabled={busy} onChange={(e) => pick(e.target.files)} />
-        <input ref={captureInputRef} type="file" accept="image/*" capture="environment" className="la-input" aria-hidden="true" tabIndex={-1} onChange={(e) => pick(e.target.files)} />
+        {/* Two inputs, one difference: `capture` hands off to the platform camera. */}
+        <input
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="la-input"
+          id="scan-capture"
+          disabled={busy}
+          onChange={(e) => pick(e.target.files)}
+        />
+        <input type="file" accept={ACCEPTED_TYPES} className="la-input" id="scan-file" disabled={busy} onChange={(e) => pick(e.target.files)} />
 
-        {stream ? (
-          <div className="la-camera">
-            <video ref={videoRef} className="la-camera-view" muted playsInline autoPlay />
-            <div className="la-actions">
-              <button type="button" className="button button-dark la-analyze" onClick={snap}>
-                Capture
-              </button>
-              <button type="button" className="button button-outline" onClick={closeCamera}>
-                Cancel
-              </button>
+        {file && preview ? (
+          <div className="sc-staged">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="la-preview sc-preview" src={preview} alt="The label you staged for analysis" />
+            <button type="button" className="button button-dark sc-primary la-analyze" onClick={() => void submitPhoto()} disabled={busy}>
+              {busy ? "Scanning…" : "Scan this label"}
+            </button>
+            <div className="sc-secondary-row">
+              <label className={`button button-outline sc-secondary${busy ? " is-disabled" : ""}`} htmlFor="scan-capture">
+                Retake photo
+              </label>
+              <label className={`button button-outline sc-secondary${busy ? " is-disabled" : ""}`} htmlFor="scan-file">
+                Choose a different image
+              </label>
             </div>
+            <span className="sc-hint">
+              {file.name} · {(file.size / 1e6).toFixed(1)} MB — nothing is sent until you press Scan
+            </span>
           </div>
         ) : (
-          <>
-            {preview ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img className="la-preview" src={preview} alt="The label you staged for analysis" />
-            ) : (
-              <div className="la-drop-art" aria-hidden="true">
-                <svg viewBox="0 0 64 64" width="56" height="56" fill="none" stroke="currentColor" strokeWidth="3">
-                  <rect x="10" y="6" width="44" height="52" rx="5" />
-                  <path d="M18 24h28M18 34h28M18 44h18" strokeLinecap="round" />
-                </svg>
-              </div>
-            )}
-            <div className="la-drop-copy">
-              {file ? (
-                <>
-                  <button type="button" className="button button-dark la-analyze" onClick={() => void submit()} disabled={busy}>
-                    {busy ? "Scanning…" : "Scan"}
-                  </button>
-                  <div className="la-actions">
-                    <button type="button" className="button button-outline" onClick={() => void openCamera()} disabled={busy}>
-                      Retake photo
-                    </button>
-                    <label className="button button-outline" htmlFor="scan-file">
-                      Choose a different image
-                    </label>
-                  </div>
-                </>
-              ) : (
-                <div className="la-actions">
-                  <button type="button" className="button button-dark" onClick={() => void openCamera()} disabled={busy}>
-                    Take a photo
-                  </button>
-                  <label className="button button-light" htmlFor="scan-file">
-                    Upload an image
-                  </label>
-                </div>
-              )}
-              <span>
-                {file
-                  ? `${file.name} · ${(file.size / 1e6).toFixed(1)} MB — nothing is sent until you press Scan`
-                  : "or drag an image here · PNG, JPEG, WebP · up to 12 MB"}
-              </span>
-            </div>
-          </>
+          <div className="sc-actions">
+            <label className={`button button-dark sc-primary${busy ? " is-disabled" : ""}`} htmlFor="scan-capture">
+              Take a photo
+            </label>
+            <label className={`button button-outline sc-secondary${busy ? " is-disabled" : ""}`} htmlFor="scan-file">
+              Upload an image
+            </label>
+            <span className="sc-hint">Supplement Facts panel · PNG, JPEG, WebP · up to 12 MB</span>
+          </div>
         )}
+
+        <div className="sc-or" role="separator" aria-label="or">
+          <span>or</span>
+        </div>
+
+        <button
+          type="button"
+          className="sc-search-toggle"
+          aria-expanded={searchOpen}
+          aria-controls="scan-search"
+          disabled={busy}
+          onClick={() => setSearchOpen((v) => !v)}
+        >
+          <span>Search for your supplement</span>
+          <svg aria-hidden="true" viewBox="0 0 20 20" width="18" height="18" className="sc-chevron">
+            <path d="M5 7.5 10 12.5 15 7.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+        <div id="scan-search" className="sc-search-panel" hidden={!searchOpen}>
+          <p className="sc-search-lede">
+            No photo? Pick the ingredient and its exact form from the catalog, add the dose if you know it. The result is
+            marked as typed — nothing verifies that a product contains what you enter.
+          </p>
+          <SupplementSearch catalog={catalog} busy={busy} onSubmit={(input) => void submitManual(input)} />
+        </div>
+
         {busy ? (
-          <p className="la-stage" role="status" aria-live="polite">
-            {STAGES[stage]}
+          <p className="la-stage sc-stage" role="status" aria-live="polite">
+            {stages[stage]}
           </p>
         ) : null}
       </div>
@@ -431,14 +447,59 @@ export function ScanFlow() {
 
       {data && !error && legend ? (
         <div className="la-result scan-result">
+          {/* The page's h1 is the headline; sections below are h3, so name the result level in between. */}
+          <h2 className="sr-only">Result</h2>
           {data.status === "analyzer_unavailable" ? (
             <div className="la-empty">
               <strong>Scanning is not configured on this deployment.</strong>
-              <span>The server needs a model API key (DEEPSEEK_API_KEY). The retained runs are unaffected.</span>
+              <span>The server needs a model API key (DEEPSEEK_API_KEY) to read a photo. Searching for a supplement by name still works.</span>
             </div>
           ) : null}
 
-          {label ? (
+          {typed && entry ? (
+            <div className="scan-identity sc-entered">
+              <div className="scan-identity-main">
+                <p className="eyebrow">What you entered</p>
+                <h3>
+                  {entry.ingredient_label}
+                  <span className="scan-brand"> · {entry.form_label}</span>
+                </h3>
+                <div className="scan-chips">
+                  <span className="scan-chip">{entry.ingredient_label}</span>
+                  <span className="scan-chip">{entry.form_label}</span>
+                  <span className="scan-chip">
+                    {entry.dose_per_serving
+                      ? `${entry.dose_per_serving.value} ${entry.dose_per_serving.unit} compound / serving`
+                      : "no dose entered"}
+                  </span>
+                  {product ? (
+                    <span className="scan-chip">
+                      {product.elemental_dose_mg.low === null ? `active moiety not convertible (${product.elemental_dose_mg.basis})` : `${mg(product.elemental_dose_mg.low)} active moiety`}
+                    </span>
+                  ) : null}
+                  {entry.servings_per_day !== null ? <span className="scan-chip">{entry.servings_per_day} serving(s)/day</span> : null}
+                  <BasisBadge kind="user_input" legend={legend} />
+                </div>
+                <p className="la-dim sc-typed-note">Typed, not read from a label. There is no vision read behind this entry, so nothing in it is label-verified.</p>
+              </div>
+              {data.meta ? (
+                <dl className="scan-meta">
+                  <div>
+                    <dt>Took</dt>
+                    <dd>{data.meta.timing_s}s</dd>
+                  </div>
+                  <div>
+                    <dt>Source</dt>
+                    <dd>typed</dd>
+                  </div>
+                  <div>
+                    <dt>Text model</dt>
+                    <dd>{data.meta.models.text ?? "—"}</dd>
+                  </div>
+                </dl>
+              ) : null}
+            </div>
+          ) : label ? (
             <div className="scan-identity">
               <div className="scan-identity-main">
                 <p className="eyebrow">What the label says</p>
@@ -652,7 +713,7 @@ export function ScanFlow() {
 
           {/* ---------------- dose ---------------- */}
           {dose ? (
-            <Section id="dose" eyebrow="Dose" title="Is your dose the dose that worked?" basis={["evidence_run", "label"]} legend={legend}>
+            <Section id="dose" eyebrow="Dose" title="Is your dose the dose that worked?" basis={["evidence_run", factsBasis]} legend={legend}>
               <p className="scan-note">{dose.note}</p>
               {dose.outcomes.length ? (
                 <div className="scan-doses">
@@ -719,7 +780,7 @@ export function ScanFlow() {
               ) : null}
 
               <div className="scan-actives">
-                <span className="la-arc-label">Actives read</span>
+                <span className="la-arc-label">{typed ? "Actives entered" : "Actives read"}</span>
                 <div className="scan-chips">
                   {compat.actives.map((a) => (
                     <span key={a.printed} className="scan-chip">
@@ -777,7 +838,11 @@ export function ScanFlow() {
           {company ? (
             <Section id="company" eyebrow="Company" title="Who makes it, and what is on record?" basis={company.basis_used.length ? company.basis_used : ["label"]} legend={legend}>
               {company.status === "no_brand_on_label" ? (
-                <p className="la-dim">No brand or manufacturer is printed on this panel, so there is nothing to look up.</p>
+                <p className="la-dim">
+                  {typed
+                    ? "The search path takes an ingredient, a form and a dose — no brand — so there is no company to look up."
+                    : "No brand or manufacturer is printed on this panel, so there is nothing to look up."}
+                </p>
               ) : (
                 <>
                   <div className="scan-company-grid">
