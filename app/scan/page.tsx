@@ -6,10 +6,9 @@ import { ScanFlow } from "@/components/scan-flow";
 /*
  * THE PRODUCT SURFACE: scan a label, get the full analysis.
  *
- * Unlisted like /tester (no nav link, site is robots noindex). The founder's
- * front-door decision of 2026-08-25 -- the public page is the waitlist alone --
- * still stands; wiring this page into the front door is one link in
- * app/page.tsx, and tests/e2e/front-door.spec.ts will say so when it happens.
+ * Still absent from site navigation like /tester (site-wide robots noindex).
+ * The 2026-09-14 PWA decision makes this the public manifest's installed
+ * start_url while keeping the browser front door at / as the waitlist.
  */
 export const metadata: Metadata = {
   title: "Scan",

@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="BS Proof supplement scanner mark">
+
+  <g transform="translate(0 0) scale(1)">
+    <g fill="none" stroke="#FFFFFF" stroke-width="27" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M77 192V111Q77 77 111 77H192"/>
+      <path d="M320 77H401Q435 77 435 111V192"/>
+      <path d="M77 320V401Q77 435 111 435H192"/>
+      <path d="M320 435H401Q435 435 435 401V320"/>
+    </g>
+
+    <path d="M214 183H282V195H291V213H300V235H292V258H302V282H291V307H285V341Q285 371 255 376H221Q189 371 189 339V225Q189 203 207 195Z" fill="none" stroke="#FFFFFF" stroke-width="8" stroke-linejoin="round"/>
+
+    <rect x="207" y="156" width="80" height="31" rx="7" fill="#FFFFFF"/>
+    <rect x="205" y="239" width="79" height="42" rx="8" fill="#FFFFFF"/>
+    <rect x="205" y="299" width="55" height="10" rx="5" fill="#FFFFFF"/>
+    <rect x="205" y="321" width="67" height="10" rx="5" fill="#FFFFFF"/>
+
+    <rect x="283" y="199" width="24" height="24" rx="3" fill="#FFFFFF"/>
+    <rect x="315" y="206" width="18" height="18" rx="3" fill="#FFFFFF"/>
+    <rect x="340" y="228" width="14" height="14" rx="2" fill="#FFFFFF"/>
+    <rect x="292" y="235" width="21" height="21" rx="3" fill="#FFFFFF"/>
+    <rect x="321" y="253" width="26" height="26" rx="3" fill="#FFFFFF"/>
+    <rect x="357" y="266" width="16" height="16" rx="2" fill="#FFFFFF"/>
+    <rect x="281" y="270" width="26" height="26" rx="3" fill="#FFFFFF"/>
+    <rect x="314" y="290" width="18" height="18" rx="3" fill="#FFFFFF"/>
+    <rect x="341" y="306" width="22" height="22" rx="3" fill="#FFFFFF"/>
+    <rect x="289" y="313" width="22" height="22" rx="3" fill="#FFFFFF"/>
+    <rect x="318" y="339" width="17" height="17" rx="2" fill="#FFFFFF"/>
+    <rect x="346" y="350" width="13" height="13" rx="2" fill="#FFFFFF"/>
+    <rect x="282" y="348" width="16" height="16" rx="2" fill="#FFFFFF"/>
+  </g>
+</svg>

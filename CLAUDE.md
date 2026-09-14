@@ -560,6 +560,16 @@ do not drop it.
 
 ## Current state
 
+**2026-09-14 — installable PWA shell implemented.** The Next.js manifest launches the installed app at
+`/scan/` in standalone mode, with separate mask-safe Android `any`/`maskable` assets, an opaque
+180 px Apple touch icon, dark browser chrome, and the requested one-color white vector mark. The
+supplied red scanner artwork was redrawn after an Opus 5 design pass: green frame, white bottle,
+blue data pixels on ink. No service worker or offline evidence cache was added; supported browsers
+can install from the manifest over HTTPS, while scan analysis remains explicitly network-dependent.
+The public manifest intentionally exposes the formerly unlisted `/scan/` start route while `/` stays
+the waitlist. Contract and phone
+steps: `docs/design/2026-09-14-pwa-install.md`; regression coverage: `tests/pwa.test.ts`.
+
 **2026-09-11 — `/tests/supplements` shipped to `main`. Handoff: `docs/HANDOFF-AYKHAN.md`.**
 A public-but-unlisted test page (`app/tests/supplements/page.tsx`) renders the design-lab card
 with `publicTest`. Six static fixtures, no API call, no research job, no survey, no user data;
@@ -1265,8 +1275,10 @@ still the unmeasured SR-uplift experiment (Next item 3).
 
 ## Next
 
-**Handoff: the narrow effect contract is IMPLEMENTED for the design lab only
-(`docs/design/2026-09-11-effect-bar-and-outcomes-tab.md`).** `effect-research-v0.1`
+**Handoff: the PWA install shell is implemented; after the validated `main` deploy, verify the icon,
+standalone launch, and `/scan/` photo-capture/upload flow on one iOS and one Android device.** The narrow
+effect contract remains IMPLEMENTED for the design lab only
+(`docs/design/2026-09-11-effect-bar-and-outcomes-tab.md`). `effect-research-v0.1`
 (prompt + schema + `effect-contract.ts` + the caffeine fixture) and the honest
 Effect presentation ship behind `/design-lab/ab`, which 404s outside development.
 Next, in this order and none of it done here: (1) decide whether the **funding
