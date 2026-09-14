@@ -50,6 +50,7 @@ describe("PWA install contract", () => {
   });
 
   it("publishes matching browser and iOS metadata", () => {
+    expect(metadata.metadataBase?.toString()).toBe("https://bs-proof-dashboard.vercel.app/");
     expect(metadata.manifest).toBe("/manifest.webmanifest");
     expect(metadata.icons).toMatchObject({
       icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],

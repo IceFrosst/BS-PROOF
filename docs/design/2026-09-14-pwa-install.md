@@ -28,7 +28,7 @@ Green means verification, blue means data, and white keeps the product neutral. 
 
 ## Phone test
 
-1. Open `https://bs-proof.vercel.app/scan/` after the validated deployment.
+1. Open `https://bs-proof-dashboard.vercel.app/scan/` after the validated deployment.
 2. iPhone/iPad: from that `/scan/` page in Safari, use Share → **Add to Home Screen** → **Add**. Opening the install flow from the waitlist root can make older iOS versions reopen `/` instead of honoring the manifest start path.
 3. Android: use Chrome → menu → **Install app**. If Chrome instead says **Add to Home screen**, record that result before calling the Android install check complete.
 4. Launch **BS Proof** from the home screen. It should open `/scan/` without browser chrome and show the green-frame bottle icon.
