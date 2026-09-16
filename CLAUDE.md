@@ -561,6 +561,47 @@ do not drop it.
 
 ## Current state
 
+**2026-09-16 — `/scan` design pass: a phone-first design system, and the result is now its own
+STATE.** Founder brief: "coherent, simplistic but look scientific … world class, not vibecoded … phone
+optimised." Two things shipped in `components/scan-flow.tsx` + the `/scan` block of `app/globals.css`
+(scoped to `.scan-page` / `.sc-*` / `.scan-*`; shared `.la-*` rules untouched, overridden under
+`.scan-page`), with **no change to `lib/analyze/**`, `app/api/**`, any prompt, schema or scoring
+constant**:
+
+1. **The "no results after photo" bug.** The staged photo and its three buttons used to stay on top and
+   the report rendered below the fold. Now `landing → staged → loading → result | error` each own the
+   viewport: on an answer the capture chrome unmounts, a compact scanned-product header (thumbnail or
+   typed chip, name, brand, **Scan another**) takes the top, and focus + scroll move to it (instant
+   under `prefers-reduced-motion`). Loading is a progress panel (dimmed thumbnail, indeterminate bar,
+   stage list with the current step marked; the Google "Save your result" card is its one CTA when
+   configured) — never a greyed "Scanning…" pill. `Scan another` is repeated at the end of the report;
+   nothing is sticky.
+2. **The report halved without losing a fact**: 9911 → 4919 px at 390 wide (10424 → 5137 at 360),
+   composite on the second screen, zero horizontal overflow. One "Before you read the score" stack
+   holds the run-validity banner (always open, above the first number) and the caveats + funding /
+   publication-bias / MLM disclosures as one-line `<details>` rows (same `la-alert la-alert-warn` class,
+   `role="note"`, render-only-on-concern — unchanged; MLM moved here from the company card, which now
+   points to it). Each outcome card: name, verdict word, the 0–100 as the page's single 40px bold
+   moment, and the **four arcs as one-line rows (label, verdict, coverage track, coverage %)**; a 0%
+   arc gets a striped track and the words "0%, untested", so `0.00 @ 0%` and `−0.70 @ 100%` cannot look
+   alike (invariant 8, pinned). Label facts, the model's recalled company facts, the badge legend and a
+   Technical details block (run parameters, models, per-stage timings, prompt versions, `run_id`,
+   `app_version`, persistence, /methodology link) are collapsed `<details>`, all still in the DOM.
+
+Tokens: one neutral ramp on pure white (no cream, no shadows on the report) and two accents with one
+meaning each — green = a trial measured this, amber = a model recalled this / read before trusting a
+number (the dashed amber **Model knowledge** badge is the one marker; every other badge is one quiet
+outlined family in sentence case). System type stack, scale 13/15/17/22/28/40, tabular numerals, no
+ALL-CAPS eyebrows, no middle-dot meta strings. `app/manifest.ts` `background_color` back to white.
+axe: zero violations on landing / sheet / staged / loading / result at Pixel 7 width (the hidden file
+inputs gained `aria-label`s). Design doc with tokens, state model, wireframe and the list of template
+tells removed: `docs/design/2026-09-16-scan-design-system.md`; screenshots `docs/design/ref/{before,after}/`
+(`scripts/design_shots.mjs` now also captures result tiles and the manual / 503 / not-a-label /
+not-supported states); `docs/SYSTEM_DESIGN.md` §1e. Tests: `tests/scan-result-state.test.tsx` (capture
+chrome gone + focus moved, validity before first score, one warn-alert family, invariant-8 arc
+rendering, collapsed facts reachable, typed ≠ read); `tests/pwa.test.ts` re-pinned. **Unverified on a
+real phone** — screenshots are Playwright iPhone 13 / Pixel 5 emulation with a fake camera.
+
 **2026-09-16 — durable scan-run history for `POST /api/scan`, and an MLM / direct-selling disclosure
 on the company profile.** Two changes, kept separate in scope, landed together:
 

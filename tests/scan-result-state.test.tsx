@@ -1,0 +1,263 @@
+/*
+ * The /scan RESULT STATE (design pass 2026-09-16,
+ * docs/design/2026-09-16-scan-design-system.md). Drives the REAL <ScanFlow>
+ * in jsdom against the rich photo fixture and pins the behaviours that were
+ * the point of the redesign:
+ *
+ *   1. After a scan finishes the capture chrome is GONE (no "Scan this
+ *      label", no Retake) and a scanned-product header with "Scan another"
+ *      owns the top -- people had concluded "no results after photo" when the
+ *      result rendered under the staged photo.
+ *   2. Focus moves to that header (a phone user sees the state change).
+ *   3. The run-validity banner renders BEFORE any composite number in DOM
+ *      order (CLAUDE.md invariant: it is load-bearing, not decoration), inside
+ *      one "Before you read the score" stack together with the caveats and the
+ *      funding / publication-bias / MLM disclosures, each keeping the
+ *      `la-alert la-alert-warn` class every disclosure has always carried.
+ *   4. Invariant 8: an arc at `0.00 @ 0%` and one at `-0.70 @ 100%` never
+ *      render alike -- the empty one says so in words.
+ *   5. A typed entry never looks like a label read (no read confidence, no
+ *      "Read from", the `user_input` badge present).
+ *   6. Everything that was collapsed is still in the DOM: badge legend, run
+ *      parameters, models, timings, run id, app version.
+ */
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { act, createElement } from "react";
+import { createRoot, type Root } from "react-dom/client";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { ScanFlow } from "@/components/scan-flow";
+import { ingredientCatalog } from "@/lib/analyze/catalog";
+
+declare global {
+  var IS_REACT_ACT_ENVIRONMENT: boolean | undefined;
+}
+
+const fixture = JSON.parse(readFileSync(join(process.cwd(), "tests", "fixtures", "scan-photo-rich.json"), "utf8"));
+const catalog = ingredientCatalog();
+
+let container: HTMLDivElement | null = null;
+let root: Root | null = null;
+
+beforeEach(() => {
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  vi.stubGlobal("URL", Object.assign(URL, { createObjectURL: () => "blob:preview", revokeObjectURL: () => {} }));
+});
+
+afterEach(async () => {
+  if (root) await act(async () => root?.unmount());
+  container?.remove();
+  root = null;
+  container = null;
+  vi.unstubAllGlobals();
+});
+
+async function mount() {
+  container = document.createElement("div");
+  document.body.appendChild(container);
+  root = createRoot(container);
+  await act(async () => {
+    root?.render(createElement(ScanFlow, { catalog }));
+  });
+  return container;
+}
+
+function mockFetch(body: unknown) {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } })),
+  );
+}
+
+async function scanPhoto(el: HTMLElement) {
+  const input = el.querySelector<HTMLInputElement>("#scan-file");
+  if (!input) throw new Error("no upload input rendered");
+  const file = new File(["fake-bytes"], "label.png", { type: "image/png" });
+  await act(async () => {
+    Object.defineProperty(input, "files", { value: [file], configurable: true });
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  const scanButton = Array.from(el.querySelectorAll("button")).find((b) => /scan this label/i.test(b.textContent ?? ""));
+  if (!scanButton) throw new Error("staged state must offer 'Scan this label'");
+  await act(async () => {
+    scanButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+  await act(async () => {
+    await Promise.resolve();
+  });
+}
+
+function buttons(el: HTMLElement, re: RegExp) {
+  return Array.from(el.querySelectorAll("button")).filter((b) => re.test(b.textContent ?? ""));
+}
+
+describe("/scan result state", () => {
+  it("collapses the capture chrome into a scanned-product header, moves focus there, and offers 'Scan another'", async () => {
+    mockFetch(fixture);
+    const el = await mount();
+    await scanPhoto(el);
+
+    expect(el.querySelector(".scan-result")).not.toBeNull();
+    expect(buttons(el, /scan this label/i)).toHaveLength(0);
+    expect(buttons(el, /retake photo/i)).toHaveLength(0);
+    expect(el.querySelector(".sc-viewfinder")).toBeNull();
+
+    const header = el.querySelector<HTMLElement>(".sc-scanned");
+    expect(header).not.toBeNull();
+    expect(header?.textContent).toContain("Creatine Pro 5000");
+    expect(header?.textContent).toContain("Nordic Labs");
+    expect(document.activeElement).toBe(header);
+    // Top and bottom: thumb-reachable either way.
+    expect(buttons(el, /^scan another$/i).length).toBeGreaterThanOrEqual(2);
+
+    // "Scan another" returns to the landing state with the search pill.
+    await act(async () => {
+      buttons(el, /^scan another$/i)[0].dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(el.querySelector(".scan-result")).toBeNull();
+    expect(buttons(el, /search your supplement/i)).toHaveLength(1);
+  });
+
+  it("puts the validity banner and every disclosure in ONE stack before the first score", async () => {
+    mockFetch(fixture);
+    const el = await mount();
+    await scanPhoto(el);
+
+    const stack = el.querySelector<HTMLElement>(".sc-notices");
+    expect(stack).not.toBeNull();
+    const validity = stack?.querySelector(".la-alert-warn");
+    expect(validity?.textContent).toContain("Not a product claim");
+    // Validity is not collapsed -- the load-bearing line is always visible.
+    expect(validity?.querySelector("details")).toBeNull();
+
+    const firstScore = el.querySelector(".sc-score");
+    expect(firstScore).not.toBeNull();
+    // DOM order: the stack precedes the first composite number.
+    expect(stack!.compareDocumentPosition(firstScore!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    // Caveat, funding, publication bias and MLM are all rows of the same stack,
+    // still carrying the class every disclosure has always used, with the full
+    // text reachable inside a native <details>.
+    const titles = Array.from(stack!.querySelectorAll(".la-alert-warn strong")).map((s) => s.textContent);
+    expect(titles).toEqual(
+      expect.arrayContaining(["Multi ingredient product", "Funding & independence", "Publication bias", "MLM / direct-selling business model"]),
+    );
+    const mlm = stack!.querySelector(".la-alert.la-alert-warn[aria-label='Business model disclosure']");
+    expect(mlm?.querySelector("details")).not.toBeNull();
+    expect(mlm?.textContent).toContain("does not affect the evidence score");
+    // Only one yellow-box family exists on the page: every warn alert is in the stack.
+    expect(el.querySelectorAll(".la-alert-warn").length).toBe(stack!.querySelectorAll(".la-alert-warn").length);
+  });
+
+  it("invariant 8: 0.00 @ 0% and -0.70 @ 100% never render alike, and every arc carries its coverage", async () => {
+    const rows = fixture.evidence.rows;
+    const twisted = {
+      ...fixture,
+      evidence: {
+        ...fixture.evidence,
+        rows: [
+          { ...rows[0], outcome: "untested_form", outcome_label: "Untested form", arcs: { ...rows[0].arcs, form: { verdict: 0, coverage: 0, strength: 0, basis: null } } },
+          { ...rows[1], outcome: "failed_form", outcome_label: "Failed form", arcs: { ...rows[1].arcs, form: { verdict: -0.7, coverage: 1, strength: 0, basis: "ladder" } } },
+        ],
+      },
+    };
+    mockFetch(twisted);
+    const el = await mount();
+    await scanPhoto(el);
+
+    const cards = Array.from(el.querySelectorAll<HTMLElement>(".scan-evidence"));
+    expect(cards).toHaveLength(2);
+    const formArc = (card: HTMLElement) => Array.from(card.querySelectorAll<HTMLElement>(".sc-arc")).find((a) => /in your form/i.test(a.textContent ?? ""))!;
+    const untested = formArc(cards[0]);
+    const failed = formArc(cards[1]);
+    expect(untested.textContent).not.toEqual(failed.textContent);
+    expect(untested.textContent).toContain("untested");
+    expect(untested.classList.contains("sc-arc-empty")).toBe(true);
+    expect(failed.textContent).toContain("100%");
+    expect(failed.classList.contains("sc-arc-empty")).toBe(false);
+    // Every arc row names its coverage in its accessible label.
+    for (const arc of el.querySelectorAll(".sc-arc")) {
+      expect(arc.getAttribute("aria-label")).toMatch(/coverage/);
+    }
+  });
+
+  it("keeps every collapsed fact reachable: legend, run parameters, models, timings, run id, app version", async () => {
+    mockFetch(fixture);
+    const el = await mount();
+    await scanPhoto(el);
+
+    const text = el.textContent ?? "";
+    for (const legendLabel of ["Evidence run", "Public registry", "Curated & cited", "As printed", "Typed by you", "Model knowledge"]) {
+      expect(text).toContain(legendLabel);
+    }
+    const technical = el.querySelector<HTMLElement>(".sc-technical");
+    expect(technical?.textContent).toContain(fixture.meta.models.vision);
+    expect(technical?.textContent).toContain(fixture.meta.models.text);
+    expect(technical?.textContent).toContain(fixture.run_id);
+    expect(technical?.textContent).toContain(fixture.app_version.package_version);
+    expect(technical?.textContent).toContain("How these numbers were produced");
+    expect(technical?.querySelector('a[href="/methodology"]')).not.toBeNull();
+    // Label facts (read confidence, quoted spans) live in the collapsed details, still in the DOM.
+    expect(text).toContain("Read confidence");
+    expect(text).toContain("Read from:");
+  });
+
+  it("a typed entry never looks like a label read", async () => {
+    const manual = {
+      ...fixture,
+      source: "manual",
+      label: undefined,
+      input: {
+        ingredient: "creatine",
+        ingredient_label: "Creatine",
+        form: "creatine_monohydrate",
+        form_label: "Creatine monohydrate",
+        dose_per_serving: { value: 5, unit: "g", mg: 5000 },
+        servings_per_day: 1,
+        basis: "user_input",
+      },
+      company: { ...fixture.company, status: "no_brand_on_label", basis_used: [] },
+    };
+    mockFetch(manual);
+    const el = await mount();
+    // Drive the manual path through the sheet, exactly as a person would.
+    await act(async () => {
+      buttons(el, /search your supplement/i)[0].click();
+    });
+    const combo = el.querySelector<HTMLInputElement>('input[role="combobox"]')!;
+    await act(async () => {
+      // React tracks the value through the prototype setter; set it there so the
+      // synthetic input event carries the new text.
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(combo, "creatine");
+      combo.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await act(async () => {
+      combo.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }));
+    });
+    await act(async () => {
+      combo.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+    });
+    const select = el.querySelector<HTMLSelectElement>("select")!;
+    await act(async () => {
+      select.value = "creatine_monohydrate";
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await act(async () => {
+      el.querySelector("form")?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const header = el.querySelector(".sc-scanned");
+    expect(header?.textContent).toContain("What you entered");
+    expect(header?.querySelector("img")).toBeNull();
+    const identity = el.querySelector(".sc-identity");
+    expect(identity?.querySelector(".scan-badge-user_input")).not.toBeNull();
+    expect(identity?.textContent).toContain("Typed, not read from a label");
+    expect(identity?.textContent).not.toContain("Read confidence");
+    expect(identity?.textContent).not.toContain("Read from:");
+    expect(el.querySelector(".sc-technical")?.textContent).not.toContain("Vision model");
+  });
+});

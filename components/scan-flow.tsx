@@ -7,55 +7,51 @@
  * form and ingredient compatibility, and the company's background -- every
  * block stamped with the BASIS it rests on.
  *
- * REDESIGNED 2026-09-16 (founder: "use your eyes", matching
- * https://bsproof.lovable.app's look). Three changes from the 2026-09-15
- * white, capture=environment-only page:
+ * DESIGN PASS 2026-09-16 (docs/design/2026-09-16-scan-design-system.md).
+ * The page is a state machine and each state OWNS the viewport:
  *
- *   1. CAMERA. <ScanCamera> (components/scan-camera.tsx) opens
- *      getUserMedia({video:{facingMode:{ideal:"environment"}},audio:false})
- *      the moment nothing is staged (`active={!file}`) and shows the live
- *      feed inside one big rounded block with a dark-navy overlay carrying
- *      the scan mark, wordmark, the page's single H1 and a subline. A big
- *      round shutter captures a frame -> canvas -> JPEG -> the SAME
- *      `stageFile` path a picked file already takes, so the existing
- *      multipart POST /api/scan is unchanged. When getUserMedia is
- *      unavailable/denied/insecure-context, the block shows a calm fallback
- *      message and the ORIGINAL `capture="environment"` file input (rendered
- *      below the block by this component) still works -- nothing regresses.
- *   2. "Search your supplement" is now a full-width button ABOVE the camera
- *      block, opening <SearchSheet> (an accessible dialog) rather than an
- *      inline expand/collapse panel below the capture controls.
- *   3. GOOGLE SIGN-IN WHILE RESULTS LOAD (founder: "people log in once so we
- *      capture their email"). `useSupabaseSession` reports whether sign-in
- *      is configured (all three NEXT_PUBLIC_* vars set) and whether anyone
- *      is signed in. When configured and nobody is signed in: a "Save your
- *      result" card with the Google button shows the moment a scan/search is
- *      submitted (during the loading stage messages), and again above a
- *      blurred, `inert` copy of the already-computed result until a session
- *      appears -- the analysis is already in state the whole time, so
- *      signing in reveals it instantly with no re-fetch. When sign-in is not
- *      configured (the default for local/CI), none of this renders and
- *      results show exactly as before. `POST /api/scan/claim` is called the
- *      moment both a session and a `run_id` are available, whichever arrives
- *      second.
+ *   landing -> staged -> loading -> result | error
+ *
+ *   - landing: search pill, live viewfinder (<ScanCamera>, the page's H1 is
+ *     its overlay), shutter, upload link.
+ *   - staged: the photo and "Scan this label" / Retake / Choose another.
+ *   - loading: a progress panel (dimmed thumbnail, stage list with the current
+ *     step marked, indeterminate bar). The Google "Save your result" card is
+ *     the ONE call to action in it when sign-in is configured. Nothing is
+ *     rendered disabled -- a greyed "Scanning…" pill read as broken.
+ *   - result / error: the capture chrome is GONE. A compact scanned-product
+ *     header (thumbnail or a typed chip, name, "Scan another") sits at the
+ *     top, the report follows, and focus + scroll move to it (instant under
+ *     prefers-reduced-motion). Previously the result rendered under the
+ *     staged photo with no transition and people concluded nothing happened.
+ *
+ * Camera, search sheet and sign-in behaviour are unchanged from the 2026-09-16
+ * camera-first redesign: <ScanCamera> runs whenever nothing is staged and no
+ * result is shown; the `capture="environment"` and plain file inputs stay
+ * mounted at all times as the fallback path; `useSupabaseSession` gates the
+ * "Save your result" card and the blurred/inert result lock; `/api/scan/claim`
+ * is called the moment both a session and a `run_id` exist.
  *
  * Rules this component keeps, all from CLAUDE.md:
  *
  * 1. INVARIANT 8: no branch renders a composite without its arcs. A gated row is
- *    an em dash with its arcs still drawn, never a zero.
+ *    an em dash with its arcs still drawn, never a zero. Every arc shows its
+ *    VERDICT and its COVERAGE on one line, so `0.00 @ 0%` and `-0.70 @ 100%`
+ *    can never look alike.
  * 2. "not scored" is not "scores badly": an unscored product renders a distinct
  *    non-numeric state.
  * 3. A model-prior sentence is never typeset like a measurement. Every block
- *    carries a basis badge; model knowledge is dashed and says "unverified".
- * 4. The validity banner is not decoration: every retained run withholds public
- *    claims and the UI has to say so.
+ *    carries a basis badge; model knowledge is the one dashed, amber badge and
+ *    its text says "unverified".
+ * 4. The validity banner is not decoration: it is the first, always-open line
+ *    of the "Before you read the score" stack, above every number.
  * 5. TYPED IS NOT READ. A manual entry renders under "What you entered" with
  *    the `user_input` badge; it never shows a read confidence, quoted spans or a
  *    vision model, because none exist. The server says which path ran
  *    (`source`) and the UI keys off that, not off which button was pressed.
- * 6. A model's recollection about a person's sign-in never gates the SCORE:
- *    the evidence composite, arcs and dose bands are computed and held in
- *    state identically whether or not the result is currently visible.
+ * 6. Sign-in never gates the SCORE: the composite, arcs and dose bands are
+ *    computed and held in state identically whether or not the result is
+ *    currently visible.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -76,17 +72,17 @@ type NullableNumber = number | null;
 const MAX_BYTES = 12 * 1024 * 1024;
 
 const PHOTO_STAGES = [
-  "Reading the label…",
-  "Converting the printed dose to its active moiety…",
-  "Matching against retained evidence runs…",
-  "Checking the FDA enforcement registry…",
-  "Asking the model about the company and the combination…",
+  "Reading the label",
+  "Converting the printed dose to its active moiety",
+  "Matching against retained evidence runs",
+  "Checking the FDA enforcement registry",
+  "Asking the model about the company and the combination",
 ];
 
 const MANUAL_STAGES = [
-  "Converting the dose you entered to its active moiety…",
-  "Matching against retained evidence runs…",
-  "Asking the model what the literature says…",
+  "Converting the dose you entered to its active moiety",
+  "Matching against retained evidence runs",
+  "Asking the model what the literature says",
 ];
 
 const ACCEPTED_TYPES = "image/png,image/jpeg,image/webp,image/gif";
@@ -97,12 +93,16 @@ function pct(value: NullableNumber): string {
 
 function signed(value: NullableNumber): string {
   if (value === null || value === undefined) return "—";
-  return `${value > 0 ? "+" : ""}${value.toFixed(2)}`;
+  return `${value > 0 ? "+" : value < 0 ? "−" : ""}${Math.abs(value).toFixed(2)}`;
 }
 
 function mg(value: NullableNumber): string {
   if (value === null || value === undefined) return "—";
   return value >= 1000 ? `${(value / 1000).toFixed(2).replace(/\.?0+$/, "")} g` : `${Math.round(value)} mg`;
+}
+
+function words(value: string): string {
+  return value.replace(/_/g, " ");
 }
 
 function BasisBadge({ kind, legend }: { kind: Basis; legend: ScanAnalysis["basis_legend"] }) {
@@ -116,14 +116,12 @@ function BasisBadge({ kind, legend }: { kind: Basis; legend: ScanAnalysis["basis
 
 function Section({
   id,
-  eyebrow,
   title,
   basis,
   legend,
   children,
 }: {
   id: string;
-  eyebrow: string;
   title: string;
   basis: Basis[];
   legend: ScanAnalysis["basis_legend"];
@@ -132,10 +130,7 @@ function Section({
   return (
     <section className="scan-section" id={`scan-${id}`} aria-labelledby={`scan-${id}-title`}>
       <header className="scan-section-head">
-        <div>
-          <p className="eyebrow">{eyebrow}</p>
-          <h3 id={`scan-${id}-title`}>{title}</h3>
-        </div>
+        <h3 id={`scan-${id}-title`}>{title}</h3>
         <div className="scan-badges" aria-label="Sources used in this section">
           {basis.map((b) => (
             <BasisBadge key={b} kind={b} legend={legend} />
@@ -147,22 +142,58 @@ function Section({
   );
 }
 
-/* One arc: its verdict AND the coverage behind it, never one without the other. */
-function Arc({ label, value, coverage, note }: { label: string; value: string; coverage: NullableNumber; note?: string | null }) {
-  const fill = coverage === null || coverage === undefined ? 0 : Math.max(0, Math.min(1, coverage));
+/* One "before you read the score" row: a one-line summary, the full text
+ * inside a native <details>. The wrapper keeps the `la-alert la-alert-warn`
+ * class every disclosure on this page has always carried (tests key on it). */
+function Notice({
+  title,
+  body,
+  lede,
+  role,
+  ariaLabel,
+}: {
+  title: string;
+  body: string;
+  lede?: string;
+  role?: "note";
+  ariaLabel?: string;
+}) {
   return (
-    <div className="la-arc">
-      <div className="la-arc-head">
-        <span className="la-arc-label">{label}</span>
-        <strong>{value}</strong>
-      </div>
-      <div className="la-arc-track" role="img" aria-label={`${label}: ${value}, coverage ${pct(coverage)}`}>
-        <span className="la-arc-fill" style={{ width: `${fill * 100}%` }} />
-      </div>
-      <span className="la-arc-foot">
-        {coverage === null || coverage === undefined ? "no coverage recorded" : `${pct(coverage)} of the evidence`}
-        {note ? ` · ${note}` : ""}
+    <div className="la-alert la-alert-warn sc-notice" role={role} aria-label={ariaLabel}>
+      <details className="sc-notice-details">
+        <summary>
+          <strong>{title}</strong>
+          {lede ? <span className="sc-notice-lede">{lede}</span> : null}
+        </summary>
+        <p>{body}</p>
+      </details>
+    </div>
+  );
+}
+
+/* A short lede for a notice: its first sentence, minus the "Model knowledge —
+ * unverified." prefix every model disclosure carries (the badge says that). */
+function firstSentence(body: string): string {
+  const stripped = body.replace(/^Model knowledge — unverified\.\s*/, "");
+  const m = stripped.match(/^(.+?[.!?])(\s|$)/);
+  return (m ? m[1] : stripped).trim();
+}
+
+/* One arc, one line: label, verdict, coverage track, coverage %. The verdict
+ * and the coverage are never separated -- `0.00 @ 0%` renders an empty track
+ * and the word "untested"; `−0.70 @ 100%` a full one. */
+function Arc({ label, value, coverage }: { label: string; value: string; coverage: NullableNumber }) {
+  const known = coverage !== null && coverage !== undefined;
+  const fill = known ? Math.max(0, Math.min(1, coverage)) : 0;
+  const coverageText = !known ? "no coverage recorded" : fill === 0 ? "0%, untested" : pct(coverage);
+  return (
+    <div className={`sc-arc${fill === 0 ? " sc-arc-empty" : ""}`} role="img" aria-label={`${label} ${value}, coverage ${coverageText}`}>
+      <span className="sc-arc-label">{label}</span>
+      <span className="sc-arc-value">{value}</span>
+      <span className="sc-arc-track" aria-hidden="true">
+        <span className="sc-arc-fill" style={{ width: `${fill * 100}%` }} />
       </span>
+      <span className="sc-arc-cov">{coverageText}</span>
     </div>
   );
 }
@@ -178,40 +209,35 @@ type EvidenceRow = {
 };
 
 function EvidenceCard({ row }: { row: EvidenceRow }) {
-  const tone = row.composite === null ? "gated" : row.composite >= 55 ? "positive" : row.composite < 45 ? "negative" : "neutral";
+  const gated = row.composite === null;
+  const notes: string[] = [];
+  if (row.arcs.form?.basis) notes.push(`Form basis: ${words(row.arcs.form.basis)}.`);
+  if (row.arcs.dose?.product_match) notes.push(`Dose match: ${words(row.arcs.dose.product_match)}${row.arcs.dose?.closeness == null ? " (not assessable)" : ""}.`);
+  else if (row.arcs.dose?.closeness == null) notes.push("Dose: not assessable.");
   return (
-    <article className={`scan-card scan-evidence scan-tone-${tone}`}>
-      <header className="la-row-head">
-        <div>
-          <h4>{row.outcome_label ?? row.outcome.replace(/_/g, " ")}</h4>
-          <p className="la-verdict">{row.verdict ?? "no verdict"}</p>
+    <article className={`scan-card scan-evidence${gated ? " scan-evidence-gated" : ""}`}>
+      <header className="sc-outcome-head">
+        <div className="sc-outcome-name">
+          <h4>{row.outcome_label ?? words(row.outcome)}</h4>
+          <p className="sc-verdict">{row.verdict ?? "no verdict"}</p>
         </div>
-        <div className="la-score">
-          <strong>{row.composite === null ? "—" : row.composite}</strong>
-          <span>/ 100</span>
-        </div>
+        <p className="sc-score" aria-label={gated ? "no composite score" : `${row.composite} out of 100`}>
+          <strong>{gated ? "—" : row.composite}</strong>
+          <span aria-hidden="true">/100</span>
+        </p>
       </header>
-      <div className="la-arcs">
+      <div className="sc-arcs">
         <Arc label="Does it work?" value={signed(row.arcs.effect?.verdict)} coverage={row.arcs.effect?.coverage} />
-        <Arc
-          label="In your form?"
-          value={row.arcs.form?.strength == null ? "—" : row.arcs.form.strength.toFixed(2)}
-          coverage={row.arcs.form?.coverage}
-          note={row.arcs.form?.basis ?? null}
-        />
-        <Arc
-          label="At your dose?"
-          value={row.arcs.dose?.closeness == null ? "not assessable" : row.arcs.dose.closeness.toFixed(2)}
-          coverage={row.arcs.dose?.coverage}
-          note={row.arcs.dose?.product_match ?? null}
-        />
-        <Arc label="How much is known?" value={pct(row.arcs.evidence?.coverage)} coverage={row.arcs.evidence?.coverage} />
+        <Arc label="In your form?" value={row.arcs.form?.strength == null ? "—" : row.arcs.form.strength.toFixed(2)} coverage={row.arcs.form?.coverage} />
+        <Arc label="At your dose?" value={row.arcs.dose?.closeness == null ? "—" : row.arcs.dose.closeness.toFixed(2)} coverage={row.arcs.dose?.coverage} />
+        <Arc label="Well studied?" value="" coverage={row.arcs.evidence?.coverage} />
       </div>
-      <footer className="la-row-foot">
+      <footer className="sc-outcome-foot">
         <span>
-          <strong>{row.n_primaries ?? 0}</strong> trial{row.n_primaries === 1 ? "" : "s"}
+          {row.n_primaries ?? 0} trial{row.n_primaries === 1 ? "" : "s"}
         </span>
-        {row.applicability != null ? <span>applies to your product at {pct(row.applicability)}</span> : null}
+        {row.applicability != null ? <span>{pct(row.applicability)} applies to your product</span> : null}
+        {notes.length ? <span className="sc-outcome-notes">{notes.join(" ")}</span> : null}
       </footer>
     </article>
   );
@@ -225,10 +251,15 @@ function DoseBar({ reading, dose }: { reading: NonNullable<ScanAnalysis["dose_ef
   const max = candidates.length ? Math.max(...candidates) * 1.25 : 1;
   const left = (v: number) => `${Math.max(0, Math.min(100, (v / max) * 100))}%`;
   const width = (lo: number, hi: number) => `${Math.max(1.5, Math.min(100, ((hi - lo) / max) * 100))}%`;
+  const name = reading.outcome_label ?? words(reading.outcome);
+  // The server's sentence starts with the outcome name; the heading already
+  // says it, so the prefix is dropped here (presentation only).
+  const stripped = reading.reading.startsWith(`${name}: `) ? reading.reading.slice(name.length + 2) : reading.reading;
+  const sentence = stripped.charAt(0).toUpperCase() + stripped.slice(1);
   return (
     <div className={`scan-dose scan-dose-${reading.tone}`}>
       <div className="scan-dose-head">
-        <strong>{reading.outcome_label ?? reading.outcome.replace(/_/g, " ")}</strong>
+        <strong>{name}</strong>
         <span>{reading.closeness == null ? "closeness —" : `closeness ${reading.closeness.toFixed(2)}`}</span>
       </div>
       <div className="scan-dosebar" role="img" aria-label={reading.reading}>
@@ -244,14 +275,27 @@ function DoseBar({ reading, dose }: { reading: NonNullable<ScanAnalysis["dose_ef
         <span>0</span>
         <span>{mg(max)}</span>
       </div>
-      <p className="scan-reading">{reading.reading}</p>
+      <p className="scan-reading">{sentence}</p>
     </div>
   );
 }
 
 function severityLabel(kind: string, severity: string): string {
-  const k = kind.replace(/_/g, " ");
-  return severity === "high" ? `${k} · high` : severity === "moderate" ? `${k} · moderate` : k;
+  const k = words(kind);
+  return severity === "high" ? `${k}, high` : severity === "moderate" ? `${k}, moderate` : k;
+}
+
+function Facts({ rows }: { rows: Array<[string, React.ReactNode]> }) {
+  return (
+    <dl className="sc-facts">
+      {rows.map(([k, v]) => (
+        <div key={k}>
+          <dt>{k}</dt>
+          <dd>{v}</dd>
+        </div>
+      ))}
+    </dl>
+  );
 }
 
 export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
@@ -268,6 +312,7 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
 
   const auth = useSupabaseSession();
   const claimedRuns = useRef<Set<string>>(new Set());
+  const resultTopRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!busy) return;
@@ -278,6 +323,19 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
   useEffect(() => () => {
     if (preview) URL.revokeObjectURL(preview);
   }, [preview]);
+
+  // The result is its own state: the instant an answer (or an error) lands,
+  // scroll its header into view and move focus there, so the change of state
+  // is unmistakable on a phone. Reduced-motion users get an instant jump.
+  const finished = !busy && (data !== null || error !== null);
+  useEffect(() => {
+    if (!finished) return;
+    const el = resultTopRef.current;
+    if (!el || typeof window === "undefined") return;
+    const reduce = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (typeof el.scrollIntoView === "function") el.scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" });
+    el.focus({ preventScroll: true });
+  }, [finished, data, error]);
 
   // Claim the run for the signed-in user the instant BOTH a session and a
   // run id exist, whichever arrives second: right after sign-in (if a result
@@ -327,6 +385,14 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
       return null;
     });
   }, []);
+
+  // "Scan another": back to the landing state. Clearing the staged file is
+  // what restarts the viewfinder.
+  const reset = useCallback(() => {
+    setData(null);
+    setError(null);
+    clearFile();
+  }, [clearFile]);
 
   const receive = useCallback(async (res: Response) => {
     const json = (await res.json()) as ScanAnalysis & { error?: string };
@@ -412,711 +478,730 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
   const locked = auth.configured && !auth.loading && !auth.email;
   const showSaveCard = auth.configured && !auth.loading && !auth.email;
 
+  const showingResult = finished;
+  const staged = Boolean(file && preview);
+
+  // The scanned-product header: what was scanned or typed, and what happened.
+  const headerKicker = error
+    ? "Could not scan that"
+    : typed
+      ? "What you entered"
+      : label
+        ? "What the label says"
+        : data?.status === "analyzer_unavailable" || data?.status === "not_a_supplement_label"
+          ? "Scan did not finish"
+          : "Result";
+  const headerName = error
+    ? "Scan did not finish"
+    : typed && entry
+      ? entry.form_label
+      : label
+        ? label.product_name ?? label.ingredient_label_text ?? label.ingredient_vocab_id ?? "Unnamed product"
+        : data?.status === "not_a_supplement_label"
+          ? "Not a supplement label"
+          : data?.status === "analyzer_unavailable"
+            ? "Photo could not be analysed"
+            : data?.ingredient_label_text ?? "Result";
+
+  // One line of the facts that decide "at my dose, in my form"; the full
+  // definition list (read confidence, quoted spans…) opens below it.
+  const activeMoiety = product ? (product.elemental_dose_mg.low === null ? `active moiety not convertible` : `${mg(product.elemental_dose_mg.low)} active`) : null;
+  const summaryParts: string[] = typed && entry
+    ? [
+        entry.dose_per_serving ? `${entry.dose_per_serving.value} ${entry.dose_per_serving.unit} compound per serving` : "no dose entered",
+        ...(activeMoiety && entry.dose_per_serving ? [activeMoiety] : []),
+        ...(entry.servings_per_day !== null ? [`${entry.servings_per_day} serving${entry.servings_per_day === 1 ? "" : "s"} a day`] : []),
+      ]
+    : label
+      ? [
+          label.form_vocab_id ? words(label.form_vocab_id) : "form not stated",
+          `${mg(label.compound_dose_mg)} compound per serving`,
+          ...(activeMoiety ? [activeMoiety] : []),
+          ...(label.servings_per_day !== null ? [`${label.servings_per_day} serving${label.servings_per_day === 1 ? "" : "s"} a day`] : []),
+        ]
+      : [];
+
+  const disclosures = data ? literatureDisclosures(data.literature_warnings?.data) : [];
+  const mlm = company?.profile.status === "ok" ? businessModelDisclosure(company.profile.data?.business_model) : null;
+  const hasNotices = Boolean(evidence?.validity || data?.caveats?.length || disclosures.length || mlm);
+
   return (
     <section className="la scan sc" aria-label="Scan a supplement">
-      <button
-        type="button"
-        className="sc-search-cta"
-        onClick={() => setSearchOpen(true)}
-        disabled={busy}
-      >
-        Search your supplement
-      </button>
+      {!busy && !showingResult ? (
+        <button type="button" className="sc-search-cta" onClick={() => setSearchOpen(true)}>
+          Search your supplement
+        </button>
+      ) : null}
 
-      <div
-        className={`sc-capture${dragging ? " is-dragging" : ""}${busy ? " is-busy" : ""}`}
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragging(true);
-        }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setDragging(false);
-          if (!busy) pick(e.dataTransfer.files);
-        }}
-      >
-        {/* Two inputs, one difference: `capture` hands off to the platform
-            camera. Kept mounted at all times -- this is the fallback path
-            that must remain when getUserMedia is unavailable/denied/an
-            insecure context, so nothing regresses. */}
-        <input
-          type="file"
-          accept="image/*"
-          capture="environment"
-          className="la-input"
-          id="scan-capture"
-          disabled={busy}
-          onChange={(e) => pick(e.target.files)}
-        />
-        <input type="file" accept={ACCEPTED_TYPES} className="la-input" id="scan-file" disabled={busy} onChange={(e) => pick(e.target.files)} />
+      {/* Two inputs, one difference: `capture` hands off to the platform
+          camera. Kept mounted at all times -- this is the fallback path
+          that must remain when getUserMedia is unavailable/denied/an
+          insecure context, so nothing regresses. */}
+      <input type="file" accept="image/*" capture="environment" className="la-input" id="scan-capture" aria-label="Photograph the label with the camera" disabled={busy} onChange={(e) => pick(e.target.files)} />
+      <input type="file" accept={ACCEPTED_TYPES} className="la-input" id="scan-file" aria-label="Choose an image of the label" disabled={busy} onChange={(e) => pick(e.target.files)} />
 
-        {file && preview ? (
-          <div className="sc-staged">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img className="la-preview sc-preview" src={preview} alt="The label you staged for analysis" />
-            <button type="button" className="button button-dark sc-primary la-analyze" onClick={() => void submitPhoto()} disabled={busy}>
-              {busy ? "Scanning…" : "Scan this label"}
-            </button>
-            <div className="sc-secondary-row">
-              <button type="button" className={`button button-outline sc-secondary${busy ? " is-disabled" : ""}`} onClick={clearFile} disabled={busy}>
-                Retake photo
+      {!showingResult ? (
+        <div
+          className={`sc-capture${dragging ? " is-dragging" : ""}`}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragging(true);
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragging(false);
+            if (!busy) pick(e.dataTransfer.files);
+          }}
+        >
+          {busy ? (
+            /* ---------------- loading ---------------- */
+            <div className="sc-progress" role="status" aria-live="polite" aria-busy="true">
+              <div className="sc-progress-head">
+                {preview ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img className="sc-thumb sc-thumb-dim" src={preview} alt="" />
+                ) : (
+                  <span className="sc-thumb sc-thumb-typed" aria-hidden="true">
+                    Aa
+                  </span>
+                )}
+                <div>
+                  <p className="sc-progress-title">{preview ? "Scanning the label" : "Analysing what you entered"}</p>
+                  <p className="sc-progress-sub">Usually under a minute.</p>
+                </div>
+              </div>
+              <div className="sc-progress-bar" aria-hidden="true">
+                <span />
+              </div>
+              <ol className="sc-stages">
+                {stages.map((s, i) => (
+                  <li key={s} className={i < stage ? "is-done" : i === stage ? "is-current" : ""} aria-current={i === stage ? "step" : undefined}>
+                    <span className="sc-stage-mark" aria-hidden="true" />
+                    <span className="la-stage">{s}</span>
+                  </li>
+                ))}
+              </ol>
+              {showSaveCard ? <SaveResultCard /> : null}
+            </div>
+          ) : staged ? (
+            /* ---------------- staged ---------------- */
+            <div className="sc-staged">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img className="la-preview sc-preview" src={preview ?? undefined} alt="The label you staged for analysis" />
+              <button type="button" className="button button-dark sc-primary la-analyze" onClick={() => void submitPhoto()}>
+                Scan this label
               </button>
-              <label className={`button button-outline sc-secondary${busy ? " is-disabled" : ""}`} htmlFor="scan-file">
-                Choose a different image
-              </label>
-            </div>
-          </div>
-        ) : (
-          <>
-            <ScanCamera active={!file} disabled={busy} onCapture={stageFile} onUnavailable={() => setCameraUnavailable(true)} />
-            <div className="sc-below-block">
-              {cameraUnavailable ? (
-                <label className={`button button-outline sc-fallback-photo${busy ? " is-disabled" : ""}`} htmlFor="scan-capture">
-                  Take a photo
+              <div className="sc-secondary-row">
+                <button type="button" className="button button-outline sc-secondary" onClick={clearFile}>
+                  Retake photo
+                </button>
+                <label className="button button-outline sc-secondary" htmlFor="scan-file">
+                  Choose a different image
                 </label>
-              ) : null}
-              <label className={`sc-upload-link${busy ? " is-disabled" : ""}`} htmlFor="scan-file">
-                Upload a photo
-              </label>
-              <span className="sc-hint">Supplement Facts panel · PNG, JPEG, WebP · up to 12 MB</span>
+              </div>
             </div>
-          </>
-        )}
-
-        {busy ? (
-          <div className="sc-loading">
-            <p className="la-stage sc-stage" role="status" aria-live="polite">
-              {stages[stage]}
-            </p>
-            {showSaveCard ? <SaveResultCard /> : null}
-          </div>
-        ) : null}
-      </div>
+          ) : (
+            /* ---------------- landing ---------------- */
+            <>
+              <ScanCamera active={!file} disabled={busy} onCapture={stageFile} onUnavailable={() => setCameraUnavailable(true)} />
+              <div className="sc-below-block">
+                {cameraUnavailable ? (
+                  <label className="button button-outline sc-fallback-photo" htmlFor="scan-capture">
+                    Take a photo
+                  </label>
+                ) : null}
+                <label className="sc-upload-link" htmlFor="scan-file">
+                  Upload a photo
+                </label>
+                <span className="sc-hint">PNG, JPEG or WebP, up to 12 MB.</span>
+              </div>
+            </>
+          )}
+        </div>
+      ) : null}
 
       <SearchSheet open={searchOpen} onClose={() => setSearchOpen(false)} titleId="scan-search-title" title="Search your supplement">
         <p className="sc-search-lede">
-          No photo? Pick the ingredient and its exact form from the catalog, add the dose if you know it. The result is
-          marked as typed — nothing verifies that a product contains what you enter.
+          Pick the ingredient and its exact form, add the dose if you know it — the result is marked as typed, not read from a
+          label.
         </p>
         <SupplementSearch catalog={catalog} busy={busy} onSubmit={(input) => void submitManual(input)} />
       </SearchSheet>
 
-      {error ? (
-        <div className="la-alert la-alert-bad" role="alert">
-          <strong>Could not scan that.</strong>
-          <span>{error}</span>
-        </div>
-      ) : null}
-
-      {data && !error && legend ? (
+      {showingResult ? (
         <div className="sc-result-wrap">
-          {locked ? <SaveResultCard /> : null}
-          {/* The la-result content is ALWAYS computed and held in state; when
-              sign-in is required and not yet present it is only blurred and
-              made inert, never re-fetched once a session appears. */}
-          <div className={`la-result scan-result${locked ? " sc-locked" : ""}`} aria-hidden={locked} inert={locked}>
-          {/* The page's h1 is the headline; sections below are h3, so name the result level in between. */}
-          <h2 className="sr-only">Result</h2>
-          {auth.configured && auth.email ? (
-            <p className="sc-signed-in-line">
-              Signed in as <strong>{auth.email}</strong> ·{" "}
-              <button type="button" className="sc-signout" onClick={() => void auth.signOut()}>
-                Sign out
-              </button>
-            </p>
-          ) : null}
-          {data.status === "analyzer_unavailable" ? (
-            <div className="la-empty">
-              <strong>Scanning is not configured on this deployment.</strong>
-              <span>The server needs a model API key (DEEPSEEK_API_KEY) to read a photo. Searching for a supplement by name still works.</span>
-            </div>
-          ) : null}
-
-          {typed && entry ? (
-            <div className="scan-identity sc-entered">
-              <div className="scan-identity-main">
-                <p className="eyebrow">What you entered</p>
-                <h3>
-                  {entry.ingredient_label}
-                  <span className="scan-brand"> · {entry.form_label}</span>
-                </h3>
-                <div className="scan-chips">
-                  <span className="scan-chip">{entry.ingredient_label}</span>
-                  <span className="scan-chip">{entry.form_label}</span>
-                  <span className="scan-chip">
-                    {entry.dose_per_serving
-                      ? `${entry.dose_per_serving.value} ${entry.dose_per_serving.unit} compound / serving`
-                      : "no dose entered"}
-                  </span>
-                  {product ? (
-                    <span className="scan-chip">
-                      {product.elemental_dose_mg.low === null ? `active moiety not convertible (${product.elemental_dose_mg.basis})` : `${mg(product.elemental_dose_mg.low)} active moiety`}
-                    </span>
-                  ) : null}
-                  {entry.servings_per_day !== null ? <span className="scan-chip">{entry.servings_per_day} serving(s)/day</span> : null}
-                  <BasisBadge kind="user_input" legend={legend} />
-                </div>
-                <p className="la-dim sc-typed-note">Typed, not read from a label. There is no vision read behind this entry, so nothing in it is label-verified.</p>
-              </div>
-              {data.meta ? (
-                <dl className="scan-meta">
-                  <div>
-                    <dt>Took</dt>
-                    <dd>{data.meta.timing_s}s</dd>
-                  </div>
-                  <div>
-                    <dt>Source</dt>
-                    <dd>typed</dd>
-                  </div>
-                  <div>
-                    <dt>Text model</dt>
-                    <dd>{data.meta.models.text ?? "—"}</dd>
-                  </div>
-                </dl>
-              ) : null}
-            </div>
-          ) : label ? (
-            <div className="scan-identity">
-              <div className="scan-identity-main">
-                <p className="eyebrow">What the label says</p>
-                <h3>
-                  {label.product_name ?? label.ingredient_label_text ?? label.ingredient_vocab_id ?? "Unnamed product"}
-                  {label.brand ? <span className="scan-brand"> by {label.brand}</span> : null}
-                </h3>
-                <div className="scan-chips">
-                  <span className="scan-chip">{label.ingredient_label_text ?? label.ingredient_vocab_id ?? "ingredient —"}</span>
-                  <span className="scan-chip">{label.form_vocab_id ? label.form_vocab_id.replace(/_/g, " ") : "form not stated"}</span>
-                  <span className="scan-chip">{mg(label.compound_dose_mg)} compound / serving</span>
-                  {product ? (
-                    <span className="scan-chip">
-                      {product.elemental_dose_mg.low === null ? `active moiety not convertible (${product.elemental_dose_mg.basis})` : `${mg(product.elemental_dose_mg.low)} active moiety`}
-                    </span>
-                  ) : null}
-                  {label.servings_per_day !== null ? <span className="scan-chip">{label.servings_per_day} serving(s)/day</span> : null}
-                  <span className="scan-chip">read confidence: {label.confidence}</span>
-                  <BasisBadge kind="label" legend={legend} />
-                </div>
-                {label.evidence_spans?.length ? (
-                  <p className="la-spans">Read from: {label.evidence_spans.map((s) => `“${s}”`).join(", ")}</p>
-                ) : null}
-              </div>
-              {data.meta ? (
-                <dl className="scan-meta">
-                  <div>
-                    <dt>Took</dt>
-                    <dd>{data.meta.timing_s}s</dd>
-                  </div>
-                  <div>
-                    <dt>Vision model</dt>
-                    <dd>{data.meta.models.vision ?? "—"}</dd>
-                  </div>
-                  <div>
-                    <dt>Text model</dt>
-                    <dd>{data.meta.models.text ?? "—"}</dd>
-                  </div>
-                </dl>
-              ) : null}
-            </div>
-          ) : null}
-
-          {data.caveats?.map((c) => (
-            <div className="la-alert la-alert-warn" key={c.code}>
-              <strong>{c.code.replace(/_/g, " ")}</strong>
-              <span>{c.text}</span>
-            </div>
-          ))}
-
-          {/*
-           * Model-decided literature disclosures (funding independence,
-           * publication bias -- founder 2026-09-16, "decided by the system
-           * prompt", same as the MLM disclosure). They concern the evidence
-           * AS A WHOLE, so they sit right under the caveats, before the
-           * Evidence section -- and render ONLY for "concern"; no_concern,
-           * unknown and every unavailable/skipped state render nothing.
-           */}
-          {literatureDisclosures(data.literature_warnings?.data).map((d) => (
-            <div className="la-alert la-alert-warn" role="note" aria-label={`${d.title} disclosure`} key={d.title}>
-              <strong>{d.title}</strong>
-              <span>{d.body}</span>
-            </div>
-          ))}
-
-          {data.status === "not_a_supplement_label" ? (
-            <div className="la-empty">
-              <strong>That does not look like a supplement label.</strong>
-              <span>Upload the Supplement Facts panel so the ingredient and dose can be read.</span>
-            </div>
-          ) : null}
-
-          {data.status === "ingredient_not_supported" ? (
-            <div className="la-empty">
-              <strong>{data.ingredient_label_text ?? "That ingredient"} is not in the evidence vocabulary yet.</strong>
-              <span>
-                This is not a low score — it is no data. Nothing has been run for it.
-                {data.queue && (data.queue as { queued?: boolean }).queued ? " Your request was recorded." : ""}
+          {/* ---------------- scanned-product header ---------------- */}
+          <div className="sc-scanned" ref={resultTopRef} tabIndex={-1}>
+            {preview && !typed ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img className="sc-thumb" src={preview} alt="The label you scanned" />
+            ) : (
+              <span className="sc-thumb sc-thumb-typed" aria-hidden="true">
+                Aa
               </span>
-              {data.supported_ingredients?.length ? <span className="la-dim">Covered so far: {data.supported_ingredients.join(", ")}</span> : null}
+            )}
+            <div className="sc-scanned-main">
+              <p className="sc-scanned-kicker">{headerKicker}</p>
+              <h2 className="sc-scanned-name">{headerName}</h2>
+              {!typed && label?.brand ? <p className="sc-scanned-brand">by {label.brand}</p> : typed && entry ? <p className="sc-scanned-brand">{entry.ingredient_label}</p> : null}
+            </div>
+            <button type="button" className="sc-again" onClick={reset}>
+              Scan another
+            </button>
+          </div>
+
+          {error ? (
+            <div className="la-alert la-alert-bad sc-error" role="alert">
+              <strong>Could not scan that.</strong>
+              <span>{error}</span>
             </div>
           ) : null}
 
-          {/* ---------------- evidence ---------------- */}
-          {product ? (
-            <Section id="evidence" eyebrow="Evidence" title="Does it work?" basis={["evidence_run"]} legend={legend}>
-              {evidence?.validity ? (
-                <div className={`la-alert ${evidence.validity.public_claims_allowed ? "la-alert-ok" : "la-alert-warn"}`}>
-                  <strong>
-                    {evidence.validity.public_claims_allowed ? "Validated run." : `Not a product claim — this run is marked ${evidence.validity.status ?? "unvalidated"}.`}
-                  </strong>
-                  <span>{evidence.validity.note ?? "Retained for inspection. The scoring constants have not passed anchor calibration."}</span>
-                </div>
-              ) : null}
-              {rows.length ? (
-                <div className="scan-grid">
-                  {rows.map((row) => (
-                    <EvidenceCard key={row.outcome} row={row} />
-                  ))}
-                </div>
-              ) : (
-                <div className="la-empty">
-                  <strong>{evidence?.status === "form_not_scored" ? "That form has not been run." : "No evidence run exists for this ingredient."}</strong>
-                  <span>
-                    {evidence?.status === "form_not_scored"
-                      ? `Evidence about a different form is not evidence about yours, so no number is shown.${evidence.scored_forms?.length ? ` Run so far: ${evidence.scored_forms.join(", ")}.` : ""}`
-                      : "This is not a low score — it is no data. A score needs the full pipeline over ~180 studies."}
-                  </span>
-                  {data.census && (data.census as { available?: boolean }).available ? (
-                    <div className="la-census">
-                      <span className="la-census-tag">Counts, not a score</span>
-                      <div className="la-census-figures">
-                        <div className="la-census-figure">
-                          <strong>{String((data.census as { rcts_indexed?: number }).rcts_indexed)}</strong>
-                          <span>randomised trials</span>
-                        </div>
-                        <div className="la-census-figure">
-                          <strong>{String((data.census as { syntheses_indexed?: number }).syntheses_indexed)}</strong>
-                          <span>systematic reviews</span>
-                        </div>
-                      </div>
-                      <span className="la-dim">Indexed in Europe PMC at supplement scope.</span>
-                    </div>
-                  ) : null}
-                </div>
-              )}
-              {evidence?.run ? (
-                <details className="la-details">
-                  <summary>How these numbers were produced</summary>
-                  <p>
-                    Effect, form and evidence arcs come from the retained run below. The dose term was recomputed for the dose
-                    on your label, and a positive verdict is discounted by how much of the evidence applies to your form and dose.
+          {data && !error && legend ? (
+            <>
+              {locked ? <SaveResultCard /> : null}
+              {/* The la-result content is ALWAYS computed and held in state; when
+                  sign-in is required and not yet present it is only blurred and
+                  made inert, never re-fetched once a session appears. */}
+              <div className={`la-result scan-result${locked ? " sc-locked" : ""}`} aria-hidden={locked} inert={locked}>
+                {auth.configured && auth.email ? (
+                  <p className="sc-signed-in-line">
+                    Signed in as <strong>{auth.email}</strong>
+                    <button type="button" className="sc-signout" onClick={() => void auth.signOut()}>
+                      Sign out
+                    </button>
                   </p>
-                  <dl className="la-read-grid">
-                    {Object.entries(evidence.run).map(([k, v]) => (
-                      <div key={k}>
-                        <dt>{k.replace(/_/g, " ")}</dt>
-                        <dd>{v === null || v === undefined ? "—" : String(v)}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                </details>
-              ) : null}
-            </Section>
-          ) : null}
+                ) : null}
 
-          {/* -------- evidence orientation (only when no run exists) -------- */}
-          {prior ? (
-            <Section
-              id="prior"
-              eyebrow="Evidence orientation"
-              title="What the literature says"
-              basis={["model_prior"]}
-              legend={legend}
-            >
-              <p className="scan-disclaimer">{prior.disclaimer}</p>
-              {prior.status === "ok" && prior.data ? (
-                <>
-                  <p className="scan-note">{prior.data.summary}</p>
-                  {prior.data.evidence_landscape ? (
-                    <p className="la-dim">
-                      Systematic reviews: {prior.data.evidence_landscape.syntheses_exist}
-                      {prior.data.evidence_landscape.note ? ` · ${prior.data.evidence_landscape.note}` : ""}
+                {data.status === "analyzer_unavailable" ? (
+                  <div className="la-empty">
+                    <strong>Scanning is not configured on this deployment.</strong>
+                    <span>The server needs a model API key (DEEPSEEK_API_KEY) to read a photo. Searching for a supplement by name still works.</span>
+                  </div>
+                ) : null}
+
+                {/* ---------------- what was read / entered ---------------- */}
+                {typed && entry ? (
+                  <div className="sc-identity sc-entered">
+                    <p className="sc-summary">
+                      <span>{summaryParts.join(", ")}.</span> <BasisBadge kind="user_input" legend={legend} />
                     </p>
-                  ) : null}
+                    <p className="la-dim sc-typed-note">Typed, not read from a label. There is no vision read behind this entry, so nothing in it is label-verified.</p>
+                    <details className="sc-details sc-identity-details">
+                      <summary>Entry details</summary>
+                      <Facts
+                        rows={[
+                          ["Ingredient", entry.ingredient_label],
+                          ["Form", entry.form_label],
+                          ["Dose per serving", entry.dose_per_serving ? `${entry.dose_per_serving.value} ${entry.dose_per_serving.unit} compound` : "no dose entered"],
+                          ...(product
+                            ? ([["Active moiety", product.elemental_dose_mg.low === null ? `not convertible (${product.elemental_dose_mg.basis})` : mg(product.elemental_dose_mg.low)]] as Array<[string, React.ReactNode]>)
+                            : []),
+                          ...(entry.servings_per_day !== null ? ([["Servings per day", String(entry.servings_per_day)]] as Array<[string, React.ReactNode]>) : []),
+                          ["Source", <BasisBadge key="b" kind="user_input" legend={legend} />],
+                        ]}
+                      />
+                    </details>
+                  </div>
+                ) : label ? (
+                  <div className="sc-identity">
+                    <p className="sc-summary">
+                      <span>{summaryParts.join(", ")}.</span> <BasisBadge kind="label" legend={legend} />
+                    </p>
+                    <details className="sc-details sc-identity-details">
+                      <summary>Label details</summary>
+                      <Facts
+                        rows={[
+                          ["Ingredient", label.ingredient_label_text ?? label.ingredient_vocab_id ?? "—"],
+                          ["Form", label.form_vocab_id ? words(label.form_vocab_id) : "not stated"],
+                          ["Dose per serving", `${mg(label.compound_dose_mg)} compound`],
+                          ...(product
+                            ? ([["Active moiety", product.elemental_dose_mg.low === null ? `not convertible (${product.elemental_dose_mg.basis})` : mg(product.elemental_dose_mg.low)]] as Array<[string, React.ReactNode]>)
+                            : []),
+                          ...(label.servings_per_day !== null ? ([["Servings per day", String(label.servings_per_day)]] as Array<[string, React.ReactNode]>) : []),
+                          ["Read confidence", label.confidence],
+                          ["Source", <BasisBadge key="b" kind="label" legend={legend} />],
+                        ]}
+                      />
+                      {label.evidence_spans?.length ? <p className="la-spans">Read from: {label.evidence_spans.map((s) => `“${s}”`).join(", ")}</p> : null}
+                    </details>
+                  </div>
+                ) : null}
 
-                  {prior.data.outcomes.length ? (
-                    <ul className="scan-list">
-                      {prior.data.outcomes.map((o, i) => (
-                        <li key={`${o.outcome}-${i}`} className="scan-item scan-item-model_prior scan-prior">
-                          <div className="scan-item-head">
-                            <strong>{o.outcome}</strong>
-                            <span className={`scan-dirchip scan-dir-${o.direction}`}>{o.direction.replace(/_/g, " ")}</span>
-                            <span className={`scan-strength scan-strength-${o.evidence_strength}`}>
-                              {o.evidence_strength} evidence
-                            </span>
-                          </div>
-                          {o.note ? <p>{o.note}</p> : null}
-                          {o.pooled_effect_recalled ? (
-                            <p className="la-dim">Pooled estimate recalled: {o.pooled_effect_recalled}</p>
-                          ) : null}
-                          {o.population ? <p className="la-dim">Population: {o.population}</p> : null}
-                          {o.dose_reading ? (
-                            <p className={o.dose_closeness != null && o.dose_closeness >= 0.999 ? "scan-dose-hit" : "scan-dose-miss"}>
-                              {o.dose_reading}
-                            </p>
-                          ) : null}
-                          <span className="la-dim">model confidence: {o.confidence}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="la-dim">The model named no outcome with describable evidence for this ingredient.</p>
-                  )}
+                {data.status === "not_a_supplement_label" ? (
+                  <div className="la-empty">
+                    <strong>That does not look like a supplement label.</strong>
+                    <span>Photograph the Supplement Facts panel so the ingredient and dose can be read.</span>
+                  </div>
+                ) : null}
 
-                  {prior.data.form_assessment ? (
-                    <div className="scan-item scan-item-model_prior">
-                      <div className="scan-item-head">
-                        <strong>This form</strong>
-                        <span className="scan-strength">{prior.data.form_assessment.verdict.replace(/_/g, " ")}</span>
+                {data.status === "ingredient_not_supported" ? (
+                  <div className="la-empty">
+                    <strong>{data.ingredient_label_text ?? "That ingredient"} is not in the evidence vocabulary yet.</strong>
+                    <span>
+                      This is not a low score — it is no data. Nothing has been run for it.
+                      {data.queue && (data.queue as { queued?: boolean }).queued ? " Your request was recorded." : ""}
+                    </span>
+                    {data.supported_ingredients?.length ? <span className="la-dim">Covered so far: {data.supported_ingredients.join(", ")}</span> : null}
+                  </div>
+                ) : null}
+
+                {/* ---------------- before you read the score ----------------
+                 * ONE stack: the run-validity banner first and always open
+                 * (load-bearing: every retained run withholds public claims),
+                 * then the caveats and the model-decided disclosures
+                 * (funding, publication bias, MLM) as one-line rows whose full
+                 * text opens in a native <details>. Disclosures render ONLY
+                 * for "concern"/confirmed/suspected; everything else renders
+                 * nothing at all. */}
+                {hasNotices ? (
+                  <section className="sc-notices" aria-labelledby="scan-notices-title">
+                    <h3 id="scan-notices-title" className="sc-notices-title">
+                      Before you read the score
+                    </h3>
+                    {evidence?.validity ? (
+                      <div className={`la-alert ${evidence.validity.public_claims_allowed ? "la-alert-ok" : "la-alert-warn"} sc-notice sc-notice-open`}>
+                        <strong>{evidence.validity.public_claims_allowed ? "Validated run." : `Not a product claim — this run is marked ${evidence.validity.status ?? "unvalidated"}.`}</strong>
+                        <span>{evidence.validity.note ?? "Retained for inspection. The scoring constants have not passed anchor calibration."}</span>
                       </div>
-                      {prior.data.form_assessment.note ? <p>{prior.data.form_assessment.note}</p> : null}
-                    </div>
-                  ) : null}
+                    ) : null}
+                    {data.caveats?.map((c) => (
+                      <Notice key={c.code} title={words(c.code).replace(/^\w/, (ch) => ch.toUpperCase())} lede={firstSentence(c.text)} body={c.text} />
+                    ))}
+                    {disclosures.map((d) => (
+                      <Notice key={d.title} title={d.title} lede={firstSentence(d.body)} body={d.body} role="note" ariaLabel={`${d.title} disclosure`} />
+                    ))}
+                    {mlm ? <Notice title={mlm.title} lede={firstSentence(mlm.body.replace(/^Model knowledge — unverified\.\s*/, "").replace(/^This company/, `${company?.brand ?? "This company"}`))} body={mlm.body} role="note" ariaLabel="Business model disclosure" /> : null}
+                  </section>
+                ) : null}
 
-                  {prior.data.safety_notes?.length ? (
-                    <div className="scan-item scan-item-model_prior">
-                      <div className="scan-item-head">
-                        <strong>Safety</strong>
-                      </div>
-                      <ul className="scan-plain">
-                        {prior.data.safety_notes.map((s) => (
-                          <li key={s}>{s}</li>
+                {/* ---------------- evidence ---------------- */}
+                {product ? (
+                  <Section id="evidence" title="Does it work?" basis={["evidence_run"]} legend={legend}>
+                    {rows.length ? (
+                      <div className="scan-grid">
+                        {rows.map((row) => (
+                          <EvidenceCard key={row.outcome} row={row} />
                         ))}
-                      </ul>
-                    </div>
-                  ) : null}
-
-                  {prior.data.caveats?.length ? <p className="la-dim">Model is unsure about: {prior.data.caveats.join("; ")}</p> : null}
-                </>
-              ) : (
-                <p className="la-dim">Orientation unavailable: {prior.reason ?? "skipped"}</p>
-              )}
-            </Section>
-          ) : null}
-
-          {/* ---------------- dose ---------------- */}
-          {dose ? (
-            <Section id="dose" eyebrow="Dose" title="Is your dose the dose that worked?" basis={["evidence_run", factsBasis]} legend={legend}>
-              <p className="scan-note">{dose.note}</p>
-              {dose.outcomes.length ? (
-                <div className="scan-doses">
-                  {dose.outcomes.map((o) => (
-                    <DoseBar key={o.outcome} reading={o} dose={dose.scored_dose_mg} />
-                  ))}
-                  <div className="scan-dose-key" aria-hidden="true">
-                    <span>
-                      <i className="scan-key scan-key-benefit" /> range where trials found benefit
-                    </span>
-                    <span>
-                      <i className="scan-key scan-key-null" /> range where trials found nothing
-                    </span>
-                    <span>
-                      <i className="scan-key scan-key-marker" /> your dose
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <p className="la-dim">No scored outcome, so there is no dose range to compare against.</p>
-              )}
-            </Section>
-          ) : null}
-
-          {/* ---------------- compatibility ---------------- */}
-          {compat ? (
-            <Section id="form" eyebrow="Form & combination" title="Does the form and the mix hold up?" basis={compat.basis_used} legend={legend}>
-              <div className="scan-card scan-formfit">
-                <strong>
-                  {compat.evidence_form_fit.status === "exact_form_scored"
-                    ? "Your form is the form the evidence run scored."
-                    : compat.evidence_form_fit.status === "form_not_scored"
-                      ? "Your form has not been run; evidence about another form is not evidence about yours."
-                      : compat.evidence_form_fit.status === "ingredient_not_scored"
-                        ? "No evidence run exists for this ingredient yet."
-                        : "Form fit unknown."}
-                </strong>
-                <span className="la-dim">
-                  {compat.evidence_form_fit.form_strength != null
-                    ? `Form evidence strength ${compat.evidence_form_fit.form_strength.toFixed(2)} (${compat.evidence_form_fit.form_basis ?? "ladder"}).`
-                    : compat.evidence_form_fit.scored_forms.length
-                      ? `Forms run so far: ${compat.evidence_form_fit.scored_forms.join(", ")}.`
-                      : ""}
-                </span>
-              </div>
-
-              {compat.form_notes.length ? (
-                <ul className="scan-list">
-                  {compat.form_notes.map((n, i) => (
-                    <li key={`${n.active}-${i}`} className={`scan-item scan-item-${n.basis}`}>
-                      <div className="scan-item-head">
-                        <strong>{n.active}</strong>
-                        <BasisBadge kind={n.basis} legend={legend} />
                       </div>
-                      <p>{n.note}</p>
-                      {n.source ? (
-                        <a href={n.source.url} target="_blank" rel="noreferrer">
-                          {n.source.title}
-                        </a>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-
-              <div className="scan-actives">
-                <span className="la-arc-label">{typed ? "Actives entered" : "Actives read"}</span>
-                <div className="scan-chips">
-                  {compat.actives.map((a) => (
-                    <span key={a.printed} className="scan-chip">
-                      {a.printed}
-                      {a.compound_dose_mg !== null ? ` · ${mg(a.compound_dose_mg)}` : ""}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {compat.status === "single_active" ? (
-                <p className="la-dim">Single active on the panel — no combination to check.</p>
-              ) : compat.interactions.length ? (
-                <ul className="scan-list">
-                  {compat.interactions.map((x, i) => (
-                    <li key={`${x.a}-${x.b}-${i}`} className={`scan-item scan-item-${x.basis} scan-sev-${x.severity}`}>
-                      <div className="scan-item-head">
-                        <strong>
-                          {x.a} + {x.b}
-                        </strong>
-                        <span className="scan-sev">{severityLabel(x.kind, x.severity)}</span>
-                        <BasisBadge kind={x.basis} legend={legend} />
-                      </div>
-                      {x.advice ? <p>{x.advice}</p> : null}
-                      {x.mechanism ? <p className="la-dim">{x.mechanism}</p> : null}
-                      {x.source ? (
-                        <a href={x.source.url} target="_blank" rel="noreferrer">
-                          {x.source.title}
-                        </a>
-                      ) : x.confidence ? (
-                        <span className="la-dim">model confidence: {x.confidence}</span>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="la-dim">No documented interaction among these actives in the curated table.</p>
-              )}
-
-              {compat.model.status === "ok" && compat.model.overall ? (
-                <div className="scan-item scan-item-model_prior scan-overall">
-                  <div className="scan-item-head">
-                    <strong>Model summary of the combination</strong>
-                    <BasisBadge kind="model_prior" legend={legend} />
-                  </div>
-                  <p>{compat.model.overall}</p>
-                </div>
-              ) : compat.model.status === "unavailable" ? (
-                <p className="la-dim">Model fill-in unavailable: {compat.model.reason}</p>
-              ) : null}
-            </Section>
-          ) : null}
-
-          {/* ---------------- company ---------------- */}
-          {company ? (
-            <Section id="company" eyebrow="Company" title="Who makes it, and what is on record?" basis={company.basis_used.length ? company.basis_used : ["label"]} legend={legend}>
-              {company.status === "no_brand_on_label" ? (
-                <p className="la-dim">
-                  {typed
-                    ? "The search path takes an ingredient, a form and a dose — no brand — so there is no company to look up."
-                    : "No brand or manufacturer is printed on this panel, so there is nothing to look up."}
-                </p>
-              ) : (
-                <>
-                  <div className="scan-company-grid">
-                    <div className="scan-card">
-                      <div className="scan-item-head">
-                        <strong>Printed on the label</strong>
-                        <BasisBadge kind="label" legend={legend} />
-                      </div>
-                      <dl className="la-read-grid">
-                        <div>
-                          <dt>Brand</dt>
-                          <dd>{company.brand ?? "—"}</dd>
-                        </div>
-                        <div>
-                          <dt>Manufacturer</dt>
-                          <dd>{company.manufacturer ?? "not printed"}</dd>
-                        </div>
-                        <div>
-                          <dt>Country</dt>
-                          <dd>{company.country_of_origin ?? "not printed"}</dd>
-                        </div>
-                      </dl>
-                      {company.certifications_printed.length ? (
-                        <div className="scan-chips">
-                          {company.certifications_printed.map((c) => (
-                            <span key={c.text} className="scan-chip scan-chip-claim" title={c.note}>
-                              {c.text}
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="la-dim">No third-party seal printed.</span>
-                      )}
-                      {company.certifications_printed.length ? (
-                        <span className="la-dim">Seals are claims as printed; a certifier&rsquo;s registry confirms them, this page does not.</span>
-                      ) : null}
-                    </div>
-
-                    <div className="scan-card">
-                      <div className="scan-item-head">
-                        <strong>FDA enforcement reports</strong>
-                        <BasisBadge kind="registry" legend={legend} />
-                      </div>
-                      {company.registry.status === "ok" ? (
-                        <ul className="scan-recalls">
-                          {company.registry.recalls.map((r, i) => (
-                            <li key={r.recall_number ?? i}>
-                              <strong>
-                                {r.initiated ?? "date —"} · {r.classification ?? "class —"} · {r.status ?? ""}
-                              </strong>
-                              <span>{r.product}</span>
-                              <span className="la-dim">{r.reason}</span>
-                              <span className="la-dim">Firm: {r.firm}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : company.registry.status === "no_matches" ? (
-                        <p>No recall on file under {company.registry.queried.join(" or ")}.</p>
-                      ) : company.registry.status === "unavailable" ? (
-                        <p className="la-dim">Registry unavailable: {company.registry.reason}</p>
-                      ) : (
-                        <p className="la-dim">Not queried.</p>
-                      )}
-                      <span className="la-dim">{company.registry.note}</span>
-                    </div>
-                  </div>
-
-                  <div className="scan-item scan-item-model_prior">
-                    <div className="scan-item-head">
-                      <strong>Company profile</strong>
-                      <BasisBadge kind="model_prior" legend={legend} />
-                    </div>
-                    {company.profile.status === "ok" && company.profile.data ? (
-                      <div className="scan-profile">
-                        <p>{company.profile.data.summary}</p>
-                        {(() => {
-                          const disclosure = businessModelDisclosure(company.profile.data?.business_model);
-                          // SAME warning visual language as every other disclosure on this
-                          // page (`.la-alert.la-alert-warn` — the caveats above and the
-                          // validity banner in the evidence section): a yellow/gold left
-                          // border, never a new colour invented for this one field.
-                          // Shown ONLY for confirmed/suspected; otherwise nothing.
-                          if (!disclosure) return null;
-                          return (
-                            <div className="la-alert la-alert-warn" role="note" aria-label="Business model disclosure">
-                              <strong>{disclosure.title}</strong>
-                              <span>{disclosure.body}</span>
+                    ) : (
+                      <div className="la-empty">
+                        <strong>{evidence?.status === "form_not_scored" ? "That form has not been run." : "No evidence run exists for this ingredient."}</strong>
+                        <span>
+                          {evidence?.status === "form_not_scored"
+                            ? `Evidence about a different form is not evidence about yours, so no number is shown.${evidence.scored_forms?.length ? ` Run so far: ${evidence.scored_forms.join(", ")}.` : ""}`
+                            : "This is not a low score — it is no data. A score needs the full pipeline over ~180 studies."}
+                        </span>
+                        {data.census && (data.census as { available?: boolean }).available ? (
+                          <div className="la-census">
+                            <span className="la-census-tag">Counts, not a score</span>
+                            <div className="la-census-figures">
+                              <div className="la-census-figure">
+                                <strong>{String((data.census as { rcts_indexed?: number }).rcts_indexed)}</strong>
+                                <span>randomised trials</span>
+                              </div>
+                              <div className="la-census-figure">
+                                <strong>{String((data.census as { syntheses_indexed?: number }).syntheses_indexed)}</strong>
+                                <span>systematic reviews</span>
+                              </div>
                             </div>
-                          );
-                        })()}
-                        {company.profile.data.known ? (
-                          <dl className="la-read-grid">
-                            <div>
-                              <dt>Founded</dt>
-                              <dd>{company.profile.data.founded_year ?? "unknown"}</dd>
-                            </div>
-                            <div>
-                              <dt>Headquarters</dt>
-                              <dd>{company.profile.data.headquarters_country ?? "unknown"}</dd>
-                            </div>
-                            <div>
-                              <dt>Ownership</dt>
-                              <dd>
-                                {company.profile.data.ownership_type}
-                                {company.profile.data.parent_company ? ` (${company.profile.data.parent_company})` : ""}
-                              </dd>
-                            </div>
-                            <div>
-                              <dt>Third-party testing</dt>
-                              <dd>
-                                {company.profile.data.third_party_testing.status}
-                                {company.profile.data.third_party_testing.program ? ` · ${company.profile.data.third_party_testing.program}` : ""}
-                              </dd>
-                            </div>
-                            <div>
-                              <dt>Batch certificates public</dt>
-                              <dd>{company.profile.data.transparency.coa_published}</dd>
-                            </div>
-                            <div>
-                              <dt>Profile confidence</dt>
-                              <dd>{company.profile.data.confidence}</dd>
-                            </div>
-                          </dl>
+                            <span className="la-dim">Indexed in Europe PMC at supplement scope.</span>
+                          </div>
                         ) : null}
-                        {company.profile.data.regulatory_history.length ? (
-                          <ul className="scan-list scan-reg">
-                            {company.profile.data.regulatory_history.map((h, i) => (
-                              <li key={i}>
-                                <strong>
-                                  {h.kind.replace(/_/g, " ")}
-                                  {h.year ? ` · ${h.year}` : ""}
-                                </strong>
-                                <span>{h.summary}</span>
-                                <span className="la-dim">
-                                  model confidence {h.confidence}
-                                  {h.kind === "recall"
-                                    ? h.registry_corroborated === true
-                                      ? " · a recall is on file in openFDA"
-                                      : h.registry_corroborated === false
-                                        ? " · NOT corroborated by openFDA under this firm name"
-                                        : ""
-                                    : ""}
-                                </span>
+                      </div>
+                    )}
+                  </Section>
+                ) : null}
+
+                {/* -------- evidence orientation (only when no run exists) -------- */}
+                {prior ? (
+                  <Section id="prior" title="What the literature says" basis={["model_prior"]} legend={legend}>
+                    <p className="scan-disclaimer">{prior.disclaimer}</p>
+                    {prior.status === "ok" && prior.data ? (
+                      <>
+                        <p className="scan-note">{prior.data.summary}</p>
+                        {prior.data.evidence_landscape ? (
+                          <p className="la-dim">
+                            Systematic reviews: {prior.data.evidence_landscape.syntheses_exist}
+                            {prior.data.evidence_landscape.note ? `. ${prior.data.evidence_landscape.note}` : ""}
+                          </p>
+                        ) : null}
+
+                        {prior.data.outcomes.length ? (
+                          <ul className="scan-list">
+                            {prior.data.outcomes.map((o, i) => (
+                              <li key={`${o.outcome}-${i}`} className="scan-item scan-item-model_prior scan-prior">
+                                <div className="scan-item-head">
+                                  <strong>{o.outcome}</strong>
+                                  <span className={`scan-dirchip scan-dir-${o.direction}`}>{words(o.direction)}</span>
+                                  <span className={`scan-strength scan-strength-${o.evidence_strength}`}>{o.evidence_strength} evidence</span>
+                                </div>
+                                {o.note ? <p>{o.note}</p> : null}
+                                {o.pooled_effect_recalled ? <p className="la-dim">Pooled estimate recalled: {o.pooled_effect_recalled}</p> : null}
+                                {o.population ? <p className="la-dim">Population: {o.population}</p> : null}
+                                {o.dose_reading ? <p className={o.dose_closeness != null && o.dose_closeness >= 0.999 ? "scan-dose-hit" : "scan-dose-miss"}>{o.dose_reading}</p> : null}
+                                <span className="la-dim">model confidence: {o.confidence}</span>
                               </li>
                             ))}
                           </ul>
-                        ) : company.profile.data.known ? (
-                          <p className="la-dim">No widely reported regulatory action recalled by the model.</p>
+                        ) : (
+                          <p className="la-dim">The model named no outcome with describable evidence for this ingredient.</p>
+                        )}
+
+                        {prior.data.form_assessment ? (
+                          <div className="scan-item scan-item-model_prior">
+                            <div className="scan-item-head">
+                              <strong>This form</strong>
+                              <span className="scan-strength">{words(prior.data.form_assessment.verdict)}</span>
+                            </div>
+                            {prior.data.form_assessment.note ? <p>{prior.data.form_assessment.note}</p> : null}
+                          </div>
                         ) : null}
-                        {company.profile.data.reputation_notes.length ? (
-                          <ul className="scan-plain">
-                            {company.profile.data.reputation_notes.map((n) => (
-                              <li key={n}>{n}</li>
-                            ))}
-                          </ul>
+
+                        {prior.data.safety_notes?.length ? (
+                          <div className="scan-item scan-item-model_prior">
+                            <div className="scan-item-head">
+                              <strong>Safety</strong>
+                            </div>
+                            <ul className="scan-plain">
+                              {prior.data.safety_notes.map((s) => (
+                                <li key={s}>{s}</li>
+                              ))}
+                            </ul>
+                          </div>
                         ) : null}
-                        {company.profile.data.caveats.length ? <p className="la-dim">Could not confirm: {company.profile.data.caveats.join("; ")}</p> : null}
+
+                        {prior.data.caveats?.length ? <p className="la-dim">Model is unsure about: {prior.data.caveats.join("; ")}</p> : null}
+                      </>
+                    ) : (
+                      <p className="la-dim">Orientation unavailable: {prior.reason ?? "skipped"}</p>
+                    )}
+                  </Section>
+                ) : null}
+
+                {/* ---------------- dose ---------------- */}
+                {dose ? (
+                  <Section id="dose" title="Is your dose the dose that worked?" basis={["evidence_run", factsBasis]} legend={legend}>
+                    <p className="scan-note">{dose.note}</p>
+                    {dose.outcomes.length ? (
+                      <div className="scan-doses">
+                        <div className="scan-dose-key" aria-hidden="true">
+                          <span>
+                            <i className="scan-key scan-key-benefit" /> benefit found
+                          </span>
+                          <span>
+                            <i className="scan-key scan-key-null" /> nothing found
+                          </span>
+                          <span>
+                            <i className="scan-key scan-key-marker" /> your dose
+                          </span>
+                        </div>
+                        {dose.outcomes.map((o) => (
+                          <DoseBar key={o.outcome} reading={o} dose={dose.scored_dose_mg} />
+                        ))}
                       </div>
                     ) : (
-                      <p className="la-dim">Profile unavailable: {company.profile.reason ?? "skipped"}</p>
+                      <p className="la-dim">No scored outcome, so there is no dose range to compare against.</p>
                     )}
-                  </div>
-                </>
-              )}
-            </Section>
+                  </Section>
+                ) : null}
+
+                {/* ---------------- compatibility ---------------- */}
+                {compat ? (
+                  <Section id="form" title="Does the form and the mix hold up?" basis={compat.basis_used} legend={legend}>
+                    <p className="scan-formfit">
+                      <strong>
+                        {compat.evidence_form_fit.status === "exact_form_scored"
+                          ? "Your form is the form the evidence run scored."
+                          : compat.evidence_form_fit.status === "form_not_scored"
+                            ? "Your form has not been run; evidence about another form is not evidence about yours."
+                            : compat.evidence_form_fit.status === "ingredient_not_scored"
+                              ? "No evidence run exists for this ingredient yet."
+                              : "Form fit unknown."}
+                      </strong>{" "}
+                      <span className="la-dim">
+                        {compat.evidence_form_fit.form_strength != null
+                          ? `Form evidence strength ${compat.evidence_form_fit.form_strength.toFixed(2)} (${compat.evidence_form_fit.form_basis ?? "ladder"}).`
+                          : compat.evidence_form_fit.scored_forms.length
+                            ? `Forms run so far: ${compat.evidence_form_fit.scored_forms.join(", ")}.`
+                            : ""}
+                      </span>
+                    </p>
+
+                    {compat.form_notes.length ? (
+                      <ul className="scan-list">
+                        {compat.form_notes.map((n, i) => (
+                          <li key={`${n.active}-${i}`} className={`scan-item scan-item-${n.basis}`}>
+                            <div className="scan-item-head">
+                              <strong>{n.active}</strong>
+                              <BasisBadge kind={n.basis} legend={legend} />
+                            </div>
+                            <p>{n.note}</p>
+                            {n.source ? (
+                              <a href={n.source.url} target="_blank" rel="noreferrer">
+                                {n.source.title}
+                              </a>
+                            ) : null}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+
+                    <div className="scan-actives">
+                      <span className="sc-label">{typed ? "Actives entered" : "Actives read"}</span>
+                      <div className="scan-chips">
+                        {compat.actives.map((a) => (
+                          <span key={a.printed} className="scan-chip">
+                            {a.printed}
+                            {a.compound_dose_mg !== null ? <span className="scan-chip-dose">{mg(a.compound_dose_mg)}</span> : null}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {compat.status === "single_active" ? (
+                      <p className="la-dim">Single active on the panel — no combination to check.</p>
+                    ) : compat.interactions.length ? (
+                      <ul className="scan-list">
+                        {compat.interactions.map((x, i) => (
+                          <li key={`${x.a}-${x.b}-${i}`} className={`scan-item scan-item-${x.basis} scan-sev-${x.severity}`}>
+                            <div className="scan-item-head">
+                              <strong>
+                                {x.a} + {x.b}
+                              </strong>
+                              <BasisBadge kind={x.basis} legend={legend} />
+                            </div>
+                            <span className="scan-sev">{severityLabel(x.kind, x.severity)}</span>
+                            {x.advice ? <p>{x.advice}</p> : null}
+                            {x.mechanism ? <p className="la-dim">{x.mechanism}</p> : null}
+                            {x.source ? (
+                              <a href={x.source.url} target="_blank" rel="noreferrer">
+                                {x.source.title}
+                              </a>
+                            ) : x.confidence ? (
+                              <span className="la-dim">model confidence: {x.confidence}</span>
+                            ) : null}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="la-dim">No documented interaction among these actives in the curated table.</p>
+                    )}
+
+                    {compat.model.status === "ok" && compat.model.overall ? (
+                      <div className="scan-item scan-item-model_prior scan-overall">
+                        <div className="scan-item-head">
+                          <strong>Model summary of the combination</strong>
+                          <BasisBadge kind="model_prior" legend={legend} />
+                        </div>
+                        <p>{compat.model.overall}</p>
+                      </div>
+                    ) : compat.model.status === "unavailable" ? (
+                      <p className="la-dim">Model fill-in unavailable: {compat.model.reason}</p>
+                    ) : null}
+                  </Section>
+                ) : null}
+
+                {/* ---------------- company ---------------- */}
+                {company ? (
+                  <Section id="company" title="Who makes it, and what is on record?" basis={company.basis_used.length ? company.basis_used : ["label"]} legend={legend}>
+                    {company.status === "no_brand_on_label" ? (
+                      <p className="la-dim">
+                        {typed
+                          ? "The search path takes an ingredient, a form and a dose — no brand — so there is no company to look up."
+                          : "No brand or manufacturer is printed on this panel, so there is nothing to look up."}
+                      </p>
+                    ) : (
+                      <>
+                        <div className="sc-sub">
+                          <div className="scan-item-head">
+                            <strong>Printed on the label</strong>
+                            <BasisBadge kind="label" legend={legend} />
+                          </div>
+                          <Facts
+                            rows={[
+                              ["Brand", company.brand ?? "—"],
+                              ["Manufacturer", company.manufacturer ?? "not printed"],
+                              ["Country", company.country_of_origin ?? "not printed"],
+                              [
+                                "Seals printed",
+                                company.certifications_printed.length ? (
+                                  <span className="scan-chips">
+                                    {company.certifications_printed.map((c) => (
+                                      <span key={c.text} className="scan-chip" title={c.note}>
+                                        {c.text}
+                                      </span>
+                                    ))}
+                                  </span>
+                                ) : (
+                                  "none"
+                                ),
+                              ],
+                            ]}
+                          />
+                          {company.certifications_printed.length ? <p className="la-dim sc-fine">Seals are claims as printed; a certifier&rsquo;s registry confirms them, this page does not.</p> : null}
+                        </div>
+
+                        <div className="sc-sub">
+                          <div className="scan-item-head">
+                            <strong>FDA enforcement reports</strong>
+                            <BasisBadge kind="registry" legend={legend} />
+                          </div>
+                          {company.registry.status === "ok" ? (
+                            <ul className="scan-recalls">
+                              {company.registry.recalls.map((r, i) => (
+                                <li key={r.recall_number ?? i}>
+                                  <span className="scan-recall-meta">
+                                    <span>{r.initiated ?? "date —"}</span>
+                                    <span>{r.classification ?? "class —"}</span>
+                                    {r.status ? <span>{r.status}</span> : null}
+                                  </span>
+                                  <strong>{r.product}</strong>
+                                  <span>{r.reason}</span>
+                                  <span className="la-dim">Firm: {r.firm}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : company.registry.status === "no_matches" ? (
+                            <p>No recall on file under {company.registry.queried.join(" or ")}.</p>
+                          ) : company.registry.status === "unavailable" ? (
+                            <p className="la-dim">Registry unavailable: {company.registry.reason}</p>
+                          ) : (
+                            <p className="la-dim">Not queried.</p>
+                          )}
+                          <p className="la-dim sc-fine">{company.registry.note}</p>
+                        </div>
+
+                        <div className="scan-item scan-item-model_prior">
+                          <div className="scan-item-head">
+                            <strong>Company profile</strong>
+                            <BasisBadge kind="model_prior" legend={legend} />
+                          </div>
+                          {company.profile.status === "ok" && company.profile.data ? (
+                            <div className="scan-profile">
+                              <p>{company.profile.data.summary}</p>
+                              {mlm ? <p className="la-dim sc-fine">Business model: see &ldquo;{mlm.title}&rdquo; under Before you read the score.</p> : null}
+                              {company.profile.data.regulatory_history.length ? (
+                                <ul className="scan-list scan-reg">
+                                  {company.profile.data.regulatory_history.map((h, i) => (
+                                    <li key={i}>
+                                      <strong>
+                                        {words(h.kind)}
+                                        {h.year ? `, ${h.year}` : ""}
+                                      </strong>
+                                      <span>{h.summary}</span>
+                                      <span className="la-dim">
+                                        model confidence {h.confidence}
+                                        {h.kind === "recall"
+                                          ? h.registry_corroborated === true
+                                            ? "; a recall is on file in openFDA"
+                                            : h.registry_corroborated === false
+                                              ? "; NOT corroborated by openFDA under this firm name"
+                                              : ""
+                                          : ""}
+                                      </span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : company.profile.data.known ? (
+                                <p className="la-dim">No widely reported regulatory action recalled by the model.</p>
+                              ) : null}
+                              {company.profile.data.known || company.profile.data.reputation_notes.length || company.profile.data.caveats.length ? (
+                                <details className="sc-details sc-inline-details">
+                                  <summary>What the model recalls about the company</summary>
+                                  {company.profile.data.known ? (
+                                    <Facts
+                                      rows={[
+                                        ["Founded", company.profile.data.founded_year ?? "unknown"],
+                                        ["Headquarters", company.profile.data.headquarters_country ?? "unknown"],
+                                        ["Ownership", `${company.profile.data.ownership_type}${company.profile.data.parent_company ? ` (${company.profile.data.parent_company})` : ""}`],
+                                        ["Third-party testing", `${company.profile.data.third_party_testing.status}${company.profile.data.third_party_testing.program ? `, ${company.profile.data.third_party_testing.program}` : ""}`],
+                                        ["Batch certificates public", company.profile.data.transparency.coa_published],
+                                        ["Profile confidence", company.profile.data.confidence],
+                                      ]}
+                                    />
+                                  ) : null}
+                                  {company.profile.data.reputation_notes.length ? (
+                                    <ul className="scan-plain">
+                                      {company.profile.data.reputation_notes.map((n) => (
+                                        <li key={n}>{n}</li>
+                                      ))}
+                                    </ul>
+                                  ) : null}
+                                  {company.profile.data.caveats.length ? <p className="la-dim">Could not confirm: {company.profile.data.caveats.join("; ")}</p> : null}
+                                </details>
+                              ) : null}
+                            </div>
+                          ) : (
+                            <p className="la-dim">Profile unavailable: {company.profile.reason ?? "skipped"}</p>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </Section>
+                ) : null}
+
+                {/* ---------------- legend + technical details ---------------- */}
+                <details className="sc-details scan-legend">
+                  <summary id="scan-legend-title">How to read the source badges</summary>
+                  <ol>
+                    {Object.entries(legend)
+                      .sort(([, a], [, b]) => a.rank - b.rank)
+                      .map(([kind, entry]) => (
+                        <li key={kind}>
+                          <BasisBadge kind={kind as Basis} legend={legend} />
+                          <span>{entry.means}</span>
+                        </li>
+                      ))}
+                  </ol>
+                </details>
+
+                <details className="sc-details sc-technical">
+                  <summary>Technical details</summary>
+                  {evidence?.run ? (
+                    <>
+                      <p>
+                        <strong>How these numbers were produced.</strong> Effect, form and evidence arcs come from the retained run below. The dose term was
+                        recomputed for the dose on your label, and a positive verdict is discounted by how much of the evidence applies to your form and
+                        dose. <a href="/methodology">Read the methodology.</a>
+                      </p>
+                      <Facts rows={Object.entries(evidence.run).map(([k, v]) => [words(k), v === null || v === undefined ? "—" : String(v)])} />
+                    </>
+                  ) : null}
+                  {data.meta ? (
+                    <Facts
+                      rows={[
+                        ["Source", typed ? "typed" : "photo"],
+                        ["Took", `${data.meta.timing_s} s`],
+                        ...(typed ? [] : ([["Vision model", data.meta.models.vision ?? "—"]] as Array<[string, React.ReactNode]>)),
+                        ["Text model", data.meta.models.text ?? "—"],
+                        ...Object.entries(data.meta.stages ?? {}).map(([k, v]) => [`Stage: ${words(k)}`, v === null || v === undefined ? "skipped" : `${v} s`] as [string, React.ReactNode]),
+                        ...Object.entries(data.meta.prompt_versions ?? {}).map(([k, v]) => [`Prompt: ${words(k)}`, String(v)] as [string, React.ReactNode]),
+                        ...(data.run_id ? ([["Run id", <code key="r">{data.run_id}</code>]] as Array<[string, React.ReactNode]>) : []),
+                        ...(data.app_version
+                          ? ([
+                              [
+                                "App version",
+                                <code key="v">
+                                  {data.app_version.package_version}
+                                  {data.app_version.git_sha ? ` ${data.app_version.git_sha.slice(0, 8)}` : ""}
+                                </code>,
+                              ],
+                            ] as Array<[string, React.ReactNode]>)
+                          : []),
+                        ...(data.persistence ? ([["Run stored", words(data.persistence.status)]] as Array<[string, React.ReactNode]>) : []),
+                      ]}
+                    />
+                  ) : null}
+                </details>
+              </div>
+            </>
           ) : null}
 
-          {/* ---------------- legend ---------------- */}
-          <section className="scan-legend" aria-labelledby="scan-legend-title">
-            <h3 id="scan-legend-title">How to read the badges</h3>
-            <ol>
-              {Object.entries(legend)
-                .sort(([, a], [, b]) => a.rank - b.rank)
-                .map(([kind, entry]) => (
-                  <li key={kind}>
-                    <BasisBadge kind={kind as Basis} legend={legend} />
-                    <span>{entry.means}</span>
-                  </li>
-                ))}
-            </ol>
-          </section>
-          </div>
+          <button type="button" className="button button-dark sc-primary sc-again-bottom" onClick={reset}>
+            Scan another
+          </button>
         </div>
       ) : null}
     </section>

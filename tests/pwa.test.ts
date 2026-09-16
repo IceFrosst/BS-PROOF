@@ -39,7 +39,7 @@ describe("PWA install contract", () => {
       start_url: "/scan/",
       scope: "/",
       display: "standalone",
-      background_color: "#050B18",
+      background_color: "#ffffff",
       theme_color: "#0B0F14",
     });
     expect(value.icons?.filter((icon) => icon.purpose === "any")).toHaveLength(2);

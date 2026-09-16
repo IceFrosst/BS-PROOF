@@ -121,7 +121,10 @@ elsewhere on this page for disclosures (`.la-alert.la-alert-warn` — the
 caveats list and the run-validity banner in the evidence section), captioned
 "Model knowledge — unverified" and "does not affect the evidence score".
 `no_evidence` / `unknown` render nothing at all (founder: "only show the mlm
-if confirmed or suspected"). The field is invisible to scoring: `tests/company-business-
+if confirmed or suspected"). **Placement amended 2026-09-16 (§1e):** the row now
+lives in the single "Before you read the score" stack above the first number,
+and the company profile carries a one-line pointer to it; class, role, wording
+and the render-only-on-concern rule are unchanged. The field is invisible to scoring: `tests/company-business-
 model.test.ts` proves two runs identical except for `business_model` produce
 byte-identical `product`/`evidence`/`dose_effectiveness` output, and that no
 scoring source file (Python or TypeScript) even mentions it.
@@ -212,13 +215,98 @@ from the reference:
   backdrop-click to close) around the unchanged `<SupplementSearch>` --
   instead of the 2026-09-15 inline expand/collapse panel below the capture
   buttons. The "or" divider is gone.
-- **Results keep their existing rendering** (every section, badge and yellow
-  warning, unchanged from §1/§1a/§1b/§1c) and stay on light/white cards for
-  contrast, per the founder's "result cards may stay light/white on the dark
-  ground" instruction -- only the page ground and the pre-result capture
-  chrome went dark. `app/manifest.ts`'s `background_color` followed the ground
-  to `#050B18` (`theme_color` unchanged); `tests/pwa.test.ts` pins both.
+- **Results kept their 2026-09-15 rendering at this point** (every section, badge
+  and yellow warning from §1/§1a/§1b/§1c, on light cards). **Superseded the same
+  day by the design pass in §1e**, which also returned `app/manifest.ts`'s
+  `background_color` to white to match the page (`theme_color` unchanged;
+  `tests/pwa.test.ts` pins both).
 - **Sign-in while results load** -- see §7 below.
+
+### 1e. The phone-first design system and the result STATE (2026-09-16, design pass)
+
+Founder: "make design coherent, simplistic but look scientific … world class,
+not vibecoded … phone optimised." Full plan, tokens, wireframe and the list of
+template tells removed: `docs/design/2026-09-16-scan-design-system.md`;
+before/after phone screenshots: `docs/design/ref/before/`, `docs/design/ref/after/`
+(both 390 and 360 wide, every state, plus consecutive viewport tiles of the
+result). Nothing in `lib/analyze/**`, `app/api/**`, a prompt, a schema or a
+scoring constant changed; this is `components/scan-flow.tsx`,
+`components/supplement-search.tsx` (one option label), `app/globals.css`
+(everything from the `/scan` block on, scoped to `.scan-page` / `.sc-*` /
+`.scan-*` — shared `.la-*` rules are untouched and get `.scan-page .la-*`
+overrides), `app/manifest.ts` (`background_color` back to white, pinned by
+`tests/pwa.test.ts`) and `scripts/design_shots.mjs`.
+
+**The page is a state machine and each state owns the viewport.** `landing →
+staged → loading → result | error`, with `Scan another` returning to
+`landing`. The bug this fixes: after a scan finished, the staged photo and its
+three buttons stayed at the top and the report rendered below the fold with no
+transition, so people reported "no results after photo". Now, the instant an
+answer (or an error) lands, the capture chrome unmounts, a compact
+**scanned-product header** (56px thumbnail of the photo — or an `Aa` chip for a
+typed entry — kicker, product name, brand, `Scan another`) takes the top, and
+focus + scroll move to it (`scrollIntoView`, instant under
+`prefers-reduced-motion`). `Scan another` is repeated as a full-width button at
+the very end of the report, so the primary action is thumb-reachable at both
+ends; nothing is sticky, so nothing covers content. The **loading** state is a
+progress panel (dimmed thumbnail, indeterminate bar, the stage list with the
+current step marked) — never a disabled "Scanning…" pill — and the Google
+"Save your result" card, when configured, is its one call to action (§7
+behaviour unchanged, restyled).
+
+**The report** is a lab-grade evidence read, left-aligned, sections separated by
+1px rules rather than boxed. In order: the one-line facts summary
+("Creatine monohydrate, 5 g compound per serving, 4.4 g active, 1 serving a
+day." with its `As printed` / `Typed by you` badge; read confidence, quoted
+spans and the full definition list under a `Label details` / `Entry details`
+`<details>`); **"Before you read the score"** — ONE stack holding the run-validity
+banner (always open, load-bearing, always above the first number) and then the
+caveats, the funding / publication-bias disclosures (§1c) and the MLM disclosure
+(§1b, moved here from the company profile, which now carries a one-line pointer
+to it) as one-line rows whose full text opens in a native `<details>`; every row
+still carries the `la-alert la-alert-warn` class and `role="note"`/`aria-label`
+the tests key on, and rows still render ONLY for concern/confirmed/suspected.
+Then **Does it work?** — one card per outcome: name, verdict word, the 0–100
+composite as the page's single bold moment (40px), and the **four arcs as four
+one-line rows**: label, verdict value, coverage track, coverage %. Invariant 8:
+the verdict and its coverage sit on the same line, an arc at 0% coverage gets a
+striped track and the words "0%, untested", so `0.00 @ 0%` and `−0.70 @ 100%`
+cannot render alike (pinned in `tests/scan-result-state.test.tsx`). Trials,
+applicability, form basis and dose match follow as a footnote line. Dose,
+form-and-mix and company sections keep every fact; the model's recalled company
+facts (founded, HQ, ownership, third-party testing, COA, confidence, reputation
+notes, caveats) sit under a `<details>` inside the dashed model-knowledge card.
+The badge legend and a **Technical details** block (how the numbers were
+produced + the retained run's parameters, models, per-stage timings, prompt
+versions, `run_id`, `app_version`, persistence status, a link to /methodology)
+close the report, both collapsed. Measured on the rich photo fixture: **9911 →
+4919 px at 390 wide, 10424 → 5137 px at 360** (−50%), no horizontal overflow at
+either width, the composite visible on the second screen.
+
+**Tokens** (scoped to `.scan-page`): one neutral ramp (`#fff` ground, `#f3f5f4`
+tint, `#dde1df` line, `#5a6660` muted text, `#16231d` ink) and two accents each
+with one meaning — `#0b6b5a` **measured** (arc fills, benefit band, in-range
+reading) and `#885a00` **unverified / read with care** (the Model knowledge
+badge text and dashed border, the warning stack's left mark). Cream (`--paper`,
+`--white: #fffdf8`), coral, blue, gold-on-cream and card shadows no longer appear
+on this page (the viewfinder keeps its one shadow). Type: the system stack
+already loaded in `layout.tsx`, scale 13 / 15 / 17 / 22 / 28 / 40, sentence case
+everywhere, tabular numerals in every column, prose capped at 62ch. One 12px
+radius for contained things. All targets ≥ 44px; `env(safe-area-inset-bottom)`
+on the page bottom, footer and sheet. axe (wcag2a/aa, 2.1, 2.2) reports zero
+violations on landing, sheet, staged, loading and result (collapsed and with
+every `<details>` open) at Pixel 7 width; the hidden file inputs gained
+`aria-label`s so they are labelled in every state.
+
+**Badges** are one quiet outlined family in sentence case (`Evidence run`,
+`Public registry`, `Curated & cited`, `As printed`, `Typed by you`); **Model
+knowledge** alone is dashed and amber, so model text is distinguishable at a
+glance and is still never typeset like a measurement. The `user_input` badge is
+no longer dotted — the LABEL carries the distinction, and §1a's rule that a
+typed entry never shows a read confidence, quoted spans or a vision model is
+unchanged and pinned. Template tells removed (ALL-CAPS eyebrows, middle-dot meta
+strings, four arc colours, per-tone card borders, the five-colour badge kit,
+repeated "% of the evidence" sentences) are enumerated in the design doc.
 
 ## 2. The one rule
 
@@ -337,8 +425,9 @@ Each prompt has its own version constant and cache domain (invariant 3):
    model fill-in, not the table
 4. **As printed** — a claim the product makes about itself
 5. **Typed by you** (`user_input`, 2026-09-15) — entered by hand on the search
-   path; weaker than a label read because nothing was even photographed. Dotted
-   badge, no confidence, no spans
+   path; weaker than a label read because nothing was even photographed. Same
+   outlined badge family as the rest, labelled "Typed by you" (dotted until the
+   2026-09-16 design pass, §1e); no confidence, no spans
 6. **Model knowledge** — unverified, orientation only, dashed badge, never scored
 
 The company profile's regulatory items are the one place model text makes a
