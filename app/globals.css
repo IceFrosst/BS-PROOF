@@ -920,6 +920,12 @@ thead th { color: var(--ink-soft); font-size: 0.7rem; text-transform: uppercase;
   --sp-measured: #0b6b5a;
   --sp-unverified: #885a00;
   --sp-danger: #a92f24;
+  /* Preview: restrained identity for the four evidence dimensions. Labels and
+     values still carry every meaning; hue only helps the four tracks scan. */
+  --sp-arc-effect: #087769;
+  --sp-arc-form: #315ca8;
+  --sp-arc-dose: #d85d42;
+  --sp-arc-evidence: #a06a00;
   --sp-radius: 12px;
   --fs-1: 13px;
   --fs-2: 15px;
@@ -1132,15 +1138,32 @@ body:has(.scan-page) .footer-inner p:last-child { display: none; }
 .sc-score { display: flex; align-items: baseline; gap: 2px; margin: 0; font-variant-numeric: tabular-nums; }
 .sc-score strong { font-size: var(--fs-6); font-weight: 700; letter-spacing: -0.04em; line-height: 1; }
 .sc-score span { color: var(--sp-mute); font-size: var(--fs-1); }
-.sc-arcs { display: grid; gap: 6px; }
-.sc-arc { display: grid; grid-template-columns: minmax(0, 1.5fr) 3em minmax(40px, 1fr) 3.2em; gap: 8px; align-items: center; font-size: var(--fs-1); font-variant-numeric: tabular-nums; }
-.sc-arc-label { color: var(--sp-mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sc-arcs { display: grid; gap: 11px; margin-top: 2px; }
+.sc-arc {
+  --sc-arc-color: var(--sp-arc-effect);
+  display: grid; gap: 5px; min-width: 0;
+  font-size: var(--fs-1); font-variant-numeric: tabular-nums;
+}
+.sc-arc-form { --sc-arc-color: var(--sp-arc-form); }
+.sc-arc-dose { --sc-arc-color: var(--sp-arc-dose); }
+.sc-arc-evidence { --sc-arc-color: var(--sp-arc-evidence); }
+.sc-arc-head { display: grid; grid-template-columns: minmax(0, 1fr) 3em auto; gap: 8px; align-items: baseline; min-width: 0; }
+.sc-arc-label { color: var(--sp-mute); white-space: nowrap; }
 .sc-arc-value { text-align: right; font-weight: 700; color: var(--sp-ink); }
-.sc-arc-track { position: relative; display: block; height: 6px; border-radius: 999px; background: var(--sp-tint); overflow: hidden; }
-.sc-arc-fill { display: block; height: 100%; border-radius: 999px; background: var(--sp-measured); }
+.sc-arc-evidence .sc-arc-value { color: var(--sp-mute); }
+.sc-arc-track {
+  position: relative; display: block; width: 100%; height: 10px; overflow: hidden;
+  border-radius: 999px; background: var(--sp-tint); box-shadow: inset 0 0 0 1px rgb(22 35 29 / 5%);
+}
+.sc-arc-fill { display: block; height: 100%; border-radius: 999px; background: var(--sc-arc-color); }
 .sc-arc-cov { text-align: right; color: var(--sp-ink); white-space: nowrap; }
-.sc-arc-empty .sc-arc-cov { color: var(--sp-unverified); font-weight: 600; overflow: visible; }
-.sc-arc-empty .sc-arc-track { background: repeating-linear-gradient(90deg, var(--sp-line) 0 4px, transparent 4px 8px); }
+.sc-arc-untested .sc-arc-cov { font-weight: 600; }
+.sc-arc-untested .sc-arc-track {
+  background-color: var(--sp-tint);
+  background-image: repeating-linear-gradient(135deg, transparent 0 4px, var(--sp-line) 4px 7px);
+  box-shadow: inset 0 0 0 1px var(--sp-line);
+}
+.sc-arc-unknown .sc-arc-track { background: var(--sp-white); border: 1px dashed var(--sp-line); box-shadow: none; }
 .sc-outcome-foot { display: flex; flex-wrap: wrap; gap: 2px 14px; padding-top: 10px; border-top: 1px solid var(--sp-line); color: var(--sp-mute); font-size: var(--fs-1); }
 .sc-outcome-notes { flex: 0 1 auto; }
 

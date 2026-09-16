@@ -561,6 +561,20 @@ do not drop it.
 
 ## Current state
 
+**Preview-only — `/scan` restores the four prominent evidence tracks without reverting the compact
+result state.** On branch `preview/restore-four-evidence-lines`, each outcome card again gives **Does
+it work? / In your form? / At your dose? / Well studied?** its own full-width horizontal track,
+stacked vertically, with restrained teal / blue / coral / gold identity. The written dimension names,
+values and coverage remain the meaning; hue is only a scanning aid. Coverage is printed beside every
+value, and exactly 0% is a striped track labelled **“0% · untested”**, so untested evidence cannot
+resemble a full, negative result (invariant 8). This changes only `components/scan-flow.tsx`, scoped
+`/scan` CSS, result-state tests and design documentation: scoring, API, prompts, schemas and analysis
+are untouched. The `8e9f48f` state model remains intact — result replaces capture UI, warnings and
+technical facts stay collapsed, `Scan another` stays at both ends, and the report remains far shorter
+than the pre-redesign version. Final built-app captures measure **5227px at 390** and **5445px at 360**,
+with 0px horizontal overflow (versus 9911px / 10424px before the redesign); references are under
+`docs/design/ref/four-lines-preview/`. This is a local preview, not a shipped or deployed change.
+
 **2026-09-16 — `/scan` design pass: a phone-first design system, and the result is now its own
 STATE.** Founder brief: "coherent, simplistic but look scientific … world class, not vibecoded … phone
 optimised." Two things shipped in `components/scan-flow.tsx` + the `/scan` block of `app/globals.css`

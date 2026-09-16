@@ -1,5 +1,17 @@
 # `/scan` design system — phone-first evidence report (2026-09-16)
 
+> **Preview amendment — four evidence tracks.** The branch
+> `preview/restore-four-evidence-lines` restores the result card's defining
+> visual: four prominent horizontal tracks stacked vertically. Each dimension
+> now owns a full-width row with a label/value/coverage header and a 10px track.
+> Teal / blue / coral / gold identify the four dimensions, while the written
+> labels and numbers carry the meaning. Exactly 0% is striped and says
+> “0% · untested”; it cannot resemble fully tested negative evidence. This
+> amendment supersedes only the compact one-line arc treatment and the
+> two-accent limit below. The result-state, collapsed details, warnings stack,
+> phone ergonomics and all other 2026-09-16 decisions remain in force. Preview
+> only; not shipped or deployed.
+
 **Brief (founder):** "make design coherent, simplistic but look scientific … world
 class, not vibecoded … phone optimised." Keep the white page, the dark live-camera
 block with its overlay, the "Search your supplement" pill above it, the round
@@ -12,7 +24,7 @@ them dig.
 
 ## 1. Tokens (scoped to `.scan-page`)
 
-### Colour — one neutral ramp, two accents
+### Colour — one neutral ramp, semantic accents, four restrained track identities
 
 | token | value | role |
 |---|---|---|
@@ -23,11 +35,17 @@ them dig.
 | `--sp-ink` | `#16231d` | text, the score, the dose marker (same ink as the rest of the site) |
 | `--sp-measured` | `#0b6b5a` | **measured** things only: arc fills, benefit band, in-range reading |
 | `--sp-unverified` | `#885a00` | **unverified / read-with-care** only: the "Model knowledge" badge text, the dashed model border, the warning stack's left mark |
+| `--sp-arc-effect` | `#087769` | “Does it work?” track identity |
+| `--sp-arc-form` | `#315ca8` | “In your form?” track identity |
+| `--sp-arc-dose` | `#d85d42` | “At your dose?” track identity |
+| `--sp-arc-evidence` | `#a06a00` | “Well studied?” track identity |
 
-Two accents, each with one meaning. Green means *a trial measured this*; amber
-means *a model recalled this or you must read this before trusting a number*. No
-coral, no blue, no gold-on-cream, no shadows (the viewfinder keeps its one shadow;
-it is the page's single object).
+Green still marks measured content elsewhere and amber still marks model-recalled
+or read-with-care content. Inside the outcome card, the four restrained hues are
+identity cues for repeated dimensions, not verdicts: every row spells out its
+label, numeric value and coverage, and the track length carries coverage. There
+are no shadows on the report (the viewfinder keeps its one shadow; it is the
+page's single object).
 
 ### Type — one family, one scale
 
@@ -113,10 +131,14 @@ same card treatment.
 │ ┌──────────────────────────────────────┐ │
 │ │ Endurance performance          60   │ │  score = the bold moment
 │ │ probably works                      │ │
-│ │ Does it work?    +0.73 ▓▓▓▓▓▓ 100%  │ │  four arcs, one line each
-│ │ In your form?     0.80 ▓▓▓▓▓░  92%  │ │  value + track + coverage
-│ │ At your dose?     0.78 ▓▓▓░░░  51%  │ │
-│ │ How much known?        ▓▓░░░░  36%  │ │
+│ │ Does it work?    +0.73   100% coverage│ │  four full-width rows
+│ │ ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓ │ │  label + value + coverage,
+│ │ In your form?    +0.70    92% coverage│ │  then a prominent track
+│ │ ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░░░░░ │ │
+│ │ At your dose?    +0.47    51% coverage│ │
+│ │ ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░░░░░░░░░░░░░░░ │ │
+│ │ Well studied?             36% coverage│ │
+│ │ ▓▓▓▓▓▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░░ │ │
 │ │ 3 trials   79% applies to your tub  │ │
 │ └──────────────────────────────────────┘ │
 │ … ×4 outcomes                            │
@@ -159,8 +181,9 @@ Worked through "what would I produce for any evidence-report page?" and compared
   table, there is no gradient, and every other number on the page is 13–15px.
   Kept, deliberately.
 - *Default:* cream ground, terracotta accent (the current page). *Changed:* pure
-  white, green = measured, amber = unverified. The two accents carry meaning, not
-  mood.
+  white, green = measured, amber = unverified. In the preview card only, four
+  restrained track hues aid repeated-dimension scanning; words and track length,
+  never hue alone, carry meaning.
 - *Default:* SaaS card kit (identical rounded cards, one radius everywhere,
   soft shadows). *Changed:* rules between sections, cards only for the
   outcome rows and the model-knowledge items where containment says
@@ -187,8 +210,10 @@ Worked through "what would I produce for any evidence-report page?" and compared
    commas or sentences.
 4. Cream card washes (`--paper`, `--paper-2`, `--white: #fffdf8`) inside a white
    page — gone; white and one tint.
-5. Four arc colours (teal, blue, coral, gold) decorating one card — one measured
-   green; the value and coverage numbers do the differentiating.
+5. Four arc colours originally collapsed to one measured green. **Preview
+   amendment:** teal, blue, coral and gold return only as restrained track
+   identities because the four stacked lines were the product's main visual;
+   labels, values, track lengths and coverage text still do all semantic work.
 6. Dashed / dotted / solid / tinted badge kit in five colours — one quiet outlined
    family, model knowledge alone is dashed + amber.
 7. Coloured top borders per card tone — removed; the verdict word and the number
@@ -199,7 +224,7 @@ Worked through "what would I produce for any evidence-report page?" and compared
 11. Result rendered below the capture chrome with no transition — the capture
     chrome collapses into the scanned-product header and focus moves.
 
-## 6. Build log — what the screenshots changed (three passes)
+## 6. Build log — what the screenshots changed (original pass + preview)
 
 Measured with `scripts/design_shots.mjs` against `tests/fixtures/scan-photo-rich.json`
 (3 actives, a recall, a suspected-MLM company, funding + publication concerns).
@@ -210,6 +235,19 @@ Measured with `scripts/design_shots.mjs` against `tests/fixtures/scan-photo-rich
 | 1 | 6181 | 6458 | state model, one stack, one-line arcs, collapsed legend/technical |
 | 2 | 5526 | 5756 | header facts → one sentence + `Label details`; notice rows → title-only on phones (the truncated lede was useless at 150 px); arc label "How well studied?"; footnotes inline |
 | 3 | 4919 | 5137 | model company facts → `<details>`; spacing scale applied consistently; dose legend copy shortened; arc label "Well studied?" (fits 360 without ellipsis) |
+| four-lines preview 1 | 5227 | 5445 | each dimension moved to a full-width 10px track with teal / blue / coral / gold identity; zero coverage striped; 0px horizontal overflow |
+| four-lines preview final | **5227** | **5445** | visual review found the evidence row's em dash implied missing data even though that dimension is pure quantity; removed that dash and retained right-aligned coverage; 0px horizontal overflow |
+
+The preview adds only 308px at each width versus pass 3 and remains 47% shorter
+than the pre-redesign 390 page (5227 vs 9911) and 48% shorter at 360 (5445 vs
+10424). Final references copied from `/tmp/four-lines-shots`:
+
+- `docs/design/ref/four-lines-preview/390-5-result-full.png`
+- `docs/design/ref/four-lines-preview/390-5-result-tile-01.png`
+- `docs/design/ref/four-lines-preview/390-5-result-tile-02.png`
+- `docs/design/ref/four-lines-preview/360-5-result-full.png`
+- `docs/design/ref/four-lines-preview/360-5-result-tile-01.png`
+- `docs/design/ref/four-lines-preview/360-5-result-tile-02.png`
 
 Decisions taken against the wireframe while looking at the tiles:
 

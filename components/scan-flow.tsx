@@ -35,9 +35,9 @@
  * Rules this component keeps, all from CLAUDE.md:
  *
  * 1. INVARIANT 8: no branch renders a composite without its arcs. A gated row is
- *    an em dash with its arcs still drawn, never a zero. Every arc shows its
- *    VERDICT and its COVERAGE on one line, so `0.00 @ 0%` and `-0.70 @ 100%`
- *    can never look alike.
+ *    an em dash with its arcs still drawn, never a zero. Every arc is its own
+ *    full-width row with its VERDICT/VALUE and COVERAGE, so `0.00 @ 0%` and
+ *    `-0.70 @ 100%` can never look alike.
  * 2. "not scored" is not "scores badly": an unscored product renders a distinct
  *    non-numeric state.
  * 3. A model-prior sentence is never typeset like a measurement. Every block
@@ -179,21 +179,40 @@ function firstSentence(body: string): string {
   return (m ? m[1] : stripped).trim();
 }
 
-/* One arc, one line: label, verdict, coverage track, coverage %. The verdict
- * and the coverage are never separated -- `0.00 @ 0%` renders an empty track
- * and the word "untested"; `−0.70 @ 100%` a full one. */
-function Arc({ label, value, coverage }: { label: string; value: string; coverage: NullableNumber }) {
+/* One evidence dimension, one full-width row: label, value and coverage stay
+ * together above a prominent track. The identity class is a restrained visual
+ * aid only; the words carry the meaning. `0.00 @ 0%` is explicitly striped and
+ * says "untested", while `−0.70 @ 100%` has a full solid track. */
+function Arc({
+  dimension,
+  label,
+  value,
+  coverage,
+}: {
+  dimension: "effect" | "form" | "dose" | "evidence";
+  label: string;
+  value: string;
+  coverage: NullableNumber;
+}) {
   const known = coverage !== null && coverage !== undefined;
   const fill = known ? Math.max(0, Math.min(1, coverage)) : 0;
-  const coverageText = !known ? "no coverage recorded" : fill === 0 ? "0%, untested" : pct(coverage);
+  const untested = known && fill === 0;
+  const coverageText = !known ? "coverage not recorded" : untested ? "0% · untested" : `${pct(coverage)} coverage`;
+  const coverageLabel = !known ? "not recorded" : untested ? "0%, untested" : pct(coverage);
   return (
-    <div className={`sc-arc${fill === 0 ? " sc-arc-empty" : ""}`} role="img" aria-label={`${label} ${value}, coverage ${coverageText}`}>
-      <span className="sc-arc-label">{label}</span>
-      <span className="sc-arc-value">{value}</span>
+    <div
+      className={`sc-arc sc-arc-${dimension}${untested ? " sc-arc-untested" : ""}${!known ? " sc-arc-unknown" : ""}`}
+      role="img"
+      aria-label={`${label}${value ? ` ${value},` : ","} coverage ${coverageLabel}`}
+    >
+      <div className="sc-arc-head">
+        <span className="sc-arc-label">{label}</span>
+        <span className="sc-arc-value">{value}</span>
+        <span className="sc-arc-cov">{coverageText}</span>
+      </div>
       <span className="sc-arc-track" aria-hidden="true">
         <span className="sc-arc-fill" style={{ width: `${fill * 100}%` }} />
       </span>
-      <span className="sc-arc-cov">{coverageText}</span>
     </div>
   );
 }
@@ -227,10 +246,10 @@ function EvidenceCard({ row }: { row: EvidenceRow }) {
         </p>
       </header>
       <div className="sc-arcs">
-        <Arc label="Does it work?" value={signed(row.arcs.effect?.verdict)} coverage={row.arcs.effect?.coverage} />
-        <Arc label="In your form?" value={row.arcs.form?.strength == null ? "—" : row.arcs.form.strength.toFixed(2)} coverage={row.arcs.form?.coverage} />
-        <Arc label="At your dose?" value={row.arcs.dose?.closeness == null ? "—" : row.arcs.dose.closeness.toFixed(2)} coverage={row.arcs.dose?.coverage} />
-        <Arc label="Well studied?" value="" coverage={row.arcs.evidence?.coverage} />
+        <Arc dimension="effect" label="Does it work?" value={signed(row.arcs.effect?.verdict)} coverage={row.arcs.effect?.coverage} />
+        <Arc dimension="form" label="In your form?" value={signed(row.arcs.form?.verdict)} coverage={row.arcs.form?.coverage} />
+        <Arc dimension="dose" label="At your dose?" value={signed(row.arcs.dose?.verdict)} coverage={row.arcs.dose?.coverage} />
+        <Arc dimension="evidence" label="Well studied?" value="" coverage={row.arcs.evidence?.coverage} />
       </div>
       <footer className="sc-outcome-foot">
         <span>
