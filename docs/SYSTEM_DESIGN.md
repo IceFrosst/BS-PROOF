@@ -267,29 +267,32 @@ to it) as one-line rows whose full text opens in a native `<details>`; every row
 still carries the `la-alert la-alert-warn` class and `role="note"`/`aria-label`
 the tests key on, and rows still render ONLY for concern/confirmed/suspected.
 Then **Does it work?** — one card per outcome: name, verdict word, the 0–100
-composite as the page's single bold moment (40px), and the **four arcs as four
-one-line rows**: label, verdict value, coverage track, coverage %. Invariant 8:
-the verdict and its coverage sit on the same line, an arc at 0% coverage gets a
-striped track and the words "0%, untested", so `0.00 @ 0%` and `−0.70 @ 100%`
-cannot render alike (pinned in `tests/scan-result-state.test.tsx`). Trials,
-applicability, form basis and dose match follow as a footnote line. Dose,
+composite as the page's single bold moment (40px), and the **four arcs as stacked,
+prominent full-width tracks**. Each dimension has a label / directional verdict /
+coverage header above its own 10px track; the effect, form and dose values are the
+arc `verdict` fields, never form strength or dose closeness. Invariant 8: every
+verdict stays with its coverage, and an arc at 0% coverage gets a striped track
+and the words "0% · untested", so `0.00 @ 0%` and `−0.70 @ 100%` cannot render
+alike across effect, form or dose (pinned in `tests/scan-result-state.test.tsx`).
+Trials, applicability, form basis and dose match follow as a footnote line. Dose,
 form-and-mix and company sections keep every fact; the model's recalled company
 facts (founded, HQ, ownership, third-party testing, COA, confidence, reputation
 notes, caveats) sit under a `<details>` inside the dashed model-knowledge card.
 The badge legend and a **Technical details** block (how the numbers were
 produced + the retained run's parameters, models, per-stage timings, prompt
 versions, `run_id`, `app_version`, persistence status, a link to /methodology)
-close the report, both collapsed. Measured on the rich photo fixture: **9911 →
-4919 px at 390 wide, 10424 → 5137 px at 360** (−50%), no horizontal overflow at
-either width, the composite visible on the second screen.
+close the report, both collapsed. Measured on the rich photo fixture after the
+stacked-track preview: **9911 → 5227 px at 390 wide, 10424 → 5445 px at 360**
+(about −47% / −48%), no horizontal overflow at either width, with the composite
+visible on the second screen.
 
 **Tokens** (scoped to `.scan-page`): one neutral ramp (`#fff` ground, `#f3f5f4`
-tint, `#dde1df` line, `#5a6660` muted text, `#16231d` ink) and two accents each
-with one meaning — `#0b6b5a` **measured** (arc fills, benefit band, in-range
-reading) and `#885a00` **unverified / read with care** (the Model knowledge
-badge text and dashed border, the warning stack's left mark). Cream (`--paper`,
-`--white: #fffdf8`), coral, blue, gold-on-cream and card shadows no longer appear
-on this page (the viewfinder keeps its one shadow). Type: the system stack
+tint, `#dde1df` line, `#5a6660` muted text, `#16231d` ink), plus `#0b6b5a`
+**measured** and `#885a00` **unverified / read with care** for their existing
+semantic roles. The four evidence tracks use restrained teal / blue / coral /
+gold identities as scanning aids only; their written labels, signed verdicts and
+coverage carry the meaning. Cream (`--paper`, `--white: #fffdf8`) and card shadows
+remain absent from the report (the viewfinder keeps its one shadow). Type: the system stack
 already loaded in `layout.tsx`, scale 13 / 15 / 17 / 22 / 28 / 40, sentence case
 everywhere, tabular numerals in every column, prose capped at 62ch. One 12px
 radius for contained things. All targets ≥ 44px; `env(safe-area-inset-bottom)`
@@ -305,8 +308,9 @@ glance and is still never typeset like a measurement. The `user_input` badge is
 no longer dotted — the LABEL carries the distinction, and §1a's rule that a
 typed entry never shows a read confidence, quoted spans or a vision model is
 unchanged and pinned. Template tells removed (ALL-CAPS eyebrows, middle-dot meta
-strings, four arc colours, per-tone card borders, the five-colour badge kit,
-repeated "% of the evidence" sentences) are enumerated in the design doc.
+strings, per-tone card borders, the five-colour badge kit, repeated "% of the
+evidence" sentences) are enumerated in the design doc; the four restrained track
+identities are retained because they make the stacked evidence dimensions scan.
 
 ## 2. The one rule
 

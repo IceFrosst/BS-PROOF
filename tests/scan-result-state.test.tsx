@@ -150,32 +150,84 @@ describe("/scan result state", () => {
     expect(el.querySelectorAll(".la-alert-warn").length).toBe(stack!.querySelectorAll(".la-alert-warn").length);
   });
 
-  it("invariant 8: 0.00 @ 0% and -0.70 @ 100% never render alike, and every arc carries its coverage", async () => {
-    const rows = fixture.evidence.rows;
-    const twisted = {
-      ...fixture,
-      evidence: {
-        ...fixture.evidence,
-        rows: [
-          { ...rows[0], outcome: "untested_form", outcome_label: "Untested form", arcs: { ...rows[0].arcs, form: { verdict: 0, coverage: 0, strength: 0, basis: null } } },
-          { ...rows[1], outcome: "failed_form", outcome_label: "Failed form", arcs: { ...rows[1].arcs, form: { verdict: -0.7, coverage: 1, strength: 0, basis: "ladder" } } },
-        ],
-      },
-    };
-    mockFetch(twisted);
+  it("renders four prominent evidence rows in every outcome card", async () => {
+    mockFetch(fixture);
     const el = await mount();
     await scanPhoto(el);
 
     const cards = Array.from(el.querySelectorAll<HTMLElement>(".scan-evidence"));
-    expect(cards).toHaveLength(2);
-    const formArc = (card: HTMLElement) => Array.from(card.querySelectorAll<HTMLElement>(".sc-arc")).find((a) => /in your form/i.test(a.textContent ?? ""))!;
-    const untested = formArc(cards[0]);
-    const failed = formArc(cards[1]);
-    expect(untested.textContent).not.toEqual(failed.textContent);
-    expect(untested.textContent).toContain("untested");
-    expect(untested.classList.contains("sc-arc-empty")).toBe(true);
-    expect(failed.textContent).toContain("100%");
-    expect(failed.classList.contains("sc-arc-empty")).toBe(false);
+    expect(cards.length).toBeGreaterThan(0);
+    for (const card of cards) {
+      const arcs = Array.from(card.querySelectorAll<HTMLElement>(".sc-arc"));
+      expect(arcs).toHaveLength(4);
+      expect(arcs.map((arc) => arc.querySelector(".sc-arc-label")?.textContent)).toEqual([
+        "Does it work?",
+        "In your form?",
+        "At your dose?",
+        "Well studied?",
+      ]);
+      // Each dimension owns a separate full-width track below its readable
+      // label/value/coverage header; it is no longer a tiny inline meter.
+      for (const arc of arcs) {
+        expect(arc.querySelector(":scope > .sc-arc-head .sc-arc-value")).not.toBeNull();
+        expect(arc.querySelector(":scope > .sc-arc-head .sc-arc-cov")).not.toBeNull();
+        expect(arc.querySelector(":scope > .sc-arc-track")).not.toBeNull();
+      }
+    }
+  });
+
+  it("invariant 8: effect, form and dose render directional verdicts with coverage, distinguishing 0.00 @ 0% from -0.70 @ 100%", async () => {
+    const source = fixture.evidence.rows[0];
+    const dimensions = ["effect", "form", "dose"] as const;
+    const rows = dimensions.flatMap((dimension) => {
+      const target = source.arcs[dimension];
+      return [
+        {
+          ...source,
+          outcome: `untested_${dimension}`,
+          outcome_label: `Untested ${dimension}`,
+          arcs: {
+            ...source.arcs,
+            [dimension]: { ...target, verdict: 0, coverage: 0, strength: 0.91, closeness: 0.88 },
+          },
+        },
+        {
+          ...source,
+          outcome: `failed_${dimension}`,
+          outcome_label: `Failed ${dimension}`,
+          arcs: {
+            ...source.arcs,
+            [dimension]: { ...target, verdict: -0.7, coverage: 1, strength: 0.91, closeness: 0.88 },
+          },
+        },
+      ];
+    });
+    mockFetch({ ...fixture, evidence: { ...fixture.evidence, rows } });
+    const el = await mount();
+    await scanPhoto(el);
+
+    const cards = Array.from(el.querySelectorAll<HTMLElement>(".scan-evidence"));
+    expect(cards).toHaveLength(6);
+    dimensions.forEach((dimension, index) => {
+      const untested = cards[index * 2].querySelector<HTMLElement>(`.sc-arc-${dimension}`)!;
+      const failed = cards[index * 2 + 1].querySelector<HTMLElement>(`.sc-arc-${dimension}`)!;
+
+      // The displayed form/dose values must be the signed directional verdict,
+      // not their positive strength/closeness metadata (set above to 0.91/0.88).
+      expect(untested.querySelector(".sc-arc-value")?.textContent).toBe("0.00");
+      expect(failed.querySelector(".sc-arc-value")?.textContent).toBe("−0.70");
+      expect(untested.textContent).not.toContain("0.91");
+      expect(untested.textContent).not.toContain("0.88");
+
+      expect(untested.textContent).toContain("0% · untested");
+      expect(untested.classList.contains("sc-arc-untested")).toBe(true);
+      expect(untested.querySelector<HTMLElement>(".sc-arc-fill")?.style.width).toBe("0%");
+      expect(failed.textContent).toContain("100% coverage");
+      expect(failed.classList.contains("sc-arc-untested")).toBe(false);
+      expect(failed.querySelector<HTMLElement>(".sc-arc-fill")?.style.width).toBe("100%");
+      expect(untested.textContent).not.toEqual(failed.textContent);
+    });
+
     // Every arc row names its coverage in its accessible label.
     for (const arc of el.querySelectorAll(".sc-arc")) {
       expect(arc.getAttribute("aria-label")).toMatch(/coverage/);
