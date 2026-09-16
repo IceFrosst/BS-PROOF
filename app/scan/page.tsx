@@ -31,8 +31,8 @@ export default function ScanPage() {
             BS <em>PROOF</em>
           </h1>
           <p className="tester-lede">
-            Evidence, dose, form, combination and company &mdash; from one photo of the label. Every block says where
-            it came from, and only the evidence run produces a number.
+            Is this supplement legit? Photograph the label and get a plain answer on the evidence, the dose, the form, the
+            mix and the company &mdash; each part marked with where it came from, and only real trials produce a number.
           </p>
         </div>
         <div className="shell analyze-hero-body">

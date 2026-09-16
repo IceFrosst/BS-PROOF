@@ -897,46 +897,155 @@ thead th { color: var(--ink-soft); font-size: 0.7rem; text-transform: uppercase;
 .front-form .waitlist-copy { max-width: 46ch; }
 .front-form .waitlist-done { margin: 0; }
 /* ---------------------------------------------------------------- SCAN ----
- * /scan: the full product analysis. Reuses the analyzer's .la-* primitives for
- * the capture card and the arc bars; everything below is the sectioned report.
- * Basis badges are the load-bearing part: model knowledge is DASHED and never
- * styled like a measurement. Text colours are the --*-text variants (AA). */
-.scan-result { gap: 28px; }
-.scan-section { display: grid; gap: 18px; padding: clamp(18px, 3vw, 28px); background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); color: var(--ink); }
-.scan-section-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px 20px; }
-.scan-section-head .eyebrow { margin-bottom: 4px; }
-.scan-section-head h3 { margin: 0; font-size: 1.35rem; letter-spacing: -0.02em; }
-.scan-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+ * /scan: the full product analysis, redesigned 2026-09-15 around a
+ * plain-language "At a glance" card (components/scan-report.tsx).
+ *
+ * Reuses the analyzer's .la-* primitives for the capture card, alerts and the
+ * census; everything below is the report. Three things are load-bearing:
+ *
+ *   TONE MARKS   .scan-mark-* carry good / mixed / caution / concern / unknown.
+ *                `unknown` is DASHED and neutral -- "not scored" must never look
+ *                like "scores badly". Colour never travels alone: every mark
+ *                has a glyph, and a screen reader gets the word.
+ *   ESTIMATES    .is-estimated and .scan-item-model_prior are dashed coral --
+ *                the same treatment as the "Model knowledge" badge -- so a
+ *                model recollection is never typeset like a measurement.
+ *   THE GAUGE    .scan-gauge zones are verdictLabel's thresholds (30/45/55/65)
+ *                so the words under the bar match the words on the card.
+ *
+ * Text colours are the --*-text variants (AA on both tints); the vivid tokens
+ * are used only for marks, bars and zones. */
+.scan-result { gap: 22px; }
+.scan-report-anchor { scroll-margin-top: 24px; }
+
 .scan-badge { display: inline-flex; align-items: center; min-height: 24px; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); color: var(--ink-soft); font-size: 0.66rem; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; white-space: nowrap; }
 .scan-badge-evidence_run { border-color: var(--teal); color: var(--teal-text); background: rgb(8 119 105 / 8%); }
 .scan-badge-registry { border-color: var(--blue); color: var(--blue); background: rgb(49 92 168 / 8%); }
 .scan-badge-curated_table { border-color: var(--gold); color: var(--gold-text); background: rgb(160 106 0 / 8%); }
 .scan-badge-label { border-color: var(--ink-soft); color: var(--ink); }
 .scan-badge-model_prior { border-style: dashed; border-color: var(--coral); color: var(--coral-text); background: transparent; }
+.scan-badges { display: flex; flex-wrap: wrap; gap: 6px; }
 
-.scan-identity { display: grid; grid-template-columns: 1fr auto; gap: 20px; padding: 20px 22px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-2); color: var(--ink); }
-.scan-identity h3 { margin: 0 0 12px; font-size: 1.5rem; letter-spacing: -0.02em; }
+.scan-mark { display: inline-grid; flex: none; place-items: center; width: 26px; height: 26px; border-radius: 50%; font-size: 0.82rem; font-weight: 900; line-height: 1; }
+.scan-mark-good { background: var(--teal); color: var(--white); }
+.scan-mark-mixed { background: rgb(160 106 0 / 14%); color: var(--gold-text); border: 1.5px solid var(--gold); }
+.scan-mark-caution { background: var(--gold); color: var(--white); }
+.scan-mark-concern { background: var(--coral); color: var(--white); }
+.scan-mark-unknown { background: transparent; color: var(--ink-soft); border: 1.5px dashed var(--ink-soft); }
+
+/* 1. the product */
+.scan-product { display: grid; grid-template-columns: auto 1fr; gap: 20px; align-items: start; padding: 20px 22px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-2); color: var(--ink); }
+.scan-product-thumb { width: 96px; height: 96px; object-fit: cover; border-radius: 12px; border: 1px solid var(--line); background: var(--white); }
+.scan-product .eyebrow { margin-bottom: 4px; }
+.scan-product h3 { margin: 0 0 12px; font-size: 1.5rem; letter-spacing: -0.02em; }
 .scan-brand { color: var(--ink-soft); font-weight: 600; }
-.scan-chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.scan-chip { display: inline-flex; align-items: center; min-height: 28px; padding: 3px 11px; border-radius: 999px; background: var(--white); border: 1px solid var(--line); font-size: 0.8rem; font-weight: 700; }
-.scan-chip-claim { border-style: dashed; }
-.scan-meta { display: grid; gap: 10px; margin: 0; align-content: start; min-width: 150px; }
-.scan-meta dt { color: var(--ink-soft); font-size: 0.64rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; }
-.scan-meta dd { margin: 2px 0 0; font-weight: 700; font-size: 0.85rem; overflow-wrap: anywhere; }
+.scan-facts { display: flex; flex-wrap: wrap; gap: 10px 24px; margin: 0; padding: 0; list-style: none; }
+.scan-facts li { display: grid; gap: 1px; }
+.scan-facts span { color: var(--ink-soft); font-size: 0.64rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
+.scan-facts strong { font-size: 0.95rem; }
 
-.scan-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
-.scan-card { display: grid; gap: 12px; padding: 18px 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--white); color: var(--ink); }
-.scan-evidence h4 { margin: 0; font-size: 1.15rem; }
-.scan-tone-positive { border-top: 4px solid var(--teal); }
-.scan-tone-negative { border-top: 4px solid var(--coral); }
-.scan-tone-neutral { border-top: 4px solid var(--line); }
-.scan-tone-gated { background: var(--paper); }
-.scan-note { margin: 0; color: var(--ink-soft); font-size: 0.92rem; }
+/* 2. at a glance */
+.scan-verdict { display: grid; gap: 18px; padding: clamp(20px, 3vw, 30px); border: 1px solid var(--line); border-top: 6px solid var(--teal); border-radius: var(--radius); background: var(--white); color: var(--ink); }
+.scan-verdict-estimated { border-top-color: var(--coral); border-top-style: dashed; }
+.scan-verdict-none { border-top-color: var(--line); }
+.scan-verdict-head .eyebrow { margin-bottom: 6px; }
+.scan-verdict h3 { margin: 0; font-size: clamp(1.3rem, 3vw, 1.75rem); letter-spacing: -0.025em; line-height: 1.15; }
+.scan-verdict-sub { max-width: 72ch; margin: 10px 0 0; color: var(--ink-soft); font-size: 0.95rem; }
+.scan-tally { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.scan-tally li { display: inline-flex; align-items: center; gap: 8px; padding: 3px 12px 3px 3px; border: 1px solid var(--line); border-radius: 999px; font-size: 0.8rem; font-weight: 800; }
+.scan-tally .scan-mark { width: 22px; height: 22px; font-size: 0.72rem; }
+.scan-findings { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.scan-finding { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: start; padding: 14px 16px; border: 1px solid var(--line); border-left-width: 5px; border-radius: 14px; background: var(--paper); color: var(--ink); }
+.scan-finding-good { border-left-color: var(--teal); }
+.scan-finding-mixed, .scan-finding-caution { border-left-color: var(--gold); }
+.scan-finding-concern { border-left-color: var(--coral); }
+.scan-finding-unknown { border-left-color: var(--line); }
+.scan-finding.is-estimated { border-style: dashed; border-color: var(--coral); border-left-style: solid; background: var(--white); }
+.scan-finding-body { display: grid; gap: 2px; min-width: 0; }
+.scan-finding-q { color: var(--ink-soft); font-size: 0.68rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
+.scan-finding-body > strong { font-size: 1.05rem; line-height: 1.3; letter-spacing: -0.01em; }
+.scan-finding-body p { margin: 6px 0 0; color: var(--ink-soft); font-size: 0.9rem; line-height: 1.5; }
+.scan-finding-basis { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.scan-finding-jump { display: inline-flex; align-items: center; min-height: 44px; color: var(--teal-text); font-size: 0.82rem; font-weight: 800; white-space: nowrap; }
 
-.scan-doses { display: grid; gap: 18px; }
+/* things to know */
+.scan-caveats { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.scan-caveats li { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start; padding: 12px 16px; border: 1px solid var(--line); border-left: 5px solid var(--gold); border-radius: 12px; background: var(--white); color: var(--ink); font-size: 0.9rem; }
+
+/* 3. the detail sections */
+.scan-section { display: grid; gap: 18px; padding: clamp(18px, 3vw, 28px); background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); color: var(--ink); scroll-margin-top: 20px; }
+.scan-section-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px 20px; }
+.scan-section-head .eyebrow { margin-bottom: 4px; }
+.scan-section-head h3 { margin: 0; font-size: 1.35rem; letter-spacing: -0.02em; }
+.scan-note { margin: 0; color: var(--ink-soft); font-size: 0.92rem; max-width: 80ch; }
+.scan-plainline { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 0.92rem; }
+
+/* 3a. outcomes */
+.scan-outcomes { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+.scan-outcome { display: grid; gap: 16px; padding: 18px 20px; border: 1px solid var(--line); border-top-width: 4px; border-radius: 14px; background: var(--white); color: var(--ink); }
+.scan-tone-good { border-top-color: var(--teal); }
+.scan-tone-mixed { border-top-color: var(--gold); }
+.scan-tone-caution, .scan-tone-concern { border-top-color: var(--coral); }
+.scan-tone-unknown { border-top-color: var(--line); background: var(--paper); }
+.scan-outcome-head { display: grid; gap: 12px; }
+.scan-outcome h4 { margin: 0; color: var(--ink-soft); font-size: 0.8rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.scan-outcome-verdict { margin: 4px 0 0; font-size: 1.45rem; font-weight: 900; letter-spacing: -0.025em; line-height: 1.1; }
+.scan-tone-good .scan-outcome-verdict { color: var(--teal-text); }
+.scan-tone-mixed .scan-outcome-verdict { color: var(--gold-text); }
+.scan-tone-caution .scan-outcome-verdict, .scan-tone-concern .scan-outcome-verdict { color: var(--coral-text); }
+.scan-tone-unknown .scan-outcome-verdict { color: var(--ink-soft); }
+.scan-outcome-gated { margin: 0; color: var(--ink-soft); font-size: 0.88rem; }
+
+.scan-gauge { display: grid; gap: 8px; padding-top: 14px; }
+.scan-gauge-track { position: relative; display: flex; height: 12px; border-radius: 999px; overflow: visible; }
+.scan-zone { display: block; height: 100%; }
+.scan-zone:first-child { border-radius: 999px 0 0 999px; }
+.scan-zone-yes { border-radius: 0 999px 999px 0; }
+.scan-zone-no { background: var(--coral); }
+.scan-zone-probno { background: rgb(216 93 66 / 45%); }
+.scan-zone-unclear { background: var(--paper-2); }
+.scan-zone-prob { background: rgb(8 119 105 / 45%); }
+.scan-zone-yes { background: var(--teal); }
+.scan-gauge-marker { position: absolute; top: 50%; transform: translate(-50%, -50%); }
+.scan-gauge-marker b { display: inline-grid; place-items: center; min-width: 36px; height: 28px; padding: 0 8px; border-radius: 999px; background: var(--night); color: var(--white); font-size: 0.82rem; font-weight: 900; font-variant-numeric: tabular-nums; box-shadow: 0 0 0 3px var(--white); }
+.scan-gauge-ticks { display: flex; justify-content: space-between; color: var(--ink-soft); font-size: 0.62rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+
+.scan-checks { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.scan-check { display: grid; grid-template-columns: auto minmax(0, 1fr) 118px; gap: 12px; align-items: center; }
+.scan-check-body { display: grid; gap: 1px; min-width: 0; }
+.scan-check-label { color: var(--ink-soft); font-size: 0.66rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.scan-check-body strong { font-size: 0.95rem; line-height: 1.3; }
+.scan-check-cov { display: grid; grid-template-columns: 1fr 38px; gap: 6px; align-items: center; }
+.scan-check-bar { display: block; height: 8px; border-radius: 999px; background: var(--paper-2); overflow: hidden; }
+.scan-check-bar > span { display: block; height: 100%; border-radius: 999px; background: var(--ink-soft); }
+.scan-check-good .scan-check-bar > span { background: var(--teal); }
+.scan-check-caution .scan-check-bar > span, .scan-check-concern .scan-check-bar > span { background: var(--coral); }
+.scan-check-mixed .scan-check-bar > span { background: var(--gold); }
+.scan-check-cov em { color: var(--ink-soft); font-size: 0.72rem; font-style: normal; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+
+.scan-outcome-foot { display: grid; gap: 6px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: 0.84rem; }
+.scan-numbers summary { display: flex; align-items: center; min-height: 44px; color: var(--teal-text); font-size: 0.8rem; font-weight: 800; cursor: pointer; }
+.scan-numbers .la-read-grid { padding-bottom: 6px; }
+
+/* 3b. the model orientation -- dashed, no gauge, no arcs */
+.scan-disclaimer { margin: 0; padding: 12px 14px; border-left: 4px solid var(--coral); background: var(--paper); color: var(--ink); font-size: 0.88rem; border-radius: 0 8px 8px 0; }
+.scan-prior { gap: 8px; }
+.scan-dirchip { padding: 2px 9px; border-radius: 999px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; border: 1px solid var(--line); }
+.scan-dir-benefit { border-color: var(--teal); color: var(--teal-text); }
+.scan-dir-no_effect { border-color: var(--ink-soft); color: var(--ink-soft); }
+.scan-dir-harm { border-color: var(--coral); color: var(--coral-text); }
+.scan-dir-insufficient { border-style: dashed; color: var(--ink-soft); }
+.scan-dots { display: inline-flex; align-items: center; gap: 4px; color: var(--ink-soft); font-size: 0.72rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+.scan-dots i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--ink-soft); }
+.scan-dots i.is-on { background: var(--ink-soft); }
+.scan-dots span { margin-left: 6px; }
+.scan-dose-hit { margin: 0; color: var(--teal-text); font-size: 0.9rem; font-weight: 700; }
+.scan-dose-miss { margin: 0; color: var(--coral-text); font-size: 0.9rem; font-weight: 700; }
+
+/* 3c. the dose bar */
+.scan-doses { display: grid; gap: 20px; }
 .scan-dose { display: grid; gap: 8px; }
-.scan-dose-head { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
-.scan-dose-head span { color: var(--ink-soft); font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+.scan-dose-head { display: flex; align-items: center; gap: 10px; }
 .scan-dosebar { position: relative; height: 14px; border-radius: 999px; background: var(--paper-2); overflow: visible; }
 .scan-band { position: absolute; top: 0; height: 100%; border-radius: 999px; }
 .scan-band-benefit { background: var(--teal); opacity: 0.85; }
@@ -952,50 +1061,53 @@ thead th { color: var(--ink-soft); font-size: 0.7rem; text-transform: uppercase;
 .scan-key-null { background: var(--coral); opacity: 0.35; }
 .scan-key-marker { width: 4px; height: 14px; background: var(--night); }
 
-.scan-list, .scan-recalls, .scan-plain { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+/* 3d. form and mix, 3e. company -- shared item primitives */
+.scan-list, .scan-recalls, .scan-plain, .scan-reg { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
 .scan-plain { list-style: disc; padding-left: 20px; gap: 4px; font-size: 0.9rem; }
-.scan-item { display: grid; gap: 6px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--white); }
+.scan-item { display: grid; gap: 6px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--white); color: var(--ink); }
 .scan-item p { margin: 0; font-size: 0.92rem; }
 .scan-item a { color: var(--teal-text); font-size: 0.82rem; font-weight: 800; overflow-wrap: anywhere; }
 .scan-item-model_prior { border-style: dashed; border-color: var(--coral); background: var(--paper); }
-.scan-item-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
-.scan-item-head strong { font-size: 1rem; }
+.scan-item-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.scan-item-head strong { font-size: 1rem; margin-right: auto; }
+.scan-formfit-good { border-left: 5px solid var(--teal); }
+.scan-formfit-caution { border-left: 5px solid var(--gold); }
+.scan-formfit-unknown { border-left: 5px solid var(--line); background: var(--paper); }
 .scan-sev { color: var(--ink-soft); font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; }
 .scan-sev-moderate .scan-sev { color: var(--gold-text); }
 .scan-sev-high .scan-sev { color: var(--coral-text); }
 .scan-actives { display: grid; gap: 8px; }
-.scan-formfit strong { font-size: 1rem; }
-.scan-overall { margin-top: 4px; }
+.scan-chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.scan-chip { display: inline-flex; align-items: center; min-height: 28px; padding: 3px 11px; border-radius: 999px; background: var(--white); border: 1px solid var(--line); font-size: 0.8rem; font-weight: 700; }
+.scan-chip-claim { border-style: dashed; }
 
-.scan-company-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.scan-trust { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.scan-trust-row { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: start; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--white); color: var(--ink); }
+.scan-trust-row.is-model { border-style: dashed; border-color: var(--coral); background: var(--paper); }
+.scan-trust-row > div { display: grid; gap: 8px; min-width: 0; }
+.scan-trust-row p { margin: 0; font-size: 0.92rem; }
 .scan-recalls li { display: grid; gap: 3px; padding: 12px 14px; border-left: 4px solid var(--coral); background: var(--paper); border-radius: 8px; font-size: 0.88rem; }
 .scan-reg li { display: grid; gap: 3px; font-size: 0.9rem; }
-.scan-profile { display: grid; gap: 14px; }
-.scan-profile p { margin: 0; }
 
-.scan-legend { display: grid; gap: 12px; padding: 18px 22px; border: 1px dashed var(--line); border-radius: var(--radius); color: var(--ink); }
-.scan-legend h3 { margin: 0; font-size: 1rem; }
-.scan-legend ol { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+/* 4. fine print */
+.scan-fineprint { padding: 14px 20px; border: 1px dashed var(--line); border-radius: var(--radius); color: var(--ink); font-size: 0.88rem; }
+.scan-fineprint > summary { display: flex; align-items: center; min-height: 44px; font-weight: 800; cursor: pointer; }
+.scan-fineprint-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 22px; margin-top: 14px; }
+.scan-fineprint h4 { margin: 0 0 8px; color: var(--ink-soft); font-size: 0.72rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
+.scan-fineprint p { color: var(--ink-soft); }
+.scan-legend { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .scan-legend li { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: center; color: var(--ink-soft); font-size: 0.86rem; }
 
 @media (max-width: 620px) {
-  .scan-identity { grid-template-columns: 1fr; }
-  .scan-meta { grid-template-columns: repeat(3, 1fr); }
+  .scan-product { grid-template-columns: 1fr; gap: 14px; }
+  .scan-product-thumb { width: 72px; height: 72px; }
+  .scan-product h3 { font-size: 1.25rem; }
+  .scan-finding { grid-template-columns: auto minmax(0, 1fr); }
+  .scan-finding-jump { grid-column: 2; min-height: 40px; }
+  .scan-outcomes { grid-template-columns: 1fr; }
+  .scan-outcome { padding: 16px 14px; }
+  .scan-check { grid-template-columns: auto minmax(0, 1fr); row-gap: 6px; }
+  .scan-check-cov { grid-column: 2; }
+  .scan-fineprint-grid { grid-template-columns: 1fr; }
   .scan-legend li { grid-template-columns: 1fr; gap: 4px; }
 }
-
-/* Evidence ORIENTATION (stage 2b): the model's recollection when no extraction
- * run exists. Deliberately unlike a scored card -- dashed, no big number, no
- * arcs -- so a reader can never mistake it for a measurement. */
-.scan-disclaimer { margin: 0; padding: 12px 14px; border-left: 4px solid var(--coral); background: var(--paper); color: var(--ink); font-size: 0.88rem; border-radius: 0 8px 8px 0; }
-.scan-prior { gap: 8px; }
-.scan-dirchip { padding: 2px 9px; border-radius: 999px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; border: 1px solid var(--line); }
-.scan-dir-benefit { border-color: var(--teal); color: var(--teal-text); }
-.scan-dir-no_effect { border-color: var(--ink-soft); color: var(--ink-soft); }
-.scan-dir-harm { border-color: var(--coral); color: var(--coral-text); }
-.scan-dir-insufficient { border-style: dashed; color: var(--ink-soft); }
-.scan-strength { color: var(--ink-soft); font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; }
-.scan-strength-strong { color: var(--teal-text); }
-.scan-strength-none { color: var(--coral-text); }
-.scan-dose-hit { margin: 0; color: var(--teal-text); font-size: 0.9rem; font-weight: 700; }
-.scan-dose-miss { margin: 0; color: var(--coral-text); font-size: 0.9rem; font-weight: 700; }

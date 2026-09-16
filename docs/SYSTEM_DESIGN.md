@@ -14,6 +14,7 @@ with **where it came from**:
 | block | question it answers | source (basis) |
 |---|---|---|
 | What the label says | ingredient, form, dose, servings, actives, seals, brand, manufacturer | `label` — as printed |
+| **At a glance** (2026-09-15) | five findings in words — does it work, is the dose right, is this the right form, does the mix hold up, who makes it — each with a tone (good / mixed / caution / concern / unknown), a one-line reason and the basis it rests on; `estimated: true` when it rests on the model | derived from the blocks below by `lib/analyze/summary.ts`; **mints no number** |
 | Does it work? | per outcome: 0–100 headline with its four arcs and verdict | `evidence_run` — retained scored run |
 | What the literature says | *fallback when no run exists:* per outcome direction, strength of the literature, effective daily dose range, recalled pooled effect | `model_prior` — estimate, no score |
 | Is your dose the dose that worked? | your daily dose vs the range where trials found benefit, and where they found nothing | `evidence_run` + `label` |
@@ -21,6 +22,20 @@ with **where it came from**:
 | Who makes it, and what is on record? | printed seals; FDA recalls on file; the model's profile of the company | `label`, `registry`, `model_prior` |
 
 Only the evidence run produces a **number**. Everything else qualifies.
+
+**The At-a-glance card is a translation, not a sixth source** (founder ask
+2026-09-15: results "an average user can benefit from, whether the certain
+supplement is legit"). `buildScanSummary` reads the statuses and verdict labels
+the sections already carry and writes them as five findings; its tally is a
+count of findings per tone and is never folded into a grade, because that would
+rank "measured on 12 trials" and "the model recalls" on one axis. Three rules
+are pinned by tests: no run → tone `unknown` and "not measured yet" (never a
+low tone); any finding resting on model recollection is `estimated` and renders
+dashed under the model badge; only a registry recall makes the company finding
+a `concern` — a model-recalled action is a stamped `caution`. The detail report
+below the card keeps every number (each outcome on a labelled 0–100 gauge with
+its four arcs as plain-worded checks; "Show the numbers" for the raw values)
+so nothing the previous view exposed has gone, it is simply no longer first.
 
 **Every supplement gets an answer** (founder 2026-09-08: "even if you don't
 [have a retained run], do the analysis through the system prompt of the API
@@ -163,13 +178,18 @@ lib/analyze/compatibility.ts     curated table + model fill-in
 lib/analyze/company.ts           label + openFDA + model profile
 lib/analyze/dose-effectiveness.ts readings off the scored rows
 lib/analyze/census.ts            Europe PMC count + demand queue (shared)
-lib/analyze/scan.ts              the orchestrator; ScanAnalysisV1
+lib/analyze/summary.ts           the plain-language At-a-glance findings (no number)
+lib/analyze/scan.ts              the orchestrator; ScanAnalysisV1 (+ summary)
 app/api/scan/route.ts            upload validation → analyzeScan
-app/scan/page.tsx, components/scan-flow.tsx   the UI
+app/scan/page.tsx, components/scan-flow.tsx   capture: drop zone, camera, consent
+components/scan-report.tsx       the result: at-a-glance, gauges + checks, dose, mix, trust
+app/scan/preview/page.tsx        DEV ONLY (404 in production): the report over the test fakes
+tests/fixtures/scan-fakes.ts     fake label / model / openFDA / Europe PMC, shared by tests + preview
 prompts/label.md (v1.1), prompts/company.md, prompts/compatibility.md,
 prompts/evidence_prior.md
 schemas/label.json, schemas/company.json, schemas/compatibility.json,
 schemas/evidence_prior.json
 vocab/compatibility.json         curated, cited interactions and form notes
 tests/scan.test.ts               the whole flow against fakes, zero model calls
+tests/dashboard/scan-report.test.tsx   the report rendered over real analyzeScan output
 ```

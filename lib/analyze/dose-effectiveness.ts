@@ -52,7 +52,7 @@ export interface DoseEffectivenessSection {
   note: string;
 }
 
-function mg(value: NullableNumber): string {
+export function mg(value: NullableNumber): string {
   if (value === null || value === undefined) return "—";
   return value >= 1000 ? `${(value / 1000).toFixed(2).replace(/\.?0+$/, "")} g` : `${Math.round(value)} mg`;
 }

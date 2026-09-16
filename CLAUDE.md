@@ -1197,6 +1197,25 @@ still the unmeasured SR-uplift experiment (Next item 3).
 
 ## Next
 
+**Changed 2026-09-15: the scan RESULT is a consumer page — `components/
+scan-report.tsx`, design in `docs/SYSTEM_DESIGN.md` §1.** Founder: results
+"an average user can benefit from, whether the certain supplement is legit".
+The page now opens with an **At a glance** card: five findings in words (does
+it work, is the dose right, right form, does the mix hold up, who makes it),
+each with a tone mark, a one-line reason and its basis badge, built by
+`lib/analyze/summary.ts` from statuses the sections already carry and shipped
+on the response as `summary`. It is a translation, so it **mints no number**
+and its tally is never a grade; no run → `unknown` "not measured yet"; a
+finding resting on the model is `estimated` and renders dashed. Below it each
+outcome sits on a labelled 0–100 gauge with the four arcs as plain-worded
+checks (invariant 8 intact — gauge and four checks always travel together),
+the company block is a trust checklist, and the raw values live under "Show
+the numbers" and the fine print. `scan-flow.tsx` keeps capture only. To see
+the result view without a key or a photo: `/scan/preview/?case=<name>` runs
+the real orchestrator over the test fakes (`tests/fixtures/scan-fakes.ts`);
+it is a 404 in production. Change a finding's WORDING in `summary.ts`, its
+LAYOUT in `scan-report.tsx`; `tests/scan.test.ts` pins the tones.
+
 **Changed 2026-09-08: EVERY supplement gets an answer — stage 2b, the no-run
 fallback.** Founder: "the retained runs, you can access them if you have them,
 but even if you don't, do the analysis through the system prompt of the API

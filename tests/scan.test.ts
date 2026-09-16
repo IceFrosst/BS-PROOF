@@ -3,8 +3,8 @@
  *
  * lib/analyze/scan.ts takes its label read, its model and its fetch as
  * injectable dependencies, so the whole flow -- label -> identity -> evidence
- * -> dose -> compatibility -> company -> one ScanAnalysisV1 -- runs here
- * against fakes. What is pinned:
+ * -> dose -> compatibility -> company -> summary -> one ScanAnalysisV1 -- runs
+ * here against the fakes in tests/fixtures/scan-fakes.ts. What is pinned:
  *
  *   - every section carries a basis, and model output is basis model_prior
  *   - a failing model call degrades ONE section, never the evidence score
@@ -12,6 +12,8 @@
  *   - openFDA parsing, including its 404-means-no-matches convention
  *   - the daily-dose rule (per serving x servings/day) for the scored dose
  *   - the JSON extractor and the schema validator refuse what they must
+ *   - the plain-language summary mints no number, stamps every estimate, and
+ *     never turns "not scored" into a low tone
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -29,148 +31,15 @@ import {
 } from "@/lib/analyze/compatibility";
 import { doseEffectivenessSection, scoredDose } from "@/lib/analyze/dose-effectiveness";
 import { readPriorDose, type PriorOutcome } from "@/lib/analyze/evidence-prior";
-import { ModelCallError, extractJson, validateAgainstSchema, type ChatJsonFn } from "@/lib/analyze/llm";
-import { analyzeScan, type ScanDeps } from "@/lib/analyze/scan";
-import { scoreProduct } from "@/lib/analyze/product-score";
-import { validateLabel, type LabelRead } from "@/lib/analyze/vision";
+import { ModelCallError, extractJson, validateAgainstSchema } from "@/lib/analyze/llm";
+import { analyzeScan } from "@/lib/analyze/scan";
+import type { Finding } from "@/lib/analyze/summary";
+import { validateLabel } from "@/lib/analyze/vision";
+import { SCENARIOS, companyFixture, deps, fakeChatJson, fakeFetch, label, magnesiumLabel, openFdaRecord } from "@/tests/fixtures/scan-fakes";
 
 type Json = Record<string, unknown>;
 
 const ROOT = process.cwd();
-
-function label(overrides: Partial<LabelRead> = {}): LabelRead {
-  return {
-    ingredient_vocab_id: "creatine",
-    ingredient_label_text: "Creatine Monohydrate",
-    form_vocab_id: "creatine_monohydrate",
-    compound_dose_mg: 5000,
-    dose_unit_as_printed: "5 g",
-    servings_per_day: 1,
-    is_multi_ingredient: false,
-    other_actives: [],
-    actives: [{ name: "Creatine Monohydrate", compound_dose_mg: 5000, dose_unit_as_printed: "5 g", form_text: "monohydrate" }],
-    certifications: ["Informed Sport"],
-    manufacturer: "Testbrand Labs Ltd",
-    country_of_origin: null,
-    warnings_printed: [],
-    claims_printed: ["Supports muscle strength"],
-    brand: "Testbrand",
-    product_name: "Testbrand Creatine",
-    is_supplement_label: true,
-    confidence: "high",
-    unreadable_reason: null,
-    evidence_spans: ["Creatine Monohydrate 5 g"],
-    _meta: { model: "fake-vision", prompt_version: "label-v1.1", elapsed_s: 0.1, backend: "fake", input_tokens: null, output_tokens: null },
-    ...overrides,
-  };
-}
-
-const companyFixture = {
-  brand: "Testbrand",
-  known: true,
-  summary: "A sports nutrition brand.",
-  founded_year: 2010,
-  headquarters_country: "United Kingdom",
-  parent_company: null,
-  ownership_type: "private",
-  third_party_testing: { program: "Informed Sport", status: "claimed" },
-  transparency: { coa_published: "unknown" },
-  regulatory_history: [{ kind: "recall", year: 2019, summary: "A voluntary recall of one lot.", confidence: "low" }],
-  reputation_notes: [],
-  confidence: "medium",
-  caveats: ["Recall details not confirmed."],
-};
-
-const priorFixture = {
-  ingredient: "Magnesium",
-  recognised: true,
-  summary: "An essential mineral taken for sleep, cramps and migraine prophylaxis.",
-  evidence_landscape: { syntheses_exist: "many", note: "Multiple meta-analyses exist." },
-  outcomes: [
-    {
-      outcome: "sleep quality",
-      direction: "benefit",
-      evidence_strength: "limited",
-      effective_daily_dose_low_mg: 200,
-      effective_daily_dose_high_mg: 400,
-      pooled_effect_recalled: "SMD 0.30 [0.10, 0.50]",
-      population: "older adults with insomnia",
-      note: "A few small RCTs, heterogeneous.",
-      confidence: "medium",
-    },
-    {
-      outcome: "migraine frequency",
-      direction: "insufficient",
-      evidence_strength: "limited",
-      effective_daily_dose_low_mg: null,
-      effective_daily_dose_high_mg: null,
-      pooled_effect_recalled: null,
-      population: null,
-      note: "Mixed trials.",
-      confidence: "low",
-    },
-  ],
-  form_assessment: { form: "magnesium glycinate", verdict: "well_absorbed", note: "Chelated forms are better tolerated." },
-  safety_notes: ["Supplemental magnesium above 350 mg/day can cause diarrhoea."],
-  confidence: "medium",
-  caveats: [],
-};
-
-const compatFixture = {
-  pairs: [
-    { a: "Creatine Monohydrate", b: "Beta-Alanine", interaction: "none", severity: "info", mechanism: "", confidence: "high" },
-  ],
-  form_notes: [],
-  overall: "No documented interaction between these actives.",
-};
-
-function fakeChatJson(answers: Record<string, unknown>): ChatJsonFn {
-  return (async <T,>(request: { purpose: string }) => {
-    const value = answers[request.purpose];
-    if (value instanceof Error) throw value;
-    if (value === undefined) throw new ModelCallError("http", `no fixture for ${request.purpose}`);
-    // A fresh object per call, as the real chatJson returns: callers may
-    // annotate their copy (company.ts adds registry_corroborated) and a shared
-    // fixture would leak that into the next test.
-    return { value: structuredClone(value) as T, meta: { text: "", model: "fake-text", backend: "fake", elapsed_s: 0.2, input_tokens: null, output_tokens: null, finish_reason: "stop" } };
-  }) as ChatJsonFn;
-}
-
-const openFdaRecord = {
-  recall_number: "F-0001-2019",
-  reason_for_recall: "Undeclared allergen",
-  status: "Terminated",
-  classification: "Class II",
-  product_description: "Testbrand Creatine 500 g tub",
-  recalling_firm: "Testbrand Labs Ltd",
-  recall_initiation_date: "20190315",
-};
-
-function fakeFetch(handlers: { openfda?: (url: string) => Response; pmc?: () => Response }): typeof fetch {
-  return (async (input: string | URL | Request) => {
-    const url = String(input instanceof Request ? input.url : input);
-    if (url.startsWith("https://api.fda.gov/")) {
-      return handlers.openfda ? handlers.openfda(url) : new Response(JSON.stringify({ error: { code: "NOT_FOUND" } }), { status: 404 });
-    }
-    if (url.includes("europepmc")) {
-      return handlers.pmc ? handlers.pmc() : new Response(JSON.stringify({ hitCount: 42 }), { status: 200 });
-    }
-    return new Response("unexpected", { status: 500 });
-  }) as typeof fetch;
-}
-
-function deps(overrides: Partial<ScanDeps> = {}): ScanDeps {
-  let t = 0;
-  return {
-    readLabel: async () => label(),
-    chatJson: fakeChatJson({ "company profile": companyFixture, compatibility: compatFixture, "evidence prior": priorFixture }),
-    fetch: fakeFetch({}),
-    scoreProduct,
-    budgetMs: 55_000,
-    now: () => (t += 10),
-    ...overrides,
-  };
-}
 
 describe("curated compatibility table", () => {
   it("only references form ids that exist in vocab/form.json and cites every entry", () => {
@@ -221,7 +90,10 @@ describe("curated compatibility table", () => {
     const notes = curatedFormNotes("creatine", "creatine_monohydrate");
     expect(notes).toHaveLength(1);
     expect(notes[0].source?.url).toContain("doi.org");
+    expect(notes[0].kind).toBe("reference_form");
     expect(curatedFormNotes("creatine", "creatine_hcl")).toHaveLength(0);
+    // The curated kind travels on the row so the summary reacts to WHAT a note says.
+    expect(curatedFormNotes("magnesium", "magnesium_oxide").map((n) => n.kind)).toContain("low_bioavailability");
   });
 });
 
@@ -378,11 +250,7 @@ describe("analyzeScan end to end (fakes only)", () => {
   });
 
   it("an unsupported ingredient still gets an orientation, compatibility, company and a queue entry", async () => {
-    const out = await analyzeScan(
-      "aW1n",
-      "image/png",
-      deps({ readLabel: async () => label({ ingredient_vocab_id: null, ingredient_label_text: "Shilajit", form_vocab_id: null }) }),
-    );
+    const out = await analyzeScan("aW1n", "image/png", SCENARIOS.shilajit());
     expect(out.status).toBe("ingredient_not_supported");
     expect(out.company?.status).toBe("ok");
     expect(out.compatibility?.status).toBeTruthy();
@@ -394,21 +262,7 @@ describe("analyzeScan end to end (fakes only)", () => {
   });
 
   it("an in-vocabulary ingredient with no run gets the orientation, with dose placed against the recalled range", async () => {
-    const out = await analyzeScan(
-      "aW1n",
-      "image/png",
-      deps({
-        readLabel: async () =>
-          label({
-            ingredient_vocab_id: "magnesium",
-            ingredient_label_text: "Magnesium Bisglycinate",
-            form_vocab_id: "magnesium_glycinate",
-            compound_dose_mg: 2000,
-            servings_per_day: 1,
-            actives: [{ name: "Magnesium (as magnesium bisglycinate)", compound_dose_mg: 2000, dose_unit_as_printed: "2000 mg", form_text: "bisglycinate" }],
-          }),
-      }),
-    );
+    const out = await analyzeScan("aW1n", "image/png", deps({ readLabel: async () => magnesiumLabel() }));
     expect(out.status).toBe("not_scored");
     expect(out.evidence_prior?.status).toBe("ok");
     const sleep = out.evidence_prior?.data?.outcomes[0];
@@ -453,8 +307,148 @@ describe("analyzeScan end to end (fakes only)", () => {
   });
 
   it("a non-label image stops after the read", async () => {
-    const out = await analyzeScan("aW1n", "image/png", deps({ readLabel: async () => label({ is_supplement_label: false }) }));
+    const out = await analyzeScan("aW1n", "image/png", SCENARIOS.notlabel());
     expect(out.status).toBe("not_a_supplement_label");
     expect(out.company).toBeUndefined();
+    expect(out.summary).toBeUndefined();
+  });
+});
+
+/*
+ * THE PLAIN-LANGUAGE SUMMARY (lib/analyze/summary.ts, 2026-09-15). It is a
+ * translation of statuses and verdict labels into words. What it must never
+ * do is the subject of every test below: mint a number, hide an estimate, or
+ * read "not scored" as "scores badly".
+ */
+describe("plain-language summary", () => {
+  const KEYS: Array<Finding["key"]> = ["evidence", "dose", "form", "combination", "company"];
+  const SCORE_LIKE = /\b\d{1,3}\s*(\/|out of)\s*100\b|\d+(\.\d+)?\s*%/;
+
+  it("a scored product is MEASURED: five findings in order, no score in any headline, every finding sourced", async () => {
+    const out = await analyzeScan("aW1n", "image/png", SCENARIOS.creatine());
+    const s = out.summary!;
+    expect(s.schema_version).toBe("ScanSummaryV1");
+    expect(s.certainty).toBe("measured");
+    expect(s.findings.map((f) => f.key)).toEqual(KEYS);
+    for (const f of s.findings) {
+      expect(f.headline, f.key).not.toMatch(SCORE_LIKE);
+      expect(f.headline.length, f.key).toBeGreaterThan(0);
+      expect(["good", "mixed", "caution", "concern", "unknown"]).toContain(f.tone);
+    }
+    expect(Object.values(s.tally).reduce((a, b) => a + b, 0)).toBe(5);
+
+    const [evidence, dose, form, combination, company] = s.findings;
+    // The evidence finding leads with one of the scorer's own verdict labels; it is a measurement, so it is not an estimate.
+    expect(evidence.estimated).toBe(false);
+    expect(evidence.basis).toEqual(["evidence_run"]);
+    expect(evidence.headline).toMatch(/^(Works|Probably works|Unclear|Probably does not work|Does not work|Barely studied|Works, but [a-z ]+) for /);
+    expect(evidence.detail).toMatch(/trials we read and can quote/);
+    // The dose finding rests on the run plus the label, never on the model.
+    expect(dose.basis).toEqual(expect.arrayContaining(["evidence_run", "label"]));
+    expect(dose.estimated).toBe(false);
+    // Monohydrate is the exact form the run scored, and the curated note says reference form -> good.
+    expect(form.tone).toBe("good");
+    expect(form.headline).toMatch(/creatine monohydrate is the form the trials used/i);
+    // One active on the panel.
+    expect(combination.tone).toBe("good");
+    // Registry: no recall on file. Model: a recall NOT corroborated by the registry, testing "claimed", a seal printed.
+    // That is "mixed", never "concern": an uncorroborated recollection does not get to indict a firm.
+    expect(company.tone).toBe("mixed");
+    expect(company.estimated).toBe(false);
+    expect(company.basis).toEqual(expect.arrayContaining(["registry", "label"]));
+    // And the top line says what the whole page rests on, including that it is not a product claim yet.
+    expect(s.headline).toContain("Testbrand Creatine");
+    expect(s.subline).toMatch(/nothing here is a product claim/);
+  });
+
+  it("no run -> ESTIMATED: the evidence, dose and form findings are stamped, and a limited-evidence benefit is 'may help', not 'works'", async () => {
+    const out = await analyzeScan("aW1n", "image/png", SCENARIOS.magnesium());
+    const s = out.summary!;
+    expect(s.certainty).toBe("estimated");
+    expect(s.headline).toMatch(/model estimate/);
+    const [evidence, dose, form] = s.findings;
+    expect(evidence.estimated).toBe(true);
+    expect(evidence.basis).toEqual(["model_prior"]);
+    expect(evidence.headline).toBe("May help sleep quality");
+    expect(evidence.tone).toBe("mixed");
+    expect(evidence.detail).toMatch(/model's reading of the literature/);
+    // 282 mg elemental inside the recalled 200-400 mg -> good, placed by our ramp, still an estimate because the range is the model's.
+    expect(dose.estimated).toBe(true);
+    expect(dose.tone).toBe("good");
+    expect(dose.basis).toEqual(expect.arrayContaining(["model_prior", "label"]));
+    // The model's form assessment is used only because no run scored the form, and it is stamped.
+    expect(form.estimated).toBe(true);
+    expect(form.tone).toBe("good");
+    expect(form.headline).toMatch(/well-absorbed/);
+  });
+
+  it("no run and no model -> UNKNOWN, never a concern: 'not scored' is not 'scores badly'", async () => {
+    const out = await analyzeScan("aW1n", "image/png", SCENARIOS.nomodel());
+    const s = out.summary!;
+    expect(s.certainty).toBe("none");
+    const [evidence, dose, form] = s.findings;
+    expect(evidence.tone).toBe("unknown");
+    expect(evidence.headline).toBe("Not measured yet");
+    expect(evidence.detail).toMatch(/not a low score/);
+    expect(evidence.estimated).toBe(false);
+    expect(dose.tone).toBe("unknown");
+    expect(form.tone).toBe("unknown");
+    expect(s.tally.concern).toBe(0);
+    expect(s.tally.caution).toBe(0);
+  });
+
+  it("a recall on the public registry is the one thing that makes the company finding a concern", async () => {
+    const out = await analyzeScan("aW1n", "image/png", SCENARIOS.recall());
+    const company = out.summary!.findings[4];
+    expect(company.tone).toBe("concern");
+    expect(company.basis).toEqual(["registry"]);
+    expect(company.estimated).toBe(false);
+    expect(company.headline).toMatch(/1 FDA recall on file/);
+    expect(company.detail).toMatch(/2019-03-15/);
+  });
+
+  it("a model-recalled warning letter is a CAUTION stamped as an estimate, not a registry fact", async () => {
+    const out = await analyzeScan(
+      "aW1n",
+      "image/png",
+      deps({
+        chatJson: fakeChatJson({
+          "company profile": { ...companyFixture, regulatory_history: [{ kind: "fda_warning_letter", year: 2021, summary: "Labelling claims.", confidence: "medium" }] },
+        }),
+      }),
+    );
+    const company = out.summary!.findings[4];
+    expect(company.tone).toBe("caution");
+    expect(company.estimated).toBe(true);
+    expect(company.basis).toContain("model_prior");
+    expect(company.detail).toMatch(/not corroborated by a registry/i);
+  });
+
+  it("a poorly absorbed form is a caution from the curated, cited table, even when the model calls it fine", async () => {
+    const out = await analyzeScan(
+      "aW1n",
+      "image/png",
+      deps({
+        readLabel: async () =>
+          magnesiumLabel({
+            form_vocab_id: "magnesium_oxide",
+            ingredient_label_text: "Magnesium Oxide",
+            actives: [{ name: "Magnesium (as magnesium oxide)", compound_dose_mg: 500, dose_unit_as_printed: "500 mg", form_text: "oxide" }],
+          }),
+      }),
+    );
+    const form = out.summary!.findings[2];
+    expect(form.tone).toBe("caution");
+    expect(form.basis).toContain("curated_table");
+    expect(form.detail).toMatch(/absorbed less/);
+  });
+
+  it("an out-of-vocabulary ingredient still gets all five findings", async () => {
+    const out = await analyzeScan("aW1n", "image/png", SCENARIOS.shilajit());
+    const s = out.summary!;
+    expect(s.findings.map((f) => f.key)).toEqual(KEYS);
+    expect(s.certainty).toBe("estimated");
+    expect(s.findings[0].estimated).toBe(true);
+    expect(s.findings[4].tone).not.toBe("unknown");
   });
 });

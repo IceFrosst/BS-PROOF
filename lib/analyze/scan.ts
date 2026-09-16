@@ -55,6 +55,7 @@ import {
 import { evidencePriorSection, type EvidencePriorSection } from "./evidence-prior";
 import { chatJson, providerConfigured, type ChatJsonFn } from "./llm";
 import { availableProducts, scoreProduct } from "./product-score";
+import { buildScanSummary, type ScanSummary } from "./summary";
 import { readLabel, type LabelMediaType, type LabelRead } from "./vision";
 import { elementalDoseRangeMg, ingredientIds, resolveIngredientForm } from "./vocab";
 
@@ -140,6 +141,12 @@ export interface ScanAnalysis {
   dose_effectiveness?: DoseEffectivenessSection;
   compatibility?: CompatibilitySection;
   company?: CompanySection;
+  /**
+   * The plain-language layer (lib/analyze/summary.ts): five findings in words,
+   * each with a tone and a basis, derived from the sections above. Present
+   * whenever a supplement label was read. Mints no number.
+   */
+  summary?: ScanSummary;
   census?: Json;
   queue?: Json;
   caveats?: Array<{ code: string; text: string }>;
@@ -192,6 +199,9 @@ export async function analyzeScan(
   const finish = (status: string): ScanAnalysis => {
     out.status = status;
     out.meta.timing_s = seconds(deps.now() - t0);
+    // Last, so it sees every section. Pure; returns null before a label exists.
+    const summary = buildScanSummary(out);
+    if (summary) out.summary = summary;
     return out;
   };
 

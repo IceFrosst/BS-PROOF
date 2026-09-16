@@ -149,6 +149,12 @@ export interface FormNoteRow {
   basis: Basis;
   confidence: "high" | "medium" | "low" | null;
   source: Source | null;
+  /**
+   * The curated table's kind (low_bioavailability, well_absorbed, reference_form,
+   * no_demonstrated_advantage, form_matters) so a consumer can react to WHAT
+   * the note says without parsing its prose. Null for a model fill-in note.
+   */
+  kind: string | null;
 }
 
 function pairKey(a: string, b: string): string {
@@ -192,6 +198,7 @@ export function curatedFormNotes(ingredient: string, formId: string | null): For
       basis: "curated_table",
       confidence: "high",
       source: note.source,
+      kind: note.kind,
     });
   }
   return out;
@@ -335,7 +342,7 @@ export async function compatibilitySection(
       });
     }
     for (const n of value.form_notes ?? []) {
-      section.form_notes.push({ active: n.active, note: n.note, basis: "model_prior", confidence: n.confidence, source: null });
+      section.form_notes.push({ active: n.active, note: n.note, basis: "model_prior", confidence: n.confidence, source: null, kind: null });
     }
     section.basis_used = [...new Set<Basis>([...section.basis_used, "model_prior"])];
     section.model = {
