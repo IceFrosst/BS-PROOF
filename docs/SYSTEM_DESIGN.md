@@ -62,11 +62,15 @@ read confidence, no quoted spans, no vision model, and a standing caveat
 Typed and photographed entries of the same tub produce identical `product`,
 `evidence` and `dose_effectiveness` blocks (pinned in `tests/scan-manual.test.ts`).
 
-**Camera.** "Take a photo" is `<input type="file" capture="environment">`.
-Production sends `Permissions-Policy: camera=()`, which blocks
-`getUserMedia`, so the in-page viewfinder is gone; the capture attribute hands
-off to the platform camera and needs no policy change. "Upload an image" is the
-same input without `capture`.
+**Camera (superseded 2026-09-16 -- see §1d below).** The 2026-09-15 text here
+said "Take a photo" was a plain `<input type="file" capture="environment">`
+because production sent `Permissions-Policy: camera=()`, which blocks
+`getUserMedia` outright, so an in-page viewfinder could never open. That is no
+longer true: the founder asked for a live camera viewfinder matching
+https://bsproof.lovable.app, `vercel.json` now sends `camera=(self)`, and
+`/scan` opens a real `getUserMedia` feed. The `capture="environment"` file
+input is KEPT, unconditionally mounted, as the fallback for insecure
+contexts, denial, or a browser with no `getUserMedia` at all -- §1d.
 
 **Every supplement gets an answer** (founder 2026-09-08: "even if you don't
 [have a retained run], do the analysis through the system prompt of the API
@@ -168,6 +172,47 @@ decision, orchestration on all three scan paths, a byte-identical pin of
 unavailable, a time-budget skip, and a source-text check that no scoring file
 mentions it) and `tests/literature-warnings-render.test.tsx` (the rendered
 page, confirming neither "fraud" nor "fabricated" ever appears).
+
+### 1d. The dark, camera-first redesign (2026-09-16)
+
+Founder: "use your eyes" -- match the look of https://bsproof.lovable.app.
+`/scan` moved from the 2026-09-15 pure-white page to a dark-navy
+(`#050b18`) page where a LIVE camera viewfinder owns most of the first
+viewport, with these founder-specified differences from the reference:
+
+- **Live camera, not the platform camera app.** `components/scan-camera.tsx`
+  requests `getUserMedia({video:{facingMode:{ideal:"environment"}},
+  audio:false})` the moment nothing is staged and shows the feed in one big
+  rounded (24px) block -- 3:4 portrait under 640px, 16:9 at or above it -- with
+  a top-to-transparent dark gradient overlay carrying the scan mark, the
+  wordmark, the page's single `<h1 id="scan-title">` ("Does your Supplement
+  actually work?") and a subline ("Scan and see."). A big round shutter under
+  the block captures a frame via canvas (`lib/camera/capture.ts`,
+  `maxLongEdge` 2048, JPEG quality 0.92) and hands it to the SAME `stageFile`
+  path a picked file already used, so the multipart `POST /api/scan` upload is
+  unchanged. The stream stops on capture, on unmount and when the tab is
+  hidden, and restarts whenever the block should be active again (clearing
+  the staged file, i.e. "Scan another"). Denial / no API / insecure context
+  all collapse to one calm fallback message in the block, and the ORIGINAL
+  `capture="environment"` file input stays mounted underneath as the recovery
+  path -- nothing regresses for a browser or permission state that cannot
+  open a live stream.
+- **`vercel.json`'s `Permissions-Policy` changed `camera=()` -> `camera=(self)`**
+  (every other directive unchanged) -- production was blocking `getUserMedia`
+  outright before this change; see §1a above, which is now superseded.
+- **"Search your supplement" moved above the block** as a full-width pill
+  button, opening `<SearchSheet>` (`components/search-sheet.tsx`) -- an
+  accessible dialog (`role="dialog"`, `aria-modal`, a focus trap, Escape and
+  backdrop-click to close) around the unchanged `<SupplementSearch>` --
+  instead of the 2026-09-15 inline expand/collapse panel below the capture
+  buttons. The "or" divider is gone.
+- **Results keep their existing rendering** (every section, badge and yellow
+  warning, unchanged from §1/§1a/§1b/§1c) and stay on light/white cards for
+  contrast, per the founder's "result cards may stay light/white on the dark
+  ground" instruction -- only the page ground and the pre-result capture
+  chrome went dark. `app/manifest.ts`'s `background_color` followed the ground
+  to `#050B18` (`theme_color` unchanged); `tests/pwa.test.ts` pins both.
+- **Sign-in while results load** -- see §7 below.
 
 ## 2. The one rule
 
@@ -352,7 +397,85 @@ bucket, the `scan_runs` table, RLS enabled with **no anon policies** (identical
 discipline to `docs/waitlist.sql`), and the indexes the two read patterns
 (newest-first, filter by status) actually need.
 
-## 7. What is deliberately NOT done
+## 7. Sign-in and email capture (2026-09-16)
+
+Founder: "people log in once so we capture their email." While a scan or a
+search's loading-stage messages show, and again over the finished result until
+a session exists, `/scan` offers Google sign-in through Supabase Auth --
+in-page, no redirect, so the analysis already sitting in component state is
+never lost to a navigation.
+
+**How it works.** The Google Identity Services script
+(`https://accounts.google.com/gsi/client`) loads LAZILY, only when sign-in is
+configured and a person has not signed in yet (`components/google-sign-in.tsx`).
+Its button (`google.accounts.id.renderButton`, theme `filled_black`, size
+`large`) returns an ID token; `supabase.auth.signInWithIdToken({provider:
+"google", token})` turns that into a Supabase session, persisted the library's
+default way (`localStorage`, auto-refreshing) -- so sign-in is once per
+device, not once per scan. `lib/auth/supabase-browser.ts` holds the one
+browser-side Supabase client (a singleton, `null` when any of the three env
+vars below is missing) and is the only file in the app importing
+`@supabase/supabase-js` -- every server-side store (`lib/waitlist/store.ts`,
+`lib/scan-history/store.ts`, `lib/auth/claim.ts`) stays on plain `fetch`
+against PostgREST/Auth, because an insert or a PATCH does not need an SDK; a
+browser session that must persist and auto-refresh does.
+
+**Client env** (`NEXT_PUBLIC_` because they are meant for the browser bundle,
+unlike every other credential in `.env.example`): `NEXT_PUBLIC_SUPABASE_URL`,
+`NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_GOOGLE_CLIENT_ID`. All three
+must be set for any of this to appear (`authFullyConfigured()`); missing any
+one is treated identically to "sign-in not offered" -- no card, no locked
+result, no third-party script load. Local/CI builds carry none of them, by
+design.
+
+**Supabase dashboard steps** (same project as `docs/waitlist.sql` /
+`docs/scan-history.sql`):
+
+1. **Authentication -> Providers -> Google**: enable it, then paste the Google
+   OAuth Web client ID and client secret (from Google Cloud Console) into the
+   provider's fields.
+2. **Google Cloud Console -> that OAuth 2.0 Client -> Authorized JavaScript
+   origins**: add `https://bs-proof-dashboard.vercel.app` and
+   `http://localhost:3000`.
+3. The **same client ID** goes into `NEXT_PUBLIC_GOOGLE_CLIENT_ID` (Vercel
+   project env vars, plus `NEXT_PUBLIC_SUPABASE_URL` and
+   `NEXT_PUBLIC_SUPABASE_ANON_KEY` from Supabase's API settings page).
+
+**Behaviour while a result is loading or ready.** When sign-in is configured
+and nobody is signed in: a "Save your result" card (title, one line of copy,
+the Google button) renders in the loading area the instant a scan/search is
+submitted, and — if the analysis finishes before a session appears — again
+above a blurred, `inert` copy of the ALREADY-COMPUTED result (no re-fetch;
+signing in just removes the blur and the `inert` attribute). When sign-in is
+not configured, or somebody is already signed in, results render exactly as
+before, plus a small "Signed in as x@y · Sign out" line in the result meta
+once there is a session.
+
+**Server-side capture, `POST /api/scan/claim` (`lib/auth/claim.ts`).** The
+client calls this the moment both a Supabase session and a scan's `run_id`
+exist, whichever arrived second — right after sign-in if a result is already
+in state, or right after a result arrives if already signed in. The route
+verifies the caller's access token itself, the same "never trust the client"
+discipline as the rest of this app: a plain `fetch GET {SUPABASE_URL}
+/auth/v1/user` with `apikey: SUPABASE_SERVICE_ROLE_KEY` and the caller's token
+as the bearer. A verified token then (a) PATCHes `public.scan_runs` (service
+role, bypassing RLS) to set `user_id`/`user_email` on that run, and (b)
+upserts `public.scan_users` (`user_id` primary key, `email`, `first_seen_at`,
+`last_seen_at`, a best-effort `scans` counter), both in
+`docs/scan-history.sql`. The route never throws past a reported outcome: 401
+on a bad/expired/missing token, 404 when the run id matches no row, 503 when
+Supabase env vars are not configured, and the JSON response never carries a
+secret. Extending `docs/scan-history.sql` is idempotent (`add column if not
+exists`, `create table if not exists`), matching every other migration file
+in this repo.
+
+**Deliberately not built:** no password/email-link sign-in (Google only,
+matching the founder's ask), no account page, no way for a signed-in user to
+see their own scan history in the app (still an owner-only Supabase SQL Editor
+job, per §6), and no atomic increment for `scan_users.scans` (a best-effort
+read-then-write, documented as such in the SQL file).
+
+## 8. What is deliberately NOT done
 
 - **No pipeline run is started by a scan.** An unscored ingredient gets a
   literature count (Europe PMC, `is_a_score: false`) and a queue entry; a human
@@ -373,7 +496,7 @@ discipline to `docs/waitlist.sql`), and the indexes the two read patterns
   the service role key only; reading them back is a Supabase SQL editor / a
   future owner-only tool, never a route this app serves.
 
-## 8. Files
+## 9. Files
 
 ```
 lib/analyze/llm.ts               the model boundary
@@ -390,16 +513,27 @@ lib/analyze/business-model.ts    MLM / direct-selling disclosure: type + pure re
 lib/analyze/literature-warnings.ts     funding-independence / publication-bias disclosures (uses llm)
 lib/analyze/literature-disclosures.ts  same disclosures: type + pure rendering decision (client-safe)
 lib/scan-history/store.ts        durable scan-run history: Supabase Storage + Postgres, plain fetch, server-only
+lib/camera/capture.ts            getUserMedia/canvas capture helpers, unit-testable without a real camera (client-safe)
+lib/auth/supabase-browser.ts     the ONE browser Supabase client singleton; @supabase/supabase-js lives here only
+lib/auth/use-supabase-session.ts hook: session state (email/access token) for <ScanFlow>
+lib/auth/claim.ts                server-side: verifies a Supabase access token, claims a scan_runs row, upserts scan_users
 app/api/scan/route.ts            multipart → analyzeScan; JSON → analyzeManual; GET catalog; wires scan-run history
+app/api/scan/claim/route.ts      POST { run_id } + Authorization: Bearer <token> → attaches the signed-in user to a run
 app/scan/page.tsx, components/scan-flow.tsx, components/supplement-search.tsx   the UI
+components/scan-camera.tsx       the live camera viewfinder block + shutter (2026-09-16)
+components/search-sheet.tsx      accessible dialog wrapping <SupplementSearch> (2026-09-16)
+components/google-sign-in.tsx    lazy-loaded Google button + the "Save your result" card (2026-09-16)
 public/scan-mark.svg             transparent scanner mark; derived by scripts/write_scan_mark.mjs
 prompts/label.md (v1.1), prompts/company.md (v1.1), prompts/compatibility.md,
 prompts/evidence_prior.md, prompts/literature_warnings.md
 schemas/label.json, schemas/company.json, schemas/compatibility.json,
 schemas/evidence_prior.json, schemas/literature_warnings.json
 vocab/compatibility.json         curated, cited interactions and form notes
-docs/scan-history.sql            idempotent migration: private bucket, scan_runs table, RLS, indexes
+docs/scan-history.sql            idempotent migration: private bucket, scan_runs/scan_users tables, RLS, indexes
 tests/scan.test.ts               the whole flow against fakes, zero model calls
+tests/camera-capture.test.ts     lib/camera/capture.ts: support detection, mocked-canvas capture, blob->File
+tests/scan-signin.test.tsx       sign-in card gating, locked/unlocked result rendering, claim call wiring (mocked supabase-browser module)
+tests/scan-claim-route.test.ts   POST /api/scan/claim: 401 bad token, 404 unknown run, 200 happy path, no secret in the response
 tests/scan-manual.test.ts        catalog integrity, unit conversion, manual orchestration, route, source/basis honesty, mark drift
 tests/scan-search.test.tsx       keyboard-driven combobox, / vs /scan vs /tester separation
 tests/scan-history.test.ts       store: payload shape, image hashing/storage, app version, orphan cleanup, no-secret leakage

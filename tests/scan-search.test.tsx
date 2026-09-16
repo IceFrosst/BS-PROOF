@@ -1,5 +1,6 @@
 /*
- * The /scan surface after the 2026-09-15 redesign:
+ * The /scan surface, carried forward through the 2026-09-16 dark camera-first
+ * redesign:
  *
  *   - the "Search for your supplement" combobox is operable by KEYBOARD alone
  *     and follows the ARIA combobox pattern (role, expanded, activedescendant,
@@ -7,7 +8,7 @@
  *   - matchCatalog ranks label > alias > form and finds an ingredient by the
  *     name printed on a tub ("bisglycinate", "Magtein")
  *   - / stays the waitlist with no scanner; /scan carries the capture input,
- *     the upload input, the search control and no waitlist; /tester is not
+ *     the upload input, the search sheet and no waitlist; /tester is not
  *     touched by any of it
  */
 import { act, createElement } from "react";
@@ -302,27 +303,65 @@ describe("/ vs /scan vs /tester", () => {
     expect(html).not.toContain("/scan");
   });
 
-  it("the scan page is white-ground, scanning-first, and carries no waitlist", () => {
+  it("the scan page is dark, camera-first, and carries no waitlist", () => {
     const html = renderToStaticMarkup(createElement(ScanPage));
     expect(html).toContain('class="scan-page"');
     expect(html).toContain("/scan-mark.svg");
-    // Camera through the platform picker, not getUserMedia: the capture input exists...
+    // The camera fallback file input exists (getUserMedia cannot run in
+    // renderToStaticMarkup / SSR at all, so ScanCamera always server-renders
+    // its fallback fill -- exactly the "unavailable" state a real denial
+    // reaches) and it still carries `capture="environment"`, unconditionally
+    // mounted so the 2026-09-15 fallback path never regresses.
     const inputTag = (id: string) => html.match(new RegExp(`<input[^>]*id="${id}"[^>]*>`))?.[0] ?? "";
     expect(inputTag("scan-capture")).toContain('type="file"');
     expect(inputTag("scan-capture")).toContain('capture="environment"');
     // ...and a plain upload input remains as the fallback, without capture.
     expect(inputTag("scan-file")).toContain('type="file"');
     expect(inputTag("scan-file")).not.toContain("capture=");
-    expect(html).not.toContain("getUserMedia");
-    // Order in the first viewport: primary, secondary, divider, search.
-    const order = ["Take a photo", "Upload an image", ">or<", "Search for your supplement"].map((s) => html.indexOf(s));
+    // The page's single H1 is the overlay headline on the camera block, exact
+    // founder copy, and still carries #scan-title for tests/e2e continuity.
+    expect(html).toMatch(/<h1[^>]*id="scan-title"[^>]*>Does your Supplement actually work\?<\/h1>/);
+    expect(html).toContain("Scan and see.");
+    expect((html.match(/<h1[^>]*>/g) ?? []).length).toBe(1);
+    // "Search your supplement" is a button ABOVE the capture block, opening a
+    // dialog (not the 2026-09-15 inline expand/collapse panel) -- order in
+    // the first viewport: search cta, then the capture controls.
+    const order = ["Search your supplement", "sc-viewfinder", "Upload a photo"].map((s) => html.indexOf(s));
     expect(order.every((i) => i >= 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
-    expect(html).toMatch(/<button[^>]*aria-expanded="false"[^>]*aria-controls="scan-search"/);
-    expect(html).toContain('role="combobox"');
+    // No inline expand/collapse toggle or "or" divider survive the redesign.
+    expect(html).not.toContain("sc-search-toggle");
+    expect(html).not.toContain('role="separator"');
     expect(html).not.toContain("waitlist-input");
-    // The old dark hero is gone from /scan.
+    // The old dark .analyze-hero (from /tester) never appears here either --
+    // this page has its own dark styling scoped to .scan-page, not that class.
     expect(html).not.toContain("analyze-hero");
+  });
+
+  it("'Search your supplement' opens an accessible dialog carrying the combobox", async () => {
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    const { ScanFlow } = await import("@/components/scan-flow");
+    const { ingredientCatalog } = await import("@/lib/analyze/catalog");
+    await act(async () => {
+      root?.render(createElement(ScanFlow, { catalog: ingredientCatalog() }));
+    });
+    const cta = Array.from(container.querySelectorAll("button")).find((b) => /search your supplement/i.test(b.textContent ?? ""));
+    expect(cta).toBeTruthy();
+    expect(container.querySelector('[role="dialog"]')).toBeNull();
+    await act(async () => {
+      cta?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    const dialog = container.querySelector('[role="dialog"]');
+    expect(dialog).toBeTruthy();
+    expect(dialog?.getAttribute("aria-modal")).toBe("true");
+    expect(dialog?.querySelector('input[role="combobox"]')).toBeTruthy();
+    const closeBtn = dialog?.querySelector<HTMLButtonElement>('button[aria-label="Close search"]');
+    await act(async () => {
+      closeBtn?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(container.querySelector('[role="dialog"]')).toBeNull();
   });
 
   it("the tester page is untouched: dark hero, its own analyzer, no search control", () => {

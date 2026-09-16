@@ -1001,8 +1001,12 @@ thead th { color: var(--ink-soft); font-size: 0.7rem; text-transform: uppercase;
 .scan-dose-miss { margin: 0; color: var(--coral-text); font-size: 0.9rem; font-weight: 700; }
 
 /* --------------------------------------------------------------------------
-   /scan REDESIGN (2026-09-15, founder-approved option 1) — pure white,
-   phone-first, scanning owns the first viewport.
+   /scan REDESIGN (2026-09-16, founder: "use your eyes" — match the dark,
+   camera-first look of https://bsproof.lovable.app). Dark navy ground, one
+   big rounded live-camera block filling most of the first viewport, capture
+   controls below it. Supersedes the 2026-09-15 pure-white version; the
+   founder-approved DIFFERENCES from the reference (search button placement,
+   copy, results styling) are in docs/SYSTEM_DESIGN.md §1a.
 
    Scoped two ways so nothing else moves: the page ground and the shared header
    are recoloured through `body:has(.scan-page)` (the root layout is untouched;
@@ -1010,31 +1014,81 @@ thead th { color: var(--ink-soft); font-size: 0.7rem; text-transform: uppercase;
    and every new control is a .sc-* class. /tester keeps .analyze-hero and the
    .la-* rules exactly as they were.
 
-   Contrast: text on white uses --ink / --ink-soft (6.4:1) or --teal-text; the
-   mark's green (#12B76A) is used only as a graphic accent, never for text.
-   -------------------------------------------------------------------------- */
-body:has(.scan-page) { background: #fff; }
-body:has(.scan-page) .site-header { background: #fff; border-bottom-color: #e6e6e6; }
-body:has(.scan-page) .site-footer { background: #fff; border-top-color: #e6e6e6; }
-.scan-page { background: #fff; color: var(--ink); }
+   Contrast: overlay/caption text on the dark ground is white or near-white
+   against #050b18 (>15:1); RESULT CARDS stay the existing light surfaces
+   (--white / --paper-2) with --ink / --ink-soft text, unchanged from the
+   white theme and already AA-checked -- only the page ground around them and
+   the pre-result capture chrome go dark. */
+body:has(.scan-page) { background: #050b18; }
+body:has(.scan-page) .site-header { background: #050b18; border-bottom-color: rgba(255, 255, 255, 0.12); }
+body:has(.scan-page) .site-header .wordmark { color: #fff; }
+body:has(.scan-page) .site-header .wordmark-mark { background: #fff; color: var(--night); }
+body:has(.scan-page) .site-header nav a { color: rgba(255, 255, 255, 0.82); }
+body:has(.scan-page) .site-footer { background: #050b18; border-top-color: rgba(255, 255, 255, 0.12); color: rgba(255, 255, 255, 0.62); }
+body:has(.scan-page) .site-footer a { color: #fff; }
+.scan-page { background: #050b18; color: #fff; }
 
-/* Sized so the whole capture stack -- mark, headline, both buttons, the divider
-   and the search control -- lands inside one viewport: measured 666 of 839 px on
-   a Pixel 7 and it must also fit a 720 px laptop window, hence the tight caps. */
-.scan-hero { display: grid; justify-items: center; text-align: center; padding-top: clamp(12px, 3vw, 22px); }
-.scan-mark { width: clamp(132px, 34vw, 152px); height: auto; margin-bottom: clamp(4px, 1.5vw, 6px); }
-.scan-headline { margin: 0; font-size: clamp(2rem, 8.5vw, 2.6rem); font-weight: 900; letter-spacing: -0.045em; line-height: 1.02; max-width: 14ch; }
-.scan-sub { max-width: 34ch; margin: 12px 0 0; color: var(--ink-soft); font-size: clamp(0.98rem, 3.8vw, 1.1rem); line-height: 1.5; }
-.scan-foot { margin: 0; padding-block: 28px 40px; color: var(--ink-soft); font-size: 0.85rem; text-align: center; }
-.scan-foot a { color: var(--ink); font-weight: 800; }
+.scan-hero { display: grid; justify-items: stretch; padding-top: clamp(10px, 2.6vw, 18px); }
+.scan-foot { margin: 0; padding-block: 22px 40px; color: rgba(255, 255, 255, 0.55); font-size: 0.85rem; text-align: center; }
+.scan-foot a { color: #fff; font-weight: 800; }
 
-.scan-page .la { width: 100%; max-width: 640px; padding-block: clamp(14px, 4vw, 16px) 0; }
-/* The hero centres its headline; the report below it is read, so it is left-aligned. */
+.scan-page .la { width: 100%; max-width: 640px; margin-inline: auto; padding-block: clamp(10px, 3vw, 14px) 0; }
+/* The camera block centres its overlay; the report below it is read, so it is left-aligned. */
 .scan-page .la-result { text-align: left; }
 .scan-page .la-alert { text-align: left; }
-.sc-capture { position: relative; display: grid; gap: 14px; justify-items: stretch; width: 100%; padding: 4px 0 0; border-radius: var(--radius); transition: background 120ms ease; }
-.sc-capture.is-dragging { background: #f2fbf6; outline: 2px dashed #12B76A; outline-offset: 8px; }
-.sc-capture.is-busy { opacity: 0.8; }
+.scan-page .la-stage { color: #8ff2cf; }
+
+.sc-search-cta {
+  display: flex; align-items: center; justify-content: center; width: 100%; min-height: 54px;
+  margin-bottom: 16px; padding: 12px 20px; border: none; border-radius: 999px; cursor: pointer;
+  background: #fff; color: var(--night); font-weight: 800; font-size: 1rem;
+}
+.sc-search-cta:hover { background: #eef1f0; }
+.sc-search-cta:disabled { opacity: 0.55; cursor: default; }
+
+.sc-capture { position: relative; display: grid; gap: 16px; justify-items: stretch; width: 100%; padding: 4px 0 0; border-radius: var(--radius); transition: background 120ms ease; }
+.sc-capture.is-dragging { outline: 2px dashed #12B76A; outline-offset: 8px; }
+.sc-capture.is-busy { opacity: 0.92; }
+
+/* -------- live camera viewfinder block -------- */
+.sc-viewfinder-wrap { display: grid; gap: 18px; justify-items: center; width: 100%; }
+.sc-viewfinder {
+  position: relative; width: 100%; aspect-ratio: 3 / 4; overflow: hidden;
+  /* Cap so the shutter stays inside the first viewport on short phones:
+     header (~72px) + search pill (~70px) + shutter row (~110px). */
+  max-height: calc(100svh - 260px); min-height: 360px; margin-inline: auto;
+  border-radius: 24px; background: #05070c; box-shadow: 0 30px 90px rgb(0 0 0 / 50%);
+  outline: 1px solid rgb(255 255 255 / 10%); outline-offset: -1px;
+}
+@media (min-width: 640px) { .sc-viewfinder { aspect-ratio: 16 / 9; } }
+.sc-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.sc-video.is-hidden { visibility: hidden; }
+.sc-viewfinder-fill { position: absolute; inset: 0; background: radial-gradient(120% 90% at 50% 0%, #12233c 0%, #05070c 70%); }
+.sc-viewfinder-overlay {
+  position: absolute; inset: 0; z-index: 2; display: grid; align-content: start; justify-items: center;
+  gap: 10px; padding: clamp(18px, 5vw, 30px) 22px 0; text-align: center; pointer-events: none;
+  background: linear-gradient(180deg, rgb(2 6 15 / 88%) 0%, rgb(2 6 15 / 48%) 45%, transparent 75%);
+}
+.sc-viewfinder-brand { display: flex; align-items: center; gap: 8px; }
+.sc-viewfinder-mark { width: 34px; height: 34px; }
+.sc-viewfinder-word { color: #fff; font-weight: 850; font-size: 0.92rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.sc-headline { margin: 8px 0 0; color: #fff; font-size: clamp(1.55rem, 6.6vw, 2.2rem); font-weight: 900; letter-spacing: -0.03em; line-height: 1.08; max-width: 15ch; text-shadow: 0 2px 20px rgb(0 0 0 / 60%); }
+.sc-subline { margin: 0; color: rgba(255, 255, 255, 0.86); font-size: clamp(0.94rem, 3.4vw, 1.05rem); font-weight: 600; text-shadow: 0 1px 12px rgb(0 0 0 / 60%); }
+.sc-camera-fallback, .sc-camera-starting { position: absolute; z-index: 1; inset: 0; display: grid; place-items: center; padding: 0 12%; text-align: center; }
+.sc-camera-fallback p, .sc-camera-starting p { margin: 0; color: rgba(255, 255, 255, 0.7); font-size: 1rem; line-height: 1.5; }
+
+.sc-shutter {
+  width: 78px; height: 78px; margin-top: -8px; padding: 0; border-radius: 50%; border: 4px solid #fff;
+  background: transparent; display: grid; place-items: center; cursor: pointer;
+}
+.sc-shutter-ring { width: 58px; height: 58px; border-radius: 50%; background: #fff; transition: transform 120ms ease; }
+.sc-shutter:active .sc-shutter-ring { transform: scale(0.86); }
+.sc-shutter:disabled { opacity: 0.5; cursor: default; }
+
+.sc-below-block { display: grid; justify-items: center; gap: 10px; margin-top: -4px; text-align: center; }
+.sc-fallback-photo { min-height: 50px; color: #fff; border-color: rgba(255, 255, 255, 0.55); }
+.sc-upload-link { color: rgba(255, 255, 255, 0.88); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; padding: 6px; }
+.sc-upload-link.is-disabled { opacity: 0.5; pointer-events: none; }
 
 .sc-actions, .sc-staged { display: grid; gap: 10px; justify-items: stretch; width: 100%; }
 .sc-secondary-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -1042,28 +1096,46 @@ body:has(.scan-page) .site-footer { background: #fff; border-top-color: #e6e6e6;
 .sc-secondary { min-height: 50px; color: var(--ink); border-color: #cfd4d1; background: #fff; }
 .sc-secondary:hover { background: #f5f7f6; }
 .sc-capture .button.is-disabled { opacity: 0.6; pointer-events: none; }
-.sc-hint { color: var(--ink-soft); font-size: 0.82rem; text-align: center; }
-.sc-preview { justify-self: center; max-height: 280px; }
+.sc-hint { color: rgba(255, 255, 255, 0.6); font-size: 0.82rem; text-align: center; }
+.sc-preview { justify-self: center; max-height: 280px; border-radius: 16px; }
 .sc-stage { text-align: center; }
+.sc-loading { display: grid; gap: 14px; justify-items: center; text-align: center; }
 /* The <label> is the visible control; move the hidden input's focus ring onto it. */
 .sc-capture > #scan-capture:focus-visible ~ * label[for="scan-capture"],
 .sc-capture > #scan-file:focus-visible ~ * label[for="scan-file"] { outline: 3px solid var(--coral); outline-offset: 4px; }
 
-.sc-or { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 14px; margin-top: 6px; color: var(--ink-soft); font-size: 0.8rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
-.sc-or::before, .sc-or::after { content: ""; height: 1px; background: #e2e5e3; }
-
-.sc-search-toggle {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  min-height: 54px; padding: 12px 18px;
-  color: var(--ink); background: #fff; border: 1px solid #cfd4d1; border-radius: 14px;
-  font-weight: 800; font-size: 1rem; text-align: left; cursor: pointer;
+/* -------- sign-in card + result lock (2026-09-16) -------- */
+.sc-signin-card {
+  display: grid; gap: 10px; justify-items: center; width: 100%; max-width: 360px;
+  padding: 18px 20px; border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 16px;
+  background: #0b1526; color: #fff; text-align: center;
 }
-.sc-search-toggle:hover { background: #f5f7f6; }
-.sc-search-toggle[aria-expanded="true"] { border-color: var(--ink); border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
-.sc-search-toggle[aria-expanded="true"] .sc-chevron { transform: rotate(180deg); }
-.sc-chevron { flex: 0 0 auto; transition: transform 120ms ease; }
-.sc-search-panel { display: grid; gap: 14px; margin-top: -14px; padding: 18px; border: 1px solid var(--ink); border-top: 0; border-radius: 0 0 14px 14px; background: #fff; text-align: left; }
-.sc-search-panel[hidden] { display: none; }
+.sc-signin-card strong { font-size: 1.02rem; }
+.sc-signin-card p { margin: 0; color: rgba(255, 255, 255, 0.72); font-size: 0.88rem; line-height: 1.45; }
+.sc-google-btn { display: flex; justify-content: center; min-height: 44px; width: 100%; }
+.sc-result-wrap { display: grid; gap: 18px; justify-items: center; }
+.sc-result-wrap .sc-signin-card { max-width: none; }
+.la-result.sc-locked { filter: blur(9px); user-select: none; pointer-events: none; }
+.sc-signed-in-line { margin: 0 0 4px; color: var(--ink-soft); font-size: 0.82rem; }
+.sc-signout { padding: 0; border: none; background: none; color: var(--teal-text); font-weight: 800; cursor: pointer; text-decoration: underline; }
+
+/* -------- "Search your supplement" sheet (2026-09-16) -------- */
+.sc-sheet-backdrop {
+  position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; justify-content: center;
+  background: rgb(2 6 15 / 62%); padding: 0;
+}
+@media (min-width: 640px) { .sc-sheet-backdrop { align-items: center; padding: 24px; } }
+.sc-sheet {
+  width: 100%; max-width: 560px; max-height: 92vh; overflow-y: auto;
+  background: #fff; color: var(--ink); border-radius: 20px 20px 0 0;
+  box-shadow: 0 -20px 60px rgb(0 0 0 / 35%);
+}
+@media (min-width: 640px) { .sc-sheet { border-radius: 18px; } }
+.sc-sheet-head { position: sticky; top: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 20px; background: #fff; border-bottom: 1px solid var(--line); }
+.sc-sheet-head h2 { margin: 0; font-size: 1.15rem; }
+.sc-sheet-close { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: #fff; color: var(--ink); cursor: pointer; }
+.sc-sheet-close:hover { background: #f5f7f6; }
+.sc-sheet-body { display: grid; gap: 16px; padding: 18px 20px 26px; }
 .sc-search-lede { margin: 0; color: var(--ink-soft); font-size: 0.9rem; line-height: 1.5; }
 
 .sc-search { display: grid; gap: 16px; }

@@ -106,7 +106,11 @@ async function key(el: HTMLElement, keyName: string) {
 
 async function searchCreatineMonohydrate(el: HTMLElement) {
   await act(async () => {
-    el.querySelector<HTMLButtonElement>(".sc-search-toggle")?.click();
+    // 2026-09-16 redesign: "Search your supplement" is a button that opens an
+    // accessible dialog (components/search-sheet.tsx) rather than the earlier
+    // inline expand/collapse panel; find it by its accessible name, not a
+    // class that no longer exists.
+    Array.from(el.querySelectorAll("button")).find((b) => /search your supplement/i.test(b.textContent ?? ""))?.click();
   });
   const input = el.querySelector<HTMLInputElement>('input[role="combobox"]');
   if (!input) throw new Error("no combobox rendered");

@@ -1,11 +1,43 @@
 "use client";
 
 /*
- * THE SCAN. Photograph a label -- or, since 2026-09-15, search for the
- * supplement by name -- and get the product's full analysis: the evidence
- * verdicts with their four arcs, dose effectiveness, form and ingredient
- * compatibility, and the company's background -- every block stamped with the
- * BASIS it rests on.
+ * THE SCAN. Photograph a label with a LIVE camera viewfinder -- or upload a
+ * photo, or search for the supplement by name -- and get the product's full
+ * analysis: the evidence verdicts with their four arcs, dose effectiveness,
+ * form and ingredient compatibility, and the company's background -- every
+ * block stamped with the BASIS it rests on.
+ *
+ * REDESIGNED 2026-09-16 (founder: "use your eyes", matching
+ * https://bsproof.lovable.app's look). Three changes from the 2026-09-15
+ * white, capture=environment-only page:
+ *
+ *   1. CAMERA. <ScanCamera> (components/scan-camera.tsx) opens
+ *      getUserMedia({video:{facingMode:{ideal:"environment"}},audio:false})
+ *      the moment nothing is staged (`active={!file}`) and shows the live
+ *      feed inside one big rounded block with a dark-navy overlay carrying
+ *      the scan mark, wordmark, the page's single H1 and a subline. A big
+ *      round shutter captures a frame -> canvas -> JPEG -> the SAME
+ *      `stageFile` path a picked file already takes, so the existing
+ *      multipart POST /api/scan is unchanged. When getUserMedia is
+ *      unavailable/denied/insecure-context, the block shows a calm fallback
+ *      message and the ORIGINAL `capture="environment"` file input (rendered
+ *      below the block by this component) still works -- nothing regresses.
+ *   2. "Search your supplement" is now a full-width button ABOVE the camera
+ *      block, opening <SearchSheet> (an accessible dialog) rather than an
+ *      inline expand/collapse panel below the capture controls.
+ *   3. GOOGLE SIGN-IN WHILE RESULTS LOAD (founder: "people log in once so we
+ *      capture their email"). `useSupabaseSession` reports whether sign-in
+ *      is configured (all three NEXT_PUBLIC_* vars set) and whether anyone
+ *      is signed in. When configured and nobody is signed in: a "Save your
+ *      result" card with the Google button shows the moment a scan/search is
+ *      submitted (during the loading stage messages), and again above a
+ *      blurred, `inert` copy of the already-computed result until a session
+ *      appears -- the analysis is already in state the whole time, so
+ *      signing in reveals it instantly with no re-fetch. When sign-in is not
+ *      configured (the default for local/CI), none of this renders and
+ *      results show exactly as before. `POST /api/scan/claim` is called the
+ *      moment both a session and a `run_id` are available, whichever arrives
+ *      second.
  *
  * Rules this component keeps, all from CLAUDE.md:
  *
@@ -21,22 +53,22 @@
  *    the `user_input` badge; it never shows a read confidence, quoted spans or a
  *    vision model, because none exist. The server says which path ran
  *    (`source`) and the UI keys off that, not off which button was pressed.
- *
- * CAMERA. "Take a photo" is a plain <input type="file" capture="environment">.
- * Production sends `Permissions-Policy: camera=()`, which blocks
- * navigator.mediaDevices.getUserMedia outright, so an in-page viewfinder can
- * never open there; the capture attribute hands off to the platform camera
- * instead and needs no permission policy. "Upload an image" is the same input
- * without `capture`, for a photo already on the device or a desktop file.
+ * 6. A model's recollection about a person's sign-in never gates the SCORE:
+ *    the evidence composite, arcs and dose bands are computed and held in
+ *    state identically whether or not the result is currently visible.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
+import { SaveResultCard } from "@/components/google-sign-in";
+import { ScanCamera } from "@/components/scan-camera";
+import { SearchSheet } from "@/components/search-sheet";
 import { SupplementSearch } from "@/components/supplement-search";
 import { businessModelDisclosure } from "@/lib/analyze/business-model";
 import type { CatalogIngredient } from "@/lib/analyze/catalog";
 import { literatureDisclosures } from "@/lib/analyze/literature-disclosures";
 import type { ManualScanInput, ScanAnalysis } from "@/lib/analyze/scan";
+import { useSupabaseSession } from "@/lib/auth/use-supabase-session";
 
 type Basis = keyof ScanAnalysis["basis_legend"];
 type NullableNumber = number | null;
@@ -232,6 +264,10 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [cameraUnavailable, setCameraUnavailable] = useState(false);
+
+  const auth = useSupabaseSession();
+  const claimedRuns = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (!busy) return;
@@ -242,6 +278,24 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
   useEffect(() => () => {
     if (preview) URL.revokeObjectURL(preview);
   }, [preview]);
+
+  // Claim the run for the signed-in user the instant BOTH a session and a
+  // run id exist, whichever arrives second: right after sign-in (if a result
+  // with a run_id already arrived) or right after a result arrives (if
+  // already signed in).
+  useEffect(() => {
+    if (!auth.configured || !auth.email || !auth.accessToken) return;
+    const runId = data?.run_id;
+    if (!runId || claimedRuns.current.has(runId)) return;
+    claimedRuns.current.add(runId);
+    void fetch("/api/scan/claim", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${auth.accessToken}` },
+      body: JSON.stringify({ run_id: runId }),
+    }).catch(() => {
+      // Best effort -- claiming never affects what the person already sees.
+    });
+  }, [auth.configured, auth.email, auth.accessToken, data?.run_id]);
 
   const stageFile = useCallback((picked: File) => {
     if (picked.size > MAX_BYTES) {
@@ -315,6 +369,7 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
       setError(null);
       setData(null);
       clearFile();
+      setSearchOpen(false);
       setStages(MANUAL_STAGES);
       setStage(0);
       setBusy(true);
@@ -350,8 +405,24 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
   const company = data?.company;
   const factsBasis: Basis = typed ? "user_input" : "label";
 
+  // Sign-in gate. `locked` only ever becomes true once we know for sure
+  // sign-in is configured AND we have finished checking for an existing
+  // session AND there is none -- never during the brief `loading` window,
+  // so a returning signed-in visitor never sees a flash of the lock.
+  const locked = auth.configured && !auth.loading && !auth.email;
+  const showSaveCard = auth.configured && !auth.loading && !auth.email;
+
   return (
     <section className="la scan sc" aria-label="Scan a supplement">
+      <button
+        type="button"
+        className="sc-search-cta"
+        onClick={() => setSearchOpen(true)}
+        disabled={busy}
+      >
+        Search your supplement
+      </button>
+
       <div
         className={`sc-capture${dragging ? " is-dragging" : ""}${busy ? " is-busy" : ""}`}
         onDragOver={(e) => {
@@ -365,7 +436,10 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
           if (!busy) pick(e.dataTransfer.files);
         }}
       >
-        {/* Two inputs, one difference: `capture` hands off to the platform camera. */}
+        {/* Two inputs, one difference: `capture` hands off to the platform
+            camera. Kept mounted at all times -- this is the fallback path
+            that must remain when getUserMedia is unavailable/denied/an
+            insecure context, so nothing regresses. */}
         <input
           type="file"
           accept="image/*"
@@ -385,9 +459,9 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
               {busy ? "Scanning…" : "Scan this label"}
             </button>
             <div className="sc-secondary-row">
-              <label className={`button button-outline sc-secondary${busy ? " is-disabled" : ""}`} htmlFor="scan-capture">
+              <button type="button" className={`button button-outline sc-secondary${busy ? " is-disabled" : ""}`} onClick={clearFile} disabled={busy}>
                 Retake photo
-              </label>
+              </button>
               <label className={`button button-outline sc-secondary${busy ? " is-disabled" : ""}`} htmlFor="scan-file">
                 Choose a different image
               </label>
@@ -397,48 +471,39 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
             </span>
           </div>
         ) : (
-          <div className="sc-actions">
-            <label className={`button button-dark sc-primary${busy ? " is-disabled" : ""}`} htmlFor="scan-capture">
-              Take a photo
-            </label>
-            <label className={`button button-outline sc-secondary${busy ? " is-disabled" : ""}`} htmlFor="scan-file">
-              Upload an image
-            </label>
-            <span className="sc-hint">Supplement Facts panel · PNG, JPEG, WebP · up to 12 MB</span>
-          </div>
+          <>
+            <ScanCamera active={!file} disabled={busy} onCapture={stageFile} onUnavailable={() => setCameraUnavailable(true)} />
+            <div className="sc-below-block">
+              {cameraUnavailable ? (
+                <label className={`button button-outline sc-fallback-photo${busy ? " is-disabled" : ""}`} htmlFor="scan-capture">
+                  Take a photo
+                </label>
+              ) : null}
+              <label className={`sc-upload-link${busy ? " is-disabled" : ""}`} htmlFor="scan-file">
+                Upload a photo
+              </label>
+              <span className="sc-hint">Supplement Facts panel · PNG, JPEG, WebP · up to 12 MB</span>
+            </div>
+          </>
         )}
 
-        <div className="sc-or" role="separator" aria-label="or">
-          <span>or</span>
-        </div>
-
-        <button
-          type="button"
-          className="sc-search-toggle"
-          aria-expanded={searchOpen}
-          aria-controls="scan-search"
-          disabled={busy}
-          onClick={() => setSearchOpen((v) => !v)}
-        >
-          <span>Search for your supplement</span>
-          <svg aria-hidden="true" viewBox="0 0 20 20" width="18" height="18" className="sc-chevron">
-            <path d="M5 7.5 10 12.5 15 7.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-        <div id="scan-search" className="sc-search-panel" hidden={!searchOpen}>
-          <p className="sc-search-lede">
-            No photo? Pick the ingredient and its exact form from the catalog, add the dose if you know it. The result is
-            marked as typed — nothing verifies that a product contains what you enter.
-          </p>
-          <SupplementSearch catalog={catalog} busy={busy} onSubmit={(input) => void submitManual(input)} />
-        </div>
-
         {busy ? (
-          <p className="la-stage sc-stage" role="status" aria-live="polite">
-            {stages[stage]}
-          </p>
+          <div className="sc-loading">
+            <p className="la-stage sc-stage" role="status" aria-live="polite">
+              {stages[stage]}
+            </p>
+            {showSaveCard ? <SaveResultCard /> : null}
+          </div>
         ) : null}
       </div>
+
+      <SearchSheet open={searchOpen} onClose={() => setSearchOpen(false)} titleId="scan-search-title" title="Search your supplement">
+        <p className="sc-search-lede">
+          No photo? Pick the ingredient and its exact form from the catalog, add the dose if you know it. The result is
+          marked as typed — nothing verifies that a product contains what you enter.
+        </p>
+        <SupplementSearch catalog={catalog} busy={busy} onSubmit={(input) => void submitManual(input)} />
+      </SearchSheet>
 
       {error ? (
         <div className="la-alert la-alert-bad" role="alert">
@@ -448,9 +513,22 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
       ) : null}
 
       {data && !error && legend ? (
-        <div className="la-result scan-result">
+        <div className="sc-result-wrap">
+          {locked ? <SaveResultCard /> : null}
+          {/* The la-result content is ALWAYS computed and held in state; when
+              sign-in is required and not yet present it is only blurred and
+              made inert, never re-fetched once a session appears. */}
+          <div className={`la-result scan-result${locked ? " sc-locked" : ""}`} aria-hidden={locked} inert={locked}>
           {/* The page's h1 is the headline; sections below are h3, so name the result level in between. */}
           <h2 className="sr-only">Result</h2>
+          {auth.configured && auth.email ? (
+            <p className="sc-signed-in-line">
+              Signed in as <strong>{auth.email}</strong> ·{" "}
+              <button type="button" className="sc-signout" onClick={() => void auth.signOut()}>
+                Sign out
+              </button>
+            </p>
+          ) : null}
           {data.status === "analyzer_unavailable" ? (
             <div className="la-empty">
               <strong>Scanning is not configured on this deployment.</strong>
@@ -1041,6 +1119,7 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
                 ))}
             </ol>
           </section>
+          </div>
         </div>
       ) : null}
     </section>

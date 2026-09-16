@@ -7,21 +7,22 @@ import { ingredientCatalog } from "@/lib/analyze/catalog";
 /*
  * THE PRODUCT SURFACE: scan a label, get the full analysis.
  *
- * REDESIGNED 2026-09-15 (founder-approved option 1): pure white, phone-first,
- * and scanning owns the first viewport -- the transparent scanner mark, one
- * concise headline, "Take a photo" as the primary action, "Upload an image" as
- * the secondary, then an "or" divider and the expandable "Search for your
- * supplement" control for people without the tub in front of them. The
- * catalog behind that search is derived on the server from vocab/form.json at
- * render time and handed to the client as a prop, so the browser holds no
- * second copy of the vocabulary.
+ * REDESIGNED 2026-09-16 (founder: "use your eyes" -- match
+ * https://bsproof.lovable.app's dark, camera-first look). The page itself is
+ * now a thin shell: <ScanFlow> owns the "Search your supplement" button, the
+ * live camera block (with the page's single H1 as an overlay on the block,
+ * `#scan-title`), the shutter, the upload fallback, the results, and the
+ * Google-sign-in-while-loading flow. This file keeps only the persistent
+ * page chrome (the methodology link) and the dark scoping class.
+ *
+ * The page's white-to-dark ground is scoped by `body:has(.scan-page)` in
+ * globals.css so the shared header stays -- restyled dark here -- for the
+ * skip link, the home link and the methodology nav link, without touching
+ * the root layout or any other route.
  *
  * Still absent from site navigation like /tester (site-wide robots noindex).
  * The 2026-09-14 PWA decision makes this the public manifest's installed
- * start_url while keeping the browser front door at / as the waitlist. The
- * page's white ground is scoped by `body:has(.scan-page)` in globals.css so
- * the shared header stays -- minimal and white here -- for the skip link, the
- * home link and the methodology link, without touching the root layout.
+ * start_url while keeping the browser front door at / as the waitlist.
  */
 export const metadata: Metadata = {
   title: "Scan",
@@ -33,13 +34,6 @@ export default function ScanPage() {
   return (
     <main id="main-content" tabIndex={-1} className="scan-page">
       <section className="shell scan-hero" id="scan" aria-labelledby="scan-title">
-        {/* Same artwork as the app icon, minus its ink ground (scripts/write_scan_mark.mjs). */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img className="scan-mark" src="/scan-mark.svg" alt="" width={512} height={512} aria-hidden="true" />
-        <h1 id="scan-title" className="scan-headline">
-          Does it actually work?
-        </h1>
-        <p className="scan-sub">Scan the Supplement Facts panel. Every part of the answer says where it came from.</p>
         <ScanFlow catalog={catalog} />
       </section>
 

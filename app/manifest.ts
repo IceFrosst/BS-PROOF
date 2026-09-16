@@ -10,7 +10,10 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: "/scan/",
     scope: "/",
     display: "standalone",
-    background_color: "#F4F0E7",
+    // The installed start_url (/scan/) went dark navy 2026-09-16 to match the
+    // live-camera redesign; the splash background follows it so the OS launch
+    // screen doesn't flash cream before the page paints.
+    background_color: "#050B18",
     theme_color: "#0B0F14",
     categories: ["health", "utilities"],
     icons: [

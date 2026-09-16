@@ -68,6 +68,20 @@ create index if not exists scan_runs_created_at_idx on public.scan_runs (created
 create index if not exists scan_runs_status_idx      on public.scan_runs (status);
 create index if not exists scan_runs_source_idx      on public.scan_runs (source);
 
+-- 2026-09-16: EMAIL CAPTURE. Google sign-in while a scan's results load
+-- (founder: "people log in once so we capture their email"). Idempotent
+-- ALTER, so re-running this file against an already-provisioned project is
+-- safe: `user_id` / `user_email` are attached to a run by
+-- `POST /api/scan/claim` (lib/auth/claim.ts, service role, never the anon
+-- key) the moment the browser's Supabase session exists for that run.
+alter table public.scan_runs add column if not exists user_id    uuid;
+alter table public.scan_runs add column if not exists user_email text;
+
+comment on column public.scan_runs.user_id    is 'auth.users id of whoever signed in and claimed this run, when sign-in is configured and used. Null for every run made without signing in.';
+comment on column public.scan_runs.user_email is 'Denormalised copy of the claiming user''s email at claim time, so a row is inspectable without joining auth.users.';
+
+create index if not exists scan_runs_user_email_idx on public.scan_runs (user_email);
+
 alter table public.scan_runs enable row level security;
 
 -- Deliberately NO policies. With RLS enabled and no policy, the anon and
@@ -99,3 +113,37 @@ on conflict (id) do nothing;
 -- Fetch a stored photo's bytes (service role key required, e.g. from the
 -- Supabase dashboard's Storage browser, never from this app):
 --   Storage -> scan-images -> <image_path>.
+
+
+-- ---------------------------------------------------------------------------
+-- scan_users (2026-09-16): one row per person who has ever signed in with
+-- Google on /scan. Written ONLY by `POST /api/scan/claim` (service role,
+-- lib/auth/claim.ts) the moment a Supabase session and a scan run's id are
+-- both available -- never on every request, and never for a visitor who
+-- never signs in. `scans` is a best-effort counter (read-then-write over
+-- plain fetch, the same discipline as the rest of this file's server code;
+-- it is not a race-free atomic increment, so treat it as approximate under
+-- concurrent claims from the same person on multiple devices at once).
+create table if not exists public.scan_users (
+  user_id        uuid primary key,                 -- auth.users.id (Supabase-managed; not a foreign key here so this table survives independently of the auth schema's own migrations)
+  email          text,
+  first_seen_at  timestamptz not null default now(),
+  last_seen_at   timestamptz not null default now(),
+  scans          integer     not null default 0     -- best-effort count of claimed runs; see note above
+);
+
+comment on table  public.scan_users            is 'One row per Google-signed-in visitor to /scan. Server-write only (service role via POST /api/scan/claim); no anon policy, no public read path.';
+comment on column public.scan_users.scans      is 'Best-effort count of scan_runs claimed by this user. Read-then-write over plain fetch, not a race-free atomic increment -- see docs/SYSTEM_DESIGN.md §7.';
+
+create index if not exists scan_users_email_idx on public.scan_users (email);
+
+alter table public.scan_users enable row level security;
+
+-- Deliberately NO policies here either -- identical discipline to scan_runs
+-- above. A signed-in user reading their OWN row would need an explicit
+-- policy this project does not grant; there is no user-facing "my account"
+-- page, so nothing needs it.
+
+-- Read the people who have signed in, most recent first:
+--   select user_id, email, first_seen_at, last_seen_at, scans
+--   from public.scan_users order by last_seen_at desc limit 50;

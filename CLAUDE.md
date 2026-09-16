@@ -1383,6 +1383,34 @@ still the unmeasured SR-uplift experiment (Next item 3).
 
 ## Next
 
+**Handoff (2026-09-16): the dark camera-first /scan redesign and Google sign-in / email capture are
+implemented and gate-clean, but UNVERIFIED on a real phone, a real camera and a real Supabase/Google
+project.** Before relying on this in production:
+
+1. **`vercel.json`'s `Permissions-Policy` now sends `camera=(self)`** (was `camera=()`). Confirm this
+   actually reaches production on the next deploy and that `getUserMedia` opens on one real iOS Safari
+   and one real Android Chrome, over HTTPS — every test here runs in jsdom, which has no camera and no
+   Permissions-Policy enforcement at all.
+2. **Sign-in needs THREE real credentials nobody has set yet**: `NEXT_PUBLIC_SUPABASE_URL`,
+   `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_GOOGLE_CLIENT_ID` (docs/SYSTEM_DESIGN.md §7 has the exact
+   Supabase/Google Cloud console steps). Until all three are set, the sign-in card, the Google script load
+   and the result lock never appear — which is also exactly what every current test exercises; nobody has
+   watched a real Google credential turn into a real Supabase session yet.
+3. **`docs/scan-history.sql`'s new `user_id`/`user_email` columns and `scan_users` table need to be run**
+   in the Supabase SQL editor (same project as the rest of the file) before `POST /api/scan/claim` can
+   write anything real — it currently only has fake-`fetch` test coverage (`lib/auth/claim.ts`).
+4. **`scan_users.scans` is a best-effort read-then-write counter, not an atomic increment** — plain
+   PostgREST has no arithmetic UPDATE, and this module stayed on plain fetch like its siblings rather than
+   introduce an RPC function. A rare simultaneous double sign-in from the same person can undercount by
+   one; nothing else is affected. Fix with a Postgres function + `rpc()` call if this ever matters at scale.
+5. **No Playwright coverage of the live camera exists** — Chromium's fake-camera flag
+   (`--use-fake-device-for-media-stream`) was NOT wired into `tests/e2e/`; the screenshots taken for this
+   change used a DENIED-permission run to capture the fallback state only. Add a fake-camera Playwright
+   run before trusting the live-video path beyond manual phone testing.
+6. **@supabase/supabase-js was added as a new runtime dependency** (pinned exact version, matching every
+   other entry in `package.json`) — it is imported by exactly one file, `lib/auth/supabase-browser.ts`;
+   every server-side store stays on plain `fetch` (see that file's header comment).
+
 **Handoff (2026-09-16): scan-run history and the MLM disclosure are implemented and gate-clean, but
 unverified against a real Supabase project.** Before relying on this in production:
 

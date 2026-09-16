@@ -7,11 +7,15 @@
  * exposes variables carrying that prefix to client bundles), and why this
  * module is imported solely by the route handler.
  *
- * No @supabase/supabase-js. Supabase's data API is PostgREST over plain HTTP,
- * and an insert is one fetch; the dependency list here is deliberately short
- * (ajv, marked, next, react, sanitize-html, zod) and a client library would
- * earn its place only if we needed auth, realtime or storage. We need one
- * INSERT.
+ * No @supabase/supabase-js HERE. Supabase's data API is PostgREST over plain
+ * HTTP, and an insert is one fetch — a client library earns its place only
+ * when a job needs auth, realtime or storage, and an INSERT does not.
+ * `@supabase/supabase-js` WAS added to the dependency list on 2026-09-16, but
+ * only for `lib/auth/supabase-browser.ts`, which needs it for real: a
+ * browser-side Google Identity Services credential becoming a persisted,
+ * auto-refreshing Supabase session (`signInWithIdToken`) is not one fetch.
+ * This module and `lib/scan-history/store.ts` stay on plain fetch because
+ * their job has not changed shape.
  *
  * CLAUDE.md said "Supabase is deliberately unused. Do not attach the unrelated
  * existing project." That line was about the evidence dashboard, which must
