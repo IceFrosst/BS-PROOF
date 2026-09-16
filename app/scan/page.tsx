@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
 import { ScanFlow } from "@/components/scan-flow";
 import { ingredientCatalog } from "@/lib/analyze/catalog";
@@ -36,11 +35,6 @@ export default function ScanPage() {
       <section className="shell scan-hero" id="scan" aria-labelledby="scan-title">
         <ScanFlow catalog={catalog} />
       </section>
-
-      <p className="shell scan-foot">
-        Only the evidence run produces a number; a model&rsquo;s recollection never does.{" "}
-        <Link href="/methodology">How the score is built</Link>
-      </p>
     </main>
   );
 }

@@ -1,0 +1,12 @@
+import { chromium } from 'playwright-core';
+const browser = await chromium.launch({headless:true});
+const page = await browser.newPage();
+const hosts = new Set();
+page.on('request', req => { try { hosts.add(new URL(req.url()).host); } catch{} });
+page.on('requestfailed', req => console.log('FAILED:', req.url(), req.failure()));
+page.on('console', msg => console.log('CONSOLE:', msg.type(), msg.text()));
+await page.goto('https://ignas.wtf', {waitUntil:'networkidle', timeout: 30000});
+await page.getByRole('button', {name:'YES', exact:true}).click();
+await page.waitForTimeout(4000);
+console.log('HOSTS:', [...hosts]);
+await browser.close();

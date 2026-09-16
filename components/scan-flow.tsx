@@ -466,9 +466,6 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
                 Choose a different image
               </label>
             </div>
-            <span className="sc-hint">
-              {file.name} · {(file.size / 1e6).toFixed(1)} MB — nothing is sent until you press Scan
-            </span>
           </div>
         ) : (
           <>

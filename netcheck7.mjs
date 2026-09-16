@@ -1,0 +1,10 @@
+import { chromium } from 'playwright-core';
+const browser = await chromium.launch({ headless: true });
+const page = await browser.newPage();
+page.on('console', msg => console.log('CONSOLE', msg.type(), msg.text()));
+page.on('pageerror', err => console.log('PAGEERROR', err.message));
+page.on('requestfailed', req => console.log('FAIL', req.url(), req.failure()));
+page.on('response', async r => { if (r.url().includes('draft_events')) console.log('RESP headers', JSON.stringify(r.headers())); });
+await page.goto('https://ignas.wtf', { waitUntil: 'load' });
+await page.waitForTimeout(3000);
+await browser.close();

@@ -173,12 +173,18 @@ unavailable, a time-budget skip, and a source-text check that no scoring file
 mentions it) and `tests/literature-warnings-render.test.tsx` (the rendered
 page, confirming neither "fraud" nor "fabricated" ever appears).
 
-### 1d. The dark, camera-first redesign (2026-09-16)
+### 1d. The camera-first redesign (2026-09-16)
 
 Founder: "use your eyes" -- match the look of https://bsproof.lovable.app.
-`/scan` moved from the 2026-09-15 pure-white page to a dark-navy
-(`#050b18`) page where a LIVE camera viewfinder owns most of the first
-viewport, with these founder-specified differences from the reference:
+`/scan` became a page where a LIVE camera viewfinder owns most of the first
+viewport. **Same day, second pass (founder: "make the background white and
+scientific like before"):** the PAGE is back to the pure-white ground of
+2026-09-15 -- white header, ink type, grey hints -- and only the viewfinder
+block is dark. Also removed on this page at the founder's request: the
+header's Methodology link (hidden via `body:has(.scan-page) .site-header
+nav`), the staged-file name/size hint, and the "Only the evidence run
+produces a number…" footer line. These are the founder-specified differences
+from the reference:
 
 - **Live camera, not the platform camera app.** `components/scan-camera.tsx`
   requests `getUserMedia({video:{facingMode:{ideal:"environment"}},
