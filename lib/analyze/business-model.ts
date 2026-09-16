@@ -1,0 +1,70 @@
+/*
+ * MLM / DIRECT-SELLING DISCLOSURE — pure, browser-safe (no fs/path, no
+ * model boundary). Split out of company.ts (which imports node:fs to read
+ * prompts/company.md) so components/scan-flow.tsx — a client component — can
+ * import the rendering decision without pulling a server-only module and its
+ * filesystem import into the browser bundle.
+ *
+ * The field itself lives in the company MODEL PROFILE
+ * (`CompanyProfile.business_model`, schemas/company.json,
+ * prompts/company.md): a conservative, model-recalled read of whether a
+ * company is structured as MLM / direct-selling. `confirmed_mlm` and
+ * `suspected_mlm` are never a legal judgement and never a claim about the
+ * PRODUCT — a lawful, common distribution structure is a completely separate
+ * question from whether the ingredient works, and this field must never be
+ * read by scoring code (pinned by tests/company-business-model.test.ts).
+ */
+
+export type BusinessModelStatus = "confirmed_mlm" | "suspected_mlm" | "no_evidence" | "unknown";
+
+export interface BusinessModel {
+  status: BusinessModelStatus;
+  basis: string;
+  confidence: "high" | "medium" | "low";
+}
+
+export interface BusinessModelDisclosure {
+  tone: "warning" | "neutral";
+  title: string;
+  body: string;
+}
+
+/**
+ * Turns a `business_model` read into what the UI shows. `confirmed_mlm` /
+ * `suspected_mlm` get the yellow disclosure warning (same visual language as
+ * the app's other model-knowledge disclosures — see `.scan-warning` in
+ * globals.css), titled "MLM / direct-selling business model", never "pyramid
+ * scheme" and never an accusation of illegality. `no_evidence` and `unknown`
+ * get a plain, honest, non-accusatory line instead of a warning box.
+ */
+export function businessModelDisclosure(model: BusinessModel | null | undefined): BusinessModelDisclosure {
+  const status = model?.status ?? "unknown";
+  const basis = model?.basis?.trim();
+  const confidence = model?.confidence ?? "low";
+
+  if (status === "confirmed_mlm" || status === "suspected_mlm") {
+    const verb = status === "confirmed_mlm" ? "is" : "may be";
+    return {
+      tone: "warning",
+      title: "MLM / direct-selling business model",
+      body:
+        `Model knowledge — unverified. This company ${verb} organised as an MLM / direct-selling business: ` +
+        "distributors are recruited and can earn from the sales of people they recruit, not only from selling " +
+        `the product themselves. ${basis ? `${basis} ` : ""}(model confidence: ${confidence}). ` +
+        "This describes a way of doing business, not a legal judgement and not evidence about whether the " +
+        "product itself works — it does not affect the evidence score.",
+    };
+  }
+  if (status === "no_evidence") {
+    return {
+      tone: "neutral",
+      title: "Business model",
+      body: `Model knowledge — unverified. No evidence of an MLM / direct-selling structure was recalled for this company.${basis ? ` ${basis}` : ""}`,
+    };
+  }
+  return {
+    tone: "neutral",
+    title: "Business model",
+    body: "Model knowledge — unverified. Whether this company uses an MLM / direct-selling structure is not confirmed either way.",
+  };
+}

@@ -70,6 +70,7 @@ import {
 } from "./dose-effectiveness";
 import { evidencePriorSection, type EvidencePriorSection } from "./evidence-prior";
 import { chatJson, providerConfigured, type ChatJsonFn } from "./llm";
+import type { AppVersionInfo, ScanHistoryOutcome } from "@/lib/scan-history/store";
 import { checkManualDose, checkServingsPerDay, type ManualDoseUnit } from "./manual-dose";
 import { availableProducts, scoreProduct } from "./product-score";
 import { readLabel, type LabelActive, type LabelMediaType, type LabelRead } from "./vision";
@@ -215,6 +216,17 @@ export interface ScanAnalysis {
   ingredient_label_text?: string | null;
   supported_ingredients?: string[];
   basis_legend: typeof BASIS_LEGEND;
+  /**
+   * Durable scan-run history (added by app/api/scan/route.ts AFTER this
+   * object is built -- analyzeScan/analyzeManual never set these three
+   * fields themselves). `run_id` is generated before analysis starts;
+   * `app_version` is this deployment's exact release identity; `persistence`
+   * says honestly whether the run (and, for a photo, its image) was durably
+   * stored -- never "stored" when it was not. See lib/scan-history/store.ts.
+   */
+  run_id?: string;
+  app_version?: AppVersionInfo;
+  persistence?: ScanHistoryOutcome;
   meta: {
     timing_s: number;
     stages: Record<string, number | null>;

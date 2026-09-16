@@ -560,6 +560,54 @@ do not drop it.
 
 ## Current state
 
+**2026-09-16 — durable scan-run history for `POST /api/scan`, and an MLM / direct-selling disclosure
+on the company profile.** Two changes, kept separate in scope, landed together:
+
+1. **Every ACCEPTED manual or photo scan is now durably recorded** — not just answered.
+   `lib/scan-history/store.ts` (same shape as `lib/waitlist/store.ts`: server-only `SUPABASE_URL` +
+   `SUPABASE_SERVICE_ROLE_KEY`, plain `fetch`, no SDK) writes one row per run to `public.scan_runs`
+   (`docs/scan-history.sql`, idempotent — private bucket, RLS enabled, no anon policies): the
+   COMPLETE returned `ScanAnalysis` JSON, the request facts (never image bytes/base64), the terminal
+   status/error, and the exact app release (`package.json` version plus, on Vercel, the git
+   SHA/ref/deployment id/environment/URL). A photo's original image goes to the **private**
+   `scan-images` Storage bucket; only its bucket, path, MIME type, byte size and SHA-256 are stored in
+   the row. `app/api/scan/route.ts` generates the run id (`crypto.randomUUID`) **before** calling
+   `analyzeScan`/`analyzeManual` and attaches `run_id` / `app_version` / `persistence` to the response
+   **after** they return — neither orchestration function knows history exists, so their existing
+   tests (`tests/scan.test.ts`, `tests/scan-manual.test.ts`) needed no change. Persistence is honest by
+   construction: `persistence.status` and `persistence.image.status` are `stored` / `unavailable` /
+   `failed` (`not_applicable` for a manual run's image) and are **never** `stored` unless the write
+   actually succeeded, reported separately because a row can be written while its image fails. With no
+   Supabase project configured, a scan still answers normally (`unavailable`, local/test builds need no
+   credentials); `SCAN_HISTORY_REQUIRED=1` makes it **fail closed** — refuses up front
+   (`scan_history_required_unavailable`, 503) when unconfigured, and discards a completed analysis in
+   favour of `scan_history_required_failed` (500) when the durable write itself fails. A DB insert
+   failure after a successful image upload best-effort deletes the orphaned image. No public read
+   endpoint and no signed image URL exist anywhere — reading this data back is a Supabase SQL editor
+   job. Design: `docs/SYSTEM_DESIGN.md` §6. Tests: `tests/scan-history.test.ts`,
+   `tests/scan-history-route.test.ts` (payload shape, image hashing/storage, app version, orphan
+   cleanup, fail-closed route behaviour, no-secret/browser leakage).
+2. **The company model profile gained a conservative MLM / direct-selling read**
+   (`CompanyProfile.business_model`: `confirmed_mlm` | `suspected_mlm` | `no_evidence` | `unknown`,
+   each with a short `basis` and a `confidence`; `unknown` is the mandatory default whenever the model
+   is unsure). `COMPANY_PROMPT_VERSION` bumped to `company-v1.1`. `confirmed_mlm` / `suspected_mlm`
+   render the **same warning visual language already used elsewhere on `/scan`** for disclosures
+   (`.la-alert.la-alert-warn`), titled "MLM / direct-selling business model" — never "pyramid scheme"
+   or any claim of illegality — captioned "Model knowledge — unverified" and explicit that it never
+   affects the evidence score; `no_evidence` / `unknown` render a plain, non-accusatory line instead of
+   a warning. The type and the pure rendering decision live in the new, browser-safe
+   `lib/analyze/business-model.ts` (split out of `lib/analyze/company.ts`, which imports `node:fs`, so
+   the client component never pulls a filesystem import into the bundle). Design:
+   `docs/SYSTEM_DESIGN.md` §1b. Tests: `tests/company-business-model.test.ts` — schema/defaults,
+   rendering wording (asserts neither "pyramid scheme" nor "illegal" ever appears), and a direct proof
+   that two runs identical except for `business_model` produce byte-identical
+   `product`/`evidence`/`dose_effectiveness`, plus a source-text check that no scoring file (Python or
+   TypeScript) mentions the field at all.
+
+Neither change touches scoring constants, prompts other than `company.md`, `app/page.tsx`, `/`, or any
+Python file under `pipeline/`. Gates at hand-off: 379 unit tests, typecheck, ESLint, both Python gates,
+production build.
+
 **2026-09-15 — `/scan` redesigned (founder-approved option 1): pure white, phone-first, scanning owns
 the first viewport, plus a real manual search path.** The page is the transparent green-frame /
 white-bottle / blue-pixel mark (`public/scan-mark.svg`, derived from the app icon by
@@ -1307,6 +1355,27 @@ extraction was spent on the fix; the first real `--with-sr` production run is
 still the unmeasured SR-uplift experiment (Next item 3).
 
 ## Next
+
+**Handoff (2026-09-16): scan-run history and the MLM disclosure are implemented and gate-clean, but
+unverified against a real Supabase project.** Before relying on this in production:
+
+1. **Run `docs/scan-history.sql`** in the project's Supabase SQL editor (same project as
+   `docs/waitlist.sql`) and confirm `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` are set on the
+   deployment. Every test here uses a fake `fetch` against a fake project — no run has hit a real
+   Supabase Storage bucket or table yet.
+2. **Decide whether to turn on `SCAN_HISTORY_REQUIRED=1`.** Off (default) matches every other
+   optional integration in this app (waitlist, label analyzer) — usable with no credentials, honest
+   `unavailable` otherwise. On makes durability a hard requirement and will turn a Supabase outage into
+   a scan outage; that trade is a founder call, not one made here.
+3. **The MLM disclosure has had no live model run.** `prompts/company.md` and `schemas/company.json`
+   are updated and unit-tested against fixtures, but no real DeepSeek call has been observed choosing
+   between `confirmed_mlm` / `suspected_mlm` / `no_evidence` / `unknown` on a real brand. Spot-check a
+   handful of known MLM brands (e.g. a brand you can independently confirm) once a provider key is
+   live, the same way any other prompt is anchor-checked before being trusted.
+4. **No new Playwright/browser coverage was added for the yellow warning box.** `tests/scan-mlm-warning.test.tsx`
+   drives the real `<ScanFlow>` component in jsdom and asserts the warning box, its class
+   (`la-alert la-alert-warn`, the same one every other `/scan` disclosure uses) and its wording land in
+   the DOM; nobody has looked at it on a real phone screen or run it through the axe/Playwright suite yet.
 
 **Handoff (2026-09-15): the `/scan` redesign and manual search path are implemented and verified.**
 After the validated `main` deploy, verify on one iOS and one

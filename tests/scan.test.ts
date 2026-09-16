@@ -77,6 +77,7 @@ const companyFixture = {
   transparency: { coa_published: "unknown" },
   regulatory_history: [{ kind: "recall", year: 2019, summary: "A voluntary recall of one lot.", confidence: "low" }],
   reputation_notes: [],
+  business_model: { status: "no_evidence" as const, basis: "sold only through retail and its own website", confidence: "medium" as const },
   confidence: "medium",
   caveats: ["Recall details not confirmed."],
 };

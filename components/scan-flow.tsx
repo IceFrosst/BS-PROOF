@@ -33,6 +33,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { SupplementSearch } from "@/components/supplement-search";
+import { businessModelDisclosure } from "@/lib/analyze/business-model";
 import type { CatalogIngredient } from "@/lib/analyze/catalog";
 import type { ManualScanInput, ScanAnalysis } from "@/lib/analyze/scan";
 
@@ -918,6 +919,22 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
                     {company.profile.status === "ok" && company.profile.data ? (
                       <div className="scan-profile">
                         <p>{company.profile.data.summary}</p>
+                        {(() => {
+                          const disclosure = businessModelDisclosure(company.profile.data?.business_model);
+                          // SAME warning visual language as every other disclosure on this
+                          // page (`.la-alert.la-alert-warn` — the caveats above and the
+                          // validity banner in the evidence section): a yellow/gold left
+                          // border, never a new colour invented for this one field.
+                          if (disclosure.tone === "warning") {
+                            return (
+                              <div className="la-alert la-alert-warn" role="note" aria-label="Business model disclosure">
+                                <strong>{disclosure.title}</strong>
+                                <span>{disclosure.body}</span>
+                              </div>
+                            );
+                          }
+                          return <p className="la-dim">{disclosure.body}</p>;
+                        })()}
                         {company.profile.data.known ? (
                           <dl className="la-read-grid">
                             <div>

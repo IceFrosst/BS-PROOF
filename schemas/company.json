@@ -4,7 +4,7 @@
   "description": "What a model recalls about a supplement company. Displayed under a 'model knowledge, unverified' badge; never enters a score. Regulatory items are cross-checked against openFDA by lib/analyze/company.ts.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["brand", "known", "summary", "confidence"],
+  "required": ["brand", "known", "summary", "confidence", "business_model"],
   "properties": {
     "brand": {"type": "string", "maxLength": 120},
     "known": {"type": "boolean"},
@@ -49,6 +49,17 @@
       "type": "array",
       "maxItems": 5,
       "items": {"type": "string", "maxLength": 200}
+    },
+    "business_model": {
+      "description": "A conservative read of whether this is an MLM / direct-selling company. Never a legal judgement -- 'confirmed'/'suspected' describe the DISTRIBUTION MODEL (recruiting distributors who earn on downline sales), not whether the product works or whether the structure is lawful. `unknown` is the mandatory answer whenever the model is not sure.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "basis", "confidence"],
+      "properties": {
+        "status": {"type": "string", "enum": ["confirmed_mlm", "suspected_mlm", "no_evidence", "unknown"]},
+        "basis": {"type": "string", "maxLength": 300},
+        "confidence": {"type": "string", "enum": ["high", "medium", "low"]}
+      }
     },
     "confidence": {"type": "string", "enum": ["high", "medium", "low"]},
     "caveats": {

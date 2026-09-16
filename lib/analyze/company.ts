@@ -23,14 +23,22 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import type { BusinessModel } from "./business-model";
 import type { Basis } from "./compatibility";
 import type { ChatJsonFn } from "./llm";
 import { textModel } from "./llm";
 
+export type { BusinessModel, BusinessModelDisclosure, BusinessModelStatus } from "./business-model";
+export { businessModelDisclosure } from "./business-model";
+
 const ROOT = process.cwd();
 
-/** Bump together with prompts/company.md. Its own cache domain (invariant 3). */
-export const COMPANY_PROMPT_VERSION = "company-v1.0";
+/** Bump together with prompts/company.md. Its own cache domain (invariant 3).
+ * v1.1 (2026-09-16) added the mandatory `business_model` field -- an MLM /
+ * direct-selling disclosure -- with no other prompt change, so every cached
+ * v1.0 profile is correctly treated as stale (it has no opinion on the new
+ * field at all, not even "unknown"). */
+export const COMPANY_PROMPT_VERSION = "company-v1.1";
 
 const OPENFDA = "https://api.fda.gov/food/enforcement.json";
 
@@ -74,6 +82,18 @@ export interface CompanyProfile {
     registry_corroborated?: boolean | null;
   }>;
   reputation_notes: string[];
+  /**
+   * MLM / direct-selling disclosure (added 2026-09-16). Conservative and
+   * mandatory: `unknown` whenever the model is not sure. `confirmed_mlm` and
+   * `suspected_mlm` describe a DISTRIBUTION MODEL, never a legal verdict --
+   * this is not "illegal pyramid scheme", and it says nothing about whether
+   * the product works. Rendered as a disclosure warning only for the two MLM
+   * states; `no_evidence` and `unknown` render as a plain, non-accusatory
+   * line. Never read by scoring code (see tests/company-business-model.test.ts).
+   * Type lives in ./business-model (browser-safe, no fs) so the UI can import
+   * the rendering decision without pulling this file's node:fs import in.
+   */
+  business_model: BusinessModel;
   confidence: "high" | "medium" | "low";
   caveats: string[];
 }
@@ -234,6 +254,7 @@ export async function companySection(input: CompanyInput, deps: CompanyDeps): Pr
           transparency: { coa_published: "unknown" },
           regulatory_history: [],
           reputation_notes: [],
+          business_model: { status: "unknown", basis: "model did not report a business-model assessment", confidence: "low" },
           caveats: [],
         },
         messages: [{ role: "user", content: companyPrompt(input) }],
