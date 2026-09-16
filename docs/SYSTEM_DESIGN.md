@@ -115,8 +115,8 @@ pulling a filesystem import into the browser bundle. `confirmed_mlm` /
 elsewhere on this page for disclosures (`.la-alert.la-alert-warn` — the
 caveats list and the run-validity banner in the evidence section), captioned
 "Model knowledge — unverified" and "does not affect the evidence score".
-`no_evidence` / `unknown` render a plain, honest, non-accusatory line instead
-of a warning box. The field is invisible to scoring: `tests/company-business-
+`no_evidence` / `unknown` render nothing at all (founder: "only show the mlm
+if confirmed or suspected"). The field is invisible to scoring: `tests/company-business-
 model.test.ts` proves two runs identical except for `business_model` produce
 byte-identical `product`/`evidence`/`dose_effectiveness` output, and that no
 scoring source file (Python or TypeScript) even mentions it.

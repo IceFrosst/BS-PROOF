@@ -172,7 +172,7 @@ describe("MLM disclosure rendered in the company section", () => {
     expect(otherWarnings.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("suspected_mlm also warns; no_evidence and unknown render an honest neutral line, no warning box", async () => {
+  it("suspected_mlm also warns; no_evidence and unknown render nothing about business model at all", async () => {
     mockFetchOnce(fixture({ status: "suspected_mlm", basis: "recruitment-based compensation language", confidence: "low" }));
     const suspected = await mount();
     await searchCreatineMonohydrate(suspected);
@@ -184,7 +184,7 @@ describe("MLM disclosure rendered in the company section", () => {
     const noEvidence = await mount();
     await searchCreatineMonohydrate(noEvidence);
     expect(noEvidence.querySelector(".la-alert.la-alert-warn[aria-label='Business model disclosure']")).toBeNull();
-    expect(noEvidence.textContent).toMatch(/No evidence of an MLM/);
+    expect(noEvidence.textContent).not.toMatch(/MLM|direct-selling/i);
     await act(async () => root?.unmount());
     container?.remove();
 
@@ -192,6 +192,6 @@ describe("MLM disclosure rendered in the company section", () => {
     const unknown = await mount();
     await searchCreatineMonohydrate(unknown);
     expect(unknown.querySelector(".la-alert.la-alert-warn[aria-label='Business model disclosure']")).toBeNull();
-    expect(unknown.textContent).toMatch(/not confirmed either way/);
+    expect(unknown.textContent).not.toMatch(/MLM|direct-selling/i);
   });
 });

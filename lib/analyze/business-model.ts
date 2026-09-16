@@ -24,7 +24,7 @@ export interface BusinessModel {
 }
 
 export interface BusinessModelDisclosure {
-  tone: "warning" | "neutral";
+  tone: "warning";
   title: string;
   body: string;
 }
@@ -34,10 +34,12 @@ export interface BusinessModelDisclosure {
  * `suspected_mlm` get the yellow disclosure warning (same visual language as
  * the app's other model-knowledge disclosures — see `.scan-warning` in
  * globals.css), titled "MLM / direct-selling business model", never "pyramid
- * scheme" and never an accusation of illegality. `no_evidence` and `unknown`
- * get a plain, honest, non-accusatory line instead of a warning box.
+ * scheme" and never an accusation of illegality. `no_evidence`, `unknown` and
+ * an absent field render NOTHING (founder 2026-09-16: "only show the mlm if
+ * confirmed or suspected") -- a warning that appears on every company would
+ * stop reading as a warning.
  */
-export function businessModelDisclosure(model: BusinessModel | null | undefined): BusinessModelDisclosure {
+export function businessModelDisclosure(model: BusinessModel | null | undefined): BusinessModelDisclosure | null {
   const status = model?.status ?? "unknown";
   const basis = model?.basis?.trim();
   const confidence = model?.confidence ?? "low";
@@ -55,16 +57,5 @@ export function businessModelDisclosure(model: BusinessModel | null | undefined)
         "product itself works — it does not affect the evidence score.",
     };
   }
-  if (status === "no_evidence") {
-    return {
-      tone: "neutral",
-      title: "Business model",
-      body: `Model knowledge — unverified. No evidence of an MLM / direct-selling structure was recalled for this company.${basis ? ` ${basis}` : ""}`,
-    };
-  }
-  return {
-    tone: "neutral",
-    title: "Business model",
-    body: "Model knowledge — unverified. Whether this company uses an MLM / direct-selling structure is not confirmed either way.",
-  };
+  return null;
 }

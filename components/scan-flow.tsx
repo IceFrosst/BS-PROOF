@@ -925,15 +925,14 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
                           // page (`.la-alert.la-alert-warn` — the caveats above and the
                           // validity banner in the evidence section): a yellow/gold left
                           // border, never a new colour invented for this one field.
-                          if (disclosure.tone === "warning") {
-                            return (
-                              <div className="la-alert la-alert-warn" role="note" aria-label="Business model disclosure">
-                                <strong>{disclosure.title}</strong>
-                                <span>{disclosure.body}</span>
-                              </div>
-                            );
-                          }
-                          return <p className="la-dim">{disclosure.body}</p>;
+                          // Shown ONLY for confirmed/suspected; otherwise nothing.
+                          if (!disclosure) return null;
+                          return (
+                            <div className="la-alert la-alert-warn" role="note" aria-label="Business model disclosure">
+                              <strong>{disclosure.title}</strong>
+                              <span>{disclosure.body}</span>
+                            </div>
+                          );
                         })()}
                         {company.profile.data.known ? (
                           <dl className="la-read-grid">

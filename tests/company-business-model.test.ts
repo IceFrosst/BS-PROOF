@@ -101,18 +101,12 @@ describe("businessModelDisclosure — rendering decision, pure", () => {
     expect(suspected.body.toLowerCase()).not.toMatch(/pyramid scheme|illegal/);
   });
 
-  it("renders an honest, non-accusatory neutral state for no_evidence and unknown", () => {
-    const noEvidence = businessModelDisclosure({ status: "no_evidence", basis: "sold only through retail", confidence: "medium" });
-    expect(noEvidence.tone).toBe("neutral");
-    expect(noEvidence.body).toMatch(/No evidence of an MLM/);
-
-    const unknown = businessModelDisclosure({ status: "unknown", basis: "", confidence: "low" });
-    expect(unknown.tone).toBe("neutral");
-    expect(unknown.body).toMatch(/not confirmed either way/);
-
-    // Absent entirely (e.g. an artifact predating v1.1) reads as unknown, not a crash.
-    expect(businessModelDisclosure(null).tone).toBe("neutral");
-    expect(businessModelDisclosure(undefined).tone).toBe("neutral");
+  it("renders NOTHING for no_evidence, unknown or an absent field (founder: only show if confirmed or suspected)", () => {
+    expect(businessModelDisclosure({ status: "no_evidence", basis: "sold only through retail", confidence: "medium" })).toBeNull();
+    expect(businessModelDisclosure({ status: "unknown", basis: "", confidence: "low" })).toBeNull();
+    // Absent entirely (e.g. a profile predating v1.1) is silence, not a crash.
+    expect(businessModelDisclosure(null)).toBeNull();
+    expect(businessModelDisclosure(undefined)).toBeNull();
   });
 });
 

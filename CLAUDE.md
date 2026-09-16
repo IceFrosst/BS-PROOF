@@ -594,8 +594,8 @@ on the company profile.** Two changes, kept separate in scope, landed together:
    render the **same warning visual language already used elsewhere on `/scan`** for disclosures
    (`.la-alert.la-alert-warn`), titled "MLM / direct-selling business model" — never "pyramid scheme"
    or any claim of illegality — captioned "Model knowledge — unverified" and explicit that it never
-   affects the evidence score; `no_evidence` / `unknown` render a plain, non-accusatory line instead of
-   a warning. The type and the pure rendering decision live in the new, browser-safe
+   affects the evidence score; `no_evidence` / `unknown` render nothing at all (founder: only show it when
+   confirmed or suspected). The type and the pure rendering decision live in the new, browser-safe
    `lib/analyze/business-model.ts` (split out of `lib/analyze/company.ts`, which imports `node:fs`, so
    the client component never pulls a filesystem import into the bundle). Design:
    `docs/SYSTEM_DESIGN.md` §1b. Tests: `tests/company-business-model.test.ts` — schema/defaults,

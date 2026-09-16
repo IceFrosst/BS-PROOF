@@ -88,8 +88,8 @@ export interface CompanyProfile {
    * `suspected_mlm` describe a DISTRIBUTION MODEL, never a legal verdict --
    * this is not "illegal pyramid scheme", and it says nothing about whether
    * the product works. Rendered as a disclosure warning only for the two MLM
-   * states; `no_evidence` and `unknown` render as a plain, non-accusatory
-   * line. Never read by scoring code (see tests/company-business-model.test.ts).
+   * states; `no_evidence` and `unknown` render NOTHING (founder 2026-09-16).
+   * Never read by scoring code (see tests/company-business-model.test.ts).
    * Type lives in ./business-model (browser-safe, no fs) so the UI can import
    * the rendering decision without pulling this file's node:fs import in.
    */
