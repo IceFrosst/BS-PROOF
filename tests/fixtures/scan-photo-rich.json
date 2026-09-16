@@ -1,0 +1,649 @@
+{
+ "schema_version": "ScanAnalysisV1",
+ "analyzed_at": "2026-09-16T19:10:14Z",
+ "source": "photo",
+ "status": "scored",
+ "basis_legend": {
+  "evidence_run": {
+   "label": "Evidence run",
+   "means": "Scored from extracted trials with quoted provenance. The only source that produces a number.",
+   "rank": 1
+  },
+  "registry": {
+   "label": "Public registry",
+   "means": "A dated public record (FDA enforcement reports via openFDA).",
+   "rank": 2
+  },
+  "curated_table": {
+   "label": "Curated & cited",
+   "means": "A maintained table where every entry cites a regulator fact sheet or a position stand.",
+   "rank": 3
+  },
+  "label": {
+   "label": "As printed",
+   "means": "Read off the label. A claim the product makes about itself, not a verification.",
+   "rank": 4
+  },
+  "user_input": {
+   "label": "Typed by you",
+   "means": "Entered by hand, not read from a label. Nothing here checked that the product contains what was typed.",
+   "rank": 5
+  },
+  "model_prior": {
+   "label": "Model knowledge",
+   "means": "What the model recalls from training data. Unverified; shown for orientation only and never scored.",
+   "rank": 6
+  }
+ },
+ "meta": {
+  "timing_s": 3.33,
+  "stages": {
+   "label": 9.2,
+   "evidence": 0.36,
+   "evidence_prior": null,
+   "compatibility": 0.01,
+   "company": 0.74,
+   "literature_warnings": 2.06
+  },
+  "provider_configured": true,
+  "models": {
+   "vision": "deepseek-v4-flash-vision-exp",
+   "text": "deepseek-chat"
+  },
+  "prompt_versions": {
+   "compatibility": "compat-v1.0",
+   "company": "company-v1.1",
+   "literature_warnings": "literature-warnings-v1.0"
+  }
+ },
+ "product": {
+  "ingredient": "creatine",
+  "form": "creatine_monohydrate",
+  "compound_dose_mg": 5000,
+  "elemental_dose_mg": {
+   "low": 4396.062,
+   "high": 4396.062,
+   "basis": "converted"
+  },
+  "servings_per_day": 1,
+  "scored_dose_mg": 4396.062,
+  "scored_dose_basis": "daily",
+  "is_multi_ingredient": false,
+  "other_actives": []
+ },
+ "evidence": {
+  "status": "scored",
+  "ingredient": "creatine",
+  "form": "creatine_monohydrate",
+  "dose_mg": 4396.062,
+  "rows": [
+   {
+    "outcome": "exercise_endurance",
+    "outcome_label": "Endurance performance",
+    "polarity": "higher_better",
+    "composite": 60,
+    "verdict": "probably works",
+    "n_primaries": 3,
+    "arcs": {
+     "effect": {
+      "verdict": 0.727,
+      "coverage": 1
+     },
+     "form": {
+      "verdict": 0.702,
+      "coverage": 0.915,
+      "strength": 0.8,
+      "basis": "ladder"
+     },
+     "dose": {
+      "verdict": 0.465,
+      "coverage": 0.51,
+      "closeness": 0.7842,
+      "product_match": "in_band"
+     },
+     "evidence": {
+      "coverage": 0.363,
+      "is_quantity": true
+     }
+    },
+    "benefit_dose_range_mg": {
+     "low": 2855.682,
+     "high": 2855.682,
+     "basis": "observed_benefit_doses"
+    },
+    "null_dose_range_mg": {
+     "low": 4396.062,
+     "high": 4396.062
+    },
+    "run_composite": 60,
+    "run_dose_closeness": 0.7842,
+    "applicability": 0.792
+   },
+   {
+    "outcome": "muscle_power",
+    "outcome_label": "Power and sprint performance",
+    "polarity": "higher_better",
+    "composite": 54,
+    "verdict": "unclear",
+    "n_primaries": 12,
+    "arcs": {
+     "effect": {
+      "verdict": 0.241,
+      "coverage": 1
+     },
+     "form": {
+      "verdict": 0.081,
+      "coverage": 0.73,
+      "strength": 0.8,
+      "basis": "ladder"
+     },
+     "dose": {
+      "verdict": 0.374,
+      "coverage": 0.221,
+      "closeness": 0.1,
+      "product_match": "below_50"
+     },
+     "evidence": {
+      "coverage": 0.693,
+      "is_quantity": true
+     }
+    },
+    "benefit_dose_range_mg": {
+     "low": 17584.246,
+     "high": 17824.419,
+     "basis": "observed_benefit_doses"
+    },
+    "null_dose_range_mg": {
+     "low": 17584.246,
+     "high": 19729.524
+    },
+    "run_composite": 54,
+    "run_dose_closeness": 0.1,
+    "applicability": 0.45
+   },
+   {
+    "outcome": "muscle_strength",
+    "outcome_label": "Muscle strength",
+    "polarity": "higher_better",
+    "composite": 51,
+    "verdict": "unclear",
+    "n_primaries": 12,
+    "arcs": {
+     "effect": {
+      "verdict": 0.038,
+      "coverage": 1
+     },
+     "form": {
+      "verdict": 0.022,
+      "coverage": 0.868,
+      "strength": 0.8,
+      "basis": "ladder"
+     },
+     "dose": {
+      "verdict": 0,
+      "coverage": 0.47,
+      "closeness": null,
+      "product_match": "unspecified"
+     },
+     "evidence": {
+      "coverage": 0.821,
+      "is_quantity": true
+     }
+    },
+    "benefit_dose_range_mg": {
+     "low": null,
+     "high": null,
+     "basis": "no_dosed_benefit_trial"
+    },
+    "null_dose_range_mg": {
+     "low": 4396.062,
+     "high": 17584.246
+    },
+    "run_composite": 51,
+    "run_dose_closeness": null,
+    "applicability": 0.45
+   },
+   {
+    "outcome": "lean_body_mass",
+    "outcome_label": "Lean body mass",
+    "polarity": "higher_better",
+    "composite": 51,
+    "verdict": "unclear",
+    "n_primaries": 6,
+    "arcs": {
+     "effect": {
+      "verdict": 0.09,
+      "coverage": 1
+     },
+     "form": {
+      "verdict": 0.075,
+      "coverage": 0.934,
+      "strength": 0.8,
+      "basis": "ladder"
+     },
+     "dose": {
+      "verdict": 0,
+      "coverage": 0.108,
+      "closeness": null,
+      "product_match": "unspecified"
+     },
+     "evidence": {
+      "coverage": 0.642,
+      "is_quantity": true
+     }
+    },
+    "benefit_dose_range_mg": {
+     "low": null,
+     "high": null,
+     "basis": "no_dosed_benefit_trial"
+    },
+    "null_dose_range_mg": {
+     "low": 2855.682,
+     "high": 2855.682
+    },
+    "run_composite": 51,
+    "run_dose_closeness": null,
+    "applicability": 0.45
+   }
+  ],
+  "refused": [
+   {
+    "outcome": "energy_levels",
+    "reason": "gated_in_run"
+   }
+  ],
+  "population": {
+   "id": "general_adult",
+   "age_band": "adult",
+   "sex": "mixed",
+   "deficiency_status": "unknown",
+   "pregnancy": "not_pregnant",
+   "health_status": "healthy"
+  },
+  "run": {
+   "id": "20260904_185830_creatine_creatine-monohydrate_claude-sr-ft-top5-suppl",
+   "scoring_model": "v14-applicability-discount",
+   "prompt_version": "v1.26",
+   "generated_at": "2026-09-04T18:58:30Z",
+   "provider": "claude",
+   "scored_product_dose_mg": 4396
+  },
+  "validity": {
+   "status": "experimental",
+   "public_claims_allowed": false,
+   "limitations": [
+    "This run has not passed explicit validation for public claims."
+   ],
+   "note": "Not approved for public claims; explicit registry review is required."
+  }
+ },
+ "dose_effectiveness": {
+  "status": "ok",
+  "basis": "evidence_run",
+  "per_serving_elemental_mg": 4396.062,
+  "servings_per_day": 1,
+  "daily_elemental_mg": 4396.062,
+  "scored_dose_mg": 4396.062,
+  "scored_dose_basis": "daily",
+  "conversion_basis": "converted",
+  "outcomes": [
+   {
+    "outcome": "exercise_endurance",
+    "outcome_label": "Endurance performance",
+    "closeness": 0.7842,
+    "product_match": "in_band",
+    "benefit_range_mg": {
+     "low": 2855.682,
+     "high": 2855.682
+    },
+    "null_range_mg": {
+     "low": 4396.062,
+     "high": 4396.062
+    },
+    "dosed_evidence_share": 0.51,
+    "reading": "Endurance performance: 4.4 g sits inside the range where trials found benefit (2.86 g\u20132.86 g). Note: trials dosed at 4.4 g\u20134.4 g also found nothing, so this dose is contested.",
+    "tone": "in_range"
+   },
+   {
+    "outcome": "muscle_power",
+    "outcome_label": "Power and sprint performance",
+    "closeness": 0.1,
+    "product_match": "below_50",
+    "benefit_range_mg": {
+     "low": 17584.246,
+     "high": 17824.419
+    },
+    "null_range_mg": {
+     "low": 17584.246,
+     "high": 19729.524
+    },
+    "dosed_evidence_share": 0.221,
+    "reading": "Power and sprint performance: 4.4 g is below the range where benefit was seen (17.58 g\u201317.82 g); closeness 0.10.",
+    "tone": "below"
+   },
+   {
+    "outcome": "muscle_strength",
+    "outcome_label": "Muscle strength",
+    "closeness": null,
+    "product_match": "unspecified",
+    "benefit_range_mg": null,
+    "null_range_mg": {
+     "low": 4396.062,
+     "high": 17584.246
+    },
+    "dosed_evidence_share": 0.47,
+    "reading": "Muscle strength: no trial that found a benefit carried a usable dose, so there is no range to compare 4.4 g against. Trials that found nothing were dosed at 4.4 g\u201317.58 g.",
+    "tone": "unassessable"
+   },
+   {
+    "outcome": "lean_body_mass",
+    "outcome_label": "Lean body mass",
+    "closeness": null,
+    "product_match": "unspecified",
+    "benefit_range_mg": null,
+    "null_range_mg": {
+     "low": 2855.682,
+     "high": 2855.682
+    },
+    "dosed_evidence_share": 0.108,
+    "reading": "Lean body mass: no trial that found a benefit carried a usable dose, so there is no range to compare 4.4 g against. Trials that found nothing were dosed at 2.86 g\u20132.86 g.",
+    "tone": "unassessable"
+   }
+  ],
+  "note": "Scored on the daily dose: 4.4 g per serving \u00d7 1 servings/day = 4.4 g of active moiety. Trials report daily doses, so this is the comparable figure."
+ },
+ "compatibility": {
+  "status": "ok",
+  "basis_used": [
+   "evidence_run",
+   "curated_table",
+   "model_prior"
+  ],
+  "actives": [
+   {
+    "printed": "Creatine Monohydrate",
+    "canonical": "creatine",
+    "compound_dose_mg": 5000,
+    "form_text": "monohydrate"
+   },
+   {
+    "printed": "Vitamin D3",
+    "canonical": "vitamin_d",
+    "compound_dose_mg": 0.05,
+    "form_text": "cholecalciferol"
+   },
+   {
+    "printed": "Magnesium (as magnesium oxide)",
+    "canonical": "magnesium",
+    "compound_dose_mg": 400,
+    "form_text": "oxide"
+   }
+  ],
+  "evidence_form_fit": {
+   "status": "exact_form_scored",
+   "scored_forms": [
+    "creatine_monohydrate"
+   ],
+   "form_strength": 0.8,
+   "form_basis": "ladder"
+  },
+  "form_notes": [
+   {
+    "active": "Magnesium (as magnesium oxide)",
+    "note": "Oxide is among the least bioavailable magnesium salts.",
+    "basis": "curated_table",
+    "confidence": "high",
+    "source": {
+     "title": "NIH ODS Magnesium fact sheet",
+     "url": "https://ods.od.nih.gov/"
+    }
+   }
+  ],
+  "interactions": [
+   {
+    "a": "Vitamin D3",
+    "b": "Magnesium (as magnesium oxide)",
+    "kind": "synergy",
+    "severity": "info",
+    "advice": "Magnesium is a cofactor for vitamin D activation.",
+    "mechanism": "Mg-dependent hydroxylases.",
+    "basis": "curated_table",
+    "confidence": "high",
+    "source": {
+     "title": "NIH ODS Magnesium fact sheet",
+     "url": "https://ods.od.nih.gov/"
+    }
+   },
+   {
+    "a": "Creatine Monohydrate",
+    "b": "Magnesium (as magnesium oxide)",
+    "kind": "absorption",
+    "severity": "moderate",
+    "advice": null,
+    "mechanism": "Magnesium oxide is poorly absorbed; high doses cause loose stools.",
+    "basis": "model_prior",
+    "confidence": "low",
+    "source": null
+   }
+  ],
+  "model": {
+   "status": "ok",
+   "reason": null,
+   "overall": "Nothing in this combination is unsafe at printed doses; the magnesium oxide is the weak link.",
+   "prompt_version": "compat-v1.0",
+   "model": "deepseek-chat",
+   "elapsed_s": 1.4
+  }
+ },
+ "company": {
+  "status": "ok",
+  "basis_used": [
+   "label",
+   "registry",
+   "model_prior"
+  ],
+  "brand": "Nordic Labs",
+  "manufacturer": "Nordic Labs O\u00dc",
+  "country_of_origin": "Estonia",
+  "certifications_printed": [
+   {
+    "text": "Informed Sport",
+    "basis": "label",
+    "note": "As printed on the label."
+   },
+   {
+    "text": "GMP",
+    "basis": "label",
+    "note": "As printed."
+   }
+  ],
+  "registry": {
+   "status": "ok",
+   "queried": [
+    "Nordic Labs",
+    "Nordic Labs O\u00dc"
+   ],
+   "recalls": [
+    {
+     "recall_number": "F-1234-2024",
+     "initiated": "2024-03-11",
+     "classification": "Class II",
+     "status": "Terminated",
+     "reason": "Undeclared allergen (milk)",
+     "product": "Creatine Pro 5000, 500 g tub",
+     "firm": "Nordic Labs O\u00dc",
+     "basis": "registry",
+     "source": {
+      "title": "FDA enforcement reports (openFDA)",
+      "url": "https://api.fda.gov/"
+     }
+    }
+   ],
+   "reason": null,
+   "source": "openFDA food enforcement reports",
+   "note": "Dietary supplements are regulated as food, so recalls appear in FDA's food enforcement reports."
+  },
+  "profile": {
+   "status": "ok",
+   "reason": null,
+   "basis": "model_prior",
+   "prompt_version": "company-v1.1",
+   "model": "deepseek-chat",
+   "elapsed_s": 1.1,
+   "data": {
+    "brand": "Nordic Labs",
+    "known": true,
+    "summary": "An Estonian sports-nutrition brand selling through independent distributors and online.",
+    "founded_year": 2016,
+    "headquarters_country": "Estonia",
+    "parent_company": null,
+    "ownership_type": "private",
+    "third_party_testing": {
+     "program": "Informed Sport",
+     "status": "claimed"
+    },
+    "transparency": {
+     "coa_published": "unknown"
+    },
+    "regulatory_history": [
+     {
+      "kind": "recall",
+      "year": 2024,
+      "summary": "Allergen recall of one creatine batch.",
+      "confidence": "medium",
+      "registry_corroborated": true
+     }
+    ],
+    "reputation_notes": [
+     "Sponsors a regional powerlifting federation (2022)."
+    ],
+    "business_model": {
+     "status": "suspected_mlm",
+     "basis": "Recruits 'brand partners' who earn on the sales of people they recruit.",
+     "confidence": "medium"
+    },
+    "confidence": "medium",
+    "caveats": [
+     "Could not confirm batch certificate publication."
+    ]
+   }
+  }
+ },
+ "literature_warnings": {
+  "status": "ok",
+  "basis": "model_prior",
+  "reason": null,
+  "data": {
+   "funding_independence": {
+    "status": "concern",
+    "basis": "A large share of positive trials were funded by a single ingredient supplier.",
+    "confidence": "medium",
+    "notable_funders": [
+     "AlzChem (Creapure)"
+    ]
+   },
+   "publication_bias": {
+    "status": "concern",
+    "basis": "A 2025 meta-analysis of bench-press outcomes reported a significant Egger's test.",
+    "confidence": "medium",
+    "signals": [
+     "Egger p = 0.0003 for bench press",
+     "squat pool showed no asymmetry"
+    ]
+   },
+   "caveats": [
+    "Creatine is one of the most-studied sports supplements, so the literature is heterogeneous and hard to characterise with a single funding or bias statement.",
+    "Some trials are funded by supplement manufacturers, but I cannot name one that dominates the published record.",
+    "My knowledge of specific meta-analytic bias tests for creatine is limited and may be outdated."
+   ]
+  },
+  "prompt_version": "literature-warnings-v1.0",
+  "model": "deepseek-chat",
+  "elapsed_s": 2.01
+ },
+ "caveats": [
+  {
+   "code": "multi_ingredient_product",
+   "text": "This product doses more than one active. The evidence score is about creatine on its own, which is not the same question as this blend."
+  }
+ ],
+ "run_id": "5c0e0478-b5c0-4bbe-b8b7-d45b2a5d3878",
+ "app_version": {
+  "package_version": "0.1.0",
+  "git_sha": "9636fd217ea7896385e55cf9c30a5f865e923c98",
+  "git_ref": "main",
+  "deployment_id": "dpl_62HShv2ir8XY5dmFfvJjnBdW81am",
+  "vercel_env": "production",
+  "url": "bs-proof-dashboard-52yydbp1b-icefrost.vercel.app"
+ },
+ "persistence": {
+  "status": "unavailable",
+  "run_id": "5c0e0478-b5c0-4bbe-b8b7-d45b2a5d3878",
+  "detail": "scan history is not configured on this deployment: set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY",
+  "image": {
+   "status": "not_applicable",
+   "bucket": null,
+   "path": null,
+   "mime_type": null,
+   "bytes": null,
+   "sha256": null
+  }
+ },
+ "label": {
+  "is_supplement_label": true,
+  "ingredient_vocab_id": "creatine",
+  "ingredient_label_text": "Creatine Monohydrate",
+  "form_vocab_id": "creatine_monohydrate",
+  "compound_dose_mg": 5000,
+  "servings_per_day": 1,
+  "is_multi_ingredient": true,
+  "other_actives": [
+   "Vitamin D3",
+   "Magnesium (as magnesium oxide)"
+  ],
+  "actives": [
+   {
+    "name": "Creatine Monohydrate",
+    "compound_dose_mg": 5000,
+    "form_text": "monohydrate"
+   },
+   {
+    "name": "Vitamin D3",
+    "compound_dose_mg": 0.05,
+    "form_text": "cholecalciferol"
+   },
+   {
+    "name": "Magnesium (as magnesium oxide)",
+    "compound_dose_mg": 400,
+    "form_text": "oxide"
+   }
+  ],
+  "certifications": [
+   "Informed Sport",
+   "GMP"
+  ],
+  "manufacturer": "Nordic Labs O\u00dc",
+  "country_of_origin": "Estonia",
+  "brand": "Nordic Labs",
+  "product_name": "Creatine Pro 5000",
+  "warnings_printed": [
+   "Consult a physician if pregnant"
+  ],
+  "claims_printed": [
+   "Supports strength"
+  ],
+  "confidence": "high",
+  "evidence_spans": [
+   "Creatine Monohydrate 5000 mg",
+   "Serving size 1 scoop"
+  ],
+  "_meta": {
+   "model": "deepseek-v4-flash-vision-exp",
+   "prompt_version": "label-v1.1",
+   "elapsed_s": 9.2,
+   "backend": "api.deepseek.com",
+   "input_tokens": null,
+   "output_tokens": null
+  }
+ }
+}
