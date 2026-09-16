@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Literature disclosure warnings (model prior)",
+  "description": "Model-recalled, conservative disclosures about the published human literature behind ONE ingredient: who funds its trials, and whether the published record shows signs of selective reporting. Displayed under a 'model knowledge, unverified' badge; never enters a score, an arc or a dose band. `unknown` is the default whenever the model is not sure; `concern` requires a specific, widely-reported reason, never a vague impression.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["funding_independence", "publication_bias"],
+  "properties": {
+    "funding_independence": {
+      "description": "Who funded the trials behind this ingredient. `concern` only for a specific, named reason (industry/trade-body funding dominates the trial base, or a specific brand funds most positive trials) -- never a claim that a result is wrong.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "basis", "confidence"],
+      "properties": {
+        "status": {"type": "string", "enum": ["concern", "no_concern", "unknown"]},
+        "basis": {"type": "string", "maxLength": 300},
+        "confidence": {"type": "string", "enum": ["high", "medium", "low"]},
+        "notable_funders": {
+          "type": "array",
+          "maxItems": 5,
+          "items": {"type": "string", "maxLength": 120}
+        }
+      }
+    },
+    "publication_bias": {
+      "description": "Whether the published record for this ingredient shows signs of selective reporting (funnel-plot asymmetry, an Egger's test, many small positive trials and few nulls). `concern` only for a specific, describable signal -- never a claim that a result is wrong.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "basis", "confidence"],
+      "properties": {
+        "status": {"type": "string", "enum": ["concern", "no_concern", "unknown"]},
+        "basis": {"type": "string", "maxLength": 300},
+        "confidence": {"type": "string", "enum": ["high", "medium", "low"]},
+        "signals": {
+          "type": "array",
+          "maxItems": 5,
+          "items": {"type": "string", "maxLength": 200}
+        }
+      }
+    },
+    "caveats": {
+      "type": "array",
+      "maxItems": 5,
+      "items": {"type": "string", "maxLength": 200}
+    }
+  }
+}

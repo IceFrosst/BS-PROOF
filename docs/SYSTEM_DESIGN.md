@@ -25,6 +25,7 @@ with **where it came from**:
 | Is your dose the dose that worked? | your daily dose vs the range where trials found benefit, and where they found nothing | `evidence_run` + `label` |
 | Does the form and the mix hold up? | is your form the scored form; cited form notes; pairwise interactions among the actives | `evidence_run`, `curated_table`, `model_prior` |
 | Who makes it, and what is on record? | printed seals; FDA recalls on file; the model's profile of the company, including a conservative MLM / direct-selling read (§1b) | `label`, `registry`, `model_prior` |
+| Is the literature behind it trustworthy to read? | funding independence and publication bias, shown ONLY as a disclosure, never a score change (§1c) | `model_prior` |
 
 Only the evidence run produces a **number**. Everything else qualifies.
 
@@ -121,14 +122,62 @@ model.test.ts` proves two runs identical except for `business_model` produce
 byte-identical `product`/`evidence`/`dose_effectiveness` output, and that no
 scoring source file (Python or TypeScript) even mentions it.
 
+### 1c. Literature disclosures: funding & independence, publication bias (2026-09-16)
+
+The founder wanted two further disclosures "decided by the system prompt", the
+same way as §1b's MLM read: **funding & independence** (does industry or a
+named trade body dominate the trial base for this ingredient, or a specific
+brand fund most of the positive trials) and **publication bias** (does the
+published record show a documented small-study / funnel-plot-asymmetry
+signal). New module `lib/analyze/literature-warnings.ts`
+(`prompts/literature_warnings.md`, `schemas/literature_warnings.json`, own
+cache domain `LITERATURE_WARNINGS_PROMPT_VERSION = "literature-warnings-v1.0"`)
+asks per ingredient/form; each topic answers `concern` | `no_concern` |
+`unknown`, with `unknown` mandatory whenever the model is not sure and
+`concern` requiring a SPECIFIC, named reason -- never a vague impression that
+"supplement research is often industry-funded".
+
+**A `concern` is a disclosure, never a verdict.** It says who funded the
+evidence or what the published record looks like; it never claims a result is
+wrong, invalid or fabricated, and it never enters the evidence score, an arc or
+a dose band -- the same rule invariant closed for the design-lab prototype on
+2026-09-11 ("funding and publication bias are clickable disclosure warnings and
+no longer touch any number"), now applied to the live `/scan` page instead of a
+scoring penalty.
+
+The TYPE and the pure rendering decision (`literatureDisclosures`) live in the
+new, browser-safe `lib/analyze/literature-disclosures.ts` -- same split as
+`business-model.ts` / `company.ts`, so the client component never pulls a
+filesystem import into the bundle. Only `concern` renders anything, as a
+`.la-alert.la-alert-warn` box (`role="note"`) titled "Funding & independence"
+or "Publication bias", captioned "Model knowledge — unverified", stating the
+basis, listing recalled funders/signals and the model's confidence, and
+explicit that it does not affect the evidence score; `no_concern`, `unknown`
+and every unavailable/skipped state render nothing. The two topics are
+independent -- a product can show one, both, or neither. Rendered on `/scan`
+immediately under the caveat warnings, before the Evidence section, because
+these disclosures concern the evidence AS A WHOLE rather than one outcome.
+
+**Runs for every scan**, not just the fallback path: scored, not-scored and
+ingredient-not-supported all get it, in parallel with stages 2b/4/5 under the
+same time-budget gating (`MIN_MODEL_BUDGET_MS`/`MAX_TEXT_CALL_MS`), and it
+degrades to `unavailable` on its own like every other model section. Tests:
+`tests/literature-warnings.test.ts` (schema/defaults, the pure rendering
+decision, orchestration on all three scan paths, a byte-identical pin of
+`product`/`evidence`/`dose_effectiveness` with the section present or
+unavailable, a time-budget skip, and a source-text check that no scoring file
+mentions it) and `tests/literature-warnings-render.test.tsx` (the rendered
+page, confirming neither "fraud" nor "fabricated" ever appears).
+
 ## 2. The one rule
 
-**A model's recollection never becomes a measurement.** DeepSeek does three
+**A model's recollection never becomes a measurement.** DeepSeek does four
 jobs in a scan — reads the label, fills in interactions the curated table does
-not cover, and profiles the company — and each output is either fed to
+not cover, profiles the company, and discloses funding independence /
+publication bias for the literature — and each output is either fed to
 deterministic code (the label read) or displayed under a dashed
-"Model knowledge — unverified" badge (the other two). No model output enters a
-score, a dose band or an arc. This is what separates the product from typing
+"Model knowledge — unverified" badge (the other three). No model output enters
+a score, a dose band or an arc. This is what separates the product from typing
 the brand into a chat window: the chat gives fluent text with no provenance; the
 scan gives numbers with receipts and text with a warning label.
 
@@ -163,18 +212,23 @@ POST /api/scan  (multipart, one image, ≤12 MB, 60 s)
   ├─ 3  dose effectiveness   dose-effectiveness.ts                               [exact]
   │       → per outcome: benefit range, null range, closeness, tone, reading
   │
-  ├─ 4  form & compatibility compatibility.ts        ┐ run in PARALLEL
-  │       curated: vocab/compatibility.json (cited)  │ after stage 1; each
-  │       model:   prompts/compatibility.md          │ degrades alone
-  │                for uncovered pairs only           │ [MODEL text]
-  │                                                    │
-  └─ 5  company background   company.ts               ┘
-          label:    seals, manufacturer, country (as printed)
-          registry: openFDA /food/enforcement, recalling_firm + product_description
-          model:    prompts/company.md, cross-checked against the registry [MODEL text]
+  ├─ 4  form & compatibility compatibility.ts        ┐ run in PARALLEL after
+  │       curated: vocab/compatibility.json (cited)  │ stage 1; each degrades
+  │       model:   prompts/compatibility.md          │ alone [MODEL text]
+  │                for uncovered pairs only           │
+  ├─ 5  company background   company.ts               │
+  │       label:    seals, manufacturer, country (as printed)               │
+  │       registry: openFDA /food/enforcement, recalling_firm + product_description │
+  │       model:    prompts/company.md, cross-checked against registry [MODEL text] │
+  └─ 5b literature disclosures literature-warnings.ts ┘
+          funding independence + publication bias, prompts/literature_warnings.md
+          [MODEL text]. `concern` | `no_concern` | `unknown` per topic, DISCLOSURE
+          only -- never enters the score, an arc or a dose band. Runs for EVERY
+          scan (scored, not-scored, ingredient-not-supported), same time budget.
 
   → ScanAnalysisV1 { source, label | input, product, evidence, dose_effectiveness,
-                     compatibility, company, caveats, basis_legend, meta }
+                     compatibility, company, literature_warnings, caveats,
+                     basis_legend, meta }
 ```
 
 ### 3a. Route contract
@@ -220,7 +274,8 @@ Verify a model id with the provider before setting it.
 
 Each prompt has its own version constant and cache domain (invariant 3):
 `LABEL_PROMPT_VERSION` (mirrored in `label_adapter.py`),
-`COMPAT_PROMPT_VERSION`, `COMPANY_PROMPT_VERSION`.
+`COMPAT_PROMPT_VERSION`, `COMPANY_PROMPT_VERSION`,
+`LITERATURE_WARNINGS_PROMPT_VERSION`.
 
 ## 5. Source ranking, as shown to the user
 
@@ -332,14 +387,16 @@ lib/analyze/scan.ts              the orchestrator; ScanAnalysisV1; analyzeScan /
 lib/analyze/catalog.ts           slim ingredient × form catalog from vocab/form.json (manual path)
 lib/analyze/manual-dose.ts       mg / g / mcg → mg, exact factors, no IU (client-safe)
 lib/analyze/business-model.ts    MLM / direct-selling disclosure: type + pure rendering decision (client-safe)
+lib/analyze/literature-warnings.ts     funding-independence / publication-bias disclosures (uses llm)
+lib/analyze/literature-disclosures.ts  same disclosures: type + pure rendering decision (client-safe)
 lib/scan-history/store.ts        durable scan-run history: Supabase Storage + Postgres, plain fetch, server-only
 app/api/scan/route.ts            multipart → analyzeScan; JSON → analyzeManual; GET catalog; wires scan-run history
 app/scan/page.tsx, components/scan-flow.tsx, components/supplement-search.tsx   the UI
 public/scan-mark.svg             transparent scanner mark; derived by scripts/write_scan_mark.mjs
 prompts/label.md (v1.1), prompts/company.md (v1.1), prompts/compatibility.md,
-prompts/evidence_prior.md
+prompts/evidence_prior.md, prompts/literature_warnings.md
 schemas/label.json, schemas/company.json, schemas/compatibility.json,
-schemas/evidence_prior.json
+schemas/evidence_prior.json, schemas/literature_warnings.json
 vocab/compatibility.json         curated, cited interactions and form notes
 docs/scan-history.sql            idempotent migration: private bucket, scan_runs table, RLS, indexes
 tests/scan.test.ts               the whole flow against fakes, zero model calls
@@ -349,4 +406,6 @@ tests/scan-history.test.ts       store: payload shape, image hashing/storage, ap
 tests/scan-history-route.test.ts route wiring: run_id/app_version/persistence attached, SCAN_HISTORY_REQUIRED fail-closed
 tests/company-business-model.test.ts  schema, defaults, the disclosure decision function, proof that scoring never sees the field
 tests/scan-mlm-warning.test.tsx       the disclosure rendered in the real <ScanFlow> DOM, same warning class as other /scan disclosures
+tests/literature-warnings.test.ts        schema, defaults, the disclosure decision function, all three scan paths, byte-identical pin, time-budget skip
+tests/literature-warnings-render.test.tsx the disclosures rendered in the real <ScanFlow> DOM, only for "concern"
 ```

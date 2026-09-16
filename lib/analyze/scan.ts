@@ -69,6 +69,7 @@ import {
   type DoseRowInput,
 } from "./dose-effectiveness";
 import { evidencePriorSection, type EvidencePriorSection } from "./evidence-prior";
+import { literatureWarningsSection, type LiteratureWarningsSection } from "./literature-warnings";
 import { chatJson, providerConfigured, type ChatJsonFn } from "./llm";
 import type { AppVersionInfo, ScanHistoryOutcome } from "@/lib/scan-history/store";
 import { checkManualDose, checkServingsPerDay, type ManualDoseUnit } from "./manual-dose";
@@ -210,6 +211,14 @@ export interface ScanAnalysis {
   dose_effectiveness?: DoseEffectivenessSection;
   compatibility?: CompatibilitySection;
   company?: CompanySection;
+  /**
+   * Model-decided disclosures about the LITERATURE behind this ingredient --
+   * funding independence and publication bias (founder 2026-09-16, "decided
+   * by the system prompt", same as the MLM disclosure). Runs for every scan
+   * (scored, not-scored and ingredient-not-supported), degrades on its own,
+   * and never enters the evidence score. See lib/analyze/literature-warnings.ts.
+   */
+  literature_warnings?: LiteratureWarningsSection;
   census?: Json;
   queue?: Json;
   caveats?: Array<{ code: string; text: string }>;
@@ -262,6 +271,7 @@ export function startRun(source: ScanSource, deps: ScanDeps): ScanRun {
     evidence_prior: null,
     compatibility: null,
     company: null,
+    literature_warnings: null,
   };
   const out: ScanAnalysis = {
     schema_version: SCAN_SCHEMA_VERSION,
@@ -450,7 +460,8 @@ export async function analyzeFromLabel(label: ProductFacts, run: ScanRun): Promi
     const printedName = label.ingredient_label_text ?? label.ingredient_vocab_id ?? "this ingredient";
     const asPrinted = scoredDose(label.compound_dose_mg, label.servings_per_day);
     const tPrior = deps.now();
-    const [prior, compat, company] = await Promise.all([
+    const tLiteratureWarnings = deps.now();
+    const [prior, compat, company, literatureWarnings] = await Promise.all([
       evidencePriorSection(
         {
           ingredientText: printedName,
@@ -471,19 +482,26 @@ export async function analyzeFromLabel(label: ProductFacts, run: ScanRun): Promi
         { chatJson: deps.chatJson, timeoutMs: Math.max(1000, modelBudget), allowModel },
       ),
       companyPromise,
+      literatureWarningsSection(
+        { ingredientText: printedName, formText: label.form_vocab_id ?? null, brand: label.brand, manufacturer: label.manufacturer },
+        { chatJson: deps.chatJson, timeoutMs: Math.max(1000, modelBudget), allowModel },
+      ),
     ]);
     stages.evidence_prior = seconds(deps.now() - tPrior);
+    stages.literature_warnings = seconds(deps.now() - tLiteratureWarnings);
     out.status = "ingredient_not_supported";
     out.ingredient_label_text = label.ingredient_label_text;
     out.supported_ingredients = ingredientIds().sort();
     out.evidence_prior = prior;
     out.compatibility = compat;
     out.company = company;
+    out.literature_warnings = literatureWarnings;
     out.queue = await enqueue(null, null, label.ingredient_label_text);
-    out.meta.models.text = prior.model ?? compat.model.model ?? company.profile.model ?? null;
+    out.meta.models.text = prior.model ?? compat.model.model ?? company.profile.model ?? literatureWarnings.model ?? null;
     out.meta.prompt_versions.evidence_prior = prior.prompt_version;
     out.meta.prompt_versions.compatibility = compat.model.prompt_version;
     out.meta.prompt_versions.company = company.profile.prompt_version;
+    out.meta.prompt_versions.literature_warnings = literatureWarnings.prompt_version;
     return run.finish("ingredient_not_supported");
   }
 
@@ -548,6 +566,24 @@ export async function analyzeFromLabel(label: ProductFacts, run: ScanRun): Promi
     return section;
   })();
 
+  // Model-decided literature disclosures (funding independence, publication
+  // bias) -- founder 2026-09-16, run for EVERY scan (scored or not), in
+  // parallel with 4, 5 and 2b, and degrading on its own like the rest.
+  const literatureWarningsPromise = (async () => {
+    const t = deps.now();
+    const section = await literatureWarningsSection(
+      {
+        ingredientText: label.ingredient_label_text ?? ingredient.replace(/_/g, " "),
+        formText: formId ? formId.replace(/_/g, " ") : null,
+        brand: label.brand,
+        manufacturer: label.manufacturer,
+      },
+      { chatJson: deps.chatJson, timeoutMs: Math.max(1000, modelBudget), allowModel },
+    );
+    stages.literature_warnings = seconds(deps.now() - t);
+    return section;
+  })();
+
   // Stage 2b: no retained run could answer, so ask the model what the
   // literature says. In parallel with 4 and 5, and never when a run exists.
   const priorPromise = (async (): Promise<EvidencePriorSection | null> => {
@@ -569,16 +605,23 @@ export async function analyzeFromLabel(label: ProductFacts, run: ScanRun): Promi
     return section;
   })();
 
-  const [compat, company, prior] = await Promise.all([compatPromise, companyPromise, priorPromise]);
+  const [compat, company, prior, literatureWarnings] = await Promise.all([
+    compatPromise,
+    companyPromise,
+    priorPromise,
+    literatureWarningsPromise,
+  ]);
   out.compatibility = compat;
   out.company = company;
+  out.literature_warnings = literatureWarnings;
   if (prior) {
     out.evidence_prior = prior;
     out.meta.prompt_versions.evidence_prior = prior.prompt_version;
   }
   out.meta.prompt_versions.compatibility = compat.model.prompt_version;
   out.meta.prompt_versions.company = company.profile.prompt_version;
-  out.meta.models.text = compat.model.model ?? company.profile.model ?? prior?.model ?? null;
+  out.meta.prompt_versions.literature_warnings = literatureWarnings.prompt_version;
+  out.meta.models.text = compat.model.model ?? company.profile.model ?? prior?.model ?? literatureWarnings.model ?? null;
 
   if (result.status !== "scored") {
     out.census = await census(ingredient, deps.fetch);
@@ -625,7 +668,7 @@ export async function analyzeFromLabel(label: ProductFacts, run: ScanRun): Promi
   if (!allowModel) {
     caveats.push({
       code: "model_sections_skipped",
-      text: "The label read used most of the time budget, so the company profile and the compatibility fill-in were skipped. The evidence score is complete.",
+      text: "The label read used most of the time budget, so the company profile, the compatibility fill-in and the literature disclosures were skipped. The evidence score is complete.",
     });
   }
   if (caveats.length) out.caveats = caveats;

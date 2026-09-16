@@ -125,6 +125,12 @@ const compatFixture = {
   overall: "No documented interaction between these actives.",
 };
 
+const literatureWarningsFixture = {
+  funding_independence: { status: "no_concern", basis: "Independently funded across multiple countries.", confidence: "medium", notable_funders: [] },
+  publication_bias: { status: "unknown", basis: "No specific asymmetry analysis recalled.", confidence: "low", signals: [] },
+  caveats: [],
+};
+
 function fakeChatJson(answers: Record<string, unknown>): ChatJsonFn {
   return (async <T,>(request: { purpose: string }) => {
     const value = answers[request.purpose];
@@ -164,7 +170,12 @@ function deps(overrides: Partial<ScanDeps> = {}): ScanDeps {
   let t = 0;
   return {
     readLabel: async () => label(),
-    chatJson: fakeChatJson({ "company profile": companyFixture, compatibility: compatFixture, "evidence prior": priorFixture }),
+    chatJson: fakeChatJson({
+      "company profile": companyFixture,
+      compatibility: compatFixture,
+      "evidence prior": priorFixture,
+      "literature warnings": literatureWarningsFixture,
+    }),
     fetch: fakeFetch({}),
     scoreProduct,
     budgetMs: 55_000,
@@ -348,15 +359,30 @@ describe("analyzeScan end to end (fakes only)", () => {
     expect(ok.company?.profile.basis).toBe("model_prior");
     expect(Object.keys(ok.basis_legend)).toEqual(expect.arrayContaining(["evidence_run", "model_prior", "registry", "curated_table", "label"]));
     expect(ok.meta.prompt_versions.label).toBe("label-v1.1");
+    expect(ok.literature_warnings?.status).toBe("ok");
+    expect(ok.literature_warnings?.basis).toBe("model_prior");
+    expect(ok.meta.prompt_versions.literature_warnings).toBe("literature-warnings-v1.0");
 
     const broken = await analyzeScan(
       "aW1n",
       "image/png",
-      deps({ chatJson: fakeChatJson({ "company profile": new ModelCallError("http", "boom"), compatibility: new ModelCallError("http", "boom") }) }),
+      deps({
+        chatJson: fakeChatJson({
+          "company profile": new ModelCallError("http", "boom"),
+          compatibility: new ModelCallError("http", "boom"),
+          "literature warnings": new ModelCallError("http", "boom"),
+        }),
+      }),
     );
     expect(broken.status).toBe(ok.status);
     expect((broken.evidence as Json).status).toBe((ok.evidence as Json).status);
     expect(broken.company?.profile.status).toBe("unavailable");
+    expect(broken.literature_warnings?.status).toBe("unavailable");
+    // A broken literature-warnings call costs only that section -- the
+    // deterministic blocks are untouched.
+    expect(broken.product).toEqual(ok.product);
+    expect(broken.evidence).toEqual(ok.evidence);
+    expect(broken.dose_effectiveness).toEqual(ok.dose_effectiveness);
   });
 
   it("skips the text model calls when the label read consumed the time budget", async () => {
@@ -375,6 +401,8 @@ describe("analyzeScan end to end (fakes only)", () => {
     );
     expect(slow.company?.profile.status).toBe("unavailable");
     expect(slow.company?.profile.reason).toMatch(/time budget/);
+    expect(slow.literature_warnings?.status).toBe("unavailable");
+    expect(slow.literature_warnings?.reason).toMatch(/time budget/);
     expect(slow.caveats?.some((c) => c.code === "model_sections_skipped")).toBe(true);
   });
 
@@ -392,6 +420,10 @@ describe("analyzeScan end to end (fakes only)", () => {
     expect(out.evidence_prior?.basis).toBe("model_prior");
     expect(out.evidence).toBeUndefined();
     expect(out.supported_ingredients).toContain("creatine");
+    // The literature disclosures run even for an ingredient outside the
+    // vocabulary -- it still has a literature (founder 2026-09-08's rule).
+    expect(out.literature_warnings?.status).toBe("ok");
+    expect(out.literature_warnings?.basis).toBe("model_prior");
   });
 
   it("an in-vocabulary ingredient with no run gets the orientation, with dose placed against the recalled range", async () => {
@@ -423,12 +455,16 @@ describe("analyzeScan end to end (fakes only)", () => {
     // An outcome with no recalled range gets no comparison rather than a guess.
     expect(out.evidence_prior?.data?.outcomes[1].dose_closeness).toBeNull();
     expect(out.meta.prompt_versions.evidence_prior).toBe("evidence-prior-v1.0");
+    expect(out.literature_warnings?.status).toBe("ok");
   });
 
   it("a scored ingredient never gets the model orientation", async () => {
     const out = await analyzeScan("aW1n", "image/png", deps());
     expect(out.status).toBe("scored");
     expect(out.evidence_prior).toBeUndefined();
+    // ...but it still gets the literature disclosures -- those run for EVERY
+    // scan, scored or not (founder 2026-09-16).
+    expect(out.literature_warnings?.status).toBe("ok");
   });
 
   it("places a dose against a recalled range with the same ramp as the scored path", () => {

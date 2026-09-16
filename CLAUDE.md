@@ -27,7 +27,7 @@ Allowed model boundaries (nothing else):
 | `pilot_adapter.py` | Claude subscription pilot (not production) |
 | `grok_adapter.py` | Grok pure-function path (separate backend) |
 | `label_adapter.py` | Reads a supplement LABEL off an uploaded image, via the local CLI (added 2026-08-21) |
-| `lib/analyze/llm.ts` | **The deployed app's ONE model transport (since 2026-09-07).** Every model call the site makes goes through `chat`/`chatJson` here: the label vision read (prompt and contract in `lib/analyze/vision.ts`, same `prompts/label.md` as `label_adapter`), the ingredient-compatibility fill-in (`prompts/compatibility.md`) and the company profile (`prompts/company.md`) behind `POST /api/scan`. Default provider is **DeepSeek** (`DEEPSEEK_API_KEY`; `VISION_API_KEY`/`GEMINI_API_KEY` still read); `MODEL_API_URL`/`LABEL_MODEL`/`TEXT_MODEL` swap providers with no code change. Temperature 0, one shot, JSON validated by Ajv against `schemas/*.json`. Model text from the two text prompts is displayed under a "model knowledge — unverified" badge and **never enters a score** — see `docs/SYSTEM_DESIGN.md` |
+| `lib/analyze/llm.ts` | **The deployed app's ONE model transport (since 2026-09-07).** Every model call the site makes goes through `chat`/`chatJson` here: the label vision read (prompt and contract in `lib/analyze/vision.ts`, same `prompts/label.md` as `label_adapter`), the ingredient-compatibility fill-in (`prompts/compatibility.md`), the company profile (`prompts/company.md`) and the funding-independence / publication-bias literature disclosures (`prompts/literature_warnings.md`) behind `POST /api/scan`. Default provider is **DeepSeek** (`DEEPSEEK_API_KEY`; `VISION_API_KEY`/`GEMINI_API_KEY` still read); `MODEL_API_URL`/`LABEL_MODEL`/`TEXT_MODEL` swap providers with no code change. Temperature 0, one shot, JSON validated by Ajv against `schemas/*.json`. Model text from the text prompts is displayed under a "model knowledge — unverified" badge and **never enters a score** — see `docs/SYSTEM_DESIGN.md` |
 
 `pipeline.invariants` enforces the Python side by AST and the TS side by scan:
 model-API markers (`chat/completions`, provider SDK imports, key env vars) may
@@ -38,7 +38,8 @@ functions, pinned to Python-computed golden values by
 `vocab/compatibility.json` lookup and the openFDA registry fetch, neither of
 which touches a model. Each prompt has its own version constant and cache
 domain (`LABEL_PROMPT_VERSION`, `COMPAT_PROMPT_VERSION`,
-`COMPANY_PROMPT_VERSION`), the same discipline as the label domain below.
+`COMPANY_PROMPT_VERSION`, `LITERATURE_WARNINGS_PROMPT_VERSION`), the same
+discipline as the label domain below.
 
 Everything in `pipeline/` and `sources/` is deterministic. If you find yourself
 importing an adapter into `scoring.py` or `dedup.py`, stop.
@@ -607,6 +608,32 @@ on the company profile.** Two changes, kept separate in scope, landed together:
 Neither change touches scoring constants, prompts other than `company.md`, `app/page.tsx`, `/`, or any
 Python file under `pipeline/`. Gates at hand-off: 379 unit tests, typecheck, ESLint, both Python gates,
 production build.
+
+**2026-09-16 — two model-decided literature disclosures added to the live `/scan` page: funding &
+independence and publication bias, "decided by the system prompt" the same way the MLM disclosure is.**
+New module `lib/analyze/literature-warnings.ts` (own prompt `prompts/literature_warnings.md`, own
+schema `schemas/literature_warnings.json`, own cache domain `LITERATURE_WARNINGS_PROMPT_VERSION =
+"literature-warnings-v1.0"`) asks, per ingredient/form, whether the published trial base looks
+industry-funded and whether the published record shows signs of selective reporting; each topic answers
+`concern` | `no_concern` | `unknown`, `unknown` being the mandatory default whenever the model is not
+sure and `concern` requiring a specific, named reason rather than a general impression. This is a
+**DISCLOSURE about the evidence as a whole, never a claim that a result is wrong**, and it is wired into
+`analyzeFromLabel` to run for **every** scan — scored, not-scored and ingredient-not-supported — in
+parallel with stages 2b/4/5 under the same time-budget gating, and it degrades to `unavailable` on its
+own like every other model section. The type and the pure rendering decision
+(`literatureDisclosures`) live in the new, browser-safe `lib/analyze/literature-disclosures.ts` (same
+split as `business-model.ts` / `company.ts`, so the client component never pulls a filesystem import
+into the bundle): only `concern` renders a `.la-alert.la-alert-warn` box, titled "Funding &
+independence" or "Publication bias", captioned "Model knowledge — unverified", stating the basis,
+listing funders/signals and confidence, and explicit that it does not affect the evidence score;
+`no_concern`, `unknown` and every unavailable/skipped state render nothing. Rendered on `/scan`
+immediately under the caveat warnings, before the Evidence section, since the disclosures concern the
+evidence as a whole. Design: `docs/SYSTEM_DESIGN.md` §1c. Tests: `tests/literature-warnings.test.ts`
+(schema/defaults, the pure rendering decision, orchestration proving the section on all three scan
+paths, a byte-identical pin of `product`/`evidence`/`dose_effectiveness` with the section present or
+unavailable, a time-budget skip, and a source-text check that no scoring file mentions it) and
+`tests/literature-warnings-render.test.tsx` (the rendered page, confirming neither "fraud" nor
+"fabricated" ever appears). Touches no scoring constant, no other prompt, and no deterministic block.
 
 **2026-09-15 — `/scan` redesigned (founder-approved option 1): pure white, phone-first, scanning owns
 the first viewport, plus a real manual search path.** The page is the transparent green-frame /

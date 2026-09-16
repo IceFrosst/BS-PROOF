@@ -35,6 +35,7 @@ import { useCallback, useEffect, useState } from "react";
 import { SupplementSearch } from "@/components/supplement-search";
 import { businessModelDisclosure } from "@/lib/analyze/business-model";
 import type { CatalogIngredient } from "@/lib/analyze/catalog";
+import { literatureDisclosures } from "@/lib/analyze/literature-disclosures";
 import type { ManualScanInput, ScanAnalysis } from "@/lib/analyze/scan";
 
 type Basis = keyof ScanAnalysis["basis_legend"];
@@ -548,6 +549,21 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
             <div className="la-alert la-alert-warn" key={c.code}>
               <strong>{c.code.replace(/_/g, " ")}</strong>
               <span>{c.text}</span>
+            </div>
+          ))}
+
+          {/*
+           * Model-decided literature disclosures (funding independence,
+           * publication bias -- founder 2026-09-16, "decided by the system
+           * prompt", same as the MLM disclosure). They concern the evidence
+           * AS A WHOLE, so they sit right under the caveats, before the
+           * Evidence section -- and render ONLY for "concern"; no_concern,
+           * unknown and every unavailable/skipped state render nothing.
+           */}
+          {literatureDisclosures(data.literature_warnings?.data).map((d) => (
+            <div className="la-alert la-alert-warn" role="note" aria-label={`${d.title} disclosure`} key={d.title}>
+              <strong>{d.title}</strong>
+              <span>{d.body}</span>
             </div>
           ))}
 
