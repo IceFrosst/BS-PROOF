@@ -359,3 +359,90 @@ case proving an unknown-status outcome renders no warnings block),
 `tests/effect-presentation.test.ts` (row is one unit, one button, chevron order;
 no gates strip), `tests/scan-result-state.test.tsx` (single-row summary with no
 `<small>`; row children are exactly name / score / chevron / track).
+
+---
+
+## 2026-09-16 — four more warning kinds in the lab card's collapsed block (preview only)
+
+Same collapsed `⚠ N evidence warnings` block, four more kinds, each built **only
+when it is actually true** for the selected product/outcome. Changed files:
+`app/design-lab/ab/evidence-warnings.ts`, `app/design-lab/ab/prototype.tsx`,
+`tests/evidence-warnings.test.tsx`. `/scan` is untouched — it already carries
+the same three product warnings in its own bundle (`data.caveats` supplies
+`multi_ingredient_product` and `servings_not_stated`, `businessModelDisclosure`
+supplies MLM), verified and pinned by a source-text test rather than edited.
+No scoring constant, `lib/analyze/**`, `app/api/**`, prompt, schema or
+`pipeline/` file was changed.
+
+**The rows, in display order** (product-level first, then outcome-level):
+
+| id | scope | fires when | wording source |
+|---|---|---|---|
+| `multi_ingredient_product` | product | the scenario declares more than one active | the `multi_ingredient_product` caveat text in `lib/analyze/scan.ts`, verbatim (its ingredient slot filled as "this ingredient") |
+| `servings_not_stated` | product | the scenario declares that servings per day are not on the label | the `servings_not_stated` caveat text in `lib/analyze/scan.ts`, label branch, verbatim |
+| `mlm` | product | the scenario declares a `confirmed_mlm` / `suspected_mlm` seller | built by calling production `businessModelDisclosure()`, so title and body are the same bytes `/scan` shows |
+| `no_human_controlled_trial` | outcome | `ledger.gates.rctCount === 0` — the same condition that makes `score()` push "No human controlled trial" | new one-liner in the same voice; states it is a **cap**, not a disclosure (certainty held at 0, no outcome score) |
+| `funding` | outcome | unchanged (industry/one-lab gate fired) | unchanged |
+| `publication` | outcome | unchanged (checklist `concern`) | unchanged |
+
+**Honesty — how the three product facts are sourced.** They are never inferred.
+`ProductDeclarations` is optional per scenario and every field defaults to
+absent, so a scenario that declares nothing renders nothing. The three retained
+audits (creatine, vitamin D, magnesium) and the three effect-only research
+passes declare **nothing at all**: they are single-ingredient products with a
+stated daily dose and no known MLM seller, and asserting any of these three
+about a real brand would be inventing a fact. A test renders all 30 retained
+audit outcomes and asserts none of the three ids, nor the strings "MLM /
+direct-selling", "more than one active" or "Servings per day", ever appears.
+
+Which scenario carries which flag, and why that is truthful:
+
+- **`none` — "Nothing to score", Sample blend D · 2 capsules** (fictional):
+  `multiIngredient` + `servingsNotStated`. True by construction — the sample is
+  a proprietary multi-active blend whose own Form/Dose text already says
+  "amounts per ingredient not printed", and its dose is "2 capsules" with no
+  servings per day, which is exactly what `servings_not_stated` describes.
+- **`thin` — "One small trial", Sample extract C · 400 mg/day** (fictional):
+  `businessModel.status = confirmed_mlm`. No existing fictional scenario had a
+  seller, so one was declared here; the card says so in three places — the
+  sidebar picker (`· fictional seller`), the fictional footnote ("Its seller is
+  fictional too: the MLM / direct-selling disclosure here exercises the row and
+  names no real company") and a stamp inside the row itself ("Fictional sample
+  seller — declared by this hand-written sample, not a model read of any real
+  company"). MLM keeps its production semantics: a disclosure that never
+  changes a number.
+- **`no_human_controlled_trial`** is derived from real ledger data, so it *does*
+  fire on a real audit — magnesium "Diagnosed anxiety disorder" (`rctCount: 0`)
+  shows it as its single warning. That is required, not a leak: it is read off
+  the run's own counted trials.
+
+Rendering: each row is still a native `<details>` whose `<summary>` is
+`title · status`, same markup and CSS family, no new visual kit. The
+retained-audit stamp, the quoted source notes and the per-outcome source links
+now render **only** for the two audit-prose warnings (`auditQuoted`), because a
+label fact or a counted-trial cap has no quoted commentary and printing "no
+specific source detail was retained" under it would invent a missing literature
+note. Statuses were shortened once after looking at the screenshots ("Evidence
+is about one ingredient", "Daily dose not computed", "Disclosure only") so each
+summary wraps to two lines and the three-row stack does not read as cramped.
+
+References (Playwright, 1440px desktop, `DESIGN_LAB=1` production build on
+:3111), `docs/design/ref/tabs-preview/`:
+`2026-09-16-lab-warning-real-publication-{collapsed,open}.png` (creatine
+"Strength when you lift weights": publication bias only),
+`2026-09-16-lab-warning-fictional-product-{collapsed,open,rows-expanded}.png`
+(blend D "Cognitive function": 3 warnings, multi-ingredient → servings → cap),
+`2026-09-16-lab-warning-fictional-mlm-{open,rows-expanded}.png` (extract C
+"Energy": MLM → cap), `2026-09-16-lab-warning-real-gate-open.png` (magnesium
+"Diagnosed anxiety disorder": the cap on a real audit) and
+`2026-09-16-lab-warning-none.png` (magnesium "Sleep quality (poor sleepers)":
+no block at all). `public/previews/lab-warning-collapsed.png` and
+`lab-warning-open.png` were refreshed from the blend-D pair, which is the
+scenario that shows the stack and the count.
+Tests: `tests/evidence-warnings.test.tsx` — declared-nothing builds nothing,
+one row per declared fact in product order, production-wording equality (read
+out of `lib/analyze/scan.ts` and out of `businessModelDisclosure`), the gate
+row derived from `rctCount === 0` across all 30 audit outcomes, no
+multi-ingredient/servings/MLM on any real audit or research pass, the count
+always equal to the number of rows drawn, and an outcome where none of the four
+conditions holds drawing no block.

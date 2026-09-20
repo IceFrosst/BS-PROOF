@@ -14,7 +14,7 @@ import magnesiumAudit from "./audits/magnesium.json";
 import caffeineResearch from "./effect-research/caffeine.json";
 import creatineResearch from "./effect-research/creatine-effect.json";
 import omega3Research from "./effect-research/omega3-effect.json";
-import { auditWarnings, evidenceDetail, type EvidenceWarning } from "./evidence-warnings";
+import { auditWarnings, evidenceDetail, gateWarnings, productWarnings, type EvidenceWarning, type ProductDeclarations } from "./evidence-warnings";
 import "./ab.css";
 
 type DimKey = "effect" | "evidence" | "form" | "dose" | "person";
@@ -25,6 +25,12 @@ interface OutcomeCase { warnings?: EvidenceWarning[]; name: string; sentence?: s
 interface Scenario {
   title: string; product: string;
   kind: "live" | "fictional" | "research";
+  /* Product-level facts this scenario DECLARES about itself (blend, missing
+   * servings per day, MLM seller). Absent everywhere except the fictional
+   * samples below, where each declared fact is true by construction. The three
+   * retained audits and the effect-only passes declare nothing, so none of the
+   * three product warnings can ever appear on a real brand. */
+  declared?: ProductDeclarations;
   outcomes: OutcomeCase[];
   live?: { runAt: string; model: string; sources: number; doseNote: string; confidence: string; confidenceNote: string; couldNotAccess: string[] };
   research?: EffectResearchFile;
@@ -60,6 +66,12 @@ const scenarios: Record<string, Scenario> = {
   },
   thin: {
     title: "One small trial", product: "Sample extract C · 400 mg/day", kind: "fictional",
+    /* FICTIONAL SELLER. This sample exists to exercise the MLM disclosure; it
+     * names no real company and is not a claim about any real brand. */
+    declared: {
+      businessModel: { status: "confirmed_mlm", basis: "This sample declares a seller whose distributors are recruited and paid on their recruits' sales.", confidence: "high" },
+      note: "Fictional sample seller — declared by this hand-written sample, not a model read of any real company.",
+    },
     outcomes: ([
       { name: "Testosterone (blood level)", sentence: "One small maker-funded trial saw higher levels. A blood marker is not what most buyers want.", ledger: { effectPoints: 1, bodyIsRct: true, checklist: { risk_of_bias: "concern", consistency: "unknown", precision: "concern", directness: "concern", publication_bias: "unknown" }, gates: { rctCount: 1, largestRctN: 60, longestRctWeeks: 4, chronicOutcome: true, surrogate: true, allPositiveIndustryOrOneLab: true }, formFit: 2, doseFit: 4 },
         detail: { effect: { found: "A small rise in a blood marker over 4 weeks.", missing: "No trial on energy, libido or strength itself.", move: "A trial measuring what people actually buy it for." }, evidence: { found: "One RCT, n≈60, funded by the maker.", missing: "Only one trial (cap 1). Small and short. Surrogate outcome. Single funder.", move: "An independent replication of any size." }, form: { found: "Same plant, different standardization than the trial.", missing: "Extract ratio on the label does not match the tested one.", move: "A trial using this standardization." }, dose: { found: "400 mg/day matches the trial dose.", missing: "Nothing — but matching a dose from one trial proves little.", move: "—" } } },
@@ -69,6 +81,13 @@ const scenarios: Record<string, Scenario> = {
   },
   none: {
     title: "Nothing to score", product: "Sample blend D · 2 capsules", kind: "fictional",
+    /* True by construction for this sample: it is a proprietary multi-active
+     * blend ("amounts per ingredient not printed") dosed as "2 capsules" with
+     * no servings per day, so no daily dose can be computed. */
+    declared: {
+      multiIngredient: true, servingsNotStated: true,
+      note: "Fictional sample label — declared by this hand-written sample, not read from a real product.",
+    },
     outcomes: ([
       { name: "Cognitive function", sentence: "No human trial tested this formula. Missing evidence is not proof it fails.", ledger: { effectPoints: "unclear", bodyIsRct: false, checklist: { risk_of_bias: "unknown", consistency: "unknown", precision: "unknown", directness: "concern", publication_bias: "unknown" }, gates: { rctCount: 0, largestRctN: 0, longestRctWeeks: 0, chronicOutcome: true, surrogate: false, allPositiveIndustryOrOneLab: false }, formFit: "unknown", doseFit: "unknown" },
         detail: { effect: { found: "Nothing on the full formula.", missing: "Ingredient-level trials exist at very different doses.", move: "Any controlled trial of this blend." }, evidence: { found: "No controlled human trial.", missing: "Everything.", move: "One RCT would unlock a score." }, form: { found: "—", missing: "Proprietary blend; amounts per ingredient not printed.", move: "A label that states each amount." }, dose: { found: "—", missing: "Cannot compare without per-ingredient amounts.", move: "—" } } },
@@ -139,17 +158,37 @@ const researchScenario = (title: string, file: EffectResearchFile): Scenario => 
   })),
 });
 
-const liveScenarios: Record<string, Scenario> = {
+/* ONE place assembles an outcome's warning stack, in display order:
+ * product-level facts first (identical on every row of that product), then
+ * the outcome-level ones — the ledger-derived "no human controlled trial"
+ * cap, then the audit's funding and publication-bias disclosures. Each part
+ * builds NOTHING unless it is actually true, so an outcome with nothing to
+ * say keeps `warnings` empty and the view draws no block at all. */
+function withWarnings(s: Scenario): Scenario {
+  const product = productWarnings(s.declared);
+  return {
+    ...s,
+    outcomes: s.outcomes.map((o) => {
+      const rows = [...product, ...gateWarnings(o.ledger), ...(o.warnings ?? [])];
+      return rows.length ? { ...o, warnings: rows } : o;
+    }),
+  };
+}
+const withWarningsEach = (r: Record<string, Scenario>): Record<string, Scenario> =>
+  Object.fromEntries(Object.entries(r).map(([k, v]) => [k, withWarnings(v)]));
+
+const liveScenarios: Record<string, Scenario> = withWarningsEach({
   creatine: fromAudit("Creatine monohydrate · 4 g", creatineAudit as unknown as AuditFileWithEffect),
   vitaminD: fromAudit("Vitamin D3 · 2000 IU", vitaminDAudit as unknown as AuditFileWithEffect),
   magnesium: fromAudit("Magnesium glycinate · 300 mg", magnesiumAudit as unknown as AuditFileWithEffect),
-};
-const researchScenarios: Record<string, Scenario> = {
+});
+const researchScenarios: Record<string, Scenario> = withWarningsEach({
   creatineEffect: researchScenario("Creatine monohydrate · 3–5 g", creatineEffectFile),
   caffeine: researchScenario("Caffeine anhydrous · 200 mg", caffeineFile),
   omega3: researchScenario("Omega-3 (EPA/DHA) · 1 g", omega3File),
-};
-const allScenarios: Record<string, Scenario> = { ...liveScenarios, ...researchScenarios, ...scenarios };
+});
+const fictionalScenarios: Record<string, Scenario> = withWarningsEach(scenarios);
+const allScenarios: Record<string, Scenario> = { ...liveScenarios, ...researchScenarios, ...fictionalScenarios };
 
 const DIMS_BASE: { key: DimKey; name: string; color: string }[] = [
   { key: "effect", name: "Effect", color: "var(--ab-r1)" },
@@ -363,12 +402,20 @@ export default function AbPrototype({ initial, publicTest = false }: AbPrototype
   const warnings = cur?.o.warnings?.length ? <details className="ab-warnings" key={`${key}:${tab}`}>
     <summary><span>⚠ {cur.o.warnings.length} evidence warning{cur.o.warnings.length === 1 ? "" : "s"}</span></summary>
     <div className="ab-warning-list" aria-label="Evidence warnings">
-      {cur.o.warnings.map((w) => <details key={w.id} data-warning={w.id}>
+      {/* The retained-audit stamp, the quoted source notes and the source
+        * links belong ONLY to the two warnings built from audit prose. A label
+        * fact or a counted-trial cap has no quoted commentary, so printing
+        * "no specific source detail was retained" under it would invent a
+        * missing literature note that was never part of that warning. */}
+      {cur.o.warnings.map((w) => <details key={w.id} data-warning={w.id} data-scope={w.scope}>
         <summary>{w.title} · {w.status}</summary>
         <p>{w.explanation}</p>
-        <p className="ab-stamp">Retained AI source notes · not human-verified. Quoted audit commentary is not the current scoring rule.</p>
-        {w.reported.length ? w.reported.map((text, i) => <p key={i}>{text}</p>) : <p>No specific source detail was retained. That is unknown, not evidence that the literature is free of this concern.</p>}
-        {cur.o.effect.sourceLinks.length > 0 && <p><b>Sources for this outcome</b> {cur.o.effect.sourceLinks.map((l) => l.url ? <a key={l.id} href={l.url} target="_blank" rel="noreferrer">{l.label} ({l.access}) </a> : <span key={l.id}>{l.label} ({l.access}) </span>)}</p>}
+        {w.note && <p className="ab-stamp">{w.note}</p>}
+        {w.auditQuoted && <>
+          <p className="ab-stamp">Retained AI source notes · not human-verified. Quoted audit commentary is not the current scoring rule.</p>
+          {w.reported.length ? w.reported.map((text, i) => <p key={i}>{text}</p>) : <p>No specific source detail was retained. That is unknown, not evidence that the literature is free of this concern.</p>}
+          {cur.o.effect.sourceLinks.length > 0 && <p><b>Sources for this outcome</b> {cur.o.effect.sourceLinks.map((l) => l.url ? <a key={l.id} href={l.url} target="_blank" rel="noreferrer">{l.label} ({l.access}) </a> : <span key={l.id}>{l.label} ({l.access}) </span>)}</p>}
+        </>}
       </details>)}
     </div>
   </details> : null;
@@ -392,7 +439,7 @@ export default function AbPrototype({ initial, publicTest = false }: AbPrototype
     </div>
   </main>;
 
-  return <main id="main-content" className="ab-stage"><aside className="ab-side"><a href="/design-lab/mobile">← Field Notebook</a><span className="ab-kicker">RESULT CARD</span><h1>Show the tub.<br />Then the <em>truth.</em></h1><p>Photo takes a third of the phone. Two placements to compare; the rows are identical in both.</p><span className="ab-kicker">PHOTO PLACEMENT</span><div className="ab-layouts" role="tablist" aria-label="Layout">{LAYOUTS.map((l) => <button key={l.id} role="tab" aria-selected={layout === l.id} onClick={() => { setLayout(l.id); setOpen(null); }}><b>{l.name}</b><small>{l.blurb}</small></button>)}</div><span className="ab-kicker">EARLIER AUDITS · UPDATED EVIDENCE POLICY</span><div className="ab-scenarios">{Object.entries(liveScenarios).map(([k, v]) => <button key={k} aria-pressed={key === k} onClick={() => pick(k)}>{v.title}<small>{v.outcomes.length} outcomes · {v.live?.sources} sources</small></button>)}</div><span className="ab-kicker">EFFECT-ONLY RESEARCH · NEW</span><div className="ab-scenarios">{Object.entries(researchScenarios).map(([k, v]) => <button key={k} aria-pressed={key === k} onClick={() => pick(k)}>{v.title}<small>{v.outcomes.length} outcomes · {v.research?.sources.length} sources · no score</small></button>)}</div>{profileRow}<span className="ab-kicker">WHAT THE USER PICKED</span><div className="ab-picks">{s.outcomes.map((o) => <label key={outcomeKey(o.name, o.population)}><input type="checkbox" checked={isPicked(o)} onChange={() => togglePick(o)} />{o.name}{o.population && <small>{o.population}</small>}</label>)}</div><details className="ab-provenance"><summary>Fictional test ledgers</summary><div className="ab-scenarios">{Object.entries(scenarios).map(([k, v]) => <button key={k} aria-pressed={key === k} onClick={() => pick(k)}>{v.title}<small>{v.product}</small></button>)}</div></details>{s.live ? <p className="ab-fine"><strong>Previous audit</strong> run {s.live.runAt} by {s.live.model}. Its effect text and sources are shown as written then and were <strong>not reverified</strong> in this pass; scores now exclude funding and publication-bias penalties. Model confidence: {s.live.confidence}. {s.live.doseNote}</p> : s.research ? <p className="ab-fine"><strong>Effect-only research pass</strong> {s.research.meta.run_at}, {s.research.meta.model}. {s.research.meta.note} <b>Reading rules:</b> {s.research.guards.join(" ")}</p> : <p className="ab-fine">Hand-written inputs to exercise the rubric; no search or model call produced this card. The numeric bars here are invented.</p>}</aside>
+  return <main id="main-content" className="ab-stage"><aside className="ab-side"><a href="/design-lab/mobile">← Field Notebook</a><span className="ab-kicker">RESULT CARD</span><h1>Show the tub.<br />Then the <em>truth.</em></h1><p>Photo takes a third of the phone. Two placements to compare; the rows are identical in both.</p><span className="ab-kicker">PHOTO PLACEMENT</span><div className="ab-layouts" role="tablist" aria-label="Layout">{LAYOUTS.map((l) => <button key={l.id} role="tab" aria-selected={layout === l.id} onClick={() => { setLayout(l.id); setOpen(null); }}><b>{l.name}</b><small>{l.blurb}</small></button>)}</div><span className="ab-kicker">EARLIER AUDITS · UPDATED EVIDENCE POLICY</span><div className="ab-scenarios">{Object.entries(liveScenarios).map(([k, v]) => <button key={k} aria-pressed={key === k} onClick={() => pick(k)}>{v.title}<small>{v.outcomes.length} outcomes · {v.live?.sources} sources</small></button>)}</div><span className="ab-kicker">EFFECT-ONLY RESEARCH · NEW</span><div className="ab-scenarios">{Object.entries(researchScenarios).map(([k, v]) => <button key={k} aria-pressed={key === k} onClick={() => pick(k)}>{v.title}<small>{v.outcomes.length} outcomes · {v.research?.sources.length} sources · no score</small></button>)}</div>{profileRow}<span className="ab-kicker">WHAT THE USER PICKED</span><div className="ab-picks">{s.outcomes.map((o) => <label key={outcomeKey(o.name, o.population)}><input type="checkbox" checked={isPicked(o)} onChange={() => togglePick(o)} />{o.name}{o.population && <small>{o.population}</small>}</label>)}</div><details className="ab-provenance"><summary>Fictional test ledgers</summary><div className="ab-scenarios">{Object.entries(fictionalScenarios).map(([k, v]) => <button key={k} aria-pressed={key === k} onClick={() => pick(k)}>{v.title}<small>{v.product}{v.declared?.businessModel ? " · fictional seller" : ""}</small></button>)}</div></details>{s.live ? <p className="ab-fine"><strong>Previous audit</strong> run {s.live.runAt} by {s.live.model}. Its effect text and sources are shown as written then and were <strong>not reverified</strong> in this pass; scores now exclude funding and publication-bias penalties. Model confidence: {s.live.confidence}. {s.live.doseNote}</p> : s.research ? <p className="ab-fine"><strong>Effect-only research pass</strong> {s.research.meta.run_at}, {s.research.meta.model}. {s.research.meta.note} <b>Reading rules:</b> {s.research.guards.join(" ")}</p> : <p className="ab-fine">Hand-written inputs to exercise the rubric; no search or model call produced this card. The numeric bars here are invented.{s.declared?.multiIngredient || s.declared?.servingsNotStated ? " Its label facts (multi-active blend, no servings per day) are declared by this sample, not read from a real label." : ""}{s.declared?.businessModel ? " Its seller is fictional too: the MLM / direct-selling disclosure here exercises the row and names no real company." : ""}</p>}</aside>
   <div className="ab-phone"><div className="ab-status"><b>9:41</b><i /><span>▮▮▮ ▰</span></div><div className={`ab-screen layout-${layout}`}>
     {layout === "hero" && <>{header}{photo}{tabs}<section className="ab-card">{block}{warnings}{bars}</section></>}
     {layout === "overlap" && <>{photo}<div className="ab-overlap-wrap">{header}{block}</div>{tabs}{warnings}<section className="ab-card">{bars}</section></>}
