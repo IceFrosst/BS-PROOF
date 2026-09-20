@@ -131,7 +131,8 @@ describe("/scan result state", () => {
     // Validity is not collapsed -- the load-bearing line is always visible.
     expect(validity?.querySelector("details")).toBeNull();
 
-    const firstScore = el.querySelector(".sc-score");
+    // The first number on the page is an outcome-row score in the Outcomes tab.
+    const firstScore = el.querySelector(".sc-outcome-row-score");
     expect(firstScore).not.toBeNull();
     // DOM order: the stack precedes the first composite number.
     expect(stack!.compareDocumentPosition(firstScore!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -150,13 +151,57 @@ describe("/scan result state", () => {
     expect(el.querySelectorAll(".la-alert-warn").length).toBe(stack!.querySelectorAll(".la-alert-warn").length);
   });
 
+  it("outcome tabs: an Outcomes list lands first with no overall number; each other tab is one outcome", async () => {
+    mockFetch(fixture);
+    const el = await mount();
+    await scanPhoto(el);
+
+    const tabs = Array.from(el.querySelectorAll<HTMLButtonElement>("[role='tab']"));
+    expect(tabs).toHaveLength(fixture.evidence.rows.length + 1);
+    expect(tabs[0].textContent).toMatch(/^Outcomes/);
+    expect(tabs[0].getAttribute("aria-selected")).toBe("true");
+    // The landing tab lists every outcome and shows no evidence card yet.
+    const listRows = Array.from(el.querySelectorAll<HTMLButtonElement>(".sc-outcome-row"));
+    expect(listRows).toHaveLength(fixture.evidence.rows.length);
+    expect(el.querySelectorAll(".scan-evidence")).toHaveLength(0);
+    // No averaged "overall" score anywhere: every number shown belongs to a named outcome.
+    expect(el.textContent).not.toMatch(/overall/i);
+
+    // Tapping a row opens that outcome's tab with exactly one card.
+    await act(async () => listRows[1].click());
+    const selected = el.querySelector("[role='tab'][aria-selected='true']");
+    expect(selected?.textContent).toBe(fixture.evidence.rows[1].outcome_label);
+    const cards = el.querySelectorAll(".scan-evidence");
+    expect(cards).toHaveLength(1);
+    expect(cards[0].querySelector("h4")?.textContent).toBe(fixture.evidence.rows[1].outcome_label);
+    expect(cards[0].querySelectorAll(".sc-arc")).toHaveLength(4);
+    // Back to the list.
+    await act(async () => tabs[0].click());
+    expect(el.querySelectorAll(".scan-evidence")).toHaveLength(0);
+    expect(el.querySelectorAll(".sc-outcome-row")).toHaveLength(fixture.evidence.rows.length);
+  });
+
+  /* Open every outcome tab in turn and collect its (single) card. */
+  async function eachCard(el: HTMLElement): Promise<HTMLElement[]> {
+    const tabs = Array.from(el.querySelectorAll<HTMLButtonElement>("[role='tab']")).slice(1);
+    const out: HTMLElement[] = [];
+    for (const tab of tabs) {
+      await act(async () => tab.click());
+      const card = el.querySelector<HTMLElement>(".scan-evidence");
+      expect(card).not.toBeNull();
+      // React reuses the one panel node between tabs, so snapshot it.
+      out.push(card!.cloneNode(true) as HTMLElement);
+    }
+    return out;
+  }
+
   it("renders four prominent evidence rows in every outcome card", async () => {
     mockFetch(fixture);
     const el = await mount();
     await scanPhoto(el);
 
-    const cards = Array.from(el.querySelectorAll<HTMLElement>(".scan-evidence"));
-    expect(cards.length).toBeGreaterThan(0);
+    const cards = await eachCard(el);
+    expect(cards.length).toBe(fixture.evidence.rows.length);
     for (const card of cards) {
       const arcs = Array.from(card.querySelectorAll<HTMLElement>(".sc-arc"));
       expect(arcs).toHaveLength(4);
@@ -206,7 +251,7 @@ describe("/scan result state", () => {
     const el = await mount();
     await scanPhoto(el);
 
-    const cards = Array.from(el.querySelectorAll<HTMLElement>(".scan-evidence"));
+    const cards = await eachCard(el);
     expect(cards).toHaveLength(6);
     dimensions.forEach((dimension, index) => {
       const untested = cards[index * 2].querySelector<HTMLElement>(`.sc-arc-${dimension}`)!;
@@ -229,8 +274,10 @@ describe("/scan result state", () => {
     });
 
     // Every arc row names its coverage in its accessible label.
-    for (const arc of el.querySelectorAll(".sc-arc")) {
-      expect(arc.getAttribute("aria-label")).toMatch(/coverage/);
+    for (const card of cards) {
+      for (const arc of card.querySelectorAll(".sc-arc")) {
+        expect(arc.getAttribute("aria-label")).toMatch(/coverage/);
+      }
     }
   });
 

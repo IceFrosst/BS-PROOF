@@ -561,6 +561,8 @@ do not drop it.
 
 ## Current state
 
+- **2026-09-16 (preview branch `preview/restore-four-evidence-lines`, not on main):** `/scan` evidence section uses outcome tabs — an `Outcomes (n)` list first (no overall number), then one tab per outcome with the four full-width tracks. `components/scan-flow.tsx` `OutcomeTabs`; tests in `tests/scan-result-state.test.tsx`.
+
 **Preview-only — `/scan` restores the four prominent evidence tracks without reverting the compact
 result state.** On branch `preview/restore-four-evidence-lines`, each outcome card again gives **Does
 it work? / In your form? / At your dose? / Well studied?** its own full-width horizontal track,

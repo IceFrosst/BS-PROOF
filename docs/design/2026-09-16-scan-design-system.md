@@ -272,3 +272,16 @@ Decisions taken against the wireframe while looking at the tiles:
 axe (wcag2a/aa/2.1/2.2, Pixel 7): 0 violations on landing, sheet, staged,
 loading, result, and result with every `<details>` open. Keyboard: first Tab
 after a result lands on `Scan another` with a 3 px ink outline.
+
+## Preview addendum — outcome tabs (2026-09-16, preview branch only)
+
+The "Does it work?" section now renders `OutcomeTabs` instead of a vertical
+stack of cards. Tab 1 **Outcomes (n)** is a list: one row per outcome with its
+score /100, verdict word and a chevron; there is deliberately **no averaged
+overall number** (a product is not one benefit — see
+`2026-09-11-effect-bar-and-outcomes-tab.md`). Every further tab is one outcome
+and shows its full card with the four full-width tracks. Tapping a list row
+opens that outcome's tab and moves focus to the panel; `← All outcomes` returns.
+WAI-ARIA tablist/tab/tabpanel with arrow/Home/End keys; strip scrolls
+horizontally on phones; 44 px targets. Result height @390: 4253 px (was 5227
+with all cards stacked). Screenshots: `docs/design/ref/tabs-preview/`.
