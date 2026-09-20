@@ -1337,7 +1337,7 @@ body:has(.scan-page) .footer-inner p:last-child { display: none; }
 .scan-page .sc-outcome-row-gated .sc-outcome-row-track { background: repeating-linear-gradient(135deg, var(--sp-tint) 0 5px, transparent 5px 9px); border: 1px dashed var(--sp-line); }
 .scan-page .sc-outcome-row-fill { display: block; height: 100%; border-radius: 999px; background: var(--sp-measured); }
 .scan-page .sc-outcome-row-more {
-  grid-column: 1 / 3; grid-row: 3; justify-self: start; display: inline-flex; align-items: center; min-height: 36px; padding: 0 14px;
+  grid-column: 2; grid-row: 3; justify-self: end; display: inline-flex; align-items: center; justify-content: center; min-width: 68px; min-height: 36px; padding: 0 14px;
   border: 1px solid var(--sp-line); border-radius: 999px; background: var(--sp-white); font-size: var(--fs-1); font-weight: 600; color: var(--sp-ink);
 }
 .scan-page .sc-outcome-row:hover .sc-outcome-row-more { background: var(--sp-ink); color: var(--sp-white); border-color: var(--sp-ink); }
