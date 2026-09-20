@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { detailFromAudit, ledgerFromAudit, personFit, score, type AuditFile, type Ledger, type Profile, type StudiedIn } from "./ledger";
 import { parseEffectResearch, type EffectResearchFile } from "./effect-contract";
@@ -177,6 +177,18 @@ interface Row {
   kind?: string;
 }
 
+function scoreSignalColor(score: number | null, signal = 1): string {
+  if (score === null) return "var(--ab-muted)";
+  const value = Math.max(0, Math.min(100, score));
+  const strength = Math.max(0, Math.min(1, signal));
+  // 0 → red, 60 → amber, 100 → green. Evidence strength controls
+  // saturation/lightness: weak signals look deliberately washed, not certain.
+  const hue = value <= 60 ? (value / 60) * 42 : 42 + ((value - 60) / 40) * 98;
+  const saturation = 32 + strength * 48;
+  const lightness = 54 - strength * 10;
+  return `hsl(${Math.round(hue)} ${Math.round(saturation)}% ${Math.round(lightness)}%)`;
+}
+
 const TRACK_FOR: Record<EffectBar["kind"], TrackState> = {
   reported_interval: "interval",
   reported_point: "interval",
@@ -270,7 +282,7 @@ export default function AbPrototype({ initial, publicTest = false }: AbPrototype
    * word ("probably works") -- the bar and the number carry it; the drill-in
    * button says where the detail lives. */
   const outcomeRows: Row[] = scored.map((x, i): Row => ({
-    id: `o${i}`, name: x.o.name, sub: x.o.population, color: isPicked(x.o) ? "var(--ab-r1)" : "var(--ab-track)",
+    id: `o${i}`, name: x.o.name, sub: x.o.population, color: isPicked(x.o) ? scoreSignalColor(x.r?.headline ?? null, x.r ? x.r.certainty / 4 : 0) : "var(--ab-track)",
     fill: x.r && x.r.headline !== null ? x.r.headline / 100 : null, track: x.r && x.r.headline !== null ? "fill" : "hatch", scale: null,
     pts: x.r && x.r.headline !== null ? `${x.r.headline}%` : "—",
     word: isPicked(x.o) ? "" : "Not picked",
@@ -293,9 +305,11 @@ export default function AbPrototype({ initial, publicTest = false }: AbPrototype
    * as a verdict about one person (founder decision 2026-09-16). */
   const pickedHeadlines = scored.filter((x) => isPicked(x.o) && x.r && x.r.headline !== null).map((x) => x.r!.headline as number);
   const general = pickedHeadlines.length ? Math.round(pickedHeadlines.reduce((a, b) => a + b, 0) / pickedHeadlines.length) : null;
+  const pickedSignals = scored.filter((x) => isPicked(x.o) && x.r && x.r.headline !== null).map((x) => x.r!.certainty / 4);
+  const generalSignal = pickedSignals.length ? pickedSignals.reduce((a, b) => a + b, 0) / pickedSignals.length : 0;
   const listBlock = (
     <div className="ab-listhead">
-      <div className="ab-general" role="img" aria-label={general === null ? "General score: no scored outcomes" : `General score ${general}, average of ${pickedHeadlines.length} outcome scores`}>
+      <div className="ab-general" style={{ "--ab-score-color": scoreSignalColor(general, generalSignal) } as CSSProperties} role="img" aria-label={general === null ? "General score: no scored outcomes" : `General score ${general}, average of ${pickedHeadlines.length} outcome scores; signal strength ${Math.round(generalSignal * 100)}%`}>
         <strong className="ab-general-score">{general === null ? "\u2014" : general}</strong>
         <span className="ab-general-name">General score<small>Average of {pickedHeadlines.length} outcome score{pickedHeadlines.length === 1 ? "" : "s"}</small></span>
       </div>
@@ -322,7 +336,7 @@ export default function AbPrototype({ initial, publicTest = false }: AbPrototype
       <button type="button" aria-expanded={d.jump === null ? isOpen : undefined} aria-controls={d.jump === null ? `ab-det-${d.id}` : undefined} onClick={onTap}>
         <span className="ab-bar-name">{d.name}{d.sub && <small>{d.sub}</small>}</span>
         <span className="ab-bar-word">{d.word}</span>
-        <span className="ab-bar-pts">{d.pts}</span>
+        <span className="ab-bar-pts" style={isList && d.fill !== null ? { color: d.color } : undefined}>{d.pts}</span>
         {d.jump !== null
           ? <span className="ab-more" aria-hidden="true">More</span>
           : <span className="ab-chev" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 6l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg></span>}
@@ -338,16 +352,18 @@ export default function AbPrototype({ initial, publicTest = false }: AbPrototype
     </li>;
   })}</ul>;
   const gates = legacy && firedGates.length > 0 && <details className="ab-gates"><summary>⚑ {firedGates.length === 1 ? firedGates[0] : `${firedGates.length} limits · ${firedGates[0]}`}</summary><ul>{firedGates.map((g) => <li key={g}>{g}</li>)}</ul></details>;
-  const warnings = cur?.o.warnings && <section className="ab-warnings" aria-label="Evidence warnings" key={`${key}:${tab}`}>
-    <p><b>⚠ Evidence warnings</b> · disclosure only, no score penalty</p>
-    {cur.o.warnings.map((w) => <details key={w.id} data-warning={w.id}>
-      <summary>{w.title} · {w.status}</summary>
-      <p>{w.explanation}</p>
-      <p className="ab-stamp">Retained AI source notes · not human-verified. Quoted audit commentary is not the current scoring rule.</p>
-      {w.reported.length ? w.reported.map((text, i) => <p key={i}>{text}</p>) : <p>No specific source detail was retained. That is unknown, not evidence that the literature is free of this concern.</p>}
-      {cur.o.effect.sourceLinks.length > 0 && <p><b>Sources for this outcome</b> {cur.o.effect.sourceLinks.map((l) => l.url ? <a key={l.id} href={l.url} target="_blank" rel="noreferrer">{l.label} ({l.access}) </a> : <span key={l.id}>{l.label} ({l.access}) </span>)}</p>}
-    </details>)}
-  </section>;
+  const warnings = cur?.o.warnings?.length ? <details className="ab-warnings" key={`${key}:${tab}`}>
+    <summary><span>⚠ {cur.o.warnings.length} evidence warning{cur.o.warnings.length === 1 ? "" : "s"}</span><small>disclosure only, no score penalty</small></summary>
+    <div className="ab-warning-list" aria-label="Evidence warnings">
+      {cur.o.warnings.map((w) => <details key={w.id} data-warning={w.id}>
+        <summary>{w.title} · {w.status}</summary>
+        <p>{w.explanation}</p>
+        <p className="ab-stamp">Retained AI source notes · not human-verified. Quoted audit commentary is not the current scoring rule.</p>
+        {w.reported.length ? w.reported.map((text, i) => <p key={i}>{text}</p>) : <p>No specific source detail was retained. That is unknown, not evidence that the literature is free of this concern.</p>}
+        {cur.o.effect.sourceLinks.length > 0 && <p><b>Sources for this outcome</b> {cur.o.effect.sourceLinks.map((l) => l.url ? <a key={l.id} href={l.url} target="_blank" rel="noreferrer">{l.label} ({l.access}) </a> : <span key={l.id}>{l.label} ({l.access}) </span>)}</p>}
+      </details>)}
+    </div>
+  </details> : null;
   const tabs = <div className="ab-tabs" aria-label="Outcome"><button type="button" aria-pressed={isList} onClick={() => go(null)}>Outcomes</button>{scored.map((x) => <button key={x.k} type="button" aria-pressed={tab === x.k} onClick={() => go(x.k)} title={x.o.population ?? undefined}>{x.o.name}</button>)}</div>;
   const header = <header className="ab-top"><button type="button" className="ab-back" aria-label="Back" onClick={() => go(null)}>‹</button><div className="ab-title"><strong>{s.product}</strong>{s.live && <small>Researched {s.live.runAt} · {s.live.sources} sources</small>}{s.research && <small>Effect-only pass {s.research.meta.run_at} · {s.research.sources.length} sources</small>}</div></header>;
   const block = isList ? listBlock : detailBlock;

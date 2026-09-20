@@ -76,7 +76,7 @@ describe("the landing tab is Outcomes, headed by a general score that is labelle
   it("rows are progress bars with a percentage and a 'More' button, no band word or rubric message", () => {
     expect(markup).toContain(">More<");
     expect(markup).not.toMatch(/test rubric/i);
-    expect(markup).toMatch(/ab-bar-pts">\d+%</);
+    expect(markup).toMatch(/ab-bar-pts"[^>]*>\d+%</);
   });
 
   it("carries no overall band label", () => {

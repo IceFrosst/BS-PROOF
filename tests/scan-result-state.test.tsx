@@ -140,6 +140,11 @@ describe("/scan result state", () => {
     // Caveat, funding, publication bias and MLM are all rows of the same stack,
     // still carrying the class every disclosure has always used, with the full
     // text reachable inside a native <details>.
+    const bundle = stack!.querySelector<HTMLDetailsElement>(".sc-warning-bundle");
+    expect(bundle).not.toBeNull();
+    expect(bundle!.open).toBe(false);
+    expect(bundle!.querySelector(":scope > summary")?.textContent).toContain("4 warnings");
+
     const titles = Array.from(stack!.querySelectorAll(".la-alert-warn strong")).map((s) => s.textContent);
     expect(titles).toEqual(
       expect.arrayContaining(["Multi ingredient product", "Funding & independence", "Publication bias", "MLM / direct-selling business model"]),
@@ -183,6 +188,26 @@ describe("/scan result state", () => {
     await act(async () => tabs[0].click());
     expect(el.querySelectorAll(".scan-evidence")).toHaveLength(0);
     expect(el.querySelectorAll(".sc-outcome-row")).toHaveLength(fixture.evidence.rows.length);
+  });
+
+  it("uses score direction for red/amber/green and evidence coverage for signal strength", async () => {
+    const source = fixture.evidence.rows[0];
+    const rows = [
+      { ...source, outcome: "bad", outcome_label: "Bad", composite: 20, arcs: { ...source.arcs, evidence: { ...source.arcs.evidence, coverage: 1 } } },
+      { ...source, outcome: "middle", outcome_label: "Middle", composite: 55, arcs: { ...source.arcs, evidence: { ...source.arcs.evidence, coverage: 1 } } },
+      { ...source, outcome: "good", outcome_label: "Good", composite: 85, arcs: { ...source.arcs, evidence: { ...source.arcs.evidence, coverage: 1 } } },
+      { ...source, outcome: "weak", outcome_label: "Weak signal", composite: 55, arcs: { ...source.arcs, evidence: { ...source.arcs.evidence, coverage: 0.1 } } },
+    ];
+    mockFetch({ ...fixture, evidence: { ...fixture.evidence, rows } });
+    const el = await mount();
+    await scanPhoto(el);
+    const colors = Array.from(el.querySelectorAll<HTMLElement>(".sc-outcome-row-fill")).map((bar) => bar.style.background);
+    const rgb = colors.map((color) => (color.match(/\d+/g) ?? []).map(Number));
+    expect(rgb[0][0]).toBeGreaterThan(rgb[0][1] * 2); // low score: red/orange
+    expect(rgb[1][0]).toBeGreaterThan(rgb[1][1]); // middle score: amber
+    expect(rgb[1][1]).toBeGreaterThan(rgb[1][2] * 2);
+    expect(rgb[2][1]).toBeGreaterThan(rgb[2][0]); // high score: green
+    expect(colors[3]).not.toBe(colors[1]); // same score, weaker evidence: less saturated/lighter
   });
 
   /* Open every outcome tab in turn and collect its (single) card. */

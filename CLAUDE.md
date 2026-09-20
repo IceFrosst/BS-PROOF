@@ -561,7 +561,7 @@ do not drop it.
 
 ## Current state
 
-- **2026-09-16 (preview branch `preview/restore-four-evidence-lines`, not on main):** `/scan` evidence section uses outcome tabs — an `Outcomes (n)` list with a General score (mean of outcome composites), progress bars per outcome, and a compact `More` button beneath each percentage; each outcome tab has the four full-width tracks. Visible “Test rubric” stamps are removed from the lab card. `components/scan-flow.tsx` `OutcomeTabs`; tests in `tests/scan-result-state.test.tsx` and `tests/effect-presentation.test.ts`.
+- **2026-09-16 (preview branch `preview/restore-four-evidence-lines`, not on main):** `/scan` evidence uses outcome tabs: General score mean tile; outcome bars whose hue runs red→amber→green by score and whose saturation/lightness follows evidence coverage; quiet `More` link under each percentage; four full-width tracks inside each outcome. Caveats/disclosures collapse behind one `N warnings` summary while the validity banner stays visible. The lab A/B card matches and keeps Hero + Overlap only. Visible “Test rubric” stamps are removed. Tests: `tests/scan-result-state.test.tsx`, `tests/effect-presentation.test.ts`, `tests/evidence-warnings.test.tsx`.
 
 **Preview-only — `/scan` restores the four prominent evidence tracks without reverting the compact
 result state.** On branch `preview/restore-four-evidence-lines`, each outcome card again gives **Does

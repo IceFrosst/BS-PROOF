@@ -290,5 +290,6 @@ with all cards stacked). Screenshots: `docs/design/ref/tabs-preview/`.
 Rows are progress bars: name, score as a percentage, bar filled to it, and a
 compact `More` button beneath the percentage, opening that outcome's tab. Visible legacy “Test rubric” stamps are removed from the card. The verdict word is gone
 from the list (bar + number carry it). Immediately above the Outcomes heading/list sits a compact **General score** tile: the mean in a white rounded square, with "Average of N outcome scores" beside it. This reverses the 2026-09-11 "no overall number" rule by founder
-decision; the label is the guard against reading it as a verdict. Same
-treatment in `app/design-lab/ab` (Hero + Overlap layouts only).
+decision; the label is the guard against reading it as a verdict. Same treatment in `app/design-lab/ab` (Hero + Overlap layouts only).
+
+Score bars use a continuous direction palette: low scores move through red, middle scores through amber, and stronger scores toward green. Evidence coverage/certainty controls saturation and lightness, so a weak signal is visibly washed rather than painted with the confidence of a strong one; color never replaces the numeric score. Outcome rows use a quiet underlined `More` action in the right column, directly under the percentage, with the full-width bar below both columns. Warning disclosures are hidden behind one native `<details>` summary (`N warnings` / `N evidence warnings`); the run-validity banner remains visible before every score.

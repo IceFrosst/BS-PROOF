@@ -97,6 +97,7 @@ describe("test-site disclosure-only policy", () => {
   it("warnings use native keyboard-operable details with no nested buttons", () => {
     const o = audits[0].outcomes[0];
     const html = renderToStaticMarkup(<AbPrototype publicTest initial={{ product: "creatine", outcome: `${o.name}||${o.population}` }} />);
+    expect(html).toContain('<details class="ab-warnings"><summary><span>⚠ 2 evidence warnings</span>');
     expect(html).toContain('data-warning="funding"');
     expect(html).toContain('data-warning="publication"');
     expect(html).toContain("disclosure only, no score penalty");
