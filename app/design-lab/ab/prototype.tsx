@@ -295,14 +295,11 @@ export default function AbPrototype({ initial, publicTest = false }: AbPrototype
   const general = pickedHeadlines.length ? Math.round(pickedHeadlines.reduce((a, b) => a + b, 0) / pickedHeadlines.length) : null;
   const listBlock = (
     <div className="ab-listhead">
-      <h2>Outcomes</h2>
-      <div className="ab-general" role="img" aria-label={general === null ? "General score: no scored outcomes" : `General score ${general}%, average of ${pickedHeadlines.length} outcome scores`}>
-        <span className="ab-general-head">
-          <span className="ab-general-name">General score<small>Average of {pickedHeadlines.length} outcome score{pickedHeadlines.length === 1 ? "" : "s"}</small></span>
-          <strong className="ab-general-pts">{general === null ? "\u2014" : `${general}%`}</strong>
-        </span>
-        <span className={`ab-bar-track${general === null ? " hatch" : ""}`}>{general !== null && <i style={{ width: `${general}%`, background: "var(--ab-r1)" }} />}</span>
+      <div className="ab-general" role="img" aria-label={general === null ? "General score: no scored outcomes" : `General score ${general}, average of ${pickedHeadlines.length} outcome scores`}>
+        <strong className="ab-general-score">{general === null ? "\u2014" : general}</strong>
+        <span className="ab-general-name">General score<small>Average of {pickedHeadlines.length} outcome score{pickedHeadlines.length === 1 ? "" : "s"}</small></span>
       </div>
+      <h2>Outcomes</h2>
     </div>
   );
   const detailBlock = cur ? (
@@ -376,5 +373,5 @@ export default function AbPrototype({ initial, publicTest = false }: AbPrototype
     {layout === "hero" && <>{header}{photo}{tabs}<section className="ab-card">{block}{warnings}{bars}{gates}</section></>}
     {layout === "overlap" && <>{photo}<div className="ab-overlap-wrap">{header}{block}</div>{tabs}{warnings}<section className="ab-card">{bars}{gates}</section></>}
   </div></div>
-  <aside className="ab-notes"><span className="ab-kicker">THE TWO PLACEMENTS</span><h3>1 · Hero</h3><p>Photo first, big and calm. The outcome list sits under it. Most “product page” feeling.</p><h3>2 · Overlap</h3><p>Full-bleed photo; the block floats over its bottom edge. Most editorial, least whitespace.</p><p className="ab-fine">Middle and Split were dropped 2026-09-16 (founder pick).</p><h3>Outcomes first</h3><p>Landing tab. A <b>General score</b> bar sits on top: the plain mean of the outcome scores, labelled as an average and never given a band word (founder decision 2026-09-16; it replaces the 2026-09-11 “no overall number” rule). Each row is a question in a named population, drawn as a progress bar with its score as a percentage; <i>More</i> opens that outcome’s tab.</p><h3>The Effect bar</h3><p>Never a tier fill. When a source reported an estimate and an interval, the interval is drawn in its own unit and labelled <i>reported estimate, not a grade</i>. With an estimate and no interval, the point is drawn and the interval is called unavailable. Otherwise the track is hatched and reads <i>size not graded</i> — which is not the same as <i>no evidence found</i> or <i>no meaningful benefit</i>.</p></aside></main>;
+  <aside className="ab-notes"><span className="ab-kicker">THE TWO PLACEMENTS</span><h3>1 · Hero</h3><p>Photo first, big and calm. The outcome list sits under it. Most “product page” feeling.</p><h3>2 · Overlap</h3><p>Full-bleed photo; the block floats over its bottom edge. Most editorial, least whitespace.</p><p className="ab-fine">Middle and Split were dropped 2026-09-16 (founder pick).</p><h3>Outcomes first</h3><p>Landing tab. A compact <b>General score</b> tile sits directly above Outcomes: the plain mean of the outcome scores, labelled as an average and never given a band word (founder decision 2026-09-16; it replaces the 2026-09-11 “no overall number” rule). Each row is a question in a named population, drawn as a progress bar with its score as a percentage; <i>More</i> opens that outcome’s tab.</p><h3>The Effect bar</h3><p>Never a tier fill. When a source reported an estimate and an interval, the interval is drawn in its own unit and labelled <i>reported estimate, not a grade</i>. With an estimate and no interval, the point is drawn and the interval is called unavailable. Otherwise the track is hatched and reads <i>size not graded</i> — which is not the same as <i>no evidence found</i> or <i>no meaningful benefit</i>.</p></aside></main>;
 }

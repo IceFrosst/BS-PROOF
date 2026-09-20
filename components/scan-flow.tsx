@@ -329,16 +329,11 @@ function OutcomeTabs({ rows }: { rows: EvidenceRow[] }) {
               const scores = rows.map((r) => r.composite).filter((c): c is number => typeof c === "number");
               const general = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
               return (
-                <div className="sc-general" role="img" aria-label={general === null ? "General score: no scored outcomes" : `General score ${general}%, average of ${scores.length} outcome scores`}>
-                  <span className="sc-general-head">
-                    <span className="sc-general-name">
-                      <strong>General score</strong>
-                      <small>Average of {scores.length} outcome score{scores.length === 1 ? "" : "s"}</small>
-                    </span>
-                    <strong className="sc-general-pts">{general === null ? "\u2014" : `${general}%`}</strong>
-                  </span>
-                  <span className={`sc-outcome-row-track${general === null ? " sc-track-hatch" : ""}`} aria-hidden="true">
-                    <span className="sc-outcome-row-fill" style={{ width: `${general ?? 0}%` }} />
+                <div className="sc-general" role="img" aria-label={general === null ? "General score: no scored outcomes" : `General score ${general}, average of ${scores.length} outcome scores`}>
+                  <strong className="sc-general-score">{general === null ? "\u2014" : general}</strong>
+                  <span className="sc-general-name">
+                    <strong>General score</strong>
+                    <small>Average of {scores.length} outcome score{scores.length === 1 ? "" : "s"}</small>
                   </span>
                 </div>
               );

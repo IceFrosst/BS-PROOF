@@ -168,7 +168,7 @@ describe("/scan result state", () => {
     const composites = fixture.evidence.rows.map((r) => r.composite).filter((c): c is number => typeof c === "number");
     const mean = Math.round(composites.reduce((a, b) => a + b, 0) / composites.length);
     const general = el.querySelector(".sc-general");
-    expect(general?.textContent).toContain(`${mean}%`);
+    expect(general?.querySelector(".sc-general-score")?.textContent).toBe(String(mean));
     expect(general?.textContent).toContain(`Average of ${composites.length} outcome scores`);
 
     // Tapping a row opens that outcome's tab with exactly one card.
