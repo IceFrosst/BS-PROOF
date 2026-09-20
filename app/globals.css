@@ -1305,3 +1305,38 @@ body:has(.scan-page) .footer-inner p:last-child { display: none; }
   .sc-stages li.is-current .sc-stage-mark { animation: none; }
   .sc-shutter-ring, .sc-details > summary::after, .sc-notice-details > summary::after { transition: none; }
 }
+
+/* ---- /scan outcome tabs (preview): "Outcomes" list first, one tab per outcome ---- */
+.scan-page .sc-tabs { display: grid; gap: 14px; }
+.scan-page .sc-tablist {
+  display: flex; gap: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; padding: 2px 0 6px;
+}
+.scan-page .sc-tablist::-webkit-scrollbar { display: none; }
+.scan-page .sc-tab {
+  flex: 0 0 auto; min-height: 44px; padding: 0 16px; border-radius: 999px;
+  border: 1px solid var(--sp-line); background: var(--sp-white); color: var(--sp-ink);
+  font: inherit; font-size: var(--fs-1); font-weight: 600; white-space: nowrap; cursor: pointer;
+}
+.scan-page .sc-tab-selected { background: var(--sp-ink); border-color: var(--sp-ink); color: var(--sp-white); }
+.scan-page .sc-tab:focus-visible, .scan-page .sc-outcome-row:focus-visible, .scan-page .sc-tab-back:focus-visible { outline: 2px solid var(--sp-measured); outline-offset: 2px; }
+.scan-page .sc-tabpanel { outline: none; display: grid; gap: 12px; }
+.scan-page .sc-outcome-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--sp-line); border-radius: 14px; background: var(--sp-white); overflow: hidden; }
+.scan-page .sc-outcome-list li + li { border-top: 1px solid var(--sp-line); }
+.scan-page .sc-outcome-row {
+  display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 12px;
+  width: 100%; min-height: 64px; padding: 12px 14px; border: 0; background: transparent; color: inherit;
+  font: inherit; text-align: left; cursor: pointer;
+}
+.scan-page .sc-outcome-row:hover { background: var(--sp-tint); }
+.scan-page .sc-outcome-row-name { display: grid; gap: 2px; min-width: 0; }
+.scan-page .sc-outcome-row-name strong { font-size: var(--fs-2); font-weight: 600; }
+.scan-page .sc-outcome-row-name .sc-verdict { margin: 0; font-size: var(--fs-1); color: var(--sp-mute); }
+.scan-page .sc-outcome-row-score { display: flex; align-items: baseline; gap: 2px; font-variant-numeric: tabular-nums; }
+.scan-page .sc-outcome-row-score strong { font-size: var(--fs-5); font-weight: 700; letter-spacing: -0.03em; line-height: 1; }
+.scan-page .sc-outcome-row-score span { color: var(--sp-mute); font-size: 13px; }
+.scan-page .sc-outcome-row-chev { color: var(--sp-mute); font-size: 22px; line-height: 1; }
+.scan-page .sc-tab-back {
+  justify-self: start; min-height: 44px; padding: 0 14px; border: 1px solid var(--sp-line); border-radius: 999px;
+  background: var(--sp-white); color: var(--sp-ink); font: inherit; font-size: var(--fs-1); font-weight: 600; cursor: pointer;
+}

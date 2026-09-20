@@ -117,6 +117,20 @@ for (const [name, dev] of [["390", devices["iPhone 13"]], ["360", { ...devices["
   const overflow = await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   console.log(`${name}: horizontal overflow ${overflow}px`);
 
+  // --- outcome tabs: scroll the Outcomes list into view, then open one outcome ---
+  await p.locator(".sc-tablist").scrollIntoViewIfNeeded();
+  await p.evaluate(() => window.scrollBy(0, -72));
+  await p.waitForTimeout(300);
+  await p.screenshot({ path: `${out}/${name}-5b-tabs-outcomes.png` });
+  await p.locator(".sc-outcome-row").nth(0).click();
+  await p.waitForTimeout(400);
+  await p.locator(".sc-tablist").scrollIntoViewIfNeeded();
+  await p.evaluate(() => window.scrollBy(0, -72));
+  await p.waitForTimeout(300);
+  await p.screenshot({ path: `${out}/${name}-5c-tabs-outcome.png` });
+  await p.locator("[role='tab']").nth(0).click();
+  await p.waitForTimeout(200);
+
   // --- manual (typed) result via the sheet ---
   delay = 300;
   reply = { status: 200, body: manualFixture };

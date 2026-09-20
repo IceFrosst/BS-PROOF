@@ -262,6 +262,94 @@ function EvidenceCard({ row }: { row: EvidenceRow }) {
   );
 }
 
+/* Outcomes as tabs: the first tab lists every outcome (no averaged overall
+ * number — a product is not one benefit), each further tab is one outcome with
+ * its four evidence tracks. Tapping a list row opens that outcome's tab. */
+function OutcomeTabs({ rows }: { rows: EvidenceRow[] }) {
+  const [active, setActive] = useState<string | null>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const current = active ? rows.find((r) => r.outcome === active) ?? null : null;
+  const ids = ["__all", ...rows.map((r) => r.outcome)];
+  const go = (id: string | null, focusPanel = false) => {
+    setActive(id);
+    if (focusPanel) requestAnimationFrame(() => panelRef.current?.focus());
+  };
+  const onKey = (e: React.KeyboardEvent<HTMLButtonElement>, idx: number) => {
+    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft" && e.key !== "Home" && e.key !== "End") return;
+    e.preventDefault();
+    const next = e.key === "Home" ? 0 : e.key === "End" ? ids.length - 1 : (idx + (e.key === "ArrowRight" ? 1 : -1) + ids.length) % ids.length;
+    go(next === 0 ? null : ids[next]);
+    tabRefs.current[next]?.focus();
+  };
+  const label = (r: EvidenceRow) => r.outcome_label ?? words(r.outcome);
+  return (
+    <div className="sc-tabs">
+      <div className="sc-tablist" role="tablist" aria-label="Outcomes">
+        {ids.map((id, idx) => {
+          const selected = (id === "__all" && !active) || id === active;
+          const row = id === "__all" ? null : rows.find((r) => r.outcome === id)!;
+          return (
+            <button
+              key={id}
+              ref={(el) => { tabRefs.current[idx] = el; }}
+              type="button"
+              role="tab"
+              id={`sc-tab-${idx}`}
+              aria-selected={selected}
+              aria-controls="sc-tabpanel"
+              tabIndex={selected ? 0 : -1}
+              className={`sc-tab${selected ? " sc-tab-selected" : ""}`}
+              onClick={() => go(id === "__all" ? null : id)}
+              onKeyDown={(e) => onKey(e, idx)}
+            >
+              {row ? label(row) : `Outcomes (${rows.length})`}
+            </button>
+          );
+        })}
+      </div>
+      <div
+        ref={panelRef}
+        id="sc-tabpanel"
+        role="tabpanel"
+        tabIndex={-1}
+        aria-labelledby={`sc-tab-${current ? ids.indexOf(current.outcome) : 0}`}
+        className="sc-tabpanel"
+      >
+        {current ? (
+          <>
+            <EvidenceCard row={current} />
+            <button type="button" className="sc-tab-back" onClick={() => go(null, true)}>
+              ← All outcomes
+            </button>
+          </>
+        ) : (
+          <ul className="sc-outcome-list" aria-label="Scored outcomes">
+            {rows.map((row) => {
+              const gated = row.composite === null;
+              return (
+                <li key={row.outcome}>
+                  <button type="button" className="sc-outcome-row" onClick={() => go(row.outcome, true)} aria-label={`${label(row)}, ${gated ? "no composite score" : `${row.composite} out of 100`}, ${row.verdict ?? "no verdict"}. Open details`}>
+                    <span className="sc-outcome-row-name">
+                      <strong>{label(row)}</strong>
+                      <span className="sc-verdict">{row.verdict ?? "no verdict"}</span>
+                    </span>
+                    <span className="sc-outcome-row-score">
+                      <strong>{gated ? "—" : row.composite}</strong>
+                      <span aria-hidden="true">/100</span>
+                    </span>
+                    <span className="sc-outcome-row-chev" aria-hidden="true">›</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* Your dose against the range where trials found benefit, on one bar. */
 function DoseBar({ reading, dose }: { reading: NonNullable<ScanAnalysis["dose_effectiveness"]>["outcomes"][number]; dose: NullableNumber }) {
   const b = reading.benefit_range_mg;
@@ -799,11 +887,7 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
                 {product ? (
                   <Section id="evidence" title="Does it work?" basis={["evidence_run"]} legend={legend}>
                     {rows.length ? (
-                      <div className="scan-grid">
-                        {rows.map((row) => (
-                          <EvidenceCard key={row.outcome} row={row} />
-                        ))}
-                      </div>
+                      <OutcomeTabs rows={rows} />
                     ) : (
                       <div className="la-empty">
                         <strong>{evidence?.status === "form_not_scored" ? "That form has not been run." : "No evidence run exists for this ingredient."}</strong>
