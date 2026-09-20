@@ -34,14 +34,46 @@ describe("test-site disclosure-only policy", () => {
     expect(score({ ...large, gates: { ...large.gates, rctCount: 0 } }).headline).toBeNull();
     expect(score(l).certainty).toBe(2); // small-RCT cap, not funding
   });
-  it("keeps concerns and incomplete funding evidence visible as warnings", () => {
-    const o = audits[0].outcomes[0];
+  /* Founder decision 2026-09-16: a warning is built ONLY for a real concern.
+   * Unknown / supported / not-assessed build nothing at all. */
+  it("keeps a reported concern visible as a warning", () => {
+    const o = audits[0].outcomes[0]; // publication_bias: concern, industry/one-lab flag: false
     const w = auditWarnings(o);
-    expect(w[0].reported.join(" ")).toContain("industry sponsorship");
-    expect(w[0].status).toContain("unknown");
-    expect(w[1].status).toBe("Concern reported");
-    expect(w[1].reported.join(" ")).toContain("Egger");
+    expect(w.map((x) => x.id)).toEqual(["publication"]);
+    expect(w[0].status).toBe("Concern reported");
+    expect(w[0].reported.join(" ")).toContain("Egger");
     expect(evidenceDetail(ledgerFromAudit(o), "found", "move").missing).not.toContain("publication bias (one point");
+  });
+
+  it("builds no warning at all when nothing is reported, and both when both are", () => {
+    const o = audits[0].outcomes[0];
+    const quiet = { ...o, ledger: { ...o.ledger, checklist: { ...o.ledger.checklist, publication_bias: "unknown" } } } as AuditFile["outcomes"][number];
+    expect(auditWarnings(quiet)).toEqual([]);
+    const supported = { ...o, ledger: { ...o.ledger, checklist: { ...o.ledger.checklist, publication_bias: "supported" } } } as AuditFile["outcomes"][number];
+    expect(auditWarnings(supported)).toEqual([]);
+    const both = { ...o, ledger: { ...o.ledger, gates: { ...o.ledger.gates, allPositiveIndustryOrOneLab: true } } } as AuditFile["outcomes"][number];
+    expect(auditWarnings(both).map((x) => x.id)).toEqual(["funding", "publication"]);
+    expect(auditWarnings(both)[0].status).toBe("Funding / one-lab flag reported");
+    // Every retained audit outcome whose state is unknown/supported is silent.
+    for (const audit of audits) for (const row of audit.outcomes) {
+      const ids = auditWarnings(row).map((x) => x.id);
+      expect(ids.includes("publication")).toBe(row.ledger.checklist.publication_bias === "concern");
+      expect(ids.includes("funding")).toBe(row.ledger.gates.allPositiveIndustryOrOneLab === true);
+    }
+  });
+
+  it("renders no warnings block for an outcome whose funding and publication status are unknown", () => {
+    // Magnesium 'Sleep quality (poor sleepers)': publication_bias unknown and no
+    // industry/one-lab flag. Nothing to disclose, so nothing is drawn.
+    const o = byName(audits[2], "Sleep quality (poor sleepers)");
+    expect(o.ledger.checklist.publication_bias).toBe("unknown");
+    expect(o.ledger.gates.allPositiveIndustryOrOneLab).toBe(false);
+    expect(auditWarnings(o)).toEqual([]);
+    const html = renderToStaticMarkup(<AbPrototype publicTest initial={{ product: "magnesium", outcome: outcomeKey(o.name, o.population) }} />);
+    expect(html).not.toContain("ab-warnings");
+    expect(html).not.toContain("evidence warning");
+    expect(html).not.toContain("Funding completeness unknown");
+    expect(html).not.toContain("Not established");
   });
   it("public page offers six real fixtures, no fictional picker or fake research interaction", () => {
     const html = renderToStaticMarkup(<AbPrototype publicTest />);
@@ -75,16 +107,24 @@ describe("test-site disclosure-only policy", () => {
   });
 
   it("funding warning quotes independence disclosures only, not any sentence containing 'author'", () => {
-    const lean = auditWarnings(byName(audits[0], "Lean mass (part is water)"))[0].reported.join(" ");
+    // The flag decides WHETHER the warning exists; this pins WHAT it quotes.
+    const flagged = (a: AuditFile, name: string) => {
+      const o = byName(a, name);
+      const forced = { ...o, ledger: { ...o.ledger, gates: { ...o.ledger.gates, allPositiveIndustryOrOneLab: true } } } as AuditFile["outcomes"][number];
+      return auditWarnings(forced).find((x) => x.id === "funding")!.reported.join(" ");
+    };
+    const lean = flagged(audits[0], "Lean mass (part is water)");
     expect(lean).toContain("industry sponsorship");
     expect(lean).toContain("conflict-of-interest");
-    expect(auditWarnings(byName(audits[2], "Sleep quality (poor sleepers)"))[0].reported.join(" ")).toContain("co-author of the exact-form trial");
-    expect(auditWarnings(byName(audits[2], "Constipation relief"))[0].reported.join(" ")).not.toContain("first of its kind");
+    expect(flagged(audits[2], "Sleep quality (poor sleepers)")).toContain("co-author of the exact-form trial");
+    expect(flagged(audits[2], "Constipation relief")).not.toContain("first of its kind");
   });
 
   it("survives an audit outcome with no evidence detail instead of blanking the page", () => {
-    const partial = { ...byName(audits[0], "Lean mass (part is water)"), detail: {} } as unknown as AuditFile["outcomes"][number];
+    const o = byName(audits[0], "Lean mass (part is water)");
+    const partial = { ...o, detail: {}, ledger: { ...o.ledger, gates: { ...o.ledger.gates, allPositiveIndustryOrOneLab: true }, checklist: { ...o.ledger.checklist, publication_bias: "concern" } } } as unknown as AuditFile["outcomes"][number];
     expect(() => auditWarnings(partial)).not.toThrow();
+    expect(auditWarnings(partial)).toHaveLength(2);
     expect(auditWarnings(partial).every((w) => w.reported.length === 0)).toBe(true);
   });
 
@@ -97,10 +137,12 @@ describe("test-site disclosure-only policy", () => {
   it("warnings use native keyboard-operable details with no nested buttons", () => {
     const o = audits[0].outcomes[0];
     const html = renderToStaticMarkup(<AbPrototype publicTest initial={{ product: "creatine", outcome: `${o.name}||${o.population}` }} />);
-    expect(html).toContain('<details class="ab-warnings"><summary><span>⚠ 2 evidence warnings</span>');
-    expect(html).toContain('data-warning="funding"');
+    // The count alone is the label: the "disclosure only, no score penalty"
+    // sub-line was deleted 2026-09-16 (founder), leaving one clean summary row.
+    expect(html).toContain('<details class="ab-warnings"><summary><span>⚠ 1 evidence warning</span></summary>');
     expect(html).toContain('data-warning="publication"');
-    expect(html).toContain("disclosure only, no score penalty");
+    expect(html).not.toContain('data-warning="funding"'); // no funding flag on this outcome
+    expect(html).not.toContain("disclosure only, no score penalty");
     expect(html).not.toContain("Nothing here was recomputed");
   });
 });

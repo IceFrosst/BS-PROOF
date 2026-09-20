@@ -359,10 +359,15 @@ function OutcomeTabs({ rows }: { rows: EvidenceRow[] }) {
                   <button type="button" className={`sc-outcome-row${gated ? " sc-outcome-row-gated" : ""}`} onClick={() => go(row.outcome, true)} aria-label={`${label(row)}, ${gated ? "no composite score" : `${row.composite} out of 100`}. More`}>
                     <span className="sc-outcome-row-name"><strong>{label(row)}</strong></span>
                     <span className="sc-outcome-row-score"><strong style={!gated ? { color: scoreSignalColor(row.composite, row.arcs.evidence?.coverage) } : undefined}>{gated ? "—" : `${row.composite}%`}</strong></span>
+                    {/* One affordance, and it is the row itself: a single chevron on the
+                      * first line. The lone "More" link used to sit on its own grid line
+                      * between the score and the bar, which broke the row into fragments. */}
+                    <span className="sc-outcome-row-more" aria-hidden="true">
+                      <svg width="14" height="14" viewBox="0 0 16 16"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                    </span>
                     <span className="sc-outcome-row-track" aria-hidden="true">
                       <span className="sc-outcome-row-fill" style={{ width: `${gated ? 0 : Math.max(0, Math.min(100, row.composite ?? 0))}%`, background: scoreSignalColor(row.composite, row.arcs.evidence?.coverage) }} />
                     </span>
-                    <span className="sc-outcome-row-more" aria-hidden="true">More</span>
                   </button>
                 </li>
               );
@@ -901,9 +906,11 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
                     ) : null}
                     {warningCount ? (
                       <details className="sc-warning-bundle">
+                        {/* The count IS the label. The "Open before deciding"
+                          * sub-line was removed 2026-09-16 (founder): one clean
+                          * row, chevron on the right. */}
                         <summary>
                           <span>{warningCount} warning{warningCount === 1 ? "" : "s"}</span>
-                          <small>Open before deciding</small>
                         </summary>
                         <div className="sc-warning-list">
                           {data.caveats?.map((c) => (

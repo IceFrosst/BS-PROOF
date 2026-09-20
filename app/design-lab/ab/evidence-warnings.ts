@@ -1,6 +1,4 @@
 import type { AuditFile, Ledger } from "./ledger";
-import type { EffectOutcome, EffectResearchFile } from "./effect-contract";
-import { sourcesFor } from "./effect-presentation";
 
 export interface EvidenceWarning {
   id: "funding" | "publication";
@@ -10,41 +8,50 @@ export interface EvidenceWarning {
   reported: string[];
 }
 
-/** Warning state never enters score(). Unknown is not a clean bill of health. */
+/**
+ * Warning state never enters score().
+ *
+ * ONLY AN ACTUAL CONCERN IS BUILT (founder decision 2026-09-16). A funding
+ * warning exists only when the audit's industry / one-lab flag fired, and a
+ * publication-bias warning only when the checklist recorded `concern`.
+ * `unknown`, `supported` and a not-assessed pass produce NOTHING, so an
+ * outcome with no real concern shows no warnings block at all: a warning
+ * printed on every outcome stops reading as a warning. The filter is on the
+ * STATUS here, at the source — never on the title in the view.
+ *
+ * The silence is not a clean bill of health, and the card never claims it is:
+ * an absent warning means "this run recorded no concern", which the Evidence
+ * row already says in words ("Unknown checklist entries are not verified
+ * passes", see evidenceDetail below).
+ */
 export function auditWarnings(o: AuditFile["outcomes"][number]): EvidenceWarning[] {
   const prose = Object.values(o.detail?.evidence ?? {});
-  return [
-    {
-      id: "funding", title: "Funding & independence",
-      status: o.ledger.gates.allPositiveIndustryOrOneLab ? "Funding / one-lab flag reported" : "Funding completeness unknown",
+  const out: EvidenceWarning[] = [];
+  if (o.ledger.gates.allPositiveIndustryOrOneLab) {
+    out.push({
+      id: "funding", title: "Funding & independence", status: "Funding / one-lab flag reported",
       explanation: "Funding can create conflicts of interest, but does not by itself establish that a result is wrong. The older audit combines industry funding and single-lab evidence in one flag; it does not identify which applies. No Evidence deduction or cap is applied.",
       // Bare 'author' matched ordinary commentary; independence wording only.
       reported: prose.filter((s) => /\b(fund(ing|ed|er|ers)?|sponsor(s|ed|ship)?|industry|conflicts?[ -]of[ -]interest|one lab|single lab|co-?authors? of)\b/i.test(s)),
-    },
-    {
-      id: "publication", title: "Publication bias",
-      status: o.ledger.checklist.publication_bias === "concern" ? "Concern reported" : o.ledger.checklist.publication_bias === "supported" ? "No concern recorded by audit" : "Not established",
+    });
+  }
+  if (o.ledger.checklist.publication_bias === "concern") {
+    out.push({
+      id: "publication", title: "Publication bias", status: "Concern reported",
       explanation: "Positive results may be more likely to be published, making a literature look more favourable. A test finding no bias does not prove its absence. This warning does not reduce Evidence or the outcome score.",
       reported: prose.filter((s) => /publication|funnel|egger|trim.and.fill/i.test(s)),
-    },
-  ];
+    });
+  }
+  return out;
 }
 
-export function researchWarnings(file: EffectResearchFile, outcome: EffectOutcome): EvidenceWarning[] {
-  const sources = sourcesFor(file, outcome);
-  return [
-    {
-      id: "funding", title: "Funding & independence", status: "Source disclosures",
-      explanation: "Funding is a disclosure, not a score penalty. A review's funding does not establish the funding of every included trial. Evidence was not scored in this effect-only pass.",
-      reported: sources.map((s) => `${s.label}: ${s.funding}`),
-    },
-    {
-      id: "publication", title: "Publication bias", status: "Check source notes",
-      explanation: "No publication-bias deduction is applied. No detected bias is not proof of absence; missing information remains unknown. Evidence was not scored in this pass.",
-      reported: sources.flatMap((s) => [...s.methods_strengths, ...s.methods_limits].filter((p) => /publication|funnel|egger/i.test(p)).map((p) => `${s.label}: ${p}`)),
-    },
-  ];
-}
+/* researchWarnings() was deleted 2026-09-16 with the same decision. The
+ * effect-only research pass GRADES NEITHER TOPIC — it recorded each source's
+ * funding sentence and its method limits as prose — so every row it produced
+ * was a "not assessed" placeholder, which must now render nothing. Nothing is
+ * lost: the per-source funding disclosure is still a line in the Effect row
+ * ("Funding — disclosure only, never a score penalty") and any publication /
+ * Egger note is still printed under "Method limits". */
 
 /** Current scoring rationale, instead of displaying stale audit penalties as live rules. */
 export function evidenceDetail(l: Ledger, found: string, move: string, auditMissing = "") {

@@ -143,7 +143,11 @@ describe("/scan result state", () => {
     const bundle = stack!.querySelector<HTMLDetailsElement>(".sc-warning-bundle");
     expect(bundle).not.toBeNull();
     expect(bundle!.open).toBe(false);
-    expect(bundle!.querySelector(":scope > summary")?.textContent).toContain("4 warnings");
+    const summary = bundle!.querySelector(":scope > summary");
+    expect(summary?.textContent).toContain("4 warnings");
+    // One clean row: the count IS the label (founder 2026-09-16).
+    expect(summary?.textContent?.trim()).toBe("4 warnings");
+    expect(summary?.querySelector("small")).toBeNull();
 
     const titles = Array.from(stack!.querySelectorAll(".la-alert-warn strong")).map((s) => s.textContent);
     expect(titles).toEqual(
@@ -169,6 +173,18 @@ describe("/scan result state", () => {
     const listRows = Array.from(el.querySelectorAll<HTMLButtonElement>(".sc-outcome-row"));
     expect(listRows).toHaveLength(fixture.evidence.rows.length);
     expect(el.querySelectorAll(".scan-evidence")).toHaveLength(0);
+    /* Each row is ONE unit and ONE control (founder 2026-09-16): name + score
+     * on the first line, a single chevron affordance, the bar underneath. The
+     * lone "More" link that floated mid-row is gone, and nothing interactive is
+     * nested inside the button. */
+    for (const row of listRows) {
+      expect(row.textContent).not.toContain("More");
+      expect(row.querySelectorAll("button, a, input").length).toBe(0);
+      expect(row.querySelectorAll(".sc-outcome-row-more svg")).toHaveLength(1);
+      expect(row.querySelectorAll(".sc-outcome-row-track")).toHaveLength(1);
+      const kids = Array.from(row.children).map((c) => c.className);
+      expect(kids).toEqual(["sc-outcome-row-name", "sc-outcome-row-score", "sc-outcome-row-more", "sc-outcome-row-track"]);
+    }
     // The general score is the plain mean of the outcome composites and says so.
     const composites = fixture.evidence.rows.map((r) => r.composite).filter((c): c is number => typeof c === "number");
     const mean = Math.round(composites.reduce((a, b) => a + b, 0) / composites.length);

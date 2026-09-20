@@ -293,3 +293,69 @@ from the list (bar + number carry it). Immediately above the Outcomes heading/li
 decision; the label is the guard against reading it as a verdict. Same treatment in `app/design-lab/ab` (Hero + Overlap layouts only).
 
 Score bars use a continuous direction palette: low scores move through red, middle scores through amber, and stronger scores toward green. Evidence coverage/certainty controls saturation and lightness, so a weak signal is visibly washed rather than painted with the confidence of a strong one; color never replaces the numeric score. Outcome rows use a quiet underlined `More` action in the right column, directly under the percentage, with the full-width bar below both columns. Warning disclosures are hidden behind one native `<details>` summary (`N warnings` / `N evidence warnings`); the run-validity banner remains visible before every score.
+
+### Four founder corrections to the outcome rows and warnings (2026-09-16, later — preview branch only)
+
+All four are **presentation-only**: no scoring constant, no `lib/analyze/**`, no
+`app/api/**`, no prompt, schema or anything under `pipeline/` was touched. Both
+surfaces were changed together so the lab card and `/scan` stay identical:
+`app/design-lab/ab/prototype.tsx` + `ab.css`, `components/scan-flow.tsx` + the
+`/scan` block of `app/globals.css`.
+
+1. **The warnings summary is one clean row.** The sub-line "disclosure only, no
+   score penalty" (lab) and "Open before deciding" (`/scan`) are deleted; the
+   count alone is the label (`⚠ N evidence warnings` / `N warnings`) with the
+   chevron hard right. Both summaries are now `display:flex` with
+   `justify-content:space-between` instead of a two-row grid. The policy the old
+   sub-line stated has not changed and is still written inside each warning
+   ("does not reduce Evidence or the outcome score").
+2. **A funding or publication-bias warning is built only when there is a real
+   concern.** Filtered at the SOURCE by status in
+   `app/design-lab/ab/evidence-warnings.ts`, never by matching a title in the
+   view: `auditWarnings` emits the funding row only when the audit's
+   industry/one-lab gate fired and the publication row only when the checklist
+   recorded `concern`. `unknown`, `supported` and not-assessed emit nothing, so
+   an outcome with no real concern shows **no warnings block at all** (measured
+   on the retained audits: 2 of 30 outcomes now carry a warning, and none carries
+   a funding one). `researchWarnings` was deleted with the same reasoning — the
+   effect-only pass grades neither topic, so every row it produced was a
+   not-assessed placeholder; each source's funding sentence is still a line in
+   the Effect row ("Funding — disclosure only, never a score penalty") and any
+   Egger/funnel note is still printed under "Method limits". On `/scan`,
+   `lib/analyze/literature-disclosures.ts` already rendered only `concern` and
+   was verified unchanged. Silence is not a clean bill of health, and the
+   Evidence row still says so in words.
+3. **The gates flag strip is gone** (`<details class="ab-gates">`, "⚑ Best RCT is
+   small or short") along with its CSS and the now-unused `firedGates` read in
+   the view. `score()` still computes `firedGates` — it is what applies the caps
+   — and the caps are still spelled out in the Evidence row's "Current rubric"
+   sentence.
+4. **The outcome row is ONE unit.** It was reading as three fragments: a lone
+   "More" link floating in the middle of the row and a bar detached at the
+   bottom. Now, in both surfaces: line 1 = outcome name (left, semibold) and the
+   percentage (right, tabular, coloured by the score ramp), line 2 = population
+   in muted small text (lab only — `/scan` rows carry no population), line 3 =
+   the full-width progress bar, and the only affordance is a **single small
+   chevron on the right of line 1**. The "More" link is deleted rather than
+   moved: the whole row already was the button, so a second visual control was
+   claiming to be a separate target it never was. Two grid rows rather than
+   three keeps the bar tied to the text it belongs to. The row stays one
+   keyboard-focusable control with no nested interactive elements; measured
+   heights 67–92px (`/scan`) and 72–105px (lab), all past 44px, with the 3px
+   focus ring drawn around the whole row (verified by keyboard Tab, not
+   `element.focus()`). Kept unchanged: the score colour ramp (red→amber→green by
+   score, saturation/lightness by evidence coverage), the General score tile
+   above the list, and gated outcomes rendering "—" over a hatched track.
+
+Result height @390 is 4226px (was 4230 before these changes); horizontal
+overflow 0px at both 390 and 360. References (Playwright, iPhone 13 / Pixel 5
+emulation and a 1440px desktop):
+`docs/design/ref/tabs-preview/2026-09-16-*.png` plus the refreshed
+`390-5b/5c`, `360-5b/5c`, `lab-ab-hero.png`, `lab-warning-collapsed.png` and
+`lab-warning-open.png`; `public/previews/lab-ab-hero.png` and
+`public/previews/scan-tabs-outcomes-390.png` were refreshed from the same run.
+Tests: `tests/evidence-warnings.test.tsx` (concern-only construction, plus a new
+case proving an unknown-status outcome renders no warnings block),
+`tests/effect-presentation.test.ts` (row is one unit, one button, chevron order;
+no gates strip), `tests/scan-result-state.test.tsx` (single-row summary with no
+`<small>`; row children are exactly name / score / chevron / track).

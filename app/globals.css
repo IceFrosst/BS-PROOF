@@ -1110,11 +1110,12 @@ body:has(.scan-page) .footer-inner p:last-child { display: none; }
 .sc-notice-details[open] .sc-notice-lede { visibility: hidden; }
 .sc-notice-details > p { margin: 0; padding: 0 14px 12px; color: var(--sp-mute); font-size: var(--fs-2); }
 .sc-warning-bundle { border: 1px solid #d6b46c; border-radius: 12px; background: #fffaf0; overflow: hidden; }
-.sc-warning-bundle > summary { display: grid; grid-template-columns: 1fr 12px; align-items: center; gap: 2px 10px; min-height: 52px; padding: 8px 14px; cursor: pointer; list-style: none; }
+/* One clean row: the warning count is the whole label (the "Open before
+   deciding" sub-line was deleted 2026-09-16), chevron hard right. */
+.sc-warning-bundle > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 8px 14px; cursor: pointer; list-style: none; }
 .sc-warning-bundle > summary::-webkit-details-marker { display: none; }
 .sc-warning-bundle > summary span { font-size: var(--fs-2); font-weight: 700; color: #7a5200; }
-.sc-warning-bundle > summary small { grid-column: 1; font-size: var(--fs-1); color: var(--sp-mute); }
-.sc-warning-bundle > summary::after { content: ""; grid-column: 2; grid-row: 1 / 3; width: 8px; height: 8px; margin-top: -4px; border-right: 1.5px solid #7a5200; border-bottom: 1.5px solid #7a5200; transform: rotate(45deg); transition: transform 120ms ease; }
+.sc-warning-bundle > summary::after { content: ""; flex: 0 0 auto; width: 8px; height: 8px; margin-top: -4px; border-right: 1.5px solid #7a5200; border-bottom: 1.5px solid #7a5200; transform: rotate(45deg); transition: transform 120ms ease; }
 .sc-warning-bundle[open] > summary::after { transform: rotate(225deg); margin-top: 4px; }
 .sc-warning-list { display: grid; gap: 6px; padding: 0 8px 8px; }
 .sc-warning-list .sc-notice { background: var(--sp-white); }
@@ -1332,22 +1333,26 @@ body:has(.scan-page) .footer-inner p:last-child { display: none; }
 .scan-page .sc-tabpanel { outline: none; display: grid; gap: 12px; }
 .scan-page .sc-outcome-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--sp-line); border-radius: 14px; background: var(--sp-white); overflow: hidden; }
 .scan-page .sc-outcome-list li + li { border-top: 1px solid var(--sp-line); }
+/* ONE UNIT PER OUTCOME (rebuilt 2026-09-16, same geometry as the design-lab
+   card): line 1 is the name, the score and one chevron; the bar spans the full
+   width directly underneath. The button is the whole row: 44px+, one focus
+   ring, nothing interactive nested inside it. */
 .scan-page .sc-outcome-row {
-  display: grid; grid-template-columns: minmax(0, 1fr) 74px; grid-template-rows: auto auto auto; align-items: center; gap: 3px 14px;
-  width: 100%; padding: 12px 14px; border: 0; background: transparent; color: inherit;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto 16px; grid-template-rows: auto auto; align-items: baseline; gap: 8px 10px;
+  width: 100%; min-height: 64px; padding: 12px 14px; border: 0; background: transparent; color: inherit;
   font: inherit; text-align: left; cursor: pointer;
 }
 .scan-page .sc-outcome-row:hover { background: var(--sp-tint); }
 .scan-page .sc-outcome-row-name { grid-column: 1; grid-row: 1; min-width: 0; }
 .scan-page .sc-outcome-row-name strong { font-size: var(--fs-3); font-weight: 600; }
-.scan-page .sc-outcome-row-score { grid-column: 2; grid-row: 1; font-variant-numeric: tabular-nums; }
+.scan-page .sc-outcome-row-score { grid-column: 2; grid-row: 1; justify-self: end; font-variant-numeric: tabular-nums; }
 .scan-page .sc-outcome-row-score strong { font-size: var(--fs-4); font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
-.scan-page .sc-outcome-row-track { grid-column: 1 / 3; grid-row: 3; display: block; height: 8px; margin-top: 4px; border-radius: 999px; background: var(--sp-tint); overflow: hidden; }
+.scan-page .sc-outcome-row-track { grid-column: 1 / 4; grid-row: 2; align-self: end; display: block; height: 8px; margin: 0; border-radius: 999px; background: var(--sp-tint); overflow: hidden; }
 .scan-page .sc-outcome-row-gated .sc-outcome-row-track { background: repeating-linear-gradient(135deg, var(--sp-tint) 0 5px, transparent 5px 9px); border: 1px dashed var(--sp-line); }
 .scan-page .sc-outcome-row-fill { display: block; height: 100%; border-radius: 999px; background: var(--sp-measured); }
 .scan-page .sc-outcome-row-more {
-  grid-column: 2; grid-row: 2; justify-self: end; display: inline-flex; align-items: center; justify-content: center; min-height: 28px; padding: 0 2px;
-  border: 0; border-radius: 0; background: transparent; font-size: var(--fs-1); font-weight: 700; color: var(--sp-measured); text-decoration: underline; text-underline-offset: 3px;
+  grid-column: 3; grid-row: 1; justify-self: end; align-self: baseline; position: relative; top: 2px;
+  display: inline-flex; align-items: center; justify-content: center; color: var(--sp-mute);
 }
 .scan-page .sc-outcome-row:hover .sc-outcome-row-more { color: var(--sp-ink); }
 .scan-page .sc-tab-back {
