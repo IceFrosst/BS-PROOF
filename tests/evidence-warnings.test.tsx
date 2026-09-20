@@ -1,8 +1,10 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import AbPrototype from "@/app/design-lab/ab/prototype";
-import { score, ledgerFromAudit, type AuditFile } from "@/app/design-lab/ab/ledger";
-import { auditWarnings, evidenceDetail } from "@/app/design-lab/ab/evidence-warnings";
+import { score, ledgerFromAudit, type AuditFile, type Ledger } from "@/app/design-lab/ab/ledger";
+import { auditWarnings, evidenceDetail, gateWarnings, productWarnings } from "@/app/design-lab/ab/evidence-warnings";
+import { businessModelDisclosure } from "@/lib/analyze/business-model";
 import { outcomeKey } from "@/app/design-lab/ab/effect-presentation";
 import creatine from "@/app/design-lab/ab/audits/creatine.json";
 import vitaminD from "@/app/design-lab/ab/audits/vitamin-d.json";
@@ -132,6 +134,161 @@ describe("test-site disclosure-only policy", () => {
     const html = renderToStaticMarkup(<AbPrototype publicTest initial={{ product: "creatine" }} />);
     expect(html).toContain(audits[0].meta.model);
     expect(html).toContain("not human-verified");
+  });
+
+  /* ---- the four warnings added 2026-09-16, each true-condition-only ---- */
+
+  it("builds no product warning when a scenario declares nothing", () => {
+    expect(productWarnings(undefined)).toEqual([]);
+    expect(productWarnings(null)).toEqual([]);
+    expect(productWarnings({})).toEqual([]);
+    expect(productWarnings({ note: "a note alone discloses nothing" })).toEqual([]);
+    expect(productWarnings({ multiIngredient: false, servingsNotStated: false, businessModel: null })).toEqual([]);
+    for (const status of ["no_evidence", "unknown"] as const) {
+      expect(productWarnings({ businessModel: { status, basis: "", confidence: "low" } })).toEqual([]);
+    }
+  });
+
+  it("builds exactly one product warning per declared fact, in product order", () => {
+    expect(productWarnings({ multiIngredient: true }).map((w) => w.id)).toEqual(["multi_ingredient_product"]);
+    expect(productWarnings({ servingsNotStated: true }).map((w) => w.id)).toEqual(["servings_not_stated"]);
+    const mlmOnly = productWarnings({ businessModel: { status: "suspected_mlm", basis: "b", confidence: "low" } });
+    expect(mlmOnly.map((w) => w.id)).toEqual(["mlm"]);
+    const all = productWarnings({ multiIngredient: true, servingsNotStated: true, businessModel: { status: "confirmed_mlm", basis: "b", confidence: "high" }, note: "Fictional sample" });
+    expect(all.map((w) => w.id)).toEqual(["multi_ingredient_product", "servings_not_stated", "mlm"]);
+    expect(all.every((w) => w.scope === "product" && w.auditQuoted === false && w.reported.length === 0)).toBe(true);
+    expect(all.every((w) => w.note === "Fictional sample")).toBe(true);
+  });
+
+  it("uses the exact production wording for the three product warnings", () => {
+    const scanSource = readFileSync("lib/analyze/scan.ts", "utf8");
+    const multi = productWarnings({ multiIngredient: true })[0].explanation;
+    // The production caveat interpolates the ingredient name; both halves of
+    // the shipped sentence must appear in lib/analyze/scan.ts verbatim.
+    expect(scanSource).toContain("This product doses more than one active. The evidence score is about ");
+    expect(scanSource).toContain("on its own, which is not the same question as this blend.");
+    expect(multi).toBe("This product doses more than one active. The evidence score is about this ingredient on its own, which is not the same question as this blend.");
+    const servings = productWarnings({ servingsNotStated: true })[0].explanation;
+    expect(servings).toBe("Servings per day are not printed, so the per-serving dose was scored. Your daily dose may be higher.");
+    expect(scanSource).toContain(servings);
+    // MLM title/body are produced by the production function itself.
+    const model = { status: "confirmed_mlm", basis: "Basis sentence.", confidence: "high" } as const;
+    const shipped = businessModelDisclosure(model)!;
+    const row = productWarnings({ businessModel: model })[0];
+    expect(row.title).toBe(shipped.title);
+    expect(row.explanation).toBe(shipped.body);
+    expect(row.explanation).toContain("it does not affect the evidence score");
+    expect(row.explanation).not.toContain("pyramid");
+  });
+
+  it("derives the no-human-controlled-trial warning from the ledger gate only", () => {
+    const l = ledgerFromAudit(audits[2].outcomes.find((o) => o.ledger.gates.rctCount === 0)!);
+    expect(gateWarnings(l).map((w) => w.id)).toEqual(["no_human_controlled_trial"]);
+    expect(gateWarnings(l)[0].scope).toBe("outcome");
+    // It is a CAP, and says so: score() holds certainty at 0 and shows no number.
+    expect(score(l).firedGates).toContain("No human controlled trial");
+    expect(score(l).certainty).toBe(0);
+    expect(score(l).headline).toBeNull();
+    expect(gateWarnings(l)[0].explanation).toContain("cap, not a disclosure");
+    expect(gateWarnings(undefined)).toEqual([]);
+    expect(gateWarnings(null)).toEqual([]);
+    for (const rctCount of [1, 2, 40]) {
+      expect(gateWarnings({ ...l, gates: { ...l.gates, rctCount } } as Ledger)).toEqual([]);
+    }
+    // Every retained audit outcome: the row exists exactly when rctCount === 0.
+    for (const audit of audits) for (const o of audit.outcomes) {
+      expect(gateWarnings(ledgerFromAudit(o)).length).toBe(o.ledger.gates.rctCount === 0 ? 1 : 0);
+    }
+  });
+
+  it("never prints a multi-ingredient, servings or MLM warning on a real audited product", () => {
+    // The three retained audits are single-ingredient products with a stated
+    // daily dose and no known MLM seller. None of them declares those facts,
+    // so the card must not assert any of them anywhere.
+    for (const [product, audit] of [["creatine", audits[0]], ["vitaminD", audits[1]], ["magnesium", audits[2]]] as const) {
+      for (const o of audit.outcomes) {
+        const html = renderToStaticMarkup(<AbPrototype publicTest initial={{ product, outcome: outcomeKey(o.name, o.population) }} />);
+        for (const id of ["multi_ingredient_product", "servings_not_stated", "mlm"]) {
+          expect(html, `${product} / ${o.name} / ${id}`).not.toContain(`data-warning="${id}"`);
+        }
+        expect(html).not.toContain("MLM / direct-selling");
+        expect(html).not.toContain("more than one active");
+        expect(html).not.toContain("Servings per day");
+      }
+    }
+    for (const product of ["creatineEffect", "caffeine", "omega3"]) {
+      const html = renderToStaticMarkup(<AbPrototype initial={{ product }} />);
+      expect(html).not.toContain("data-warning=");
+    }
+  });
+
+  it("shows the gate warning on the one real audit outcome with zero trials", () => {
+    const o = byName(audits[2], "Diagnosed anxiety disorder");
+    expect(o.ledger.gates.rctCount).toBe(0);
+    const html = renderToStaticMarkup(<AbPrototype publicTest initial={{ product: "magnesium", outcome: outcomeKey(o.name, o.population) }} />);
+    expect(html).toContain("⚠ 1 evidence warning<");
+    expect(html).toContain('data-warning="no_human_controlled_trial"');
+    expect(html).toContain("No randomised human trial was found for this outcome");
+    // Derived from counted trials, so it carries no retained-audit quote block.
+    expect(html).not.toContain("No specific source detail was retained");
+  });
+
+  it("stacks the fictional blend's declared label facts before the outcome-level cap, and counts them", () => {
+    const html = renderToStaticMarkup(<AbPrototype initial={{ product: "none", outcome: outcomeKey("Cognitive function") }} />);
+    expect(html).toContain("⚠ 3 evidence warnings<");
+    const order = [...html.matchAll(/data-warning="([a-z_]+)"/g)].map((m) => m[1]);
+    expect(order).toEqual(["multi_ingredient_product", "servings_not_stated", "no_human_controlled_trial"]);
+    expect(html).toContain("Fictional sample label");
+    expect(html).toContain("Your daily dose may be higher.");
+  });
+
+  it("attaches MLM only to the fictional seller, and names it as fictional", () => {
+    const html = renderToStaticMarkup(<AbPrototype initial={{ product: "thin", outcome: outcomeKey("Testosterone (blood level)") }} />);
+    expect(html).toContain("⚠ 1 evidence warning<");
+    expect(html).toContain('data-warning="mlm"');
+    expect(html).toContain("MLM / direct-selling business model");
+    expect(html).toContain("Fictional sample seller");
+    expect(html).toContain("seller is fictional too");
+    expect(html).not.toContain('data-warning="multi_ingredient_product"');
+    // Same product, an outcome with no trials: the seller row plus the cap.
+    const energy = renderToStaticMarkup(<AbPrototype initial={{ product: "thin", outcome: outcomeKey("Energy") }} />);
+    expect(energy).toContain("⚠ 2 evidence warnings<");
+    expect([...energy.matchAll(/data-warning="([a-z_]+)"/g)].map((m) => m[1])).toEqual(["mlm", "no_human_controlled_trial"]);
+  });
+
+  it("renders no warnings block for a fictional outcome where none of the four conditions holds", () => {
+    const html = renderToStaticMarkup(<AbPrototype initial={{ product: "solid", outcome: outcomeKey("Muscle strength") }} />);
+    expect(html).not.toContain("ab-warnings");
+    expect(html).not.toContain("evidence warning");
+    expect(html).not.toContain("data-warning=");
+  });
+
+  it("the warning count always equals the number of rows drawn", () => {
+    const cases: [string, string][] = [
+      ["creatine", outcomeKey("Strength when you lift weights", "Adults under 50 doing resistance training")],
+      ["magnesium", outcomeKey("Diagnosed anxiety disorder", "Adults with a diagnosed anxiety disorder")],
+      ["none", outcomeKey("Cognitive function")],
+      ["none", outcomeKey("Focus")],
+      ["thin", outcomeKey("Testosterone (blood level)")],
+      ["thin", outcomeKey("Libido")],
+    ];
+    for (const [product, outcome] of cases) {
+      const html = renderToStaticMarkup(<AbPrototype initial={{ product, outcome }} />);
+      const rows = [...html.matchAll(/data-warning="/g)].length;
+      const stated = html.match(/⚠ (\d+) evidence warning/);
+      expect(Number(stated?.[1] ?? 0), `${product} / ${outcome}`).toBe(rows);
+      expect(rows, `${product} / ${outcome}`).toBeGreaterThan(0);
+    }
+  });
+
+  it("/scan still carries the same three product warnings in its own bundle", () => {
+    // Nothing in this task changes /scan; this pins that the surfaces agree.
+    const flow = readFileSync("components/scan-flow.tsx", "utf8");
+    expect(flow).toContain("businessModelDisclosure");
+    expect(flow).toMatch(/warningCount = \(data\?\.caveats\?\.length \?\? 0\)[^\n]*\(mlm \? 1 : 0\)/);
+    const scanSource = readFileSync("lib/analyze/scan.ts", "utf8");
+    expect(scanSource).toContain('code: "multi_ingredient_product"');
+    expect(scanSource).toContain('code: "servings_not_stated"');
   });
 
   it("warnings use native keyboard-operable details with no nested buttons", () => {
