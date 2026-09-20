@@ -1345,3 +1345,13 @@ body:has(.scan-page) .footer-inner p:last-child { display: none; }
   justify-self: start; min-height: 44px; padding: 0 14px; border: 1px solid var(--sp-line); border-radius: 999px;
   background: var(--sp-white); color: var(--sp-ink); font: inherit; font-size: var(--fs-1); font-weight: 600; cursor: pointer;
 }
+
+/* General score above the Outcomes list: mean of outcome composites, drawn as a bar. */
+.scan-page .sc-general { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--sp-line); border-radius: 14px; background: var(--sp-white); }
+.scan-page .sc-general-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.scan-page .sc-general-name { display: grid; gap: 2px; }
+.scan-page .sc-general-name strong { font-size: var(--fs-3); font-weight: 600; }
+.scan-page .sc-general-name small { font-size: var(--fs-1); color: var(--sp-mute); }
+.scan-page .sc-general-pts { font-size: var(--fs-5); font-weight: 700; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+.scan-page .sc-general .sc-outcome-row-track { grid-column: auto; grid-row: auto; }
+.scan-page .sc-track-hatch { background: repeating-linear-gradient(135deg, var(--sp-tint) 0 5px, transparent 5px 9px); border: 1px dashed var(--sp-line); }
