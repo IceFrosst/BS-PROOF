@@ -186,12 +186,10 @@ const TRACK_FOR: Record<EffectBar["kind"], TrackState> = {
   fictional_points: "fill",
 };
 
-type Layout = "hero" | "middle" | "overlap" | "split";
+type Layout = "hero" | "overlap";
 const LAYOUTS: { id: Layout; name: string; blurb: string }[] = [
   { id: "hero", name: "1 · Hero", blurb: "photo on top" },
-  { id: "middle", name: "2 · Middle", blurb: "score, photo, rows" },
-  { id: "overlap", name: "3 · Overlap", blurb: "score floats on photo" },
-  { id: "split", name: "4 · Split", blurb: "photo beside score" },
+  { id: "overlap", name: "2 · Overlap", blurb: "score floats on photo" },
 ];
 
 function Interval({ scale }: { scale: IntervalScale }) {
@@ -223,7 +221,7 @@ export interface AbPrototypeProps {
 }
 
 export default function AbPrototype({ initial, publicTest = false }: AbPrototypeProps = {}) {
-  const [layout, setLayout] = useState<Layout>(initial?.layout ?? "middle");
+  const [layout, setLayout] = useState<Layout>(initial?.layout ?? "hero");
   const [key, setKey] = useState(initial?.product ?? "creatine");
   const [tab, setTab] = useState<string | null>(initial?.outcome ?? null); // null = the Outcomes list
   const [open, setOpen] = useState<string | null>(initial?.open ?? null);
@@ -267,11 +265,15 @@ export default function AbPrototype({ initial, publicTest = false }: AbPrototype
     };
   }) : [];
 
+  /* Outcome rows read like the dimension rows on the right: name, a progress
+   * bar filled to the 0-100 headline and that number as a percentage. No band
+   * word ("probably works") -- the bar and the number carry it; the drill-in
+   * button says where the detail lives. */
   const outcomeRows: Row[] = scored.map((x, i): Row => ({
     id: `o${i}`, name: x.o.name, sub: x.o.population, color: isPicked(x.o) ? "var(--ab-r1)" : "var(--ab-track)",
-    fill: null, track: "none", scale: null,
-    pts: x.r && x.r.headline !== null ? String(x.r.headline) : "—",
-    word: isPicked(x.o) ? (x.r ? x.r.label : x.o.effect.word) : "Not picked",
+    fill: x.r && x.r.headline !== null ? x.r.headline / 100 : null, track: x.r && x.r.headline !== null ? "fill" : "hatch", scale: null,
+    pts: x.r && x.r.headline !== null ? `${x.r.headline}%` : "—",
+    word: isPicked(x.o) ? "" : "Not picked",
     negative: false, detail: null, lines: [], sourceLinks: [], provenance: null, jump: x.k, dim: !isPicked(x.o),
   }));
   const rowsToShow = isList ? outcomeRows : dimRows;
@@ -317,7 +319,9 @@ export default function AbPrototype({ initial, publicTest = false }: AbPrototype
         <span className="ab-bar-name">{d.name}{d.sub && <small>{d.sub}</small>}</span>
         <span className="ab-bar-word">{d.word}</span>
         <span className="ab-bar-pts">{d.pts}</span>
-        <span className="ab-chev" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16"><path d={d.jump !== null ? "M6 3l5 5-5 5" : "M3 6l5 5 5-5"} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg></span>
+        {d.jump !== null
+          ? <span className="ab-more" aria-hidden="true">Find out more <svg width="12" height="12" viewBox="0 0 16 16"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></span>
+          : <span className="ab-chev" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 6l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg></span>}
         {d.track === "interval" && d.scale && <Interval scale={d.scale} />}
         {d.track !== "interval" && d.track !== "none" && <span className={`ab-bar-track ${d.track}`}>{d.track === "fill" && d.fill !== null && <i style={{ width: `${Math.round(d.fill * 100)}%`, background: d.negative ? "var(--ab-warn)" : d.color }} />}{d.track === "null-result" && <i className="ab-null-tick" />}</span>}
       </button>
@@ -360,12 +364,10 @@ export default function AbPrototype({ initial, publicTest = false }: AbPrototype
     </div>
   </main>;
 
-  return <main id="main-content" className="ab-stage"><aside className="ab-side"><a href="/design-lab/mobile">← Field Notebook</a><span className="ab-kicker">RESULT CARD</span><h1>Show the tub.<br />Then the <em>truth.</em></h1><p>Photo takes a third of the phone. Four placements to compare; the rows are identical in all of them, and none of them carries an overall score.</p><span className="ab-kicker">PHOTO PLACEMENT</span><div className="ab-layouts" role="tablist" aria-label="Layout">{LAYOUTS.map((l) => <button key={l.id} role="tab" aria-selected={layout === l.id} onClick={() => { setLayout(l.id); setOpen(null); }}><b>{l.name}</b><small>{l.blurb}</small></button>)}</div><span className="ab-kicker">EARLIER AUDITS · UPDATED EVIDENCE POLICY</span><div className="ab-scenarios">{Object.entries(liveScenarios).map(([k, v]) => <button key={k} aria-pressed={key === k} onClick={() => pick(k)}>{v.title}<small>{v.outcomes.length} outcomes · {v.live?.sources} sources</small></button>)}</div><span className="ab-kicker">EFFECT-ONLY RESEARCH · NEW</span><div className="ab-scenarios">{Object.entries(researchScenarios).map(([k, v]) => <button key={k} aria-pressed={key === k} onClick={() => pick(k)}>{v.title}<small>{v.outcomes.length} outcomes · {v.research?.sources.length} sources · no score</small></button>)}</div>{profileRow}<span className="ab-kicker">WHAT THE USER PICKED</span><div className="ab-picks">{s.outcomes.map((o) => <label key={outcomeKey(o.name, o.population)}><input type="checkbox" checked={isPicked(o)} onChange={() => togglePick(o)} />{o.name}{o.population && <small>{o.population}</small>}</label>)}</div><details className="ab-provenance"><summary>Fictional test ledgers</summary><div className="ab-scenarios">{Object.entries(scenarios).map(([k, v]) => <button key={k} aria-pressed={key === k} onClick={() => pick(k)}>{v.title}<small>{v.product}</small></button>)}</div></details>{s.live ? <p className="ab-fine"><strong>Previous audit</strong> run {s.live.runAt} by {s.live.model}. Its effect text and sources are shown as written then and were <strong>not reverified</strong> in this pass; scores now exclude funding and publication-bias penalties. Model confidence: {s.live.confidence}. {s.live.doseNote}</p> : s.research ? <p className="ab-fine"><strong>Effect-only research pass</strong> {s.research.meta.run_at}, {s.research.meta.model}. {s.research.meta.note} <b>Reading rules:</b> {s.research.guards.join(" ")}</p> : <p className="ab-fine">Hand-written inputs to exercise the rubric; no search or model call produced this card. The numeric bars here are invented.</p>}</aside>
+  return <main id="main-content" className="ab-stage"><aside className="ab-side"><a href="/design-lab/mobile">← Field Notebook</a><span className="ab-kicker">RESULT CARD</span><h1>Show the tub.<br />Then the <em>truth.</em></h1><p>Photo takes a third of the phone. Two placements to compare; the rows are identical in both, and neither carries an overall score.</p><span className="ab-kicker">PHOTO PLACEMENT</span><div className="ab-layouts" role="tablist" aria-label="Layout">{LAYOUTS.map((l) => <button key={l.id} role="tab" aria-selected={layout === l.id} onClick={() => { setLayout(l.id); setOpen(null); }}><b>{l.name}</b><small>{l.blurb}</small></button>)}</div><span className="ab-kicker">EARLIER AUDITS · UPDATED EVIDENCE POLICY</span><div className="ab-scenarios">{Object.entries(liveScenarios).map(([k, v]) => <button key={k} aria-pressed={key === k} onClick={() => pick(k)}>{v.title}<small>{v.outcomes.length} outcomes · {v.live?.sources} sources</small></button>)}</div><span className="ab-kicker">EFFECT-ONLY RESEARCH · NEW</span><div className="ab-scenarios">{Object.entries(researchScenarios).map(([k, v]) => <button key={k} aria-pressed={key === k} onClick={() => pick(k)}>{v.title}<small>{v.outcomes.length} outcomes · {v.research?.sources.length} sources · no score</small></button>)}</div>{profileRow}<span className="ab-kicker">WHAT THE USER PICKED</span><div className="ab-picks">{s.outcomes.map((o) => <label key={outcomeKey(o.name, o.population)}><input type="checkbox" checked={isPicked(o)} onChange={() => togglePick(o)} />{o.name}{o.population && <small>{o.population}</small>}</label>)}</div><details className="ab-provenance"><summary>Fictional test ledgers</summary><div className="ab-scenarios">{Object.entries(scenarios).map(([k, v]) => <button key={k} aria-pressed={key === k} onClick={() => pick(k)}>{v.title}<small>{v.product}</small></button>)}</div></details>{s.live ? <p className="ab-fine"><strong>Previous audit</strong> run {s.live.runAt} by {s.live.model}. Its effect text and sources are shown as written then and were <strong>not reverified</strong> in this pass; scores now exclude funding and publication-bias penalties. Model confidence: {s.live.confidence}. {s.live.doseNote}</p> : s.research ? <p className="ab-fine"><strong>Effect-only research pass</strong> {s.research.meta.run_at}, {s.research.meta.model}. {s.research.meta.note} <b>Reading rules:</b> {s.research.guards.join(" ")}</p> : <p className="ab-fine">Hand-written inputs to exercise the rubric; no search or model call produced this card. The numeric bars here are invented.</p>}</aside>
   <div className="ab-phone"><div className="ab-status"><b>9:41</b><i /><span>▮▮▮ ▰</span></div><div className={`ab-screen layout-${layout}`}>
     {layout === "hero" && <>{header}{photo}{tabs}<section className="ab-card">{block}{warnings}{bars}{gates}</section></>}
-    {layout === "middle" && <>{header}{tabs}{block}{warnings}{photo}<section className="ab-card">{bars}{gates}</section></>}
     {layout === "overlap" && <>{photo}<div className="ab-overlap-wrap">{header}{block}</div>{tabs}{warnings}<section className="ab-card">{bars}{gates}</section></>}
-    {layout === "split" && <>{header}{tabs}<div className="ab-split">{photo}<div className="ab-split-score">{block}</div></div>{warnings}<section className="ab-card">{bars}{gates}</section></>}
   </div></div>
-  <aside className="ab-notes"><span className="ab-kicker">THE FOUR PLACEMENTS</span><h3>1 · Hero</h3><p>Photo first, big and calm. The outcome list sits under it. Most “product page” feeling.</p><h3>2 · Middle</h3><p>Outcomes first, photo between the intro and the rows — the founder’s “a third, in the middle”.</p><h3>3 · Overlap</h3><p>Full-bleed photo; the block floats over its bottom edge. Most editorial, least whitespace.</p><h3>4 · Split</h3><p>Photo left, text right, side by side. Shortest; leaves room below the rows.</p><h3>Outcomes first</h3><p>Landing tab. <b>There is no overall number and no overall band.</b> A product is not one benefit: each row is a question in a named population, and tapping it drills in. Numbers beside a row are the earlier rubric, shown unchanged.</p><h3>The Effect bar</h3><p>Never a tier fill. When a source reported an estimate and an interval, the interval is drawn in its own unit and labelled <i>reported estimate, not a grade</i>. With an estimate and no interval, the point is drawn and the interval is called unavailable. Otherwise the track is hatched and reads <i>size not graded</i> — which is not the same as <i>no evidence found</i> or <i>no meaningful benefit</i>.</p></aside></main>;
+  <aside className="ab-notes"><span className="ab-kicker">THE TWO PLACEMENTS</span><h3>1 · Hero</h3><p>Photo first, big and calm. The outcome list sits under it. Most “product page” feeling.</p><h3>2 · Overlap</h3><p>Full-bleed photo; the block floats over its bottom edge. Most editorial, least whitespace.</p><p className="ab-fine">Middle and Split were dropped 2026-09-16 (founder pick).</p><h3>Outcomes first</h3><p>Landing tab. <b>There is no overall number and no overall band.</b> A product is not one benefit: each row is a question in a named population, and tapping it drills in. Numbers beside a row are the earlier rubric, shown unchanged.</p><h3>The Effect bar</h3><p>Never a tier fill. When a source reported an estimate and an interval, the interval is drawn in its own unit and labelled <i>reported estimate, not a grade</i>. With an estimate and no interval, the point is drawn and the interval is called unavailable. Otherwise the track is hatched and reads <i>size not graded</i> — which is not the same as <i>no evidence found</i> or <i>no meaningful benefit</i>.</p></aside></main>;
 }
