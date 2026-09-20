@@ -5,7 +5,7 @@ import Link from "next/link";
 import { detailFromAudit, ledgerFromAudit, personFit, score, type AuditFile, type Ledger, type Profile, type StudiedIn } from "./ledger";
 import { parseEffectResearch, type EffectResearchFile } from "./effect-contract";
 import {
-  NOT_ASSESSED_WORD, PREVIOUS_RUBRIC_LABEL, fictionalEffectBar, legacyEffectBar, notAssessedReason, outcomeKey,
+  NOT_ASSESSED_WORD, fictionalEffectBar, legacyEffectBar, notAssessedReason, outcomeKey,
   researchEffectBar, type EffectBar, type EffectLine, type EffectSourceLink, type IntervalScale,
 } from "./effect-presentation";
 import creatineAudit from "./audits/creatine.json";
@@ -261,7 +261,7 @@ export default function AbPrototype({ initial, publicTest = false }: AbPrototype
     return {
       id: d.key, name: d.name, color: d.color, fill, track: fill === null ? "hatch" : "fill", scale: null, pts, word, negative: false,
       detail: (d.key === "person" ? personDetail(cur.o.studiedIn, profile) : cur.o.detail?.[d.key as Exclude<DimKey, "person">]) ?? null,
-      lines: [], sourceLinks: [], provenance: PREVIOUS_RUBRIC_LABEL, jump: null, dim: false,
+      lines: [], sourceLinks: [], provenance: null, jump: null, dim: false,
     };
   }) : [];
 
@@ -307,14 +307,12 @@ export default function AbPrototype({ initial, publicTest = false }: AbPrototype
   );
   const detailBlock = cur ? (
     <div className={`ab-headline ${legacy ? tone : "muted"}${layout === "overlap" ? " float" : ""}`}>
-      {legacy && <div className="ab-number"><strong>{headline ?? "—"}</strong><span>{headline === null ? "no score" : "test rubric"}</span></div>}
+      {legacy && <div className="ab-number"><strong>{headline ?? "—"}</strong></div>}
       <div>
         <h2>{cur.o.name}</h2>
         <p className="ab-pop"><b>Population</b> {cur.o.population ?? "not recorded by this run"}</p>
         {cur.o.sentence && <p>{cur.o.sentence}</p>}
-        {legacy
-          ? <p className="ab-stamp">{PREVIOUS_RUBRIC_LABEL} — {cur.r?.label ?? "Not scored"}. Recalculated without funding or publication-bias penalties.</p>
-          : <p className="ab-stamp">Effect only. No overall number for this product; the other bars were not assessed.</p>}
+        {!legacy ? <p className="ab-stamp">Effect only. The other dimensions were not assessed.</p> : null}
       </div>
     </div>
   ) : null;
@@ -329,7 +327,7 @@ export default function AbPrototype({ initial, publicTest = false }: AbPrototype
         <span className="ab-bar-word">{d.word}</span>
         <span className="ab-bar-pts">{d.pts}</span>
         {d.jump !== null
-          ? <span className="ab-more" aria-hidden="true">Find out more <svg width="12" height="12" viewBox="0 0 16 16"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></span>
+          ? <span className="ab-more" aria-hidden="true">More</span>
           : <span className="ab-chev" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 6l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg></span>}
         {d.track === "interval" && d.scale && <Interval scale={d.scale} />}
         {d.track !== "interval" && d.track !== "none" && <span className={`ab-bar-track ${d.track}`}>{d.track === "fill" && d.fill !== null && <i style={{ width: `${Math.round(d.fill * 100)}%`, background: d.negative ? "var(--ab-warn)" : d.color }} />}{d.track === "null-result" && <i className="ab-null-tick" />}</span>}
@@ -378,5 +376,5 @@ export default function AbPrototype({ initial, publicTest = false }: AbPrototype
     {layout === "hero" && <>{header}{photo}{tabs}<section className="ab-card">{block}{warnings}{bars}{gates}</section></>}
     {layout === "overlap" && <>{photo}<div className="ab-overlap-wrap">{header}{block}</div>{tabs}{warnings}<section className="ab-card">{bars}{gates}</section></>}
   </div></div>
-  <aside className="ab-notes"><span className="ab-kicker">THE TWO PLACEMENTS</span><h3>1 · Hero</h3><p>Photo first, big and calm. The outcome list sits under it. Most “product page” feeling.</p><h3>2 · Overlap</h3><p>Full-bleed photo; the block floats over its bottom edge. Most editorial, least whitespace.</p><p className="ab-fine">Middle and Split were dropped 2026-09-16 (founder pick).</p><h3>Outcomes first</h3><p>Landing tab. A <b>General score</b> bar sits on top: the plain mean of the outcome scores, labelled as an average and never given a band word (founder decision 2026-09-16; it replaces the 2026-09-11 “no overall number” rule). Each row is a question in a named population, drawn as a progress bar with its score as a percentage; <i>Find out more</i> opens that outcome’s tab.</p><h3>The Effect bar</h3><p>Never a tier fill. When a source reported an estimate and an interval, the interval is drawn in its own unit and labelled <i>reported estimate, not a grade</i>. With an estimate and no interval, the point is drawn and the interval is called unavailable. Otherwise the track is hatched and reads <i>size not graded</i> — which is not the same as <i>no evidence found</i> or <i>no meaningful benefit</i>.</p></aside></main>;
+  <aside className="ab-notes"><span className="ab-kicker">THE TWO PLACEMENTS</span><h3>1 · Hero</h3><p>Photo first, big and calm. The outcome list sits under it. Most “product page” feeling.</p><h3>2 · Overlap</h3><p>Full-bleed photo; the block floats over its bottom edge. Most editorial, least whitespace.</p><p className="ab-fine">Middle and Split were dropped 2026-09-16 (founder pick).</p><h3>Outcomes first</h3><p>Landing tab. A <b>General score</b> bar sits on top: the plain mean of the outcome scores, labelled as an average and never given a band word (founder decision 2026-09-16; it replaces the 2026-09-11 “no overall number” rule). Each row is a question in a named population, drawn as a progress bar with its score as a percentage; <i>More</i> opens that outcome’s tab.</p><h3>The Effect bar</h3><p>Never a tier fill. When a source reported an estimate and an interval, the interval is drawn in its own unit and labelled <i>reported estimate, not a grade</i>. With an estimate and no interval, the point is drawn and the interval is called unavailable. Otherwise the track is hatched and reads <i>size not graded</i> — which is not the same as <i>no evidence found</i> or <i>no meaningful benefit</i>.</p></aside></main>;
 }

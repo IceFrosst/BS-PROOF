@@ -73,8 +73,9 @@ describe("the landing tab is Outcomes, headed by a general score that is labelle
     expect(markup).not.toContain("ab-number"); // the big headline tile stays off the landing tab
   });
 
-  it("rows are progress bars with a percentage and a 'Find out more' button, no band word", () => {
-    expect(markup).toContain("Find out more");
+  it("rows are progress bars with a percentage and a 'More' button, no band word or rubric message", () => {
+    expect(markup).toContain(">More<");
+    expect(markup).not.toMatch(/test rubric/i);
     expect(markup).toMatch(/ab-bar-pts">\d+%</);
   });
 
@@ -167,7 +168,7 @@ describe("the three shipped audits keep their own text, stamped and not reverifi
     const key = outcomeKey(row.name, row.population);
     const summary = renderToStaticMarkup(createElement(AbPrototype, { initial: { product: "creatine", outcome: key } }));
     expect(summary).not.toMatch(/a third more than training alone/);
-    expect(summary).toContain("Test rubric · disclosure-only warnings");
+    expect(summary).not.toMatch(/test rubric/i);
   });
 
   it("but the previous run's own effect text stays reachable under the expansion", () => {
@@ -348,7 +349,7 @@ describe("caffeine is effect-only: reported estimates, no invented bars", () => 
     expect(markup).not.toContain("ab-number");
     const notAssessedRows = markup.match(new RegExp(`ab-bar-word">${NOT_ASSESSED_WORD}`, "g")) ?? [];
     expect(notAssessedRows).toHaveLength(4);
-    expect(markup).toContain("Effect only. No overall number for this product");
+    expect(markup).toContain("Effect only. The other dimensions were not assessed.");
     expect(markup).toContain(REPORTED_ESTIMATE_LABEL);
     expect(markup).toContain("https://doi.org/10.3390/nu17233792");
     expect(markup).toContain("Unknown.");

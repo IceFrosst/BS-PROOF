@@ -561,7 +561,7 @@ do not drop it.
 
 ## Current state
 
-- **2026-09-16 (preview branch `preview/restore-four-evidence-lines`, not on main):** `/scan` evidence section uses outcome tabs — an `Outcomes (n)` list first (no overall number), then one tab per outcome with the four full-width tracks. `components/scan-flow.tsx` `OutcomeTabs`; tests in `tests/scan-result-state.test.tsx`.
+- **2026-09-16 (preview branch `preview/restore-four-evidence-lines`, not on main):** `/scan` evidence section uses outcome tabs — an `Outcomes (n)` list with a General score (mean of outcome composites), progress bars per outcome, and a compact `More` button beneath each percentage; each outcome tab has the four full-width tracks. Visible “Test rubric” stamps are removed from the lab card. `components/scan-flow.tsx` `OutcomeTabs`; tests in `tests/scan-result-state.test.tsx` and `tests/effect-presentation.test.ts`.
 
 **Preview-only — `/scan` restores the four prominent evidence tracks without reverting the compact
 result state.** On branch `preview/restore-four-evidence-lines`, each outcome card again gives **Does

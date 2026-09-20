@@ -139,7 +139,7 @@ body:has(.ab-stage)>.site-header,body:has(.ab-stage)>.site-footer{display:none}
 .ab-bars.outcomes .ab-bar-word:empty{display:none}
 .ab-bars.outcomes .ab-bar-pts{grid-column:2;grid-row:1;font-size:14px;align-self:start}
 .ab-bars.outcomes .ab-bar-track{grid-column:1/3;grid-row:2}
-.ab-more{grid-column:1/3;grid-row:3;justify-self:start;display:inline-flex;align-items:center;gap:4px;min-height:32px;padding:0 12px;border:1px solid var(--ab-line);border-radius:999px;font-size:12px;font-weight:650;color:var(--ab-ink,inherit);background:var(--ab-surface)}
+.ab-more{grid-column:2;grid-row:3;justify-self:end;display:inline-flex;align-items:center;justify-content:center;min-width:62px;min-height:32px;padding:0 12px;border:1px solid var(--ab-line);border-radius:999px;font-size:12px;font-weight:650;color:var(--ab-ink,inherit);background:var(--ab-surface)}
 .ab-bars.outcomes li>button:hover .ab-more{background:var(--ab-track)}
 .ab-bars.outcomes .ab-bar-name{overflow:hidden}
 .ab-bars.outcomes .ab-bar-name>small{white-space:normal}

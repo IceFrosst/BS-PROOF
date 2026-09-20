@@ -288,7 +288,7 @@ with all cards stacked). Screenshots: `docs/design/ref/tabs-preview/`.
 
 ### Outcomes list, revised (founder, 2026-09-16 evening)
 Rows are progress bars: name, score as a percentage, bar filled to it, and a
-`Find out more ›` button opening that outcome's tab. The verdict word is gone
+compact `More` button beneath the percentage, opening that outcome's tab. Visible legacy “Test rubric” stamps are removed from the card. The verdict word is gone
 from the list (bar + number carry it). Above the list sits a **General score**
 bar — the plain mean of the outcome composites, labelled "Average of N outcome
 scores". This reverses the 2026-09-11 "no overall number" rule by founder
