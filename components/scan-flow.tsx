@@ -54,7 +54,7 @@
  *    currently visible.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 
 import { SaveResultCard } from "@/components/google-sign-in";
 import { ScanCamera } from "@/components/scan-camera";
@@ -89,6 +89,16 @@ const ACCEPTED_TYPES = "image/png,image/jpeg,image/webp,image/gif";
 
 function pct(value: NullableNumber): string {
   return value === null || value === undefined ? "—" : `${Math.round(value * 100)}%`;
+}
+
+function scoreSignalColor(score: NullableNumber, signal: NullableNumber): string {
+  if (score === null || score === undefined) return "var(--sp-mute)";
+  const value = Math.max(0, Math.min(100, score));
+  const strength = Math.max(0, Math.min(1, signal ?? 0));
+  const hue = value <= 60 ? (value / 60) * 42 : 42 + ((value - 60) / 40) * 98;
+  const saturation = 32 + strength * 48;
+  const lightness = 54 - strength * 10;
+  return `hsl(${Math.round(hue)} ${Math.round(saturation)}% ${Math.round(lightness)}%)`;
 }
 
 function signed(value: NullableNumber): string {
@@ -326,10 +336,13 @@ function OutcomeTabs({ rows }: { rows: EvidenceRow[] }) {
         ) : (
           <>
             {(() => {
-              const scores = rows.map((r) => r.composite).filter((c): c is number => typeof c === "number");
+              const scoredRows = rows.filter((r) => typeof r.composite === "number");
+              const scores = scoredRows.map((r) => r.composite as number);
               const general = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
+              const signals = scoredRows.map((r) => r.arcs.evidence?.coverage).filter((v): v is number => typeof v === "number");
+              const generalSignal = signals.length ? signals.reduce((a, b) => a + b, 0) / signals.length : 0;
               return (
-                <div className="sc-general" role="img" aria-label={general === null ? "General score: no scored outcomes" : `General score ${general}, average of ${scores.length} outcome scores`}>
+                <div className="sc-general" style={{ "--sc-score-color": scoreSignalColor(general, generalSignal) } as CSSProperties} role="img" aria-label={general === null ? "General score: no scored outcomes" : `General score ${general}, average of ${scores.length} outcome scores; signal strength ${Math.round(generalSignal * 100)}%`}>
                   <strong className="sc-general-score">{general === null ? "\u2014" : general}</strong>
                   <span className="sc-general-name">
                     <strong>General score</strong>
@@ -345,9 +358,9 @@ function OutcomeTabs({ rows }: { rows: EvidenceRow[] }) {
                 <li key={row.outcome}>
                   <button type="button" className={`sc-outcome-row${gated ? " sc-outcome-row-gated" : ""}`} onClick={() => go(row.outcome, true)} aria-label={`${label(row)}, ${gated ? "no composite score" : `${row.composite} out of 100`}. More`}>
                     <span className="sc-outcome-row-name"><strong>{label(row)}</strong></span>
-                    <span className="sc-outcome-row-score"><strong>{gated ? "—" : `${row.composite}%`}</strong></span>
+                    <span className="sc-outcome-row-score"><strong style={!gated ? { color: scoreSignalColor(row.composite, row.arcs.evidence?.coverage) } : undefined}>{gated ? "—" : `${row.composite}%`}</strong></span>
                     <span className="sc-outcome-row-track" aria-hidden="true">
-                      <span className="sc-outcome-row-fill" style={{ width: `${gated ? 0 : Math.max(0, Math.min(100, row.composite ?? 0))}%` }} />
+                      <span className="sc-outcome-row-fill" style={{ width: `${gated ? 0 : Math.max(0, Math.min(100, row.composite ?? 0))}%`, background: scoreSignalColor(row.composite, row.arcs.evidence?.coverage) }} />
                     </span>
                     <span className="sc-outcome-row-more" aria-hidden="true">More</span>
                   </button>
@@ -642,7 +655,8 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
 
   const disclosures = data ? literatureDisclosures(data.literature_warnings?.data) : [];
   const mlm = company?.profile.status === "ok" ? businessModelDisclosure(company.profile.data?.business_model) : null;
-  const hasNotices = Boolean(evidence?.validity || data?.caveats?.length || disclosures.length || mlm);
+  const warningCount = (data?.caveats?.length ?? 0) + disclosures.length + (mlm ? 1 : 0);
+  const hasNotices = Boolean(evidence?.validity || warningCount);
 
   return (
     <section className="la scan sc" aria-label="Scan a supplement">
@@ -885,13 +899,23 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
                         <span>{evidence.validity.note ?? "Retained for inspection. The scoring constants have not passed anchor calibration."}</span>
                       </div>
                     ) : null}
-                    {data.caveats?.map((c) => (
-                      <Notice key={c.code} title={words(c.code).replace(/^\w/, (ch) => ch.toUpperCase())} lede={firstSentence(c.text)} body={c.text} />
-                    ))}
-                    {disclosures.map((d) => (
-                      <Notice key={d.title} title={d.title} lede={firstSentence(d.body)} body={d.body} role="note" ariaLabel={`${d.title} disclosure`} />
-                    ))}
-                    {mlm ? <Notice title={mlm.title} lede={firstSentence(mlm.body.replace(/^Model knowledge — unverified\.\s*/, "").replace(/^This company/, `${company?.brand ?? "This company"}`))} body={mlm.body} role="note" ariaLabel="Business model disclosure" /> : null}
+                    {warningCount ? (
+                      <details className="sc-warning-bundle">
+                        <summary>
+                          <span>{warningCount} warning{warningCount === 1 ? "" : "s"}</span>
+                          <small>Open before deciding</small>
+                        </summary>
+                        <div className="sc-warning-list">
+                          {data.caveats?.map((c) => (
+                            <Notice key={c.code} title={words(c.code).replace(/^\w/, (ch) => ch.toUpperCase())} lede={firstSentence(c.text)} body={c.text} />
+                          ))}
+                          {disclosures.map((d) => (
+                            <Notice key={d.title} title={d.title} lede={firstSentence(d.body)} body={d.body} role="note" ariaLabel={`${d.title} disclosure`} />
+                          ))}
+                          {mlm ? <Notice title={mlm.title} lede={firstSentence(mlm.body.replace(/^Model knowledge — unverified\.\s*/, "").replace(/^This company/, `${company?.brand ?? "This company"}`))} body={mlm.body} role="note" ariaLabel="Business model disclosure" /> : null}
+                        </div>
+                      </details>
+                    ) : null}
                   </section>
                 ) : null}
 
