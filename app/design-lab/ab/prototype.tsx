@@ -14,7 +14,7 @@ import magnesiumAudit from "./audits/magnesium.json";
 import caffeineResearch from "./effect-research/caffeine.json";
 import creatineResearch from "./effect-research/creatine-effect.json";
 import omega3Research from "./effect-research/omega3-effect.json";
-import { auditWarnings, researchWarnings, evidenceDetail, type EvidenceWarning } from "./evidence-warnings";
+import { auditWarnings, evidenceDetail, type EvidenceWarning } from "./evidence-warnings";
 import "./ab.css";
 
 type DimKey = "effect" | "evidence" | "form" | "dose" | "person";
@@ -131,7 +131,10 @@ const researchScenario = (title: string, file: EffectResearchFile): Scenario => 
     name: o.name,
     population: o.population,
     sentence: o.comparator,
-    warnings: researchWarnings(file, o),
+    /* No warnings: the effect-only pass graded neither funding independence nor
+     * publication bias, and a not-assessed state renders nothing (founder
+     * 2026-09-16). Each source's funding line and its method limits stay in the
+     * Effect row. */
     effect: researchEffectBar(file, o),
   })),
 });
@@ -289,7 +292,6 @@ export default function AbPrototype({ initial, publicTest = false }: AbPrototype
     negative: false, detail: null, lines: [], sourceLinks: [], provenance: null, jump: x.k, dim: !isPicked(x.o),
   }));
   const rowsToShow = isList ? outcomeRows : dimRows;
-  const firedGates = cur?.r?.firedGates ?? [];
   const headline = cur?.r?.headline ?? null;
   const tone = headline === null ? "muted" : headline >= 55 ? "good" : headline >= 45 ? "neutral" : "bad";
   const pick = (k: string) => { setKey(k); setTab(null); setOpen(null); };
@@ -337,9 +339,11 @@ export default function AbPrototype({ initial, publicTest = false }: AbPrototype
         <span className="ab-bar-name">{d.name}{d.sub && <small>{d.sub}</small>}</span>
         <span className="ab-bar-word">{d.word}</span>
         <span className="ab-bar-pts" style={isList && d.fill !== null ? { color: d.color } : undefined}>{d.pts}</span>
-        {d.jump !== null
-          ? <span className="ab-more" aria-hidden="true">More</span>
-          : <span className="ab-chev" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 6l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg></span>}
+        {/* One affordance per row, and it is the row: a single chevron (pointing
+          * right when the tap opens that outcome's tab, down when it expands in
+          * place). The old lone "More" link sat on its own grid line and broke
+          * the row into three disconnected fragments. */}
+        <span className={`ab-chev${d.jump !== null ? " go" : ""}`} aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 6l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg></span>
         {d.track === "interval" && d.scale && <Interval scale={d.scale} />}
         {d.track !== "interval" && d.track !== "none" && <span className={`ab-bar-track ${d.track}`}>{d.track === "fill" && d.fill !== null && <i style={{ width: `${Math.round(d.fill * 100)}%`, background: d.negative ? "var(--ab-warn)" : d.color }} />}{d.track === "null-result" && <i className="ab-null-tick" />}</span>}
       </button>
@@ -351,9 +355,13 @@ export default function AbPrototype({ initial, publicTest = false }: AbPrototype
       </div>}
     </li>;
   })}</ul>;
-  const gates = legacy && firedGates.length > 0 && <details className="ab-gates"><summary>⚑ {firedGates.length === 1 ? firedGates[0] : `${firedGates.length} limits · ${firedGates[0]}`}</summary><ul>{firedGates.map((g) => <li key={g}>{g}</li>)}</ul></details>;
+  /* The "⚑ Best RCT is small or short" gates strip was deleted 2026-09-16
+   * (founder). Those caps are already spelled out in the Evidence row's
+   * "Current rubric" sentence, where they belong; a second amber strip under
+   * the card only competed with the warnings block. score() still computes
+   * firedGates — it is what applies the caps — only the strip is gone. */
   const warnings = cur?.o.warnings?.length ? <details className="ab-warnings" key={`${key}:${tab}`}>
-    <summary><span>⚠ {cur.o.warnings.length} evidence warning{cur.o.warnings.length === 1 ? "" : "s"}</span><small>disclosure only, no score penalty</small></summary>
+    <summary><span>⚠ {cur.o.warnings.length} evidence warning{cur.o.warnings.length === 1 ? "" : "s"}</span></summary>
     <div className="ab-warning-list" aria-label="Evidence warnings">
       {cur.o.warnings.map((w) => <details key={w.id} data-warning={w.id}>
         <summary>{w.title} · {w.status}</summary>
@@ -378,7 +386,7 @@ export default function AbPrototype({ initial, publicTest = false }: AbPrototype
       <div className="ab-public-result">{header}
         {s.live && <p className="ab-stamp">Model {s.live.model}, run {s.live.runAt} · AI research, not reverified and not human-verified.</p>}
         {s.research && <p className="ab-stamp">Model {s.research.meta.model}, effect-only pass {s.research.meta.run_at} · AI research, not reverified and not human-verified.</p>}
-        {tabs}{block}{warnings}{photo}<section className="ab-card" aria-label="Outcome results">{bars}{gates}</section></div>
+        {tabs}{block}{warnings}{photo}<section className="ab-card" aria-label="Outcome results">{bars}</section></div>
       <details className="ab-public-options"><summary>Optional profile & outcome interests</summary>{profileRow}<div className="ab-picks">{s.outcomes.map((o) => <label key={keyOf(o)}><input type="checkbox" checked={isPicked(o)} onChange={() => togglePick(o)} />{o.name}{o.population && <small>{o.population}</small>}</label>)}</div></details>
       <footer className="ab-fine">Saved research examples only. Sources and access limits are in the expandable Effect row. Funding and publication bias are warnings, not Evidence deductions. This test does not change the existing scanner or historical pipeline. Not medical advice.</footer>
     </div>
@@ -386,8 +394,8 @@ export default function AbPrototype({ initial, publicTest = false }: AbPrototype
 
   return <main id="main-content" className="ab-stage"><aside className="ab-side"><a href="/design-lab/mobile">← Field Notebook</a><span className="ab-kicker">RESULT CARD</span><h1>Show the tub.<br />Then the <em>truth.</em></h1><p>Photo takes a third of the phone. Two placements to compare; the rows are identical in both.</p><span className="ab-kicker">PHOTO PLACEMENT</span><div className="ab-layouts" role="tablist" aria-label="Layout">{LAYOUTS.map((l) => <button key={l.id} role="tab" aria-selected={layout === l.id} onClick={() => { setLayout(l.id); setOpen(null); }}><b>{l.name}</b><small>{l.blurb}</small></button>)}</div><span className="ab-kicker">EARLIER AUDITS · UPDATED EVIDENCE POLICY</span><div className="ab-scenarios">{Object.entries(liveScenarios).map(([k, v]) => <button key={k} aria-pressed={key === k} onClick={() => pick(k)}>{v.title}<small>{v.outcomes.length} outcomes · {v.live?.sources} sources</small></button>)}</div><span className="ab-kicker">EFFECT-ONLY RESEARCH · NEW</span><div className="ab-scenarios">{Object.entries(researchScenarios).map(([k, v]) => <button key={k} aria-pressed={key === k} onClick={() => pick(k)}>{v.title}<small>{v.outcomes.length} outcomes · {v.research?.sources.length} sources · no score</small></button>)}</div>{profileRow}<span className="ab-kicker">WHAT THE USER PICKED</span><div className="ab-picks">{s.outcomes.map((o) => <label key={outcomeKey(o.name, o.population)}><input type="checkbox" checked={isPicked(o)} onChange={() => togglePick(o)} />{o.name}{o.population && <small>{o.population}</small>}</label>)}</div><details className="ab-provenance"><summary>Fictional test ledgers</summary><div className="ab-scenarios">{Object.entries(scenarios).map(([k, v]) => <button key={k} aria-pressed={key === k} onClick={() => pick(k)}>{v.title}<small>{v.product}</small></button>)}</div></details>{s.live ? <p className="ab-fine"><strong>Previous audit</strong> run {s.live.runAt} by {s.live.model}. Its effect text and sources are shown as written then and were <strong>not reverified</strong> in this pass; scores now exclude funding and publication-bias penalties. Model confidence: {s.live.confidence}. {s.live.doseNote}</p> : s.research ? <p className="ab-fine"><strong>Effect-only research pass</strong> {s.research.meta.run_at}, {s.research.meta.model}. {s.research.meta.note} <b>Reading rules:</b> {s.research.guards.join(" ")}</p> : <p className="ab-fine">Hand-written inputs to exercise the rubric; no search or model call produced this card. The numeric bars here are invented.</p>}</aside>
   <div className="ab-phone"><div className="ab-status"><b>9:41</b><i /><span>▮▮▮ ▰</span></div><div className={`ab-screen layout-${layout}`}>
-    {layout === "hero" && <>{header}{photo}{tabs}<section className="ab-card">{block}{warnings}{bars}{gates}</section></>}
-    {layout === "overlap" && <>{photo}<div className="ab-overlap-wrap">{header}{block}</div>{tabs}{warnings}<section className="ab-card">{bars}{gates}</section></>}
+    {layout === "hero" && <>{header}{photo}{tabs}<section className="ab-card">{block}{warnings}{bars}</section></>}
+    {layout === "overlap" && <>{photo}<div className="ab-overlap-wrap">{header}{block}</div>{tabs}{warnings}<section className="ab-card">{bars}</section></>}
   </div></div>
-  <aside className="ab-notes"><span className="ab-kicker">THE TWO PLACEMENTS</span><h3>1 · Hero</h3><p>Photo first, big and calm. The outcome list sits under it. Most “product page” feeling.</p><h3>2 · Overlap</h3><p>Full-bleed photo; the block floats over its bottom edge. Most editorial, least whitespace.</p><p className="ab-fine">Middle and Split were dropped 2026-09-16 (founder pick).</p><h3>Outcomes first</h3><p>Landing tab. A compact <b>General score</b> tile sits directly above Outcomes: the plain mean of the outcome scores, labelled as an average and never given a band word (founder decision 2026-09-16; it replaces the 2026-09-11 “no overall number” rule). Each row is a question in a named population, drawn as a progress bar with its score as a percentage; <i>More</i> opens that outcome’s tab.</p><h3>The Effect bar</h3><p>Never a tier fill. When a source reported an estimate and an interval, the interval is drawn in its own unit and labelled <i>reported estimate, not a grade</i>. With an estimate and no interval, the point is drawn and the interval is called unavailable. Otherwise the track is hatched and reads <i>size not graded</i> — which is not the same as <i>no evidence found</i> or <i>no meaningful benefit</i>.</p></aside></main>;
+  <aside className="ab-notes"><span className="ab-kicker">THE TWO PLACEMENTS</span><h3>1 · Hero</h3><p>Photo first, big and calm. The outcome list sits under it. Most “product page” feeling.</p><h3>2 · Overlap</h3><p>Full-bleed photo; the block floats over its bottom edge. Most editorial, least whitespace.</p><p className="ab-fine">Middle and Split were dropped 2026-09-16 (founder pick).</p><h3>Outcomes first</h3><p>Landing tab. A compact <b>General score</b> tile sits directly above Outcomes: the plain mean of the outcome scores, labelled as an average and never given a band word (founder decision 2026-09-16; it replaces the 2026-09-11 “no overall number” rule). Each row is ONE unit: the outcome name and its score on the first line, the population under it, the full-width bar across the bottom. The whole row is the control and a single chevron on the right is the only affordance; tapping it opens that outcome’s tab. (The lone link that used to float mid-row was removed 2026-09-16.)</p><h3>The Effect bar</h3><p>Never a tier fill. When a source reported an estimate and an interval, the interval is drawn in its own unit and labelled <i>reported estimate, not a grade</i>. With an estimate and no interval, the point is drawn and the interval is called unavailable. Otherwise the track is hatched and reads <i>size not graded</i> — which is not the same as <i>no evidence found</i> or <i>no meaningful benefit</i>.</p></aside></main>;
 }

@@ -73,10 +73,29 @@ describe("the landing tab is Outcomes, headed by a general score that is labelle
     expect(markup).not.toContain("ab-number"); // the big headline tile stays off the landing tab
   });
 
-  it("rows are progress bars with a percentage and a 'More' button, no band word or rubric message", () => {
-    expect(markup).toContain(">More<");
+  /* Founder 2026-09-16: the row must read as ONE unit. The lone "More" link
+   * that floated between the score and the bar is gone; the whole row is the
+   * control and a single chevron is its only affordance. */
+  it("rows are one unit: name + score on line 1, a chevron, and the bar under them", () => {
+    expect(markup).not.toContain(">More<");
+    expect(markup).not.toContain("ab-more");
     expect(markup).not.toMatch(/test rubric/i);
     expect(markup).toMatch(/ab-bar-pts"[^>]*>\d+%</);
+    const row = markup.split('<ul class="ab-bars outcomes">')[1].split("</li>")[0];
+    // One button, no nested interactive element, one chevron, one track.
+    expect((row.match(/<button/g) ?? []).length).toBe(1);
+    expect(row).not.toMatch(/<a |<input |role="button"/);
+    expect((row.match(/class="ab-chev go"/g) ?? []).length).toBe(1);
+    expect((row.match(/ab-bar-track/g) ?? []).length).toBe(1);
+    // DOM order inside the row: name, score, chevron, then the bar.
+    expect(row.indexOf("ab-bar-name")).toBeLessThan(row.indexOf("ab-bar-pts"));
+    expect(row.indexOf("ab-bar-pts")).toBeLessThan(row.indexOf("ab-chev"));
+    expect(row.indexOf("ab-chev")).toBeLessThan(row.indexOf("ab-bar-track"));
+  });
+
+  it("drops the gates flag strip from the card", () => {
+    expect(markup).not.toContain("ab-gates");
+    expect(markup).not.toContain("Best RCT is small or short");
   });
 
   it("carries no overall band label", () => {
