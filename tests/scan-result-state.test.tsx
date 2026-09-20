@@ -151,7 +151,7 @@ describe("/scan result state", () => {
     expect(el.querySelectorAll(".la-alert-warn").length).toBe(stack!.querySelectorAll(".la-alert-warn").length);
   });
 
-  it("outcome tabs: an Outcomes list lands first with no overall number; each other tab is one outcome", async () => {
+  it("outcome tabs: an Outcomes list lands first under a general (mean) score; each other tab is one outcome", async () => {
     mockFetch(fixture);
     const el = await mount();
     await scanPhoto(el);
@@ -164,8 +164,12 @@ describe("/scan result state", () => {
     const listRows = Array.from(el.querySelectorAll<HTMLButtonElement>(".sc-outcome-row"));
     expect(listRows).toHaveLength(fixture.evidence.rows.length);
     expect(el.querySelectorAll(".scan-evidence")).toHaveLength(0);
-    // No averaged "overall" score anywhere: every number shown belongs to a named outcome.
-    expect(el.textContent).not.toMatch(/overall/i);
+    // The general score is the plain mean of the outcome composites and says so.
+    const composites = fixture.evidence.rows.map((r) => r.composite).filter((c): c is number => typeof c === "number");
+    const mean = Math.round(composites.reduce((a, b) => a + b, 0) / composites.length);
+    const general = el.querySelector(".sc-general");
+    expect(general?.textContent).toContain(`${mean}%`);
+    expect(general?.textContent).toContain(`Average of ${composites.length} outcome scores`);
 
     // Tapping a row opens that outcome's tab with exactly one card.
     await act(async () => listRows[1].click());

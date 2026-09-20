@@ -59,14 +59,23 @@ const barFor = (o: LegacyAudit["outcomes"][number]) => legacyEffectBar({
   strongestDoubt: o.strongest_doubt,
 });
 
-describe("the landing tab is Outcomes, and there is no overall number", () => {
+describe("the landing tab is Outcomes, headed by a general score that is labelled as a mean", () => {
   const markup = renderToStaticMarkup(createElement(AbPrototype, { initial: { product: "creatine" } }));
 
-  it("renders an Outcomes list, not an Overall average", () => {
+  /* Founder decision 2026-09-16: a general score returns above the list, as a
+   * bar, but it must say it is an average of the outcome scores -- never a
+   * verdict tile with a band word. */
+  it("renders an Outcomes list under a general score bar that names itself an average", () => {
     expect(markup).toContain("Outcomes");
-    expect(markup).not.toContain("Overall");
-    expect(markup).not.toMatch(/Average of the/);
-    expect(markup).not.toContain("ab-number"); // the big headline tile is gone from the landing tab
+    expect(markup).toContain("General score");
+    expect(markup).toMatch(/Average of \d+ outcome scores?/);
+    expect(markup).toContain('class="ab-general"');
+    expect(markup).not.toContain("ab-number"); // the big headline tile stays off the landing tab
+  });
+
+  it("rows are progress bars with a percentage and a 'Find out more' button, no band word", () => {
+    expect(markup).toContain("Find out more");
+    expect(markup).toMatch(/ab-bar-pts">\d+%</);
   });
 
   it("carries no overall band label", () => {
@@ -76,10 +85,8 @@ describe("the landing tab is Outcomes, and there is no overall number", () => {
     }
   });
 
-  it("qualifies every outcome row by its population and says suggestions are not a promise", () => {
+  it("qualifies every outcome row by its population", () => {
     expect(markup).toContain("Adults under 50 doing resistance training");
-    expect(markup).toContain("not a measure of how many people buy it");
-    expect(markup).toContain("Test rubric · disclosure-only warnings");
   });
 
   it("drops the product-level for-whom claim that implied one global benefit", () => {
