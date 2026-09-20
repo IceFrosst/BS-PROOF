@@ -5,6 +5,6 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Result card A/B · Design lab" };
 
 export default function AbPage() {
-  if (process.env.NODE_ENV !== "development") notFound();
+  if (process.env.NODE_ENV !== "development" && process.env.DESIGN_LAB !== "1") notFound();
   return <AbPrototype />;
 }
