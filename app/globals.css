@@ -1324,18 +1324,23 @@ body:has(.scan-page) .footer-inner p:last-child { display: none; }
 .scan-page .sc-outcome-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--sp-line); border-radius: 14px; background: var(--sp-white); overflow: hidden; }
 .scan-page .sc-outcome-list li + li { border-top: 1px solid var(--sp-line); }
 .scan-page .sc-outcome-row {
-  display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 12px;
-  width: 100%; min-height: 64px; padding: 12px 14px; border: 0; background: transparent; color: inherit;
+  display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto auto; align-items: center; gap: 8px 12px;
+  width: 100%; padding: 14px; border: 0; background: transparent; color: inherit;
   font: inherit; text-align: left; cursor: pointer;
 }
 .scan-page .sc-outcome-row:hover { background: var(--sp-tint); }
-.scan-page .sc-outcome-row-name { display: grid; gap: 2px; min-width: 0; }
-.scan-page .sc-outcome-row-name strong { font-size: var(--fs-2); font-weight: 600; }
-.scan-page .sc-outcome-row-name .sc-verdict { margin: 0; font-size: var(--fs-1); color: var(--sp-mute); }
-.scan-page .sc-outcome-row-score { display: flex; align-items: baseline; gap: 2px; font-variant-numeric: tabular-nums; }
-.scan-page .sc-outcome-row-score strong { font-size: var(--fs-5); font-weight: 700; letter-spacing: -0.03em; line-height: 1; }
-.scan-page .sc-outcome-row-score span { color: var(--sp-mute); font-size: 13px; }
-.scan-page .sc-outcome-row-chev { color: var(--sp-mute); font-size: 22px; line-height: 1; }
+.scan-page .sc-outcome-row-name { grid-column: 1; grid-row: 1; min-width: 0; }
+.scan-page .sc-outcome-row-name strong { font-size: var(--fs-3); font-weight: 600; }
+.scan-page .sc-outcome-row-score { grid-column: 2; grid-row: 1; font-variant-numeric: tabular-nums; }
+.scan-page .sc-outcome-row-score strong { font-size: var(--fs-4); font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
+.scan-page .sc-outcome-row-track { grid-column: 1 / 3; grid-row: 2; display: block; height: 10px; border-radius: 999px; background: var(--sp-tint); overflow: hidden; }
+.scan-page .sc-outcome-row-gated .sc-outcome-row-track { background: repeating-linear-gradient(135deg, var(--sp-tint) 0 5px, transparent 5px 9px); border: 1px dashed var(--sp-line); }
+.scan-page .sc-outcome-row-fill { display: block; height: 100%; border-radius: 999px; background: var(--sp-measured); }
+.scan-page .sc-outcome-row-more {
+  grid-column: 1 / 3; grid-row: 3; justify-self: start; display: inline-flex; align-items: center; min-height: 36px; padding: 0 14px;
+  border: 1px solid var(--sp-line); border-radius: 999px; background: var(--sp-white); font-size: var(--fs-1); font-weight: 600; color: var(--sp-ink);
+}
+.scan-page .sc-outcome-row:hover .sc-outcome-row-more { background: var(--sp-ink); color: var(--sp-white); border-color: var(--sp-ink); }
 .scan-page .sc-tab-back {
   justify-self: start; min-height: 44px; padding: 0 14px; border: 1px solid var(--sp-line); border-radius: 999px;
   background: var(--sp-white); color: var(--sp-ink); font: inherit; font-size: var(--fs-1); font-weight: 600; cursor: pointer;

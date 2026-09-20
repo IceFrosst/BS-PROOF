@@ -329,16 +329,13 @@ function OutcomeTabs({ rows }: { rows: EvidenceRow[] }) {
               const gated = row.composite === null;
               return (
                 <li key={row.outcome}>
-                  <button type="button" className="sc-outcome-row" onClick={() => go(row.outcome, true)} aria-label={`${label(row)}, ${gated ? "no composite score" : `${row.composite} out of 100`}, ${row.verdict ?? "no verdict"}. Open details`}>
-                    <span className="sc-outcome-row-name">
-                      <strong>{label(row)}</strong>
-                      <span className="sc-verdict">{row.verdict ?? "no verdict"}</span>
+                  <button type="button" className={`sc-outcome-row${gated ? " sc-outcome-row-gated" : ""}`} onClick={() => go(row.outcome, true)} aria-label={`${label(row)}, ${gated ? "no composite score" : `${row.composite} out of 100`}. Find out more`}>
+                    <span className="sc-outcome-row-name"><strong>{label(row)}</strong></span>
+                    <span className="sc-outcome-row-score"><strong>{gated ? "—" : `${row.composite}%`}</strong></span>
+                    <span className="sc-outcome-row-track" aria-hidden="true">
+                      <span className="sc-outcome-row-fill" style={{ width: `${gated ? 0 : Math.max(0, Math.min(100, row.composite ?? 0))}%` }} />
                     </span>
-                    <span className="sc-outcome-row-score">
-                      <strong>{gated ? "—" : row.composite}</strong>
-                      <span aria-hidden="true">/100</span>
-                    </span>
-                    <span className="sc-outcome-row-chev" aria-hidden="true">›</span>
+                    <span className="sc-outcome-row-more" aria-hidden="true">Find out more ›</span>
                   </button>
                 </li>
               );
