@@ -146,6 +146,40 @@ describe("/scan result state", () => {
     expect(headline?.style.getPropertyValue("--sc-score-color")).toMatch(/hsl/);
   });
 
+  it("matched tabs rove with wraparound and panel labelling survives punctuation in a composite key", async () => {
+    const ledgerAudit = retainedAuditForProduct({
+      ingredient: "creatine",
+      form: "creatine_monohydrate",
+      compoundDoseMg: 4000,
+      servingsPerDay: 1,
+      isMultiIngredient: false,
+      actives: [{ name: "Creatine Monohydrate", compoundDoseMg: 4000 }],
+      otherActives: [],
+    });
+    expect(ledgerAudit).not.toBeNull();
+    const matched = structuredClone(ledgerAudit!);
+    matched.audit.outcomes[0].name = "Endurance / recovery (acute),";
+    mockFetch({ ...structuredClone(fixture), ledger_audit: matched });
+    const el = await mount();
+    await scanPhoto(el);
+    const tabs = Array.from(el.querySelectorAll<HTMLButtonElement>(".sc-ledger-tabs [role='tab']"));
+    const panel = el.querySelector<HTMLElement>("[role='tabpanel']")!;
+    expect(panel.getAttribute("aria-labelledby")).toBe(tabs[0].id);
+    await act(async () => tabs[0].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
+    expect(document.activeElement).toBe(tabs[1]);
+    expect(tabs[1].getAttribute("aria-selected")).toBe("true");
+    expect(panel.getAttribute("aria-labelledby")).toBe(tabs[1].id);
+    expect(document.getElementById(panel.getAttribute("aria-labelledby")!)).toBe(tabs[1]);
+    await act(async () => tabs[1].dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true })));
+    expect(document.activeElement).toBe(tabs[tabs.length - 1]);
+    await act(async () => tabs[tabs.length - 1].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
+    expect(document.activeElement).toBe(tabs[0]);
+    await act(async () => tabs[0].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })));
+    expect(document.activeElement).toBe(tabs[tabs.length - 1]);
+    await act(async () => tabs[tabs.length - 1].dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true })));
+    expect(document.activeElement).toBe(tabs[0]);
+  });
+
   it("collapses the capture chrome into a scanned-product header, moves focus there, and offers 'Scan another'", async () => {
     mockFetch(fixture);
     const el = await mount();
@@ -213,90 +247,72 @@ describe("/scan result state", () => {
     expect(el.querySelectorAll(".la-alert-warn").length).toBe(stack!.querySelectorAll(".la-alert-warn").length);
   });
 
-  it("outcome tabs: an Outcomes list lands first under a general (mean) score; each other tab is one outcome", async () => {
+  it("unmatched tabs rove with wraparound and panel labelling resolves sanitized composite ids", async () => {
+    mockFetch({ ...structuredClone(fixture), evidence: { ...fixture.evidence, rows: [{ ...fixture.evidence.rows[0], outcome: "dose/form, exact" }, ...fixture.evidence.rows.slice(1)] } });
+    const el = await mount();
+    await scanPhoto(el);
+    const tabs = Array.from(el.querySelectorAll<HTMLButtonElement>(".sc-ledger-tabs [role='tab']"));
+    const panel = el.querySelector<HTMLElement>("[role='tabpanel']")!;
+    expect(panel.getAttribute("aria-labelledby")).toBe(tabs[0].id);
+    await act(async () => tabs[0].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })));
+    expect(document.activeElement).toBe(tabs[tabs.length - 1]);
+    expect(tabs[tabs.length - 1].getAttribute("aria-selected")).toBe("true");
+    await act(async () => tabs[tabs.length - 1].dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true })));
+    expect(document.activeElement).toBe(tabs[0]);
+    await act(async () => tabs[0].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
+    expect(document.activeElement).toBe(tabs[1]);
+    expect(panel.getAttribute("aria-labelledby")).toBe(tabs[1].id);
+    expect(document.getElementById(panel.getAttribute("aria-labelledby")!)).toBe(tabs[1]);
+    await act(async () => tabs[1].dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true })));
+    expect(document.activeElement).toBe(tabs[tabs.length - 1]);
+  });
+
+  it("unmatched scans use the retained lab shell without exposing continuous scores", async () => {
     mockFetch(fixture);
     const el = await mount();
     await scanPhoto(el);
 
-    const tabs = Array.from(el.querySelectorAll<HTMLButtonElement>("[role='tab']"));
+    expect(el.querySelector(".sc-ledger-tabs")).not.toBeNull();
+    expect(el.querySelector(".sc-tabs:not(.sc-ledger-tabs)")).toBeNull();
+    const tabs = Array.from(el.querySelectorAll<HTMLButtonElement>(".sc-ledger-tabs [role='tab']"));
     expect(tabs).toHaveLength(fixture.evidence.rows.length + 1);
-    expect(tabs[0].textContent).toMatch(/^Outcomes/);
-    expect(tabs[0].getAttribute("aria-selected")).toBe("true");
-    // The landing tab lists every outcome and shows no evidence card yet.
-    const listRows = Array.from(el.querySelectorAll<HTMLButtonElement>(".sc-outcome-row"));
+    expect(tabs[0].textContent).toBe("General");
+    expect(el.querySelector(".sc-general-score")?.textContent).toBe("—");
+    expect(el.querySelector(".sc-general")?.textContent).toContain("Not assessed");
+    expect(el.querySelector(".sc-no-ledger-audit")?.textContent).toContain("not converted into quarters");
+
+    const listRows = Array.from(el.querySelectorAll<HTMLButtonElement>(".sc-ledger-tabs .sc-outcome-row"));
     expect(listRows).toHaveLength(fixture.evidence.rows.length);
-    expect(el.querySelectorAll(".scan-evidence")).toHaveLength(0);
-    /* Each row is ONE unit and ONE control (founder 2026-09-16): name + score
-     * on the first line, a single chevron affordance, the bar underneath. The
-     * lone "More" link that floated mid-row is gone, and nothing interactive is
-     * nested inside the button. */
     for (const row of listRows) {
-      expect(row.textContent).not.toContain("More");
+      expect(row.querySelector(".sc-outcome-row-score")?.textContent).toBe("—");
       expect(row.querySelectorAll("button, a, input").length).toBe(0);
-      expect(row.querySelectorAll(".sc-outcome-row-more svg")).toHaveLength(1);
       expect(row.querySelectorAll(".sc-outcome-row-track")).toHaveLength(1);
-      const kids = Array.from(row.children).map((c) => c.className);
-      expect(kids).toEqual(["sc-outcome-row-name", "sc-outcome-row-score", "sc-outcome-row-more", "sc-outcome-row-track"]);
     }
-    // The run's population is a plain FACT line, stated once (it is recorded
-    // per run, not per outcome) and never drawn as a scored bar.
-    const popLines = el.querySelectorAll(".sc-list-pop");
-    expect(popLines).toHaveLength(1);
-    expect(popLines[0].textContent).toContain("healthy adults, men and women");
-    expect(popLines[0].querySelector(".sc-arc-track, .sc-outcome-row-track")).toBeNull();
 
-    // The general score is the plain mean of the outcome composites and says so.
-    const composites = fixture.evidence.rows.map((r) => r.composite).filter((c): c is number => typeof c === "number");
-    const mean = Math.round(composites.reduce((a, b) => a + b, 0) / composites.length);
-    const general = el.querySelector(".sc-general");
-    expect(general?.querySelector(".sc-general-score")?.textContent).toBe(String(mean));
-    expect(general?.textContent).toContain(`Average of ${composites.length} outcome scores`);
-
-    // Tapping a row opens that outcome's tab with exactly one card.
     await act(async () => listRows[1].click());
-    const selected = el.querySelector("[role='tab'][aria-selected='true']");
-    expect(selected?.textContent).toBe(fixture.evidence.rows[1].outcome_label);
-    const cards = el.querySelectorAll(".scan-evidence");
-    expect(cards).toHaveLength(1);
-    expect(cards[0].querySelector("h4")?.textContent).toBe(fixture.evidence.rows[1].outcome_label);
-    expect(cards[0].querySelectorAll(".sc-arc")).toHaveLength(4);
-    // Back to the list.
-    await act(async () => tabs[0].click());
-    expect(el.querySelectorAll(".scan-evidence")).toHaveLength(0);
-    expect(el.querySelectorAll(".sc-outcome-row")).toHaveLength(fixture.evidence.rows.length);
+    const card = el.querySelector<HTMLElement>(".sc-ledger-card")!;
+    expect(card.querySelector("h4")?.textContent).toBe(fixture.evidence.rows[1].outcome_label);
+    expect(card.querySelector(".sc-outcome-number")?.textContent).toBe("—");
+    expect(Array.from(card.querySelectorAll(".sc-arc-label")).map((node) => node.textContent)).toEqual(["Effect", "Evidence certainty", "Form", "Dose"]);
+    for (const dimension of card.querySelectorAll(".sc-ledger-row")) {
+      expect(dimension.querySelector(".sc-arc-value")?.textContent).toBe("—");
+      expect(dimension.querySelector(".sc-arc-word")?.textContent).toContain("Not assessed");
+    }
+    expect(card.textContent).not.toMatch(/\b(?:\d+%|\d+\/100|probably works|possibly works)\b/i);
+    const effect = card.querySelector<HTMLButtonElement>(".sc-arc-effect .sc-arc-row")!;
+    await act(async () => effect.click());
+    expect(card.querySelector(".sc-arc-effect .sc-arc-detail")?.textContent).toContain("not converted into quarters");
   });
 
-  it("uses score direction for red/amber/green and evidence coverage for signal strength", async () => {
-    const source = fixture.evidence.rows[0];
-    const rows = [
-      { ...source, outcome: "bad", outcome_label: "Bad", composite: 20, arcs: { ...source.arcs, evidence: { ...source.arcs.evidence, coverage: 1 } } },
-      { ...source, outcome: "middle", outcome_label: "Middle", composite: 55, arcs: { ...source.arcs, evidence: { ...source.arcs.evidence, coverage: 1 } } },
-      { ...source, outcome: "good", outcome_label: "Good", composite: 85, arcs: { ...source.arcs, evidence: { ...source.arcs.evidence, coverage: 1 } } },
-      { ...source, outcome: "weak", outcome_label: "Weak signal", composite: 55, arcs: { ...source.arcs, evidence: { ...source.arcs.evidence, coverage: 0.1 } } },
-    ];
-    mockFetch({ ...fixture, evidence: { ...fixture.evidence, rows } });
+  it("does not expose continuous composite, verdict, or coverage values in the unmatched card", async () => {
+    mockFetch({ ...fixture, evidence: { ...fixture.evidence, rows: fixture.evidence.rows.map((row) => ({ ...row, composite: 99, verdict: "probably works", arcs: { ...row.arcs, evidence: { ...row.arcs.evidence, coverage: 1 } } })) } });
     const el = await mount();
     await scanPhoto(el);
-    const colors = Array.from(el.querySelectorAll<HTMLElement>(".sc-outcome-row-fill")).map((bar) => bar.style.background);
-    const rgb = colors.map((color) => (color.match(/\d+/g) ?? []).map(Number));
-    // The same ramp drives the number, only darkened so 22px type clears WCAG
-    // 1.4.3 (axe reported 2.6:1 before): same hue, lower lightness.
-    const text = Array.from(el.querySelectorAll<HTMLElement>(".sc-outcome-row-score strong")).map((s) =>
-      (s.style.color.match(/\d+/g) ?? []).map(Number),
-    );
-    const dominant = (c: number[]) => c.indexOf(Math.max(...c));
-    text.forEach((c, i) => {
-      // Same ramp: the dominant channel (red for a low score, green for a high
-      // one) is identical to the bar's.
-      expect(dominant(c)).toBe(dominant(rgb[i]));
-      // Darker, so 22px type clears WCAG 1.4.3 (axe measured 2.6:1 before).
-      expect(Math.max(...c)).toBeLessThan(Math.max(...rgb[i]));
-    });
-    expect(rgb[0][0]).toBeGreaterThan(rgb[0][1] * 2); // low score: red/orange
-    expect(rgb[1][0]).toBeGreaterThan(rgb[1][1]); // middle score: amber
-    expect(rgb[1][1]).toBeGreaterThan(rgb[1][2] * 2);
-    expect(rgb[2][1]).toBeGreaterThan(rgb[2][0]); // high score: green
-    expect(colors[3]).not.toBe(colors[1]); // same score, weaker evidence: less saturated/lighter
+    expect(el.querySelector(".sc-ledger-tabs")).not.toBeNull();
+    expect(el.querySelector(".sc-tabs:not(.sc-ledger-tabs)")).toBeNull();
+    expect(el.textContent).not.toContain("probably works");
+    expect(el.querySelectorAll(".sc-ledger-tabs .sc-outcome-row-score strong")).toHaveLength(fixture.evidence.rows.length);
+    expect(Array.from(el.querySelectorAll(".sc-ledger-tabs .sc-outcome-row-score strong")).every((node) => node.textContent === "—")).toBe(true);
   });
 
   /* Open every outcome tab in turn and collect its (single) card. */
@@ -313,157 +329,54 @@ describe("/scan result state", () => {
     return out;
   }
 
-  it("renders four prominent evidence rows, each carrying its verdict AND its coverage, in every outcome card", async () => {
+  it("renders four expandable Not assessed dimensions for each unmatched outcome", async () => {
     mockFetch(fixture);
     const el = await mount();
     await scanPhoto(el);
 
     const cards = await eachCard(el);
     expect(cards.length).toBe(fixture.evidence.rows.length);
-    cards.forEach((card, i) => {
-      const source = fixture.evidence.rows[i];
-      const arcs = Array.from(card.querySelectorAll<HTMLElement>(".sc-arc"));
+    cards.forEach((card) => {
+      const arcs = Array.from(card.querySelectorAll<HTMLElement>(".sc-ledger-row"));
       expect(arcs).toHaveLength(4);
-      expect(arcs.map((arc) => arc.querySelector(".sc-arc-label")?.textContent)).toEqual([
-        "Does it work?",
-        "In your form?",
-        "At your dose?",
-        "Well studied?",
-      ]);
-      // Each dimension is ONE tappable line (the design-lab card's geometry)
-      // whose value and coverage sit together above its own full-width track.
+      expect(arcs.map((arc) => arc.querySelector(".sc-arc-label")?.textContent)).toEqual(["Effect", "Evidence certainty", "Form", "Dose"]);
+      // Each dimension is one accessible tappable line with an honest dash.
       for (const arc of arcs) {
         const row = arc.querySelector<HTMLButtonElement>(":scope > .sc-arc-row");
         expect(row).not.toBeNull();
         expect(row!.getAttribute("aria-expanded")).toBe("false");
-        expect(row!.querySelector(":scope > .sc-arc-value")).not.toBeNull();
-        expect(row!.querySelector(":scope > .sc-arc-cov")).not.toBeNull();
-        expect(row!.querySelector(":scope > .sc-arc-track")).not.toBeNull();
+        expect(row!.querySelector(":scope > .sc-arc-value")?.textContent).toBe("—");
+        expect(row!.querySelector(":scope > .sc-arc-word")?.textContent).toContain("Not assessed");
         // One control per row, nothing interactive nested inside it.
         expect(row!.querySelectorAll("button, a, input").length).toBe(0);
       }
-      // The three signed dimensions print the run's own signed verdict, and
-      // every dimension prints the run's own coverage (invariant 8).
-      const dims = ["effect", "form", "dose"] as const;
-      dims.forEach((dim, idx) => {
-        const v = source.arcs[dim].verdict as number;
-        const shown = arcs[idx].querySelector(".sc-arc-value")?.textContent ?? "";
-        expect(shown).toBe(`${v > 0 ? "+" : v < 0 ? "\u2212" : ""}${Math.abs(v).toFixed(2)}`);
-      });
-      arcs.forEach((arc, idx) => {
-        const dim = (["effect", "form", "dose", "evidence"] as const)[idx];
-        const cov = source.arcs[dim].coverage as number;
-        expect(arc.querySelector(".sc-arc-cov")?.textContent).toContain(`${Math.round(cov * 100)}%`);
-      });
     });
   });
 
-  it("expands a dimension in place with facts the run really carries, and no lab affordance production cannot back", async () => {
+  it("expands an unmatched dimension with the honest no-audit explanation", async () => {
     mockFetch(fixture);
     const el = await mount();
     await scanPhoto(el);
     await act(async () => el.querySelectorAll<HTMLButtonElement>(".sc-outcome-row")[0].click());
-
-    const card = el.querySelector<HTMLElement>(".scan-evidence")!;
-    const dose = card.querySelector<HTMLElement>(".sc-arc-dose")!;
-    const row = dose.querySelector<HTMLButtonElement>(".sc-arc-row")!;
-    expect(dose.querySelector(".sc-arc-detail")).toBeNull();
-    await act(async () => row.click());
-    const detail = dose.querySelector<HTMLElement>(".sc-arc-detail");
-    expect(detail).not.toBeNull();
-    expect(row.getAttribute("aria-expanded")).toBe("true");
-    expect(row.getAttribute("aria-controls")).toBe(detail!.id);
-    // Real dose facts: the scored daily dose, the benefit band and the
-    // server's own reading sentence for this outcome.
-    expect(detail!.textContent).toContain("4.4 g");
-    expect(detail!.textContent).toContain("Benefit range");
-    // The server's own reading sentence, minus the outcome-name prefix the
-    // card already shows (the same strip the dose bar has always done).
-    const reading: string = fixture.dose_effectiveness.outcomes[0].reading;
-    expect(detail!.textContent).toContain(reading.slice(`${fixture.evidence.rows[0].outcome_label}: `.length + 1));
-    // The dose word is the tone the server computed, not an invented grade,
-    // and the run's own dose tier stays reachable (it used to be a footnote).
-    expect(row.textContent).toContain("in range");
-    expect(detail!.textContent).toContain("Dose match");
-    expect(detail!.textContent).toContain("in band");
-
-    // Only one dimension is open at a time; opening another closes this one.
-    await act(async () => card.querySelector<HTMLButtonElement>(".sc-arc-evidence .sc-arc-row")!.click());
-    expect(dose.querySelector(".sc-arc-detail")).toBeNull();
-    const evidence = card.querySelector<HTMLElement>(".sc-arc-evidence .sc-arc-detail")!;
-    expect(evidence.textContent).toContain(fixture.evidence.run.id);
-    expect(evidence.textContent).toContain("3 trials");
-
-    // NOT adopted from the design-lab card, because production has no such
-    // data: a fifth person-fit bar, rubric ordinals, and an interval axis.
-    expect(card.querySelectorAll(".sc-arc")).toHaveLength(4);
-    expect(card.textContent).not.toContain("Studied in you");
-    expect(card.textContent).not.toMatch(/\b\d\/4\b/);
-    expect(card.querySelector(".sc-interval, .ab-interval")).toBeNull();
-    // The population IS shown -- as a plain fact line, never as a scored bar.
-    const pop = card.querySelector<HTMLElement>(".sc-pop");
-    expect(pop?.textContent).toContain("healthy adults");
-    expect(pop?.querySelector(".sc-arc-track")).toBeNull();
+    const card = el.querySelector<HTMLElement>(".sc-ledger-card")!;
+    expect(card.querySelectorAll(".sc-ledger-row")).toHaveLength(4);
+    const effect = card.querySelector<HTMLButtonElement>(".sc-arc-effect .sc-arc-row")!;
+    expect(effect.getAttribute("aria-expanded")).toBe("false");
+    await act(async () => effect.click());
+    expect(effect.getAttribute("aria-expanded")).toBe("true");
+    expect(card.querySelector(".sc-arc-effect .sc-arc-detail")?.textContent).toContain("not converted into quarters");
+    expect(card.textContent).toContain("No source-verified /4 audit matches this exact form and daily dose");
   });
 
-  it("invariant 8: effect, form and dose render directional verdicts with coverage, distinguishing 0.00 @ 0% from -0.70 @ 100%", async () => {
-    const source = fixture.evidence.rows[0];
-    const dimensions = ["effect", "form", "dose"] as const;
-    const rows = dimensions.flatMap((dimension) => {
-      const target = source.arcs[dimension];
-      return [
-        {
-          ...source,
-          outcome: `untested_${dimension}`,
-          outcome_label: `Untested ${dimension}`,
-          arcs: {
-            ...source.arcs,
-            [dimension]: { ...target, verdict: 0, coverage: 0, strength: 0.91, closeness: 0.88 },
-          },
-        },
-        {
-          ...source,
-          outcome: `failed_${dimension}`,
-          outcome_label: `Failed ${dimension}`,
-          arcs: {
-            ...source.arcs,
-            [dimension]: { ...target, verdict: -0.7, coverage: 1, strength: 0.91, closeness: 0.88 },
-          },
-        },
-      ];
-    });
+  it("never routes an unmatched scan through the legacy continuous renderer", async () => {
+    const rows = fixture.evidence.rows.map((row) => ({ ...row, composite: 99, verdict: "probably works" }));
     mockFetch({ ...fixture, evidence: { ...fixture.evidence, rows } });
     const el = await mount();
     await scanPhoto(el);
-
-    const cards = await eachCard(el);
-    expect(cards).toHaveLength(6);
-    dimensions.forEach((dimension, index) => {
-      const untested = cards[index * 2].querySelector<HTMLElement>(`.sc-arc-${dimension}`)!;
-      const failed = cards[index * 2 + 1].querySelector<HTMLElement>(`.sc-arc-${dimension}`)!;
-
-      // The displayed form/dose values must be the signed directional verdict,
-      // not their positive strength/closeness metadata (set above to 0.91/0.88).
-      expect(untested.querySelector(".sc-arc-value")?.textContent).toBe("0.00");
-      expect(failed.querySelector(".sc-arc-value")?.textContent).toBe("−0.70");
-      expect(untested.textContent).not.toContain("0.91");
-      expect(untested.textContent).not.toContain("0.88");
-
-      expect(untested.textContent).toContain("0% · untested");
-      expect(untested.classList.contains("sc-arc-untested")).toBe(true);
-      expect(untested.querySelector<HTMLElement>(".sc-arc-fill")?.style.width).toBe("0%");
-      expect(failed.textContent).toContain("100% coverage");
-      expect(failed.classList.contains("sc-arc-untested")).toBe(false);
-      expect(failed.querySelector<HTMLElement>(".sc-arc-fill")?.style.width).toBe("100%");
-      expect(untested.textContent).not.toEqual(failed.textContent);
-    });
-
-    // Every arc row names its coverage in its accessible name.
-    for (const card of cards) {
-      for (const row of card.querySelectorAll(".sc-arc .sc-arc-row")) {
-        expect(row.getAttribute("aria-label")).toMatch(/coverage/);
-      }
-    }
+    expect(el.querySelector(".sc-ledger-tabs")).not.toBeNull();
+    expect(el.querySelector(".sc-tabs:not(.sc-ledger-tabs)")).toBeNull();
+    expect(Array.from(el.querySelectorAll(".sc-ledger-tabs .sc-outcome-row-score strong")).every((node) => node.textContent === "—")).toBe(true);
+    expect(el.textContent).not.toContain("probably works");
   });
 
   /* Nothing currently reachable may become unreachable: the design pass that
@@ -512,6 +425,11 @@ describe("/scan result state", () => {
       const el = await mount();
       await scanPhoto(el);
       expect(el.textContent, name).toMatch(expected);
+      if (name === "form_not_scored" || name === "not_scored") {
+        expect(el.querySelector(".sc-ledger-tabs"), name).not.toBeNull();
+        expect(el.querySelector(".sc-no-ledger-audit"), name).not.toBeNull();
+        expect(el.querySelectorAll(".sc-outcome-row"), name).toHaveLength(0);
+      }
       // The scanned-product header and both "Scan another" buttons survive.
       expect(el.querySelector(".sc-scanned"), name).not.toBeNull();
       expect(buttons(el, /^scan another$/i).length, name).toBeGreaterThanOrEqual(1);
