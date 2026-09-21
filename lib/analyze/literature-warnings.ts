@@ -50,8 +50,14 @@ export { literatureDisclosures } from "./literature-disclosures";
 
 const ROOT = process.cwd();
 
-/** Bump together with prompts/literature_warnings.md. Its own cache domain (invariant 3). */
-export const LITERATURE_WARNINGS_PROMPT_VERSION = "literature-warnings-v1.0";
+/** Bump together with prompts/literature_warnings.md. Its own cache domain (invariant 3).
+ * v1.1 (2026-09-16): prompts/literature_warnings.md gained the shared
+ * plain-language rule, so each `basis`, the recalled funders/signals strings
+ * and the caveats are written in short plain sentences with every figure kept
+ * exactly. WORDING ONLY -- the concern/no_concern/unknown contract, the
+ * "specific reason required" bar and the disclosure-not-verdict rule are
+ * unchanged. */
+export const LITERATURE_WARNINGS_PROMPT_VERSION = "literature-warnings-v1.1";
 
 export interface LiteratureWarningsSection {
   status: "ok" | "skipped" | "unavailable";

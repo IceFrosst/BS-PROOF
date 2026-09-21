@@ -1,0 +1,282 @@
+{
+  "Sleep quality (poor sleepers)||Adults 18-65 with self-rated poor sleep": {
+    "effect": {
+      "found": "The trial on this exact form found a gain that was statistically significant but small on its main measure: 1.6 points on the ISI (an insomnia questionnaire, where a lower score means better sleep). The effect size was d=0.20, which counts as small. Most of the change happened in the first 14 days.",
+      "missing": "The bottom of the 95% CI (the range the true value probably sits in) is 0.0, so the trial only just rules out no effect at all. The average gain is well below the 6-point ISI change that the trial itself named as clinically significant.",
+      "move": "A count of how many people improved, with enough participants to detect the 6-point ISI threshold, registered in advance rather than left as 'data not shown'."
+    },
+    "evidence": {
+      "found": "The newest systematic review (a full search for the trials on a question) pooled 12 RCTs (randomised controlled trials), searching up to June 2026. It includes the largest magnesium and sleep trial ever run, with 155 participants, and that trial used this form.",
+      "missing": "Certainty is rated low to very low, because the forms, elemental doses, durations and measuring instruments all differ between trials. Across objective measures the review found no consistent signal. A co-author of the exact-form trial is the first author of that review.",
+      "move": "A 12-week trial with 300+ participants that measures sleep with actigraphy (a wrist movement tracker) or PSG (an overnight sleep lab recording) alongside the ISI questionnaire."
+    },
+    "form": {
+      "found": "The trial used the exact form in this product: magnesium bisglycinate capsules taken 30-60 min before bed. That is the same routine a shopper would follow.",
+      "missing": "The same capsules also deliver ~1,523 mg of glycine, which has its own sleep research, so the trial cannot separate magnesium from glycine. It is a fair test of the product, not of magnesium on its own.",
+      "move": "A trial with three groups: bisglycinate, a placebo carrying the same amount of glycine, and an inert placebo."
+    },
+    "dose": {
+      "found": "Under Reading A (treating the label figure as elemental magnesium), 300 mg elemental is 20% above the 250 mg elemental dose that produced the signal, and it sits inside the tested band of 250-500 mg.",
+      "missing": "Nothing was tested above 500 mg for this outcome in adults under 65. Reading B (42 mg elemental) is below anything ever tested.",
+      "move": "A trial comparing several doses on the ISI score: 150 vs 300 vs 450 mg elemental."
+    },
+    "summary": {
+      "sentence": "In the one trial on this exact form (n=155), the insomnia score fell 1.6 pts further than on placebo (CI 0.0-3.3, the range the true value probably sits in). The 6-pt mark the trial called meaningful was not reached.",
+      "absolute_effect": "The ISI insomnia score was 1.6 points better than placebo at 4 weeks (95% CI 0.0 to 3.3) on a 0-28 scale, the CI being the range the true value probably sits in. Among people who finished, 38% versus 23% achieved a 6-point drop.",
+      "clinically_meaningful": "Unknown. The average difference is far below the 6-point ISI improvement the trial named in advance as clinically significant (Yang et al., cited by the authors). The gap in people who responded (38% versus 23%, about ~7 people treated for each extra responder) was reported without a significance test.",
+      "strongest_doubt": "The bottom of its confidence interval is 0.0 and the p-value is p=0.049, just under the usual cut-off for calling a result significant. All seven secondary measures showed nothing. The newest systematic review, whose first author co-authored the trial, still concludes magnesium should not be used routinely for insomnia."
+    }
+  },
+  "Falling asleep faster, age 55+||Adults 55+ with insomnia": {
+    "effect": {
+      "found": "Pooled together, people fell asleep 17 minutes faster. The two trials that measured it agreed with each other, with no heterogeneity (no disagreement between their results).",
+      "missing": "Total sleep time, sleep efficiency and the PSQI questionnaire (a sleep quality score) did not improve. The review states the true effect lies somewhere between a positive effect and no effect at all.",
+      "move": "A trial that reports sleep onset latency (how long it takes to fall asleep) against a minimum difference that matters, stated before the trial starts."
+    },
+    "evidence": {
+      "found": "A published meta-analysis (a study that pools other trials) covering three countries, independent of manufacturers. It rated the trials with RoB 2.0 (a standard risk-of-bias checklist) and GRADE (a standard rating of how certain evidence is).",
+      "missing": "The pooled sleep-onset estimate rests on 55 people in two trials, one of which is a 12-person crossover (each person takes both the supplement and the placebo in turn). Two of three trials are at high risk of bias. No trial reported how it randomised people, how it concealed allocation, or how it kept people blinded.",
+      "move": "One trial with enough participants to answer the question in adults 55+ (n>=200), using polysomnography (an overnight sleep lab recording)."
+    },
+    "form": {
+      "found": "Nothing on this form. Both salts tested, oxide and citrate, are different from bisglycinate. Carrying the result across assumes the active part is elemental magnesium.",
+      "missing": "No trial has compared bisglycinate directly against oxide or citrate on any sleep outcome. The one human absorption comparison that included bisglycinate found no rise in blood magnesium from it (PMID 39770988, that paper's reference number).",
+      "move": "A trial comparing bisglycinate with citrate at the same elemental dose in older adults."
+    },
+    "dose": {
+      "found": "The product's 300 mg elemental magnesium is within 20% of the 320 mg citrate dose used in the largest of the three trials.",
+      "missing": "The trial that drove the sleep-onset result used 500 mg elemental as oxide, and the EEG crossover (a brain-wave study) used 729 mg. Both are well above this product.",
+      "move": "A comparison of 300 vs 500 mg elemental in this age group."
+    },
+    "summary": {
+      "sentence": "Three small trials of magnesium oxide or citrate at 320-729 mg elemental pooled to falling asleep 17 min faster (CI 7-27 min, the range the true value probably sits in). None of them used bisglycinate.",
+      "absolute_effect": "People fell asleep 17.4 minutes faster than on placebo (95% CI 7.4 to 27.3, the range the true value probably sits in). Total sleep time was +16 minutes, which was not statistically significant.",
+      "clinically_meaningful": "Unknown. The review declines to call 17 minutes clinically significant and names no threshold. No included trial set an MCID (the smallest change that matters to a patient) for how long it takes to fall asleep.",
+      "strongest_doubt": "The pooled sleep-onset result comes from 55 people. The 100-person trial in the same review found no difference on the PSQI sleep questionnaire. A 2026 prospective cohort (n=3,887, people followed over time rather than randomised) found no link between magnesium use and objectively measured sleep."
+    }
+  },
+  "Sleep if you sleep fine already||Adults with no sleep complaint": {
+    "effect": {
+      "found": "Nothing measurable was found. That means the evidence is missing, not that there is evidence of no benefit.",
+      "missing": "Any placebo-controlled trial in adults without a sleep complaint. The one 12-person EEG crossover (a brain-wave study where each person takes both supplement and placebo) cannot answer it.",
+      "move": "A trial that recruits normal sleepers and uses a measure built to cope with a floor effect, since people who already sleep well have little room to improve."
+    },
+    "evidence": {
+      "found": "A 2026 prospective cohort (n=3,887, with a PSG sleep lab substudy, following people over time rather than randomising them) found no link between magnesium supplement use and sleep in a general population sample. That counts weakly against, and it is confounded by why people start supplements in the first place.",
+      "missing": "Randomised data in this population, at any dose, in any form.",
+      "move": "Any RCT (randomised controlled trial) with enough participants, run in good sleepers."
+    },
+    "form": {
+      "found": "Nothing on any form in this population.",
+      "missing": "Everything is missing.",
+      "move": "See above."
+    },
+    "dose": {
+      "found": "Nothing was found.",
+      "missing": "No tested dose range exists for this population, so 300 mg cannot be judged inside or outside it.",
+      "move": "See above."
+    },
+    "summary": {
+      "sentence": "This is untested. Every trial recruited poor sleepers or people with insomnia. The only exception is a 12-person EEG brain-wave crossover at 729 mg in healthy older adults.",
+      "absolute_effect": "No effect estimate is available.",
+      "clinically_meaningful": "Unknown. No effect estimate exists in this population.",
+      "strongest_doubt": "Both magnesium and sleep trial programmes deliberately excluded good sleepers. So the marketing claim of 'better sleep' has never been tested on people who sleep normally."
+    }
+  },
+  "Anxiety and stress (healthy)||Healthy adults, no anxiety diagnosis": {
+    "effect": {
+      "found": "On this exact form the result was a tight null, meaning no effect measured precisely: anxiety moved 0.0 points (CI -0.4 to 0.4, the range the true value probably sits in) on the anxiety part of the PHQ-4 questionnaire. Perceived stress and negative mood did not move either.",
+      "missing": "The participants were not anxious to begin with (PHQ-4 total 4.7/12), so a floor effect cannot be ruled out, since there was little room to improve. Anxiety was a secondary endpoint, measured with a 2-item screening questionnaire.",
+      "move": "A trial in people whose anxiety is raised but below a clinical diagnosis, using a full questionnaire (GAD-7 or STAI) as the main endpoint."
+    },
+    "evidence": {
+      "found": "One well-run trial on the exact form. There is also an 18-study systematic review (a full search that pools the trials on a question) of the wider field.",
+      "missing": "Several of the review's positive studies also gave vitamin B6 at the same time, and none recruited people short of magnesium. The review says the quality is poor and calls for well-designed RCTs. The 2024 review that sounds more positive has no risk-of-bias assessment.",
+      "move": "A trial registered in advance, with enough participants, and with anxiety named beforehand as the main outcome."
+    },
+    "form": {
+      "found": "The exact form was tested, and it was the group that produced the null, meaning no effect.",
+      "missing": "Nothing is missing on form. This is the rare case where the no-effect result comes from the product's own preparation. The capsules also carry ~1.5 g of glycine, so even that did not move anxiety.",
+      "move": "Nothing further is needed on form for this outcome."
+    },
+    "dose": {
+      "found": "Under Reading A (treating the label figure as elemental magnesium), the product's dose sits inside the band that produced no effect. The dose was tested and did nothing.",
+      "missing": "Whether a higher elemental dose (400-500 mg) would do anything is untested in healthy adults.",
+      "move": "A trial that compares several doses for anxiety."
+    },
+    "summary": {
+      "sentence": "On this form, anxiety moved 0.0 (CI -0.4 to 0.4) and stress moved 0.4 (CI -1.7 to 2.5) compared with placebo, the CI being the range the true value probably sits in. The 18-study review calls the wider field poor quality.",
+      "absolute_effect": "After 4 weeks on this exact form, anxiety changed by 0.0 points on the PHQ-4 anxiety subscale (95% CI -0.4 to 0.4) and stress by 0.4 points on the 40-point Perceived Stress Scale (95% CI -1.7 to 2.5). The CI is the range the true value probably sits in.",
+      "clinically_meaningful": "No. The confidence interval rules out even a 0.5-point change on a 6-point anxiety subscale, far below any anxiety response threshold. No MCID (the smallest change that matters to a patient) was set in advance, so the judgement rests on the interval being narrower than the smallest plausible meaningful change.",
+      "strongest_doubt": "The participants had little anxiety to lose, so the null may be a floor effect. Separately, 4 of 8 trials in mildly anxious groups did report a benefit (Boyle 2017), which is why this reads 'not shown' rather than 'disproven'."
+    }
+  },
+  "Diagnosed anxiety disorder||Adults with a diagnosed anxiety disorder": {
+    "effect": {
+      "found": "Nothing was found. There are zero randomised trials of magnesium on its own in diagnosed anxiety disorders.",
+      "missing": "Everything is missing. Stretching the results from mildly anxious volunteers to a clinical diagnosis is not supported.",
+      "move": "One RCT (randomised controlled trial) in people with diagnosed generalised anxiety disorder."
+    },
+    "evidence": {
+      "found": "A systematic review (a full search for the trials on a question) looked for exactly this and did not find it, which is a stronger statement than nobody having searched.",
+      "missing": "Any trial at all. The one nearby trial tested a combination product containing three herbs.",
+      "move": "A trial registered in advance that adds magnesium on top of stable treatment in patients with GAD (generalised anxiety disorder)."
+    },
+    "form": {
+      "found": "Nothing on any form in this population.",
+      "missing": "Everything is missing.",
+      "move": "See above."
+    },
+    "dose": {
+      "found": "Nothing was found.",
+      "missing": "No dose has been tested in this population.",
+      "move": "See above."
+    },
+    "summary": {
+      "sentence": "No trial gave magnesium on its own to people with a diagnosed anxiety disorder. The 18-study review found only mildly anxious samples, PMS (premenstrual syndrome) samples and samples of women after childbirth.",
+      "absolute_effect": "No effect estimate is available.",
+      "clinically_meaningful": "Unknown. No effect estimate exists in this population.",
+      "strongest_doubt": "Nothing here argues that magnesium cannot help clinical anxiety. The honest statement is that it has never been tested, and combination products are the only positive signal."
+    }
+  },
+  "Night leg cramps (age 50+)||Adults 50+ with idiopathic night cramps": {
+    "effect": {
+      "found": "The absence of an effect was measured well: 0.18 fewer cramps a week. The high-certainty responder analysis, which counts how many people improved, puts the chance of a 25% improvement at 1.04 times placebo.",
+      "missing": "Nothing important. The confidence interval (the range the true value probably sits in) is narrow enough to exclude the benefit people buy magnesium for. A 2026 independent trial repeated the no-effect result at this product's elemental dose.",
+      "move": "Nothing would rescue a benefit here short of a large trial on this exact chelate, the bound form of magnesium in the product."
+    },
+    "evidence": {
+      "found": "A Cochrane review (an independent evidence review group) obtained participant-level data for 4 trials, including one unpublished. There is also a 2026 meta-analysis that repeats the no-effect result (-0.42 cramps per week), two RCTs published after the Cochrane review, and a 2026 cohort study where supplement users had MORE cramps.",
+      "missing": "Bisglycinate specifically has never been tested in this population.",
+      "move": "An RCT with 200+ people testing 300 mg elemental bisglycinate for night-time leg cramps."
+    },
+    "form": {
+      "found": "Four different magnesium salts have been tested and all failed. The active part in all of them is elemental magnesium.",
+      "missing": "A trial on this specific form. The only clearly positive cramp trial used a branded magnesium oxide monohydrate and was funded by its manufacturer (PMID 34719399, that paper's reference number). That makes the positive signal less reliable, but it is not a reason to doubt the no-effect result.",
+      "move": "An independent repeat of the magnesium oxide monohydrate result, and any bisglycinate trial."
+    },
+    "dose": {
+      "found": "The product's elemental dose sits inside the range that has been tested and failed. This is a case of tested and did not work, not never tested.",
+      "missing": "Nothing meaningful. Higher doses were also null, and they cause diarrhoea in 11-37% of users.",
+      "move": "Nothing."
+    },
+    "summary": {
+      "sentence": "Cochrane found -0.18 cramps per week (CI -0.84 to 0.49, the range the true value probably sits in) and no gain in how many people improved (RR 1.04, the relative risk compared with placebo). A 2026 independent trial at 250 mg elemental also found nothing.",
+      "absolute_effect": "Cochrane reports -0.18 cramps per week versus placebo at 4 weeks (95% CI -0.84 to +0.49). The 2026 meta-analysis reports -0.42 cramps per week (95% CI -1.15 to +0.31). For the share of people whose cramps fell by 25%, the relative risk is 1.04 (95% CI 0.84 to 1.29).",
+      "clinically_meaningful": "No. The high-certainty responder analysis excludes the >=25% cut in cramp rate that Cochrane set in advance as the clinically relevant threshold. The authors state the effect is unlikely to be clinically meaningful.",
+      "strongest_doubt": "One 175-person trial of a branded magnesium oxide monohydrate did beat placebo (PMID 34719399), but it was funded by that product's manufacturer and registered only after the fact. No independent group has reproduced it."
+    }
+  },
+  "Leg cramps in pregnancy||Pregnant women with 2+ leg cramps a week": {
+    "effect": {
+      "found": "In the only trial using this exact chelate at this exact elemental dose, 86% of women halved how often they cramped versus 60.5%. A 2026 meta-analysis of 4 pregnancy trials pools to a relative risk (RR) of 1.35 (1.05-1.74).",
+      "missing": "An earlier meta-analysis that pooled cramp frequency as a continuous number found nothing (-0.47 per week, CI -1.14 to 0.20, the range the true value probably sits in). Cochrane rates every pregnancy trial at high risk of bias, with results that do not agree across measures and time points.",
+      "move": "One registered trial in pregnancy with enough participants (n>=300) and a definition of who counts as improved stated beforehand."
+    },
+    "evidence": {
+      "found": "Two Cochrane reviews and two meta-analyses have looked at this question since 2020. Finding the studies is not the problem here.",
+      "missing": "They disagree. Cochrane calls the pregnancy trials high risk of bias, while the 2026 review calls the key trial low risk. One pooled analysis is positive on how many people improved and another shows no effect on average frequency. Certainty stays low to very low, because the trials are small and their measures do not match.",
+      "move": "A single trial big enough to settle it, using cramp diaries and describing how people were kept blinded."
+    },
+    "form": {
+      "found": "The exact form was tested. Outside the sleep trial, this is the only population where magnesium bisglycinate itself was the treatment being tested.",
+      "missing": "Independent replication on this form. One trial that two review teams grade differently for bias is not a verdict on the form.",
+      "move": "An independent group repeating the Supakatisant 2015 trial."
+    },
+    "dose": {
+      "found": "The elemental dose matches exactly (300 mg = 12.3 mmol). It was checked against a second source because the trial's own full text was behind a paywall.",
+      "missing": "Nothing on dose. Pregnancy is a distinct population, and the note adds that pregnant women should follow their clinician, not a label.",
+      "move": "Nothing on dose."
+    },
+    "summary": {
+      "sentence": "On this exact form at 300 mg elemental, one 86-woman trial and a 2026 pooled relative risk of 1.35 (CI 1.05-1.74, the range the true value probably sits in) favour it. An earlier pooled analysis found nothing.",
+      "absolute_effect": "Across 4 trials (N approx 364), the pooled relative risk for reduced cramp frequency is 1.35 (95% CI 1.05 to 1.74). In the exact-form trial, 86.0% versus 60.5% halved how often they cramped, a 25-point absolute gain, which is about 4 women treated for each extra person who improves.",
+      "clinically_meaningful": "Unknown. Halving cramp frequency is the threshold the trials themselves used and would matter to a patient, and the 2026 pooled relative risk excludes 1.0, the value meaning no difference. But the competing pooled analysis of mean frequency includes zero, and all certainty ratings are low or very low.",
+      "strongest_doubt": "Cochrane grades the same trial HIGH risk of bias and refuses to pool it. The meta-analysis that pooled mean cramp frequency instead of responders found nothing (-0.47 per week, CI -1.14 to 0.20). Two teams reading the same papers reach opposite conclusions."
+    }
+  },
+  "Raising a low magnesium level||Adults with low or borderline magnesium": {
+    "effect": {
+      "found": "Oral magnesium does what it is supposed to do: plasma magnesium rose +0.056 mmol/L over 4 months in people who started below 0.80 mmol/L. The confidence interval (the range the true value probably sits in) stays well clear of zero.",
+      "missing": "This is a blood number, not a symptom. No trial shows that correcting a borderline level makes a person without symptoms feel different, and that missing link is the whole reason this row is capped.",
+      "move": "A trial that enrols people by their measured magnesium status and reports symptoms such as sleep, cramps and fatigue, not just the blood level."
+    },
+    "evidence": {
+      "found": "One clean 4-month RCT (randomised controlled trial) in a genuinely deficient population. A 2026 clinical review also names the same dose range as first-line care.",
+      "missing": "Only 2 RCTs were verified live for this outcome. Dozens more report serum magnesium (the blood level) as a secondary endpoint and were not individually checked. Serum magnesium is also a poor marker of body stores (~1% of the body's magnesium sits outside the cells), and a 2026 narrative review is titled 'Why Serum Magnesium Fails'.",
+      "move": "A top-up trial of this chelate measuring magnesium inside red blood cells, or using a magnesium-retention test, as its endpoint."
+    },
+    "form": {
+      "found": "A 2026 clinical review lists bisglycinate as a first-line organic salt with high bioavailability (how much of it the body absorbs) and minimal stomach upset.",
+      "missing": "That listing is expert judgement, not a trial. The one direct human comparison found no significant rise in blood magnesium from bisglycinate at all, and it was funded by the maker of the comparator product, so the original treats it as a warning rather than a refutation.",
+      "move": "An independent crossover study of bisglycinate versus citrate at the same elemental dose, measuring absorption and retention, with each person taking both."
+    },
+    "dose": {
+      "found": "Under Reading A (treating the label figure as elemental magnesium), 300 mg elemental sits inside the guideline range (200-400 mg) and under the supplemental upper limit of 350 mg/day.",
+      "missing": "Under Reading B (treating the label figure as the whole compound), the product delivers ~42 mg elemental and cannot correct a deficiency at all. This single ambiguity on the label decides the row.",
+      "move": "A label that states the elemental magnesium content explicitly."
+    },
+    "summary": {
+      "sentence": "360 mg/day of magnesium oxide raised plasma magnesium by 0.056 mmol/L in deficient older people. The product's 300 mg elemental sits inside the 200-400 mg range clinicians use to top people back up.",
+      "absolute_effect": "Plasma magnesium rose +0.056 mmol/L (95% CI 0.028 to 0.085, the range the true value probably sits in) after 16 weeks at 360 mg elemental a day, in adults starting at or below 0.80 mmol/L.",
+      "clinically_meaningful": "Unknown. The rise is enough to lift many people over the 0.80 mmol/L cut-off for hypomagnesaemia (low blood magnesium) used in that trial and in the 2026 clinical update. But no trial has shown that crossing it changes how a person without symptoms feels.",
+      "strongest_doubt": "It used magnesium oxide, not this chelate, and the only human study to test bisglycinate's absorption directly found no rise in blood magnesium at all. So the 'highly absorbable' selling point is unproven in humans."
+    }
+  },
+  "Migraine prevention||Adults with episodic migraine": {
+    "effect": {
+      "found": "A guideline body calls magnesium probably effective. In the pivotal trial, attack frequency fell by 42% versus 16% over 12 weeks.",
+      "missing": "A multicentre trial from the same era at a similar dose found nothing and was stopped early. The 2019 meta-analysis of severity cannot exclude no effect. No trial reports the absolute reduction in monthly migraine days with a confidence interval at this product's dose.",
+      "move": "A modern RCT registered in advance, with monthly migraine days as the main endpoint."
+    },
+    "evidence": {
+      "found": "Five placebo-controlled RCTs and three meta-analyses exist, and a Cochrane review is currently in progress.",
+      "missing": "The trials date from 1996-2008, are small (the largest had n=81) and disagree with each other. The newest Cochrane record is only a protocol, so there is no current high-quality synthesis. Meta-analyses that report a benefit include trials with inadequate randomisation.",
+      "move": "The completed Cochrane review (record CD016307) and one modern trial with enough participants."
+    },
+    "form": {
+      "found": "Nothing on this form. Every trial used dicitrate, citrate or aspartate hydrochloride.",
+      "missing": "Any bisglycinate migraine trial. Carrying the results across assumes only elemental magnesium matters, which is plausible but untested for this outcome.",
+      "move": "A trial of a chelated form at 600 mg elemental."
+    },
+    "dose": {
+      "found": "Under Reading A (treating the label figure as elemental magnesium), this product provides half the elemental dose used in the positive trials.",
+      "missing": "No migraine trial has tested 300 mg elemental, so the product's dose is an extension downward from where the benefit was seen. The effective dose caused diarrhoea in 19-46% of participants.",
+      "move": "A trial comparing 300 vs 600 mg elemental."
+    },
+    "summary": {
+      "sentence": "The Level B rating of 'probably effective' rests on 600 mg/day of citrate salts, where attacks fell -42% versus -16%. This product's 300 mg elemental is half that, and one trial found nothing.",
+      "absolute_effect": "At 600 mg elemental a day, attack frequency fell 41.6% from baseline versus 15.8% over 12 weeks, and no confidence interval for the difference between groups was published. The 2025 dose-response meta-analysis reports -1.66 monthly migraine days, without a confidence interval in the abstract.",
+      "clinically_meaningful": "Unknown. The usual bar in this field is a 50% responder rate or >=1.5 fewer monthly migraine days, the standard threshold in prevention trials. The pivotal trial reports neither with a confidence interval, and no trial tested this product's dose.",
+      "strongest_doubt": "A multicentre trial from the same year at a similar dose was stopped early for futility, meaning it was unlikely to show anything. The 2019 meta-analysis's severity estimate cannot exclude no effect. The only Cochrane record is a 2025 protocol, a plan rather than a finished review."
+    }
+  },
+  "Constipation relief||Adults with chronic constipation": {
+    "effect": {
+      "found": "Magnesium oxide produced a large, clean effect: 68.3% versus 11.7% reported overall improvement. That equalled senna, a herbal laxative, with better quality-of-life scores.",
+      "missing": "That effect belongs to a poorly absorbed salt at roughly three times this product's elemental dose. Nothing shows that an absorbed chelate at 300 mg does the same. If anything, the exact-form trial reported fewer gut side effects than placebo.",
+      "move": "A placebo-controlled trial of magnesium bisglycinate at 300 mg elemental, with spontaneous bowel movements as the main endpoint."
+    },
+    "evidence": {
+      "found": "One properly randomised, double-blind, placebo-controlled trial in adults, which its own authors call the first of its kind. Magnesium oxide is also widely used in clinics as an osmotic laxative, meaning it works by pulling water into the bowel.",
+      "missing": "Only one such trial exists, at a single centre with 93% women, and only its abstract could be read, so risk of bias could not be assessed. There is no systematic review of oral magnesium salts versus placebo for chronic constipation.",
+      "move": "A meta-analysis, or a second placebo-controlled trial, ideally comparing the salts directly against each other."
+    },
+    "form": {
+      "found": "Nothing transferable. The tested form is magnesium oxide, and it works by holding water in the gut.",
+      "missing": "The chelate's whole design point, absorption, works against the laxative mechanism. So this is not a form mismatch that can be waved through as plausibly equivalent.",
+      "move": "A direct comparison of bisglycinate versus oxide on how often people pass stools, at the same elemental dose."
+    },
+    "dose": {
+      "found": "Nothing at 300 mg elemental. The tested dose is ~900 mg elemental.",
+      "missing": "300 mg elemental is below the US supplemental upper limit precisely because it is below the dose at which magnesium reliably loosens stools. The dose that works as a laxative is also the dose that causes diarrhoea by design.",
+      "move": "A trial comparing several doses, measuring bowel movements."
+    },
+    "summary": {
+      "sentence": "The laxative evidence comes from magnesium oxide at 1.5 g/day (~900 mg elemental), where 68% improved versus 12%. An absorbed chelate at 300 mg is a different thing entirely.",
+      "absolute_effect": "After 28 days on magnesium oxide 1.5 g/day (~900 mg elemental), 68.3% of patients reported overall improvement versus 11.7%, p<0.0001 (a result very unlikely to be chance). That is a ~57 percentage-point absolute gain.",
+      "clinically_meaningful": "Yes for magnesium oxide at that dose. The endpoint was patients' own reports of overall improvement plus spontaneous bowel movements, the thresholds used in constipation drug trials. For this product it is unknown, because it was never tested.",
+      "strongest_doubt": "It tells you nothing about this product. The salt is different, the elemental dose is ~3x higher, and the mechanism of staying in the bowel is exactly what a bisglycinate chelate is formulated to avoid."
+    }
+  }
+}

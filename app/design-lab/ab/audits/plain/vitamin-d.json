@@ -1,0 +1,338 @@
+{
+  "Raising a low blood level||Adults with 25(OH)D below 20 ng/mL (50 nmol/L)": {
+    "effect": {
+      "found": "At this exact dose the blood vitamin D level rose by about +12 ng/mL (nanograms per millilitre, the unit used for this blood test). Three separate settings showed it: deficient kidney-stone formers, US adults with normal levels in the VITAL trial, and a controlled dosing study.",
+      "missing": "Nobody has shown that the rise itself makes a deficient person feel better or function better. The biomarker, a lab measurement standing in for health, is the endpoint here.",
+      "move": "What would move this: a trial in people whose 25(OH)D (the blood test for vitamin D) is under 12 ng/mL and who have symptoms such as bone pain or weakness. It would report the change in symptoms alongside the blood level."
+    },
+    "evidence": {
+      "found": "There is randomised dose-response data, meaning different doses compared head to head, plus a 25,871-person trial that measured what this same dose does to the blood level. The rise per unit of dose is consistent across studies.",
+      "missing": "How much your level rises depends on body weight and on your starting level. Obese women sat 17.8 nmol/L lower on the same dose (PMID 22431675, the id of that study in the PubMed database). One person's own response is not guaranteed.",
+      "move": "What would move this: a randomised dose-response trial, where people are assigned doses by chance, limited to people with 25(OH)D under 12 ng/mL, including a 2000 IU/day arm, and reporting the response by BMI (body mass index, weight for height)."
+    },
+    "form": {
+      "found": "Cholecalciferol, which is vitamin D3 and the form in this product, is the exact form tested in every trial cited here.",
+      "missing": "Nothing that matters. D2, a different form of vitamin D, raises 25(OH)D less well, but D2 is not what this product contains.",
+      "move": "Nothing is needed here."
+    },
+    "dose": {
+      "found": "2000 IU/day has been tested directly, where IU means international units, the standard measure for vitamin D. It sits in the middle of the tested range and is enough to push nearly everyone past 20 ng/mL.",
+      "missing": "It is not enough to guarantee reaching 30 ng/mL or above if you start from a very low level. In Gallagher's dose-response curve that took 3200+ IU/day.",
+      "move": "What would move this: a trial that reports what share of people cross 20 and 30 ng/mL on 2000 IU/day, broken down by starting level and by BMI (body mass index)."
+    },
+    "summary": {
+      "sentence": "2000 IU/day reliably raises 25(OH)D (the blood test for vitamin D) by about 12 ng/mL (30 nmol/L) in 8-12 weeks. That lifts most deficient people over the 20 ng/mL line.",
+      "absolute_effect": "In 62 people (n=62) starting from a 10-20 ng/mL baseline, 12 weeks at 2000 IU/day raised the level by +12.5 ng/mL. The 95% CI (the range the true value probably sits in) was not reported, and p<0.001 means a result this size would be very unlikely by chance alone. In VITAL the same dose gave +12.0 ng/mL at 2 years (29.2 -> 41.2 ng/mL) against -0.6 on placebo, a dummy pill.",
+      "clinically_meaningful": "Yes for the blood level itself: a typical deficient person moves from about 15 to about 27 ng/mL, past the IOM (Institute of Medicine) sufficiency threshold of 20 ng/mL (50 nmol/L). That threshold comes from IOM 2011, reported in Ross 2011, PMID 21118827. No benefit a person can feel follows automatically, which is exactly why the surrogate flag, meaning a stand-in measure rather than a health outcome, is raised.",
+      "strongest_doubt": "This row is about a blood number. The same 2000 IU/day that reliably fixes the number failed to change fractures, falls, infections, mood or death in trials of 18,000-25,871 people, so 'corrected the level' must not be read as 'delivered a health benefit'. The trial at this dose in deficient people is also small (n=62) and was run in kidney-stone formers, where 24-h urine calcium rose."
+    }
+  },
+  "Treating rickets or osteomalacia||Rickets/osteomalacia from vitamin D deficiency": {
+    "effect": {
+      "found": "Topping the level back up heals rickets and osteomalacia caused by a lack of vitamin D, both diseases of soft, poorly mineralised bone. This is the one place where vitamin D is a treatment rather than a hopeful preventive.",
+      "missing": "No modern randomised trial of treating diet-related osteomalacia in adults exists; the audit searched for one and says so in its note. The healing evidence is guideline consensus, patient series and two trials from 1973 and 1984.",
+      "move": "What would move this: a randomised trial in people whose osteomalacia is confirmed by biopsy or by blood tests, comparing 2000 IU/day with the guideline dose, and measuring bone pain, mobility and healing."
+    },
+    "evidence": {
+      "found": "There is an international consensus from 2016, agreed by 11 organisations and built with GRADE (a formal system for rating how certain evidence is), that defines diagnosis and treatment. A practical management review reprints its dose table, and the audit read that in full text.",
+      "missing": "There is no trial dedicated to treating osteomalacia. A search of the Europe PMC literature database for osteomalacia in the title plus randomised controlled trial returns 5 records, and none is a modern treatment trial for diet-related osteomalacia: two are 1980s trials in people with mild osteomalacia, one is a 1973 trial in people on anti-seizure drugs, one is a 1965 survey after stomach surgery, and one is a 2010 anti-seizure prevention study. Recent osteomalacia research is dominated by the tumour-caused kind.",
+      "move": "What would move this: any randomised comparison of top-up regimens in confirmed diet-related osteomalacia that measures outcomes patients care about."
+    },
+    "form": {
+      "found": "The consensus prefers D3, including for high-dose stoss therapy, which is a single very large dose, because D3 stays in the body longer.",
+      "missing": "Nothing that matters here.",
+      "move": "Nothing is needed here."
+    },
+    "dose": {
+      "found": "2000 IU/day is the consensus treatment dose, but only for babies under 12 months old.",
+      "missing": "From 12 months through adulthood the recommended treatment dose is 3000-6000 IU/day, so 2000 IU/day is only 33-67% of it. For active disease this product gives too little.",
+      "move": "What would move this: a dose-comparison trial of 2000 against 3000-6000 IU/day in confirmed rickets or osteomalacia over 12 weeks, with healing as the endpoint."
+    },
+    "summary": {
+      "sentence": "Vitamin D cures it, but the guideline treatment dose is 2000 IU/day only under age 1. From 12 months up it is 3000-6000 IU/day for 12+ weeks.",
+      "absolute_effect": "Randomised data cannot give this as a risk difference. The nearest measured numbers are these: unmineralised bone, called osteoid, returned to normal volume within 3 months in most of 41 treated elderly patients (1984), and bone mineral content rose +4% against 0% on placebo after 3 months of 2000 IU/day of D2 in osteomalacia caused by anti-seizure drugs (1973).",
+      "clinically_meaningful": "Yes. It heals a disease of poor bone mineralisation that causes bone pain, deformity, seizures from low calcium, and fractures. No formal MCID exists, meaning no agreed minimal clinically important difference, the smallest change that matters to a patient, so the threshold used here is the consensus definition of healing on blood tests and X-rays (PMID 26745253 via PMC8061584).",
+      "strongest_doubt": "There is no modern randomised trial of vitamin D as a treatment for diet-related osteomalacia in adults; the audit searched and found none. And at 2000 IU/day this product sits below the consensus treatment dose for everyone older than 12 months. So 'vitamin D treats osteomalacia' is not the same claim as 'this bottle treats osteomalacia'."
+    }
+  },
+  "Preventing fractures (D alone)||Community adults 50+, not deficient, no calcium": {
+    "effect": {
+      "found": "A tightly measured no-difference result. Over 5.3 years, 769/12,927 people on vitamin D had a first fracture against 782/12,944 on placebo (5.9% vs 6.0%). Hip fractures were 57 against 56.",
+      "missing": "Nothing important is missing. The confidence interval, the range the true value probably sits in, rules out anything better than roughly an 11% relative reduction. Bolland 2018 also ran a trial sequential analysis, a running total that says when more trials cannot change the answer, and it crossed the futility line for even a 5% reduction.",
+      "move": "Nothing realistic would move it. For adults living at home who are not deficient, this question is answered."
+    },
+    "evidence": {
+      "found": "The largest daily-dose trial ever run (n=25,871, with fractures checked centrally, over 5.3 y) plus two separate reviews that agree. The counting is deduplicated: VITAL stands alone, and the 15 vitamin-D-alone trials sit pooled inside Cochrane 2014 and Bolland 2018 rather than counted twice.",
+      "missing": "Small positive trials do exist here, mostly older, smaller, often giving calcium as well or run inside institutions. They do not weaken the no-effect finding: they are the kind of study a large, precise trial supersedes, and Bolland's running analysis shows the accumulated data have passed the point of futility. That is why consistency is still marked supported despite the scattered positive reports.",
+      "move": "Nothing. A new 25,000-person trial at this dose would be hard to justify ethically and could not change the pooled estimate much."
+    },
+    "form": {
+      "found": "Cholecalciferol, which is the exact form and the daily schedule VITAL used.",
+      "missing": "Nothing.",
+      "move": "Nothing is needed here."
+    },
+    "dose": {
+      "found": "2000 IU/day is the tested dose. It was also checked within groups split by starting blood level, and showed no effect in any of them.",
+      "missing": "Nothing. Higher doses, up to 4000 IU/day, and bolus regimens, meaning one big dose now and then, do no better, and bolus dosing has raised fracture and fall risk in some trials.",
+      "move": "Nothing is needed here."
+    },
+    "summary": {
+      "sentence": "VITAL gave 25,871 adults this exact dose for 5.3 years. Total fractures came out at HR 0.98 (0.89-1.08) and hip fractures at 1.01, where a hazard ratio compares how often fractures happened in each group. There was no benefit at any starting blood level.",
+      "absolute_effect": "5.9% of people on vitamin D against 6.0% on placebo had a first fracture over 5.3 years (769/12,927 vs 782/12,944). That is an absolute risk difference of about -0.1 percentage points, with a 95% CI, the range the true value probably sits in, running from -0.7 to +0.5 percentage points. Hip fractures were 57 against 56.",
+      "clinically_meaningful": "No. The confidence interval rules out anything better than about an 11% relative reduction, and Bolland 2018's running trial sequential analysis crossed the futility line for relative reductions of 5-15%. Those futility lines, set in advance at 15%, 10%, 7.5% and 5%, come from PMID 30293909.",
+      "strongest_doubt": "VITAL enrolled generally healthy adults who were not picked for being deficient: the average starting level was 30.7 ng/mL and only 2.4% were below 12 ng/mL, so profoundly deficient people are thinly represented. The subgroups planned in advance at under 12, under 20 and under 30 ng/mL still showed no change in the effect, and only about 10% had already had a fragility fracture."
+    }
+  },
+  "Fractures with calcium, frail 70+||Frail/care-home elderly on D + 1200 mg calcium": {
+    "effect": {
+      "found": "A real but small benefit, concentrated where fracture risk is already high: 9 fewer hip fractures per 1000 people per year in institutions, and 1 per 1000 per year among people living at home.",
+      "missing": "The benefit belongs to the combination of vitamin D with calcium. Cochrane's own conclusion is that vitamin D alone is unlikely to prevent fractures at the doses tested.",
+      "move": "What would move this: a trial of 2000 IU/day without calcium in care-home residents. The trials that gave both supplements cannot answer what this product does."
+    },
+    "evidence": {
+      "found": "Nine randomised trials with 49,853 participants, rated high quality under GRADE, a formal system for rating certainty, for hip fracture. The anchor is a 3270-woman trial in institutionalised women aged 84.",
+      "missing": "These trials cannot separate whether the calcium, the vitamin D or the pair is doing the work. Taking calcium alongside also carried harms: kidney disease RR 1.16 (1.02-1.33) and kidney stones RR 1.17 (1.02-1.34), where RR is a risk ratio comparing the two groups and the bracketed range is where the true value probably sits.",
+      "move": "What would move this: a three-arm trial giving vitamin D alone, calcium alone, or both, in frail older people, with hip fracture as the endpoint."
+    },
+    "form": {
+      "found": "D3, the same molecule as in this product.",
+      "missing": "What was tested was a vitamin D plus calcium regimen, not a lone D3 capsule.",
+      "move": "Nothing is needed on form. The mismatch is the missing calcium."
+    },
+    "dose": {
+      "found": "The dosing that worked was 700-800 IU/day of vitamin D together with 1000-1200 mg/day of calcium.",
+      "missing": "This product gives 2.5x the vitamin D and no calcium at all, which is a different regimen from the one that worked. In the trials of vitamin D on its own, more vitamin D did not help.",
+      "move": "What would move this: a head-to-head trial of 800 IU plus calcium against 2000 IU alone in older people at high risk."
+    },
+    "summary": {
+      "sentence": "800 IU plus 1200 mg of calcium cut hip fractures by about 16% (RR 0.84, a risk ratio comparing the two groups), which is 9 fewer per 1000 per year in care homes. That regimen is not 2000 IU alone.",
+      "absolute_effect": "With calcium, hip fracture RR 0.84 (0.74-0.96). In absolute terms that is about 1 fewer hip fracture per 1000 older adults per year among people living at home (95% CI 0 to 2, the range the true value probably sits in) and 9 fewer per 1000 per year in institutions (95% CI 2 to 14).",
+      "clinically_meaningful": "Yes in institutions, where 9 hip fractures prevented per 1000 residents per year is large in absolute terms. Essentially not for people living at home, at 1 per 1000 per year. The threshold comes from the absolute risk differences Cochrane 2014 itself reports for low-risk and high-risk groups (PMID 24729336).",
+      "strongest_doubt": "This is not the product's regimen. Every trial in this row also gave 1000-1200 mg/day of calcium, the USPSTF (US Preventive Services Task Force) found no fracture benefit for the same combination in adults living at home, and Bolland 2018's pooled analysis, which included the calcium trials, found no fracture benefit at all. The signal is confined to frail, institutionalised, calcium-deficient elderly people."
+    }
+  },
+  "Preventing falls||Community adults 65+, incl. those at risk of falls": {
+    "effect": {
+      "found": "A tightly measured no-difference at exactly this dose: 9.8% against 9.4% of people had 2+ falls over 5 years. A pooled analysis of 37 trials found nothing either.",
+      "missing": "Nothing is missing on the benefit side. What is there instead is a harm signal at 1000 IU/day and above in a trial built to compare doses.",
+      "move": "Nothing would establish a benefit. The useful trial would be one designed to test the harm signal: serious falls at 2000 against 400-800 IU/day."
+    },
+    "evidence": {
+      "found": "A 25,871-person trial at this dose, a purpose-built trial comparing 4 doses and adapting as results came in, a meta-analysis pooling 37 trials, and a national task-force recommendation against use.",
+      "missing": "Trials in care-home residents with severe deficiency are older and were often bundled with calcium. The deficient, institutional group is not answered as cleanly as people living at home.",
+      "move": "What would move this: a placebo-controlled trial in care-home residents whose 25(OH)D (the blood test for vitamin D) is under 30 nmol/L, using vitamin D alone, with falls as the main endpoint."
+    },
+    "form": {
+      "found": "D3 taken daily, the exact form and schedule of both VITAL and STURDY.",
+      "missing": "Nothing.",
+      "move": "Nothing is needed here."
+    },
+    "dose": {
+      "found": "2000 IU/day was one of STURDY's four randomly assigned arms and was VITAL's dose, and both found no effect. STURDY's dose-finding stage picked 1000 IU/day over 2000 and 4000 because falls happened more often at the higher doses.",
+      "missing": "Whether the higher-dose harm signal is actually caused by the vitamin D is unknown. STURDY's comparison arm was 200 IU/day rather than a placebo, and the safety findings came out of multiple secondary analyses.",
+      "move": "What would move this: a placebo-controlled trial large enough to measure falls that cause injury at 2000 IU/day."
+    },
+    "summary": {
+      "sentence": "At this exact dose VITAL found 2+ falls at OR 0.97 (0.90-1.05), where an odds ratio compares the odds in each group and the bracketed range is where the true value probably sits. The USPSTF recommends against vitamin D for falls, and 1000-4000 IU may raise serious falls.",
+      "absolute_effect": "9.8% on vitamin D against 9.4% on placebo, out of 25,871 adults, had 2 or more falls over 5 years. That is a 0.4 percentage-point excess, OR 0.97 (0.90-1.05). Pooled across 37 trials the falls RR was 0.97 (0.93-1.02).",
+      "clinically_meaningful": "No. Bolland 2018 set futility boundaries in advance at a 5-15% relative reduction and the data crossed them, so the data exclude even a 7.5% relative reduction in falls (threshold source: PMID 30293909).",
+      "strongest_doubt": "The live question is harm, not benefit. STURDY saw more serious falls and more fall hospitalisations at 1000-4000 IU/day than at 200 IU/day, though its comparison arm was low-dose vitamin D rather than placebo and those findings came from secondary analyses."
+    }
+  },
+  "Colds and flu, general adults||General population, mostly vitamin D replete": {
+    "effect": {
+      "found": "At most a sliver. In the 2021 pooled analysis 61.3% against 62.3% of people had at least one infection, about 1 percentage point apart, an NNT of roughly 100, meaning about that many people treated for one to benefit. In the updated analysis the confidence interval now touches 1.00, which is no effect at all.",
+      "missing": "Any benefit at this specific dose. The three trials that used 2000 IU/day, two of them large, found nothing.",
+      "move": "What would move this: a trial randomly assigning 2000 IU/day or placebo in a deficient population, with laboratory-confirmed ARI (acute respiratory infection) as the main endpoint. See the next row."
+    },
+    "evidence": {
+      "found": "40 double-blind randomised trials with 61,589 participants, pooled by the same research group across three cycles, once using each participant's own data and once using the trial summaries. Most of the trials were at low risk of bias.",
+      "missing": "The published positive results are lopsided (Egger p=0.0020, a test for skewed or missing studies), and a separate analysis (PMID 39808630) shows the protective signals came disproportionately from small trials. That inflates the apparent benefit, so it strengthens rather than weakens the no-effect reading. Certainty is not marked down for it; it is recorded here.",
+      "move": "What would move this: pre-registered trials, large enough to answer the question, in people who are profoundly deficient. For adults with normal levels nothing further is needed."
+    },
+    "form": {
+      "found": "D3 taken daily, as used in the trials that ran this dose.",
+      "missing": "Nothing.",
+      "move": "Nothing is needed here."
+    },
+    "dose": {
+      "found": "2000 IU/day was tested directly in three trials: 15,804 adults, 2157 older adults and 703 children. All of them found no effect.",
+      "missing": "Nothing. Higher and lower daily doses and bolus regimens, meaning occasional large doses, have all been tested, and the 2025 subgroup analysis found that dose size did not change the effect.",
+      "move": "Nothing is needed here for this group."
+    },
+    "summary": {
+      "sentence": "An updated pooled analysis of 61,589 people put the odds of an acute respiratory infection (ARI) at 0.94 (0.88-1.00). At this dose, VITAL's odds of an upper respiratory infection (URI) were 0.96 (0.86-1.06). At best that spares about 1 person in 100.",
+      "absolute_effect": "In the 2021 pooled analysis 61.3% against 62.3% of participants had at least one ARI, about 1 percentage point in absolute terms, an NNT of roughly 100 per season. In the 2025 update the confidence interval (OR 0.88-1.00) includes no effect at all. At 2000 IU/day in VITAL the odds of a recent URI at one year were OR 0.96 (0.86-1.06).",
+      "clinically_meaningful": "No. Even the most favourable pooled estimate is about one fewer person in a hundred having any infection, and the current confidence interval includes zero effect. The threshold used is a 10% relative reduction in the share of people having >=1 ARI, the scale the pooled analyses themselves report and are powered against (PMID 39993397).",
+      "strongest_doubt": "The central estimate has sat at 0.92-0.94 across three analysis cycles and only lost statistical significance when large no-effect trials were added. A genuine 6% relative reduction cannot be excluded, and the lopsided spread of published results means the true value is more likely nearer 1.00, which is no effect, than further from it."
+    }
+  },
+  "Colds if severely deficient||People with 25(OH)D under 10 ng/mL (25 nmol/L)": {
+    "effect": {
+      "found": "One analysis pooling each participant's own data found a genuinely large signal: adjusted odds ratio 0.30, with a formal test showing the effect really did differ between groups (p for interaction 0.006). It is the strongest subgroup claim anywhere in the vitamin D literature.",
+      "missing": "Nobody has repeated it. The same team's two later, larger analyses using trial-level summaries found that starting blood level did not change the effect, and the largest deficient subgroup at this dose (n=255) is far too small to settle it.",
+      "move": "What would move this: a dedicated randomised trial in people whose 25(OH)D (the blood test for vitamin D) is under 25 nmol/L, assigned by chance to 2000 IU/day or placebo, with acute respiratory infection as the main endpoint."
+    },
+    "evidence": {
+      "found": "Individual participant data, meaning each person's own records rather than trial summaries, from 10,933 participants in 2017, plus trial-level data from 61,589 people split by starting level in 2025. That is unusually strong machinery for a subgroup question.",
+      "missing": "The 2017 result rested on relatively few profoundly deficient participants, and the later analyses used trial-level split data rather than each participant's own records, so a real difference between groups could in principle be diluted. The published data cannot resolve this.",
+      "move": "What would move this: an updated analysis using each participant's own data rather than trial summaries, restricted to people under 25 nmol/L, or the trial described above."
+    },
+    "form": {
+      "found": "Daily D3 is the regimen the 2017 subgroup favoured. Bolus dosing, meaning occasional large doses, showed nothing (p for interaction 0.05).",
+      "missing": "Nothing is missing on form.",
+      "move": "Nothing is needed here."
+    },
+    "dose": {
+      "found": "Daily dosing matches the subgroup where the benefit appeared, but the dose itself is essentially untested in this group.",
+      "missing": "There is no tested effective dose in severely deficient people. The audit marks it unknown rather than guessing.",
+      "move": "What would move this: dose-ranging of 800 against 2000 IU/day in a deficient population, with infections as the endpoint."
+    },
+    "summary": {
+      "sentence": "One 2017 pooled analysis using each participant's own data found a big effect here (adjusted odds ratio 0.30, interaction p=0.006). Two larger updates found none, and 2000 IU/day is barely tested in this group.",
+      "absolute_effect": "It cannot be estimated reliably. If the 2017 subgroup estimate were true (adjusted odds ratio 0.30) the effect would be enormous, roughly 30-40 fewer people per 100 having an infection, and that size is itself a reason for caution. The later analyses are compatible with no effect at all in this group.",
+      "clinically_meaningful": "Unknown. The possible effect would matter a great deal if it is real, but its direction and size are unresolved. No threshold is applied, because there is no stable estimate to compare against.",
+      "strongest_doubt": "The same group's larger 2021 and 2025 analyses, which include those trials plus 50,000 more participants, found that starting vitamin D status did not change the effect. The 2017 deficient group was also small and drawn largely from trials in children in places where deficiency is common."
+    }
+  },
+  "Preventing depression||Adults 50+ with no current depression": {
+    "effect": {
+      "found": "A tightly measured no-difference on both endpoints: 0.4 fewer events per 1000 person-years (HR 0.97, a hazard ratio comparing how often depression appeared in each group) and a mood change 50x smaller than the difference set in advance as meaningful.",
+      "missing": "Nothing is missing for this group. The interval excludes anything better than a 13% relative reduction in new depression.",
+      "move": "Nothing realistic. This is the largest supplement trial for preventing depression ever run."
+    },
+    "evidence": {
+      "found": "One trial, but it covered 18,353 people over 5.3 years at the exact dose, kept 90.5% of them to the end, set its minimal clinically important difference in advance, and was published in JAMA.",
+      "missing": "Independent replication at this scale does not exist, which is why the scoring rule for 'only one randomised trial' fires and caps certainty at 1 despite the trial's size and precision. That cap understates what is known here.",
+      "move": "What would move this: a second large prevention trial, or a pooled analysis of each participant's own data combining VITAL-DEP with the smaller prevention arms of other trials."
+    },
+    "form": {
+      "found": "D3 taken daily, exactly as sold.",
+      "missing": "Nothing.",
+      "move": "Nothing is needed here."
+    },
+    "dose": {
+      "found": "2000 IU/day, the product's dose, taken for 5.3 years.",
+      "missing": "Nothing.",
+      "move": "Nothing is needed here."
+    },
+    "summary": {
+      "sentence": "VITAL-DEP tested this exact dose in 18,353 adults for 5.3 years. Depression came out at HR 0.97 (0.87-1.09), a hazard ratio with the range the true value probably sits in, and mood changed by 0.01 points against a 0.5-point threshold for a difference that matters.",
+      "absolute_effect": "12.9 against 13.3 depression events per 1000 person-years (609 against 625 events over a median 5.3 years), which is about 0.4 fewer events per 1000 person-years, HR 0.97 (0.87-1.09). On mood, the PHQ-8 questionnaire change differed by 0.01 points (95% CI -0.04 to 0.05, the range the true value probably sits in).",
+      "clinically_meaningful": "No. The mood difference is 0.01 points against the trial's pre-specified minimal clinically important difference of 0.5 points on the PHQ-8 mood questionnaire (threshold source: VITAL-DEP, PMID 32749491), and the confidence interval for new depression excludes more than a 13% relative reduction.",
+      "strongest_doubt": "Participants averaged 67.5 years, were largely US volunteers with normal vitamin D levels, and needed no history of depression to take part. The audit could read only the abstract and key points because the JAMA full text is paywalled, so it could not verify whether a low-starting-25(OH)D subgroup was formally tested for a difference in effect."
+    }
+  },
+  "Treating depression||Depressed adults, including those with low levels": {
+    "effect": {
+      "found": "Every reasonably conducted trial in depressed people found no benefit, including three that specifically selected people with low vitamin D. A large pooled analysis of very mixed trials does find a moderate improvement, but at very low certainty.",
+      "missing": "There is no placebo-controlled trial at 2000 IU/day in depressed adults with a measured deficiency. Nobody has run it. The closest are 1200 IU/day and 4000-4800 IU/day, and both found nothing.",
+      "move": "What would move this is that trial: 2000 IU/day against placebo, in adults with MDD (major depressive disorder) and 25(OH)D under 20 ng/mL, using the HDRS or MADRS depression rating scales at 12 weeks, and large enough to answer the question (n>=400)."
+    },
+    "evidence": {
+      "found": "Six treatment trials, counted once each with no double counting, and three of them enrolled people who were both depressed and low in vitamin D. So the answer to 'does the depressed-and-deficient trial exist?' is yes, and it found no effect.",
+      "missing": "Certainty is genuinely low here, unlike the prevention row. The largest trial is 281 people, the most positive small trial has an Expression of Concern published against it, the trials disagree with each other a great deal (heterogeneity 88%), and the positive pooled estimate comes largely from small studies at high risk of bias.",
+      "move": "One pre-registered, placebo-controlled trial that is large enough would settle it."
+    },
+    "form": {
+      "found": "All the trials cited used D3.",
+      "missing": "Nothing.",
+      "move": "Nothing is needed here."
+    },
+    "dose": {
+      "found": "2000 IU/day sits inside the tested span of 1200-4800 IU/day, and it matches the pooled analysis's remark about the >=2000 IU/day subgroup.",
+      "missing": "That subgroup remark has no formal test behind it showing the effect truly differs by dose; it is a hypothesis only. And no trial has used exactly 2000 IU/day against placebo in depressed adults.",
+      "move": "What would move this: a dose-ranging trial of 1000 against 2000 against 4000 IU/day against placebo, in depressed, deficient adults."
+    },
+    "summary": {
+      "sentence": "Trials in depressed people with low vitamin D found no effect (D-Vitaal, n=155 at 1200 IU; DepFuD, n=281). A pooled analysis of 41 trials shows g -0.32, a standardised effect size, at very low certainty.",
+      "absolute_effect": "The best estimate near this dose is no measurable change. D-Vitaal reported no relevant difference between groups on the CES-D depression scale at 12 months. DepFuD's difference on the MADRS scale was Cohen's d -0.09 (-0.32 to 0.14), which is under 1 point on a 0-60 scale. The pooled estimate (g -0.317) would correspond to roughly 2-3 points on a 17-item Hamilton scale if it were real.",
+      "clinically_meaningful": "Unknown. The pooled g -0.32 would be borderline meaningful, about a 3-point change on the 17-item HDRS depression scale against a commonly cited MCID of 3 points, but GRADE certainty is very low and every trial that selected depressed-and-deficient patients found nothing. The threshold comes from converting the standardised-difference scale reported in PMID 35816192 into HDRS points; no trial-defined MCID was available in the records the audit could reach.",
+      "strongest_doubt": "No trial has tested 2000 IU/day against placebo in depressed adults, the largest treatment trial is only 281 people, and a 41-trial pooled analysis does point to benefit. So 'not shown' here is much weaker than the 'shown absent' of the prevention row."
+    }
+  },
+  "Living longer (any cause)||Adults 50+ taking it for several years": {
+    "effect": {
+      "found": "Two very large trials and a pooled analysis of 52 trials all sit on no effect. The interval is tight (RR 0.98, 0.95-1.02, the range the true value probably sits in) and excludes more than a 5% relative reduction.",
+      "missing": "A benefit is what is missing. The older Cochrane estimate for D3 (RR 0.94) has not been reproduced by the trials run since.",
+      "move": "Nothing realistic for the general 50+ population. The question that remains is about age, and it is described below."
+    },
+    "evidence": {
+      "found": "75,454 randomly assigned participants in the 2019 pooled analysis, plus 47,186 in the two very large trials that followed. The trials agreed closely with each other (I2=0, meaning no disagreement detected between them).",
+      "missing": "Adults 75+ are the live question. The Endocrine Society 2024 guideline suggests supplementing at 75+ 'because of its potential to lower the risk of mortality', but no trial randomly assigned only that age band and no formal test has shown the effect differs by age. It stays a hypothesis, so it is not scored as its own row.",
+      "move": "What would move this: a randomised trial restricted to adults 75+, or a published test of age differences using each participant's own data, with death from any cause as the main endpoint."
+    },
+    "form": {
+      "found": "D3 taken daily, the form used both by the older pooled analysis that found a benefit and by the modern trials that found none.",
+      "missing": "Nothing.",
+      "move": "Nothing is needed here."
+    },
+    "dose": {
+      "found": "VITAL tested 2000 IU/day directly over 5.3 years.",
+      "missing": "Daily versus bolus dosing matters elsewhere, as in the cancer death row. For death from any cause both regimens show no effect in the modern trials.",
+      "move": "Nothing is needed here."
+    },
+    "summary": {
+      "sentence": "Death from any cause: VITAL HR 0.99 (0.87-1.12), D-Health 1.04 (0.93-1.18), and a pooled analysis of 52 trials RR 0.98 (0.95-1.02). There is no benefit at this dose.",
+      "absolute_effect": "978 deaths among 25,871 people over 5.3 years, HR 0.99 (0.87-1.12), which is an absolute difference of under 0.2 percentage points in either direction. Across 75,454 participants the pooled RR is 0.98 (0.95-1.02).",
+      "clinically_meaningful": "No. The pooled interval excludes more than a 5% relative reduction in death. The older Cochrane D3 estimate implied an NNT of about 150 over five years, meaning roughly that many people treated for one death avoided, and that estimate has not survived the trials run since (threshold: the 5% relative-reduction bound of the modern pooled confidence interval, PMID 31405892).",
+      "strongest_doubt": "Cochrane 2014 found a 6% reduction in deaths specifically for vitamin D3 (RR 0.94, 0.91-0.98) with its running trial-sequential boundary crossed, and the Endocrine Society still suggests supplementation at 75+ on mortality grounds. So 'no benefit' may be truer for healthy 60-somethings than for the very old, in whom no trial has been run on its own."
+    }
+  },
+  "Dying of cancer||Adults 50+ on daily dosing for 4+ years": {
+    "effect": {
+      "found": "Four independent pooled analyses all show a 6-16% relative reduction in cancer death. The effect is strongest, and statistically significant, when only daily-dosing trials are counted, and daily dosing is what this product is.",
+      "missing": "No trial was designed for this endpoint. Cancer death was a secondary or exploratory outcome everywhere, the number of new cancers did not change, and the most complete analysis using each participant's own data still crosses 1.00, which is no effect.",
+      "move": "What would move this: a randomised trial with cancer death named in advance as the main endpoint, daily dosing, over 5+ years, or a pre-registered update pooling each participant's own data."
+    },
+    "evidence": {
+      "found": "14 randomised trials and 104,727 participants, with each participant's own data available for 90% of them, plus a formal test comparing daily against bolus dosing (p=0.042) rather than a bare subgroup p-value.",
+      "missing": "Many outcomes were tested at once: cancer death is one of many secondary endpoints in these trials, so selective emphasis is a real risk. And the daily-dosing subgroup that reached significance was defined after the fact relative to each trial's own design.",
+      "move": "What would move this: a repeat daily-dosing trial with the endpoint named in advance, ideally measuring 25(OH)D at the start. Kuznia notes that starting levels were measured too rarely to analyse."
+    },
+    "form": {
+      "found": "D3 is the only form these analyses credit. Zhang 2019 found that D3 and D2 differed (p for interaction 0.04).",
+      "missing": "Nothing.",
+      "move": "Nothing is needed here."
+    },
+    "dose": {
+      "found": "Daily dosing at this size is exactly the regimen carrying the signal, and VITAL's 2000 IU/day is one of the trials that make up the pooled result.",
+      "missing": "No dose-response gradient has been shown within the daily trials, so 2000 IU/day sits inside a tested range rather than being an identified best dose.",
+      "move": "What would move this: a dose-comparison trial, for example 800 against 2000 IU/day, with cancer death as the endpoint. It is unlikely to be run."
+    },
+    "summary": {
+      "sentence": "Pooled together, the daily-dosing trials show 12% lower cancer death (RR 0.88, 0.78-0.98; the daily-versus-bolus interaction test gives p=0.042). The fullest analysis using each participant's own data is 0.93 (0.84-1.02).",
+      "absolute_effect": "These figures are derived rather than reported per group: 341 cancer deaths among 25,871 VITAL participants (1.3%) over 5.3 years. An HR of 0.83 corresponds to roughly 2 fewer cancer deaths per 1000 people over 5 years. The pooled daily-dosing RR of 0.88 implies about a 12% relative reduction on a base rate of 1-2% over 5 years.",
+      "clinically_meaningful": "Yes if real, because the outcome is death, but small in absolute terms: about 2 fewer cancer deaths per 1000 people over 5 years. No formal minimal important difference exists for death, so the threshold applied here is that any true reduction in deaths matters. The honest caveat is that the confidence intervals of the two most complete analyses include no effect.",
+      "strongest_doubt": "Cancer death was a secondary endpoint in every contributing trial, the number of new cancers did not move at all (VITAL HR 0.96), and the fullest analyses (overall RR 0.94, and 0.93 using each participant's own data) include no effect. So this is a plausible small benefit, not an established one, and it is the only row in this audit that scores above nothing."
+    }
+  },
+  "Pregnancy outcomes||Pregnant women (any baseline vitamin D level)": {
+    "effect": {
+      "found": "The central estimates favour vitamin D for low birthweight (RR 0.69) and for severe bleeding after birth (RR 0.68), and a major guideline body recommends supplementation in pregnancy.",
+      "missing": "Precision and reliability are missing. The pre-eclampsia estimate rests on 165 women, the result for bleeding after birth comes from a single trial, and the confidence interval for low birthweight still allows harm.",
+      "move": "What would move this: a large, trustworthy randomised trial (n>=2000) of a defined daily dose from early pregnancy, with pre-eclampsia, preterm birth and birthweight named as endpoints in advance."
+    },
+    "evidence": {
+      "found": "A 2024 Cochrane update that explicitly assessed whether the included studies could be trusted. That is why it is the source of record here rather than the older versions, which look larger.",
+      "missing": "Two-thirds of the evidence previously pooled was removed as untrustworthy or as awaiting classification: 20 studies moved out and 34 awaiting assessment. The usable evidence base shrank rather than grew, and all certainty ratings fell to low or very low.",
+      "move": "What would move this: publication of the integrity assessments for the 34 studies awaiting classification, plus one new trial large enough to answer the question."
+    },
+    "form": {
+      "found": "Cholecalciferol is the usual form in the included trials.",
+      "missing": "Nothing that matters on form.",
+      "move": "Nothing is needed here."
+    },
+    "dose": {
+      "found": "2000 IU/day sits inside the doses trialled and above the pregnancy RDA (recommended daily allowance) of 600 IU.",
+      "missing": "No effective dose has been identified, and the Endocrine Society says so explicitly. So the dose here is plausible rather than matched to a proven one.",
+      "move": "What would move this: a dose-defined trial, for example 600 against 2000 IU/day, in pregnancy, with clinical endpoints."
+    },
+    "summary": {
+      "sentence": "Cochrane 2024 pooled 10 trials: vitamin D may cut low birthweight (RR 0.69, 0.44-1.08, a range that includes no effect) and severe bleeding. Pre-eclampsia and preterm birth remain very uncertain.",
+      "absolute_effect": "Low birthweight: RR 0.69 (0.44-1.08) across 371 infants. On a 10% baseline that is about 3 fewer per 100, with an interval that also allows 1 more per 100. Severe bleeding after birth: RR 0.68 (0.51-0.91) in a single 1134-woman trial. Pre-eclampsia: RR 0.53 (0.21-1.33) in 165 women.",
+      "clinically_meaningful": "Unknown. The central estimates would be clearly meaningful if real, roughly a third fewer low-birthweight babies or severe haemorrhages, but Cochrane rates them low certainty and the intervals include no effect. No formal minimal important difference applies to these yes-or-no outcomes beyond 'any real reduction matters' (threshold source: the GRADE ratings in PMID 39077939).",
+      "strongest_doubt": "The evidence base shrank by two-thirds on integrity grounds in 2024, key results come from single trials, and the Endocrine Society's own recommendation admits the optimal dose is unknown. So this row is a guideline-backed 'reasonable to take', not a demonstrated benefit of 2000 IU/day."
+    }
+  }
+}

@@ -46,7 +46,7 @@ function section(data: LiteratureWarnings | null): LiteratureWarningsSection {
     basis: "model_prior",
     reason: data ? null : "no model provider configured",
     data,
-    prompt_version: "literature-warnings-v1.0",
+    prompt_version: "literature-warnings-v1.1",
     model: data ? "fake-text" : null,
     elapsed_s: data ? 0.2 : null,
   };
@@ -76,7 +76,7 @@ function fixture(literatureWarnings: LiteratureWarningsSection) {
       model_prior: { label: "Model knowledge", means: "x", rank: 6 },
     },
     literature_warnings: literatureWarnings,
-    meta: { timing_s: 0.1, stages: {}, provider_configured: true, models: { vision: null, text: "fake-text" }, prompt_versions: { literature_warnings: "literature-warnings-v1.0" } },
+    meta: { timing_s: 0.1, stages: {}, provider_configured: true, models: { vision: null, text: "fake-text" }, prompt_versions: { literature_warnings: "literature-warnings-v1.1" } },
   };
 }
 

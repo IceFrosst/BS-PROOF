@@ -53,7 +53,7 @@ function baseCompany(business_model: BusinessModel): CompanySection {
       status: "ok",
       reason: null,
       basis: "model_prior",
-      prompt_version: "company-v1.1",
+      prompt_version: "company-v1.2",
       model: "fake-text",
       elapsed_s: 0.2,
       data: {
@@ -100,7 +100,7 @@ function fixture(business_model: BusinessModel) {
       model_prior: { label: "Model knowledge", means: "x", rank: 6 },
     },
     company: baseCompany(business_model),
-    meta: { timing_s: 0.1, stages: {}, provider_configured: true, models: { vision: null, text: "fake-text" }, prompt_versions: { company: "company-v1.1" } },
+    meta: { timing_s: 0.1, stages: {}, provider_configured: true, models: { vision: null, text: "fake-text" }, prompt_versions: { company: "company-v1.2" } },
   };
 }
 

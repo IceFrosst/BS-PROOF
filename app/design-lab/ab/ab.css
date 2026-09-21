@@ -74,6 +74,20 @@ body:has(.ab-stage)>.site-header,body:has(.ab-stage)>.site-footer{display:none}
 .ab-bar-detail b{color:var(--ab-ink);font-weight:700;margin-right:4px}
 .ab-srcs a{color:var(--ab-accent);text-decoration:underline;overflow-wrap:anywhere}
 .ab-srcs span{margin-right:6px}
+/* "Exact wording from the audit": the plain rewrite is the body, the audit's own
+ * sentences sit under it. Quiet on purpose — no new colour, no new box, the same
+ * muted small type and hairline the rest of the expansion already uses. */
+.ab-verbatim{border-top:1px solid var(--ab-line);margin-top:4px}
+.ab-verbatim>summary{cursor:pointer;min-height:44px;display:flex;align-items:center;gap:8px;font-size:11px;font-weight:650;color:var(--ab-muted);list-style:none}
+.ab-verbatim>summary::-webkit-details-marker{display:none}
+.ab-verbatim>summary::after{content:"\2304";font-size:17px;line-height:1;margin-top:-6px;transition:transform .18s ease}
+.ab-verbatim[open]>summary::after{transform:rotate(180deg);margin-top:0}
+.ab-verbatim>summary:focus-visible{outline:3px solid #bc8344;outline-offset:2px}
+/* Open, the audit's own sentences read as a quotation of the body above:
+ * indented behind a hairline, one step down in size. */
+.ab-verbatim>:not(summary){margin-left:9px;padding-left:9px;border-left:1px solid var(--ab-line);font-size:11.5px}
+.ab-verbatim>*+*{margin-top:6px}
+.ab-verbatim>:last-child{margin-bottom:8px}
 
 /* Reported estimate, not a grade: a plain interval on a data-derived axis with
  * a no-effect line. No threshold, no anchor, no tier anywhere on it. */

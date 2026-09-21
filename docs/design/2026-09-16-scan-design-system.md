@@ -446,3 +446,181 @@ row derived from `rctCount === 0` across all 30 audit outcomes, no
 multi-ingredient/servings/MLM on any real audit or research pass, the count
 always equal to the number of rows drawn, and an outcome where none of the four
 conditions holds drawing no block.
+
+## 2026-09-16 — the lab card reads in plain language, the audit's wording stays one tap away (preview only)
+
+**What changed.** Every expandable dimension row on the lab A/B card
+(`/design-lab/ab/`) now renders a **plain-language body**: the same facts in
+shop-floor English, jargon explained inline the first time it appears ("1RM (the
+heaviest weight you can lift once)", "I2 = 0% (the trials agreed with each
+other)"). Under it sits one quiet native `<details>` labelled **"Exact wording
+from the audit"** holding the audit's own sentences, verbatim and complete, for
+exactly the same fields. Nothing is removed and nothing is summarised away.
+
+**Where the plain text comes from, and what it is not.** It is
+**model-written**, from sidecar files at `app/design-lab/ab/audits/plain/
+{creatine,vitamin-d,magnesium}.json`, keyed `"<outcome name>||<population>"`
+then dimension then field (plus a `summary` group for the reported-effect
+lines). A typed loader, `app/design-lab/ab/plain-language.ts`, validates each
+file at module load (unknown group, unknown field, non-string or blank value →
+throw) and exposes `plainFor(productKey, outcomeKey)` and
+`plainPair(entry, dimension, field, original) -> {plain, original, rewritten}`.
+
+Three properties, all enforced rather than promised:
+
+1. **No number was changed.** The rewrite carries every figure, unit, interval,
+   p-value, sample size and direction across unchanged; it may re-order them
+   into a clearer sentence and may not round, drop or invent one. The audit
+   original is retained verbatim and is reachable in one tap, so any sentence
+   can be checked against the sentence it came from.
+2. **It is presentation only.** No score, ledger, gate, cap or warning reads the
+   sidecar. `score()`, `ledgerFromAudit()`, `auditWarnings()` and the warnings
+   block are untouched, as are the `Previous AI audit · not reverified` stamp,
+   the `Found / Missing / Would move it` labels and the source links.
+3. **A missing key falls back to the original.** `plainPair()` returns the audit
+   text when the sidecar has nothing, so a partially covered outcome renders the
+   audit sentence rather than a gap. In the shipped data exactly one field
+   family falls back: creatine's `form.move` (all 8 creatine outcomes), which
+   the audit itself records as "—". Where a field falls back, the body already
+   IS the audit's wording, so the details shows the audit block only when at
+   least one field on that row differs.
+
+The Evidence row's generated "Current rubric:" sentence is appended to BOTH
+versions by the same `evidenceDetail()` call, so the plain body and the verbatim
+block each carry the live scoring rule and neither can read as the audit's.
+"Studied in you" is computed from the ledger and the person's own inputs, has no
+audit wording behind it, and therefore gets no details.
+
+**Style.** No new visual kit and no new colour. The plain body is the normal
+`.ab-bar-detail` body text; `.ab-verbatim` is a hairline, an 11px muted
+`600`-weight summary with the same `⌄` caret idiom as `.ab-warnings`, and, when
+open, an indented 11.5px quotation behind a `var(--ab-line)` rule, opening with
+the `.ab-stamp` line that says the body above was written by a model and that no
+number was changed. One iteration after looking at the first screenshots: the
+summary had `display:flex` and so lost its disclosure triangle (it read as a
+heading), and the opened block sat at the same weight as the body — the caret
+and the indented smaller quotation fixed both.
+
+References (Playwright, 1440px desktop, `DESIGN_LAB=1` production build on
+:3111), `docs/design/ref/tabs-preview/`:
+`2026-09-16-plain-effect-body.png` (creatine "Strength when you lift weights",
+Effect expanded: plain body under the untouched stamp and warnings block),
+`2026-09-16-plain-effect-verbatim-{closed,open}.png` and
+`2026-09-16-plain-evidence-verbatim-{closed,open}.png`.
+Tests: `tests/plain-language.test.tsx` — all 30 retained audit outcomes have a
+sidecar entry with all four dimensions, each file parses with no empty string
+and a malformed one throws, the rendered card shows the plain text ABOVE the
+details and the audit string INSIDE it (spot check plus all 30 Effect rows), the
+Evidence row prints "Current rubric:" exactly twice, and an uncovered field
+(creatine `form.move`) falls back to the audit text.
+
+## 2026-09-16 — the plain-language rule moves INTO the prompts, and the warning bodies follow (preview only)
+
+**Why.** The previous pass rewrote audit prose in a sidecar, which fixes the lab
+card and nothing else: the model still WROTE in journal English, and every
+sentence `/scan` gets live from a model was untouched. So the rule now lives in
+the prompt, and the code-authored warning bodies were rewritten to the same
+standard by hand. Target reader: someone who finished high school, reading on a
+phone in a shop.
+
+**Where the rule lives.** `prompts/_shared.md` is NOT the carrier. It is
+prepended by `claude_adapter._system_prompt()` to the S1–S8 extraction agents
+only; the deployed app's loaders (`lib/analyze/{compatibility,company,
+literature-warnings,evidence-prior,vision}.ts`) each `readFileSync` their own
+prompt with no shared preamble. Putting the block in `_shared.md` would have
+missed every user-facing prompt and invalidated ~1000 cached S1–S8 extractions
+for nothing. The block is therefore pasted **byte-identically** into the five
+prompts whose free text a person reads, pinned by
+`tests/plain-language-prompts.test.ts`:
+
+| prompt | version before | version after | pinned in |
+|---|---|---|---|
+| `prompts/compatibility.md` | `compat-v1.0` | `compat-v1.1` | `lib/analyze/compatibility.ts` |
+| `prompts/company.md` | `company-v1.1` | `company-v1.2` | `lib/analyze/company.ts` |
+| `prompts/literature_warnings.md` | `literature-warnings-v1.0` | `literature-warnings-v1.1` | `lib/analyze/literature-warnings.ts` |
+| `prompts/evidence_prior.md` | `evidence-prior-v1.0` | `evidence-prior-v1.1` | `lib/analyze/evidence-prior.ts` |
+| `prompts/research_audit.md` | `audit-v0.2` | `audit-v0.3` | the prompt header itself (offline audit path) |
+
+The rule requires, for every free-text field: 2–4 short sentences, active voice,
+sentence case, plain words (a per-field "one sentence" or character limit still
+wins); every number, unit, confidence interval, p-value and sample size kept
+exactly, never rounded, dropped or invented; each technical term explained
+inline in parentheses the first time it appears; no softening and no
+strengthening, a hedge stays a hedge, no advice or recommendation; no markdown,
+bullets, emoji, em-dash connectors or marketing voice; uncertainty stated as a
+plain fact ("nobody has tested this"), not as jargon.
+
+**Not touched.** `prompts/label.md` (its free text is verbatim label copy —
+`evidence_spans`, `warnings_printed`, `claims_printed` — and a "rewrite it
+plainly" rule there would break the copy-exactly contract) and the S1–S8
+extraction prompts, whose output is numbers, enums and quoted spans and is never
+rendered as prose to an end user (`/scan` reads retained artifacts through
+`lib/analyze/product-score.ts`, which surfaces numbers plus the run's own
+validity note). The three retained audits still record `audit-v0.2`, because
+that is the prompt they were actually run against.
+
+**Warning bodies, both surfaces, meaning unchanged.** Rewritten in
+`lib/analyze/literature-disclosures.ts` (funding, publication bias),
+`lib/analyze/business-model.ts` (MLM), the five caveats in
+`lib/analyze/scan.ts` (`typed_not_verified`, `multi_ingredient_product`,
+`dose_not_convertible`, `servings_not_stated`, `model_sections_skipped`) and the
+six lab explanations in `app/design-lab/ab/evidence-warnings.ts`. Every
+qualifier survives: a funding or publication row still says it is a disclosure
+and not a score penalty ("it does not affect the evidence score"), the MLM row
+still opens "Model knowledge — unverified" and still says a distribution model
+is not a legal judgement and does not affect the score, and the
+no-human-controlled-trial row is still described as a cap, not a disclosure.
+The shared strings stay byte-identical across the surfaces: the lab reuses
+production `businessModelDisclosure()` for MLM and copies the two caveat
+sentences out of `lib/analyze/scan.ts`, which `tests/evidence-warnings.test.tsx`
+re-pins against the new wording.
+
+Examples (before → after):
+
+- `typed_not_verified`: "These figures were typed, not read from a label. The
+  analysis is about the ingredient, form and dose entered; nothing here checked
+  that a product actually contains them." → "You typed these figures. Nobody
+  read them off a label. This analysis is about the ingredient, form and dose
+  you entered. Nothing here checked that a real product contains them."
+- `dose_not_convertible` (hydrate branch): "The dose axis is unavailable: this
+  form's hydration state is not stated, so its elemental dose cannot be computed
+  without guessing." → "Your dose could not be checked. The label does not say
+  how much of this form is water, so the amount of the active ingredient in it
+  cannot be worked out without guessing."
+- publication bias (lab): "Positive results may be more likely to be published,
+  making a literature look more favourable. …" → "Publication bias means studies
+  that found something are more likely to get published than studies that found
+  nothing. That can make an ingredient look better than it is. …"
+
+**No scoring, gating or condition changed.** Which condition fires which
+warning, the status gating (`concern`-only for the two literature disclosures,
+`confirmed_mlm`/`suspected_mlm`-only for MLM, `rctCount === 0` for the cap), the
+scores, the schemas and the pipeline maths are all untouched; these are display
+strings and prompt prose.
+
+**Cache finding.** The deployed app has **no model-response cache**: nothing in
+`lib/analyze/` or `app/api/scan` stores or keys a model reply (the route sends
+`Cache-Control: no-store`), and the prompt-version constants are cache-DOMAIN
+markers stamped into `meta.prompt_versions` for provenance. So the bumps cannot
+invalidate stale prose — there is none to invalidate — and the residual risk is
+only stored artifacts and fixtures written under the old versions, each of which
+carries its own version stamp.
+
+**One iteration after looking at the shots.** The MLM sentence and the
+publication-bias sentence were each one long clause-joined sentence, which also
+became the collapsed one-line lede on `/scan` (`firstSentence()`); both were
+split in two so the lede is short and the body reads in phone-sized sentences.
+
+References (Playwright, `DESIGN_LAB=1` production build on :3111),
+`docs/design/ref/tabs-preview/`:
+`2026-09-16-plainwarn-scan-{390,360}-bundle-open.png` (the `/scan` warnings
+bundle expanded with all four bodies open, from `scripts/design_shots.mjs`,
+which gained the expand-and-shoot step),
+`2026-09-16-plainwarn-scan-390-viewport.png`, and the lab rows
+`2026-09-16-plainwarn-lab-{product-warnings,publication,gate,mlm}.png`.
+Tests: `tests/plain-language-prompts.test.ts` (block byte-identical in all five
+prompts, each rule present, absent from `_shared.md`/`label.md`/the S-prompts,
+all four constants bumped) plus the updated
+`tests/{evidence-warnings,company-business-model,literature-warnings,
+literature-warnings-render,scan,scan-manual,scan-mlm-warning,
+research-audit-schema}` and `tests/fixtures/scan-photo-rich.json`.

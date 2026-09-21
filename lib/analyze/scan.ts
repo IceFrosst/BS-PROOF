@@ -633,42 +633,43 @@ export async function analyzeFromLabel(label: ProductFacts, run: ScanRun): Promi
     caveats.push({
       code: "typed_not_verified",
       text:
-        "These figures were typed, not read from a label. The analysis is about the ingredient, form and dose entered; " +
-        "nothing here checked that a product actually contains them.",
+        "You typed these figures. Nobody read them off a label. This analysis is about the ingredient, form and " +
+        "dose you entered. Nothing here checked that a real product contains them.",
     });
   }
   if (label.is_multi_ingredient) {
     caveats.push({
       code: "multi_ingredient_product",
       text:
-        `This product doses more than one active. The evidence score is about ${ingredient.replace(/_/g, " ")} ` +
-        "on its own, which is not the same question as this blend.",
+        `This product contains more than one active ingredient. The evidence score is about ${ingredient.replace(/_/g, " ")} ` +
+        "on its own. A blend is a different question, and this score does not answer it.",
     });
   }
   if (elemental.basis === "compound_only" || elemental.basis === "unstated") {
     caveats.push({
       code: "dose_not_convertible",
       text:
-        "The dose axis is unavailable: " +
+        "Your dose could not be checked. " +
         (elemental.basis === "unstated"
           ? typed
-            ? "no per-serving dose was entered."
-            : "no per-serving mass for this ingredient is printed on the label."
-          : "this form's hydration state is not stated, so its elemental dose cannot be computed without guessing."),
+            ? "No per-serving dose was entered."
+            : "The label prints no per-serving amount for this ingredient."
+          : "The label does not say how much of this form is water, so the amount of the active ingredient in it " +
+            "cannot be worked out without guessing."),
     });
   }
   if (scored.basis === "per_serving") {
     caveats.push({
       code: "servings_not_stated",
       text: typed
-        ? "Servings per day were not entered, so the per-serving dose was scored. Your daily dose may be higher."
-        : "Servings per day are not printed, so the per-serving dose was scored. Your daily dose may be higher.",
+        ? "You did not enter how many servings you take a day, so the dose in one serving was scored. Your daily dose may be higher."
+        : "The label does not say how many servings are taken a day, so the dose in one serving was scored. Your daily dose may be higher.",
     });
   }
   if (!allowModel) {
     caveats.push({
       code: "model_sections_skipped",
-      text: "The label read used most of the time budget, so the company profile, the compatibility fill-in and the literature disclosures were skipped. The evidence score is complete.",
+      text: "Reading the label used up most of the time this scan is allowed. The company profile, the ingredient compatibility check and the literature disclosures were skipped. The evidence score is complete.",
     });
   }
   if (caveats.length) out.caveats = caveats;

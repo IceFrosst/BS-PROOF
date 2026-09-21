@@ -50,11 +50,11 @@ export function businessModelDisclosure(model: BusinessModel | null | undefined)
       tone: "warning",
       title: "MLM / direct-selling business model",
       body:
-        `Model knowledge — unverified. This company ${verb} organised as an MLM / direct-selling business: ` +
-        "distributors are recruited and can earn from the sales of people they recruit, not only from selling " +
-        `the product themselves. ${basis ? `${basis} ` : ""}(model confidence: ${confidence}). ` +
-        "This describes a way of doing business, not a legal judgement and not evidence about whether the " +
-        "product itself works — it does not affect the evidence score.",
+        `Model knowledge — unverified. This company ${verb} organised as an MLM, short for multi-level ` +
+        "marketing and also called direct selling. It signs up distributors who can earn money from the sales " +
+        `of the people they recruit, not only from what they sell themselves. ${basis ? `${basis} ` : ""}(model confidence: ${confidence}). ` +
+        "That is a way of selling, not a legal judgement, and it says nothing about whether the product works. " +
+        "It does not affect the evidence score.",
     };
   }
   return null;

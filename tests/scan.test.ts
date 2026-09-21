@@ -361,7 +361,7 @@ describe("analyzeScan end to end (fakes only)", () => {
     expect(ok.meta.prompt_versions.label).toBe("label-v1.1");
     expect(ok.literature_warnings?.status).toBe("ok");
     expect(ok.literature_warnings?.basis).toBe("model_prior");
-    expect(ok.meta.prompt_versions.literature_warnings).toBe("literature-warnings-v1.0");
+    expect(ok.meta.prompt_versions.literature_warnings).toBe("literature-warnings-v1.1");
 
     const broken = await analyzeScan(
       "aW1n",
@@ -454,7 +454,7 @@ describe("analyzeScan end to end (fakes only)", () => {
     expect(sleep?.dose_reading).toMatch(/inside the range/);
     // An outcome with no recalled range gets no comparison rather than a guess.
     expect(out.evidence_prior?.data?.outcomes[1].dose_closeness).toBeNull();
-    expect(out.meta.prompt_versions.evidence_prior).toBe("evidence-prior-v1.0");
+    expect(out.meta.prompt_versions.evidence_prior).toBe("evidence-prior-v1.1");
     expect(out.literature_warnings?.status).toBe("ok");
   });
 

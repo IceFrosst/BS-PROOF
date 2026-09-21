@@ -33,7 +33,7 @@ const manualFixture = {
     basis: "user_input",
   },
   caveats: [
-    { code: "typed_not_verified", text: "These figures were typed, not read from a label. Nothing verifies that any product contains what was entered." },
+    { code: "typed_not_verified", text: "You typed these figures. Nobody read them off a label. This analysis is about the ingredient, form and dose you entered. Nothing here checked that a real product contains them." },
     ...(fixture.caveats ?? []),
   ],
   company: { ...fixture.company, status: "no_brand_on_label", brand: null, manufacturer: null, basis_used: [] },
@@ -116,6 +116,27 @@ for (const [name, dev] of [["390", devices["iPhone 13"]], ["360", { ...devices["
   console.log(`${name}: result page height ${height}px`);
   const overflow = await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   console.log(`${name}: horizontal overflow ${overflow}px`);
+
+  // --- warnings bundle, expanded: the summary plus every notice opened, so
+  //     the caveat / disclosure BODIES can be read at review size (2026-09-16,
+  //     the plain-language rewrite). ---
+  if (await p.locator(".sc-warning-bundle").count()) {
+    await p.locator(".sc-warning-bundle > summary").click();
+    await p.waitForTimeout(200);
+    const notices = p.locator(".sc-warning-list .sc-notice-details > summary");
+    for (let i = 0; i < (await notices.count()); i++) {
+      await notices.nth(i).click();
+      await p.waitForTimeout(80);
+    }
+    await p.locator(".sc-warning-bundle").scrollIntoViewIfNeeded();
+    await p.evaluate(() => window.scrollBy(0, -24));
+    await p.waitForTimeout(250);
+    await p.screenshot({ path: `${out}/${name}-5a-warnings-open.png` });
+    // The whole bundle as one image, so every body can be read in review.
+    await p.locator(".sc-warning-bundle").screenshot({ path: `${out}/${name}-5a-warnings-open-block.png` });
+    await p.locator(".sc-warning-bundle > summary").click();
+    await p.waitForTimeout(150);
+  }
 
   // --- outcome tabs: scroll the Outcomes list into view, then open one outcome ---
   await p.locator(".sc-tablist").scrollIntoViewIfNeeded();
