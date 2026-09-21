@@ -42,6 +42,8 @@ const nextConfig: NextConfig = {
       "./schemas/company.json",
       "./schemas/compatibility.json",
       "./schemas/evidence_prior.json",
+      "./app/design-lab/ab/audits/*.json",
+      "./app/design-lab/ab/audits/plain/*.json",
     ],
   },
 };

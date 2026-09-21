@@ -1,5 +1,7 @@
 # Supplement Evidence Pipeline — v1 Technical Spec
 
+> **Current display contract (2026-09-17):** `/scan` uses the retained Evidence Ledger only for an exact single-ingredient match to the three source-verified targets (creatine monohydrate 4000 mg printed compound/day; vitamin D3/cholecalciferol 0.05 mg / 50 mcg / 2000 IU/day; magnesium glycinate 300 mg printed compound/day). Matching is exact, including form, stated servings/day and normalized printed mass. Its effect scale is −3..+3, certainty/form/dose are their native x/4 values, and unknown fit is a dash. Production coverage is never bucketed into /4. Unmatched products retain the continuous v14 `evidence.rows` API as a clearly labelled backup and show no /4 audit state.
+
 **Status:** design, pre-build
 **Last updated:** 2026-08-05 (rev 3)
 **Companion artifacts:** `pipeline_v2_demo.excalidraw` (current, generated from
@@ -1099,3 +1101,11 @@ system that are currently exact.
   per-study workers confirmed. v1 input is typed ingredient name; scan layer deferred.
   Calibration restructured to three tiers after founder correctly noted they cannot
   hand-rate ECUs themselves.
+
+- **2026-09-17** — Founder approved shipping the simpler retained Evidence Ledger on
+  real `/scan` for three exact, source-verified product/form/dose targets. The
+  browser-safe implementation is shared by the lab and scan. The prior continuous
+  v14 scorer remains in code and API as a documented backup; it is never presented
+  as `/4`, and unmatched products explicitly receive no exact-audit state. The
+  retained audits remain heuristic and unvalidated. Expanding beyond these fixtures
+  requires a source-retrieval service before `research_audit` can be run honestly.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { score, type Ledger, personFit, type StudiedIn } from "@/app/design-lab/ab/ledger";
+import { score, type Ledger } from "@/app/design-lab/ab/ledger";
 
 // Pins the worked examples in docs/design/2026-09-10-evidence-ledger-rubric.md
 // so the design doc and the demo arithmetic cannot drift apart silently.
@@ -46,51 +46,14 @@ describe("evidence ledger rubric v0.1 (proposed, demo only)", () => {
   });
 });
 
-describe("person fit — fifth bar (founder scale, 2026-09-11)", () => {
-  const youngMen: StudiedIn = { sex: "male", age_min: 18, age_max: 30 };
-  const mixedOld: StudiedIn = { sex: "mixed", age_min: 60, age_max: 85 };
-
-  it("3 = same sex and similar age", () => {
-    expect(personFit({ age: 25, sex: "male" }, youngMen)).toBe(3);
-  });
-  it("2 = mixed-sex trials at a similar age, OR your sex but the wrong age", () => {
-    expect(personFit({ age: 70, sex: "female" }, mixedOld)).toBe(2);
-    expect(personFit({ age: 60, sex: "male" }, youngMen)).toBe(2);
-  });
-  it("1 = other sex, similar age", () => {
-    expect(personFit({ age: 25, sex: "female" }, youngMen)).toBe(1);
-  });
-  it("0 = other sex and the age is off too", () => {
-    expect(personFit({ age: 68, sex: "female" }, youngMen)).toBe(0);
-  });
-  it("age slack is a band, not a cliff", () => {
-    expect(personFit({ age: 34, sex: "male" }, youngMen)).toBe(3); // 30 + 5 slack
-    expect(personFit({ age: 36, sex: "male" }, youngMen)).toBe(2);
-  });
-  it("stays 'unknown' rather than guessing when we do not know who was enrolled or who is asking", () => {
-    expect(personFit({ age: 30, sex: "male" }, undefined)).toBe("unknown");
-    expect(personFit({ age: null, sex: null }, youngMen)).toBe("unknown");
-    expect(personFit({ age: 30, sex: "male" }, { sex: "unknown", age_min: null, age_max: null })).toBe("unknown");
-  });
-
-  const base: Ledger = {
-    effectPoints: 2, bodyIsRct: true,
-    checklist: { risk_of_bias: "supported", consistency: "supported", precision: "supported", directness: "supported", publication_bias: "supported" },
-    gates: { rctCount: 12, largestRctN: 400, longestRctWeeks: 26, chronicOutcome: true, surrogate: false, allPositiveIndustryOrOneLab: false },
-    formFit: 4, doseFit: 4,
-  };
-
-  it("a poor person-match lowers a positive score but never flips a null into a benefit", () => {
-    const ignored = score(base).headline as number;
-    const matched = score(base, 3).headline as number;
-    const mismatched = score(base, 0).headline as number;
-    expect(matched).toBe(ignored); // perfect match == the un-personalised score
-    expect(mismatched).toBeLessThan(matched);
-    // a null stays exactly 50 no matter who is asking
-    expect(score({ ...base, effectPoints: 0 }, 0).headline).toBe(50);
-    expect(score({ ...base, effectPoints: 0 }, 3).headline).toBe(50);
-  });
-  it("person fit cannot rescue a harm signal into a benefit", () => {
-    expect(score({ ...base, effectPoints: -3 }, 3).headline as number).toBeLessThan(50);
+describe("person fit is not a rubric dimension", () => {
+  it("scores use only form and dose applicability", () => {
+    const ledger: Ledger = {
+      effectPoints: 2, bodyIsRct: true,
+      checklist: { risk_of_bias: "supported", consistency: "supported", precision: "supported", directness: "supported", publication_bias: "supported" },
+      gates: { rctCount: 12, largestRctN: 400, longestRctWeeks: 26, chronicOutcome: true, surrogate: false, allPositiveIndustryOrOneLab: false },
+      formFit: 4, doseFit: 4,
+    };
+    expect(score(ledger).headline).toBe(83);
   });
 });

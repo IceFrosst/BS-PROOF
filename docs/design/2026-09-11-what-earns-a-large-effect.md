@@ -16,8 +16,8 @@ certainty  = (bodyIsRct ? 4 : 2) − 1 per checklist "concern", floored at 0
 caps       = rctCount 0 → 0 | rctCount 1 → 1
              largestRctN < 50 OR (chronicOutcome && longestRctWeeks < 4) → 2
              surrogate → 3
-             allPositiveIndustryOrOneLab → 2          (caps stack by min)
-applicability = mean(formFit/4, doseFit/4 [, personFit/3])   unknown axis → 0.10
+             allPositiveIndustryOrOneLab → disclosure only (no cap)
+applicability = mean(formFit/4, doseFit/4)   unknown axis → 0.10
 signal        = (E/3) × (C/4)
 headline      = round(50 + 50 × signal × (signal > 0 ? applicability : 1))
 label         = E===0 && C>=3 ? "No meaningful benefit" : bandLabel(headline)

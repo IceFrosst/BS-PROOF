@@ -1,8 +1,8 @@
-# Evidence Ledger rubric v0.1 — proposed scoring for the AI-research path
+# Evidence Ledger rubric v0.1 — retained scoring for the AI-research path
 
-**Status: PROPOSED, not approved.** Every constant here is a founder call
+**Status: RETAINED for three exact source-verified audits (founder decision 2026-09-17).** The rubric remains heuristic and unvalidated; it is not a probability of benefit. It is not run by the deployed chat model. Every constant here is a founder call
 (CLAUDE.md invariant 4). Nothing in this file changes `pipeline/scoring.py` or
-any retained run. Prompt: `prompts/research_audit.md` (`audit-v0.1`).
+any retained run. Prompt: `prompts/research_audit.md` (`audit-v0.4`; retained artifacts below carry `audit-v0.2`).
 
 ## Principle
 
@@ -27,7 +27,7 @@ the number. Same discipline as the retained-run scorer, on a different input.
 | Exactly one RCT | C ≤ 1 |
 | Largest RCT n < 50, or longest < 4 weeks for a chronic outcome | C ≤ 2 |
 | Outcome is a surrogate biomarker | C ≤ 3, and the missing link is printed |
-| Every positive trial industry-funded or from one lab | C ≤ 2 |
+| Every positive trial industry-funded or from one lab | Disclosure only; no certainty cap |
 
 Caps stack by taking the minimum. Each fired gate is shown as one line.
 
@@ -126,13 +126,25 @@ Safety (always its own visible block), marketing red flags, company background,
 source counts (more papers is not more evidence), and the model's
 `self_confidence` (displayed beside the score, never inside it).
 
-## Open before this can ship
+## Retained-scope limits and validation still open
 
-1. Founder approval of every constant above and of the 0.10 unknown-axis price.
-2. Anchor test: run the audit on 6–8 well-known claims (creatine/strength,
+The founder approved retaining the rubric only for the three source-verified
+artifacts and exact product matcher in `lib/evidence-ledger/retained-audits.ts`:
+creatine monohydrate 4000 mg printed compound/day, vitamin D3/cholecalciferol
+0.05 mg (50 mcg / 2000 IU)/day, and magnesium glycinate 300 mg printed
+compound/day. The person-fit dimension is dropped from the shared rubric because
+no user profile is collected; retained `studied_in` fields are source context only.
+Funding and publication bias are disclosures only and do not affect certainty or
+headline. Production coverage is never converted into
+this rubric's /4 values.
+
+1. Anchor test: run the audit on 6–8 well-known claims (creatine/strength,
    melatonin/sleep onset, vitamin C/cold incidence, magnesium oxide/sleep,
    tongkat ali/testosterone, a proprietary blend) and check band membership,
    not decimals.
 3. Repeat-run stability: same claim twice, same day — dimensions must agree.
-4. `schemas/research_audit.json` and a deterministic `ledgerToScore()` with
-   golden tests, before any UI shows a number.
+4. `schemas/research_audit.json` and the deterministic `score()` in
+   `lib/evidence-ledger/` are schema-tested and parity-tested before the retained
+   UI shows a number. Arbitrary-product live audits remain blocked until a
+   source-retrieval service can open and record sources; do not route
+   `research_audit` through the ordinary deployed chat model.

@@ -54,6 +54,8 @@
  * fake label read, a fake model and a fake fetch -- zero model calls in tests.
  */
 import { catalogForm, catalogIngredient } from "./catalog";
+import { retainedAuditForProduct, type ProductMatchFacts } from "@/lib/evidence-ledger/retained-audits";
+import type { RetainedLedgerAudit } from "@/lib/evidence-ledger";
 import { census, enqueue } from "./census";
 import { companySection, type CompanySection } from "./company";
 import {
@@ -206,6 +208,8 @@ export interface ScanAnalysis {
     other_actives: string[];
   };
   evidence?: Json;
+  /** One exact retained ledger audit only. Absent means no /4 audit for this exact product. */
+  ledger_audit?: RetainedLedgerAudit;
   /** Stage 2b. Present ONLY when no retained run could answer (see scan.ts header). */
   evidence_prior?: EvidencePriorSection;
   dose_effectiveness?: DoseEffectivenessSection;
@@ -518,6 +522,20 @@ export async function analyzeFromLabel(label: ProductFacts, run: ScanRun): Promi
     is_multi_ingredient: Boolean(label.is_multi_ingredient),
     other_actives: label.other_actives ?? [],
   };
+  // The ledger audit is a separate exact-product contract. It intentionally
+  // compares printed compound mass, not converted elemental mass, and refuses
+  // every missing/ambiguous/multi-ingredient case.
+  const matchFacts: ProductMatchFacts = {
+    ingredient,
+    form: formId,
+    compoundDoseMg: label.compound_dose_mg,
+    servingsPerDay: label.servings_per_day,
+    isMultiIngredient: Boolean(label.is_multi_ingredient),
+    actives: (label.actives ?? []).map((active) => ({ name: active.name, compoundDoseMg: active.compound_dose_mg })),
+    otherActives: label.other_actives ?? [],
+  };
+  const retainedAudit = retainedAuditForProduct(matchFacts);
+  if (retainedAudit) out.ledger_audit = retainedAudit;
 
   // ---- stage 2: evidence (deterministic) ---------------------------------
   const tEvidence = deps.now();

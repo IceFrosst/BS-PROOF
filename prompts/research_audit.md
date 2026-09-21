@@ -1,11 +1,11 @@
 # Evidence audit — one product, live sources, population-aware
 
-**Version `audit-v0.3`. Output must validate against `schemas/research_audit.json`.**
+**Version `audit-v0.4`. Output must validate against `schemas/research_audit.json`.**
 
-v0.3 (2026-09-16) changes the WRITING only: the plain-language rule below now
-lives in the prompt, so the model writes shop-floor English at the source
-instead of being rewritten afterwards. No rule about what counts as evidence,
-no gate, no threshold and no schema field changed. The three retained audits in
+v0.4 (2026-09-17) records that this prompt is reserved for a future source-
+retrieval service; the deployed chat transport must not run it. The v0.3 plain-
+language rule remains unchanged. No rule about what counts as evidence, no gate,
+no threshold and no schema field changed. The three retained audits in
 `app/design-lab/ab/audits/` were produced under `audit-v0.2` and still record
 that version, because that is the prompt they were actually run against.
 Self-contained: everything the model needs is below. Callers inject the four
@@ -13,8 +13,10 @@ variables in ROLE and send this file verbatim as the system prompt. Do NOT tell
 the model to read repository files — a production wrapper cannot rely on that.
 
 Bump the version here and in the caller's cache key together (invariant 3).
-Rubric constants live in `docs/design/2026-09-10-evidence-ledger-rubric.md` and
-still need founder sign-off before a number is shown to a user.
+Rubric constants live in `docs/design/2026-09-10-evidence-ledger-rubric.md`.
+The founder approved their use only with the three retained source-verified audit
+artifacts and an exact product/form/printed-dose matcher; this prompt is not run
+through the deployed chat model, which has no web access.
 
 ---
 

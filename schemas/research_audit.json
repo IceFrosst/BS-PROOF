@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Evidence audit (audit-v0.2)",
-  "description": "Population-aware live-source audit of ONE supplement product. Produced by prompts/research_audit.md. The model supplies classified findings only; app/design-lab/ab/ledger.ts computes every headline, band label and dimension the user sees. One outcomes[] entry per POPULATION the evidence distinguishes, never one per outcome.",
+  "title": "Evidence audit (audit-v0.4)",
+  "description": "Population-aware live-source audit of ONE supplement product. Produced by prompts/research_audit.md (audit-v0.4). The model supplies classified findings only; app/design-lab/ab/ledger.ts computes every headline, band label and dimension the user sees. One outcomes[] entry per POPULATION the evidence distinguishes, never one per outcome.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -40,7 +40,7 @@
         "prompt": {
           "type": "string",
           "maxLength": 120,
-          "description": "Prompt version, e.g. audit-v0.2"
+          "description": "Prompt version for current audits, e.g. audit-v0.4"
         },
         "note": {
           "type": "string",
@@ -323,7 +323,7 @@
         },
         "studied_in": {
           "type": "object",
-          "description": "Who was ENROLLED in the studies behind this row. Drives the 'Studied in you' bar.",
+          "description": "Who was ENROLLED in the studies behind this row. Retained as source context only; it does not drive a score or a person-fit bar.",
           "additionalProperties": false,
           "required": [
             "sex",
