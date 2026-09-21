@@ -39,7 +39,7 @@ import { vocabBlock } from "./vocab";
 const ROOT = process.cwd();
 
 /** Bump together with prompts/label.md and label_adapter.LABEL_PROMPT_VERSION. */
-export const LABEL_PROMPT_VERSION = "label-v1.1";
+export const LABEL_PROMPT_VERSION = "label-v1.2";
 
 /** One read's wall clock. The route's maxDuration is 60s; leave headroom. */
 const TIMEOUT_MS = 50_000;
@@ -199,7 +199,10 @@ export async function readLabel(
       // spend tokens thinking BEFORE the answer and count both against the
       // cap (measured 2026-08-23: 2048 left an empty answer). 8192 fits both.
       maxTokens: 8192,
-      jsonMode: false,
+      // Prefer the provider's native JSON-object mode. `chat` retries once
+      // without response_format when a vision-compatible endpoint rejects it,
+      // so this improves conforming providers without dropping compatibility.
+      jsonMode: true,
       messages: [
         {
           role: "user",

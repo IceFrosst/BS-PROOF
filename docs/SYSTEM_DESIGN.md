@@ -422,6 +422,13 @@ Each prompt has its own version constant and cache domain (invariant 3):
 `COMPAT_PROMPT_VERSION`, `COMPANY_PROMPT_VERSION`,
 `LITERATURE_WARNINGS_PROMPT_VERSION`.
 
+The deployed label read uses native JSON-object mode when the provider supports
+it and supplies a complete typed JSON template in `prompts/label.md`
+(`label-v1.2`). If an OpenAI-compatible vision endpoint rejects
+`response_format` with HTTP 400, the shared transport repeats the same stateless
+request without that parameter. Returned prose, quoted booleans, wrong types and
+truncated JSON still fail closed; the parser does not repair or coerce a dose.
+
 ## 5. Source ranking, as shown to the user
 
 1. **Evidence run** — scored from extracted trials with quoted provenance

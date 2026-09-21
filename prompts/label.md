@@ -95,5 +95,34 @@ with `ingredient_label_text` set — that is a supported answer, not a failure.
 
 ## Output
 
-A single JSON object matching the schema. No prose, no markdown fence, no
-explanation before or after.
+Return exactly one JSON object in this shape. Use JSON types exactly: booleans
+are `true` or `false`, never quoted strings; numbers are unquoted; unknown text
+or numbers are `null`; lists are JSON arrays. Do not omit a key.
+
+{
+  "ingredient_vocab_id": null,
+  "ingredient_label_text": null,
+  "form_vocab_id": null,
+  "compound_dose_mg": null,
+  "dose_unit_as_printed": null,
+  "servings_per_day": null,
+  "is_multi_ingredient": false,
+  "other_actives": [],
+  "actives": [],
+  "certifications": [],
+  "manufacturer": null,
+  "country_of_origin": null,
+  "warnings_printed": [],
+  "claims_printed": [],
+  "brand": null,
+  "product_name": null,
+  "is_supplement_label": false,
+  "confidence": "low",
+  "unreadable_reason": null,
+  "evidence_spans": []
+}
+
+The example deliberately defaults `is_supplement_label` to `false`; change it
+to `true` only when the image visibly is a supplement label. Replace the other
+example values only with facts visible in the image. Return no
+prose, no markdown fence and no explanation before or after the object.

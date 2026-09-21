@@ -58,10 +58,9 @@ SCHEMA = ROOT / "schemas" / "label.json"
 
 # Bump when prompts/label.md or schemas/label.json changes. Scoped to the label
 # read only -- see the module docstring on why this is not PROMPT_VERSION.
-LABEL_PROMPT_VERSION = "label-v1.1"   # v1.1 (2026-09-07): whole-panel fields --
-                                      # actives, certifications, manufacturer,
-                                      # country, warnings, claims. Mirrored in
-                                      # lib/analyze/vision.ts.
+LABEL_PROMPT_VERSION = "label-v1.2"   # v1.2 (2026-09-21): typed JSON template;
+                                      # v1.1 added whole-panel fields. Mirrored
+                                      # in lib/analyze/vision.ts.
 
 # Tier A. Label reading is OCR plus a vocabulary mapping -- the same shape as S1
 # and S8, which are tier A for the same reason. Measured 2026-08-21: haiku read
