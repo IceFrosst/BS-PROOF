@@ -1,6 +1,6 @@
 /**
  * The audit JSON in app/design-lab/ab/audits/ is what a live model returns for
- * prompts/research_audit.md (now audit-v0.3; the three retained files were run
+ * prompts/research_audit.md (now audit-v0.4; the three retained files were run
  * against audit-v0.2 and still record that, because that is the prompt they
  * were actually produced under -- v0.3 changed the WRITING rules only, not the
  * schema or any gate). These pin the contract between the
@@ -13,14 +13,14 @@ import { join } from "node:path";
 import Ajv2020 from "ajv/dist/2020";
 import { describe, expect, it } from "vitest";
 
-import { ledgerFromAudit, personFit, score, type AuditFile } from "@/app/design-lab/ab/ledger";
+import { ledgerFromAudit, score, type AuditFile } from "@/app/design-lab/ab/ledger";
 
 const AUDIT_DIR = join(process.cwd(), "app/design-lab/ab/audits");
 const schema = JSON.parse(readFileSync(join(process.cwd(), "schemas/research_audit.json"), "utf8"));
 const files = readdirSync(AUDIT_DIR).filter((f) => f.endsWith(".json"));
 const load = (f: string) => JSON.parse(readFileSync(join(AUDIT_DIR, f), "utf8")) as AuditFile;
 
-describe("research_audit schema (prompt audit-v0.3, retained files audit-v0.2)", () => {
+describe("research_audit schema (prompt audit-v0.4, retained files audit-v0.2)", () => {
   const ajv = new Ajv2020({ allErrors: true, strict: false });
   const validate = ajv.compile(schema);
 
@@ -37,10 +37,18 @@ describe("research_audit schema (prompt audit-v0.3, retained files audit-v0.2)",
     expect(ok).toBe(true);
   });
 
+  it.each(files)("%s keeps its historical prompt metadata while allowing current audit-v0.4", (f) => {
+    const prompt = load(f).meta.prompt;
+    expect(["audit-v0.2", "audit-v0.4"]).toContain(prompt);
+    // These checked-in retained audits were actually produced under v0.2; do
+    // not rewrite their provenance merely because the current prompt is v0.4.
+    expect(prompt).toBe("audit-v0.2");
+  });
+
   it.each(files)("%s scores end to end without the model writing a number", (f) => {
     const audit = load(f);
     for (const o of audit.outcomes) {
-      const r = score(ledgerFromAudit(o), personFit({ age: 40, sex: "female" }, o.studied_in));
+      const r = score(ledgerFromAudit(o));
       // Either a real 0-100 headline, or an honest refusal to score.
       if (r.headline === null) expect(r.label).toBe("Not scored");
       else {

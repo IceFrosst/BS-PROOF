@@ -68,6 +68,6 @@ describe("the plain-language rule is in the prompts themselves", () => {
     expect(COMPANY_PROMPT_VERSION).toBe("company-v1.2");
     expect(EVIDENCE_PRIOR_PROMPT_VERSION).toBe("evidence-prior-v1.1");
     expect(LITERATURE_WARNINGS_PROMPT_VERSION).toBe("literature-warnings-v1.1");
-    expect(read("research_audit.md")).toContain("**Version `audit-v0.3`.");
+    expect(read("research_audit.md")).toContain("**Version `audit-v0.4`.");
   });
 });

@@ -488,8 +488,8 @@ Three properties, all enforced rather than promised:
 The Evidence row's generated "Current rubric:" sentence is appended to BOTH
 versions by the same `evidenceDetail()` call, so the plain body and the verbatim
 block each carry the live scoring rule and neither can read as the audit's.
-"Studied in you" is computed from the ledger and the person's own inputs, has no
-audit wording behind it, and therefore gets no details.
+Person fit is dropped from both surfaces; retained population fields are plain
+source context and carry no score or details.
 
 **Style.** No new visual kit and no new colour. The plain body is the normal
 `.ab-bar-detail` body text; `.ab-verbatim` is a hairline, an 11px muted
@@ -539,7 +539,7 @@ prompts whose free text a person reads, pinned by
 | `prompts/company.md` | `company-v1.1` | `company-v1.2` | `lib/analyze/company.ts` |
 | `prompts/literature_warnings.md` | `literature-warnings-v1.0` | `literature-warnings-v1.1` | `lib/analyze/literature-warnings.ts` |
 | `prompts/evidence_prior.md` | `evidence-prior-v1.0` | `evidence-prior-v1.1` | `lib/analyze/evidence-prior.ts` |
-| `prompts/research_audit.md` | `audit-v0.2` | `audit-v0.3` | the prompt header itself (offline audit path) |
+| `prompts/research_audit.md` | `audit-v0.2` | `audit-v0.4` | the prompt header itself (offline audit path; no deployed model call) |
 
 The rule requires, for every free-text field: 2–4 short sentences, active voice,
 sentence case, plain words (a per-field "one sentence" or character limit still
@@ -624,3 +624,152 @@ all four constants bumped) plus the updated
 `tests/{evidence-warnings,company-business-model,literature-warnings,
 literature-warnings-render,scan,scan-manual,scan-mlm-warning,
 research-audit-schema}` and `tests/fixtures/scan-photo-rich.json`.
+
+---
+
+## The design-lab A/B card's design now SHIPS on `/scan` (2026-09-16, preview branch)
+
+**Founder:** ship the design-lab card's look and interaction model on the live
+scanner. `app/design-lab/ab/prototype.tsx` + `ab.css` stay exactly as they are —
+they remain the visual reference and the route keeps working; `ab.css` is **not**
+imported into production. Everything below is `components/scan-flow.tsx` plus the
+`/scan` block of `app/globals.css` (scoped `.scan-page` / `.sc-*`). **No scoring,
+API, prompt, schema or pipeline file changed. No new number is minted:** the
+General score is still the labelled plain mean of the outcome composites, and
+every value on the card is read straight off the answer the route already
+returns.
+
+### What was adopted
+
+- **The card shell.** The tab panel is now one calm paper surface
+  (`--sp-paper: #fafbfa`, 18px radius, one hairline, no shadow) holding either the
+  Outcomes landing list or one outcome — the lab's `.ab-card`, translated into
+  this page's neutral ramp so the "no cream, no shadows on the report" token rule
+  from §1 still holds.
+- **The outcome tab strip** and the **Outcomes landing list with the compact
+  General score tile** (both already shipped in the tabs preview) keep the lab's
+  geometry: one row = name + score + one chevron on line 1, the full-width
+  coloured track across the bottom, the whole row a single 44px+ control.
+- **The per-outcome view is now the lab's headline block**: the composite in its
+  own rounded white tile beside the outcome name, the verdict word under it, and
+  the population as a plain line — on a tint mixed from the score's own colour
+  (the shared `scoreSignalColor` ramp, no second ramp).
+- **Each dimension is now ONE tappable line** — label, the plain word production
+  actually computes, the signed value, a chevron, with the coloured track
+  full-width underneath and the coverage under that — **expanding in place** into
+  a detail block, exactly like the lab's rows.
+- **The collapsed warnings block** with one native `<details>` per warning was
+  already shipped in the "Before you read the score" stack and is unchanged; it
+  stays above the first number so the validity banner keeps its place.
+
+### What was DROPPED or REMAPPED, because production does not measure it
+
+| lab element | production data source | what renders when it is missing |
+|---|---|---|
+| 5th bar **"Studied in you"** (person fit) | **none.** Person fit is dropped from the shared rubric and both surfaces; retained `studied_in` data is source context only | **Dropped entirely.** No fifth bar, no profile input, no "population match". The run's recorded `evidence.population` renders as a plain FACT line — once above the Outcomes list ("every outcome below was scored in healthy adults, men and women") and once in the outcome headline — never as a scored bar |
+| ordinals **"2/4"**, **"Exact match"**, **"Low"** | **none.** They are the lab rubric's ladders (`certainty/4`, `formFit/4`, `doseFit/4`) | **Dropped.** Each row renders the run's real **signed verdict** (`arcs.<dim>.verdict`, 2 dp, signed) **and** its real **coverage** (`arcs.<dim>.coverage`), per invariant 8. `0.00 @ 0%` keeps its striped "0% · untested" track; `−0.70 @ 100%` is a full track with a red value. The evidence row has no verdict at all (it is a quantity), so it shows coverage only |
+| the plain WORD beside each bar | only two exist: the dose axis's `tone` from `lib/analyze/dose-effectiveness.ts` (`in range` / `below the range` / `above the range` / `not assessable`) and the product-level `compatibility.evidence_form_fit.status` (`exact form scored`, …) | **Effect and evidence show no word.** A word was not invented for a number that has none |
+| the Effect **reported interval** on its own axis | **none.** A retained run carries no pooled estimate and no CI; the lab draws one because its audit files record `absolute_effect` | **No axis is drawn.** The row keeps the existing coverage track, and the expansion says in words: "This run keeps no pooled estimate or confidence interval, so none is drawn." If a run ever carries one, that is the place to add it |
+| "Found / Missing / Would move it" audit prose + "Exact wording from the audit" | **none.** That is written by the research-audit pass, which `/scan` does not run | The expansion is built only from facts the answer carries: what the dimension means, the verdict, the coverage, trial count, polarity, form strength + ladder basis, form-fit status and the forms run so far, your daily dose, the benefit band, the band where nothing was found, closeness, the run's dose tier ("in band"), the server's own dose reading sentence, applicability, the composite, and the retained run id + scoring model. Every fact the old per-card footnote line carried (trials, applicability, form basis, dose match) is in there, under the dimension it belongs to |
+| per-outcome warnings inside the card | product-level caveats + literature disclosures + MLM | Unchanged: they stay in the one "Before you read the score" stack **above** the first number (the validity banner must precede every number) |
+| the illustrated jar / "FIELD NOTES" photo block | the scanned photo | Unchanged: the real thumbnail in the scanned-product header |
+
+### Everything kept
+
+Camera, shutter, staged photo, upload fallback, search sheet, loading progress
+panel, Google sign-in card, the `landing → staged → loading → result | error`
+state machine with focus moving to the result, the always-visible run-validity
+banner before any number, basis badges on every section, label/entry facts,
+company + recalls + certifications, the dose bar, technical details, the badge
+legend, and every empty/error state (`analyzer_unavailable`,
+`not_a_supplement_label`, `ingredient_not_supported`, `form_not_scored`,
+`not_scored`, network error). Nothing reachable before is unreachable now: the
+per-outcome footnote line (trials, applicability, form basis, dose match) moved
+into the dimension expansions, where each fact sits under the dimension it
+belongs to.
+
+### Measurements
+
+Built app, Playwright, mocked `POST /api/scan` with
+`tests/fixtures/scan-photo-rich.json` (`scripts/design_shots.mjs`):
+
+| | before (tabs preview) | after (lab card shipped) |
+|---|---:|---:|
+| result height @390 | 4226 px | **4325 px** |
+| result height @360 | 4437 px | **4511 px** |
+| horizontal overflow | 0 px | **0 px** |
+
+The ~100 px is the population fact line plus the card's own padding; the report
+is still less than half the pre-redesign 9911 px. Targets stay ≥44px (each
+dimension row is one 56px-min button), the focus ring is unchanged,
+`env(safe-area-inset-bottom)` is unchanged, and the one new transition (the
+dimension row's chevron rotation) was added to the existing
+`prefers-reduced-motion` block beside `.sc-shutter-ring` and the two summary
+chevrons.
+
+**axe (wcag2a/aa, 2.1, 2.2) on the RESULT state at Pixel 7 width: zero
+violations** — outcomes list, one outcome, one outcome with all four dimensions
+expanded, and with every `<details>` open. Getting there fixed a **pre-existing**
+contrast failure: the score ramp's fill lightness (amber `#c68f2f`) is 2.6–2.9:1
+as 22–40px type, so the General tile and the outcome-row percentages were failing
+WCAG 1.4.3 before this change. `scoreSignalColor` gained a `usage: "fill" |
+"text"` argument that keeps the SAME hue and only darkens it (`--sc-score-text`
+beside `--sc-score-color`); bars and tints are unchanged. This is not a second
+ramp — the hue, and therefore the meaning, is identical, and a test pins that the
+dominant channel matches the bar's while the text is darker.
+
+**Two class-name collisions and one wording bug were found by looking at the
+shots:** the first pass
+named the outcome headline `.sc-headline`, which is the LIVE CAMERA overlay's
+`<h1>` class (white text + text-shadow), so the outcome name rendered white and
+ghosted. Renamed to `.sc-outcome-headline` / `.sc-outcome-headline-main` /
+`.sc-outcome-number`; the viewfinder H1 is untouched. The outcome name also
+broke mid-word ("Endurance performanc/e") under the page-wide
+`overflow-wrap: anywhere`, fixed with `break-word` on that heading, and the form
+expansion read "0.80 on the evidence ladder (ladder)" because the arc's `basis`
+is literally `ladder`.
+
+References (`docs/design/ref/tabs-preview/`, prefix `2026-09-16-shipped-`):
+`scan-{390,360}-outcomes`, `scan-{390,360}-outcome`, `scan-390-dose-open`,
+`scan-390-form-open`, `scan-360-evidence-open`, `scan-390-untested-0pct` beside
+`scan-390-failed-100pct` (invariant 8, side by side), `scan-{390,360}-result-full`,
+`scan-390-{landing,loading,manual-full,error-503,not-a-label,not-supported}`, and
+the design-lab reference at the same width, `lab-390-outcomes` / `lab-390-outcome`.
+`public/previews/scan-tabs-outcomes-390.png` and
+`public/previews/scan-tabs-outcome-390.png` were refreshed from the same run.
+Tests: `tests/scan-result-state.test.tsx` (four rows with verdict **and**
+coverage per outcome, the expansion built from real run facts with no person bar /
+no ordinals / no interval, the population as a fact line, `0.00 @ 0%` vs
+`−0.70 @ 100%`, the validity banner before the first number, and every empty /
+error state).
+
+**A live scan was NOT exercised: no model API key exists in this environment.**
+The mocked fixture in `scripts/design_shots.mjs` is the substitute.
+
+---
+
+## Retained Evidence Ledger on `/scan` (2026-09-17)
+
+The lab card remains the visual reference, but the live result now selects the
+simpler retained Evidence Ledger for an exact single-ingredient match only. The
+three targets are shown in the result provenance: creatine monohydrate, 4000 mg
+printed compound/day; vitamin D3 (cholecalciferol), 0.05 mg / 50 mcg / 2000 IU
+printed/day; and magnesium glycinate, 300 mg printed compound/day. Matching uses
+integer-normalized printed mass, exact form, and an explicitly stated daily
+serving count. There is no tolerance and no nearby-audit fallback.
+
+The validity line appears before the first number and says the audit is retained
+from a previous run, gives its prompt version and target product/dose, and was not
+reverified on this scan. Outcomes, General, tabs, and the four expandable rows
+come from that matched audit and the shared `score()` implementation: Effect is
+its real −3..+3 state (not /4), certainty is x/4, and form/dose are x/4 or `—`
+when unknown. The original audit wording, plain-language sidecar and source
+inventory are reachable from each relevant expansion. Person fit is not rendered.
+Funding and publication bias remain disclosures only.
+
+For every unmatched scan the product facts and existing caveats/company/label
+sections remain, the continuous v14 rows remain available as a compatibility
+backup, and the page says `No /4 audit for this exact form and daily dose yet`.
+Coverage is never converted to /4. A future arbitrary-product audit needs a
+source-retrieval service before `research_audit` can be run; the deployed chat
+transport has no web access.

@@ -644,3 +644,31 @@ tests/scan-mlm-warning.test.tsx       the disclosure rendered in the real <ScanF
 tests/literature-warnings.test.ts        schema, defaults, the disclosure decision function, all three scan paths, byte-identical pin, time-budget skip
 tests/literature-warnings-render.test.tsx the disclosures rendered in the real <ScanFlow> DOM, only for "concern"
 ```
+
+## 10. Exact retained Evidence Ledger audits (2026-09-17)
+
+`lib/evidence-ledger/` is browser-safe and is the one implementation of the
+Evidence Ledger types and `score()` used by the design lab and `/scan`. The
+server-only selector in `retained-audits.ts` reads exactly one retained audit
+when ingredient, form, single-ingredient status, stated servings/day, and
+printed compound mass match exactly: creatine monohydrate 4000 mg, vitamin D3
+(cholecalciferol) 0.05 mg / 50 mcg / 2000 IU, or magnesium glycinate 300 mg.
+Missing servings, multi-ingredient labels, different forms, and every dose
+mismatch return no audit. Only that matched audit and its matching plain-language
+sidecar cross the browser boundary; the original audit wording and opened-source
+inventory remain reachable in its expansions. The `/api/scan` server bundle
+explicitly traces these retained JSON sidecars; the browser-safe module contains
+no filesystem import.
+
+The audit banner states retained previous audit, prompt version, target product
+and dose, and not reverified on this scan. Effect keeps the audit's real −3..+3
+state; certainty, form and dose use their native x/4 values, with unknown fit as
+`—`. Production coverage is never converted or bucketed into /4. Unmatched
+products retain the continuous v14 evidence API as a compatibility backup and
+show an explicit no-exact-audit message. Funding/publication bias remain
+concerns-only disclosures and do not change the Ledger score. Person fit is dropped; retained `studied_in` fields are source
+context only. The retained **General score** is intentionally the plain mean of
+scored outcome headlines, an aggregation outside canonical per-outcome
+`score()` and explicitly not a probability of benefit. The audit remains
+heuristic and unvalidated; arbitrary-product expansion needs a source-retrieval
+service because the deployed model transport cannot open live sources.

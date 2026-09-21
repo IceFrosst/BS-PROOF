@@ -367,7 +367,7 @@ describe("caffeine is effect-only: reported estimates, no invented bars", () => 
     const markup = renderToStaticMarkup(createElement(AbPrototype, { initial: { product: "caffeine", outcome: key, open: "effect" } }));
     expect(markup).not.toContain("ab-number");
     const notAssessedRows = markup.match(new RegExp(`ab-bar-word">${NOT_ASSESSED_WORD}`, "g")) ?? [];
-    expect(notAssessedRows).toHaveLength(4);
+    expect(notAssessedRows).toHaveLength(3);
     expect(markup).toContain("Effect only. The other dimensions were not assessed.");
     expect(markup).toContain(REPORTED_ESTIMATE_LABEL);
     expect(markup).toContain("https://doi.org/10.3390/nu17233792");

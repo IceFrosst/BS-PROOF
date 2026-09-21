@@ -467,6 +467,82 @@ describe("analyzeScan end to end (fakes only)", () => {
     expect(out.literature_warnings?.status).toBe("ok");
   });
 
+  it("matches only when the sole label active agrees with the top-level printed dose", async () => {
+    const exact = await analyzeScan(
+      "aW1n",
+      "image/png",
+      deps({
+        readLabel: async () => label({
+          compound_dose_mg: 4000,
+          actives: [{ name: "Creatine Monohydrate", compound_dose_mg: 4000, dose_unit_as_printed: "4 g", form_text: "monohydrate" }],
+        }),
+      }),
+    );
+    expect(exact.ledger_audit).toBeDefined();
+
+    const contradictoryDose = await analyzeScan(
+      "aW1n",
+      "image/png",
+      deps({
+        readLabel: async () => label({
+          compound_dose_mg: 4000,
+          actives: [{ name: "Creatine Monohydrate", compound_dose_mg: 5000, dose_unit_as_printed: "5 g", form_text: "monohydrate" }],
+        }),
+      }),
+    );
+    expect(contradictoryDose.ledger_audit).toBeUndefined();
+
+    const missingDose = await analyzeScan(
+      "aW1n",
+      "image/png",
+      deps({
+        readLabel: async () => label({
+          compound_dose_mg: 4000,
+          actives: [{ name: "Creatine Monohydrate", compound_dose_mg: null, dose_unit_as_printed: null, form_text: "monohydrate" }],
+        }),
+      }),
+    );
+    expect(missingDose.ledger_audit).toBeUndefined();
+
+    const ambiguousDose = await analyzeScan(
+      "aW1n",
+      "image/png",
+      deps({ readLabel: async () => label({ compound_dose_mg: 4000, actives: [] }) }),
+    );
+    expect(ambiguousDose.ledger_audit).toBeUndefined();
+  });
+
+  it("keeps multi-active labels out of the retained matcher", async () => {
+    const otherActive = await analyzeScan(
+      "aW1n",
+      "image/png",
+      deps({
+        readLabel: async () => label({
+          compound_dose_mg: 4000,
+          actives: [{ name: "Creatine Monohydrate", compound_dose_mg: 4000, dose_unit_as_printed: "4 g", form_text: "monohydrate" }],
+          other_actives: ["Vitamin D3"],
+        }),
+      }),
+    );
+    expect(otherActive.ledger_audit).toBeUndefined();
+
+    const multipleActives = await analyzeScan(
+      "aW1n",
+      "image/png",
+      deps({
+        readLabel: async () => label({
+          compound_dose_mg: 4000,
+          is_multi_ingredient: false,
+          actives: [
+            { name: "Creatine Monohydrate", compound_dose_mg: 4000, dose_unit_as_printed: "4 g", form_text: "monohydrate" },
+            { name: "Vitamin D3", compound_dose_mg: 0.05, dose_unit_as_printed: "0.05 mg", form_text: null },
+          ],
+        }),
+      }),
+    );
+    expect(multipleActives.ledger_audit).toBeUndefined();
+  });
+
   it("places a dose against a recalled range with the same ramp as the scored path", () => {
     const row = (low: number | null, high: number | null): PriorOutcome => ({
       outcome: "x",

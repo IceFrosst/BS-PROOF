@@ -2,7 +2,7 @@
 
 import { useState, type CSSProperties } from "react";
 import Link from "next/link";
-import { detailFromAudit, ledgerFromAudit, personFit, score, type AuditFile, type Ledger, type Profile, type StudiedIn } from "./ledger";
+import { detailFromAudit, ledgerFromAudit, score, type AuditFile, type Ledger } from "./ledger";
 import { parseEffectResearch, type EffectResearchFile } from "./effect-contract";
 import {
   NOT_ASSESSED_WORD, fictionalEffectBar, legacyEffectBar, notAssessedReason, outcomeKey,
@@ -18,19 +18,19 @@ import { auditWarnings, evidenceDetail, gateWarnings, productWarnings, type Evid
 import { PLAIN_LANGUAGE_STAMP, VERBATIM_SUMMARY, plainFor, plainText, type PlainDimension, type PlainProductKey } from "./plain-language";
 import "./ab.css";
 
-type DimKey = "effect" | "evidence" | "form" | "dose" | "person";
+type DimKey = "effect" | "evidence" | "form" | "dose";
 interface Detail { found: string; missing: string; move: string }
 
 /* HYPOTHETICAL ledgers. Fictional products; hand-written inputs to exercise the rubric. No search or study lookup was performed. */
 interface OutcomeCase {
   warnings?: EvidenceWarning[]; name: string; sentence?: string; ledger?: Ledger;
   /** What the row RENDERS: the plain-language rewrite where a sidecar supplies one, otherwise the audit's own text. */
-  detail?: Record<Exclude<DimKey, "person">, Detail>;
+  detail?: Record<DimKey, Detail>;
   /** The audit's own wording for those same fields, kept verbatim behind a details. Absent on the hand-written ledgers. */
-  originalDetail?: Record<Exclude<DimKey, "person">, Detail>;
+  originalDetail?: Record<DimKey, Detail>;
   /** Plain-language versions of the Effect bar's reported-effect lines; the bar itself keeps the audit's. */
   plainLines?: EffectLine[];
-  population?: string; studiedIn?: StudiedIn; effect: EffectBar;
+  population?: string; effect: EffectBar;
 }
 interface Scenario {
   title: string; product: string;
@@ -47,7 +47,7 @@ interface Scenario {
 }
 const okChecklist: Ledger["checklist"] = { risk_of_bias: "supported", consistency: "concern", precision: "supported", directness: "supported", publication_bias: "unknown" };
 const strongGates: Ledger["gates"] = { rctCount: 24, largestRctN: 120, longestRctWeeks: 12, chronicOutcome: true, surrogate: false, allPositiveIndustryOrOneLab: false };
-const thinDetail = (what: string): Record<Exclude<DimKey, "person">, Detail> => ({
+const thinDetail = (what: string): Record<DimKey, Detail> => ({
   effect: { found: what, missing: "Few trials measured this directly.", move: "A trial with this as the primary outcome." },
   evidence: { found: "A handful of small trials.", missing: "Imprecise; results vary.", move: "A preregistered replication." },
   form: { found: "Same preparation as the strength trials.", missing: "—", move: "—" },
@@ -106,16 +106,6 @@ const scenarios: Record<string, Scenario> = {
   },
 };
 
-function personDetail(st: StudiedIn | undefined, p: Profile): Detail {
-  if (!st) return { found: "This audit has not recorded who the trials enrolled.", missing: "Enrolled sex and age range per study.", move: "Re-reading the trials for their demographics." };
-  const who = [st.sex === "unknown" ? "sex not reported" : st.sex === "mixed" ? "men and women" : st.sex === "male" ? "men only" : "women only", st.age_min !== null || st.age_max !== null ? `ages ${st.age_min ?? "?"}-${st.age_max ?? "?"}` : "age range not reported"].join(", ");
-  const you = p.age === null && p.sex === null ? "Tell us your age and sex to see how well this transfers." : `You: ${p.sex ?? "sex not given"}${p.age !== null ? `, ${p.age}` : ""}.`;
-  return {
-    found: `Trials enrolled ${who}. ${st.sex_note ?? ""} ${st.age_note ?? ""}`.trim(),
-    missing: `Ethnicity: ${st.ethnicity ?? "not reported"}.${st.confidence && st.confidence !== "verified" ? ` Demographics ${st.confidence}, not read from every paper.` : ""}`,
-    move: you,
-  };
-}
 
 /* The shipped audits carry two prose fields the older AuditFile type never
  * declared. They are read-only here: the Effect bar reuses that text verbatim
@@ -145,7 +135,7 @@ function fromAudit(title: string, a: AuditFileWithEffect, plainKey: PlainProduct
     outcomes: a.outcomes.map((o) => {
       const ledger = ledgerFromAudit(o);
       const plain = plainFor(plainKey, outcomeKey(o.name, o.population));
-      const audit: Record<Exclude<DimKey, "person">, Detail> = {
+      const audit: Record<DimKey, Detail> = {
         effect: detailFromAudit(o.detail.effect), evidence: detailFromAudit(o.detail.evidence),
         form: detailFromAudit(o.detail.form), dose: detailFromAudit(o.detail.dose),
       };
@@ -171,7 +161,7 @@ function fromAudit(title: string, a: AuditFileWithEffect, plainKey: PlainProduct
         strongestDoubt: o.strongest_doubt === undefined ? undefined : plainText(plain, "summary", "strongest_doubt", o.strongest_doubt),
       });
       return {
-        name: o.name, population: o.population, studiedIn: o.studied_in, ledger,
+        name: o.name, population: o.population, ledger,
         detail: { ...plainDim, evidence: withRubric(plainDim.evidence) },
         originalDetail: { ...audit, evidence: withRubric(audit.evidence) },
         plainLines: plainBar.lines,
@@ -240,7 +230,6 @@ const DIMS_BASE: { key: DimKey; name: string; color: string }[] = [
   { key: "form", name: "Form", color: "var(--ab-r2)" },
   { key: "dose", name: "Dose", color: "var(--ab-r3)" },
 ];
-const PERSON_DIM = { key: "person" as const, name: "Studied in you", color: "var(--ab-r5)" };
 
 type TrackState = "fill" | "hatch" | "null-result" | "no-evidence" | "interval" | "none";
 interface Row {
@@ -338,18 +327,17 @@ export default function AbPrototype({ initial, publicTest = false }: AbPrototype
   const [key, setKey] = useState(initial?.product ?? "creatine");
   const [tab, setTab] = useState<string | null>(initial?.outcome ?? null); // null = the Outcomes list
   const [open, setOpen] = useState<string | null>(initial?.open ?? null);
-  const [profile, setProfile] = useState<Profile>({ age: null, sex: null });
   const [unpicked, setUnpicked] = useState<Record<string, boolean>>({}); // outcomes the user did NOT pick at the interests step
   const s = allScenarios[key];
   const keyOf = (o: OutcomeCase) => outcomeKey(o.name, o.population);
   const isPicked = (o: OutcomeCase) => !unpicked[`${key}:${keyOf(o)}`];
   const togglePick = (o: OutcomeCase) => setUnpicked((u) => ({ ...u, [`${key}:${keyOf(o)}`]: !u[`${key}:${keyOf(o)}`] }));
-  const scored = s.outcomes.map((o) => ({ o, k: keyOf(o), r: o.ledger ? score(o.ledger, personFit(profile, o.studiedIn)) : null }));
+  const scored = s.outcomes.map((o) => ({ o, k: keyOf(o), r: o.ledger ? score(o.ledger) : null }));
   const isList = tab === null;
   const cur = isList ? null : (scored.find((x) => x.k === tab) ?? null);
   const legacy = s.kind !== "research";
 
-  const dimRows: Row[] = cur ? [...DIMS_BASE, PERSON_DIM].map((d): Row => {
+  const dimRows: Row[] = cur ? DIMS_BASE.map((d): Row => {
     const bar = cur.o.effect;
     if (d.key === "effect") {
       const lines = cur.o.plainLines ?? bar.lines;
@@ -362,7 +350,7 @@ export default function AbPrototype({ initial, publicTest = false }: AbPrototype
       };
     }
     if (!legacy || !cur.r || !cur.o.ledger) {
-      const reason = s.research ? notAssessedReason(s.research, d.key as "evidence" | "form" | "dose" | "person") : null;
+      const reason = s.research ? notAssessedReason(s.research, d.key as "evidence" | "form" | "dose") : null;
       return {
         id: d.key, name: d.name, color: d.color, fill: null, track: "hatch", scale: null, pts: "—", word: NOT_ASSESSED_WORD,
         negative: false, detail: null, lines: reason ? [{ label: "Why", body: reason }] : [], original: null, sourceLinks: [],
@@ -370,16 +358,14 @@ export default function AbPrototype({ initial, publicTest = false }: AbPrototype
       };
     }
     const L = cur.o.ledger; const r = cur.r;
-    const fill = d.key === "evidence" ? r.certainty / 4 : d.key === "form" ? (L.formFit === "unknown" ? null : L.formFit / 4) : d.key === "dose" ? (L.doseFit === "unknown" ? null : L.doseFit / 4) : (r.person === "unknown" ? null : r.person / 3);
-    const pts = d.key === "evidence" ? `${r.certainty}/4` : d.key === "form" ? (L.formFit === "unknown" ? "—" : `${L.formFit}/4`) : d.key === "dose" ? (L.doseFit === "unknown" ? "—" : `${L.doseFit}/4`) : (r.person === "unknown" ? "—" : `${r.person}/3`);
-    const word = d.key === "evidence" ? r.certaintyWord : d.key === "form" ? r.formWord : d.key === "dose" ? r.doseWord : r.personWord;
-    const detail = (d.key === "person" ? personDetail(cur.o.studiedIn, profile) : cur.o.detail?.[d.key as Exclude<DimKey, "person">]) ?? null;
+    const fill = d.key === "evidence" ? r.certainty / 4 : d.key === "form" ? (L.formFit === "unknown" ? null : L.formFit / 4) : (L.doseFit === "unknown" ? null : L.doseFit / 4);
+    const pts = d.key === "evidence" ? `${r.certainty}/4` : d.key === "form" ? (L.formFit === "unknown" ? "—" : `${L.formFit}/4`) : (L.doseFit === "unknown" ? "—" : `${L.doseFit}/4`);
+    const word = d.key === "evidence" ? r.certaintyWord : d.key === "form" ? r.formWord : r.doseWord;
+    const detail = cur.o.detail?.[d.key] ?? null;
     return {
       id: d.key, name: d.name, color: d.color, fill, track: fill === null ? "hatch" : "fill", scale: null, pts, word, negative: false,
       detail,
-      // "Studied in you" is computed here from the ledger and the person's own
-      // inputs, not written by the audit, so it has no audit wording to keep.
-      original: d.key === "person" ? null : verbatim(detail, cur.o.originalDetail?.[d.key as Exclude<DimKey, "person">] ?? null, [], []),
+      original: verbatim(detail, cur.o.originalDetail?.[d.key] ?? null, [], []),
       lines: [], sourceLinks: [], provenance: null, jump: null, dim: false,
     };
   }) : [];
@@ -401,7 +387,6 @@ export default function AbPrototype({ initial, publicTest = false }: AbPrototype
   const pick = (k: string) => { setKey(k); setTab(null); setOpen(null); };
   const go = (k: string | null) => { setTab(k); setOpen(null); };
 
-  const profileRow = <div className="ab-profile"><span className="ab-kicker">WHO IS ASKING</span><div><input type="number" min={12} max={110} placeholder="Age" aria-label="Your age" value={profile.age ?? ""} onChange={(e) => setProfile((v) => ({ ...v, age: e.target.value === "" ? null : Number(e.target.value) }))} />{(["female", "male"] as const).map((x) => <button key={x} type="button" aria-pressed={profile.sex === x} onClick={() => setProfile((v) => ({ ...v, sex: v.sex === x ? null : x }))}>{x === "female" ? "Female" : "Male"}</button>)}<button type="button" className="ab-clear" onClick={() => setProfile({ age: null, sex: null })}>Clear</button></div><small>Optional experimental demographic match; changes the applicability term and can raise or lower an existing score. Not a validated prediction. Kept only in this page’s memory.</small></div>;
   const photo = <div className={`ab-photo-hero${layout === "overlap" ? " bleed" : ""}`} role="img" aria-label="Illustrated sample product (placeholder)"><div className="ab-jar"><div className="ab-jar-lid" /><span>FIELD NOTES / 001</span><strong>{(s.kind === "fictional" ? s.product : s.title).split(" · ")[0].replace(/^Sample /, "").toLowerCase()}</strong><i>Pure. Simple. Studied.</i><div>{s.kind === "fictional" ? "SAMPLE" : "DAILY"} <b>{(s.kind === "fictional" ? s.product : s.title).split(" · ")[1] ?? ""}</b></div></div></div>;
 
   /* THE LANDING TAB. No average, no overall number, no band label: a product is
@@ -508,12 +493,12 @@ export default function AbPrototype({ initial, publicTest = false }: AbPrototype
         {s.live && <p className="ab-stamp">Model {s.live.model}, run {s.live.runAt} · AI research, not reverified and not human-verified.</p>}
         {s.research && <p className="ab-stamp">Model {s.research.meta.model}, effect-only pass {s.research.meta.run_at} · AI research, not reverified and not human-verified.</p>}
         {tabs}{block}{warnings}{photo}<section className="ab-card" aria-label="Outcome results">{bars}</section></div>
-      <details className="ab-public-options"><summary>Optional profile & outcome interests</summary>{profileRow}<div className="ab-picks">{s.outcomes.map((o) => <label key={keyOf(o)}><input type="checkbox" checked={isPicked(o)} onChange={() => togglePick(o)} />{o.name}{o.population && <small>{o.population}</small>}</label>)}</div></details>
+      <details className="ab-public-options"><summary>Optional outcome interests</summary><div className="ab-picks">{s.outcomes.map((o) => <label key={keyOf(o)}><input type="checkbox" checked={isPicked(o)} onChange={() => togglePick(o)} />{o.name}{o.population && <small>{o.population}</small>}</label>)}</div></details>
       <footer className="ab-fine">Saved research examples only. Sources and access limits are in the expandable Effect row. Funding and publication bias are warnings, not Evidence deductions. This test does not change the existing scanner or historical pipeline. Not medical advice.</footer>
     </div>
   </main>;
 
-  return <main id="main-content" className="ab-stage"><aside className="ab-side"><a href="/design-lab/mobile">← Field Notebook</a><span className="ab-kicker">RESULT CARD</span><h1>Show the tub.<br />Then the <em>truth.</em></h1><p>Photo takes a third of the phone. Two placements to compare; the rows are identical in both.</p><span className="ab-kicker">PHOTO PLACEMENT</span><div className="ab-layouts" role="tablist" aria-label="Layout">{LAYOUTS.map((l) => <button key={l.id} role="tab" aria-selected={layout === l.id} onClick={() => { setLayout(l.id); setOpen(null); }}><b>{l.name}</b><small>{l.blurb}</small></button>)}</div><span className="ab-kicker">EARLIER AUDITS · UPDATED EVIDENCE POLICY</span><div className="ab-scenarios">{Object.entries(liveScenarios).map(([k, v]) => <button key={k} aria-pressed={key === k} onClick={() => pick(k)}>{v.title}<small>{v.outcomes.length} outcomes · {v.live?.sources} sources</small></button>)}</div><span className="ab-kicker">EFFECT-ONLY RESEARCH · NEW</span><div className="ab-scenarios">{Object.entries(researchScenarios).map(([k, v]) => <button key={k} aria-pressed={key === k} onClick={() => pick(k)}>{v.title}<small>{v.outcomes.length} outcomes · {v.research?.sources.length} sources · no score</small></button>)}</div>{profileRow}<span className="ab-kicker">WHAT THE USER PICKED</span><div className="ab-picks">{s.outcomes.map((o) => <label key={outcomeKey(o.name, o.population)}><input type="checkbox" checked={isPicked(o)} onChange={() => togglePick(o)} />{o.name}{o.population && <small>{o.population}</small>}</label>)}</div><details className="ab-provenance"><summary>Fictional test ledgers</summary><div className="ab-scenarios">{Object.entries(fictionalScenarios).map(([k, v]) => <button key={k} aria-pressed={key === k} onClick={() => pick(k)}>{v.title}<small>{v.product}{v.declared?.businessModel ? " · fictional seller" : ""}</small></button>)}</div></details>{s.live ? <p className="ab-fine"><strong>Previous audit</strong> run {s.live.runAt} by {s.live.model}. Its effect text and sources are shown as written then and were <strong>not reverified</strong> in this pass; scores now exclude funding and publication-bias penalties. Model confidence: {s.live.confidence}. {s.live.doseNote}</p> : s.research ? <p className="ab-fine"><strong>Effect-only research pass</strong> {s.research.meta.run_at}, {s.research.meta.model}. {s.research.meta.note} <b>Reading rules:</b> {s.research.guards.join(" ")}</p> : <p className="ab-fine">Hand-written inputs to exercise the rubric; no search or model call produced this card. The numeric bars here are invented.{s.declared?.multiIngredient || s.declared?.servingsNotStated ? " Its label facts (multi-active blend, no servings per day) are declared by this sample, not read from a real label." : ""}{s.declared?.businessModel ? " Its seller is fictional too: the MLM / direct-selling disclosure here exercises the row and names no real company." : ""}</p>}</aside>
+  return <main id="main-content" className="ab-stage"><aside className="ab-side"><a href="/design-lab/mobile">← Field Notebook</a><span className="ab-kicker">RESULT CARD</span><h1>Show the tub.<br />Then the <em>truth.</em></h1><p>Photo takes a third of the phone. Two placements to compare; the rows are identical in both.</p><span className="ab-kicker">PHOTO PLACEMENT</span><div className="ab-layouts" role="tablist" aria-label="Layout">{LAYOUTS.map((l) => <button key={l.id} role="tab" aria-selected={layout === l.id} onClick={() => { setLayout(l.id); setOpen(null); }}><b>{l.name}</b><small>{l.blurb}</small></button>)}</div><span className="ab-kicker">EARLIER AUDITS · UPDATED EVIDENCE POLICY</span><div className="ab-scenarios">{Object.entries(liveScenarios).map(([k, v]) => <button key={k} aria-pressed={key === k} onClick={() => pick(k)}>{v.title}<small>{v.outcomes.length} outcomes · {v.live?.sources} sources</small></button>)}</div><span className="ab-kicker">EFFECT-ONLY RESEARCH · NEW</span><div className="ab-scenarios">{Object.entries(researchScenarios).map(([k, v]) => <button key={k} aria-pressed={key === k} onClick={() => pick(k)}>{v.title}<small>{v.outcomes.length} outcomes · {v.research?.sources.length} sources · no score</small></button>)}</div><span className="ab-kicker">WHAT THE USER PICKED</span><div className="ab-picks">{s.outcomes.map((o) => <label key={outcomeKey(o.name, o.population)}><input type="checkbox" checked={isPicked(o)} onChange={() => togglePick(o)} />{o.name}{o.population && <small>{o.population}</small>}</label>)}</div><details className="ab-provenance"><summary>Fictional test ledgers</summary><div className="ab-scenarios">{Object.entries(fictionalScenarios).map(([k, v]) => <button key={k} aria-pressed={key === k} onClick={() => pick(k)}>{v.title}<small>{v.product}{v.declared?.businessModel ? " · fictional seller" : ""}</small></button>)}</div></details>{s.live ? <p className="ab-fine"><strong>Previous audit</strong> run {s.live.runAt} by {s.live.model}. Its effect text and sources are shown as written then and were <strong>not reverified</strong> in this pass; scores now exclude funding and publication-bias penalties. Model confidence: {s.live.confidence}. {s.live.doseNote}</p> : s.research ? <p className="ab-fine"><strong>Effect-only research pass</strong> {s.research.meta.run_at}, {s.research.meta.model}. {s.research.meta.note} <b>Reading rules:</b> {s.research.guards.join(" ")}</p> : <p className="ab-fine">Hand-written inputs to exercise the rubric; no search or model call produced this card. The numeric bars here are invented.{s.declared?.multiIngredient || s.declared?.servingsNotStated ? " Its label facts (multi-active blend, no servings per day) are declared by this sample, not read from a real label." : ""}{s.declared?.businessModel ? " Its seller is fictional too: the MLM / direct-selling disclosure here exercises the row and names no real company." : ""}</p>}</aside>
   <div className="ab-phone"><div className="ab-status"><b>9:41</b><i /><span>▮▮▮ ▰</span></div><div className={`ab-screen layout-${layout}`}>
     {layout === "hero" && <>{header}{photo}{tabs}<section className="ab-card">{block}{warnings}{bars}</section></>}
     {layout === "overlap" && <>{photo}<div className="ab-overlap-wrap">{header}{block}</div>{tabs}{warnings}<section className="ab-card">{bars}</section></>}

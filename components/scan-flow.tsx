@@ -64,6 +64,8 @@ import { businessModelDisclosure } from "@/lib/analyze/business-model";
 import type { CatalogIngredient } from "@/lib/analyze/catalog";
 import { literatureDisclosures } from "@/lib/analyze/literature-disclosures";
 import type { ManualScanInput, ScanAnalysis } from "@/lib/analyze/scan";
+import { auditPlainEntry, auditPlainText } from "@/lib/evidence-ledger/plain";
+import { ledgerFromAudit, score as ledgerScore, type AuditOutcome, type RetainedLedgerAudit } from "@/lib/evidence-ledger";
 import { useSupabaseSession } from "@/lib/auth/use-supabase-session";
 
 type Basis = keyof ScanAnalysis["basis_legend"];
@@ -91,13 +93,21 @@ function pct(value: NullableNumber): string {
   return value === null || value === undefined ? "—" : `${Math.round(value * 100)}%`;
 }
 
-function scoreSignalColor(score: NullableNumber, signal: NullableNumber): string {
+/*
+ * ONE ramp, two usages. Hue is the score (0 red -> 60 amber -> 100 green) and
+ * saturation follows evidence coverage, so a weak signal looks deliberately
+ * washed. `usage: "text"` keeps the SAME hue and only darkens it: the fill
+ * lightness that reads well as a 10px bar fails WCAG 1.4.3 as 22-40px type
+ * (measured: amber `#c68f2f` on white is 2.84:1). This is not a second ramp --
+ * the hue, and therefore the meaning, is identical.
+ */
+function scoreSignalColor(score: NullableNumber, signal: NullableNumber, usage: "fill" | "text" = "fill"): string {
   if (score === null || score === undefined) return "var(--sp-mute)";
   const value = Math.max(0, Math.min(100, score));
   const strength = Math.max(0, Math.min(1, signal ?? 0));
   const hue = value <= 60 ? (value / 60) * 42 : 42 + ((value - 60) / 40) * 98;
-  const saturation = 32 + strength * 48;
-  const lightness = 54 - strength * 10;
+  const saturation = usage === "text" ? 48 + strength * 32 : 32 + strength * 48;
+  const lightness = usage === "text" ? 30 - strength * 4 : 54 - strength * 10;
   return `hsl(${Math.round(hue)} ${Math.round(saturation)}% ${Math.round(lightness)}%)`;
 }
 
@@ -189,94 +199,479 @@ function firstSentence(body: string): string {
   return (m ? m[1] : stripped).trim();
 }
 
-/* One evidence dimension, one full-width row: label, value and coverage stay
- * together above a prominent track. The identity class is a restrained visual
- * aid only; the words carry the meaning. `0.00 @ 0%` is explicitly striped and
- * says "untested", while `−0.70 @ 100%` has a full solid track. */
-function Arc({
+/* One evidence dimension, one TAPPABLE full-width row (the design-lab A/B card's
+ * geometry, shipped here 2026-09-16): label, the plain word production already
+ * computes, the signed value and its coverage on line one, a prominent coloured
+ * track underneath, and the detail expanding in place below it.
+ *
+ * INVARIANT 8 lives in this row. The verdict never travels without its
+ * coverage: `0.00 @ 0%` is striped and says "untested" in words, while
+ * `−0.70 @ 100%` has a full solid track. The identity colour is a scanning aid
+ * only; the words carry the meaning.
+ *
+ * NOT ADOPTED from the lab: its ordinal readouts ("2/4", "Exact match") come
+ * from the lab's own rubric, and its reported confidence interval comes from
+ * audit prose that carries one. Production's retained runs carry neither, so
+ * this row renders the run's real signed verdict and real coverage instead of
+ * an invented grade, and draws no interval axis at all rather than an empty one.
+ */
+function DimensionRow({
   dimension,
   label,
   value,
+  word,
   coverage,
+  open,
+  onToggle,
+  children,
 }: {
   dimension: "effect" | "form" | "dose" | "evidence";
   label: string;
   value: string;
+  word?: string | null;
   coverage: NullableNumber;
+  open: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
 }) {
   const known = coverage !== null && coverage !== undefined;
   const fill = known ? Math.max(0, Math.min(1, coverage)) : 0;
   const untested = known && fill === 0;
-  const coverageText = !known ? "coverage not recorded" : untested ? "0% · untested" : `${pct(coverage)} coverage`;
   const coverageLabel = !known ? "not recorded" : untested ? "0%, untested" : pct(coverage);
+  const detailId = `sc-dim-${dimension}`;
   return (
-    <div
-      className={`sc-arc sc-arc-${dimension}${untested ? " sc-arc-untested" : ""}${!known ? " sc-arc-unknown" : ""}`}
-      role="img"
-      aria-label={`${label}${value ? ` ${value},` : ","} coverage ${coverageLabel}`}
+    <li
+      className={`sc-arc sc-arc-${dimension}${untested ? " sc-arc-untested" : ""}${!known ? " sc-arc-unknown" : ""}${open ? " is-open" : ""}`}
+      data-dimension={dimension}
     >
-      <div className="sc-arc-head">
+      <button
+        type="button"
+        className="sc-arc-row"
+        aria-expanded={open}
+        aria-controls={detailId}
+        aria-label={`${label}${value ? ` verdict ${value},` : ","}${word ? ` ${word},` : ""} coverage ${coverageLabel}`}
+        onClick={onToggle}
+      >
         <span className="sc-arc-label">{label}</span>
-        <span className="sc-arc-value">{value}</span>
-        <span className="sc-arc-cov">{coverageText}</span>
-      </div>
-      <span className="sc-arc-track" aria-hidden="true">
-        <span className="sc-arc-fill" style={{ width: `${fill * 100}%` }} />
-      </span>
-    </div>
+        <span className="sc-arc-word">{word ?? ""}</span>
+        {/* The sign is already in the text; the colour only repeats it, so a
+            verdict AGAINST cannot be skimmed as one in favour. */}
+        <span className="sc-arc-value" data-sign={value.startsWith("\u2212") ? "negative" : "other"}>
+          {value}
+        </span>
+        <span className="sc-arc-cov">
+          {!known ? (
+            "coverage not recorded"
+          ) : untested ? (
+            "0% · untested"
+          ) : (
+            <>
+              {pct(coverage)}
+              <span className="sc-arc-cov-word"> coverage</span>
+            </>
+          )}
+        </span>
+        <span className="sc-arc-chev" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 16 16">
+            <path d="M3 6l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
+        <span className="sc-arc-track" aria-hidden="true">
+          <span className="sc-arc-fill" style={{ width: `${fill * 100}%` }} />
+        </span>
+      </button>
+      {open ? (
+        <div id={detailId} className="sc-arc-detail">
+          {children}
+        </div>
+      ) : null}
+    </li>
   );
 }
+
+/* A line of the expanded detail. Every one of these is a fact the retained run
+ * (or the label) actually carries -- there is no written audit prose on this
+ * path, so nothing here is narrated. */
+function DetailLine({ term, children }: { term: string; children: React.ReactNode }) {
+  return (
+    <p>
+      <b>{term}</b> {children}
+    </p>
+  );
+}
+
+type DoseRange = { low: NullableNumber; high: NullableNumber; basis?: string | null } | null | undefined;
+type FormFit = { status: string; form_strength?: NullableNumber; form_basis?: string | null; scored_forms: string[] };
 
 type EvidenceRow = {
   outcome: string;
   outcome_label: string | null;
+  polarity?: string | null;
   composite: NullableNumber;
   verdict: string | null;
   n_primaries: NullableNumber;
   applicability?: NullableNumber;
+  benefit_dose_range_mg?: DoseRange;
+  null_dose_range_mg?: DoseRange;
   arcs: Record<"effect" | "form" | "dose" | "evidence", { verdict: NullableNumber; coverage: NullableNumber; strength?: NullableNumber; closeness?: NullableNumber; basis?: string | null; product_match?: string | null }>;
 };
 
-function EvidenceCard({ row }: { row: EvidenceRow }) {
+/* Everything the expanded dimension rows may say, gathered from parts of the
+ * answer that already exist. Nothing here is computed for the display: each
+ * field is read straight off the retained run, the dose section or the
+ * compatibility section. */
+type RunContext = {
+  population?: Record<string, string | null> | null;
+  run?: Record<string, unknown> | null;
+  doseReadings?: NonNullable<ScanAnalysis["dose_effectiveness"]>["outcomes"] | null;
+  scoredDoseMg?: NullableNumber;
+  formFit?: FormFit | null;
+};
+
+/* The run's population as a plain FACT line. It is never a scored bar: the
+ * design-lab card's fifth bar ("Studied in you") comes from a person-fit term
+ * this pipeline does not compute, so it is not shown at all here. */
+function populationLine(pop: Record<string, string | null> | null | undefined): string | null {
+  if (!pop) return null;
+  const ages: Record<string, string> = { adult: "adults", older_adult: "older adults", adolescent: "adolescents", child: "children", infant: "infants" };
+  const sexes: Record<string, string> = { mixed: "men and women", male: "men", female: "women" };
+  const parts: string[] = [];
+  const who = [
+    pop.health_status && pop.health_status !== "unknown" ? words(pop.health_status) : null,
+    pop.age_band ? ages[pop.age_band] ?? words(pop.age_band) : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  if (who) parts.push(who);
+  if (pop.sex && pop.sex !== "unknown") parts.push(sexes[pop.sex] ?? words(pop.sex));
+  if (pop.deficiency_status && pop.deficiency_status !== "unknown") parts.push(`${words(pop.deficiency_status)} at baseline`);
+  if (pop.pregnancy && pop.pregnancy !== "unknown" && pop.pregnancy !== "not_pregnant") parts.push(words(pop.pregnancy));
+  if (!parts.length) return pop.id ? words(pop.id) : null;
+  return parts.join(", ");
+}
+
+/* The one plain word the dose axis really has: `tone`, computed by
+ * lib/analyze/dose-effectiveness.ts. Effect, form strength and evidence mass
+ * have no such word in this pipeline, so those rows show none rather than an
+ * invented one. */
+const DOSE_TONE_WORD: Record<string, string> = {
+  in_range: "in range",
+  below: "below the range",
+  above: "above the range",
+  unassessable: "not assessable",
+};
+
+function EvidenceCard({ row, context }: { row: EvidenceRow; context: RunContext }) {
+  const [open, setOpen] = useState<string | null>(null);
   const gated = row.composite === null;
-  const notes: string[] = [];
-  if (row.arcs.form?.basis) notes.push(`Form basis: ${words(row.arcs.form.basis)}.`);
-  if (row.arcs.dose?.product_match) notes.push(`Dose match: ${words(row.arcs.dose.product_match)}${row.arcs.dose?.closeness == null ? " (not assessable)" : ""}.`);
-  else if (row.arcs.dose?.closeness == null) notes.push("Dose: not assessable.");
+  const signal = row.arcs.evidence?.coverage ?? null;
+  const name = row.outcome_label ?? words(row.outcome);
+  const population = populationLine(context.population);
+  const reading = context.doseReadings?.find((d) => d.outcome === row.outcome) ?? null;
+  const trials = `${row.n_primaries ?? 0} trial${row.n_primaries === 1 ? "" : "s"}`;
+  const band = row.benefit_dose_range_mg && row.benefit_dose_range_mg.low !== null ? row.benefit_dose_range_mg : null;
+  const nulls = row.null_dose_range_mg && row.null_dose_range_mg.low !== null ? row.null_dose_range_mg : null;
+  // A band whose ends are equal is one dose, not a range (presentation only).
+  const range = (r: NonNullable<DoseRange>) => (r.low === r.high ? mg(r.low) : `${mg(r.low)}\u2013${mg(r.high)}`);
+  // The server's reading sentence opens with the outcome name; the card above
+  // already says it, exactly as DoseBar already strips it.
+  const readingText = reading ? (reading.reading.startsWith(`${name}: `) ? reading.reading.slice(name.length + 2) : reading.reading) : null;
+  const formFit = context.formFit ?? null;
+  const run = context.run ?? null;
+  const runId = run && typeof run.id === "string" ? run.id : null;
+  const scoringModel = run && typeof run.scoring_model === "string" ? run.scoring_model : null;
+  const toggle = (id: string) => setOpen((cur) => (cur === id ? null : id));
   return (
     <article className={`scan-card scan-evidence${gated ? " scan-evidence-gated" : ""}`}>
-      <header className="sc-outcome-head">
-        <div className="sc-outcome-name">
-          <h4>{row.outcome_label ?? words(row.outcome)}</h4>
-          <p className="sc-verdict">{row.verdict ?? "no verdict"}</p>
-        </div>
-        <p className="sc-score" aria-label={gated ? "no composite score" : `${row.composite} out of 100`}>
+      <header
+        className="sc-outcome-headline"
+        style={{ "--sc-score-color": scoreSignalColor(row.composite, signal), "--sc-score-text": scoreSignalColor(row.composite, signal, "text") } as CSSProperties}
+      >
+        <p className="sc-outcome-number" aria-label={gated ? "no composite score" : `${row.composite} out of 100`}>
           <strong>{gated ? "—" : row.composite}</strong>
           <span aria-hidden="true">/100</span>
         </p>
+        <div className="sc-outcome-headline-main">
+          <h4>{name}</h4>
+          <p className="sc-verdict">{row.verdict ?? "no verdict"}</p>
+          {population ? (
+            <p className="sc-pop">
+              <b>Population</b> {population}
+            </p>
+          ) : null}
+        </div>
       </header>
-      <div className="sc-arcs">
-        <Arc dimension="effect" label="Does it work?" value={signed(row.arcs.effect?.verdict)} coverage={row.arcs.effect?.coverage} />
-        <Arc dimension="form" label="In your form?" value={signed(row.arcs.form?.verdict)} coverage={row.arcs.form?.coverage} />
-        <Arc dimension="dose" label="At your dose?" value={signed(row.arcs.dose?.verdict)} coverage={row.arcs.dose?.coverage} />
-        <Arc dimension="evidence" label="Well studied?" value="" coverage={row.arcs.evidence?.coverage} />
-      </div>
-      <footer className="sc-outcome-foot">
-        <span>
-          {row.n_primaries ?? 0} trial{row.n_primaries === 1 ? "" : "s"}
-        </span>
-        {row.applicability != null ? <span>{pct(row.applicability)} applies to your product</span> : null}
-        {notes.length ? <span className="sc-outcome-notes">{notes.join(" ")}</span> : null}
-      </footer>
+      <ul className="sc-arcs" aria-label="Evidence dimensions">
+        <DimensionRow
+          dimension="effect"
+          label="Does it work?"
+          value={signed(row.arcs.effect?.verdict)}
+          coverage={row.arcs.effect?.coverage}
+          open={open === "effect"}
+          onToggle={() => toggle("effect")}
+        >
+          <p className="sc-arc-what">
+            What the trials found overall for this outcome, from −1 (they found harm) to +1 (they found benefit). Coverage is how much of the
+            evidence for this outcome could be read that way.
+          </p>
+          <DetailLine term="Verdict">{signed(row.arcs.effect?.verdict)} over all the evidence.</DetailLine>
+          <DetailLine term="Coverage">{row.arcs.effect?.coverage == null ? "not recorded." : pct(row.arcs.effect.coverage)}</DetailLine>
+          <DetailLine term="Trials">{trials} read for this outcome.</DetailLine>
+          {row.polarity ? (
+            <DetailLine term="Direction">
+              {row.polarity === "higher_better"
+                ? "A higher measurement is the better result here."
+                : row.polarity === "lower_better"
+                  ? "A lower measurement is the better result here."
+                  : words(row.polarity)}
+            </DetailLine>
+          ) : null}
+          <p className="sc-arc-note">This run keeps no pooled estimate or confidence interval, so none is drawn.</p>
+        </DimensionRow>
+
+        <DimensionRow
+          dimension="form"
+          label="In your form?"
+          value={signed(row.arcs.form?.verdict)}
+          word={formFit && formFit.status !== "unknown" ? words(formFit.status) : null}
+          coverage={row.arcs.form?.coverage}
+          open={open === "form"}
+          onToggle={() => toggle("form")}
+        >
+          <p className="sc-arc-what">
+            What the trials that used your preparation found. Coverage is how much of the evidence was run in your form; the rest used another
+            preparation or never said which one.
+          </p>
+          <DetailLine term="Verdict">{signed(row.arcs.form?.verdict)} over the evidence in your form.</DetailLine>
+          <DetailLine term="Coverage">{row.arcs.form?.coverage == null ? "not recorded." : pct(row.arcs.form.coverage)}</DetailLine>
+          {row.arcs.form?.strength != null ? (
+            <DetailLine term="Form strength">
+              {row.arcs.form.strength.toFixed(2)}
+              {!row.arcs.form.basis || row.arcs.form.basis === "ladder" ? " on the evidence ladder." : ` (${words(row.arcs.form.basis)}).`}
+            </DetailLine>
+          ) : null}
+          {formFit ? (
+            <DetailLine term="Form fit">
+              {formFit.status === "exact_form_scored"
+                ? "Your form is the form this run scored."
+                : formFit.status === "form_not_scored"
+                  ? "Your form has not been run. Evidence about another form is not evidence about yours."
+                  : formFit.status === "ingredient_not_scored"
+                    ? "No evidence run exists for this ingredient yet."
+                    : "Form fit unknown."}
+              {formFit.scored_forms?.length ? ` Forms run so far: ${formFit.scored_forms.map((f) => words(f)).join(", ")}.` : ""}
+            </DetailLine>
+          ) : null}
+        </DimensionRow>
+
+        <DimensionRow
+          dimension="dose"
+          label="At your dose?"
+          value={signed(row.arcs.dose?.verdict)}
+          word={reading ? DOSE_TONE_WORD[reading.tone] ?? words(reading.tone) : null}
+          coverage={row.arcs.dose?.coverage}
+          open={open === "dose"}
+          onToggle={() => toggle("dose")}
+        >
+          <p className="sc-arc-what">What the trials dosed near your daily amount found. Coverage is how much of the evidence sat in that band.</p>
+          <DetailLine term="Verdict">{signed(row.arcs.dose?.verdict)} over the evidence at your dose.</DetailLine>
+          <DetailLine term="Coverage">{row.arcs.dose?.coverage == null ? "not recorded." : pct(row.arcs.dose.coverage)}</DetailLine>
+          <DetailLine term="Your daily dose">{context.scoredDoseMg == null ? "could not be established from the label." : mg(context.scoredDoseMg)}</DetailLine>
+          <DetailLine term="Benefit range">{band ? range(band) : "no trial that found a benefit carried a usable dose."}</DetailLine>
+          {nulls ? <DetailLine term="Nothing found at">{range(nulls)}</DetailLine> : null}
+          <DetailLine term="Closeness">{row.arcs.dose?.closeness == null ? "not assessable." : row.arcs.dose.closeness.toFixed(2)}</DetailLine>
+          {/* The run's own dose tier, kept reachable: it used to sit in the
+            * card's footnote line, which the expansions replaced. */}
+          {row.arcs.dose?.product_match ? <DetailLine term="Dose match">{words(row.arcs.dose.product_match)}</DetailLine> : null}
+          {readingText ? <p className="sc-arc-note">{readingText.charAt(0).toUpperCase() + readingText.slice(1)}</p> : null}
+        </DimensionRow>
+
+        <DimensionRow
+          dimension="evidence"
+          label="Well studied?"
+          value=""
+          coverage={row.arcs.evidence?.coverage}
+          open={open === "evidence"}
+          onToggle={() => toggle("evidence")}
+        >
+          <p className="sc-arc-what">
+            How much is known in total: the quality-weighted mass of the trials, which saturates as more good trials arrive. It carries no
+            direction, so it never says the ingredient works.
+          </p>
+          <DetailLine term="Coverage">{row.arcs.evidence?.coverage == null ? "not recorded." : pct(row.arcs.evidence.coverage)}</DetailLine>
+          <DetailLine term="Trials">{trials}.</DetailLine>
+          {row.applicability != null ? (
+            <DetailLine term="Applies to your product">
+              {pct(row.applicability)} — the average of the form and dose terms. A positive score is discounted by it.
+            </DetailLine>
+          ) : null}
+          <DetailLine term="Score">
+            {gated
+              ? "This outcome was gated in the run, so it carries no number."
+              : `${row.composite} out of 100, the signed score rescaled and discounted by what applies to your product.`}
+          </DetailLine>
+          {runId ? (
+            <DetailLine term="Source">
+              Retained evidence run <code>{runId}</code>
+              {scoringModel ? `, scoring model ${scoringModel}` : ""}. Full run parameters are under Technical details.
+            </DetailLine>
+          ) : null}
+        </DimensionRow>
+      </ul>
     </article>
   );
+}
+
+function auditSourceHref(id: string): string | null {
+  const doi = id.match(/10\.\d{4,9}\/[^^\s,;]+/i)?.[0];
+  if (doi) return `https://doi.org/${doi.replace(/[.)]+$/, "")}`;
+  const pmid = id.match(/PMID[: ]+(\d+)/i)?.[1];
+  if (pmid) return `https://pubmed.ncbi.nlm.nih.gov/${pmid}/`;
+  const pmc = id.match(/\b(PMC\d+)\b/i)?.[1];
+  return pmc ? `https://pmc.ncbi.nlm.nih.gov/articles/${pmc}/` : null;
+}
+
+type AuditConcernNotice = { key: string; title: string; body: string };
+
+/* Retained-audit concerns share the same collapsed warning bundle as product
+ * caveats and live literature disclosures. They are disclosures only: neither
+ * funding nor publication bias changes score(), and the detailed audit wording
+ * plus opened sources remain reachable from each outcome expansion. */
+function auditConcernNotices(audit: RetainedLedgerAudit | null): AuditConcernNotice[] {
+  if (!audit) return [];
+  return audit.audit.outcomes.flatMap((outcome) => {
+    const notices: AuditConcernNotice[] = [];
+    if (outcome.ledger.gates.allPositiveIndustryOrOneLab) {
+      notices.push({
+        key: `${outcome.name}:${outcome.population ?? ""}:funding`,
+        title: "Funding & independence",
+        body: `The retained audit flagged industry funding or one laboratory across the positive evidence for ${outcome.name}. This is a disclosure about the evidence, not a claim that the result is wrong. It does not affect the Evidence Ledger score.`,
+      });
+    }
+    if (outcome.ledger.checklist.publication_bias === "concern") {
+      notices.push({
+        key: `${outcome.name}:${outcome.population ?? ""}:publication`,
+        title: "Publication bias",
+        body: `The retained audit recorded a publication-bias concern for ${outcome.name}. Studies with positive findings may be more likely to appear in the published record. This disclosure does not affect the Evidence Ledger score.`,
+      });
+    }
+    return notices;
+  });
+}
+
+function AuditDetailText({ audit, outcome, dimension }: { audit: RetainedLedgerAudit; outcome: AuditOutcome; dimension: "effect" | "evidence" | "form" | "dose" }) {
+  const original = outcome.detail[dimension];
+  const plain = auditPlainEntry(audit.plain, outcome);
+  return (
+    <>
+      {(["found", "missing", "move"] as const).map((field) => (
+        <DetailLine key={field} term={field === "found" ? "Found" : field === "missing" ? "Missing" : "Would move it"}>
+          {auditPlainText(plain, dimension, field, original[field])}
+        </DetailLine>
+      ))}
+      <details className="sc-audit-exact">
+        <summary>Exact wording from the audit</summary>
+        <DetailLine term="Found">{original.found}</DetailLine>
+        <DetailLine term="Missing">{original.missing}</DetailLine>
+        <DetailLine term="Would move it">{original.move}</DetailLine>
+      </details>
+    </>
+  );
+}
+
+function AuditSourceList({ outcome }: { outcome: AuditOutcome }) {
+  return outcome.inventory.length ? (
+    <div className="sc-audit-sources">
+      <b>Sources opened for this outcome</b>
+      {outcome.inventory.map((source) => {
+        const href = auditSourceHref(source.id);
+        return <span key={`${source.id}-${source.year}`}>{href ? <a href={href} target="_blank" rel="noreferrer">{source.id}</a> : source.id} <small>({source.access})</small></span>;
+      })}
+    </div>
+  ) : null;
+}
+
+function AuditDimensionRow({ id, label, value, word, open, onToggle, children }: { id: string; label: string; value: string; word: string; open: boolean; onToggle: () => void; children: React.ReactNode }) {
+  return (
+    <li className={`sc-arc sc-ledger-row sc-arc-${id}${open ? " is-open" : ""}`}>
+      <button type="button" className="sc-arc-row" aria-expanded={open} aria-controls={`sc-ledger-${id}`} onClick={onToggle}>
+        <span className="sc-arc-label">{label}</span><span className="sc-arc-word">{word}</span><span className="sc-arc-value" data-sign={value.startsWith("−") ? "negative" : "other"}>{value}</span>
+        <span className="sc-arc-chev" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 6l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg></span>
+      </button>
+      {open ? <div id={`sc-ledger-${id}`} className="sc-arc-detail">{children}</div> : null}
+    </li>
+  );
+}
+
+function LedgerOutcomeTabs({ audit }: { audit: RetainedLedgerAudit }) {
+  const [active, setActive] = useState<string | null>(null);
+  const [open, setOpen] = useState<string | null>(null);
+  const outcomes = audit.audit.outcomes;
+  const current = active ? outcomes.find((o) => `${o.name}||${o.population ?? ""}` === active) ?? null : null;
+  const scored = outcomes.map((outcome) => ({ outcome, score: ledgerScore(ledgerFromAudit(outcome)) }));
+  const numbers = scored.map((x) => x.score.headline).filter((x): x is number => x !== null);
+  const general = numbers.length ? Math.round(numbers.reduce((a, b) => a + b, 0) / numbers.length) : null;
+  const generalSignal = scored.length ? scored.reduce((sum, x) => sum + x.score.certainty / 4, 0) / scored.length : 0;
+  const go = (key: string | null) => { setActive(key); setOpen(null); };
+  const render = (outcome: AuditOutcome) => {
+    const key = `${outcome.name}||${outcome.population ?? ""}`;
+    const result = ledgerScore(ledgerFromAudit(outcome));
+    const detail = (dimension: "effect" | "evidence" | "form" | "dose") => <AuditDetailText audit={audit} outcome={outcome} dimension={dimension} />;
+    const fitValue = (value: string) => value === "unknown" ? "—" : `${value}/4`;
+    const scoreColor = scoreSignalColor(result.headline, result.certainty / 4);
+    const scoreTextColor = scoreSignalColor(result.headline, result.certainty / 4, "text");
+    return <article className="scan-card scan-evidence sc-ledger-card" key={key}>
+      <header className="sc-outcome-headline sc-ledger-headline" style={{ "--sc-score-color": scoreColor, "--sc-score-text": scoreTextColor } as CSSProperties}>
+        <p className="sc-outcome-number" aria-label={result.headline === null ? "no ledger score" : `${result.headline} out of 100`}><strong>{result.headline ?? "—"}</strong>{result.headline !== null ? <span aria-hidden="true">/100</span> : null}</p>
+        <div className="sc-outcome-headline-main"><h4>{outcome.name}</h4><p className="sc-verdict">{result.label}</p>{outcome.population ? <p className="sc-pop"><b>Population</b> {outcome.population}</p> : null}</div>
+      </header>
+      <ul className="sc-arcs sc-ledger-arcs" aria-label="Evidence Ledger dimensions">
+        <AuditDimensionRow id="effect" label="Effect" value={result.effect === "unclear" ? "—" : `${result.effect > 0 ? "+" : result.effect < 0 ? "−" : ""}${result.effect}`} word={result.effectWord} open={open === `${key}:effect`} onToggle={() => setOpen(open === `${key}:effect` ? null : `${key}:effect`)}>
+          <p className="sc-arc-what">The audit&apos;s effect state is shown on its real −3 to +3 scale. It is not a /4 grade.</p>
+          <DetailLine term="Plain summary">{auditPlainText(auditPlainEntry(audit.plain, outcome), "summary", "sentence", outcome.sentence)}</DetailLine>
+          <DetailLine term="Estimate">{outcome.absolute_effect ?? "No usable interval or point estimate was retained."}</DetailLine>
+          <DetailLine term="Meaningful">{outcome.clinically_meaningful ?? "Unknown."}</DetailLine>
+          <DetailLine term="Strongest doubt">{outcome.strongest_doubt}</DetailLine>
+          {detail("effect")}
+          <AuditSourceList outcome={outcome} />
+        </AuditDimensionRow>
+        <AuditDimensionRow id="certainty" label="Evidence certainty" value={`${result.certainty}/4`} word={result.certaintyWord} open={open === `${key}:certainty`} onToggle={() => setOpen(open === `${key}:certainty` ? null : `${key}:certainty`)}>
+          <p className="sc-arc-what">Certainty is calculated from the body type, checklist and gates. Funding and publication bias are disclosed separately and do not change this number.</p>
+          <DetailLine term="Gates">{result.firedGates.length ? result.firedGates.join("; ") : "No certainty gate fired."}</DetailLine>
+          <DetailLine term="Checklist">{Object.entries(outcome.ledger.checklist).map(([name, state]) => `${words(name)}: ${state}`).join("; ")}</DetailLine>
+          {detail("evidence")}
+          <AuditSourceList outcome={outcome} />
+        </AuditDimensionRow>
+        <AuditDimensionRow id="form" label="Form" value={fitValue(outcome.ledger.formFit)} word={result.formWord} open={open === `${key}:form`} onToggle={() => setOpen(open === `${key}:form` ? null : `${key}:form`)}>
+          <p className="sc-arc-what">Form fit is the audit&apos;s 0 to 4 preparation match. Unknown is shown as a dash, never as 0/4.</p>
+          {detail("form")}<AuditSourceList outcome={outcome} />
+        </AuditDimensionRow>
+        <AuditDimensionRow id="dose" label="Dose" value={fitValue(outcome.ledger.doseFit)} word={result.doseWord} open={open === `${key}:dose`} onToggle={() => setOpen(open === `${key}:dose` ? null : `${key}:dose`)}>
+          <p className="sc-arc-what">Dose fit is the audit&apos;s 0 to 4 comparison with the effective daily range. Unknown is shown as a dash, never as 0/4.</p>
+          <DetailLine term="Effective daily range">{outcome.ledger.effective_daily_range}</DetailLine>
+          {detail("dose")}<AuditSourceList outcome={outcome} />
+        </AuditDimensionRow>
+      </ul>
+    </article>;
+  };
+  return <div className="sc-tabs sc-ledger-tabs">
+    <div className="sc-tablist" role="tablist" aria-label="Evidence Ledger outcomes">
+      <button type="button" className={`sc-tab${active === null ? " sc-tab-selected" : ""}`} role="tab" aria-selected={active === null} onClick={() => go(null)} style={{ "--sc-tab-score": scoreSignalColor(general, generalSignal, "text") } as CSSProperties}>General</button>
+      {outcomes.map((o) => { const key = `${o.name}||${o.population ?? ""}`; const tabScore = ledgerScore(ledgerFromAudit(o)); return <button type="button" className={`sc-tab${active === key ? " sc-tab-selected" : ""}`} role="tab" key={key} aria-selected={active === key} onClick={() => go(key)} style={{ "--sc-tab-score": scoreSignalColor(tabScore.headline, tabScore.certainty / 4, "text") } as CSSProperties}>{o.name}</button>; })}
+    </div>
+    {current ? render(current) : <div className="sc-ledger-general">
+      <div className="sc-general" style={{ "--sc-score-color": scoreSignalColor(general, generalSignal), "--sc-score-text": scoreSignalColor(general, generalSignal, "text") } as CSSProperties} role="img" aria-label={general === null ? "General score: no scored outcomes" : `General score ${general}, mean of ${numbers.length} scored outcome scores; not a probability`}><strong className="sc-general-score">{general ?? "—"}</strong><span className="sc-general-name"><strong>General score</strong><small>Mean of {numbers.length} scored outcome score{numbers.length === 1 ? "" : "s"} · not a probability</small></span></div>
+      <ul className="sc-outcome-list" aria-label="Evidence Ledger outcomes">{outcomes.map((o) => { const key = `${o.name}||${o.population ?? ""}`; const r = ledgerScore(ledgerFromAudit(o)); return <li key={key}><button type="button" className="sc-outcome-row" onClick={() => go(key)} aria-label={`${o.name}, ${r.headline === null ? "no ledger score" : `${r.headline} out of 100`}`}><span className="sc-outcome-row-name"><strong>{o.name}</strong><small>{o.population}</small></span><span className="sc-outcome-row-score"><strong style={{ color: scoreSignalColor(r.headline, r.certainty / 4, "text") }}>{r.headline ?? "—"}</strong></span><span className="sc-outcome-row-more" aria-hidden="true">›</span><span className="sc-outcome-row-track" aria-hidden="true"><span className="sc-outcome-row-fill" style={{ width: `${r.headline === null ? 0 : r.headline}%`, background: scoreSignalColor(r.headline, r.certainty / 4) }} /></span></button></li>; })}</ul>
+    </div>}
+  </div>;
 }
 
 /* Outcomes as tabs: the first tab lists every outcome (no averaged overall
  * number — a product is not one benefit), each further tab is one outcome with
  * its four evidence tracks. Tapping a list row opens that outcome's tab. */
-function OutcomeTabs({ rows }: { rows: EvidenceRow[] }) {
+function OutcomeTabs({ rows, context }: { rows: EvidenceRow[]; context: RunContext }) {
   const [active, setActive] = useState<string | null>(null);
+  const population = populationLine(context.population);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const current = active ? rows.find((r) => r.outcome === active) ?? null : null;
@@ -328,7 +723,7 @@ function OutcomeTabs({ rows }: { rows: EvidenceRow[] }) {
       >
         {current ? (
           <>
-            <EvidenceCard row={current} />
+            <EvidenceCard row={current} context={context} />
             <button type="button" className="sc-tab-back" onClick={() => go(null, true)}>
               ← All outcomes
             </button>
@@ -342,7 +737,7 @@ function OutcomeTabs({ rows }: { rows: EvidenceRow[] }) {
               const signals = scoredRows.map((r) => r.arcs.evidence?.coverage).filter((v): v is number => typeof v === "number");
               const generalSignal = signals.length ? signals.reduce((a, b) => a + b, 0) / signals.length : 0;
               return (
-                <div className="sc-general" style={{ "--sc-score-color": scoreSignalColor(general, generalSignal) } as CSSProperties} role="img" aria-label={general === null ? "General score: no scored outcomes" : `General score ${general}, average of ${scores.length} outcome scores; signal strength ${Math.round(generalSignal * 100)}%`}>
+                <div className="sc-general" style={{ "--sc-score-color": scoreSignalColor(general, generalSignal), "--sc-score-text": scoreSignalColor(general, generalSignal, "text") } as CSSProperties} role="img" aria-label={general === null ? "General score: no scored outcomes" : `General score ${general}, average of ${scores.length} outcome scores; signal strength ${Math.round(generalSignal * 100)}%`}>
                   <strong className="sc-general-score">{general === null ? "\u2014" : general}</strong>
                   <span className="sc-general-name">
                     <strong>General score</strong>
@@ -351,6 +746,16 @@ function OutcomeTabs({ rows }: { rows: EvidenceRow[] }) {
                 </div>
               );
             })()}
+          {/* The run's population, stated ONCE: it is recorded per RUN, not per
+            * outcome, so repeating it on every row would print the same string
+            * four times. It is a plain fact line, never a scored bar -- the
+            * design-lab card's "Studied in you" bar comes from a person-fit term
+            * this pipeline does not compute and is not shown at all. */}
+          {population ? (
+            <p className="sc-pop sc-list-pop">
+              <b>Population</b> every outcome below was scored in {population}.
+            </p>
+          ) : null}
           <ul className="sc-outcome-list" aria-label="Scored outcomes">
             {rows.map((row) => {
               const gated = row.composite === null;
@@ -358,7 +763,7 @@ function OutcomeTabs({ rows }: { rows: EvidenceRow[] }) {
                 <li key={row.outcome}>
                   <button type="button" className={`sc-outcome-row${gated ? " sc-outcome-row-gated" : ""}`} onClick={() => go(row.outcome, true)} aria-label={`${label(row)}, ${gated ? "no composite score" : `${row.composite} out of 100`}. More`}>
                     <span className="sc-outcome-row-name"><strong>{label(row)}</strong></span>
-                    <span className="sc-outcome-row-score"><strong style={!gated ? { color: scoreSignalColor(row.composite, row.arcs.evidence?.coverage) } : undefined}>{gated ? "—" : `${row.composite}%`}</strong></span>
+                    <span className="sc-outcome-row-score"><strong style={!gated ? { color: scoreSignalColor(row.composite, row.arcs.evidence?.coverage, "text") } : undefined}>{gated ? "—" : `${row.composite}%`}</strong></span>
                     {/* One affordance, and it is the row itself: a single chevron on the
                       * first line. The lone "More" link used to sit on its own grid line
                       * between the score and the bar, which broke the row into fragments. */}
@@ -598,14 +1003,24 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
   const entry = data?.input;
   const typed = data?.source === "manual";
   const product = data?.product;
+  const ledgerAudit = data?.ledger_audit ?? null;
   const evidence = data?.evidence as
-    | { status: string; rows?: EvidenceRow[]; scored_forms?: string[]; run?: Record<string, unknown>; validity?: { status: string | null; public_claims_allowed: boolean; note: string | null; limitations?: string[] } }
+    | { status: string; rows?: EvidenceRow[]; scored_forms?: string[]; run?: Record<string, unknown>; population?: Record<string, string | null> | null; validity?: { status: string | null; public_claims_allowed: boolean; note: string | null; limitations?: string[] } }
     | undefined;
   const rows = evidence?.rows ?? [];
   const prior = data?.evidence_prior;
   const dose = data?.dose_effectiveness;
   const compat = data?.compatibility;
   const company = data?.company;
+  // What an expanded evidence dimension is allowed to show. Every field is a
+  // fact the answer already carries; nothing is derived for the display.
+  const runContext: RunContext = {
+    population: evidence?.population ?? null,
+    run: evidence?.run ?? null,
+    doseReadings: dose?.outcomes ?? null,
+    scoredDoseMg: dose?.scored_dose_mg ?? product?.scored_dose_mg ?? null,
+    formFit: compat?.evidence_form_fit ?? null,
+  };
   const factsBasis: Basis = typed ? "user_input" : "label";
 
   // Sign-in gate. `locked` only ever becomes true once we know for sure
@@ -660,8 +1075,9 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
 
   const disclosures = data ? literatureDisclosures(data.literature_warnings?.data) : [];
   const mlm = company?.profile.status === "ok" ? businessModelDisclosure(company.profile.data?.business_model) : null;
-  const warningCount = (data?.caveats?.length ?? 0) + disclosures.length + (mlm ? 1 : 0);
-  const hasNotices = Boolean(evidence?.validity || warningCount);
+  const auditWarnings = auditConcernNotices(ledgerAudit);
+  const warningCount = (data?.caveats?.length ?? 0) + disclosures.length + (mlm ? 1 : 0) + auditWarnings.length;
+  const hasNotices = Boolean(ledgerAudit || evidence?.validity || warningCount);
 
   return (
     <section className="la scan sc" aria-label="Scan a supplement">
@@ -898,6 +1314,12 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
                     <h3 id="scan-notices-title" className="sc-notices-title">
                       Before you read the score
                     </h3>
+                    {ledgerAudit ? (
+                      <div className="la-alert la-alert-warn sc-notice sc-notice-open sc-ledger-validity">
+                        <strong>Retained previous audit · not reverified</strong>
+                        <span>{ledgerAudit.provenance.prompt_version} · target: {ledgerAudit.provenance.target_product} · {ledgerAudit.provenance.target_dose}</span>
+                      </div>
+                    ) : null}
                     {evidence?.validity ? (
                       <div className={`la-alert ${evidence.validity.public_claims_allowed ? "la-alert-ok" : "la-alert-warn"} sc-notice sc-notice-open`}>
                         <strong>{evidence.validity.public_claims_allowed ? "Validated run." : `Not a product claim — this run is marked ${evidence.validity.status ?? "unvalidated"}.`}</strong>
@@ -920,6 +1342,7 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
                             <Notice key={d.title} title={d.title} lede={firstSentence(d.body)} body={d.body} role="note" ariaLabel={`${d.title} disclosure`} />
                           ))}
                           {mlm ? <Notice title={mlm.title} lede={firstSentence(mlm.body.replace(/^Model knowledge — unverified\.\s*/, "").replace(/^This company/, `${company?.brand ?? "This company"}`))} body={mlm.body} role="note" ariaLabel="Business model disclosure" /> : null}
+                          {auditWarnings.map((warning) => <Notice key={warning.key} title={warning.title} lede={firstSentence(warning.body)} body={warning.body} role="note" ariaLabel={`${warning.title} disclosure`} />)}
                         </div>
                       </details>
                     ) : null}
@@ -929,9 +1352,16 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
                 {/* ---------------- evidence ---------------- */}
                 {product ? (
                   <Section id="evidence" title="Does it work?" basis={["evidence_run"]} legend={legend}>
-                    {rows.length ? (
-                      <OutcomeTabs rows={rows} />
+                    {ledgerAudit ? (
+                      <LedgerOutcomeTabs audit={ledgerAudit} />
+                    ) : rows.length ? (
+                      <>
+                        <p className="sc-no-ledger-audit">No /4 audit for this exact form and daily dose yet.</p>
+                        <OutcomeTabs rows={rows} context={runContext} />
+                      </>
                     ) : (
+                      <>
+                        <p className="sc-no-ledger-audit">No /4 audit for this exact form and daily dose yet.</p>
                       <div className="la-empty">
                         <strong>{evidence?.status === "form_not_scored" ? "That form has not been run." : "No evidence run exists for this ingredient."}</strong>
                         <span>
@@ -956,6 +1386,7 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
                           </div>
                         ) : null}
                       </div>
+                      </>
                     )}
                   </Section>
                 ) : null}
