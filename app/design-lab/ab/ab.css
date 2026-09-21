@@ -1,9 +1,9 @@
 body:has(.ab-stage)>.site-header,body:has(.ab-stage)>.site-footer{display:none}
-.ab-stage{--ab-bg:#f6f3ea;--ab-surface:#fffdf7;--ab-soft:#eef0e3;--ab-ink:#1f3a2d;--ab-muted:#5f6b60;--ab-line:#d9dccc;--ab-accent:#2f5d45;--ab-track:#e3e5d6;--ab-r1:#2f5d45;--ab-r2:#6f9b6b;--ab-r3:#98a953;--ab-r5:#7c6a9c;--ab-r4:#bb8a30;--ab-warn:#963d26;--ab-warn-bg:#fbeddf;min-height:100svh;background:#e8eadf;color:var(--ab-ink);font-family:ui-rounded,"SF Pro Rounded",-apple-system,"Segoe UI",sans-serif;display:flex;justify-content:center;align-items:flex-start;gap:48px;padding:40px 28px}
-.ab-stage button{font:inherit;cursor:pointer;color:inherit}
-.ab-stage button:focus-visible{outline:3px solid #bc8344;outline-offset:3px}
-.ab-stage h1,.ab-stage h2,.ab-stage h3,.ab-stage p{margin:0}
-.ab-stage em{font-family:Georgia,serif;font-weight:400}
+.ab-stage,.scan-lab-result{--ab-bg:#f6f3ea;--ab-surface:#fffdf7;--ab-soft:#eef0e3;--ab-ink:#1f3a2d;--ab-muted:#5f6b60;--ab-line:#d9dccc;--ab-accent:#2f5d45;--ab-track:#e3e5d6;--ab-r1:#2f5d45;--ab-r2:#6f9b6b;--ab-r3:#98a953;--ab-r5:#7c6a9c;--ab-r4:#bb8a30;--ab-warn:#963d26;--ab-warn-bg:#fbeddf;min-height:100svh;background:#e8eadf;color:var(--ab-ink);font-family:ui-rounded,"SF Pro Rounded",-apple-system,"Segoe UI",sans-serif;display:flex;justify-content:center;align-items:flex-start;gap:48px;padding:40px 28px}
+.ab-stage button,.scan-lab-result button{font:inherit;cursor:pointer;color:inherit}
+.ab-stage button:focus-visible,.scan-lab-result button:focus-visible{outline:3px solid #bc8344;outline-offset:3px}
+.ab-stage h1,.ab-stage h2,.ab-stage h3,.ab-stage p,.scan-lab-result h1,.scan-lab-result h2,.scan-lab-result h3,.scan-lab-result p{margin:0}
+.ab-stage em,.scan-lab-result em{font-family:Georgia,serif;font-weight:400}
 .ab-kicker{display:block;font-size:11px;font-weight:750;letter-spacing:.09em}
 .ab-side{width:300px;flex-shrink:0}
 .ab-side>a{display:inline-flex;min-height:44px;align-items:center;font-size:13px;color:var(--ab-muted);margin-bottom:26px}
@@ -28,8 +28,8 @@ body:has(.ab-stage)>.site-header,body:has(.ab-stage)>.site-footer{display:none}
 .ab-tabs{display:flex;flex-shrink:0;gap:6px;overflow-x:auto;padding-bottom:10px;scrollbar-width:none}
 .ab-tabs button{white-space:nowrap;min-height:44px;padding:8px 13px;border:1px solid var(--ab-line);border-radius:11px;background:var(--ab-surface);font-size:12px;display:flex;align-items:center;flex-shrink:0;max-width:210px;overflow:hidden;text-overflow:ellipsis}
 .ab-tabs button small{font-size:10px;color:var(--ab-muted);overflow:hidden;text-overflow:ellipsis;max-width:190px}
-.ab-tabs button[aria-pressed=true]{background:var(--ab-accent);border-color:var(--ab-accent);color:#f7f9f1}
-.ab-tabs button[aria-pressed=true] small{color:#dfe8d6}
+.ab-tabs button[aria-pressed=true],.ab-tabs button[role=tab][aria-selected=true]{background:var(--ab-accent);border-color:var(--ab-accent);color:#f7f9f1}
+.ab-tabs button[aria-pressed=true] small,.ab-tabs button[role=tab][aria-selected=true] small{color:#dfe8d6}
 /* The card is the phone's REAL scroll region: every outcome row must be
  * reachable by scrolling instead of being clipped by the 844px shell. */
 .ab-card{flex:1 1 auto;display:flex;flex-direction:column;background:var(--ab-surface);border:1px solid var(--ab-line);border-bottom-width:3px;border-radius:22px;padding:14px;min-height:120px;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none}

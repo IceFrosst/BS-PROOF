@@ -773,3 +773,64 @@ backup, and the page says `No /4 audit for this exact form and daily dose yet`.
 Coverage is never converted to /4. A future arbitrary-product audit needs a
 source-retrieval service before `research_audit` can be run; the deployed chat
 transport has no web access.
+
+---
+
+## Fidelity pass against the shipped lab card (2026-09-22)
+
+The port to the shared `ab.css` primitives was already structurally right; this
+pass closed the differences that were still visible at 390 next to
+`docs/design/ref/tabs-preview/2026-09-16-shipped-lab-390-outcome(s).png`, and
+fixed two defects the earlier captures hid. Presentation only: no scoring, API,
+prompt, schema or pipeline change, and no new number.
+
+**Measured deltas closed** (all in `app/scan-lab-result.css` unless noted):
+
+| what | was | now |
+|---|---|---|
+| result header | inherited `.sc-scanned`: a 56px first column, a 12px gutter and a rule under the header that the reference does not have | the card's own `.ab-top`: 44px circle, 10px gutter, no rule |
+| photo hero | 220px at ≤600px (240 above) | **262px**, the reference height at the same width |
+| hero surface | the `<img>` carried a flat `--ab-soft` fill that masked the dotted paper panel behind a letterboxed photo | fill removed; the photo is still `contain`, never cropped, and the dot grid shows around it |
+| card at ≤600px | padding 12px, radius 20px | 14px / 22px — the same object at 360 as at 390 |
+| "Outcomes" rule | `.ab-listhead` wrapped the list too, so its hairline fell under the LAST row (`components/scan-flow.tsx`) | the head closes at the heading, so the rule divides heading from list as in the reference |
+| outcome headline tint | the inline `--ab-score-color` was computed and never used: every headline was the same neutral panel | tinted at the same 13% from the same one ramp the bars and the General tile use; `muted` (no number) stays colourless |
+| section summaries | flex row, so a 3-line title sat beside a ragged stacked column of basis badges | title + chevron on line 1, badges wrap on their own line |
+
+**Two defects found by reading the actual pixels, not the markup:**
+
+1. **The warnings bundle was clipped off-screen.** Every element in the chain
+   (`.ab-warnings` → `.ab-warning-list` → `.ab-warning-row` → its `summary`) is
+   a grid or flex item, and the one-line lede is `white-space: nowrap`, so the
+   automatic minimum size blew the card out to **990px inside a 358px column**;
+   `.scan-lab-result { overflow: hidden }` then cut the disclosure bodies at the
+   viewport edge. Pinning `min-width: 0` along the chain restores the full text.
+   The lede itself is gone from the collapsed row — at 100px it truncated to
+   "This is abo…" and it is the opening line of the body one tap below — and the
+   row gained the chevron it never had.
+2. **The warning rows still wore the old report's alert skin.** `.la-alert`
+   under `.scan-page` re-applied a gold left rule and a one-sided radius over
+   the newer rule; they are now the reference's own hairline box on paper.
+
+Also scoped to production: the fallback tub (typed entry, or a preview that
+failed to decode) grows to contain its `FORM` footer instead of spilling it
+below the jar, and a long form name ellipsizes on that line.
+
+**Intentional deltas from the lab card, kept on purpose:**
+
+- The validity/provenance stamp is the first thing inside the card. The lab has
+  no equivalent; production must put it before the first number.
+- The outcome tile prints `/100` under the composite and the Outcomes rows print
+  a bare number. The lab renders `58%`, which is a false unit: the composite is
+  a 0–100 display of a signed score, not a percentage.
+- Every unmatched outcome keeps the same shell with `—` and *Not assessed*, and
+  there is no "Studied in you" row on either surface, because production has no
+  person-fit data.
+
+Result heights at this pass: unmatched 1678px @390 / 1693px @360, matched
+2871px @390 / 3035px @360, **0px horizontal overflow at both widths**.
+`scripts/design_shots.mjs` gained an `-11-matched-*` pass that mocks the exact
+body `POST /api/scan` returns for a 4 g single-active creatine label, so the
+fully scored card is reviewable; before it, every review shot was the unmatched
+"Not assessed" shell. Shots: `docs/design/ref/tabs-preview/2026-09-22-scan-actual-ab-*`;
+`public/previews/scan-tabs-{outcomes,outcome}-390.png` refreshed from the matched
+pass. A live scan was NOT exercised: no model API key exists in this environment.

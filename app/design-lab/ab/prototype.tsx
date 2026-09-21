@@ -16,7 +16,6 @@ import creatineResearch from "./effect-research/creatine-effect.json";
 import omega3Research from "./effect-research/omega3-effect.json";
 import { auditWarnings, evidenceDetail, gateWarnings, productWarnings, type EvidenceWarning, type ProductDeclarations } from "./evidence-warnings";
 import { PLAIN_LANGUAGE_STAMP, VERBATIM_SUMMARY, plainFor, plainText, type PlainDimension, type PlainProductKey } from "./plain-language";
-import "./ab.css";
 
 type DimKey = "effect" | "evidence" | "form" | "dose";
 interface Detail { found: string; missing: string; move: string }

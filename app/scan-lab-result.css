@@ -1,0 +1,95 @@
+/* Production composition for /scan. The card, tabs, hero and row primitives are
+   imported from design-lab/ab/ab.css; this file only places those primitives in
+   the real page and keeps the old capture/error state untouched. */
+body:has(.scan-lab-result) { background: #f6f3ea; }
+.scan-page:has(.scan-lab-result) .scan-hero,
+.scan-page:has(.scan-lab-result) .la.scan { padding-top: 0; min-height: 0; }
+body:has(.scan-lab-result) > .site-header, body:has(.scan-lab-result) > .site-footer { display: none; }
+.scan-page:has(.scan-lab-result), .scan-page:has(.scan-lab-result) .scan-hero { background: #f6f3ea; }
+.scan-lab-result {
+  width: 100%; max-width: 640px; min-width: 0; min-height: 0; margin-inline: auto; padding: 6px 0 28px;
+  display: block; gap: 0; justify-content: initial; align-items: initial; box-sizing: border-box; overflow: hidden;
+  background: var(--ab-bg); color: var(--ab-ink); font-family: ui-rounded, "SF Pro Rounded", -apple-system, "Segoe UI", sans-serif;
+}
+.scan-lab-result:focus { outline: none; }
+/* The result header is the lab card's own top row, not the old report's
+   .sc-scanned band: same 44px circle + 10px gutter, and no rule under it. */
+.scan-lab-result .ab-top.sc-scanned { grid-template-columns: 44px minmax(0, 1fr); gap: 10px; padding: 4px 0 8px; border-bottom: 0; }
+.scan-lab-result .ab-title strong { font-size: 15px; }
+.scan-lab-result .ab-title small { font-size: 11px; color: var(--ab-muted); }
+/* Same height as the reference card's hero. The photo is CONTAINED, never
+   cropped, so the dotted paper panel shows through around a letterboxed
+   label instead of being masked by a flat fill. */
+.scan-lab-hero { height: 262px; margin-bottom: 10px; }
+.scan-lab-photo { width: 100%; height: 100%; object-fit: contain; }
+/* Fallback tub (typed entry, or a preview that failed to decode): a long form
+   name must stay on the footer line instead of wrapping over the italic. */
+.scan-lab-hero .ab-jar { height: auto; min-height: 196px; padding-bottom: 14px; }
+.scan-lab-hero .ab-jar > div:last-child { gap: 8px; min-width: 0; }
+.scan-lab-hero .ab-jar > div:last-child b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; }
+.scan-lab-result .ab-tabs { margin-bottom: 0; }
+.scan-lab-result .ab-tabs button[role="tab"] { min-height: 44px; }
+.scan-lab-result .ab-card { flex: none; overflow: visible; min-width: 0; min-height: 0; padding: 14px; border-radius: 22px; }
+.scan-lab-result .ab-card > [role="tabpanel"] { min-width: 0; }
+/* The outcome headline is tinted from the SAME score ramp the bars and the
+   General tile use (one ramp, mixed at the same 13%), so a benefit and a
+   failure cannot present as the same neutral block. `muted` is the
+   no-number case and stays deliberately colourless. */
+.scan-lab-result .ab-headline { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 14px; background: color-mix(in srgb, var(--ab-score-color, var(--ab-accent)) 13%, var(--ab-surface)); }
+.scan-lab-result .ab-headline.muted { background: #ecece4; }
+.scan-lab-result .ab-headline > .ab-bars { grid-column: 1 / -1; width: 100%; }
+.scan-lab-result .ab-headline h2 { font-size: 22px; }
+.scan-lab-result .ab-bars { margin-top: 10px; }
+/* Same object as the reference card's warning row: one hairline box on paper.
+   The `.la-alert` class it also carries would otherwise re-apply the old
+   report's gold left rule and its one-sided radius. */
+.scan-lab-result .ab-warning-row.la-alert { border: 1px solid #cfaa83; border-radius: 10px; background: var(--ab-surface); padding: 0 10px; }
+.scan-lab-result .ab-warning-row > summary { min-height: 42px; display: flex; align-items: center; justify-content: space-between; gap: 8px; cursor: pointer; color: var(--ab-warn); font-size: 12px; font-weight: 650; list-style: none; }
+.scan-lab-result .ab-warning-row > summary::-webkit-details-marker { display: none; }
+/* The row is title + chevron. The first sentence used to be squeezed in beside
+   the title, where it had ~100px and truncated to "This is abo\2026"; it is the
+   opening line of the body one tap below, so the collapsed row shows the
+   concern and an affordance instead of a fragment. */
+.scan-lab-result .ab-warning-row > summary::after { content: "\2304"; flex: 0 0 auto; font-size: 17px; line-height: 1; margin-top: -5px; transition: transform .18s ease; }
+.scan-lab-result .ab-warning-row[open] > summary::after { transform: rotate(180deg); margin-top: 0; }
+/* Every one of these is a grid or flex item whose automatic minimum size is
+   its longest unbreakable run. The one-line lede is `nowrap`, so without an
+   explicit 0 minimum the whole warnings bundle grew to ~990px inside a 358px
+   column and the disclosure bodies were clipped off-screen. */
+.scan-lab-result .ab-warnings,
+.scan-lab-result .ab-warning-list,
+.scan-lab-result .ab-warning-list > *,
+.scan-lab-result .ab-warning-row > summary { min-width: 0; }
+.scan-lab-result .ab-warning-row > summary strong { min-width: 0; overflow-wrap: anywhere; }
+.scan-lab-result .ab-warning-row > summary span { display: none; }
+.scan-lab-result .ab-warning-row > p { margin: 0 0 10px; color: var(--ab-muted); font-size: 12px; line-height: 1.45; }
+.scan-lab-result .scan-lab-validity { margin: 0 0 8px; }
+.scan-lab-details, .scan-lab-disclosure { margin-top: 10px; padding: 0 2px; border-bottom: 1px solid var(--ab-line); }
+/* Title and chevron share line 1; the source badges wrap onto their own line
+   underneath instead of stacking into a ragged right-hand column. */
+.scan-lab-disclosure > summary { min-height: 48px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 10px; row-gap: 8px; padding: 6px 0; cursor: pointer; list-style: none; }
+.scan-lab-disclosure > summary::-webkit-details-marker { display: none; }
+.scan-lab-disclosure > summary h3 { grid-column: 1; grid-row: 1; font-size: 15px; font-weight: 650; line-height: 1.25; }
+.scan-lab-disclosure > summary .scan-badges,
+.scan-lab-disclosure > summary > .scan-badge { grid-column: 1 / -1; grid-row: 2; justify-self: start; }
+.scan-lab-disclosure > summary::after { content: "⌄"; grid-column: 2; grid-row: 1; color: var(--ab-muted); font-size: 17px; }
+.scan-lab-disclosure[open] > summary::after { transform: rotate(180deg); }
+.scan-lab-disclosure > *:not(summary) { margin-bottom: 12px; }
+.scan-lab-disclosure .scan-section-body { padding: 0 0 6px; }
+.scan-lab-disclosure.scan-section { border-top: 1px solid var(--ab-line); border-bottom: 1px solid var(--ab-line); padding: 0 2px; }
+.scan-lab-disclosure.scan-section > summary { padding: 0; }
+.scan-lab-disclosure.scan-section > summary h3 { font-size: 15px; }
+.scan-lab-result .scan-section-body { font-size: 13px; color: var(--ab-muted); }
+.scan-lab-result .scan-section-body p { font-size: 13px; line-height: 1.45; }
+.scan-lab-result .sc-facts { font-size: 13px; }
+.scan-lab-result .sc-details { border-color: var(--ab-line); }
+.scan-lab-result .scan-legend, .scan-lab-result .sc-technical { margin-top: 12px; }
+.scan-lab-result .ab-general-name { font-size: 17px; }
+/* No narrow-width shrink of the card itself: the reference card is drawn at
+   390 with 14px padding and a 22px radius, and 360 gets the same object. */
+@media (max-width: 600px) {
+  .scan-lab-result { padding: 6px 0 24px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .scan-lab-result * { transition: none !important; animation: none !important; }
+}

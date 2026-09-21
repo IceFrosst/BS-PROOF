@@ -43,8 +43,8 @@
  * 3. A model-prior sentence is never typeset like a measurement. Every block
  *    carries a basis badge; model knowledge is the one dashed, amber badge and
  *    its text says "unverified".
- * 4. The validity banner is not decoration: it is the first, always-open line
- *    of the "Before you read the score" stack, above every number.
+ * 4. The validity stamp is not decoration: it is the first line inside the
+ *    result card, above every number.
  * 5. TYPED IS NOT READ. A manual entry renders under "What you entered" with
  *    the `user_input` badge; it never shows a read confidence, quoted spans or a
  *    vision model, because none exist. The server says which path ran
@@ -54,7 +54,7 @@
  *    currently visible.
  */
 
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 
 import { SaveResultCard } from "@/components/google-sign-in";
 import { ScanCamera } from "@/components/scan-camera";
@@ -135,20 +135,6 @@ function tabId(key: string): string {
   return `sc-tab-${safe || "outcome"}-${Math.abs(hash).toString(36)}`;
 }
 
-function moveTabOnKey(
-  event: KeyboardEvent<HTMLButtonElement>,
-  index: number,
-  keys: string[],
-  refs: { current: Array<HTMLButtonElement | null> },
-  select: (key: string) => void,
-) {
-  if (!["ArrowRight", "ArrowLeft", "Home", "End"].includes(event.key)) return;
-  event.preventDefault();
-  const next = event.key === "Home" ? 0 : event.key === "End" ? keys.length - 1 : (index + (event.key === "ArrowRight" ? 1 : -1) + keys.length) % keys.length;
-  select(keys[next]);
-  refs.current[next]?.focus();
-}
-
 function BasisBadge({ kind, legend }: { kind: Basis; legend: ScanAnalysis["basis_legend"] }) {
   const entry = legend[kind];
   return (
@@ -172,17 +158,15 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="scan-section" id={`scan-${id}`} aria-labelledby={`scan-${id}-title`}>
-      <header className="scan-section-head">
-        <h3 id={`scan-${id}-title`}>{title}</h3>
+    <details className="scan-section scan-lab-disclosure" id={`scan-${id}`}>
+      <summary className="scan-section-head" id={`scan-${id}-title`}>
+        <h3>{title}</h3>
         <div className="scan-badges" aria-label="Sources used in this section">
-          {basis.map((b) => (
-            <BasisBadge key={b} kind={b} legend={legend} />
-          ))}
+          {basis.map((b) => <BasisBadge key={b} kind={b} legend={legend} />)}
         </div>
-      </header>
-      {children}
-    </section>
+      </summary>
+      <div className="scan-section-body">{children}</div>
+    </details>
   );
 }
 
@@ -203,15 +187,10 @@ function Notice({
   ariaLabel?: string;
 }) {
   return (
-    <div className="la-alert la-alert-warn sc-notice" role={role} aria-label={ariaLabel}>
-      <details className="sc-notice-details">
-        <summary>
-          <strong>{title}</strong>
-          {lede ? <span className="sc-notice-lede">{lede}</span> : null}
-        </summary>
-        <p>{body}</p>
-      </details>
-    </div>
+    <details className="ab-warning-row la-alert la-alert-warn" role={role} aria-label={ariaLabel}>
+      <summary><strong>{title}</strong>{lede ? <span>{lede}</span> : null}</summary>
+      <p>{body}</p>
+    </details>
   );
 }
 
@@ -308,180 +287,73 @@ function AuditSourceList({ outcome }: { outcome: AuditOutcome }) {
   ) : null;
 }
 
-function AuditDimensionRow({ id, label, value, word, open, onToggle, children }: { id: string; label: string; value: string; word: string; open: boolean; onToggle: () => void; children: React.ReactNode }) {
-  return (
-    <li className={`sc-arc sc-ledger-row sc-arc-${id}${open ? " is-open" : ""}`}>
-      <button type="button" className="sc-arc-row" aria-expanded={open} aria-controls={`sc-ledger-${id}`} onClick={onToggle}>
-        <span className="sc-arc-label">{label}</span><span className="sc-arc-word">{word}</span><span className="sc-arc-value" data-sign={value.startsWith("−") ? "negative" : "other"}>{value}</span>
-        <span className="sc-arc-chev" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 6l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg></span>
-      </button>
-      {open ? <div id={`sc-ledger-${id}`} className="sc-arc-detail">{children}</div> : null}
-    </li>
-  );
+/* Production result primitive: this is deliberately the same markup as the
+ * field-notebook card in app/design-lab/ab. The scan only supplies real audit
+ * values; it does not reuse the older report's .sc-* visual grammar. */
+function LabDimension({ id, label, value, word, fill, open, onToggle, children }: { id: string; label: string; value: string; word: string; fill: number | null; open: boolean; onToggle: () => void; children: ReactNode }) {
+  return <li className={open ? "open" : ""} data-row-id={id}>
+    <button type="button" aria-expanded={open} aria-controls={`ab-scan-${id}`} onClick={onToggle}>
+      <span className="ab-bar-name">{label}</span><span className="ab-bar-word">{word}</span><span className="ab-bar-pts">{value}</span>
+      <span className="ab-chev" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 6l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg></span>
+      <span className={`ab-bar-track ${fill === null ? "hatch" : "fill"}`}>{fill !== null ? <i style={{ width: `${Math.max(0, Math.min(100, fill * 100))}%`, background: "var(--ab-accent)" }} /> : null}</span>
+    </button>
+    {open ? <div id={`ab-scan-${id}`} className="ab-bar-detail">{children}</div> : null}
+  </li>;
 }
 
-function LedgerOutcomeTabs({ audit }: { audit: RetainedLedgerAudit }) {
+function LabValidity({ audit, validity }: { audit: RetainedLedgerAudit | null; validity?: { status: string | null; public_claims_allowed: boolean; note: string | null } }) {
+  if (!audit && !validity) return null;
+  return <p className="ab-stamp scan-lab-validity"><b>{audit ? "Retained audit · not reverified" : validity?.public_claims_allowed ? "Validated run" : `Not a public product claim · ${validity?.status ?? "unvalidated"}`}</b>{" "}{audit ? `${audit.provenance.prompt_version} · ${audit.provenance.target_product} · ${audit.provenance.target_dose}` : validity?.note ?? "Retained for inspection; scoring constants are not calibrated for public claims."}</p>;
+}
+
+function LabWarnings({ count, children }: { count: number; children: ReactNode }) {
+  if (!count) return null;
+  return <details className="ab-warnings"><summary><span>{count} evidence warning{count === 1 ? "" : "s"}</span></summary><div className="ab-warning-list">{children}</div></details>;
+}
+
+function LabTabs({ audit, unmatchedRows, population, emptyState, validity, warnings, warningCount }: { audit: RetainedLedgerAudit | null; unmatchedRows?: EvidenceRow[]; population?: Record<string, string | null> | null; emptyState?: { title: string; description: string; census?: { rcts_indexed?: number; syntheses_indexed?: number } | null }; validity?: { status: string | null; public_claims_allowed: boolean; note: string | null }; warnings: ReactNode; warningCount: number }) {
   const [active, setActive] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>(null);
-  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
-  const outcomes = audit.audit.outcomes;
-  const outcomeKey = (outcome: AuditOutcome) => `${outcome.name}||${outcome.population ?? ""}`;
-  const tabKeys = ["matched:__general", ...outcomes.map((outcome) => `matched:${outcomeKey(outcome)}`)];
-  const current = active ? outcomes.find((o) => outcomeKey(o) === active) ?? null : null;
-  const scored = outcomes.map((outcome) => ({ outcome, score: ledgerScore(ledgerFromAudit(outcome)) }));
-  const numbers = scored.map((x) => x.score.headline).filter((x): x is number => x !== null);
-  const general = numbers.length ? Math.round(numbers.reduce((a, b) => a + b, 0) / numbers.length) : null;
-  const generalSignal = scored.length ? scored.reduce((sum, x) => sum + x.score.certainty / 4, 0) / scored.length : 0;
-  const go = (key: string | null) => { setActive(key); setOpen(null); };
-  const selectTab = (key: string) => go(key === "matched:__general" ? null : key.slice("matched:".length));
-  const render = (outcome: AuditOutcome) => {
-    const key = outcomeKey(outcome);
-    const result = ledgerScore(ledgerFromAudit(outcome));
-    const detail = (dimension: "effect" | "evidence" | "form" | "dose") => <AuditDetailText audit={audit} outcome={outcome} dimension={dimension} />;
-    const fitValue = (value: string) => value === "unknown" ? "—" : `${value}/4`;
-    const scoreColor = scoreSignalColor(result.headline, result.certainty / 4);
-    const scoreTextColor = scoreSignalColor(result.headline, result.certainty / 4, "text");
-    return <article className="scan-card scan-evidence sc-ledger-card" key={key}>
-      <header className="sc-outcome-headline sc-ledger-headline" style={{ "--sc-score-color": scoreColor, "--sc-score-text": scoreTextColor } as CSSProperties}>
-        <p className="sc-outcome-number" aria-label={result.headline === null ? "no ledger score" : `${result.headline} out of 100`}><strong>{result.headline ?? "—"}</strong>{result.headline !== null ? <span aria-hidden="true">/100</span> : null}</p>
-        <div className="sc-outcome-headline-main"><h4>{outcome.name}</h4><p className="sc-verdict">{result.label}</p>{outcome.population ? <p className="sc-pop"><b>Population</b> {outcome.population}</p> : null}</div>
-      </header>
-      <ul className="sc-arcs sc-ledger-arcs" aria-label="Evidence Ledger dimensions">
-        <AuditDimensionRow id="effect" label="Effect" value={result.effect === "unclear" ? "—" : `${result.effect > 0 ? "+" : result.effect < 0 ? "−" : ""}${result.effect}`} word={result.effectWord} open={open === `${key}:effect`} onToggle={() => setOpen(open === `${key}:effect` ? null : `${key}:effect`)}>
-          <p className="sc-arc-what">The audit&apos;s effect state is shown on its real −3 to +3 scale. It is not a /4 grade.</p>
-          <DetailLine term="Plain summary">{auditPlainText(auditPlainEntry(audit.plain, outcome), "summary", "sentence", outcome.sentence)}</DetailLine>
-          <DetailLine term="Estimate">{outcome.absolute_effect ?? "No usable interval or point estimate was retained."}</DetailLine>
-          <DetailLine term="Meaningful">{outcome.clinically_meaningful ?? "Unknown."}</DetailLine>
-          <DetailLine term="Strongest doubt">{outcome.strongest_doubt}</DetailLine>
-          {detail("effect")}
-          <AuditSourceList outcome={outcome} />
-        </AuditDimensionRow>
-        <AuditDimensionRow id="certainty" label="Evidence certainty" value={`${result.certainty}/4`} word={result.certaintyWord} open={open === `${key}:certainty`} onToggle={() => setOpen(open === `${key}:certainty` ? null : `${key}:certainty`)}>
-          <p className="sc-arc-what">Certainty is calculated from the body type, checklist and gates. Funding and publication bias are disclosed separately and do not change this number.</p>
-          <DetailLine term="Gates">{result.firedGates.length ? result.firedGates.join("; ") : "No certainty gate fired."}</DetailLine>
-          <DetailLine term="Checklist">{Object.entries(outcome.ledger.checklist).map(([name, state]) => `${words(name)}: ${state}`).join("; ")}</DetailLine>
-          {detail("evidence")}
-          <AuditSourceList outcome={outcome} />
-        </AuditDimensionRow>
-        <AuditDimensionRow id="form" label="Form" value={fitValue(outcome.ledger.formFit)} word={result.formWord} open={open === `${key}:form`} onToggle={() => setOpen(open === `${key}:form` ? null : `${key}:form`)}>
-          <p className="sc-arc-what">Form fit is the audit&apos;s 0 to 4 preparation match. Unknown is shown as a dash, never as 0/4.</p>
-          {detail("form")}<AuditSourceList outcome={outcome} />
-        </AuditDimensionRow>
-        <AuditDimensionRow id="dose" label="Dose" value={fitValue(outcome.ledger.doseFit)} word={result.doseWord} open={open === `${key}:dose`} onToggle={() => setOpen(open === `${key}:dose` ? null : `${key}:dose`)}>
-          <p className="sc-arc-what">Dose fit is the audit&apos;s 0 to 4 comparison with the effective daily range. Unknown is shown as a dash, never as 0/4.</p>
-          <DetailLine term="Effective daily range">{outcome.ledger.effective_daily_range}</DetailLine>
-          {detail("dose")}<AuditSourceList outcome={outcome} />
-        </AuditDimensionRow>
-      </ul>
-    </article>;
+  const refs = useRef<Array<HTMLButtonElement | null>>([]);
+  const matched = Boolean(audit);
+  const outcomes = matched ? audit!.audit.outcomes.map((o) => ({ key: `${o.name}||${o.population ?? ""}`, name: o.name, population: o.population })) : (unmatchedRows ?? []).map((r) => ({ key: `unmatched:${r.outcome}||${r.outcome_label ?? words(r.outcome)}`, name: r.outcome_label ?? words(r.outcome), population: undefined }));
+  const keys = ["__general", ...outcomes.map((o) => o.key)];
+  const current = active ? outcomes.find((o) => o.key === active) ?? null : null;
+  const select = (key: string) => { setActive(key === "__general" ? null : key); setOpen(null); };
+  const onKey = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    if (!["ArrowRight", "ArrowLeft", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const next = event.key === "Home" ? 0 : event.key === "End" ? keys.length - 1 : (index + (event.key === "ArrowRight" ? 1 : -1) + keys.length) % keys.length;
+    select(keys[next]); refs.current[next]?.focus();
   };
-  return <div className="sc-tabs sc-ledger-tabs">
-    <div className="sc-tablist" role="tablist" aria-label="Evidence Ledger outcomes">
-      <button ref={(node) => { tabRefs.current[0] = node; }} id={tabId(tabKeys[0])} type="button" className={`sc-tab${active === null ? " sc-tab-selected" : ""}`} role="tab" aria-selected={active === null} aria-controls="sc-ledger-tabpanel" tabIndex={active === null ? 0 : -1} onKeyDown={(event) => moveTabOnKey(event, 0, tabKeys, tabRefs, selectTab)} onClick={() => go(null)} style={{ "--sc-tab-score": scoreSignalColor(general, generalSignal, "text") } as CSSProperties}>General</button>
-      {outcomes.map((o, index) => { const key = outcomeKey(o); const tabKey = tabKeys[index + 1]; const tabScore = ledgerScore(ledgerFromAudit(o)); return <button ref={(node) => { tabRefs.current[index + 1] = node; }} id={tabId(tabKey)} type="button" className={`sc-tab${active === key ? " sc-tab-selected" : ""}`} role="tab" key={key} aria-selected={active === key} aria-controls="sc-ledger-tabpanel" tabIndex={active === key ? 0 : -1} onKeyDown={(event) => moveTabOnKey(event, index + 1, tabKeys, tabRefs, selectTab)} onClick={() => go(key)} style={{ "--sc-tab-score": scoreSignalColor(tabScore.headline, tabScore.certainty / 4, "text") } as CSSProperties}>{o.name}</button>; })}
-    </div>
-    <div id="sc-ledger-tabpanel" role="tabpanel" tabIndex={-1} aria-labelledby={tabId(current ? `matched:${outcomeKey(current)}` : tabKeys[0])}>
-    {current ? render(current) : <div className="sc-ledger-general">
-      <div className="sc-general" style={{ "--sc-score-color": scoreSignalColor(general, generalSignal), "--sc-score-text": scoreSignalColor(general, generalSignal, "text") } as CSSProperties} role="img" aria-label={general === null ? "General score: no scored outcomes" : `General score ${general}, mean of ${numbers.length} scored outcome scores; not a probability`}><strong className="sc-general-score">{general ?? "—"}</strong><span className="sc-general-name"><strong>General score</strong><small>Mean of {numbers.length} scored outcome score{numbers.length === 1 ? "" : "s"} · not a probability</small></span></div>
-      <ul className="sc-outcome-list" aria-label="Evidence Ledger outcomes">{outcomes.map((o) => { const key = `${o.name}||${o.population ?? ""}`; const r = ledgerScore(ledgerFromAudit(o)); return <li key={key}><button type="button" className="sc-outcome-row" onClick={() => go(key)} aria-label={`${o.name}, ${r.headline === null ? "no ledger score" : `${r.headline} out of 100`}`}><span className="sc-outcome-row-name"><strong>{o.name}</strong><small>{o.population}</small></span><span className="sc-outcome-row-score"><strong style={{ color: scoreSignalColor(r.headline, r.certainty / 4, "text") }}>{r.headline ?? "—"}</strong></span><span className="sc-outcome-row-more" aria-hidden="true">›</span><span className="sc-outcome-row-track" aria-hidden="true"><span className="sc-outcome-row-fill" style={{ width: `${r.headline === null ? 0 : r.headline}%`, background: scoreSignalColor(r.headline, r.certainty / 4) }} /></span></button></li>; })}</ul>
-    </div>}
-    </div>
-  </div>;
-}
-
-/* An unmatched product uses the retained-audit card shell without pretending
- * that the continuous run is an audit. Outcome names are the only retained-run
- * fact carried into this presentation; every score, verdict and coverage stays
- * explicitly unassessed. The legacy continuous renderer is intentionally absent
- * from the public /scan result path; its API/scoring mechanism remains documented
- * for compatibility consumers. */
-function UnmatchedOutcomeTabs({ rows, population, emptyState }: { rows: EvidenceRow[]; population?: Record<string, string | null> | null; emptyState?: { title: string; description: string; census?: { rcts_indexed?: number; syntheses_indexed?: number } | null } }) {
-  const [active, setActive] = useState<string | null>(null);
-  const [open, setOpen] = useState<string | null>(null);
-  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
-  const outcomes = rows.map((row) => ({ key: `unmatched:${row.outcome}||${row.outcome_label ?? words(row.outcome)}`, name: row.outcome_label ?? words(row.outcome) }));
-  const tabKeys = ["unmatched:__general", ...outcomes.map((outcome) => outcome.key)];
-  const current = active ? outcomes.find((outcome) => outcome.key === active) ?? null : null;
-  const go = (key: string | null) => { setActive(key); setOpen(null); };
-  const selectTab = (key: string) => go(key === "unmatched:__general" ? null : key);
-  const populationText = populationLine(population);
-  const noAuditCopy = "No source-verified /4 audit matches this exact form and daily dose. The old continuous result was not converted into quarters.";
-  const render = (outcome: { key: string; name: string }) => (
-    <article className="scan-card scan-evidence sc-ledger-card" key={outcome.key}>
-      <header className="sc-outcome-headline sc-ledger-headline" style={{ "--sc-score-color": "var(--sp-mute)", "--sc-score-text": "var(--sp-mute)" } as CSSProperties}>
-        <p className="sc-outcome-number" aria-label={`${outcome.name}: score not assessed`}><strong>—</strong></p>
-        <div className="sc-outcome-headline-main"><h4>{outcome.name}</h4><p className="sc-verdict">Not assessed</p>{populationText ? <p className="sc-pop"><b>Population</b> {populationText}</p> : null}</div>
-      </header>
-      <ul className="sc-arcs sc-ledger-arcs" aria-label="Evidence Ledger dimensions">
-        {(["effect", "evidence", "form", "dose"] as const).map((dimension) => (
-          <AuditDimensionRow
-            key={dimension}
-            id={dimension}
-            label={dimension === "effect" ? "Effect" : dimension === "evidence" ? "Evidence certainty" : dimension === "form" ? "Form" : "Dose"}
-            value="—"
-            word="· Not assessed"
-            open={open === `${outcome.key}:${dimension}`}
-            onToggle={() => setOpen(open === `${outcome.key}:${dimension}` ? null : `${outcome.key}:${dimension}`)}
-          >
-            <p className="sc-arc-what">{noAuditCopy}</p>
-            <DetailLine term="Status">Not assessed. No source-verified /4 audit matches this exact form and daily dose.</DetailLine>
-            <DetailLine term="Method">The old continuous result was not converted into quarters.</DetailLine>
-          </AuditDimensionRow>
-        ))}
-      </ul>
-    </article>
-  );
-  return (
-    <div className="sc-tabs sc-ledger-tabs">
-      <div className="sc-tablist" role="tablist" aria-label="Evidence Ledger outcomes">
-        <button ref={(node) => { tabRefs.current[0] = node; }} id={tabId(tabKeys[0])} type="button" className={`sc-tab${active === null ? " sc-tab-selected" : ""}`} role="tab" aria-selected={active === null} aria-controls="sc-unmatched-tabpanel" tabIndex={active === null ? 0 : -1} onKeyDown={(event) => moveTabOnKey(event, 0, tabKeys, tabRefs, selectTab)} onClick={() => go(null)}>General</button>
-        {outcomes.map((outcome, index) => (
-          <button ref={(node) => { tabRefs.current[index + 1] = node; }} id={tabId(outcome.key)} type="button" className={`sc-tab${active === outcome.key ? " sc-tab-selected" : ""}`} role="tab" key={outcome.key} aria-selected={active === outcome.key} aria-controls="sc-unmatched-tabpanel" tabIndex={active === outcome.key ? 0 : -1} onKeyDown={(event) => moveTabOnKey(event, index + 1, tabKeys, tabRefs, selectTab)} onClick={() => go(outcome.key)}>{outcome.name}</button>
-        ))}
+  const tabIdFor = (key: string) => `ab-scan-tab-${tabId(`${matched ? "matched" : "unmatched"}:${key}`)}`;
+  const scores = matched ? audit!.audit.outcomes.map((o) => ledgerScore(ledgerFromAudit(o))) : [];
+  const numbers = scores.map((s) => s.headline).filter((n): n is number => n !== null);
+  const general = numbers.length ? Math.round(numbers.reduce((a, b) => a + b, 0) / numbers.length) : null;
+  const generalSignal = scores.length ? scores.reduce((sum, s) => sum + s.certainty / 4, 0) / scores.length : 0;
+  const renderMatched = (outcome: AuditOutcome) => {
+    const result = ledgerScore(ledgerFromAudit(outcome));
+    const key = `${outcome.name}||${outcome.population ?? ""}`;
+    const detail = (dimension: "effect" | "evidence" | "form" | "dose") => <AuditDetailText audit={audit!} outcome={outcome} dimension={dimension} />;
+    const fit = (v: string) => v === "unknown" ? "—" : `${v}/4`;
+    const rows: Array<{ id: string; label: string; value: string; word: string; fill: number | null; body: ReactNode }> = [
+      { id: "effect", label: "Effect", value: result.effect === "unclear" ? "—" : `${result.effect > 0 ? "+" : result.effect < 0 ? "−" : ""}${result.effect}/3`, word: result.effectWord, fill: result.effect === "unclear" ? null : (result.effect + 3) / 6, body: <><p>The audit effect state uses its real −3 to +3 scale; it is not a /4 grade.</p><DetailLine term="Plain summary">{auditPlainText(auditPlainEntry(audit!.plain, outcome), "summary", "sentence", outcome.sentence)}</DetailLine><DetailLine term="Estimate">{outcome.absolute_effect ?? "No usable interval or point estimate was retained."}</DetailLine><DetailLine term="Meaningful">{outcome.clinically_meaningful ?? "Unknown."}</DetailLine><DetailLine term="Strongest doubt">{outcome.strongest_doubt}</DetailLine>{detail("effect")}<AuditSourceList outcome={outcome} /></> },
+      { id: "evidence", label: "Evidence", value: `${result.certainty}/4`, word: result.certaintyWord, fill: result.certainty / 4, body: <><p>Certainty comes from the retained body type, checklist and gates. Funding and publication bias remain disclosures.</p><DetailLine term="Gates">{result.firedGates.length ? result.firedGates.join("; ") : "No certainty gate fired."}</DetailLine><DetailLine term="Checklist">{Object.entries(outcome.ledger.checklist).map(([name, state]) => `${words(name)}: ${state}`).join("; ")}</DetailLine>{detail("evidence")}<AuditSourceList outcome={outcome} /></> },
+      { id: "form", label: "Form", value: fit(outcome.ledger.formFit), word: result.formWord, fill: typeof outcome.ledger.formFit === "number" ? outcome.ledger.formFit / 4 : null, body: <><p>Form fit compares this product preparation with the retained audit.</p>{detail("form")}<AuditSourceList outcome={outcome} /></> },
+      { id: "dose", label: "Dose", value: fit(outcome.ledger.doseFit), word: result.doseWord, fill: typeof outcome.ledger.doseFit === "number" ? outcome.ledger.doseFit / 4 : null, body: <><p>Dose fit compares the entered daily dose with the retained effective range.</p><DetailLine term="Effective daily range">{outcome.ledger.effective_daily_range}</DetailLine>{detail("dose")}<AuditSourceList outcome={outcome} /></> },
+    ];
+    return <>
+      <div className="ab-headline" style={{ "--ab-score-color": scoreSignalColor(result.headline, result.certainty / 4) } as CSSProperties}>
+        <div className="ab-number"><strong>{result.headline ?? "—"}</strong>{result.headline !== null ? <span>/100</span> : null}</div>
+        <div><h2>{outcome.name}</h2><p className="ab-pop"><b>Population</b> {outcome.population ?? "not recorded by this run"}</p><p>{result.label}</p></div>
       </div>
-      <div id="sc-unmatched-tabpanel" role="tabpanel" tabIndex={-1} aria-labelledby={tabId(current ? current.key : tabKeys[0])}>
-      {current ? render(current) : (
-        <div className="sc-ledger-general">
-          <div className="sc-general" style={{ "--sc-score-color": "var(--sp-mute)", "--sc-score-text": "var(--sp-mute)" } as CSSProperties} role="img" aria-label="General score: not assessed">
-            <strong className="sc-general-score">—</strong>
-            <span className="sc-general-name"><strong>General score</strong><small>Not assessed</small></span>
-          </div>
-          <p className="sc-no-ledger-audit">{noAuditCopy}</p>
-          {populationText ? <p className="sc-pop sc-list-pop"><b>Population</b> measured outcomes from {populationText}; this is a fact, not a score.</p> : null}
-          {outcomes.length ? (
-            <ul className="sc-outcome-list" aria-label="Measured outcomes">
-              {outcomes.map((outcome) => (
-                <li key={outcome.key}>
-                  <button type="button" className="sc-outcome-row" onClick={() => go(outcome.key)} aria-label={`${outcome.name}, not assessed`}>
-                    <span className="sc-outcome-row-name"><strong>{outcome.name}</strong></span>
-                    <span className="sc-outcome-row-score"><strong>—</strong></span>
-                    <span className="sc-outcome-row-more" aria-hidden="true">›</span>
-                    <span className="sc-outcome-row-track" aria-hidden="true"><span className="sc-outcome-row-fill" style={{ width: "0%" }} /></span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="la-empty">
-              <strong>{emptyState?.title ?? "No retained audit outcomes are available."}</strong>
-              <span>{emptyState?.description ?? "No source-verified /4 audit matches this exact form and daily dose."}</span>
-              {emptyState?.census ? (
-                <div className="la-census">
-                  <span className="la-census-tag">Counts, not a score</span>
-                  <div className="la-census-figures">
-                    <div className="la-census-figure"><strong>{String(emptyState.census.rcts_indexed ?? 0)}</strong><span>randomised trials</span></div>
-                    <div className="la-census-figure"><strong>{String(emptyState.census.syntheses_indexed ?? 0)}</strong><span>systematic reviews</span></div>
-                  </div>
-                  <span className="la-dim">Indexed in Europe PMC at supplement scope.</span>
-                </div>
-              ) : null}
-            </div>
-          )}
-        </div>
-      )}
-      </div>
-    </div>
-  );
+      <LabWarnings count={warningCount}>{warnings}</LabWarnings>
+      <ul className="ab-bars">{rows.map((row) => <LabDimension key={row.id} {...row} open={open === `${key}:${row.id}`} onToggle={() => setOpen(open === `${key}:${row.id}` ? null : `${key}:${row.id}`)}>{row.body}</LabDimension>)}</ul>
+    </>;
+  };
+  const renderUnmatched = (outcome: { key: string; name: string }) => <><div className="ab-headline muted"><div className="ab-number"><strong>—</strong></div><div><h2>{outcome.name}</h2><p>Not assessed</p>{population && <p className="ab-pop"><b>Population</b> {populationLine(population)}</p>}</div></div><LabWarnings count={warningCount}>{warnings}</LabWarnings><ul className="ab-bars">{(["effect", "evidence", "form", "dose"] as const).map((id) => <LabDimension key={id} id={id} label={id === "evidence" ? "Evidence" : id.charAt(0).toUpperCase() + id.slice(1)} value="—" word="Not assessed" fill={null} open={open === `${outcome.key}:${id}`} onToggle={() => setOpen(open === `${outcome.key}:${id}` ? null : `${outcome.key}:${id}`)}><p>No source-verified /4 audit matches this exact form and daily dose.</p><DetailLine term="Status">Not assessed. The old continuous result was not converted into quarters.</DetailLine></LabDimension>)}</ul></>;
+  const panel = current ? (matched ? renderMatched(audit!.audit.outcomes.find((o) => `${o.name}||${o.population ?? ""}` === current.key)!) : renderUnmatched(current)) : <><LabWarnings count={warningCount}>{warnings}</LabWarnings><div className="ab-listhead"><div className="ab-general" style={{ "--ab-score-color": scoreSignalColor(general, generalSignal) } as CSSProperties}><strong className="ab-general-score">{general ?? "—"}</strong><span className="ab-general-name">General score<small>{matched ? `Average of ${numbers.length} outcome score${numbers.length === 1 ? "" : "s"}` : "Not assessed"}</small></span></div><h2>Outcomes</h2>{!matched && <p className="ab-stamp">{outcomes.length ? "No source-verified /4 audit matches this exact form and daily dose. The old continuous result was not converted into quarters." : emptyState?.title ?? "No retained audit outcomes are available."}</p>}{!matched && !outcomes.length && <p className="ab-pop">{emptyState?.description ?? "This is not a low score — it is no data."}</p>}</div><ul className="ab-bars outcomes">{outcomes.map((o, index) => { const score = scores[index]; const value = score?.headline ?? null; return <li key={o.key}><button type="button" onClick={() => select(o.key)}><span className="ab-bar-name">{o.name}{o.population && <small>{o.population}</small>}</span><span className="ab-bar-pts" style={value === null ? undefined : { color: scoreSignalColor(value, score!.certainty / 4, "text") }}>{value ?? "—"}</span><span className="ab-chev go" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 6l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.8" /></svg></span><span className={`ab-bar-track ${value === null ? "hatch" : "fill"}`}><i style={{ width: `${value ?? 0}%`, background: value === null ? undefined : scoreSignalColor(value, score!.certainty / 4) }} /></span></button></li>; })}</ul></>;
+  return <><div className="ab-tabs" role="tablist" aria-label="Outcome"><button id={tabIdFor("__general")} ref={(n) => { refs.current[0] = n; }} role="tab" aria-selected={active === null} aria-controls="ab-scan-tabpanel" tabIndex={active === null ? 0 : -1} onKeyDown={(e) => onKey(e, 0)} onClick={() => select("__general")}>Outcomes</button>{outcomes.map((o, i) => <button key={o.key} id={tabIdFor(o.key)} ref={(n) => { refs.current[i + 1] = n; }} role="tab" aria-selected={active === o.key} aria-controls="ab-scan-tabpanel" tabIndex={active === o.key ? 0 : -1} onKeyDown={(e) => onKey(e, i + 1)} onClick={() => select(o.key)}>{o.name}</button>)}</div><section className="ab-card scan-lab-card" aria-label="Outcome results"><LabValidity audit={audit} validity={validity} /><div id="ab-scan-tabpanel" role="tabpanel" tabIndex={-1} aria-labelledby={tabIdFor(active ?? "__general")}>{panel}</div></section></>;
 }
 
 /* The legacy continuous renderer was intentionally removed from the public UI.
@@ -556,6 +428,7 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
   const auth = useSupabaseSession();
   const claimedRuns = useRef<Set<string>>(new Set());
   const resultTopRef = useRef<HTMLDivElement | null>(null);
+  const [heroImage, setHeroImage] = useState<"idle" | "loaded" | "error">("idle");
 
   useEffect(() => {
     if (!busy) return;
@@ -605,6 +478,7 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
     }
     setError(null);
     setData(null);
+    setHeroImage("idle");
     setFile(picked);
     setSearchOpen(false);
     setPreview((old) => {
@@ -623,6 +497,7 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
 
   const clearFile = useCallback(() => {
     setFile(null);
+    setHeroImage("idle");
     setPreview((old) => {
       if (old) URL.revokeObjectURL(old);
       return null;
@@ -724,6 +599,7 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
 
   const showingResult = finished;
   const staged = Boolean(file && preview);
+  const labResult = Boolean(data && !error && legend);
 
   // The scanned-product header: what was scanned or typed, and what happened.
   const headerKicker = error
@@ -769,7 +645,6 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
   const mlm = company?.profile.status === "ok" ? businessModelDisclosure(company.profile.data?.business_model) : null;
   const auditWarnings = auditConcernNotices(ledgerAudit);
   const warningCount = (data?.caveats?.length ?? 0) + disclosures.length + (mlm ? 1 : 0) + auditWarnings.length;
-  const hasNotices = Boolean(ledgerAudit || evidence?.validity || warningCount);
 
   return (
     <section className="la scan sc" aria-label="Scan a supplement">
@@ -876,37 +751,33 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
       </SearchSheet>
 
       {showingResult ? (
-        <div className="sc-result-wrap">
-          {/* ---------------- scanned-product header ---------------- */}
-          <div className="sc-scanned" ref={resultTopRef} tabIndex={-1}>
-            {preview && !typed ? (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img className="sc-thumb" src={preview} alt="The label you scanned" />
-            ) : (
-              <span className="sc-thumb sc-thumb-typed" aria-hidden="true">
-                Aa
-              </span>
-            )}
-            <div className="sc-scanned-main">
-              <p className="sc-scanned-kicker">{headerKicker}</p>
-              <h2 className="sc-scanned-name">{headerName}</h2>
-              {!typed && label?.brand ? <p className="sc-scanned-brand">by {label.brand}</p> : typed && entry ? <p className="sc-scanned-brand">{entry.ingredient_label}</p> : null}
-            </div>
-            <button type="button" className="sc-again" onClick={reset}>
-              Scan another
-            </button>
-          </div>
-
+        <div className={`sc-result-wrap${labResult ? " scan-success" : ""}`}>
+          {!labResult ? <div className="sc-scanned" ref={resultTopRef} tabIndex={-1}><span className="sc-thumb sc-thumb-typed" aria-hidden="true">!</span><div className="sc-scanned-main"><p className="sc-scanned-kicker">{headerKicker}</p><h2 className="sc-scanned-name">{headerName}</h2></div><button type="button" className="sc-again" onClick={reset}>Scan another</button></div> : null}
           {error ? (
             <div className="la-alert la-alert-bad sc-error" role="alert">
               <strong>Could not scan that.</strong>
               <span>{error}</span>
             </div>
           ) : null}
+          {/* Successful results switch to the field-notebook primitive. */}
+          {labResult ? (<div className="scan-lab-result">
+            <header className="ab-top scan-lab-top sc-scanned" ref={resultTopRef} tabIndex={-1}>
+              <button type="button" className="ab-back" aria-label="Scan another" onClick={reset}>‹</button>
+              <div className="ab-title"><strong>{headerName}</strong><small>{typed ? "What you entered · source supplied by you" : `What the label says${label?.brand ? ` · ${label.brand}` : ""}`}</small></div>
+            </header>
+            <div className="ab-photo-hero scan-lab-hero">
+              {preview && !typed && heroImage !== "error" ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img className={`scan-lab-photo${heroImage === "loaded" ? " is-loaded" : ""}`} src={preview} alt="The label you scanned" onLoad={(event) => setHeroImage(event.currentTarget.naturalWidth > 0 ? "loaded" : "error")} onError={() => setHeroImage("error")} />
+              ) : (
+                <div className="ab-jar"><div className="ab-jar-lid" /><span>FIELD NOTES / 001</span><strong>{(headerName || "product").split(" ").slice(0, 3).join(" ")}</strong><i>{typed ? "Typed product entry" : "Photo preview unavailable"}</i><div>FORM <b>{entry?.form_label ?? "—"}</b></div></div>
+              )}
+            </div>
+
+          {locked ? <SaveResultCard /> : null}
 
           {data && !error && legend ? (
             <>
-              {locked ? <SaveResultCard /> : null}
               {/* The la-result content is ALWAYS computed and held in state; when
                   sign-in is required and not yet present it is only blurred and
                   made inert, never re-fetched once a session appears. */}
@@ -924,54 +795,6 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
                   <div className="la-empty">
                     <strong>Scanning is not configured on this deployment.</strong>
                     <span>The server needs a model API key (DEEPSEEK_API_KEY) to read a photo. Searching for a supplement by name still works.</span>
-                  </div>
-                ) : null}
-
-                {/* ---------------- what was read / entered ---------------- */}
-                {typed && entry ? (
-                  <div className="sc-identity sc-entered">
-                    <p className="sc-summary">
-                      <span>{summaryParts.join(", ")}.</span> <BasisBadge kind="user_input" legend={legend} />
-                    </p>
-                    <p className="la-dim sc-typed-note">Typed, not read from a label. There is no vision read behind this entry, so nothing in it is label-verified.</p>
-                    <details className="sc-details sc-identity-details">
-                      <summary>Entry details</summary>
-                      <Facts
-                        rows={[
-                          ["Ingredient", entry.ingredient_label],
-                          ["Form", entry.form_label],
-                          ["Dose per serving", entry.dose_per_serving ? `${entry.dose_per_serving.value} ${entry.dose_per_serving.unit} compound` : "no dose entered"],
-                          ...(product
-                            ? ([["Active moiety", product.elemental_dose_mg.low === null ? `not convertible (${product.elemental_dose_mg.basis})` : mg(product.elemental_dose_mg.low)]] as Array<[string, React.ReactNode]>)
-                            : []),
-                          ...(entry.servings_per_day !== null ? ([["Servings per day", String(entry.servings_per_day)]] as Array<[string, React.ReactNode]>) : []),
-                          ["Source", <BasisBadge key="b" kind="user_input" legend={legend} />],
-                        ]}
-                      />
-                    </details>
-                  </div>
-                ) : label ? (
-                  <div className="sc-identity">
-                    <p className="sc-summary">
-                      <span>{summaryParts.join(", ")}.</span> <BasisBadge kind="label" legend={legend} />
-                    </p>
-                    <details className="sc-details sc-identity-details">
-                      <summary>Label details</summary>
-                      <Facts
-                        rows={[
-                          ["Ingredient", label.ingredient_label_text ?? label.ingredient_vocab_id ?? "—"],
-                          ["Form", label.form_vocab_id ? words(label.form_vocab_id) : "not stated"],
-                          ["Dose per serving", `${mg(label.compound_dose_mg)} compound`],
-                          ...(product
-                            ? ([["Active moiety", product.elemental_dose_mg.low === null ? `not convertible (${product.elemental_dose_mg.basis})` : mg(product.elemental_dose_mg.low)]] as Array<[string, React.ReactNode]>)
-                            : []),
-                          ...(label.servings_per_day !== null ? ([["Servings per day", String(label.servings_per_day)]] as Array<[string, React.ReactNode]>) : []),
-                          ["Read confidence", label.confidence],
-                          ["Source", <BasisBadge key="b" kind="label" legend={legend} />],
-                        ]}
-                      />
-                      {label.evidence_spans?.length ? <p className="la-spans">Read from: {label.evidence_spans.map((s) => `“${s}”`).join(", ")}</p> : null}
-                    </details>
                   </div>
                 ) : null}
 
@@ -993,80 +816,29 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
                   </div>
                 ) : null}
 
-                {/* ---------------- before you read the score ----------------
-                 * ONE stack: the run-validity banner first and always open
-                 * (load-bearing: every retained run withholds public claims),
-                 * then the caveats and the model-decided disclosures
-                 * (funding, publication bias, MLM) as one-line rows whose full
-                 * text opens in a native <details>. Disclosures render ONLY
-                 * for "concern"/confirmed/suspected; everything else renders
-                 * nothing at all. */}
-                {hasNotices ? (
-                  <section className="sc-notices" aria-labelledby="scan-notices-title">
-                    <h3 id="scan-notices-title" className="sc-notices-title">
-                      Before you read the score
-                    </h3>
-                    {ledgerAudit ? (
-                      <div className="la-alert la-alert-warn sc-notice sc-notice-open sc-ledger-validity">
-                        <strong>Retained previous audit · not reverified</strong>
-                        <span>{ledgerAudit.provenance.prompt_version} · target: {ledgerAudit.provenance.target_product} · {ledgerAudit.provenance.target_dose}</span>
-                      </div>
-                    ) : null}
-                    {evidence?.validity ? (
-                      <div className={`la-alert ${evidence.validity.public_claims_allowed ? "la-alert-ok" : "la-alert-warn"} sc-notice sc-notice-open`}>
-                        <strong>{evidence.validity.public_claims_allowed ? "Validated run." : `Not a product claim — this run is marked ${evidence.validity.status ?? "unvalidated"}.`}</strong>
-                        <span>{evidence.validity.note ?? "Retained for inspection. The scoring constants have not passed anchor calibration."}</span>
-                      </div>
-                    ) : null}
-                    {warningCount ? (
-                      <details className="sc-warning-bundle">
-                        {/* The count IS the label. The "Open before deciding"
-                          * sub-line was removed 2026-09-16 (founder): one clean
-                          * row, chevron on the right. */}
-                        <summary>
-                          <span>{warningCount} warning{warningCount === 1 ? "" : "s"}</span>
-                        </summary>
-                        <div className="sc-warning-list">
-                          {data.caveats?.map((c) => (
-                            <Notice key={c.code} title={words(c.code).replace(/^\w/, (ch) => ch.toUpperCase())} lede={firstSentence(c.text)} body={c.text} />
-                          ))}
-                          {disclosures.map((d) => (
-                            <Notice key={d.title} title={d.title} lede={firstSentence(d.body)} body={d.body} role="note" ariaLabel={`${d.title} disclosure`} />
-                          ))}
-                          {mlm ? <Notice title={mlm.title} lede={firstSentence(mlm.body.replace(/^Model knowledge — unverified\.\s*/, "").replace(/^This company/, `${company?.brand ?? "This company"}`))} body={mlm.body} role="note" ariaLabel="Business model disclosure" /> : null}
-                          {auditWarnings.map((warning) => <Notice key={warning.key} title={warning.title} lede={firstSentence(warning.body)} body={warning.body} role="note" ariaLabel={`${warning.title} disclosure`} />)}
-                        </div>
-                      </details>
-                    ) : null}
-                  </section>
-                ) : null}
-
-                {/* ---------------- evidence ---------------- */}
+                {/* The validity stamp and disclosures now live inside the lab card,
+                    immediately before its first score. */}
                 {product ? (
-                  <Section id="evidence" title="Does it work?" basis={["evidence_run"]} legend={legend}>
-                    {ledgerAudit ? (
-                      <LedgerOutcomeTabs audit={ledgerAudit} />
-                    ) : (
-                      <UnmatchedOutcomeTabs
-                        rows={rows}
-                        population={evidence?.population ?? null}
-                        emptyState={
-                          evidence?.status === "form_not_scored"
-                            ? {
-                                title: "That form has not been run.",
-                                description: `Evidence about a different form is not evidence about yours, so no number is shown.${evidence.scored_forms?.length ? ` Run so far: ${evidence.scored_forms.join(", ")}.` : ""}`,
-                                census: data.census && (data.census as { available?: boolean }).available ? (data.census as { rcts_indexed?: number; syntheses_indexed?: number }) : null,
-                              }
-                            : {
-                                title: "No evidence run exists for this ingredient.",
-                                description: "This is not a low score — it is no data. A score needs the full pipeline over ~180 studies.",
-                                census: data.census && (data.census as { available?: boolean }).available ? (data.census as { rcts_indexed?: number; syntheses_indexed?: number }) : null,
-                              }
-                        }
-                      />
-                    )}
-                  </Section>
+                  <LabTabs
+                    audit={ledgerAudit}
+                    unmatchedRows={ledgerAudit ? undefined : rows}
+                    population={evidence?.population ?? null}
+                    emptyState={{ title: evidence?.status === "form_not_scored" ? "That form has not been run." : "No evidence run exists for this ingredient.", description: evidence?.status === "form_not_scored" ? "Evidence about a different form is not evidence about yours, so no number is shown." : "This is not a low score — it is no data." }}
+                    validity={evidence?.validity}
+                    warningCount={warningCount}
+                    warnings={<>
+                      {data.caveats?.map((c) => <Notice key={c.code} title={words(c.code).replace(/^\w/, (ch) => ch.toUpperCase())} lede={firstSentence(c.text)} body={c.text} />)}
+                      {disclosures.map((d) => <Notice key={d.title} title={d.title} lede={firstSentence(d.body)} body={d.body} role="note" ariaLabel={`${d.title} disclosure`} />)}
+                      {mlm ? <Notice title={mlm.title} lede={firstSentence(mlm.body.replace(/^Model knowledge — unverified\.\s*/, "").replace(/^This company/, `${company?.brand ?? "This company"}`))} body={mlm.body} role="note" ariaLabel="Business model disclosure" /> : null}
+                      {auditWarnings.map((warning) => <Notice key={warning.key} title={warning.title} lede={firstSentence(warning.body)} body={warning.body} role="note" ariaLabel={`${warning.title} disclosure`} />)}
+                    </>}
+                  />
                 ) : null}
+                {/* Only when it has something to hold: with no product, no validity
+                    and no warnings (analyzer_unavailable) this drew an empty card. */}
+                {!product && (ledgerAudit || evidence?.validity || warningCount > 0) ? <section className="ab-card scan-lab-card"><LabValidity audit={ledgerAudit} validity={evidence?.validity} /><LabWarnings count={warningCount}><>{data.caveats?.map((c) => <Notice key={c.code} title={words(c.code).replace(/^\w/, (ch) => ch.toUpperCase())} lede={firstSentence(c.text)} body={c.text} />)}{disclosures.map((d) => <Notice key={d.title} title={d.title} lede={firstSentence(d.body)} body={d.body} role="note" ariaLabel={`${d.title} disclosure`} />)}{mlm ? <Notice title={mlm.title} lede={firstSentence(mlm.body.replace(/^Model knowledge — unverified\.\s*/, "").replace(/^This company/, `${company?.brand ?? "This company"}`))} body={mlm.body} role="note" ariaLabel="Business model disclosure" /> : null}{auditWarnings.map((warning) => <Notice key={warning.key} title={warning.title} lede={firstSentence(warning.body)} body={warning.body} role="note" ariaLabel={`${warning.title} disclosure`} />)}</></LabWarnings></section> : null}
+
+                {typed && entry ? <details className="scan-lab-disclosure" open={false}><summary><h3>What you entered</h3><BasisBadge kind="user_input" legend={legend} /></summary><p className="la-dim"><b>{entry.ingredient_label}</b>, {entry.form_label}. {summaryParts.join(", ")}. Typed, not read from a label.</p><Facts rows={[["Ingredient", entry.ingredient_label], ["Form", entry.form_label], ["Dose per serving", entry.dose_per_serving ? `${entry.dose_per_serving.value} ${entry.dose_per_serving.unit} compound` : "no dose entered"], ...(product ? [["Active moiety", product.elemental_dose_mg.low === null ? `not convertible (${product.elemental_dose_mg.basis})` : mg(product.elemental_dose_mg.low)]] as Array<[string, React.ReactNode]> : []), ...(entry.servings_per_day !== null ? [["Servings per day", String(entry.servings_per_day)]] as Array<[string, React.ReactNode]> : [])]} /></details> : label ? <details className="scan-lab-disclosure"><summary><h3>Label details</h3><BasisBadge kind="label" legend={legend} /></summary><p className="la-dim"><b>{label.ingredient_label_text ?? label.ingredient_vocab_id ?? "—"}</b>, {label.form_vocab_id ? words(label.form_vocab_id) : "form not stated"}. {summaryParts.join(", ")}.</p><Facts rows={[["Ingredient", label.ingredient_label_text ?? label.ingredient_vocab_id ?? "—"], ["Form", label.form_vocab_id ? words(label.form_vocab_id) : "not stated"], ["Dose per serving", `${mg(label.compound_dose_mg)} compound`], ...(product ? [["Active moiety", product.elemental_dose_mg.low === null ? `not convertible (${product.elemental_dose_mg.basis})` : mg(product.elemental_dose_mg.low)]] as Array<[string, React.ReactNode]> : []), ...(label.servings_per_day !== null ? [["Servings per day", String(label.servings_per_day)]] as Array<[string, React.ReactNode]> : []), ["Read confidence", label.confidence], ["Source", <BasisBadge key="label-source" kind="label" legend={legend} />]]} />{label.evidence_spans?.length ? <p className="la-spans">Read from: {label.evidence_spans.map((s) => `“${s}”`).join(", ")}</p> : null}</details> : null}
 
                 {/* -------- evidence orientation (only when no run exists) -------- */}
                 {prior ? (
@@ -1335,7 +1107,7 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
                           {company.profile.status === "ok" && company.profile.data ? (
                             <div className="scan-profile">
                               <p>{company.profile.data.summary}</p>
-                              {mlm ? <p className="la-dim sc-fine">Business model: see &ldquo;{mlm.title}&rdquo; under Before you read the score.</p> : null}
+                              {mlm ? <p className="la-dim sc-fine">Business model: see &ldquo;{mlm.title}&rdquo; in the evidence warnings.</p> : null}
                               {company.profile.data.regulatory_history.length ? (
                                 <ul className="scan-list scan-reg">
                                   {company.profile.data.regulatory_history.map((h, i) => (
@@ -1453,7 +1225,8 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
                 </details>
               </div>
             </>
-          ) : null}
+                ) : null}
+            </div>) : null}
 
           <button type="button" className="button button-dark sc-primary sc-again-bottom" onClick={reset}>
             Scan another

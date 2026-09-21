@@ -1,3 +1,6 @@
+@import "./design-lab/ab/ab.css";
+@import "./scan-lab-result.css";
+
 :root {
   --paper: #f4f0e7;
   --paper-2: #e9e3d6;
