@@ -96,7 +96,8 @@ ramp the scored path uses — places the label's dose against it.
 ### 1b. Company background: MLM / direct-selling disclosure (2026-09-16)
 
 The company MODEL profile (`CompanyProfile.business_model`, `schemas/company.json`,
-`prompts/company.md`, `COMPANY_PROMPT_VERSION` bumped to `company-v1.1`) now
+`prompts/company.md`, `COMPANY_PROMPT_VERSION` bumped to `company-v1.1`, and to `company-v1.2` on
+2026-09-16 when the prompt gained the shared plain-language rule) now
 carries a conservative read of whether the company is structured as MLM /
 direct-selling: `confirmed_mlm`, `suspected_mlm`, `no_evidence` or `unknown`,
 each with a short factual `basis` and a `confidence`. `unknown` is the
@@ -138,7 +139,8 @@ brand fund most of the positive trials) and **publication bias** (does the
 published record show a documented small-study / funnel-plot-asymmetry
 signal). New module `lib/analyze/literature-warnings.ts`
 (`prompts/literature_warnings.md`, `schemas/literature_warnings.json`, own
-cache domain `LITERATURE_WARNINGS_PROMPT_VERSION = "literature-warnings-v1.0"`)
+cache domain `LITERATURE_WARNINGS_PROMPT_VERSION = "literature-warnings-v1.0"`,
+bumped to `"literature-warnings-v1.1"` on 2026-09-16 for the plain-language rule)
 asks per ingredient/form; each topic answers `concern` | `no_concern` |
 `unknown`, with `unknown` mandatory whenever the model is not sure and
 `concern` requiring a SPECIFIC, named reason -- never a vague impression that

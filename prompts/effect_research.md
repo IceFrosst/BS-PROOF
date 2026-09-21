@@ -11,7 +11,7 @@ transmit the schema. Do not tell the model to read repository files.
 This prompt has its **own cache domain**
 (`EFFECT_RESEARCH_PROMPT_VERSION` in `app/design-lab/ab/effect-contract.ts`),
 deliberately separate from the shared pipeline `PROMPT_VERSION` and from
-`audit-v0.2` in `prompts/research_audit.md`. Bump the version here and in that
+`audit-v0.3` in `prompts/research_audit.md`. Bump the version here and in that
 constant together (invariant 3). Editing this file does **not** invalidate any
 audit cache, and editing the audit prompt does not invalidate this one.
 

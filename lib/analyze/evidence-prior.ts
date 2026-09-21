@@ -35,8 +35,13 @@ import { doseFactorFor } from "./scoring";
 
 const ROOT = process.cwd();
 
-/** Bump together with prompts/evidence_prior.md. Its own cache domain (invariant 3). */
-export const EVIDENCE_PRIOR_PROMPT_VERSION = "evidence-prior-v1.0";
+/** Bump together with prompts/evidence_prior.md. Its own cache domain (invariant 3).
+ * v1.1 (2026-09-16): prompts/evidence_prior.md gained the shared plain-language
+ * rule, so `summary`, every outcome `note`, the form note, safety notes and
+ * caveats are written in short plain sentences with every number, unit and
+ * interval kept exactly. WORDING ONLY -- no field, enum or dose semantics
+ * changed. */
+export const EVIDENCE_PRIOR_PROMPT_VERSION = "evidence-prior-v1.1";
 
 export interface PriorOutcome {
   outcome: string;

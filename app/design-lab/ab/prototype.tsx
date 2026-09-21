@@ -15,13 +15,23 @@ import caffeineResearch from "./effect-research/caffeine.json";
 import creatineResearch from "./effect-research/creatine-effect.json";
 import omega3Research from "./effect-research/omega3-effect.json";
 import { auditWarnings, evidenceDetail, gateWarnings, productWarnings, type EvidenceWarning, type ProductDeclarations } from "./evidence-warnings";
+import { PLAIN_LANGUAGE_STAMP, VERBATIM_SUMMARY, plainFor, plainText, type PlainDimension, type PlainProductKey } from "./plain-language";
 import "./ab.css";
 
 type DimKey = "effect" | "evidence" | "form" | "dose" | "person";
 interface Detail { found: string; missing: string; move: string }
 
 /* HYPOTHETICAL ledgers. Fictional products; hand-written inputs to exercise the rubric. No search or study lookup was performed. */
-interface OutcomeCase { warnings?: EvidenceWarning[]; name: string; sentence?: string; ledger?: Ledger; detail?: Record<Exclude<DimKey, "person">, Detail>; population?: string; studiedIn?: StudiedIn; effect: EffectBar }
+interface OutcomeCase {
+  warnings?: EvidenceWarning[]; name: string; sentence?: string; ledger?: Ledger;
+  /** What the row RENDERS: the plain-language rewrite where a sidecar supplies one, otherwise the audit's own text. */
+  detail?: Record<Exclude<DimKey, "person">, Detail>;
+  /** The audit's own wording for those same fields, kept verbatim behind a details. Absent on the hand-written ledgers. */
+  originalDetail?: Record<Exclude<DimKey, "person">, Detail>;
+  /** Plain-language versions of the Effect bar's reported-effect lines; the bar itself keeps the audit's. */
+  plainLines?: EffectLine[];
+  population?: string; studiedIn?: StudiedIn; effect: EffectBar;
+}
 interface Scenario {
   title: string; product: string;
   kind: "live" | "fictional" | "research";
@@ -114,7 +124,17 @@ function personDetail(st: StudiedIn | undefined, p: Profile): Detail {
 type AuditOutcome = AuditFile["outcomes"][number] & { absolute_effect?: string; clinically_meaningful?: string };
 type AuditFileWithEffect = Omit<AuditFile, "outcomes"> & { outcomes: AuditOutcome[] };
 
-function fromAudit(title: string, a: AuditFileWithEffect): Scenario {
+/*
+ * PLAIN BODY, AUDIT WORDING ONE TAP AWAY (2026-09-16).
+ *
+ * Each row now renders the model-written plain-language rewrite from
+ * `audits/plain/<product>.json` as its body, and keeps the audit's own
+ * sentences verbatim inside an "Exact wording from the audit" details. A field
+ * with no rewrite falls back to the audit text, so nothing is ever dropped;
+ * the rewrite carries every number, unit, interval and sample size unchanged
+ * and changes no score, ledger or warning.
+ */
+function fromAudit(title: string, a: AuditFileWithEffect, plainKey: PlainProductKey): Scenario {
   return {
     title, product: a.product.replace(/,?\s*(softgel|powder|capsules)[^,]*/i, "").replace(" per day", "/day"),
     kind: "live",
@@ -122,19 +142,43 @@ function fromAudit(title: string, a: AuditFileWithEffect): Scenario {
      * them asserts "roughly a third more than training alone", a share-of-gain
      * claim the follow-up read could not defend. The row's full reported-effect
      * text stays reachable in the Effect expansion, stamped as that run's. */
-    outcomes: a.outcomes.map((o) => ({
-      name: o.name, population: o.population, studiedIn: o.studied_in, ledger: ledgerFromAudit(o),
-      detail: { effect: detailFromAudit(o.detail.effect), evidence: evidenceDetail(ledgerFromAudit(o), detailFromAudit(o.detail.evidence).found, detailFromAudit(o.detail.evidence).move, detailFromAudit(o.detail.evidence).missing), form: detailFromAudit(o.detail.form), dose: detailFromAudit(o.detail.dose) },
-      warnings: auditWarnings(o),
-      effect: legacyEffectBar({
-        effectPoints: o.ledger.effectPoints === "unclear" ? "unclear" : Number(o.ledger.effectPoints),
+    outcomes: a.outcomes.map((o) => {
+      const ledger = ledgerFromAudit(o);
+      const plain = plainFor(plainKey, outcomeKey(o.name, o.population));
+      const audit: Record<Exclude<DimKey, "person">, Detail> = {
+        effect: detailFromAudit(o.detail.effect), evidence: detailFromAudit(o.detail.evidence),
+        form: detailFromAudit(o.detail.form), dose: detailFromAudit(o.detail.dose),
+      };
+      const rewrite = (dim: PlainDimension, d: Detail): Detail => ({
+        found: plainText(plain, dim, "found", d.found),
+        missing: plainText(plain, dim, "missing", d.missing),
+        move: plainText(plain, dim, "move", d.move),
+      });
+      // The Evidence row's "Current rubric" sentence is written by the rubric,
+      // not by the audit, so it is appended to BOTH versions the same way.
+      const withRubric = (d: Detail): Detail => evidenceDetail(ledger, d.found, d.move, d.missing);
+      const plainDim = { effect: rewrite("effect", audit.effect), evidence: rewrite("evidence", audit.evidence), form: rewrite("form", audit.form), dose: rewrite("dose", audit.dose) };
+      const barInput = {
+        effectPoints: o.ledger.effectPoints === "unclear" ? ("unclear" as const) : Number(o.ledger.effectPoints),
         rctCount: o.ledger.gates.rctCount,
         inventory: o.inventory,
-        absoluteEffect: o.absolute_effect,
-        clinicallyMeaningful: o.clinically_meaningful,
-        strongestDoubt: o.strongest_doubt,
-      }),
-    })),
+      };
+      const effect = legacyEffectBar({ ...barInput, absoluteEffect: o.absolute_effect, clinicallyMeaningful: o.clinically_meaningful, strongestDoubt: o.strongest_doubt });
+      const plainBar = legacyEffectBar({
+        ...barInput,
+        absoluteEffect: o.absolute_effect === undefined ? undefined : plainText(plain, "summary", "absolute_effect", o.absolute_effect),
+        clinicallyMeaningful: o.clinically_meaningful === undefined ? undefined : plainText(plain, "summary", "clinically_meaningful", o.clinically_meaningful),
+        strongestDoubt: o.strongest_doubt === undefined ? undefined : plainText(plain, "summary", "strongest_doubt", o.strongest_doubt),
+      });
+      return {
+        name: o.name, population: o.population, studiedIn: o.studied_in, ledger,
+        detail: { ...plainDim, evidence: withRubric(plainDim.evidence) },
+        originalDetail: { ...audit, evidence: withRubric(audit.evidence) },
+        plainLines: plainBar.lines,
+        warnings: auditWarnings(o),
+        effect,
+      };
+    }),
     live: { runAt: a.meta.run_at, model: a.meta.model, sources: new Set(a.outcomes.flatMap((o) => o.inventory.map((i) => i.id))).size, doseNote: a.dose_note, confidence: a.self_confidence, confidenceNote: a.confidence_note, couldNotAccess: a.could_not_access },
   };
 }
@@ -178,9 +222,9 @@ const withWarningsEach = (r: Record<string, Scenario>): Record<string, Scenario>
   Object.fromEntries(Object.entries(r).map(([k, v]) => [k, withWarnings(v)]));
 
 const liveScenarios: Record<string, Scenario> = withWarningsEach({
-  creatine: fromAudit("Creatine monohydrate · 4 g", creatineAudit as unknown as AuditFileWithEffect),
-  vitaminD: fromAudit("Vitamin D3 · 2000 IU", vitaminDAudit as unknown as AuditFileWithEffect),
-  magnesium: fromAudit("Magnesium glycinate · 300 mg", magnesiumAudit as unknown as AuditFileWithEffect),
+  creatine: fromAudit("Creatine monohydrate · 4 g", creatineAudit as unknown as AuditFileWithEffect, "creatine"),
+  vitaminD: fromAudit("Vitamin D3 · 2000 IU", vitaminDAudit as unknown as AuditFileWithEffect, "vitaminD"),
+  magnesium: fromAudit("Magnesium glycinate · 300 mg", magnesiumAudit as unknown as AuditFileWithEffect, "magnesium"),
 });
 const researchScenarios: Record<string, Scenario> = withWarningsEach({
   creatineEffect: researchScenario("Creatine monohydrate · 3–5 g", creatineEffectFile),
@@ -212,11 +256,26 @@ interface Row {
   negative: boolean;
   detail: Detail | null;
   lines: EffectLine[];
+  /** The audit's own sentences for the SAME fields, shown verbatim under the plain body. Null when there is no rewrite to distinguish. */
+  original: { detail: Detail | null; lines: EffectLine[] } | null;
   sourceLinks: EffectSourceLink[];
   provenance: string | null;
   jump: string | null;
   dim: boolean;
   kind?: string;
+}
+
+/**
+ * What goes inside "Exact wording from the audit": only the fields whose body
+ * is actually a rewrite. When the sidecar had nothing, the body IS the audit's
+ * wording and a second copy of it would say nothing.
+ */
+function verbatim(plainDetail: Detail | null, auditDetail: Detail | null, plainLines: EffectLine[], auditLines: EffectLine[]): Row["original"] {
+  const detailDiffers = !!plainDetail && !!auditDetail
+    && (plainDetail.found !== auditDetail.found || plainDetail.missing !== auditDetail.missing || plainDetail.move !== auditDetail.move);
+  const linesDiffer = auditLines.length === plainLines.length && auditLines.some((l, i) => l.body !== plainLines[i]?.body);
+  if (!detailDiffers && !linesDiffer) return null;
+  return { detail: detailDiffers ? auditDetail : null, lines: linesDiffer ? auditLines : [] };
 }
 
 function scoreSignalColor(score: number | null, signal = 1): string {
@@ -293,10 +352,12 @@ export default function AbPrototype({ initial, publicTest = false }: AbPrototype
   const dimRows: Row[] = cur ? [...DIMS_BASE, PERSON_DIM].map((d): Row => {
     const bar = cur.o.effect;
     if (d.key === "effect") {
+      const lines = cur.o.plainLines ?? bar.lines;
       return {
         id: "effect", name: d.name, color: d.color, fill: bar.fill, track: TRACK_FOR[bar.kind], scale: bar.scale,
         pts: bar.pts, word: bar.word, negative: bar.kind === "fictional_points" && (typeof cur.o.ledger?.effectPoints === "number" ? cur.o.ledger.effectPoints < 0 : false),
-        detail: cur.o.detail?.effect ?? null, lines: bar.lines, sourceLinks: bar.sourceLinks, provenance: bar.provenance,
+        detail: cur.o.detail?.effect ?? null, lines, sourceLinks: bar.sourceLinks, provenance: bar.provenance,
+        original: verbatim(cur.o.detail?.effect ?? null, cur.o.originalDetail?.effect ?? null, lines, bar.lines),
         jump: null, dim: false, kind: bar.kind,
       };
     }
@@ -304,7 +365,7 @@ export default function AbPrototype({ initial, publicTest = false }: AbPrototype
       const reason = s.research ? notAssessedReason(s.research, d.key as "evidence" | "form" | "dose" | "person") : null;
       return {
         id: d.key, name: d.name, color: d.color, fill: null, track: "hatch", scale: null, pts: "—", word: NOT_ASSESSED_WORD,
-        negative: false, detail: null, lines: reason ? [{ label: "Why", body: reason }] : [], sourceLinks: [],
+        negative: false, detail: null, lines: reason ? [{ label: "Why", body: reason }] : [], original: null, sourceLinks: [],
         provenance: "Effect-only pass · nothing here was graded", jump: null, dim: false, kind: "not_assessed",
       };
     }
@@ -312,9 +373,13 @@ export default function AbPrototype({ initial, publicTest = false }: AbPrototype
     const fill = d.key === "evidence" ? r.certainty / 4 : d.key === "form" ? (L.formFit === "unknown" ? null : L.formFit / 4) : d.key === "dose" ? (L.doseFit === "unknown" ? null : L.doseFit / 4) : (r.person === "unknown" ? null : r.person / 3);
     const pts = d.key === "evidence" ? `${r.certainty}/4` : d.key === "form" ? (L.formFit === "unknown" ? "—" : `${L.formFit}/4`) : d.key === "dose" ? (L.doseFit === "unknown" ? "—" : `${L.doseFit}/4`) : (r.person === "unknown" ? "—" : `${r.person}/3`);
     const word = d.key === "evidence" ? r.certaintyWord : d.key === "form" ? r.formWord : d.key === "dose" ? r.doseWord : r.personWord;
+    const detail = (d.key === "person" ? personDetail(cur.o.studiedIn, profile) : cur.o.detail?.[d.key as Exclude<DimKey, "person">]) ?? null;
     return {
       id: d.key, name: d.name, color: d.color, fill, track: fill === null ? "hatch" : "fill", scale: null, pts, word, negative: false,
-      detail: (d.key === "person" ? personDetail(cur.o.studiedIn, profile) : cur.o.detail?.[d.key as Exclude<DimKey, "person">]) ?? null,
+      detail,
+      // "Studied in you" is computed here from the ledger and the person's own
+      // inputs, not written by the audit, so it has no audit wording to keep.
+      original: d.key === "person" ? null : verbatim(detail, cur.o.originalDetail?.[d.key as Exclude<DimKey, "person">] ?? null, [], []),
       lines: [], sourceLinks: [], provenance: null, jump: null, dim: false,
     };
   }) : [];
@@ -328,7 +393,7 @@ export default function AbPrototype({ initial, publicTest = false }: AbPrototype
     fill: x.r && x.r.headline !== null ? x.r.headline / 100 : null, track: x.r && x.r.headline !== null ? "fill" : "hatch", scale: null,
     pts: x.r && x.r.headline !== null ? `${x.r.headline}%` : "—",
     word: isPicked(x.o) ? "" : "Not picked",
-    negative: false, detail: null, lines: [], sourceLinks: [], provenance: null, jump: x.k, dim: !isPicked(x.o),
+    negative: false, detail: null, lines: [], original: null, sourceLinks: [], provenance: null, jump: x.k, dim: !isPicked(x.o),
   }));
   const rowsToShow = isList ? outcomeRows : dimRows;
   const headline = cur?.r?.headline ?? null;
@@ -390,6 +455,15 @@ export default function AbPrototype({ initial, publicTest = false }: AbPrototype
         {d.provenance && <p className="ab-stamp">{d.provenance}</p>}
         {d.detail && <><p><b>Found</b> {d.detail.found}</p><p><b>Missing</b> {d.detail.missing}</p><p><b>Would move it</b> {d.detail.move}</p></>}
         {d.lines.map((l, i) => <p key={`${i}-${l.label}`}><b>{l.label}</b> {l.body}</p>)}
+        {/* The body above is a plain-language rewrite; the audit's own sentences
+          * stay here, verbatim and complete, one tap away. Quiet by design:
+          * the same small muted type as the stamps around it. */}
+        {d.original && <details className="ab-verbatim">
+          <summary>{VERBATIM_SUMMARY}</summary>
+          <p className="ab-stamp">{PLAIN_LANGUAGE_STAMP}</p>
+          {d.original.detail && <><p><b>Found</b> {d.original.detail.found}</p><p><b>Missing</b> {d.original.detail.missing}</p><p><b>Would move it</b> {d.original.detail.move}</p></>}
+          {d.original.lines.map((l, i) => <p key={`${i}-${l.label}`}><b>{l.label}</b> {l.body}</p>)}
+        </details>}
         {d.sourceLinks.length > 0 && <p className="ab-srcs"><b>Sources</b> {d.sourceLinks.map((l) => <span key={l.id}>{l.url ? <a href={l.url} target="_blank" rel="noreferrer">{l.label}</a> : l.label} <small>({l.access})</small> </span>)}</p>}
       </div>}
     </li>;

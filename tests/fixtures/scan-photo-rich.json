@@ -51,9 +51,9 @@
    "text": "deepseek-chat"
   },
   "prompt_versions": {
-   "compatibility": "compat-v1.0",
-   "company": "company-v1.1",
-   "literature_warnings": "literature-warnings-v1.0"
+   "compatibility": "compat-v1.1",
+   "company": "company-v1.2",
+   "literature_warnings": "literature-warnings-v1.1"
   }
  },
  "product": {
@@ -430,7 +430,7 @@
    "status": "ok",
    "reason": null,
    "overall": "Nothing in this combination is unsafe at printed doses; the magnesium oxide is the weak link.",
-   "prompt_version": "compat-v1.0",
+   "prompt_version": "compat-v1.1",
    "model": "deepseek-chat",
    "elapsed_s": 1.4
   }
@@ -487,7 +487,7 @@
    "status": "ok",
    "reason": null,
    "basis": "model_prior",
-   "prompt_version": "company-v1.1",
+   "prompt_version": "company-v1.2",
    "model": "deepseek-chat",
    "elapsed_s": 1.1,
    "data": {
@@ -557,14 +557,14 @@
     "My knowledge of specific meta-analytic bias tests for creatine is limited and may be outdated."
    ]
   },
-  "prompt_version": "literature-warnings-v1.0",
+  "prompt_version": "literature-warnings-v1.1",
   "model": "deepseek-chat",
   "elapsed_s": 2.01
  },
  "caveats": [
   {
    "code": "multi_ingredient_product",
-   "text": "This product doses more than one active. The evidence score is about creatine on its own, which is not the same question as this blend."
+   "text": "This product contains more than one active ingredient. The evidence score is about creatine on its own. A blend is a different question, and this score does not answer it."
   }
  ],
  "run_id": "5c0e0478-b5c0-4bbe-b8b7-d45b2a5d3878",

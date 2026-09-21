@@ -1,6 +1,9 @@
 /**
  * The audit JSON in app/design-lab/ab/audits/ is what a live model returns for
- * prompts/research_audit.md (audit-v0.2). These pin the contract between the
+ * prompts/research_audit.md (now audit-v0.3; the three retained files were run
+ * against audit-v0.2 and still record that, because that is the prompt they
+ * were actually produced under -- v0.3 changed the WRITING rules only, not the
+ * schema or any gate). These pin the contract between the
  * model's output and the code that scores it, so a malformed or drifting audit
  * fails here rather than rendering a wrong number on a card.
  */
@@ -17,7 +20,7 @@ const schema = JSON.parse(readFileSync(join(process.cwd(), "schemas/research_aud
 const files = readdirSync(AUDIT_DIR).filter((f) => f.endsWith(".json"));
 const load = (f: string) => JSON.parse(readFileSync(join(AUDIT_DIR, f), "utf8")) as AuditFile;
 
-describe("research_audit schema (audit-v0.2)", () => {
+describe("research_audit schema (prompt audit-v0.3, retained files audit-v0.2)", () => {
   const ajv = new Ajv2020({ allErrors: true, strict: false });
   const validate = ajv.compile(schema);
 

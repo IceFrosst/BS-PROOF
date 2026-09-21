@@ -24,8 +24,13 @@ import { formEntry } from "./vocab";
 
 const ROOT = process.cwd();
 
-/** Bump together with prompts/compatibility.md. Its own cache domain (invariant 3). */
-export const COMPAT_PROMPT_VERSION = "compat-v1.0";
+/** Bump together with prompts/compatibility.md. Its own cache domain (invariant 3).
+ * v1.1 (2026-09-16): prompts/compatibility.md gained the shared plain-language
+ * rule, so every `mechanism`, `form_notes[].note` and the `overall` sentence
+ * are written in short plain words with each dose and unit kept exactly.
+ * WORDING ONLY -- the pair enums, severities and the curated/model split are
+ * unchanged. */
+export const COMPAT_PROMPT_VERSION = "compat-v1.1";
 
 /*
  * `user_input` (2026-09-15): facts a person TYPED on the manual search path of

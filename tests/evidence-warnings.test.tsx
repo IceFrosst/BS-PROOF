@@ -165,11 +165,11 @@ describe("test-site disclosure-only policy", () => {
     const multi = productWarnings({ multiIngredient: true })[0].explanation;
     // The production caveat interpolates the ingredient name; both halves of
     // the shipped sentence must appear in lib/analyze/scan.ts verbatim.
-    expect(scanSource).toContain("This product doses more than one active. The evidence score is about ");
-    expect(scanSource).toContain("on its own, which is not the same question as this blend.");
-    expect(multi).toBe("This product doses more than one active. The evidence score is about this ingredient on its own, which is not the same question as this blend.");
+    expect(scanSource).toContain("This product contains more than one active ingredient. The evidence score is about ");
+    expect(scanSource).toContain("on its own. A blend is a different question, and this score does not answer it.");
+    expect(multi).toBe("This product contains more than one active ingredient. The evidence score is about this ingredient on its own. A blend is a different question, and this score does not answer it.");
     const servings = productWarnings({ servingsNotStated: true })[0].explanation;
-    expect(servings).toBe("Servings per day are not printed, so the per-serving dose was scored. Your daily dose may be higher.");
+    expect(servings).toBe("The label does not say how many servings are taken a day, so the dose in one serving was scored. Your daily dose may be higher.");
     expect(scanSource).toContain(servings);
     // MLM title/body are produced by the production function itself.
     const model = { status: "confirmed_mlm", basis: "Basis sentence.", confidence: "high" } as const;
@@ -177,7 +177,7 @@ describe("test-site disclosure-only policy", () => {
     const row = productWarnings({ businessModel: model })[0];
     expect(row.title).toBe(shipped.title);
     expect(row.explanation).toBe(shipped.body);
-    expect(row.explanation).toContain("it does not affect the evidence score");
+    expect(row.explanation).toContain("does not affect the evidence score");
     expect(row.explanation).not.toContain("pyramid");
   });
 

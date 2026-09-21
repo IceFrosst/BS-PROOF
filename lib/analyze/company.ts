@@ -37,8 +37,13 @@ const ROOT = process.cwd();
  * v1.1 (2026-09-16) added the mandatory `business_model` field -- an MLM /
  * direct-selling disclosure -- with no other prompt change, so every cached
  * v1.0 profile is correctly treated as stale (it has no opinion on the new
- * field at all, not even "unknown"). */
-export const COMPANY_PROMPT_VERSION = "company-v1.1";
+ * field at all, not even "unknown").
+ * v1.2 (2026-09-16) added the shared plain-language rule to prompts/company.md:
+ * every free-text field (summary, business_model.basis, reputation_notes,
+ * caveats) must now be written in short, plain, hedge-preserving sentences with
+ * every number kept exactly. WORDING ONLY -- no field, enum or semantics moved,
+ * but the prose a reader sees is different, so v1.1 answers are stale prose. */
+export const COMPANY_PROMPT_VERSION = "company-v1.2";
 
 const OPENFDA = "https://api.fda.gov/food/enforcement.json";
 

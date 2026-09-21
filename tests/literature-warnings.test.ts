@@ -292,7 +292,8 @@ describe("literatureDisclosures -- rendering decision, pure", () => {
 
 describe("literature-warnings prompt version", () => {
   it("has its own cache domain (invariant 3)", () => {
-    expect(LITERATURE_WARNINGS_PROMPT_VERSION).toBe("literature-warnings-v1.0");
+    // v1.1 (2026-09-16): the prompt gained the shared plain-language rule.
+    expect(LITERATURE_WARNINGS_PROMPT_VERSION).toBe("literature-warnings-v1.1");
   });
 });
 

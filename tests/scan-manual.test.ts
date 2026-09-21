@@ -293,14 +293,14 @@ describe("analyzeManual (offline, zero model calls)", () => {
     expect(out.status).toBe("scored");
     expect(out.product?.scored_dose_basis).toBe("none");
     const caveat = out.caveats?.find((c) => c.code === "dose_not_convertible");
-    expect(caveat?.text).toMatch(/no per-serving dose was entered/);
-    expect(caveat?.text).not.toMatch(/printed on the label/);
+    expect(caveat?.text).toMatch(/No per-serving dose was entered/);
+    expect(caveat?.text).not.toMatch(/label prints no per-serving amount/);
   });
 
   it("a typed per-serving dose without servings is scored per serving, worded for typing", async () => {
     const out = await analyzeManual({ ingredient: "creatine", form: "creatine_monohydrate", dose: { value: 3000, unit: "mg" } }, offlineDeps());
     expect(out.product?.scored_dose_basis).toBe("per_serving");
-    expect(out.caveats?.find((c) => c.code === "servings_not_stated")?.text).toMatch(/were not entered/);
+    expect(out.caveats?.find((c) => c.code === "servings_not_stated")?.text).toMatch(/You did not enter how many servings/);
   });
 
   it("an unscored typed product degrades its model sections and still returns the census", async () => {

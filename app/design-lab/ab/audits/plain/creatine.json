@@ -1,0 +1,218 @@
+{
+  "Strength when you lift weights||Adults under 50 doing resistance training": {
+    "effect": {
+      "found": "Creatine added 4.43 kg to upper-body 1RM (the heaviest weight you can lift once) and 11.35 kg to lower-body 1RM, on top of what the same training gave people taking a placebo. The ranges around those figures are CI 3.12-5.75 kg and CI 8.44-14.25 kg, meaning the true values are probably somewhere in there. Heterogeneity was I2 = 0% for both, which means the trials agreed with each other.",
+      "missing": "There is no agreed minimum difference that counts as clinically important for 1RM (the heaviest you can lift once) in healthy adults, so any claim that the gain matters has to rest on the standardised size of 0.24-0.35, which counts as small, and on the relative figures of 20% against 12%. The same meta-analysis, which pools results from several trials, found no significant gain in the two trials that included only women: upper body +1.54 kg, CI -1.81 to 4.89, n = 40 participants.",
+      "move": "What would settle this is a trial in women big enough to answer the sex question. Right now the test for a difference between men and women is only a trend (p = 0.067, Q = 3.366, not low enough to count as a reliable difference) and it rests on 40 women. So the idea that creatine works less well in women is labelled subgroup_hypothesis_only, a hunch from splitting the data rather than a tested finding."
+    },
+    "evidence": {
+      "found": "There are 23 randomised controlled trials, where people are assigned by chance to creatine or placebo, covering 509 participants, all rated good or excellent on the PEDro scale of trial quality. A separate 2025 dose-response review rated 56 of its 61 trials at low risk of bias, and heterogeneity was I2 = 0%, so the trials agreed with each other. EFSA, the European food safety regulator, separately established cause and effect for creatine plus resistance training on muscle strength in adults over 55 (10.2903/j.efsa.2016.4400).",
+      "missing": "Publication bias is a real concern on the upper body: the funnel plot was asymmetric and Egger's test was significant (t = 2.102, p = 0.048), both checks for missing studies. Trim-and-fill, which estimates the result if the missing studies were added back, still left +3.60 kg (CI 2.39-4.81). Every single trial is small, the largest being n = 39, so the gate for the best RCT being small fires even though the pooled range is tight. In the companion review, 37 of the 61 trials (60.7%) had partial or complete industry sponsorship.",
+      "move": "One properly sized trial would move this: at least n >= 200 participants, registered in advance, testing 4 g/day with no loading phase against placebo over 12 weeks of supervised training."
+    },
+    "form": {
+      "found": "Creatine monohydrate is the form that was tested. In the 2025 review, 51 of 54 fat-free-mass effect sizes came from monohydrate, and the three effect sizes from other forms behaved differently (+3.34 kg against +1.35 kg). So the monohydrate estimate is the one that applies to this product.",
+      "missing": "Nothing important is missing. This is the rare case where the form in the product is the same form the studies tested."
+    },
+    "dose": {
+      "found": "The 4 g/day in this product sits inside the 3-5 g/day maintenance band described by ISSN 2017, and above the >=3 g/day that EFSA authorised. Dose groups do not differ: <=5 against >5 g/day gives p = 0.965 for fat-free mass, so no detectable difference. The review also states that creatine dosage (<=5 g/day vs >5 g/day) had no influence on the upper-body strength gains.",
+      "missing": "There is no loading phase. At 3-4 g/day the muscle takes about 28 days to fill up instead of 5-7, so the first month is a ramp. There is also an unresolved trend toward bigger lower-body gains above 5 g/day (p = 0.068).",
+      "move": "A head-to-head comparison of 4 g/day with and without a 5-day 20 g loading phase, measuring 1RM (the heaviest you can lift once) at week 1 and week 12."
+    },
+    "summary": {
+      "sentence": "On top of training, creatine adds about 4.4 kg to upper-body 1RM (the heaviest you can lift once) and 11.4 kg to lower-body 1RM. The strength gain is 20% rather than 12%, with 12% as the comparison figure.",
+      "absolute_effect": "Creatine gave +4.43 kg on upper-body 1RM (the heaviest you can lift once), 95% CI 3.12 to 5.75, meaning the true value probably lies in that range, and +11.35 kg on lower-body 1RM, 95% CI 8.44 to 14.25, compared with identical training on placebo. In relative terms that is a 20% strength gain instead of 12%, so +8 percentage points of 1RM. Standardised, it is chest press SMD 0.35 (0.16-0.53) and leg press SMD 0.24 (0.05-0.43), where SMD measures the effect in standard deviations.",
+      "clinically_meaningful": "Yes. The threshold used is SMD 0.20, the conventional Cohen small benchmark, applied word for word as the interpretive cut in the 2025 creatine dose-response meta-analysis itself, which says Cohen's d was interpreted as small (0.2), medium (0.5), and large (0.8) (PMID 41433021). Chest press 0.35 and leg press 0.24 clear that bar; the lower confidence bound for leg press (0.05) does not. The named caveat is that no MCID (minimal clinically important difference, the smallest change a person would notice) exists for 1RM in healthy adults, so this is a statistical benchmark rather than one anchored in patients.",
+      "strongest_doubt": "Every trial is tiny, the largest being n = 39, and the upper-body funnel plot is asymmetric with Egger's p = 0.048, so some of the 4.43 kg is probably inflation from small studies; trim-and-fill puts it at 3.60 kg. The two trials in women only show no significant gain, and 60.7% of the wider trial base is industry-sponsored."
+    }
+  },
+  "Sprint power without lifting||Active adults not doing resistance training": {
+    "effect": {
+      "found": "Repeated-sprint and Wingate power, an all-out effort on a lab cycling machine, improved whether or not people lifted weights. Pooled, peak power rose +71.27 W (CI 38.09-104.45), and in the trials where people did not lift it rose +119.72 W. Formal interaction tests, which check whether the two settings really differ, showed no difference between them.",
+      "missing": "Gains in lean mass and body composition genuinely do need resistance training: the interaction tests are significant (p = 0.009 for fat-free mass, p = 0.0001 for lean body mass) and the central estimates without resistance training are negative. Endurance is a separate question again. Branch's meta-analysis of 100 studies concludes that creatine does not appear to be effective in improving running and swimming performance.",
+      "move": "A trial in people who do no structured training at all, rather than people doing some other sport, measuring repeated-sprint ability at 4 g/day over 8 weeks."
+    },
+    "evidence": {
+      "found": "There are 12 Wingate trials, and 25 of the 37 trials in the source review were rated low risk of bias on the RoB 2 checklist. Egger's test, which looks for missing studies, gave p = 0.34 for peak power. Heterogeneity was low at I2 = 13.8%, meaning the trials largely agreed with each other.",
+      "missing": "The non-lifting subgroup is only 5 studies and n = 88, and its range of 28 to 211 W is nearly an order of magnitude wide, close to a tenfold spread. The same review's squat 1RM subgroup reports a larger effect without training (+17.57 kg) than with it (+9.58 kg), interaction p = 0.022, which is biologically implausible and almost certainly an artefact of people learning the lift or of short loading trials, so this review's subgroups cannot carry much weight. Wingate cycle power is also a laboratory test standing in for sport performance; nobody's goal is a 30-second score on an exercise bike.",
+      "move": "A trial registered in advance, in people who do not lift, with a real-world power measure such as repeated 20 m sprints or jump height in competition."
+    },
+    "form": {
+      "found": "Almost all of the power trials used creatine monohydrate.",
+      "missing": "Nothing important is missing here."
+    },
+    "dose": {
+      "found": "A few of the pooled power trials used 5 g/day for 30-56 days (Herda, Taylor) rather than a 20 g loading dose, and they reached the same conclusion. So a steady low daily dose is not untested here.",
+      "missing": "The dominant regimen is 20 g/day for 4-7 days, and that is where most of the pooled effect comes from. At 4 g/day with no loading dose, the muscle is still below saturation for the first ~4 weeks, which is exactly when short studies take their measurements. EFSA 2016 also recorded no effect when the same weekly amount was given on training days only rather than daily, so the schedule matters and not just the total.",
+      "move": "A 4-week arm at 4 g/day with no loading, against an arm at 20 g/day with a 5-day load, both compared with placebo, with Wingate power measured weekly."
+    },
+    "summary": {
+      "sentence": "Short-burst power still rises without weights: Wingate peak power +71 W, about +8%. Lean mass does not: +3.39 kg with training against -0.89 kg without it.",
+      "absolute_effect": "Wingate peak power rose +71.27 W (95% CI 38.09 to 104.45, the range the true value probably sits in) pooled, and +119.72 W (95% CI 28.40 to 211.04) in trials without resistance training; mean power rose +39.69 W (95% CI 15.83 to 63.56). In one 2026 crossover trial that is peak power going from 738 to 797 W and mean power from 526 to 570 W, about +8%. Fat-free mass without resistance training was -0.89 kg (95% CI -3.94 to 2.15), which is no gain.",
+      "clinically_meaningful": "Yes for short-burst power, no for muscle size. The threshold is SMD 0.20, the Cohen small benchmark, with the wording taken from PMID 41433021 as the source of the threshold rather than as evidence for this row. The power effect size in the single trial is about 0.9 and the pooled range excludes zero, while the lean-mass range without resistance training (-3.94 to +2.15 kg) contains zero and its central estimate is negative, so it fails any positive threshold. No MCID (smallest change that matters to a person) anchored in patients exists for Wingate power.",
+      "strongest_doubt": "The one trial that directly claims strength and lean mass gains without exercise (PMID 42578920, n = 64, 10 g/day) let participants choose their own exercise group before they were randomised, ran about 16 people per cell, was done in a single lab with the supplement supplied by a creatine manufacturer, and its authors label the cognitive and biomarker findings exploratory. Meanwhile the same review that supports the power finding also reports a physiologically impossible +17.57 kg squat 1RM (the heaviest you can lift once) without training, which shows its subgroups are fragile."
+    }
+  },
+  "Lean mass (part is water)||Adults doing resistance training": {
+    "effect": {
+      "found": "Lean body mass rose +1.14 kg (CI 0.69-1.59) and fat-free mass +1.39 kg (CI 1.07-1.70) over identical training with placebo, and fat mass fell by about -0.73 kg. GRADE certainty, a rating of how much confidence to place in the evidence, is high. The pattern repeats across two independent teams and 44 trials.",
+      "missing": "What is missing is how much of the gain is muscle. Every source that looked says 0.5-1.0 L of the early gain is water, and DXA, a body scan that weighs lean tissue, cannot tell water from protein. The one meta-analysis that imaged muscle directly found only 0.11 standardised (credible interval -0.02 to 0.25, the range the true value probably sits in) and 0.10-0.16 cm of thickness, and the 2025 review says the water-to-tissue split has never been directly measured. Single trials have shown real tissue change, with Burke 2003 finding greater Type II fibre area by biopsy, but nobody has put a fraction on it.",
+      "move": "A trial that reports DXA lean mass, total body water measured with D2O (heavy water tracing) and MRI muscle volume in the same participants at week 1, week 4 and week 12. The arithmetic would then answer the question on its own."
+    },
+    "evidence": {
+      "found": "There are 44 trials on fat-free mass, with 56 of 61 at low risk of bias and GRADE certainty rated high. Egger's and Begg's tests, which look for missing studies, were both negative, and one trial ran as long as 52 weeks. The results held across normal and overweight BMI, both sexes, and people who trained and people who did not.",
+      "missing": "The outcome is a stand-in: lean mass from DXA or BIA body scans is used in place of actual muscle tissue, and the water fraction is the missing link. Individual trials are all small, the largest being n = 38. Of the pooled trials, 60.7% had partial or complete industry sponsorship and 60.7% reported no conflict-of-interest statement at all. Trials in women only show +0.61 kg (CI -0.11 to 1.34), which is not statistically significant, and the difference between the sexes is significant (p = 0.048).",
+      "move": "A trial in women with MRI as the main measure, n >= 100, at 4 g/day for 16 weeks."
+    },
+    "form": {
+      "found": "Monohydrate is the form that was tested: 51 of 54 fat-free-mass effect sizes came from it. The three effect sizes from other forms were larger (+3.34 kg) and inconsistent with each other, so pooling the forms together would have flattered this product's form rather than held it back.",
+      "missing": "Nothing important is missing here."
+    },
+    "dose": {
+      "found": "This is answered directly: <=5 g/day gives +1.35 kg and >5 g/day gives +1.37 kg, with a difference between the groups of p = 0.965, so no detectable difference. A maintenance-only protocol with no loading gives +1.50 kg (CI 1.11-1.90) from 23 effect sizes. No dose-response relationship of any shape was found for fat-free mass.",
+      "missing": "The oldest meta-analysis found the opposite pattern for body composition, with a loading-only effect size of 0.26 against 0.04 for maintenance, p = 0.0003 (PMID 12945830). That is best read as the quick water gain showing up in loading-only trials, but it is an unresolved disagreement. In postmenopausal women specifically, a 2026 review (PMID 42141930) reports that trials at <=3 g/day without training showed no measurable effect.",
+      "move": "A trial comparing 4 g/day, 10 g/day and placebo, with DXA scans and D2O (heavy water) measurements at 4 and 12 weeks."
+    },
+    "summary": {
+      "sentence": "Creatine adds about +1.1 to 1.4 kg of lean mass on a DXA body scan over training alone. But 0.5-1.0 L of that is water, and scans that image the muscle directly show almost nothing.",
+      "absolute_effect": "Lean body mass rose +1.14 kg (95% CI 0.69 to 1.59) and fat-free mass +1.39 kg (95% CI 1.07 to 1.70) more than resistance training alone, against a total body-mass gain of only +0.89 kg (95% CI 0.76 to 1.01). About 0.5-1.0 L of water is retained during a loading week, generally proportional to the immediate weight gain. Imaging the muscle directly gives a standardised 0.11 (95% CrI -0.02 to 0.25, the credible range for the true value), which is 0.10-0.16 cm of muscle thickness. The best available answer to how much is water: the early gain is essentially all water, the 12-week gain has never been split, and the tissue part is small enough that direct imaging cannot separate it from zero.",
+      "clinically_meaningful": "Unknown. There is no established minimal clinically important difference for DXA lean mass in healthy adults, and that gap is itself the finding. Against the SMD 0.20 benchmark (Cohen small, with the wording taken from PMID 41433021, which is also an evidence source for this row), the direct muscle-imaging estimate of 0.11 (CrI -0.02 to 0.25) fails the threshold, while the whole-body DXA estimate clears it. Those two facts belong in the same sentence, and they are the reason this row is not called muscle growth.",
+      "strongest_doubt": "PMID 37432300: when you image the muscle instead of weighing the body, the added effect of creatine is 0.11 standardised with a credible interval of -0.02 to 0.25, and thickness gains of 0.10-0.16 cm. Put that together with lean mass (1.39 kg) exceeding the total mass gain (0.89 kg) and 0.5-1.0 L of fluid retained during loading, and a large share of the headline kilogram is water. No study has ever measured the split."
+    }
+  },
+  "Thinking and memory, young||Healthy adults roughly 18-45": {
+    "effect": {
+      "found": "In young adults the pooled effect is SMD 0.03 (CI -0.14 to 0.20, I2 = 0%, so the trials agreed with each other), where SMD measures the effect in standard deviations. The trial with n = 123, registered in advance at 5 g/day for 6 weeks, missed both of its own main outcomes. A 20 g/day crossover trial found nothing on the Stroop or Trail Making tests while raising cycling power by 8% in the same people.",
+      "missing": "A small benefit is not formally ruled out. The n = 123 trial was sized to detect d = 0.45, and its authors' own conclusion is that creatine might have a small beneficial effect and that larger studies are needed. The upper bound of the pooled range in young adults is exactly 0.20, the meaningful threshold, so no benefit worth having is supported, while literally zero is not.",
+      "move": "One trial of n >= 500 people at 4-5 g/day for 12 weeks, registered in advance with a single main cognitive outcome. That would settle whether an effect of d = 0.15 exists."
+    },
+    "evidence": {
+      "found": "The systematic review holds 10 randomised controlled trials, and there is a 123-participant crossover trial registered in advance. An independent regulator, EFSA 2024, reviewed 23 studies including the manufacturer's own submission and rejected the claim. A second 2024 meta-analysis also found nothing for overall cognition or executive function.",
+      "missing": "Precision is the gap: no trial is large enough to rule out a small effect of about d ~ 0.2. Publication bias cannot be assessed, because Prokopidis says there were too few studies to draw a funnel plot. The one meta-analysis reporting an overall memory benefit is the subject of a published statistical challenge alleging that some results were counted twice.",
+      "move": "A very large trial run through a registry, or a reanalysis of the existing trials using the raw data of individual participants, with correct handling of several outcomes per person."
+    },
+    "form": {
+      "found": "The form is creatine monohydrate. In the memory review, 9 of 10 trials used monohydrate powder, and the 2024 meta-analysis records monohydrate as the form in all 16 of its randomised trials.",
+      "missing": "One trial used monohydrate in capsules and found SMD 0.04 (CI -0.30 to 0.39), also nothing. So the null result is not caused by how the creatine was delivered."
+    },
+    "dose": {
+      "found": "5 g/day for 6 weeks is the tested dose closest to 4 g/day, and it is the dose that produced the cleanest null result in the largest trial. So this product's dose has been tested for cognition, and nothing happened.",
+      "missing": "The only doses ever associated with a working-memory signal were 20 g/day for 5-7 days, and EFSA explicitly records that this was not seen at lower doses (2.2-14 g/day). The audit adds that if a brain effect exists at all it appears to need roughly 5x this product's dose, which it calls a reason not to buy 4 g/day for cognition rather than a reason to buy more.",
+      "move": "A cognition trial comparing 4 g/day, 20 g/day and placebo, using MRS brain scans to check whether creatine in the brain is the link."
+    },
+    "summary": {
+      "sentence": "The biggest trial (n=123, 5 g/day, 6 weeks) missed both of the outcomes it had registered in advance. EFSA rejected the cognition claim in 2024 after reviewing 23 studies.",
+      "absolute_effect": "In 11-31 year olds the pooled effect is SMD 0.03 (95% CI -0.14 to 0.20, I2 = 0%, so the trials agreed), which is about 3% of a standard deviation and cannot be told apart from nothing. In the largest trial, at 5 g/day for 6 weeks, partial eta-squared, a measure of how much of the variation the treatment explains, was 0.029 for Backward Digit Span (p = 0.064) and 0.008 for Raven's Matrices (p = 0.327). No trial has reported a cognitive gain in young healthy adults at any dose at or below 14 g/day.",
+      "clinically_meaningful": "No. The threshold is SMD 0.20, the Cohen small benchmark, with the wording taken from PMID 41433021 as the source of the threshold rather than as evidence for this row. The pooled estimate in young adults of 0.03 is an order of magnitude below it, roughly ten times smaller, and the upper bound of the confidence interval only just touches the threshold, so any effect that survives is smaller than the smallest conventionally meaningful one. No test-specific MCID (smallest change that matters to a person) exists for Backward Digit Span or Raven's Matrices, which is a real gap.",
+      "strongest_doubt": "The null result is not tight enough to exclude a small real effect. The n = 123 trial was sized to detect d = 0.45, its Bayesian analysis supported a small beneficial effect, Backward Digit Span came within a whisker of significance (p = 0.064), and the pooled range reaches exactly 0.20 at its upper bound. So no benefit worth paying for is well supported, while creatine does nothing to the brain is not."
+    }
+  },
+  "Staying sharp after no sleep||Healthy adults after a night without sleep": {
+    "effect": {
+      "found": "At 0.2 g/kg, thinking got worse up to 12% less on logic, number, language-processing-speed and vigilance tasks over ~8 hours of sleep deprivation. The effect was larger at 0.35 g/kg. Brain scans using 31P-MRS also picked up measurable changes in brain phosphocreatine, ATP and pH.",
+      "missing": "Both trials come from one research group at one site, and the 2026 review found only five studies in total across 19 years. The effect varies by the type of task, and the reported sex difference, with women benefiting more on logic, PVT and processing speed, has no interaction test behind it. That makes it subgroup_hypothesis_only, a hunch from splitting the data rather than a tested finding.",
+      "move": "An independent replication at another site would move this. The decisive study would test whether a steady 4-5 g/day regimen produces the same overnight protection as a single large dose."
+    },
+    "evidence": {
+      "found": "Both trials are randomised, double-blind, placebo-controlled crossovers, so neither the participants nor the staff knew who got what, and the product was prepared and blinded by a pharmacy. The first also took objective 31P/1H-MRS brain measurements. The mechanism is plausible: creatine buffers the ATP shortfall that sleep deprivation creates.",
+      "missing": "The trials are n = 15 and n = 29, from one research group. Five studies exist in the whole literature, they were described in words rather than pooled, and no funnel plot to check for missing studies was possible. Sleep deprivation is the one thinking-related setting where EFSA's 2024 rejection does not directly apply, but EFSA did not endorse it either.",
+      "move": "A trial across several sites, registered in advance, with n >= 150 and one main outcome of PVT lapses (missed responses on a reaction-time test), including a 4 g/day steady-dose arm alongside the single large-dose arm."
+    },
+    "form": {
+      "found": "Both trials used creatine monohydrate. The 0.35 g/kg trial names AlzChem, Trostberg as the source of the real product.",
+      "missing": "Nothing important is missing here."
+    },
+    "dose": {
+      "found": "Nothing has been tested at this dose. Every trial in this row used a single 0.2-0.35 g/kg dose.",
+      "missing": "The whole regimen is missing. 4 g/day is 16-29% of the single dose that was tested, and the mechanism the trials propose, a brief surge of creatine outside the cells that forces it across the blood-brain barrier, is specifically an argument that a small daily dose will not do the same thing. The 2026 trial's own finding that 0.2 g/kg worked less well than 0.35 g/kg is a dose-response pattern pointing away from 4 g.",
+      "move": "A three-arm trial: a single 0.35 g/kg dose, 4 g/day for 4 weeks, and placebo, all tested during the same sleep-deprivation protocol."
+    },
+    "summary": {
+      "sentence": "Two small trials found up to 12% less mental decline overnight. That came from a single 14-25 g dose, roughly 4-6x what this product provides.",
+      "absolute_effect": "An improvement of up to 12% on logic, number, language processing speed and Psychomotor Vigilance Test scores compared with placebo, over 7.5 hours of sleep deprivation, from a single 0.2 g/kg dose (n = 29). The effect was larger at 0.35 g/kg (n = 15) but was not given a separate number. No pooled effect size exists, because the only systematic review of this question described its five studies in words rather than combining them.",
+      "clinically_meaningful": "Unknown. The threshold is SMD 0.20, the Cohen small benchmark, with the wording taken from PMID 41433021 as the source of the threshold rather than as evidence for this row, and it cannot be applied because neither trial published a standardised effect size or confidence interval. A 12% reduction in overnight cognitive decline would plainly matter to a shift worker, but whether it is real at n = 29, from one lab, and whether anything at all survives at 4 g/day, are all open. There is no validated MCID (smallest change that matters to a person) for PVT lapses in this setting.",
+      "strongest_doubt": "The dose is the doubt. Both trials gave a single 14-25 g dose precisely because the authors argue that steady low dosing does not get creatine across the blood-brain barrier fast enough; their own stated reasoning is that creatine is only effective over a long-term diet of weeks by the usual route. A 4 g/day product is not a weaker version of this, it is a different thing. Add n = 15 and n = 29, a single research group, five studies in total, and product supplied by a creatine manufacturer."
+    }
+  },
+  "Memory in older adults||Healthy adults 60 and over": {
+    "effect": {
+      "found": "There is a large subgroup estimate of SMD 0.88 (CI 0.22-1.55) in 66-76 year olds, where SMD measures the effect in standard deviations. The 24-week trial at 5 g/day is the closest regimen to this product in the whole cognition literature.",
+      "missing": "There is no interaction test. Without one, the claim that creatine works for memory in older adults but not younger ones is a hypothesis produced by splitting eight trials into groups of two and six, not a finding. A different meta-analysis splits by age in the opposite direction for attention (p between groups = 0.02, favouring the younger group).",
+      "move": "A single properly sized trial in over-65s: n >= 300, 4-5 g/day, 6 months, with one memory outcome registered in advance."
+    },
+    "evidence": {
+      "found": "Both underlying trials are double-blind and randomised, so neither the participants nor the researchers knew who got creatine. One of them runs 24 weeks, which is long for this field.",
+      "missing": "Two trials, 57 participants, I2 = 83%, meaning the trials disagreed with each other a lot, and no interaction test. Publication bias cannot be assessed because the number of included studies was too low, there is a published statistical challenge alleging false positives from counting results twice, a second meta-analysis disagrees about which age group benefits, and a regulator rejected the overall claim. Avgerinos 2018 also rated the McMorris trial high risk of bias.",
+      "move": "A reanalysis of all creatine cognition trials using the raw data of individual participants, with one result per person, plus the properly sized trial described above."
+    },
+    "form": {
+      "found": "Both trials used creatine monohydrate powder.",
+      "missing": "Nothing important is missing here."
+    },
+    "dose": {
+      "found": "One of the two trials used 5 g/day for 24 weeks, so a dose close to this product's has been used in this population.",
+      "missing": "The two trials sit at 5 and 20 g/day, and the meta-analysis found neither dose band significant on its own (<=5 g/day SMD 0.24, CI -0.04 to 0.52; >5 g/day 0.33, CI -0.07 to 0.74). So the positive age subgroup is not reproduced by either dose subgroup, which is a strong internal warning.",
+      "move": "The properly sized 4-5 g/day trial described above. If it comes back null, this row closes."
+    },
+    "summary": {
+      "sentence": "One meta-analysis found a large gain in over-66s. It comes from two trials totalling 57 people, with no interaction test and a published statistics challenge against it.",
+      "absolute_effect": "Memory in 66-76 year olds improved by SMD 0.88 (95% CI 0.22 to 1.55). That comes from two trials, n = 25 and n = 32, at 5 g/day for 24 weeks and 20 g/day for 1 week, with I2 = 83%, meaning they disagreed a lot. Against that, a larger meta-analysis reports SMD 0.12 (95% CI -0.34 to 0.58) for attention in over-60s. Neither review reports an actual change in test scores, such as digits recalled or words recalled.",
+      "clinically_meaningful": "Unknown. The threshold is SMD 0.20, the Cohen small benchmark, with the wording taken from PMID 41433021 as the source of the threshold rather than as evidence for this row. The central estimate of 0.88 would clear it four times over and the second meta-analysis's 0.12 would fail it, so the threshold cannot tell them apart: the disagreement is about direction and validity, not size. No MCID (smallest change that matters to a person) exists for the memory tests used.",
+      "strongest_doubt": "The positive number is a subgroup with no interaction test, built from 57 people at two doses four-fold apart, inside a meta-analysis that a published letter says counted outcomes twice into false positives. A second, larger meta-analysis splits by age in the opposite direction (p = 0.02). EFSA reviewed all of it in 2024 and established no cause-and-effect relationship."
+    }
+  },
+  "Strength in muscular dystrophy||People with a muscular dystrophy": {
+    "effect": {
+      "found": "Muscle strength rose +8.47% (CI 3.55-13.38) across 6 trials and 192 participants. People were also more likely to report feeling better, with a risk ratio of 4.51 (CI 2.33-8.74), meaning it happened about that many times as often as on placebo; because patients report it themselves, that outcome needs no threshold argument. Cochrane grades this high quality and records no clinically relevant adverse events.",
+      "missing": "Everyday function is what is missing. The largest trial (n = 50) found no strength effect at all, the n = 30 crossover trial found gains in handgrip in one hand and in fat-free mass but explicitly no improvements in functional tasks or activities of daily living, and the 2025 FSHD trial missed its main motor-function outcome. So strength measures move and daily life may not.",
+      "move": "A trial in a single type of dystrophy whose main outcome is function, such as 6-minute walk distance or a validated motor-function scale, sized around the 20 m threshold for a small meaningful change."
+    },
+    "evidence": {
+      "found": "A Cochrane review with low risk of bias in most of its 14 trials, a pooled range clear of zero, a co-primary outcome reported by patients themselves, and the review's own high-quality rating.",
+      "missing": "The literature search ended 11 September 2012 and no new studies were added at that update, so this pooled estimate is over a decade old. The two largest and newest individual trials found nothing on their main strength and function outcomes. Publication bias could not be assessed from the abstract, and the full text, including the table of doses per trial, is blocked by the publisher, so the auditor could not verify what dose each pooled trial used.",
+      "move": "An updated Cochrane search that includes the 2025 FSHD trial, plus one properly sized randomised trial in a specific dystrophy type."
+    },
+    "form": {
+      "found": "Every dystrophy trial that could be checked individually used creatine monohydrate: CINRG at 5 g/day, Tarnopolsky at ~0.1 g/kg/day, and the FSHD trial at 100 mg/kg/day of powdered creatine monohydrate.",
+      "missing": "Nothing important is missing here."
+    },
+    "dose": {
+      "found": "The verified regimens are 5 g/day for 6 months and 0.1 g/kg/day, so 4 g/day sits inside the range tested in adults.",
+      "missing": "The Cochrane full text could not be read, so the dose used in each of the 6 pooled dystrophy trials cannot be stated, only the dose in the four retrieved separately. Per kilogram of body weight, 4 g/day in an adult is about half the 0.1 g/kg/day used in children, and much of this evidence comes from children.",
+      "move": "A dose-ranging trial comparing 0.05 with 0.1 g/kg/day in adults who have a dystrophy."
+    },
+    "summary": {
+      "sentence": "Cochrane found +8.5% muscle strength and 4.5x the odds of people reporting they feel better. The largest single trial (n=50) found nothing on strength.",
+      "absolute_effect": "Muscle strength rose +8.47% (95% CI 3.55 to 13.38) pooled across 6 randomised trials and 192 participants, and the risk ratio for a participant reporting they feel better was 4.51 (95% CI 2.33 to 8.74). Set against that, there was no significant strength change in the largest single trial (n = 50, 5 g/day, 6 months). In the newest trial, motor function differed by a mean of 0.19 points (95% CI -0.71 to 1.08) and 6-minute walk distance by +27.74 m (95% CI -1.41 to 56.88).",
+      "clinically_meaningful": "Yes for the pooled result, on two named thresholds. (1) The co-primary outcome is anchored in patients: a risk ratio of 4.51 for participants reporting they feel better needs no outside threshold, because feeling better is the outcome itself. (2) For walking, Perera et al 2006 set a small meaningful change at 20 m of six-minute walk distance (and 0.05 m/s gait speed, 0.5 SPPB points); the 2025 FSHD trial's estimate of +27.74 m clears 20 m, but its confidence interval (-1.41 to 56.88) does not exclude no change. There is no established MCID (smallest change that matters to a person) for % muscle strength in dystrophy, so the 8.47% figure itself is unanchored.",
+      "strongest_doubt": "The pooled estimate is not reproduced by the biggest or newest trials: CINRG (n = 50, 5 g/day, 6 months) found no strength effect, Tarnopolsky's crossover moved handgrip in one hand but not a single functional task or activity of daily living, and the 2025 FSHD trial missed its main motor-function outcome. The Cochrane search also closed in September 2012. Related but separate: in metabolic myopathies there was no strength benefit, and high-dose creatine made daily activities worse and muscle pain greater in McArdle disease, which the audit calls a reason for anyone with a muscle disease to involve a neurologist rather than self-prescribe."
+    }
+  },
+  "Vegetarians: bigger response?||Vegetarians and very low meat intake": {
+    "effect": {
+      "found": "Vegetarians were measured starting 13 mmol/kg lower in muscle creatine. On an identical protocol, the rise in phosphocreatine reaches statistical significance in vegetarians but not in omnivores. One trial reports greater gains in lean tissue and total work done in the vegetarian creatine group.",
+      "missing": "For muscle, what is missing is an interaction test in a trial large enough to run one; the positive comparison is 10 vegetarians against 12 non-vegetarians. For cognition the answer is already in and it is no: the interaction test in 123 participants gave p = 0.81 and p = 0.39, with Bayes factors, a measure of how strongly the data support one explanation over another, favouring no difference.",
+      "move": "A trial that splits people by diet when they are randomised, say 100 vegetarians and 100 omnivores, on 4 g/day across 12 weeks of resistance training, reporting the diet-by-supplement interaction for 1RM (the heaviest you can lift once) and DXA lean mass as a main outcome registered in advance."
+    },
+    "evidence": {
+      "found": "There are three relevant randomised trials, one of them large and registered in advance, a coherent mechanism confirmed by 31P-MRS scans, and a real, measured baseline difference rather than an assumed one.",
+      "missing": "The muscle claim's outcome is partly a stand-in: total creatine and phosphocreatine in muscle are lab markers, and the missing link is whether a larger creatine load produces a proportionally larger strength or lean-mass gain in a properly sized trial. The Solis protocol was single-blind with placebo always given first, so it is closer to a sequence of phases than a parallel randomised trial. The direct precedent from the cognition side is that this exact subgroup hypothesis failed when it was finally tested properly.",
+      "move": "The diet-split trial described above; failing that, a pooling of the raw individual-participant data from the existing resistance-training trials in which diet was recorded."
+    },
+    "form": {
+      "found": "Creatine monohydrate was used throughout.",
+      "missing": "Nothing important is missing here."
+    },
+    "dose": {
+      "found": "The muscle trial's maintenance dose works out at roughly 3.4 g/day and the cognition trials used exactly 5 g/day, so 4 g/day is bracketed by doses already tested in exactly this population.",
+      "missing": "Whether a vegetarian needs less than an omnivore to reach the same muscle saturation, or the same amount for longer, has never been tested head to head.",
+      "move": "A saturation study that measures total muscle creatine weekly at 4 g/day in vegetarians against omnivores."
+    },
+    "summary": {
+      "sentence": "Vegetarians start 13 mmol/kg lower in muscle creatine and load more. The muscle claim rests on n=42, and the cognition version was refuted at n=123.",
+      "absolute_effect": "Muscle total creatine at the start was 117 against 130 mmol/kg of dry mass in vegetarians compared with non-vegetarians (p < 0.05). After 0.3 g/kg/day for 7 days, muscle phosphocreatine rose 10.3-27.6% overall, reaching significance in vegetarians (p < 0.0001) but not omnivores, while brain phosphocreatine moved -0.7% to +3.9%, which is not at all, in every group. For the outcomes people care about, no extra gain in kg or % 1RM (the heaviest you can lift once) has ever been published for vegetarians: the one trial reporting a bigger lean-tissue and total-work response gives only P < 0.05 on 10 against 12 participants. The cognition interaction test in 123 participants found nothing (p = 0.81, p = 0.39).",
+      "clinically_meaningful": "Unknown. The threshold is SMD 0.20, the Cohen small benchmark, with the wording taken from PMID 41433021 as the source of the threshold rather than as evidence for this row, and no standardised extra effect for vegetarians has been published for any muscle outcome, so the threshold cannot be applied. On the cognition side the threshold question is settled the other way: Bayes factors gave strong support for no difference against d = 0.36, so the extra benefit there is below anything meaningful. Note also that the gap in the lab marker (117 vs 130 mmol/kg) does not carry over to the brain, where phosphocreatine did not move in any group.",
+      "strongest_doubt": "This exact subgroup hypothesis has already been tested properly once, on the cognition side, and it failed: PMID 37968687 recruited 123 participants, about half of them vegetarian, specifically to replicate it, and the diet-by-supplement interaction came back p = 0.808 and p = 0.392, not even in the predicted direction, with Bayes factors strongly favouring no difference. The muscle version rests on a 10-against-12 comparison with no interaction test, no effect size, and a full text the auditor could not open."
+    }
+  }
+}

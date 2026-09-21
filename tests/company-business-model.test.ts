@@ -111,8 +111,11 @@ describe("businessModelDisclosure — rendering decision, pure", () => {
 });
 
 describe("company profile version", () => {
-  it("bumped COMPANY_PROMPT_VERSION alongside the new field", () => {
-    expect(COMPANY_PROMPT_VERSION).toBe("company-v1.1");
+  it("bumped COMPANY_PROMPT_VERSION alongside the new field, and again for the plain-language rewrite", () => {
+    // v1.1 added `business_model`; v1.2 (2026-09-16) added the shared
+    // plain-language rule to prompts/company.md, which changes the prose the
+    // model writes, so the version had to move with it (invariant 3).
+    expect(COMPANY_PROMPT_VERSION).toBe("company-v1.2");
   });
 });
 

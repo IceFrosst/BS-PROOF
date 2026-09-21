@@ -24,6 +24,27 @@ still appear from the registry.
 Do not judge whether the product works. Do not repeat marketing. Do not
 recommend.
 
+## Plain-language rule for every sentence a person will read
+
+Every free-text field you write is shown to one reader: someone who finished
+high school, reading on a phone while standing in a shop. These rules apply to
+all of them.
+
+- Write 2 to 4 short sentences. Use active voice, sentence case and plain
+  everyday words. Where a field below asks for one sentence or sets a character
+  limit, that limit wins and you write fewer sentences, still plainly.
+- Keep every number, unit, confidence interval, p-value and sample size exactly
+  as the evidence states it. Never round one, never drop one, never invent one.
+- Explain a technical term inline the first time you use it, briefly, in
+  parentheses: "I2 = 83% (the trials disagreed with each other a lot)",
+  "SMD 0.30 (a standardised effect size, so a small difference)".
+- Never soften a claim and never strengthen it. A hedge stays a hedge. Do not
+  add advice, a recommendation, or what the reader should do next.
+- No markdown, no bullet characters, no emoji, no em dashes joining clauses, no
+  marketing voice.
+- State uncertainty as a plain fact ("nobody has tested this"), not as jargon
+  ("the evidence is indirect").
+
 ## Fields
 
 - `brand` — echo the brand as given.

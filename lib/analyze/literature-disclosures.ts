@@ -67,12 +67,11 @@ export function literatureDisclosures(data: LiteratureWarnings | null | undefine
       tone: "warning",
       title: "Funding & independence",
       body:
-        "Model knowledge — unverified. " +
-        `${basis || "The model recalls a funding pattern worth disclosing for this ingredient's trial base."} ` +
-        `${funders.length ? `Funders commonly named: ${funders.join(", ")}. ` : ""}` +
+        "Model knowledge — unverified. This is about who paid for the trials behind this ingredient. " +
+        `${basis || "The model remembers a funding pattern here that is worth telling you about."} ` +
+        `${funders.length ? `Funders often named: ${funders.join(", ")}. ` : ""}` +
         `(model confidence: ${funding.confidence}). ` +
-        "This is a disclosure about who funds the trials, not a claim that the results are wrong, and it does " +
-        "not affect the evidence score.",
+        "Saying who paid is not saying the results are wrong, and it does not affect the evidence score.",
     });
   }
 
@@ -84,12 +83,13 @@ export function literatureDisclosures(data: LiteratureWarnings | null | undefine
       tone: "warning",
       title: "Publication bias",
       body:
-        "Model knowledge — unverified. " +
-        `${basis || "The model recalls a pattern in the published record worth disclosing for this ingredient."} ` +
-        `${signals.length ? `Signals: ${signals.join("; ")}. ` : ""}` +
+        "Model knowledge — unverified. Publication bias means studies that found something are more likely to " +
+        "get published than studies that found nothing. That can make an ingredient look better than it is. " +
+        `${basis || "The model remembers a pattern in the published record here that is worth telling you about."} ` +
+        `${signals.length ? `Signs of it: ${signals.join("; ")}. ` : ""}` +
         `(model confidence: ${bias.confidence}). ` +
-        "This is a disclosure about the published record, not a claim that the results are wrong, and it does " +
-        "not affect the evidence score.",
+        "This describes the published record. It is not a claim that the results are wrong, and it does not " +
+        "affect the evidence score.",
     });
   }
 
