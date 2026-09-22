@@ -19,7 +19,8 @@
  *                      because that is what earlier deployments set)
  *   MODEL_API_URL      chat-completions endpoint (VISION_API_URL accepted)
  *                      default: https://api.deepseek.com/chat/completions
- *   LABEL_MODEL        vision model id   default deepseek-v4-flash-vision-exp
+ *   LABEL_MODEL        vision model id   default deepseek-flash (was the now-retired
+ *                                        deepseek-v4-flash-vision-exp alias)
  *   TEXT_MODEL         text model id     default deepseek-chat
  *
  * The defaults moved to DeepSeek on 2026-09-07 (founder: "they get a result
@@ -46,7 +47,13 @@ import Ajv, { type ValidateFunction } from "ajv";
 const ROOT = process.cwd();
 
 const DEFAULT_URL = "https://api.deepseek.com/chat/completions";
-const DEFAULT_VISION_MODEL = "deepseek-v4-flash-vision-exp";
+/*
+ * 2026-09-22: DeepSeek's vision guide says `deepseek-v4-flash-vision-exp` is
+ * RETIRED -- the name is still accepted but served by the latest `deepseek-flash`,
+ * which is a thinking model by default. Same model either way; this is the
+ * current name. LABEL_MODEL still overrides it.
+ */
+const DEFAULT_VISION_MODEL = "deepseek-flash";
 const DEFAULT_TEXT_MODEL = "deepseek-chat";
 
 export type ModelErrorKind =
@@ -94,6 +101,15 @@ export function textModel(): string {
   return process.env.TEXT_MODEL ?? DEFAULT_TEXT_MODEL;
 }
 
+/** Does this endpoint document DeepSeek's `thinking` switch? */
+export function supportsThinkingToggle(url: string = endpoint()): boolean {
+  try {
+    return new URL(url).hostname === "api.deepseek.com";
+  } catch {
+    return false;
+  }
+}
+
 export function backendHost(): string {
   try {
     return new URL(endpoint()).hostname;
@@ -120,6 +136,17 @@ export interface ChatRequest {
   timeoutMs?: number;
   /** Ask for a JSON object; dropped automatically if the provider rejects it. */
   jsonMode?: boolean;
+  /**
+   * Turn the provider's thinking/reasoning mode OFF for this call (2026-09-22).
+   * DeepSeek's current Flash model thinks by default, and its reasoning tokens
+   * count against max_tokens: on a busy label the whole budget went to
+   * `reasoning_content` and `content` came back empty (finish_reason "length").
+   * A label read is transcription, not reasoning. Sent only to DeepSeek's own
+   * endpoint, where `{"thinking": {"type": "disabled"}}` is the documented
+   * switch (api-docs.deepseek.com/guides/thinking_mode); other OpenAI-compatible
+   * providers get the request unchanged. Like jsonMode, dropped on an HTTP 400.
+   */
+  disableThinking?: boolean;
 }
 
 export interface ChatResult {
@@ -202,12 +229,15 @@ export async function chat(request: ChatRequest): Promise<ChatResult> {
     messages: request.messages,
   };
   if (request.jsonMode) body.response_format = { type: "json_object" };
+  if (request.disableThinking && supportsThinkingToggle(url)) body.thinking = { type: "disabled" };
 
   let res = await post(url, key, body, timeoutMs, request.purpose);
-  if (res.status === 400 && request.jsonMode) {
-    // Not every compatible endpoint accepts response_format; the prompt already
-    // demands a bare JSON object, so retry once without it.
+  if (res.status === 400 && (body.response_format || body.thinking)) {
+    // Not every compatible endpoint accepts response_format (or a thinking
+    // switch); the prompt already demands a bare JSON object, so retry once
+    // without the optional parameters.
     delete body.response_format;
+    delete body.thinking;
     res = await post(url, key, body, timeoutMs, request.purpose);
   }
 
@@ -233,9 +263,12 @@ export async function chat(request: ChatRequest): Promise<ChatResult> {
   if (!text) {
     const finish = choice?.finish_reason ?? "unknown";
     const reasoned = choice?.message?.reasoning_content ? " after emitting reasoning_content" : "";
+    const used = payload.usage?.completion_tokens;
+    const budget = typeof used === "number" ? `; ${used} of ${body.max_tokens as number} output tokens used` : "";
+    const thinking = body.thinking ? "; thinking disabled" : "";
     throw new ModelCallError(
       "empty",
-      `${request.purpose}: the model returned no message content (finish_reason: ${finish}${reasoned})`,
+      `${request.purpose}: the model returned no message content (finish_reason: ${finish}${reasoned}${budget}${thinking})`,
     );
   }
   return {

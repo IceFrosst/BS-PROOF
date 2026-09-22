@@ -208,6 +208,11 @@ export async function readLabel(
       // without response_format when a vision-compatible endpoint rejects it,
       // so this improves conforming providers without dropping compatibility.
       jsonMode: true,
+      // Transcription, not reasoning: switch DeepSeek's default thinking mode
+      // off so the whole token budget goes to the JSON answer (2026-09-22: a
+      // busy panel spent all 8192 tokens in reasoning_content and returned no
+      // content). Sent only to api.deepseek.com; see ChatRequest.disableThinking.
+      disableThinking: true,
       messages: [
         {
           role: "user",

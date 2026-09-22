@@ -50,6 +50,7 @@ describe("label vision JSON contract", () => {
 
     expect(request).not.toBeNull();
     expect(request!.jsonMode).toBe(true);
+    expect(request!.disableThinking).toBe(true);
     const parts = request!.messages[0].content;
     expect(Array.isArray(parts)).toBe(true);
     const prompt = (parts as Array<{ type: string; text?: string }>).map((part) => part.text ?? "").join("\n");

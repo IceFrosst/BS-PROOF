@@ -414,7 +414,10 @@ anywhere under `lib/`, `app/` or `components/` fails the gate). It provides:
 
 Provider is config: `DEEPSEEK_API_KEY`, `MODEL_API_URL`
 (default `https://api.deepseek.com/chat/completions`), `LABEL_MODEL`
-(default `deepseek-v4-flash-vision-exp`), `TEXT_MODEL` (default `deepseek-chat`).
+(default `deepseek-flash`; the old `deepseek-v4-flash-vision-exp` id is retired and
+served by it), `TEXT_MODEL` (default `deepseek-chat`). The label read sends DeepSeek's
+`thinking: {type: "disabled"}` (only to `api.deepseek.com`), because the current
+Flash model thinks by default and its reasoning counts against `max_tokens`.
 Verify a model id with the provider before setting it.
 
 Each prompt has its own version constant and cache domain (invariant 3):
