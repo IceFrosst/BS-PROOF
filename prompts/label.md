@@ -56,7 +56,13 @@ Return the object with nulls rather than inventing a product.
 legible. `low` when you are reconstructing any of them from a partial view.
 
 `evidence_spans` — verbatim strings you copied from the label, enough to justify
-each non-null field. Copy exactly, including the unit.
+each non-null field. Copy exactly, including the unit. **At most 12 spans, each
+under 200 characters.** One span may justify several fields (a Supplement Facts
+line usually carries the ingredient, its form and its dose at once). When a busy
+panel would need more than 12, keep them in this order and stop at 12: the main
+active's line (name, form, dose); the serving size and servings-per-day line;
+then the other actives' lines in panel order. Never merge two separate label
+lines into one span, and never paraphrase to save space.
 
 ## The rest of the panel (label-v1.1)
 
@@ -85,6 +91,26 @@ printed. Do not infer a country from the brand.
 pregnant", "Not for children"). `claims_printed` — short verbatim marketing or
 structure/function claims ("Supports muscle strength", "Clinically studied").
 Keep each under 160 characters; at most ten of each.
+
+## Size limits (label-v1.3)
+
+The object is checked against a schema, and ONE list that is too long rejects
+the whole read — the user then gets no answer at all. Stay inside these limits:
+
+| field | at most | each item |
+|---|---|---|
+| `evidence_spans` | 12 | under 200 characters |
+| `actives` | 40 | `name` and `form_text` under 120 characters |
+| `other_actives` | 30 | under 80 characters |
+| `certifications` | 12 | under 80 characters |
+| `warnings_printed` | 10 | under 160 characters |
+| `claims_printed` | 10 | under 160 characters |
+
+When a list would run longer, keep the first entries in the order they are
+printed on the panel and stop at the limit. Do not shorten an item by rewording
+it; if one printed string is longer than its limit, copy its first part
+verbatim. Cutting a list does not change `is_multi_ingredient`: it stays true
+whenever more than one active is dosed.
 
 ## Allowed ids
 

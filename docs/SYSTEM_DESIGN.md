@@ -424,7 +424,8 @@ Each prompt has its own version constant and cache domain (invariant 3):
 
 The deployed label read uses native JSON-object mode when the provider supports
 it and supplies a complete typed JSON template in `prompts/label.md`
-(`label-v1.2`). If an OpenAI-compatible vision endpoint rejects
+(`label-v1.2`; `label-v1.3` also states every schema list/length limit so a
+busy panel cannot fail the read on an unstated cap). If an OpenAI-compatible vision endpoint rejects
 `response_format` with HTTP 400, the shared transport repeats the same stateless
 request without that parameter. Returned prose, quoted booleans, wrong types and
 truncated JSON still fail closed; the parser does not repair or coerce a dose.

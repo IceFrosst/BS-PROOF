@@ -39,7 +39,12 @@ import { vocabBlock } from "./vocab";
 const ROOT = process.cwd();
 
 /** Bump together with prompts/label.md and label_adapter.LABEL_PROMPT_VERSION. */
-export const LABEL_PROMPT_VERSION = "label-v1.2";
+/* label-v1.3 (2026-09-22): the prompt now states every list/length limit in
+ * schemas/label.json. A real busy-panel scan returned 13+ evidence_spans and the
+ * whole read failed "must NOT have more than 12 items" because the prompt never
+ * mentioned the cap. Wording only: the schema, the fail-closed validation and
+ * every field's meaning are unchanged. */
+export const LABEL_PROMPT_VERSION = "label-v1.3";
 
 /** One read's wall clock. The route's maxDuration is 60s; leave headroom. */
 const TIMEOUT_MS = 50_000;

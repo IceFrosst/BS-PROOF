@@ -58,8 +58,8 @@ describe("label vision JSON contract", () => {
     expect(prompt).toContain("booleans");
     expect(prompt).toContain("are `true` or `false`, never quoted strings");
     expect(label.is_multi_ingredient).toBe(false);
-    expect(label._meta.prompt_version).toBe("label-v1.2");
-    expect(LABEL_PROMPT_VERSION).toBe("label-v1.2");
+    expect(label._meta.prompt_version).toBe("label-v1.3");
+    expect(LABEL_PROMPT_VERSION).toBe("label-v1.3");
   });
 
   it("still fails closed when the model returns prose instead of an object", async () => {
