@@ -561,6 +561,27 @@ do not drop it.
 
 ## Current state
 
+**2026-10-02 — Vercel project consolidation (owner-authorized).** Keep only
+`bs-proof-dashboard` (`prj_LVkNjXw2Sw96J18MUbGOx5AUkCMx`) in the IceFrost team.
+The independently reviewed obsolete projects were deleted only after their ID,
+name and team were verified immediately beforehand: `bs-proof-preview`
+(`prj_FVlObLwXHx4Sgw6M5k0vjwmsqjjz`) and `bs-proof-four-lines`
+(`prj_5pMDVAdYGan28RGmG3iVvfmPQFZC`). Both old URLs now return 404. Canonical
+`/scan/` and `/tests/supplements/` both return 200. The local
+`.vercel/project.json` was explicitly checked and links the canonical
+`bs-proof-dashboard` / `prj_LVkNjXw2Sw96J18MUbGOx5AUkCMx`. In the 2026-10-02
+check before this docs commit, production's verified Git SHA was
+`d9cedc44fdbfe3cd58d2cf3dcaf860b88451bd24`; that is a point-in-time record,
+not a claim about current `main`. Deployment age alone was misleading, not
+evidence of a stale release. `bs-proof.vercel.app`
+is still live under another account and cannot be removed with the current
+IceFrost access. Unrelated projects and canonical deployment aliases were not
+touched. **Handoff:** subscription-backed live research is not implemented yet;
+source-constrained five-case Sonnet 5.5 xhigh versus Opus 5.5 high benchmarking
+is in progress. DeepSeek remains the photo reader. Never assume servings/day;
+read an explicit daily regimen from the photo or ask the user to confirm it.
+
+
 - **2026-09-22 (later) — label reads switch DeepSeek's thinking mode OFF.** The `label-v1.3` re-scan still failed with `finish_reason: length after emitting reasoning_content`. Cause, per DeepSeek's own docs (guides/vision, guides/thinking_mode): `deepseek-v4-flash-vision-exp` is **retired** and served by the current `deepseek-flash`, which is a thinking model by default (effort `high`), and reasoning tokens count against `max_tokens` — so the 8192 budget from `acc0887` could be spent entirely on `reasoning_content`. Thinking mode also ignores `temperature`, so the "temperature 0" in `llm.ts` was not in effect for these reads. Fix: `ChatRequest.disableThinking` in `lib/analyze/llm.ts` sends the documented `{"thinking": {"type": "disabled"}}` **only to `api.deepseek.com`** (other OpenAI-compatible providers get an unchanged request), and it is dropped with `response_format` on the existing one-shot HTTP 400 retry. `readLabel` sets it: a label read is transcription. `DEFAULT_VISION_MODEL` is now `deepseek-flash` (same model, current id; Vercel's explicit `LABEL_MODEL` still names the legacy id, which DeepSeek still accepts). The empty-content error now states tokens used vs budget and whether thinking was disabled. **The three text calls (company, compatibility, literature warnings, evidence prior) are unchanged** and still run with the provider default — check whether `deepseek-chat` thinks and whether `literature_warnings` (max_tokens 1024) is degrading to `unavailable` before extending the switch. No prompt, schema, scoring or version constant changed. Tests: `tests/llm-thinking.test.ts` (fake fetch, zero model calls), `tests/vision-json.test.ts`. Handoff: re-scan the same busy label after deploy; if it still fails, the error now says whether thinking was off and how many tokens were used.
 
 - **2026-09-22 — label reads no longer fail on an unstated schema cap (`label-v1.3`).** A real `/scan` of a busy panel returned `model output violates schemas/label.json: /evidence_spans must NOT have more than 12 items`: the prompt asked for spans "enough to justify each non-null field" and for every dosed active, but never said `schemas/label.json` caps `evidence_spans` at 12, so a faithful model broke the schema and the whole read was refused. `prompts/label.md` now states every list/length limit the schema enforces (spans 12 × <200 chars, actives 40, other_actives 30, certifications 12 × <80, warnings/claims 10 × <160), a priority order for spans (main active line, servings line, other actives in panel order), and that a cut list never changes `is_multi_ingredient`. **Prompt wording only**: `schemas/label.json`, the fail-closed validation (no truncation or coercion in code) and every field's meaning are unchanged. `LABEL_PROMPT_VERSION` bumped to `label-v1.3` in both `lib/analyze/vision.ts` and `label_adapter.py` (invariant 3, label cache domain; the shared `PROMPT_VERSION` is untouched). Same scan, earlier attempt: `finish_reason: length after emitting reasoning_content` at `maxTokens` 8192 — not addressed here. Handoff: re-scan the same busy label after deploy.
@@ -1455,6 +1476,16 @@ extraction was spent on the fix; the first real `--with-sr` production run is
 still the unmeasured SR-uplift experiment (Next item 3).
 
 ## Next
+
+- Finish the five-case subscription research benchmark, then implement the
+  source-backed PC research worker and its secure website job connection.
+  Preserve the approved four-axis result format, distinguish ingredient from
+  whole-formula evidence, and keep unknown daily intake unknown. No live
+  research capability is implied by this deployment cleanup.
+- Obtain the other account owner's access/cooperation to retire or redirect
+  `bs-proof.vercel.app`; only the IceFrost team's BS-PROOF projects are
+  consolidated so far. Canonical link: `https://bs-proof-dashboard.vercel.app`.
+
 
 **Handoff (2026-09-17): retained Evidence Ledger production wiring is implemented on the preview branch, not deployed.** Person fit is dropped from the shared rubric and both result surfaces; it is not a scored or displayed dimension. Verify `npm run typecheck`, `npm run lint`, `npx vitest run`, both Python gates, and `npm run build`; inspect the 390/360 matched and unmatched result screenshots twice before any deploy. No live research audit was run: the three retained files remain audit-v0.2 model artifacts, not reverified, and the deployed model transport cannot open web sources. The Ledger is heuristic/unvalidated. Confirm the exact matcher rejects dose/form/multi-ingredient/missing-servings cases and that only one matched audit crosses the API boundary. Legacy v14 remains the API/display backup; do not alter its constants or paths. Future arbitrary-product audit expansion requires a source-retrieval service.
 
