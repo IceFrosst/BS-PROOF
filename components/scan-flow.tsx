@@ -59,6 +59,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties, type Keyb
 import { SaveResultCard } from "@/components/google-sign-in";
 import { ScanCamera } from "@/components/scan-camera";
 import { SearchSheet } from "@/components/search-sheet";
+import { shrinkForUpload } from "@/lib/camera/capture";
 import { SupplementSearch } from "@/components/supplement-search";
 import { businessModelDisclosure } from "@/lib/analyze/business-model";
 import type { CatalogIngredient } from "@/lib/analyze/catalog";
@@ -73,19 +74,68 @@ type NullableNumber = number | null;
 
 const MAX_BYTES = 12 * 1024 * 1024;
 
+/* Plain words for what the analysis does (2026-10-03). Steps advance on a
+ * timer sized to a typical 5-11 s scan; the route answers once, at the end,
+ * so these name the work, they do not report it as it finishes. */
 const PHOTO_STAGES = [
   "Reading the label",
-  "Converting the printed dose to its active moiety",
-  "Matching against retained evidence runs",
-  "Checking the FDA enforcement registry",
-  "Asking the model about the company and the combination",
+  "Checking your dose",
+  "Comparing with clinical trials",
+  "Checking safety records",
+  "Looking up the brand",
 ];
 
 const MANUAL_STAGES = [
-  "Converting the dose you entered to its active moiety",
-  "Matching against retained evidence runs",
-  "Asking the model what the literature says",
+  "Checking your dose",
+  "Comparing with clinical trials",
+  "Looking up what is known",
 ];
+
+/* Landing + loading copy in two languages (2026-10-03, English default).
+ * ponytail: the result report below stays English-only; translate it as a
+ * separate pass when the report wording is frozen. */
+type Lang = "en" | "lt";
+const LANG_KEY = "bsproof.lang";
+const COPY = {
+  en: {
+    headline: "Does your Supplement actually work?",
+    subline: "Scan and see.",
+    upload: "Upload",
+    uploadLabel: "Upload a photo",
+    search: "Search",
+    searchLabel: "Search your supplement",
+    takePhoto: "Take a photo",
+    camera: { hint: "Fill the frame · avoid glare", unavailable: "Camera unavailable — upload a photo instead.", starting: "Opening the camera…", torchOn: "Turn the flashlight on", torchOff: "Turn the flashlight off", shutter: "Take a photo" },
+    loadingTitle: "Checking your supplement",
+    loadingSub: "Usually about 10 seconds.",
+    photoStages: PHOTO_STAGES,
+    manualStages: MANUAL_STAGES,
+    scanThis: "Scan this label",
+    retake: "Retake photo",
+    chooseOther: "Choose a different image",
+    switchTo: "Lietuviškai",
+  },
+  lt: {
+    headline: "Ar tavo papildas tikrai veikia?",
+    subline: "Nuskenuok ir pamatyk.",
+    upload: "Įkelti",
+    uploadLabel: "Įkelti nuotrauką",
+    search: "Ieškoti",
+    searchLabel: "Ieškoti papildo",
+    takePhoto: "Fotografuoti",
+    camera: { hint: "Užpildyk rėmelį · venk atspindžių", unavailable: "Kamera nepasiekiama — įkelk nuotrauką.", starting: "Atidaroma kamera…", torchOn: "Įjungti žibintuvėlį", torchOff: "Išjungti žibintuvėlį", shutter: "Fotografuoti" },
+    loadingTitle: "Tikriname tavo papildą",
+    loadingSub: "Paprastai apie 10 sekundžių.",
+    photoStages: ["Skaitome etiketę", "Tikriname dozę", "Lyginame su klinikiniais tyrimais", "Tikriname saugumo įrašus", "Ieškome gamintojo"],
+    manualStages: ["Tikriname dozę", "Lyginame su klinikiniais tyrimais", "Ieškome, kas žinoma"],
+    scanThis: "Skenuoti šią etiketę",
+    retake: "Fotografuoti iš naujo",
+    chooseOther: "Pasirinkti kitą nuotrauką",
+    switchTo: "English",
+  },
+} as const;
+
+const STAGE_STEP_MS = 2200;
 
 const ACCEPTED_TYPES = "image/png,image/jpeg,image/webp,image/gif";
 
@@ -417,6 +467,30 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [lang, setLang] = useState<Lang>("en");
+  const t = COPY[lang];
+  useEffect(() => {
+    // Read after mount so the server render (English) and the first client
+    // render agree; the setState runs in a callback, as in scan-camera.tsx.
+    let saved: string | null = null;
+    try {
+      saved = window.localStorage.getItem(LANG_KEY);
+    } catch {
+      /* storage blocked: English */
+    }
+    if (saved === "lt") void Promise.resolve().then(() => setLang("lt"));
+  }, []);
+  const toggleLang = useCallback(() => {
+    setLang((current) => {
+      const next: Lang = current === "en" ? "lt" : "en";
+      try {
+        window.localStorage.setItem(LANG_KEY, next);
+      } catch {
+        /* storage blocked: still switches for this visit */
+      }
+      return next;
+    });
+  }, []);
   const [stage, setStage] = useState(0);
   const [stages, setStages] = useState<string[]>(PHOTO_STAGES);
   const [data, setData] = useState<ScanAnalysis | null>(null);
@@ -432,7 +506,7 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
 
   useEffect(() => {
     if (!busy) return;
-    const id = setInterval(() => setStage((s) => Math.min(s + 1, stages.length - 1)), 6000);
+    const id = setInterval(() => setStage((s) => Math.min(s + 1, stages.length - 1)), STAGE_STEP_MS);
     return () => clearInterval(id);
   }, [busy, stages.length]);
 
@@ -533,19 +607,19 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
     if (!file || busy) return;
     setError(null);
     setData(null);
-    setStages(PHOTO_STAGES);
+    setStages([...t.photoStages]);
     setStage(0);
     setBusy(true);
     try {
       const body = new FormData();
-      body.append("image", file);
+      body.append("image", await shrinkForUpload(file));
       await receive(await fetch("/api/scan", { method: "POST", body }));
     } catch (err) {
       setError(`Could not reach the analyzer: ${String(err)}`);
     } finally {
       setBusy(false);
     }
-  }, [file, busy, receive]);
+  }, [file, busy, receive, t]);
 
   const submitManual = useCallback(
     async (input: ManualScanInput) => {
@@ -554,7 +628,7 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
       setData(null);
       clearFile();
       setSearchOpen(false);
-      setStages(MANUAL_STAGES);
+      setStages([...t.manualStages]);
       setStage(0);
       setBusy(true);
       try {
@@ -571,7 +645,7 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
         setBusy(false);
       }
     },
-    [busy, receive, clearFile],
+    [busy, receive, clearFile, t],
   );
 
   const legend = data?.basis_legend;
@@ -648,12 +722,26 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
 
   return (
     <section className="la scan sc" aria-label="Scan a supplement">
-      {!busy && !showingResult ? (
-        <button type="button" className="sc-search-cta" onClick={() => setSearchOpen(true)}>
-          Search your supplement
-        </button>
-      ) : null}
-
+      {/* Page top bar (2026-10-03): the product's own scan mark, the language
+          switch, and -- only once signed in -- the account initial. Replaces
+          the shared site header on this page (hidden in globals.css). */}
+      <div className="sc-topbar">
+        <span className="sc-brand">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/favicon.svg" alt="" width={28} height={28} aria-hidden="true" />
+          BS PROOF
+        </span>
+        <span className="sc-topbar-end">
+          <button type="button" className="sc-lang" onClick={toggleLang} aria-label={t.switchTo}>
+            {lang === "en" ? "LT" : "EN"}
+          </button>
+          {auth.configured && auth.email ? (
+            <span className="sc-avatar" title={auth.email} aria-label={`Signed in as ${auth.email}`}>
+              {auth.email.charAt(0).toUpperCase()}
+            </span>
+          ) : null}
+        </span>
+      </div>
       {/* Two inputs, one difference: `capture` hands off to the platform
           camera. Kept mounted at all times -- this is the fallback path
           that must remain when getUserMedia is unavailable/denied/an
@@ -688,12 +776,12 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
                   </span>
                 )}
                 <div>
-                  <p className="sc-progress-title">{preview ? "Scanning the label" : "Analysing what you entered"}</p>
-                  <p className="sc-progress-sub">Usually under a minute.</p>
+                  <p className="sc-progress-title">{t.loadingTitle}</p>
+                  <p className="sc-progress-sub">{t.loadingSub}</p>
                 </div>
               </div>
-              <div className="sc-progress-bar" aria-hidden="true">
-                <span />
+              <div className="sc-progress-bar is-steps" aria-hidden="true">
+                <span style={{ width: `${Math.round(((stage + 1) / (stages.length + 1)) * 100)}%` }} />
               </div>
               <ol className="sc-stages">
                 {stages.map((s, i) => (
@@ -711,32 +799,55 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img className="la-preview sc-preview" src={preview ?? undefined} alt="The label you staged for analysis" />
               <button type="button" className="button button-dark sc-primary la-analyze" onClick={() => void submitPhoto()}>
-                Scan this label
+                {t.scanThis}
               </button>
               <div className="sc-secondary-row">
                 <button type="button" className="button button-outline sc-secondary" onClick={clearFile}>
-                  Retake photo
+                  {t.retake}
                 </button>
                 <label className="button button-outline sc-secondary" htmlFor="scan-file">
-                  Choose a different image
+                  {t.chooseOther}
                 </label>
               </div>
             </div>
           ) : (
             /* ---------------- landing ---------------- */
             <>
-              <ScanCamera active={!file} disabled={busy} onCapture={stageFile} onUnavailable={() => setCameraUnavailable(true)} />
-              <div className="sc-below-block">
-                {cameraUnavailable ? (
-                  <label className="button button-outline sc-fallback-photo" htmlFor="scan-capture">
-                    Take a photo
-                  </label>
-                ) : null}
-                <label className="sc-upload-link" htmlFor="scan-file">
-                  Upload a photo
-                </label>
-                <span className="sc-hint">PNG, JPEG or WebP, up to 12 MB.</span>
+              <div className="sc-intro">
+                <h1 id="scan-title" className="sc-headline" lang={lang}>{t.headline}</h1>
+                <p className="sc-subline" lang={lang}>{t.subline}</p>
               </div>
+              <ScanCamera
+                active={!file}
+                disabled={busy}
+                onCapture={stageFile}
+                onUnavailable={() => setCameraUnavailable(true)}
+                labels={t.camera}
+                leading={
+                  <label className="sc-icon-btn" htmlFor="scan-file" aria-label={t.uploadLabel}>
+                    <span className="sc-icon" aria-hidden="true">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="3" /><circle cx="9" cy="10" r="1.8" /><path d="m21 16-5-5-9 9" /></svg>
+                    </span>
+                    {t.upload}
+                  </label>
+                }
+                trailing={
+                  <button type="button" className="sc-icon-btn sc-search-cta" onClick={() => setSearchOpen(true)} aria-label={t.searchLabel}>
+                    <span className="sc-icon" aria-hidden="true">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="6.5" /><path d="m20 20-4.2-4.2" /></svg>
+                    </span>
+                    {t.search}
+                    {lang === "en" ? <span className="sr-only"> your supplement</span> : null}
+                  </button>
+                }
+                fallback={
+                  cameraUnavailable ? (
+                    <label className="button button-dark sc-fallback-photo" htmlFor="scan-capture">
+                      {t.takePhoto}
+                    </label>
+                  ) : null
+                }
+              />
             </>
           )}
         </div>

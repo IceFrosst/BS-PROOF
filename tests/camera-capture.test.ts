@@ -40,14 +40,17 @@ describe("cameraSupported", () => {
 });
 
 describe("startCamera / stopCamera", () => {
-  it("requests the rear camera with no audio by default", async () => {
+  it("requests the rear camera at its best resolution, with no audio, by default", async () => {
     const fakeStream = { getTracks: () => [] } as unknown as MediaStream;
     const getUserMedia = vi.fn().mockResolvedValue(fakeStream);
     Object.defineProperty(navigator, "mediaDevices", { value: { getUserMedia }, configurable: true });
 
     const stream = await startCamera();
     expect(stream).toBe(fakeStream);
-    expect(getUserMedia).toHaveBeenCalledWith({ video: { facingMode: { ideal: "environment" } }, audio: false });
+    expect(getUserMedia).toHaveBeenCalledWith({
+      video: { facingMode: { ideal: "environment" }, width: { ideal: 3840 }, height: { ideal: 2160 } },
+      audio: false,
+    });
   });
 
   it("stops every track, and is safe to call with null/undefined/an already-stopped stream", () => {
