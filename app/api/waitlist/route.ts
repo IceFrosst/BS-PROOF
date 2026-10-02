@@ -1,5 +1,6 @@
 /*
- * The dashboard's SECOND runtime API. Read app/api/analyze-label/route.ts
+ * One of the app's two runtime APIs (the other is app/api/scan/route.ts; the
+ * first, /api/analyze-label, was retired 2026-10-03). Read the scan route
  * before adding a third.
  *
  * Someone scans the QR code on the stand's roll-up, lands on the site, and

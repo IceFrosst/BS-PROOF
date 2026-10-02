@@ -43,7 +43,7 @@ export default async function RunPage({ params }: RunPageProps) {
     <main id="main-content" tabIndex={-1}>
       <div className="run-hero">
         <div className="shell">
-          <nav className="breadcrumbs breadcrumbs-light" aria-label="Breadcrumb"><Link href="/">Runs</Link><span aria-hidden="true">/</span><span>{humanize(dashboardRun.run.ingredient)}</span></nav>
+          <nav className="breadcrumbs breadcrumbs-light" aria-label="Breadcrumb"><Link href="/runs">Runs</Link><span aria-hidden="true">/</span><span>{humanize(dashboardRun.run.ingredient)}</span></nav>
           <div className="run-hero-grid">
             <div>
               <div className="hero-status-row"><StatusBadge status={dashboardRun.run.validity.status} testId="run-status" /><span>{formatDate(dashboardRun.run.timestamp)}</span></div>

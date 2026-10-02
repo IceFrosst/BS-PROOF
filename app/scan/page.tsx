@@ -19,7 +19,7 @@ import { ingredientCatalog } from "@/lib/analyze/catalog";
  * skip link, the home link and the methodology nav link, without touching
  * the root layout or any other route.
  *
- * Still absent from site navigation like /tester (site-wide robots noindex).
+ * Still absent from site navigation like /runs (site-wide robots noindex).
  * The 2026-09-14 PWA decision makes this the public manifest's installed
  * start_url while keeping the browser front door at / as the waitlist.
  */

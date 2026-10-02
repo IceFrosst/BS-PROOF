@@ -8,8 +8,8 @@
  *   - matchCatalog ranks label > alias > form and finds an ingredient by the
  *     name printed on a tub ("bisglycinate", "Magtein")
  *   - / stays the waitlist with no scanner; /scan carries the capture input,
- *     the upload input, the search sheet and no waitlist; /tester is not
- *     touched by any of it
+ *     the upload input, the search sheet and no waitlist; /runs is the run
+ *     archive (the old /tester was retired 2026-10-03)
  */
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -18,7 +18,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import HomePage from "@/app/page";
 import ScanPage from "@/app/scan/page";
-import TesterPage from "@/app/tester/page";
+import RunsPage from "@/app/runs/page";
 import { matchCatalog, SupplementSearch } from "@/components/scan/supplement-search";
 import { ingredientCatalog } from "@/lib/analyze/catalog";
 import type { ManualScanInput } from "@/lib/analyze/scan";
@@ -292,7 +292,7 @@ describe("SupplementSearch combobox", () => {
   });
 });
 
-describe("/ vs /scan vs /tester", () => {
+describe("/ vs /scan vs /runs", () => {
   it("the waitlist page offers no scanner and no search", () => {
     const html = renderToStaticMarkup(createElement(HomePage));
     expect(html).toContain('class="waitlist-input');
@@ -300,6 +300,7 @@ describe("/ vs /scan vs /tester", () => {
     expect(html).not.toContain("Take a photo");
     expect(html).not.toContain('role="combobox"');
     expect(html).not.toContain("/tester");
+    expect(html).not.toContain("/runs");
     expect(html).not.toContain("/scan");
   });
 
@@ -333,8 +334,8 @@ describe("/ vs /scan vs /tester", () => {
     expect(html).not.toContain("sc-search-toggle");
     expect(html).not.toContain('role="separator"');
     expect(html).not.toContain("waitlist-input");
-    // The old dark .analyze-hero (from /tester) never appears here either --
-    // this page has its own dark styling scoped to .scan-page, not that class.
+    // The old dark .analyze-hero (from the retired /tester) never appears here
+    // either -- this page has its own styling scoped to .scan-page.
     expect(html).not.toContain("analyze-hero");
   });
 
@@ -364,12 +365,13 @@ describe("/ vs /scan vs /tester", () => {
     expect(container.querySelector('[role="dialog"]')).toBeNull();
   });
 
-  it("the tester page is untouched: dark hero, its own analyzer, no search control", () => {
-    const html = renderToStaticMarkup(createElement(TesterPage));
-    expect(html).toContain("analyze-hero");
-    expect(html).toContain("la-drop");
-    expect(html).not.toContain("Search for your supplement");
+  it("the run archive lists runs and carries no scanner, search or waitlist", () => {
+    const html = renderToStaticMarkup(createElement(RunsPage));
+    expect(html).toContain("Evidence runs");
+    expect(html).toContain('data-testid="run-card"');
+    expect(html).not.toContain('type="file"');
     expect(html).not.toContain('role="combobox"');
+    expect(html).not.toContain("waitlist-input");
     expect(html).not.toContain("scan-page");
   });
 });

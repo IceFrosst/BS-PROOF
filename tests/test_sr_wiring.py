@@ -1,4 +1,4 @@
-"""Pin the production SR-inheritance wiring in run_pipeline.py.
+"""Pin the production SR-inheritance wiring (bsproof/run/extract.py).
 
 WHY AST AND NOT AN IMPORT. run_pipeline needs httpx and a signed-in backend,
 neither of which a bare test interpreter has (the repo hooks block bare-python
@@ -14,7 +14,8 @@ import ast
 import unittest
 from pathlib import Path
 
-SOURCE = Path(__file__).resolve().parents[1] / "run_pipeline.py"
+# The backend branches moved out of run_pipeline.main() on 2026-10-03.
+SOURCE = Path(__file__).resolve().parents[1] / "bsproof" / "run" / "extract.py"
 
 
 class SRWiring(unittest.TestCase):

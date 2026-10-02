@@ -97,19 +97,6 @@ p { margin-block: 0 1rem; }
 .button-outline { color: currentColor; background: transparent; border-color: currentColor; }
 .back-link { display: inline-block; margin-top: 24px; font-weight: 800; }
 
-.home-hero { color: var(--white); background-color: var(--night); background-image: radial-gradient(rgb(255 255 255 / 13%) 1px, transparent 1px); background-size: 22px 22px; padding: clamp(64px, 9vw, 112px) 0 0; }
-.hero-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.7fr); gap: clamp(40px, 8vw, 110px); align-items: end; }
-.hero-kicker { color: var(--lime); }
-.home-hero h1 { font-size: clamp(5.5rem, 16vw, 12.5rem); font-weight: 900; line-height: 0.72; letter-spacing: -0.085em; }
-.home-hero h1 em { color: var(--lime); font-style: normal; }
-.hero-copy { padding-bottom: 12px; color: #c7d2cc; }
-.hero-lede { color: var(--white); font-size: clamp(1.2rem, 2vw, 1.65rem); line-height: 1.3; letter-spacing: -0.025em; }
-.hero-copy .button { margin-top: 18px; }
-.hero-ledger { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: clamp(65px, 9vw, 120px); border: 1px solid rgb(255 255 255 / 22%); border-bottom: 0; }
-.hero-ledger > div { min-height: 120px; display: flex; flex-direction: column; justify-content: center; padding: 22px; border-right: 1px solid rgb(255 255 255 / 22%); }
-.hero-ledger > div:last-child { border: 0; }
-.hero-ledger strong { font-size: 2.4rem; line-height: 1; }
-.hero-ledger span { color: #b6c3bc; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.12em; }
 
 .section-heading { margin-bottom: 36px; }
 .split-heading { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 0.45fr); gap: 50px; align-items: end; }

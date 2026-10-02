@@ -1,6 +1,7 @@
 /*
  * How much literature EXISTS for an ingredient we have not scored, and a
- * best-effort demand queue for it. Shared by /api/analyze-label and /api/scan.
+ * best-effort demand queue for it. Used by /api/scan (and, until 2026-10-03,
+ * the retired /api/analyze-label).
  *
  * A census is a COUNT, explicitly labelled as one: it answers "is there
  * anything to read", never "does it work". Query shape mirrors

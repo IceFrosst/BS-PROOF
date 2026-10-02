@@ -10,6 +10,40 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-03 — /tester retired, run_pipeline split, dashboard legacy paths
+
+**Retired `/tester` and `POST /api/analyze-label`** (the pre-/scan analyzer):
+deleted the page, the route, `components/label-analyzer.tsx` and the
+analyzer stylesheet. The run archive `/tester` carried moved to a new `/runs`
+index (same content, run-page header); the run pages' "Runs" breadcrumb now
+points there instead of the waitlist. The `.la-*` rules /scan still renders
+moved into `app/styles/scan.css` in cascade order; dead census, hero and
+tester rules were removed. E2E and unit tests retargeted to `/runs`; /tester
+and /api/analyze-label are pinned as 404. Also added the missing
+`prompts/literature_warnings.md` + schema to `/api/scan`'s file tracing (they
+are read at request time). Verified: /scan screenshots 46/48 byte-identical,
+the other two differ only in animation frames; page heights identical.
+
+**`run_pipeline.py` 1,051 → 113 lines.** Stages moved to `bsproof/run/`
+(options, corpus, extract, score, report); helpers and stage bodies moved
+verbatim. Hand-rolled flag parsing → argparse (`--help` now exists; an unknown
+flag is an error instead of becoming the ingredient). `tests/test_run_options.py`
+keeps the old parser as an oracle over 16 argv cases. Verified: CLI edge cases
+identical, wiring run identical bar network lines, all deterministic baselines,
+and an offline smoke of the Claude production path with a fake adapter
+(backend selection, S2–S8 calls, SR gate, report mode `claude-sr-top5-broad`).
+
+**Dashboard legacy paths.** Measured with coverage over the real retained data.
+Removed: rendering context-only runs (none remain; now quarantined with a
+reason) and `scoringModelFromReport` (back-filled a scoring model from .md
+reports and `reports/archive/` for pre-stamp contexts). Kept on purpose: the
+context cross-check (every run still writes a context), `usageFromSpeedReport`
+(the only usage source for a future Grok run) and the provider fallback.
+
+**Found, not changed:** a TYPED creatine monohydrate 4000 mg × 1/day never gets
+the retained Evidence Ledger audit — the manual path builds no `actives` list
+and the exact matcher requires exactly one. Product decision.
+
 ## 2026-10-03 — effect-research version mismatch resolved
 
 `prompts/effect_research.md` said `effect-research-v0.3` while

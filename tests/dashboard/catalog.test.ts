@@ -16,13 +16,10 @@ import { compositeOf, outcomeIdOf, rowsOf } from "./helpers";
  * Fixtures are built from the committed artifacts so they always satisfy the
  * real DashboardRunV1 contract; only identity and the field under test change.
  *
- * NOTE: two expectations here — "one unreadable artifact does not take the rest
- * of the catalog down" and "a legacy context run is retained alongside runs that
- * do have artifacts" — were written against intended behaviour while
- * lib/dashboard/catalog.ts was being changed by another author. That change has
- * since landed (quarantine of unreadable artifacts, per-run legacy fallback);
- * these two tests now pin it. Before that commit they described the goal, not
- * the code.
+ * NOTE: "one unreadable artifact does not take the rest of the catalog down"
+ * pins the per-run quarantine. Context-only runs (pre-DashboardRunV1) were
+ * rendered as "legacy" runs until 2026-10-03; none remain, so they are now
+ * quarantined with a reason instead -- pinned below.
  */
 
 type Json = Record<string, unknown>;
@@ -71,7 +68,7 @@ function writeDashboardArtifact(runId: string, generatedAt: string, mutate?: (ar
   return artifact;
 }
 
-function writeLegacyContext(runId: string, mutate?: (context: Json) => void): Json {
+function writeRunContext(runId: string, mutate?: (context: Json) => void): Json {
   const context = readRepoJson(RETAINED_CONTEXT_PATH);
   mutate?.(context);
   write(`${runId}_context.json`, JSON.stringify(context));
@@ -185,27 +182,23 @@ describe("loadDashboardCatalog", () => {
     }
   });
 
-  it("retains a legacy context run alongside runs that do have artifacts", async () => {
+  it("quarantines a context-only run instead of rendering it", async () => {
     writeDashboardArtifact(RUN_A, STAMP_A);
-    writeLegacyContext(RUN_B);
-    const { loadDashboardCatalog } = await loadCatalogModule();
+    writeRunContext(RUN_B);
+    const { loadDashboardCatalog, loadQuarantinedRuns } = await loadCatalogModule();
 
-    const runs = loadDashboardCatalog();
-    expect(runs.map((run) => run.run.id).sort()).toEqual([RUN_A, RUN_B].sort());
-
-    const legacy = runs.find((run) => run.run.id === RUN_B)!;
-    expect(legacy.schemaVersion).toBe("LegacyContextV0");
-    // A projection of a pre-contract report must not pass itself off as validated.
-    expect(legacy.run.validity.status.toLowerCase()).not.toBe("validated");
-    expect(legacy.run.validity.publicClaimsAllowed).toBe(false);
-    expect(legacy.run.validity.reasonCodes).toContain("legacy_context");
+    expect(loadDashboardCatalog().map((run) => run.run.id)).toEqual([RUN_A]);
+    const quarantined = loadQuarantinedRuns();
+    expect(quarantined.map((entry) => entry.runId)).toEqual([RUN_B]);
+    expect(quarantined[0].reason).toMatch(/Context-only run: no DashboardRunV1 artifact/);
   });
 
   it("checks a run's retained context against its artifact instead of merging it", async () => {
     const artifact = writeDashboardArtifact(RUN_A, STAMP_A);
-    writeLegacyContext(RUN_A);
-    // The legacy projection reads its scoring model off the retained report.
-    write(`${RUN_A}_summary.md`, "scoring_model: v2-four-arc\n\n# Summary\n");
+    // Contexts written since the scoring-model stamp carry it themselves (the
+    // fixture context predates the stamp, so it is added here); the reader no
+    // longer back-fills it from a summary report.
+    writeRunContext(RUN_A, (context) => { context.scoring_model = "v2-four-arc"; });
     const { loadDashboardRun } = await loadCatalogModule();
 
     const run = loadDashboardRun(RUN_A)!;
@@ -217,10 +210,10 @@ describe("loadDashboardCatalog", () => {
 
   it("never reports a disagreeing context as reconciled", async () => {
     writeDashboardArtifact(RUN_A, STAMP_A);
-    writeLegacyContext(RUN_A, (context) => {
+    writeRunContext(RUN_A, (context) => {
+      context.scoring_model = "v2-four-arc";
       (context.ecu_rows as unknown[]).splice(0, 1);
     });
-    write(`${RUN_A}_summary.md`, "scoring_model: v2-four-arc\n\n# Summary\n");
     writeDashboardArtifact(RUN_B, STAMP_B);
     const { loadDashboardCatalog } = await loadCatalogModule();
 

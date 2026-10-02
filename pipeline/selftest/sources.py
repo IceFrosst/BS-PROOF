@@ -658,7 +658,7 @@ def run(check, *, _sc):
 
     # The wiring that made the ladder matter: the filter must accept records
     # whose full text is reachable OFF PubMed Central.
-    import run_pipeline as _rp
+    from bsproof.run import corpus as _rp
     kept = _rp._prioritize_primaries(
         [{"oa": "full_text", "year": 2020},
          {"oa": "abstract_only", "year": 2020, "oa_location": {"url": "x.pdf"}},

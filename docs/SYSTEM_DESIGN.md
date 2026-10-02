@@ -15,8 +15,9 @@ design; the code is `lib/analyze/scan.ts` and its stage modules.
 **Amended 2026-09-15 (founder-approved option 1):** `/scan` is a pure-white,
 phone-first page where scanning owns the first viewport, and a second way in —
 **"Search for your supplement"** — feeds the same stages 1–5 with a TYPED
-ingredient × form × dose. §1a, §3a and §5 describe it. `/` remains the waitlist;
-`/tester` is unchanged.
+ingredient × form × dose. §1a, §3a and §5 describe it. `/` remains the waitlist.
+(`/tester` and its `/api/analyze-label` were retired 2026-10-03; the run archive
+they carried is now `/runs`.)
 
 ## 1. What the user gets
 
@@ -660,7 +661,7 @@ tests/camera-capture.test.ts     lib/camera/capture.ts: support detection, mocke
 tests/scan-signin.test.tsx       sign-in card gating, locked/unlocked result rendering, claim call wiring (mocked supabase-browser module)
 tests/scan-claim-route.test.ts   POST /api/scan/claim: 401 bad token, 404 unknown run, 200 happy path, no secret in the response
 tests/scan-manual.test.ts        catalog integrity, unit conversion, manual orchestration, route, source/basis honesty, mark drift
-tests/scan-search.test.tsx       keyboard-driven combobox, / vs /scan vs /tester separation
+tests/scan-search.test.tsx       keyboard-driven combobox, / vs /scan vs /runs separation
 tests/scan-history.test.ts       store: payload shape, image hashing/storage, app version, orphan cleanup, no-secret leakage
 tests/scan-history-route.test.ts route wiring: run_id/app_version/persistence attached, SCAN_HISTORY_REQUIRED fail-closed
 tests/company-business-model.test.ts  schema, defaults, the disclosure decision function, proof that scoring never sees the field

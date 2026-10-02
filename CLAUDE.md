@@ -171,7 +171,8 @@ bsproof/                the extraction layer (may call a model; pipeline/ may no
   worker_payload.py     what each agent is sent, fitted to the input budget
   worker_shadow.py      v13 shadow helpers (off unless SP_V13_SHADOW=1)
   worker_quota.py       subscription-limit detection
-run_pipeline.py         one ingredient end to end (--wiring / --grok / --with-sr)
+  run/                  run_pipeline stages: options, corpus, extract, score, report
+run_pipeline.py         one ingredient end to end (--wiring / --grok / --with-sr; --help)
 run_sr_inheritance.py   SR-table uplift alone
 run_coverage.py         OA + methods-fact coverage, no model
 
@@ -190,9 +191,10 @@ pipeline/   deterministic, NO MODEL, unit-tested
   invariants.py selftest/          the two gates (selftest is a package; run with -m)
 sources/    deterministic HTTP layer: europepmc, clinicaltrials, oa, fulltext
 
-app/        Next.js routes: /scan (product), /api/scan, /tester, /tests/supplements,
-            /runs, /methodology, /design-lab (dev only, 404 in production), / (waitlist)
-components/ scan-flow.tsx + scan-camera.tsx (the /scan UI), label-analyzer.tsx (/tester)
+app/        Next.js routes: /scan (product), /api/scan, /runs (run archive) and
+            /runs/<id>, /tests/supplements, /methodology, /design-lab (dev only,
+            404 in production), / (waitlist). /tester + /api/analyze-label retired 2026-10-03
+components/ scan/ (the /scan UI), evidence-ledger/ (lab card), run/dashboard components
 lib/analyze/        the scan: llm.ts (model transport), vision.ts, scan.ts, TS scoring ports
 lib/evidence-ledger/  rubric + retained audits used by /scan for exact matches
 lib/scan-history/ lib/auth/   optional Supabase history + Google sign-in

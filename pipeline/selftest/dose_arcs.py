@@ -389,7 +389,7 @@ def run(check, *, product, _score):
     # Guard the plumbing itself: the immutable dashboard exporter must receive
     # the complete deterministic ECU rows.  The old hand-written projection
     # dropped applicability, dose, evidence ids, flags and provenance.
-    _rp = (pathlib.Path(__file__).parent.parent.parent / "run_pipeline.py").read_text()
+    _rp = (pathlib.Path(__file__).parent.parent.parent / "bsproof" / "run" / "score.py").read_text()
     _full_handoff = 'run_context["ecu_rows"] = rows' in _rp
     check("runner retains complete ECU rows for report artifacts", _full_handoff,
           "run_context must receive the full build_ecus rows without projection")

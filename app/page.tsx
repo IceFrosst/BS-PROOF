@@ -6,8 +6,8 @@ import { WaitlistForm } from "@/components/waitlist-form";
  * Founder, 2026-08-25: "The only thing that needs to be on the main page for
  * now is just the waitlist." So the scanner, the run archive, the totals strip
  * and the methodology promo are all gone from here — not hidden behind a flag,
- * not moved below the fold. Everything a tester or board member needs lives at
- * /tester, which carries the analyzer and the full run archive.
+ * not moved below the fold. Testers and board members use /scan (the product)
+ * and /runs (the run archive); the old /tester page was retired 2026-10-03.
  *
  * Why the archive left too, since it was the honest provenance for every
  * number: there are no numbers on this page any more. Provenance for a claim
@@ -40,7 +40,7 @@ import { WaitlistForm } from "@/components/waitlist-form";
  *
  * This route still reads no catalog at all, so it renders the same whether or
  * not any artifact is present, and it still offers no scanner and no link to
- * /tester (pinned by tests/e2e/front-door.spec.ts).
+ * /runs or /scan (pinned by tests/e2e/front-door.spec.ts).
  */
 
 export default function HomePage() {

@@ -1,14 +1,6 @@
-/* /tester crumbs, the waitlist form and the public front door (/).
+/* The waitlist form and the public front door (/).
    Split out of app/globals.css on 2026-10-02; globals.css imports the files in
    their original order, so the cascade is unchanged. */
-
-/* --------------------------------------------------------------- /tester */
-/* On the dark hero, so light-on-dark like the waitlist copy beside it. */
-.tester-crumbs { justify-content: center; margin-bottom: 14px; color: #bdc9c2; font-size: 0.82rem; }
-.tester-crumbs a { color: var(--lime); }
-.tester-lede { max-width: 640px; margin: 14px auto 0; color: #c7d2cc; font-size: 0.98rem; line-height: 1.5; }
-.tester-foot { margin: 0; color: var(--ink-soft); font-size: 0.85rem; }
-.tester-foot code { font-size: 0.8rem; }
 
 /* ---------------------------------------------------------------- waitlist */
 /*
@@ -107,9 +99,8 @@
    3. TAP TARGETS. The form panel and its controls go full-width below 620px,
       where a side-by-side pair would leave two 150px columns nobody can hit.
 
-   Scoped to .front-* on purpose. /tester shares the old .analyze-hero and the
-   .waitlist form styles; nothing here reaches either, so the analyzer page is
-   untouched by a change made for the public page.
+   Scoped to .front-* on purpose, so a change made for the public page cannot
+   reach the shared .waitlist form styles.
    -------------------------------------------------------------------------- */
 .front-main { display: flex; flex-direction: column; }
 .front-hero {

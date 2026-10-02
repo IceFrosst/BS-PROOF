@@ -30,7 +30,7 @@ export default async function OutcomePage({ params }: OutcomePageProps) {
   return (
     <main id="main-content" tabIndex={-1}>
       <div className="shell outcome-detail-hero">
-        <nav className="breadcrumbs" aria-label="Breadcrumb"><Link href="/">Runs</Link><span aria-hidden="true">/</span><Link href={`/runs/${runId}`}>{humanize(dashboardRun.run.ingredient)}</Link><span aria-hidden="true">/</span><span>{outcome.label}</span></nav>
+        <nav className="breadcrumbs" aria-label="Breadcrumb"><Link href="/runs">Runs</Link><span aria-hidden="true">/</span><Link href={`/runs/${runId}`}>{humanize(dashboardRun.run.ingredient)}</Link><span aria-hidden="true">/</span><span>{outcome.label}</span></nav>
         <div className="outcome-detail-grid">
           <div>
             <div className="hero-status-row"><StatusBadge status={dashboardRun.run.validity.status} /><span>{outcome.displayScore === null ? "Evidence gated" : humanize(outcome.band)}</span></div>

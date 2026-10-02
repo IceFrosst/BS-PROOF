@@ -31,7 +31,7 @@ sys.path.insert(0, str(ROOT))
 from bsproof import claude_adapter
 from bsproof import workers
 from pipeline.storage import Store
-from run_pipeline import _best_text, _sections
+from bsproof.run.corpus import _best_text, _sections
 
 BASELINE = ROOT / "out/creatine_v126_sr_extractions.json"
 BASELINE_SHA256 = "dc834ea012ea419876658bf2a85b6e33027d7aef81d178f598a409c2c8a45526"

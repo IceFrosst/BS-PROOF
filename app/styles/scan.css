@@ -2,6 +2,33 @@
    Split out of app/globals.css on 2026-10-02; globals.css imports the files in
    their original order, so the cascade is unchanged. */
 
+/* .la-* primitives /scan still renders (hidden file inputs, staged preview,
+   stage list, alerts, empty states). Moved here 2026-10-03 from the retired
+   label analyzer's stylesheet, in their original order; the `.scan-page .la-*`
+   overrides further down still refine them. */
+.la { padding-block: clamp(40px, 6vw, 72px); }
+.la-input { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.la-input:focus-visible + .la-preview { outline: 3px solid var(--coral); outline-offset: 4px; }
+.la-preview { max-height: 320px; border-radius: 12px; border: 1px solid var(--line); }
+.la-stage { margin: 0; color: var(--teal-text); font-weight: 700; font-size: 0.9rem; }
+.la-alert { display: grid; gap: 4px; margin-top: 22px; padding: 16px 18px; border: 1px solid var(--line); border-left: 5px solid var(--line); background: var(--white); color: var(--ink); }
+.la-alert span { color: var(--ink-soft); font-size: 0.9rem; }
+.la-alert-warn { border-left-color: var(--gold); }
+.la-alert-bad { border-left-color: var(--danger); }
+.la-alert-ok { border-left-color: var(--teal); }
+.la-result { margin-top: 30px; display: grid; gap: 22px; }
+.la-spans { margin: 16px 0 0; color: var(--ink-soft); font-size: 0.82rem; font-style: italic; }
+.la-dim { color: var(--ink-soft); font-weight: 400; }
+.la-empty { display: grid; gap: 8px; padding: 26px 24px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--white); color: var(--ink); }
+.la-empty > strong { font-size: 1.15rem; }
+.la-empty > span { color: var(--ink-soft); }
+.la-analyze { min-width: 240px; font-size: 1.1rem; }
+.la-analyze[disabled] { opacity: 0.6; cursor: default; }
+@media (max-width: 620px) {
+  .la-analyze { width: 100%; }
+  .la-preview { max-height: 240px; }
+}
+
 /* ---------------------------------------------------------------- SCAN ----
    /scan design system (2026-09-16, docs/history/2026-09-16-scan-design-log.md; current summary in docs/SYSTEM_DESIGN.md §11).
    A lab-grade evidence report read on a phone. One white ground, one grey
@@ -12,7 +39,7 @@
 
    Scoping: everything here hangs off `.scan-page` or a `.sc-*` / `.scan-*`
    class that only components/scan/ renders. Shared `.la-*` rules
-   (used by /tester's label-analyzer) are NOT edited -- where /scan needs a
+   (defined at the top of this file) are NOT edited -- where /scan needs a
    different look for `.la-alert`, `.la-empty`, `.la-dim`, `.la-result`,
    `.la-spans`, `.la-census*` it gets a `.scan-page .la-*` override below.
    The header's Methodology link is hidden on this page only (founder); the
@@ -70,8 +97,6 @@ body:has(.scan-page) .footer-inner p:last-child { display: none; }
 .scan-page .la-empty { gap: 6px; padding: 16px; border: 1px solid var(--sp-line); border-radius: var(--sp-radius); background: var(--sp-white); margin-top: 16px; }
 .scan-page .la-empty > strong { font-size: var(--fs-3); }
 .scan-page .la-empty > span { color: var(--sp-mute); font-size: var(--fs-2); }
-.scan-page .la-census { border-top-color: var(--sp-line); }
-.scan-page .la-census-tag { color: var(--sp-mute); }
 .scan-page .la-alert { margin-top: 0; padding: 12px 14px; border: 1px solid var(--sp-line); border-left: 3px solid var(--sp-line); background: var(--sp-white); border-radius: 0 var(--sp-radius) var(--sp-radius) 0; }
 .scan-page .la-alert span { color: var(--sp-mute); font-size: var(--fs-2); }
 .scan-page .la-alert-warn { border-left-color: var(--sp-unverified); }

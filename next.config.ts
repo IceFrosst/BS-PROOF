@@ -14,21 +14,10 @@ const nextConfig: NextConfig = {
   // cost little on CI, where 226 mostly-I/O pages do not saturate 4 workers.
   experimental: { cpus: 4 },
   staticPageGenerationTimeout: 180,
-  // The analyze-label function reads these at REQUEST time via fs, so they must
-  // be traced into its serverless bundle — on Vercel nothing outside the traced
-  // set exists at runtime. Static pages read the same files at BUILD time and
-  // need no tracing. Scoped to the one route so the rest of the app's functions
-  // stay small: run artifacts are ~300 KB each and there are dozens.
+  // /api/scan reads these at REQUEST time via fs, so they must be traced into
+  // its serverless bundle -- on Vercel nothing outside the traced set exists at
+  // runtime. Static pages read the same files at BUILD time and need no tracing.
   outputFileTracingIncludes: {
-    "/api/analyze-label": [
-      "./reports/runs/*_dashboard.json",
-      "./reports/run_statuses.json",
-      "./vocab/form.json",
-      "./prompts/label.md",
-      "./schemas/label.json",
-    ],
-    // /api/scan reads everything the label route does plus the compatibility
-    // table and the two text prompts with their schemas (lib/analyze/scan.ts).
     "/api/scan": [
       "./reports/runs/*_dashboard.json",
       "./reports/run_statuses.json",
@@ -38,10 +27,12 @@ const nextConfig: NextConfig = {
       "./prompts/company.md",
       "./prompts/compatibility.md",
       "./prompts/evidence_prior.md",
+      "./prompts/literature_warnings.md",
       "./schemas/label.json",
       "./schemas/company.json",
       "./schemas/compatibility.json",
       "./schemas/evidence_prior.json",
+      "./schemas/literature_warnings.json",
       "./lib/evidence-ledger/audits/*.json",
       "./lib/evidence-ledger/audits/plain/*.json",
     ],

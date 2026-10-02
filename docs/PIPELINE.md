@@ -163,6 +163,8 @@ grok models                    # verify model ids
 
 ### Useful flags
 
+`run_pipeline.py --help` lists them all; an unknown flag is an error.
+
 | Flag | Effect |
 |------|--------|
 | `--dose <mg elemental>` | Judge the dose axis for a specific product |

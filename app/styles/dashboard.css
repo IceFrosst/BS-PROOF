@@ -296,11 +296,10 @@ thead th { color: var(--ink-soft); font-size: 0.7rem; text-transform: uppercase;
 .empty-state { padding: 32px; color: var(--ink-soft); background: var(--white); border: 1px dashed var(--line); border-radius: var(--radius); }
 
 @media (max-width: 900px) {
-  .hero-grid, .run-hero-grid, .split-heading, .validity-panel, .outcome-detail-grid { grid-template-columns: 1fr; }
-  .home-hero h1 { font-size: clamp(5rem, 23vw, 10rem); }
-  .hero-ledger, .provenance-strip, .evidence-summary-grid { grid-template-columns: repeat(2, 1fr); }
-  .hero-ledger > div:nth-child(2), .provenance-strip span:nth-child(2), .evidence-summary-grid > div:nth-child(2) { border-right: 0; }
-  .hero-ledger > div:nth-child(-n+2), .provenance-strip span:nth-child(-n+2), .evidence-summary-grid > div:nth-child(-n+2) { border-bottom: 1px solid rgb(255 255 255 / 22%); }
+  .run-hero-grid, .split-heading, .validity-panel, .outcome-detail-grid { grid-template-columns: 1fr; }
+  .provenance-strip, .evidence-summary-grid { grid-template-columns: repeat(2, 1fr); }
+  .provenance-strip span:nth-child(2), .evidence-summary-grid > div:nth-child(2) { border-right: 0; }
+  .provenance-strip span:nth-child(-n+2), .evidence-summary-grid > div:nth-child(-n+2) { border-bottom: 1px solid rgb(255 255 255 / 22%); }
   .outcome-grid { grid-template-columns: 1fr; }
   .quality-grid { grid-template-columns: 1fr; }
   .metric-grid { grid-template-columns: repeat(2, 1fr); }
@@ -321,11 +320,6 @@ thead th { color: var(--ink-soft); font-size: 0.7rem; text-transform: uppercase;
   .header-inner { min-height: 64px; }
   .site-header nav { gap: 14px; font-size: 0.78rem; }
   .footer-inner, .chart-heading, .telemetry-heading, .outcome-heading { align-items: start; flex-direction: column; }
-  .hero-grid { gap: 30px; }
-  .home-hero h1 { font-size: clamp(4.2rem, 25vw, 7rem); }
-  .hero-ledger { grid-template-columns: 1fr 1fr; }
-  .hero-ledger > div { min-height: 90px; padding: 15px; }
-  .hero-ledger strong { font-size: 1.8rem; }
   .methodology-promo { grid-template-columns: 1fr; gap: 15px; }
   .compact-stats { grid-template-columns: repeat(2, 1fr); }
   .compact-stats div:nth-child(2) { border-right: 0; }

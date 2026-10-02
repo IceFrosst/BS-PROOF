@@ -244,7 +244,7 @@ def run(check, *, _b2, _ext, _pr):
     # STRATIFIED TARGET SELECTION (2026-08-11). primaries[:limit] starved
     # tail outcomes: endurance n=4 / energy n=1 against 122-200 available hits.
     print("\nSTRATIFIED SELECTION")
-    from run_pipeline import stratify_targets as _st
+    from bsproof.run.corpus import stratify_targets as _st
     _mk = lambda i, tags: {"canonical_id": f"c{i}", "retrieved_for": tags}
     _prims = ([_mk(i, "muscle_strength") for i in range(10)]
               + [_mk(10 + i, "exercise_endurance") for i in range(10)])

@@ -21,8 +21,8 @@
  * their own — so only the photo path is refused when no provider is
  * configured. The LABEL_ANALYZER_ENABLED=0 kill switch stops both.
  *
- * /api/analyze-label remains as the earlier, evidence-only endpoint the tester
- * page uses. Both share the label read, the scorer, the census and the queue.
+ * It replaced /api/analyze-label, the earlier evidence-only endpoint behind the
+ * /tester page; both were retired 2026-10-03.
  *
  * Deployment: a model key (DEEPSEEK_API_KEY, or VISION_API_KEY / GEMINI_API_KEY)
  * and the traced files in next.config.ts (run artifacts, vocab, prompts,

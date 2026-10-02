@@ -73,7 +73,7 @@ function enrichOutcomes(run: DashboardRun): DashboardRun {
   };
 }
 
-function matchingLegacyContext(run: DashboardRun): string | null {
+function matchingRunContext(run: DashboardRun): string | null {
   if (run.reports.contextPath) {
     const explicit = safeRunArtifactPath(run.reports.contextPath);
     return fs.existsSync(explicit) ? explicit : null;
@@ -98,9 +98,9 @@ function loadDashboardArtifact(filePath: string): DashboardRun {
     const details = contractCheck.issues.map((item) => `${item.path}: ${item.message}`).join("; ");
     throw new Error(`Dashboard artifact failed reconciliation (${posixRelative(filePath)}): ${details}`);
   }
-  const legacyPath = matchingLegacyContext(run);
-  if (legacyPath) {
-    const retained = loadLegacyContext(legacyPath);
+  const contextPath = matchingRunContext(run);
+  if (contextPath) {
+    const retained = loadRunContext(contextPath);
     const reconciliation = reconcileRun(run, retained);
     if (!reconciliation.ok) {
       const details = reconciliation.issues.map((item) => `${item.path}: ${item.message}`).join("; ");
@@ -117,37 +117,18 @@ function loadDashboardArtifact(filePath: string): DashboardRun {
   return enrichOutcomes(run);
 }
 
-function scoringModelFromReport(reportPath: string): string | null {
-  // The .md reports MOVE: scripts/archive_reports.py sweeps superseded-model
-  // reports from reports/runs/ into reports/archive/<model>/ (the .json
-  // artifacts stay put). Every archived run therefore lost its scoring_model
-  // backfill here and QUARANTINED on a cold build — pre-existing before the
-  // 2026-08-12 redesign, diagnosed during it. Probe the run-dir path first,
-  // then the same basename under each archive model directory.
-  const candidates = [reportPath];
-  const archiveRoot = path.join(path.dirname(RUNS_DIR), "archive");
-  if (fs.existsSync(archiveRoot)) {
-    const basename = path.basename(reportPath);
-    for (const model of fs.readdirSync(archiveRoot)) {
-      candidates.push(path.join(archiveRoot, model, basename));
-    }
-  }
-  for (const candidate of candidates) {
-    if (!fs.existsSync(candidate)) continue;
-    const match = fs.readFileSync(candidate, "utf8").match(/^scoring_model:\s*([^\s]+)\s*$/m);
-    if (match?.[1]) return match[1];
-  }
-  return null;
-}
-
-function loadLegacyContext(filePath: string): DashboardRun {
+/**
+ * A run's retained `_context.json`, normalised. Every run writes one beside its
+ * DashboardRunV1 artifact; it is read only to CROSS-CHECK that artifact (see
+ * loadDashboardArtifact), never rendered on its own since 2026-10-03.
+ */
+function loadRunContext(filePath: string): DashboardRun {
   const raw = readJson(filePath) as Record<string, unknown>;
   const base = filePath.replace(/_context\.json$/, "");
   const summary = `${base}_summary.md`;
   const full = `${base}_full.md`;
   const augmented = {
     ...raw,
-    scoring_model: raw.scoring_model ?? scoringModelFromReport(summary) ?? scoringModelFromReport(full),
     reports: {
       summary: fs.existsSync(summary) ? posixRelative(summary) : null,
       full: fs.existsSync(full) ? posixRelative(full) : null,
@@ -226,8 +207,11 @@ function quarantine(
 }
 
 /**
- * Load immutable DashboardRunV1 artifacts, falling back per run to legacy context
- * JSON. One unreadable artifact quarantines its own run, not the whole catalog.
+ * Load immutable DashboardRunV1 artifacts. One unreadable artifact quarantines
+ * its own run, not the whole catalog. A run with only a `_context.json` (the
+ * pre-2026-08-09 shape, before DashboardRunV1 existed) is quarantined too: no
+ * such run remains, and rendering one would show a projection with no
+ * provenance as if it were a run.
  */
 function loadCatalog(): CatalogLoad {
   const runs: DashboardRun[] = [];
@@ -235,16 +219,20 @@ function loadCatalog(): CatalogLoad {
   const loadedIds = new Set<string>();
 
   for (const artifacts of runArtifacts()) {
-    const source = artifacts.dashboardPath ?? artifacts.contextPath;
-    if (!source) continue;
+    if (artifacts.dashboardPath === null) {
+      if (artifacts.contextPath !== null) {
+        quarantine(quarantined, artifacts.runId, artifacts.contextPath,
+          "Context-only run: no DashboardRunV1 artifact. Regenerate it with scripts/dashboard_artifact.py to render this run.");
+      }
+      continue;
+    }
+    const source = artifacts.dashboardPath;
     let run: DashboardRun;
     try {
       // A dashboard artifact that fails its contract is quarantined outright. Falling
       // back to its context JSON would render a run whose two sources disagree as if
       // it were fine, which is the substitution the reconciliation exists to refuse.
-      run = artifacts.dashboardPath !== null
-        ? loadDashboardArtifact(artifacts.dashboardPath)
-        : loadLegacyContext(source);
+      run = loadDashboardArtifact(source);
     } catch (error) {
       quarantine(quarantined, artifacts.runId, source, failureReason(error));
       continue;

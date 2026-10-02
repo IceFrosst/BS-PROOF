@@ -10,7 +10,7 @@ import type { DashboardRun } from "@/lib/dashboard/types";
  * invites exactly that comparison.
  *
  * Lifted out of app/page.tsx on 2026-08-25 when the public page became the
- * waitlist alone; it renders on /tester now.
+ * waitlist alone; it renders on /runs (app/runs/page.tsx) now.
  */
 export function RunGroups({ runs, prefix }: { runs: DashboardRun[]; prefix: string }) {
   const groups = new Map<string, DashboardRun[]>();
