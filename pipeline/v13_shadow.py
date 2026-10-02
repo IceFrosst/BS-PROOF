@@ -212,10 +212,6 @@ def _positive(value: Any, name: str) -> float:
     return result
 
 
-def _optional_float(value: Any, name: str) -> Optional[float]:
-    return None if value is None else _finite(value, name)
-
-
 def _get(record: Mapping[str, Any], *names: str, default: Any = None) -> Any:
     for name in names:
         if name in record:

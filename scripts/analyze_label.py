@@ -1,7 +1,7 @@
 """
 One uploaded image -> one answer about that product. The label-upload entry point.
 
-This is the INJECTION LAYER, like run_pipeline.py and workers.py: it is the only
+This is the INJECTION LAYER, like run_pipeline.py and bsproof/workers.py: it is the only
 file in this feature allowed to touch both a model boundary (label_adapter) and
 the deterministic core (pipeline.product_score), because it is the thing wiring
 them together. Neither half imports the other.
@@ -170,7 +170,7 @@ def census(ingredient: str) -> dict:
 def analyze(image: Path, *, do_census: bool = True,
             do_queue: bool = True) -> dict:
     started = time.monotonic()
-    import label_adapter  # imported here: model boundary, injection layer only
+    from bsproof import label_adapter  # imported here: model boundary, injection layer only
 
     out: dict = {"schema_version": "LabelAnalysisV1", "analyzed_at": _now()}
     try:

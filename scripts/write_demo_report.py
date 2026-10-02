@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Write audit reports under reports/runs/ (immutable) + latest.md + INDEX.md.
+Write audit reports under reports/runs/ (immutable) + a row in INDEX.md.
 
     python3 scripts/write_demo_report.py --wiring --ingredient creatine --form creatine_monohydrate
 """
@@ -285,14 +285,10 @@ def main() -> int:
     parts.append(_sqlite_ecu_section(
         "Grok batch databases", "grok_*.sqlite",
         "Grok Build CLI pure-function path — test separately from Claude; not merged scores."))
-    parts.append(_sqlite_ecu_section(
-        "Claude pilot databases", "pilot*.sqlite",
-        "Claude subscription pilot — not production public claims."))
 
     body = "\n".join(parts)
     fname = f"{_stamp()}_{_slug(args.ingredient)}_{_slug(args.form)}_{mode}.md"
     (RUNS / fname).write_text(body, encoding="utf-8")
-    (REPORTS / "latest.md").write_text(body, encoding="utf-8")
     rel = f"runs/{fname}"
     _update_index(rel, {
         "when": _now(), "mode": mode,

@@ -39,10 +39,6 @@ function config(): Config | null {
   return { url, serviceKey: key };
 }
 
-export function scanClaimConfigured(): boolean {
-  return config() !== null;
-}
-
 export interface VerifiedUser {
   id: string;
   email: string | null;

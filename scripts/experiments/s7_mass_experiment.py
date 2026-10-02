@@ -8,12 +8,13 @@ defect: every study whose v1.26 extraction has a per-kg-dosed arm with a null
 mass (32 on the creatine corpus, 13 of which had their stated mass captured by
 the v1.23 top-level contract and lost by v1.24 arm keying).
 
-Same discipline as scripts/null_numbers_experiment.py (the v1.15 S5 check):
+Same discipline as the removed scripts/null_numbers_experiment.py (the v1.15 S5
+check; in git history):
 one agent, a fixed study set, before/after measured, drift on every OTHER
 field counted -- the fix must add masses, not move doses or forms.
 
 Usage (needs httpx + signed-in Claude CLI, so use the venv python):
-    .venv/bin/python scripts/s7_mass_experiment.py
+    .venv/bin/python scripts/experiments/s7_mass_experiment.py
 """
 from __future__ import annotations
 
@@ -24,11 +25,11 @@ from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-import claude_adapter
-import workers
+from bsproof import claude_adapter
+from bsproof import workers
 from pipeline.storage import Store
 from run_pipeline import _best_text, _sections
 

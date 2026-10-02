@@ -268,8 +268,6 @@ export const DashboardRunSchema = z
     }
   });
 
-export type DashboardRunArtifact = z.infer<typeof DashboardRunSchema>;
-
 const canonicalValidator = new Ajv({ allErrors: true, strict: false }).compile(
   dashboardRunV1Schema,
 );

@@ -308,7 +308,7 @@ arrow(MID, y + 110, MID, y + 150)
 
 y = 2760
 box(L, y, W, 100,
-    "14 · REPORT →  reports/runs/  +  INDEX.md  +  latest.md\n"
+    "14 · REPORT →  reports/runs/  +  INDEX.md\n"
     "stamped with scoring_model and the provider that extracted it\n"
     "one row per outcome, sorted by evidence mass", BLUE, size=15)
 

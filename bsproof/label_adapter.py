@@ -52,7 +52,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 PROMPT = ROOT / "prompts" / "label.md"
 SCHEMA = ROOT / "schemas" / "label.json"
 
@@ -289,7 +289,7 @@ def read_label(image_path: str | Path) -> dict:
 
 
 def preflight() -> int:
-    """`python3 label_adapter.py` -- is a label read possible on this machine?"""
+    """`python3 -m bsproof.label_adapter` -- is a label read possible on this machine?"""
     binary = _claude_bin()
     try:
         p = subprocess.run([binary, "--version"], capture_output=True,

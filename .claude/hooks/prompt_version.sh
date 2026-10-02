@@ -26,16 +26,16 @@ case "$FILE" in *vocab/*) exit 0 ;; esac
 
 CUR=$(python3 -c "
 import ast,sys
-for n in ast.parse(open('claude_adapter.py').read()).body:
+for n in ast.parse(open('bsproof/claude_adapter.py').read()).body:
     if isinstance(n, ast.Assign) and getattr(n.targets[0],'id','')=='PROMPT_VERSION':
         print(ast.literal_eval(n.value)); break
 " 2>/dev/null)
 
-if git diff HEAD -- claude_adapter.py 2>/dev/null | grep -q "^[+-].*PROMPT_VERSION"; then
+if git diff HEAD -- bsproof/claude_adapter.py 2>/dev/null | grep -q "^[+-].*PROMPT_VERSION"; then
   exit 0   # already bumped in this working tree
 fi
 
 echo "invariant 3: you edited $(basename "$FILE") but PROMPT_VERSION is still ${CUR:-unknown}." >&2
-echo "Bump it in claude_adapter.py or the response cache will serve pre-edit" >&2
+echo "Bump it in bsproof/claude_adapter.py or the response cache will serve pre-edit" >&2
 echo "extractions under the same key while stamping rows with the new prompt." >&2
 exit 2

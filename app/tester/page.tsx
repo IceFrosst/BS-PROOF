@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { LabelAnalyzer } from "@/components/label-analyzer";
 import { RunGroups } from "@/components/run-groups";
-import { loadRetainedRuns } from "@/lib/dashboard/catalog";
+import { loadDashboardCatalog } from "@/lib/dashboard/catalog";
 
 /*
  * THE TESTER SURFACE. Scanning and the run archive both live here.
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
 };
 
 export default function TesterPage() {
-  const runs = loadRetainedRuns();
+  const runs = loadDashboardCatalog();
   const validatedRuns = runs.filter((run) => run.run.validity.status.toLowerCase() === "validated");
   const archiveRuns = runs.filter((run) => run.run.validity.status.toLowerCase() !== "validated");
   const studies = runs.reduce((total, run) => total + (run.extraction.targeted ?? 0), 0);

@@ -426,7 +426,7 @@ Flash model thinks by default and its reasoning counts against `max_tokens`.
 Verify a model id with the provider before setting it.
 
 Each prompt has its own version constant and cache domain (invariant 3):
-`LABEL_PROMPT_VERSION` (mirrored in `label_adapter.py`),
+`LABEL_PROMPT_VERSION` (mirrored in `bsproof/label_adapter.py`),
 `COMPAT_PROMPT_VERSION`, `COMPANY_PROMPT_VERSION`,
 `LITERATURE_WARNINGS_PROMPT_VERSION`.
 

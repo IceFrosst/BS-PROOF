@@ -10,6 +10,53 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-03 — repository cleanup, step 4: tooling, CI, dead code, structure
+
+**Small items.** `reports/latest*.md` dropped (writers no longer create them;
+`INDEX.md` header aligned with what the writers prepend). Unused e2e helpers
+removed (lint is clean). Six experiment scripts moved to
+`scripts/experiments/` with a README of what each measured; references updated.
+
+**CI.** `dashboard.yml` skips docs-only pushes (`docs/**`, top-level `*.md`,
+experiments, the diagram, `.claude/**` — never `prompts/` or `reports/`, which
+the app reads), runs nightly and on demand, and prints a non-blocking `knip`
+report. `selftest.yml` runs only on Python-relevant paths, now also runs the 48
+`tests/*.py` (never run in CI before) and a non-blocking `vulture` report. With
+one retained run the browser suite is 52 tests / ~25 s, so no smoke split.
+
+**Dead code.** `knip` (pinned devDependency, `knip.json`, `npm run knip`) is
+clean: removed 4 dead exports, 2 stale re-export groups, 2 duplicate catalog
+aliases, an unused type and `@testing-library/user-event`; the `@emnapi` pins
+are kept on purpose (clean `npm ci`). `vulture`: removed 5 dead helpers
+(`_header_n`, `_value_n`, `_normal_cdf`, `_optional_float`,
+`filter_ecu_rows_by_extracted_n`) and 3 dead assignments. Kept on purpose:
+founder constants, dataclass fields, documented-but-unwired helpers
+(`synthesis_contribution_cap`, `inherited_facts`, `harvest_serialized`,
+`Store.ecus_for`). Left for a scoring-code pass: the unused parameters
+`to_studies(dose_bands=)` and `score_ecu(n_unique=)` (still passed by callers).
+
+**Large files split (moved verbatim).** `pipeline/selftest.py` → package
+`pipeline/selftest/` (5 groups; 3 explicit hand-offs; the `-m pipeline.selftest`
+command is unchanged). `pipeline/assemble.py` → + `claim_arms.py`,
+`effect_s.py`, `eligibility.py` (re-exported). `workers.py` → `workers.py` +
+`worker_payload.py`, `worker_shadow.py`, `worker_quota.py` (re-exported; the
+shadow self-check now patches the two modules the table helpers are read
+from). `claude_adapter.py` deliberately NOT split: one file per model boundary.
+
+**Package.** Adapters and workers moved into `bsproof/`; entry points stay at
+the root. `pipeline.invariants` now recognises `bsproof.<adapter>` imports in
+every spelling (5 new evasion probes in the selftest); its allowlist, the
+hooks, `verify_helpers.py` and the CI path filter follow the new paths. The
+Grok preflight is now run as the module `bsproof.grok_adapter` (venv
+interpreter). The LLM cache key holds no paths, so no cached extraction was
+invalidated.
+
+**Verified against a pre-change baseline:** selftest output identical except
+the evasion count (8 → 13); `rescore_run --recompose` and `--verify` identical;
+five offline experiment replays identical; invariants; 48 Python tests; the
+shadow wiring self-check; a `--wiring` run (same output bar network/store
+lines); typecheck, lint, knip, 491 unit tests, build, 52/52 Playwright.
+
 ## 2026-10-03 — repository cleanup, step 3: docs and front-end
 
 **Docs.** Living docs are now `README.md`, `CLAUDE.md`, `docs/SPEC.md`

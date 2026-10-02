@@ -27,7 +27,8 @@ import json
 import re
 import sys
 
-NETWORK = r"(?:run_pipeline|run_sr_inheritance|run_coverage|grok_adapter)\.py"
+# The Grok preflight is `python3 -m bsproof.grok_adapter` since 2026-10-03.
+NETWORK = r"(?:(?:run_pipeline|run_sr_inheritance|run_coverage)\.py|bsproof\.grok_adapter)"
 
 INVOCATION = re.compile(
     r"(?:^|[;&|]\s*|\$\(\s*|`\s*)"      # start, or after ; && || | $( `

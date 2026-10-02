@@ -51,12 +51,12 @@ def backend(name: str):
     output with it, and never blends two.
     """
     if name == "grok":
-        import grok_adapter as ga
+        from bsproof import grok_adapter as ga
         if not ga.preflight():
             return None, "grok"
         return (lambda agent, payload: ga.call(agent, payload, timeout=300)), "grok"
     if name == "claude":
-        import claude_adapter as ca
+        from bsproof import claude_adapter as ca
         return (lambda agent, payload: ca.call(agent, payload)), "claude-production"
     return None, f"unknown backend {name!r}"
 

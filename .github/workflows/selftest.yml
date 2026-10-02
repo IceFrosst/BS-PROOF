@@ -1,8 +1,44 @@
 name: selftest
 
+# Only paths that can change a deterministic Python result. The TypeScript
+# ports are pinned to Python goldens by tests/analyze-parity.test.ts, which runs
+# in dashboard.yml.
 on:
   push:
+    paths:
+      - "pipeline/**"
+      - "sources/**"
+      - "bsproof/**"
+      - "vocab/**"
+      - "prompts/**"
+      - "schemas/**"
+      - "scripts/**/*.py"
+      - "tests/**/*.py"
+      - "tests/fixtures/dashboard/**"
+      - "reports/run_statuses.json"
+      - "*.py"
+      - "requirements.txt"
+      - ".github/workflows/selftest.yml"
   pull_request:
+    paths:
+      - "pipeline/**"
+      - "sources/**"
+      - "bsproof/**"
+      - "vocab/**"
+      - "prompts/**"
+      - "schemas/**"
+      - "scripts/**/*.py"
+      - "tests/**/*.py"
+      - "tests/fixtures/dashboard/**"
+      - "reports/run_statuses.json"
+      - "*.py"
+      - "requirements.txt"
+      - ".github/workflows/selftest.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: selftest-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   deterministic:
@@ -15,9 +51,9 @@ jobs:
       # See dashboard.yml: selftest needs httpx transitively. Missing until
       # 2026-08-10; this workflow had never been green.
       - name: Install Python dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements.txt pytest vulture
       - name: Validate schemas parse
-        run: python -c "import json,glob,sys; [json.load(open(f)) for f in glob.glob('schemas/*.json')]; print('8 schemas ok')"
+        run: python -c "import json,glob; fs=glob.glob('schemas/*.json'); [json.load(open(f)) for f in fs]; print(len(fs), 'schemas ok')"
       # Replaces two text-matching gates that both failed for the same reason:
       # a grep for "claude_adapter" in pipeline/ (which flagged the legitimate
       # test-only import at pipeline/selftest.py:1262 and so was red on every
@@ -31,6 +67,17 @@ jobs:
         run: |
           set -o pipefail
           python -m pipeline.selftest 2>&1 | tee selftest-log.txt
+      # The unittest suites in tests/*.py (dashboard artifact writer, SR wiring,
+      # universal-negative repair, S7 drift guard). Never run in CI before
+      # 2026-10-03; jsonschema from requirements.txt is what they need.
+      - name: Python tests
+        run: python -m pytest -q tests/
+      # Non-blocking dead-code report. At confidence 80 only certain findings
+      # print; the 60% tier is mostly dataclass fields and founder constants
+      # that are kept on purpose (2026-10-03 triage, docs/history/project-log.md).
+      - name: Dead-code report (vulture)
+        continue-on-error: true
+        run: vulture pipeline sources scripts *.py --min-confidence 80
       - name: Upload selftest log
         if: always()
         uses: actions/upload-artifact@v4

@@ -2,7 +2,7 @@
 A/B/C: what does effect-size s_value do to the creatine corpus?
 NO MODEL MAY ENTER THIS FILE. Offline replay, zero model calls.
 
-    python3 scripts/effect_size_experiment.py [extractions_dump.json]
+    python3 scripts/experiments/effect_size_experiment.py [extractions_dump.json]
 
 Arm A is the OLD vote-counting model, reproduced by making every unit refuse to
 standardise so every study falls back to its direction label. Arm B is what
@@ -27,7 +27,7 @@ import json
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 import pipeline.scoring as sc                    # noqa: E402
@@ -162,7 +162,7 @@ def main(dump_path: str) -> int:
     print("    included because it is the OBVIOUS implementation and it is wrong:")
     print("    a well-powered trial measuring a true zero effect scores s=0, so a")
     print("    properly-studied useless product reads 'inconclusive' -- which")
-    print("    scripts/penalty_experiment.py argues is indistinguishable from never")
+    print("    scripts/experiments/penalty_experiment.py argues is indistinguishable from never")
     print("    having been studied. Check it on the fixture:")
     rob = {f"i{i}": 1 for i in range(1, 7)}
     for label, mid in (("B  recentred on 0.2", 0.2), ("E  centred on zero", 0.0)):

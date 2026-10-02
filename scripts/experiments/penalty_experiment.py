@@ -2,7 +2,7 @@
 A/B/C sweep: what happens if the NEGATIVE penalties come out of the score?
 NO MODEL MAY ENTER THIS FILE. Offline replay, zero model calls.
 
-    python3 scripts/penalty_experiment.py [extractions_dump.json]
+    python3 scripts/experiments/penalty_experiment.py [extractions_dump.json]
 
 Founder question 2026-08-11: "an a/b test if we removed any negative penalties".
 "Negative penalty" is ambiguous, so this sweeps both mechanisms that can actually
@@ -19,7 +19,7 @@ sweep -- accurate for the v1.14 dump, where 0 of 227 mapped claims take the
 measured path, and increasingly incomplete as v1.17 extractions land.
 
 The synthetic fixtures are unaffected and still correct: they set no effect size,
-so they exercise the label path deliberately. `scripts/effect_size_experiment.py`
+so they exercise the label path deliberately. `scripts/experiments/effect_size_experiment.py`
 is the sweep for the measured path, and its arm E is the control showing why the
 effect-size scale is recentred rather than zero-centred.
 
@@ -54,7 +54,7 @@ import math
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 import pipeline.scoring as sc                      # noqa: E402

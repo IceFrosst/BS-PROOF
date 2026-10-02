@@ -2,9 +2,9 @@
 Is the score's null share an EXTRACTION defect, or an AGGREGATION defect?
 NO MODEL MAY ENTER THIS FILE. Offline replay, zero model calls.
 
-    python3 scripts/vote_counting_investigation.py [extractions_dump.json]
+    python3 scripts/experiments/vote_counting_investigation.py [extractions_dump.json]
 
-THE QUESTION THIS SETTLES. `scripts/magnitude_investigation.py` asked whether the
+THE QUESTION THIS SETTLES. `scripts/experiments/magnitude_investigation.py` asked whether the
 score's compression was our bug or the literature's, and framed two answers:
 
   (a) our extraction fails to size benefits the papers DID quantify  -> fix S5
@@ -92,7 +92,7 @@ import json
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 # Four showcase outcomes, all "higher is better", so the SIGN of a point estimate

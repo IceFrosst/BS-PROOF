@@ -250,10 +250,6 @@ def _upper_critical_probability(level: float) -> float:
     return q
 
 
-def _normal_cdf(x: float) -> float:
-    return 0.5 * (1.0 + math.erf(x / math.sqrt(2.0)))
-
-
 def _normal_ppf_from_log_lower_tail(log_probability: float) -> float:
     """Normal lower-tail quantile when the probability itself underflows."""
     if not math.isfinite(log_probability) or log_probability >= 0.0:

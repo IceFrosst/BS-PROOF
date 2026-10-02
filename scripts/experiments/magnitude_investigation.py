@@ -2,7 +2,7 @@
 Phase 0: is the score's compression OUR bug or the literature's?
 NO MODEL MAY ENTER THIS FILE. Offline replay, zero model calls.
 
-    python3 scripts/magnitude_investigation.py [extractions_dump.json]
+    python3 scripts/experiments/magnitude_investigation.py [extractions_dump.json]
 
 THE PROBLEM THIS MEASURES. `Study.s_value()` maps magnitude `trivial`, `unstated`
 and `None` all to +0.3, so a corpus whose benefits are never sized is HARD-CAPPED
@@ -41,7 +41,7 @@ import json
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from pipeline.assemble import build_ecus   # noqa: E402

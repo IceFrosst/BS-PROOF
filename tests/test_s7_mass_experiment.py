@@ -1,6 +1,6 @@
 import unittest
 
-from scripts.s7_mass_experiment import _arm_drift
+from scripts.experiments.s7_mass_experiment import _arm_drift
 
 
 class S7MassDriftGuard(unittest.TestCase):

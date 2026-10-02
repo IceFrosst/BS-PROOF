@@ -261,14 +261,6 @@ def _n_status(value: str) -> tuple[bool, int | None]:
         return True, None
 
 
-def _header_n(header: str) -> int | None:
-    return _n_status(header)[1]
-
-
-def _value_n(value: str) -> int | None:
-    return _n_status(value)[1]
-
-
 def _identifies_se_or_ci(text: str) -> bool:
     """Whether source text labels a ± value as SE/SEM/CI rather than SD."""
 

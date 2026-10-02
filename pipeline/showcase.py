@@ -105,20 +105,6 @@ def filter_ecu_rows(rows: list[dict], allowed: list[str] | None) -> list[dict]:
     return [by_id[oid] for oid in allowed if oid in by_id]
 
 
-def filter_ecu_rows_by_extracted_n(rows: list[dict], top_n: int = 5) -> list[dict]:
-    """
-    Alternate ranking AFTER scoring: top-N by n_primaries in this run.
-    Used when allowlist was None but the report still wants a short table.
-    """
-    def n_of(r):
-        return int(
-            r.get("n_primaries")
-            or (r.get("evidence") or {}).get("n_primaries")
-            or 0
-        )
-    return sorted(rows, key=lambda r: -n_of(r))[:top_n]
-
-
 def restrict_outcome_vocab(full_outcomes: list[dict],
                            allowed: list[str] | None) -> list[dict]:
     """Shrink the S6 vocabulary so the model cannot map into the tail."""

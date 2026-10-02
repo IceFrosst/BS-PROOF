@@ -16,9 +16,9 @@ import time
 from pathlib import Path
 from typing import Any
 
-from claude_adapter import AGENTS, PROMPT_VERSION, SCHEMAS, _system_prompt
+from bsproof.claude_adapter import AGENTS, PROMPT_VERSION, SCHEMAS, _system_prompt
 
-ROOT = Path(__file__).parent
+ROOT = Path(__file__).resolve().parent.parent
 PROVIDER = "grok"
 PROVENANCE = "grok-cli-pure-function"
 CACHE_DB = ROOT / "out" / "grok_llm_cache.sqlite"

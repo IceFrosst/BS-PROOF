@@ -156,8 +156,8 @@ curl -fsSL https://x.ai/cli/install.sh | bash
 echo 'export PATH="$HOME/.grok/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc
 grok login                     # browser/device auth; subscription only, no billed key
 grok models                    # verify model ids
-.venv/bin/python grok_adapter.py         # preflight: finds grok + 8 subagents
-.venv/bin/python grok_adapter.py smoke   # one S8 call
+.venv/bin/python -m bsproof.grok_adapter         # preflight: finds grok + 8 subagents
+.venv/bin/python -m bsproof.grok_adapter smoke   # one S8 call
 .venv/bin/python run_pipeline.py creatine --form creatine_monohydrate --grok
 ```
 
@@ -178,8 +178,8 @@ A study costs ~10 model calls, about half of them S6.
 
 ### Step 5 — archive results
 
-Every human-facing run goes under `reports/runs/` with `INDEX.md` and
-`latest.md` updated (`scripts/auto_report_push.py` does this at the end of a
+Every human-facing run goes under `reports/runs/` with a row in `INDEX.md`
+(`scripts/auto_report_push.py` does this at the end of a
 run; `scripts/write_demo_report.py` writes a wiring report). Never overwrite an
 old run. Label the provider.
 

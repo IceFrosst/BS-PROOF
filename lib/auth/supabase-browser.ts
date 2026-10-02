@@ -76,9 +76,3 @@ export function getSupabaseBrowserClient(): SupabaseClient | null {
   return cached;
 }
 
-/** Test-only escape hatch: forces the next `getSupabaseBrowserClient()` call
- * to recompute, so tests that toggle env vars between cases do not read a
- * stale cached client. */
-export function resetSupabaseBrowserClientForTests(): void {
-  cached = undefined;
-}

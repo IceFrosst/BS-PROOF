@@ -28,8 +28,7 @@ import type { Basis } from "./compatibility";
 import type { ChatJsonFn } from "./llm";
 import { textModel } from "./llm";
 
-export type { BusinessModel, BusinessModelDisclosure, BusinessModelStatus } from "./business-model";
-export { businessModelDisclosure } from "./business-model";
+export type { BusinessModel } from "./business-model";
 
 const ROOT = process.cwd();
 

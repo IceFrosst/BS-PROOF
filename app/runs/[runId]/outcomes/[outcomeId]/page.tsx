@@ -5,14 +5,14 @@ import { notFound } from "next/navigation";
 import { FourRingScore } from "@/components/four-ring-score";
 import { StatusBadge } from "@/components/status-badge";
 import { formatNumber, formatPercent, formatSigned, formatUnknown, humanize } from "@/lib/dashboard/format";
-import { loadDashboardRun, loadRetainedRuns } from "@/lib/dashboard/catalog";
+import { loadDashboardRun, loadDashboardCatalog } from "@/lib/dashboard/catalog";
 
 interface OutcomePageProps { params: Promise<{ runId: string; outcomeId: string }> }
 
 export const dynamicParams = false;
 
 export function generateStaticParams() {
-  return loadRetainedRuns().flatMap((run) => run.outcomes.map((outcome) => ({ runId: run.run.id, outcomeId: outcome.id })));
+  return loadDashboardCatalog().flatMap((run) => run.outcomes.map((outcome) => ({ runId: run.run.id, outcomeId: outcome.id })));
 }
 
 export async function generateMetadata({ params }: OutcomePageProps): Promise<Metadata> {

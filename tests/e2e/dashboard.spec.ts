@@ -110,16 +110,6 @@ function expectedHumanized(value: string | null | undefined): string {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function expectedNumber(value: number | null, digits = 0): string {
-  return value === null
-    ? "Unavailable"
-    : new Intl.NumberFormat("en", { maximumFractionDigits: digits }).format(value);
-}
-
-function expectedSeconds(value: number | null): string {
-  return value === null ? "Unavailable" : `${expectedNumber(value, 1)} s`;
-}
-
 function expectedPercent(value: number | null): string {
   return value === null ? "Unavailable" : `${(value * 100).toFixed(1)}%`;
 }

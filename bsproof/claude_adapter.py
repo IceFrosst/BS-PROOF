@@ -69,7 +69,7 @@ import subprocess, json, hashlib, os, time, sqlite3, threading
 from pathlib import Path
 from dataclasses import dataclass, field
 
-ROOT = Path(__file__).parent
+ROOT = Path(__file__).resolve().parent.parent
 SCHEMAS = ROOT / "schemas"
 PROMPTS = ROOT / "prompts"
 # SP_LLM_CACHE points this at a scratch file so an A/B arm can be measured COLD.
@@ -134,7 +134,7 @@ def _claude_bin() -> str:
 # tables (one paper: 109 "+/-" values inside <table-wrap>, prose mostly
 # demographics) while S5's payload was prose-only. workers._tables_text
 # serialises up to ~4k chars of tables, deterministically. Discovered en route
-# and documented in workers.py: _fit_text has been a NO-OP for S5/S3 since the
+# and documented in bsproof/worker_payload.py: _fit_text has been a NO-OP for S5/S3 since the
 # prompt growth (S5 fixed cost 22.2k vs 12k budget; the 16k wall was a GROK
 # measurement), so production Claude calls already ship the full paper.
 # v1.20 (2026-08-12): S5 reports the endpoint's printed SD (`effect_sd` +

@@ -32,7 +32,7 @@ exist so that does not have to sit in the main context to answer one question.
 - The anchor count (`docs/anchors.csv` rows vs ANCHORS.md and SPEC — SPEC §10 said
   28 when the CSV had 35)
 - `PROMPT_VERSION` and what each version claims to have added
-  (`claude_adapter.py`) against the prompts themselves
+  (`bsproof/claude_adapter.py`) against the prompts themselves
 - `TIER_MODEL` / `TIER_EFFORT` vs the tier table in CLAUDE.md
 - Constants named in SPEC §13 vs their live values in `pipeline/scoring.py`
 - Command blocks — do they actually run? Try them.

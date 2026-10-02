@@ -156,7 +156,6 @@ def report(rows: list[tuple[str, Counter]]) -> None:
         print(f"  + Unpaywall                 included above")
 
     # Methods facts = OA full text, OR the registry can answer the RoB items.
-    reg_useful = grand["registry_design_facts"] + grand["registry_attrition_facts"]
     reg_rate = grand["registry_design_facts"] / s
     projected_methods = projected_oa + 100 * closed_frac * (1 - green_rate) * reg_rate
 

@@ -60,8 +60,27 @@ ROOT = Path(__file__).resolve().parent.parent
 MODEL_MODULES = ("claude_adapter", "grok_adapter",
                  "label_adapter")
 
-# The deterministic layer. NOT scripts/, run_pipeline.py or workers.py -- those
-# are the injection layer by design (`call=` is passed down from there), so
+# Since 2026-10-03 the adapters live in the `bsproof` package. An import is
+# matched by the adapter's module name whether it is written bare
+# (`import claude_adapter`), dotted (`import bsproof.claude_adapter`,
+# `from bsproof.claude_adapter import x`) or as a package member
+# (`from bsproof import claude_adapter`). `import bsproof` alone is not flagged:
+# it binds the package, not an adapter, and the package __init__ imports none.
+ADAPTER_PACKAGE = "bsproof"
+
+
+def _model_module(dotted: str) -> str | None:
+    """'claude_adapter', 'bsproof.claude_adapter[.x]' -> 'claude_adapter'; else None."""
+    parts = dotted.split(".")
+    if parts[0] in MODEL_MODULES:
+        return parts[0]
+    if parts[0] == ADAPTER_PACKAGE and len(parts) > 1 and parts[1] in MODEL_MODULES:
+        return parts[1]
+    return None
+
+# The deterministic layer. NOT scripts/, run_pipeline.py or bsproof/ -- those
+# are the injection layer by design (`call=` is passed down from there; workers
+# now lives at bsproof/workers.py), so
 # checking them would be all allowlist and no signal.
 CHECKED_DIRS = ("pipeline", "sources")
 
@@ -71,7 +90,7 @@ CHECKED_DIRS = ("pipeline", "sources")
 # fails. Both rules exist because the failure mode of an allowlist is not that
 # it blocks too much, it is that it silently stops guarding anything.
 IMPORT_EXCEPTIONS: dict[tuple[str, str], str] = {
-    ("pipeline/selftest.py", "claude_adapter"):
+    ("pipeline/selftest/extraction.py", "claude_adapter"):
         "test-only: reads _key() and TIER_EFFORT to assert effort is in the cache "
         "key. Never calls the adapter, so no model can enter a test run.",
 }
@@ -79,7 +98,7 @@ IMPORT_EXCEPTIONS: dict[tuple[str, str], str] = {
 # Where AGENTS lives. Read as TEXT, never imported: importing it from inside
 # pipeline/ is the exact thing invariant 1 forbids, and this module would then
 # have to allowlist itself.
-ADAPTER_FOR_WIRING = "claude_adapter.py"
+ADAPTER_FOR_WIRING = "bsproof/claude_adapter.py"
 
 
 # --------------------------------------------------------------------------- #
@@ -110,24 +129,28 @@ def model_imports(src: str, path: str = "<string>") -> list[tuple[str, int, str]
     for node in ast.walk(ast.parse(src, filename=path)):
         if isinstance(node, ast.Import):
             for alias in node.names:
-                root = alias.name.split(".")[0]
-                if root in MODEL_MODULES:
+                root = _model_module(alias.name)
+                if root:
                     found.append((root, node.lineno, "import"))
         elif isinstance(node, ast.ImportFrom):
             # node.module is None for `from . import x`; level>0 is relative and
             # can never name a top-level adapter.
             if node.module and node.level == 0:
-                root = node.module.split(".")[0]
-                if root in MODEL_MODULES:
+                root = _model_module(node.module)
+                if root:
                     found.append((root, node.lineno, "from-import"))
+                elif node.module == ADAPTER_PACKAGE:
+                    for alias in node.names:
+                        if alias.name in MODEL_MODULES:
+                            found.append((alias.name, node.lineno, "from-import"))
         elif isinstance(node, ast.Call):
             # Dynamic evasion, only for a CONSTANT argument. A computed module
             # name is not caught -- stated here rather than pretended away.
             if _called_name(node) in ("__import__", "import_module") and node.args:
                 arg = node.args[0]
                 if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
-                    root = arg.value.split(".")[0]
-                    if root in MODEL_MODULES:
+                    root = _model_module(arg.value)
+                    if root:
                         found.append((root, node.lineno, "dynamic import"))
     return found
 
@@ -193,7 +216,7 @@ def exception_problems(root: Path | None = None) -> list[str]:
 
 # Anything importable without installing something. `sys.stdlib_module_names` is
 # used rather than a hand-list so this check never needs maintaining.
-LOCAL_MODULES = ("pipeline", "sources", "vocab") + MODEL_MODULES + ("workers",)
+LOCAL_MODULES = ("pipeline", "sources", "vocab", ADAPTER_PACKAGE) + MODEL_MODULES + ("workers",)
 
 
 def module_level_third_party(src: str, path: str = "<string>") -> list[tuple[str, int]]:

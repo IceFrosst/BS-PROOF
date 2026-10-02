@@ -75,7 +75,6 @@ def relevance_check(record: dict, ingredient: str) -> tuple[bool, str]:
 
     title_l = title.lower()
     abs_l = abstract.lower()
-    text_l = text.lower()
 
     # 1) Ingredient must appear in title or abstract (not only full body / MeSH).
     if ingredient not in title_l and ingredient not in abs_l:

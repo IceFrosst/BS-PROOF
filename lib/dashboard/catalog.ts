@@ -275,13 +275,9 @@ export function loadQuarantinedRuns(): QuarantinedRun[] {
   return loadCatalog().quarantined;
 }
 
-export const loadRetainedRuns = loadDashboardCatalog;
-
 export function loadDashboardRun(runId: string): DashboardRun | null {
   return loadDashboardCatalog().find((run) => run.run.id === runId) ?? null;
 }
-
-export const loadRetainedRun = loadDashboardRun;
 
 export function getRetainedRunIds(): string[] {
   return loadDashboardCatalog().map((run) => run.run.id);

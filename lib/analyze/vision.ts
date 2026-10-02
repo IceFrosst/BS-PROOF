@@ -6,7 +6,7 @@
  * Nothing here reads a key or names an endpoint.
  *
  * Two backends, ONE brain: the prompt is prompts/label.md — the same file
- * label_adapter.py renders, with the same {VOCAB} block — so a label reads
+ * bsproof/label_adapter.py renders, with the same {VOCAB} block — so a label reads
  * identically on the CLI backend and on the API backend, and invariant 3 has
  * one prompt to version. `LABEL_PROMPT_VERSION` mirrors
  * label_adapter.LABEL_PROMPT_VERSION and both must move together.
@@ -91,10 +91,6 @@ export interface LabelRead {
     input_tokens: number | null;
     output_tokens: number | null;
   };
-}
-
-export function apiKeyPresent(): boolean {
-  return providerConfigured();
 }
 
 /**

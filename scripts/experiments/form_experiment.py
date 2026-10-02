@@ -1,7 +1,7 @@
 """
 Form-arc A/B/C: which ladder aggregation width? NO MODEL MAY ENTER THIS FILE.
 
-    python3 scripts/form_experiment.py [extractions_dump.json]
+    python3 scripts/experiments/form_experiment.py [extractions_dump.json]
 
 Two arms, because one of them cannot answer the question on its own:
 
@@ -29,7 +29,7 @@ import json
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from pipeline import arcs as arcsmod                      # noqa: E402

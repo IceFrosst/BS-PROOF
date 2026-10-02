@@ -462,7 +462,7 @@ def main(argv: list[str]) -> int:
         # Imported here, not at module scope: a --wiring run must not load the
         # model boundary at all. preflight() checks the subscription is signed
         # in, which is the whole configuration story now.
-        import claude_adapter
+        from bsproof import claude_adapter
         if not claude_adapter.preflight():
             print("No extraction backend selected / configured.")
             return 1
@@ -617,9 +617,9 @@ def main(argv: list[str]) -> int:
             run_context["studies_targeted"] = len(extractions)
             run_context["studies_ok"] = len(extractions)
         else:
-            import workers
+            from bsproof import workers
             if grok:
-                import grok_adapter as ga
+                from bsproof import grok_adapter as ga
                 ga.reset_stats()
                 if not ga.preflight():
                     return 1
@@ -664,7 +664,7 @@ def main(argv: list[str]) -> int:
                 # no reason for a second one: the backends differ ONLY in which
                 # `call` they inject, which is exactly what call_fn is for.
                 # Merged 2026-08-09.
-                import claude_adapter as ca
+                from bsproof import claude_adapter as ca
                 if not ca.preflight():
                     return 1
                 # EXPLICIT, not None. workers.extract_study defaults a None
@@ -799,7 +799,7 @@ def main(argv: list[str]) -> int:
         # reporting a zero that looks measured.
         if not wiring and not grok:
             try:
-                import claude_adapter as _ca
+                from bsproof import claude_adapter as _ca
                 run_context["usage"] = _ca.USAGE.as_dict()
                 run_context["models"] = dict(_ca.TIER_MODEL)
                 run_context["agent_tiers"] = {a: t for a, (t, _s, _p)

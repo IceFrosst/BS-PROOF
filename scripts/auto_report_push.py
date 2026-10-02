@@ -2,8 +2,10 @@
 """
 After every live extraction: write BOTH reports and push reports/ to GitHub.
 
-  1) Summary  → reports/latest.md + reports/runs/*_summary.md
-  2) Full     → reports/latest_full.md + reports/runs/*_full.md
+  1) Summary  → reports/runs/*_summary.md
+  2) Full     → reports/runs/*_full.md
+  plus a row in reports/INDEX.md (newest first). The latest*.md copies were
+  dropped 2026-10-03: they duplicated the run's own files.
 
 Reports are RUN-SCOPED: only the ingredient/DB from this run, never mixed
 with other ingredients (no creatine rows inside a magnesium report).
@@ -533,7 +535,6 @@ def write_report(ingredient: str, form: str, mode: str,
     ctx.setdefault("mode", mode)
     ctx.setdefault("provider", (
         "grok" if "grok" in mode else
-        "claude-pilot" if "pilot" in mode else
         "claude" if "claude" in mode else None
     ))
     ctx.setdefault("scoring_model", _SCORING_MODEL)
@@ -586,8 +587,6 @@ def write_report(ingredient: str, form: str, mode: str,
     path_full = RUNS / f"{base}_full.md"
     path_sum.write_text(summary, encoding="utf-8")
     path_full.write_text(full, encoding="utf-8")
-    (REPORTS / "latest.md").write_text(summary, encoding="utf-8")
-    (REPORTS / "latest_full.md").write_text(full, encoding="utf-8")
 
     # THE MARKDOWN REPORTS ARE NOW ON DISK AND MUST STAY THERE.
     #
@@ -646,8 +645,6 @@ def write_report(ingredient: str, form: str, mode: str,
     print(f"Wrote reports/runs/{path_full.name}")
     if dashboard_path is not None:
         print(f"Wrote reports/runs/{dashboard_path.name}")
-    print("Wrote reports/latest.md (summary)")
-    print("Wrote reports/latest_full.md (full)")
     return written
 
 

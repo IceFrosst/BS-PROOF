@@ -79,7 +79,7 @@ FORM_LADDER = {
 }
 
 # How many of the highest-ranked eligible studies are averaged. A/B/C/D MEASURED
-# 2026-08-11 via scripts/form_experiment.py. The creatine corpus could not decide
+# 2026-08-11 via scripts/experiments/form_experiment.py. The creatine corpus could not decide
 # this on its own -- every exact-form primary is design_rank 4, so all widths are
 # arithmetically identical there -- so the decision rests on rank-varied fixtures:
 #

@@ -39,14 +39,7 @@ import type {
 import type { ChatJsonFn } from "./llm";
 import { textModel } from "./llm";
 
-export type {
-  FundingIndependence,
-  LiteratureDisclosure,
-  LiteratureWarnings,
-  LiteratureWarningStatus,
-  PublicationBias,
-} from "./literature-disclosures";
-export { literatureDisclosures } from "./literature-disclosures";
+export type { LiteratureWarnings } from "./literature-disclosures";
 
 const ROOT = process.cwd();
 

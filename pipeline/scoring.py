@@ -33,7 +33,7 @@ POP_FACTOR  = {"exact":1.00, "adjacent":0.70, "different":0.35}
 OA_FACTOR   = {"full_text":1.00, "sr_table":0.85, "abstract_only":0.55}
 
 # FOUNDER DECISION 2026-08-11: null_effect -0.7 -> -0.35, from the sweep in
-# scripts/penalty_experiment.py. Reasoning recorded because the value is a guess
+# scripts/experiments/penalty_experiment.py. Reasoning recorded because the value is a guess
 # either way: -0.7 priced a well-run null at 70% of documented HARM, and "we
 # looked and found no effect" is genuinely weaker evidence against a product than
 # "we found damage". -0.35 halves that while keeping the system able to return a
@@ -65,7 +65,7 @@ S_VALUE = {"benefit_meaningful":1.0, "benefit_trivial":0.3,
 # null_effect claims carrying a usable number had a point estimate FAVOURING the
 # supplement, each scored -0.35, while 7 published pooled estimates on the same
 # outcome favour it with CIs excluding zero and our pipeline returned -15.
-# Full evidence: scripts/vote_counting_investigation.py.
+# Full evidence: scripts/experiments/vote_counting_investigation.py.
 #
 # THE SCALE IS RECENTRED ON THE MEANINGFUL THRESHOLD, NOT ON ZERO, and that is
 # the whole design. The product's claim is not "the effect differs from zero", it
@@ -413,7 +413,7 @@ SCORING_MODEL_HISTORY = {
         "S_VALUE null_effect was still -0.7. Superseded 2026-08-11.",
     "v7-null-035":
         "identical to v6 except S_VALUE['null_effect'] -0.7 -> -0.35 (founder, "
-        "2026-08-11, from scripts/penalty_experiment.py). A well-run null is no "
+        "2026-08-11, from scripts/experiments/penalty_experiment.py). A well-run null is no "
         "longer priced at 70% of documented harm. harm stays -1.0. Every score "
         "built on a corpus containing nulls moves UP; runs across this boundary "
         "are not comparable.",

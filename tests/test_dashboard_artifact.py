@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-import claude_adapter
+from bsproof import claude_adapter
 from scripts import dashboard_artifact
 from scripts.auto_report_push import reconcile_agent_views
 from scripts.dashboard_artifact import (

@@ -3,8 +3,7 @@
 ```
 runs/              runs from the CURRENT scoring model only (immutable)
 archive/<model>/   created by scripts/archive_reports.py when SCORING_MODEL changes
-INDEX.md           table of runs
-latest*.md         pointers to the newest run
+INDEX.md           table of runs, newest first (the scripts prepend rows)
 run_statuses.json  validity registry; an unlisted run is `experimental`
 ```
 

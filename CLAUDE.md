@@ -35,9 +35,9 @@ arcs (effect / form / dose / evidence), each a verdict plus its coverage.
 
 | File | Role |
 |---|---|
-| `claude_adapter.py` | Claude production extraction (subscription + `--safe-mode`) |
-| `grok_adapter.py` | Grok extraction (separate backend, separate store) |
-| `label_adapter.py` | Local CLI read of a label image |
+| `bsproof/claude_adapter.py` | Claude production extraction (subscription + `--safe-mode`) |
+| `bsproof/grok_adapter.py` | Grok extraction (separate backend, separate store) |
+| `bsproof/label_adapter.py` | Local CLI read of a label image |
 | `lib/analyze/llm.ts` | **The app's one model transport.** Label vision read (`vision.ts`), compatibility, company profile, literature warnings, evidence prior. DeepSeek by default (`DEEPSEEK_API_KEY`); `MODEL_API_URL` / `LABEL_MODEL` / `TEXT_MODEL` swap provider without code changes |
 
 `python3 -m pipeline.invariants` enforces this (AST for Python, a text scan for
@@ -60,8 +60,8 @@ image; `--max-turns 3`, one tool, scoped dir). Do not cite it for an extractor.
 
 | prompts | constant |
 |---|---|
-| S1–S8 (`prompts/s*.md`, `_shared.md`) | `PROMPT_VERSION` in `claude_adapter.py` (shared with Grok) |
-| `prompts/label.md` | `LABEL_PROMPT_VERSION` in **both** `lib/analyze/vision.ts` and `label_adapter.py` |
+| S1–S8 (`prompts/s*.md`, `_shared.md`) | `PROMPT_VERSION` in `bsproof/claude_adapter.py` (shared with Grok) |
+| `prompts/label.md` | `LABEL_PROMPT_VERSION` in **both** `lib/analyze/vision.ts` and `bsproof/label_adapter.py` |
 | compatibility / company / literature_warnings / evidence_prior | their own `*_PROMPT_VERSION` in `lib/analyze/` |
 | research_audit / effect_research (design lab only) | version stamped in the prompt / `lib/evidence-ledger/effect-contract.ts` |
 
@@ -165,8 +165,12 @@ is not a valid CLI id and failed a run 0/80).
 ## Layout
 
 ```
-claude_adapter.py grok_adapter.py label_adapter.py   model boundaries
-workers.py              fan-out; model injected via call=
+bsproof/                the extraction layer (may call a model; pipeline/ may not import it)
+  claude_adapter.py grok_adapter.py label_adapter.py   the model boundaries
+  workers.py            per-study fan-out (extract_study / extract_corpus); call= injectable
+  worker_payload.py     what each agent is sent, fitted to the input budget
+  worker_shadow.py      v13 shadow helpers (off unless SP_V13_SHADOW=1)
+  worker_quota.py       subscription-limit detection
 run_pipeline.py         one ingredient end to end (--wiring / --grok / --with-sr)
 run_sr_inheritance.py   SR-table uplift alone
 run_coverage.py         OA + methods-fact coverage, no model
@@ -177,11 +181,13 @@ pipeline/   deterministic, NO MODEL, unit-tested
   dedup.py classify.py relevance.py retrieve.py predatory.py
   synthesis.py synthesis_bridge.py SR resolution, SR-derived trials
   dose.py product_score.py         dose bands; product lookup behind the app
+  claim_arms.py eligibility.py     invariant-7 counterfactual firewall and scope refusals
+  effect_s.py                      reported effect -> signed contribution s
   calibration.py                   anchor harness
   meta_effects.py effect_harvest.py  effect-size utilities
   v13_shadow.py                    shadow analysis, NOT imported by production scoring
   storage.py vocab.py preview.py showcase.py
-  invariants.py selftest.py        the two gates
+  invariants.py selftest/          the two gates (selftest is a package; run with -m)
 sources/    deterministic HTTP layer: europepmc, clinicaltrials, oa, fulltext
 
 app/        Next.js routes: /scan (product), /api/scan, /tester, /tests/supplements,
@@ -210,7 +216,7 @@ python3 -m pipeline.selftest          # ~510 checks, offline, ~0.5 s
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt   # once
 .venv/bin/python run_pipeline.py creatine --form creatine_monohydrate --wiring   # no model
 .venv/bin/python run_pipeline.py creatine --form creatine_monohydrate            # Claude production
-.venv/bin/python grok_adapter.py                                                 # Grok preflight
+.venv/bin/python -m bsproof.grok_adapter                                         # Grok preflight
 
 # App
 npm ci && cp .env.example .env.local   # set DEEPSEEK_API_KEY for photo reads
@@ -234,8 +240,8 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
   and Claude verifies their commits afterwards (`python3 scripts/verify_helpers.py`).
   Shared agent rules: `AGENTS.md`.
 - **Do not delete a comment recording a MEASUREMENT.** Move it if inconvenient.
-- **Reports:** every human-facing run goes under `reports/runs/` + `INDEX.md` +
-  `latest.md`, stamped with `scoring_model:` and the provider. Never overwrite an
+- **Reports:** every human-facing run goes under `reports/runs/` with a row in `INDEX.md`,
+  stamped with `scoring_model:` and the provider. Never overwrite an
   old run. After changing `SCORING_MODEL`, run
   `python3 scripts/archive_reports.py --apply`.
 - **Claude Code helper agents** (`.claude/agents/`: run-triage, node-gates,

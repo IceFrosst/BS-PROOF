@@ -290,7 +290,7 @@ class UniversalNegativeRepairTests(unittest.TestCase):
         self.assertEqual(sum(row["action"] == "exclude_scope" for row in rows), 2)
 
     def test_claude_stream_transport_recovers_only_exact_max_turns_wrappers(self):
-        import claude_adapter
+        from bsproof import claude_adapter
         schema = json.dumps({"type": "object", "required": ["x"],
                              "additionalProperties": False,
                              "properties": {"x": {"type": "integer"}}})
@@ -361,7 +361,7 @@ class UniversalNegativeRepairTests(unittest.TestCase):
         import sqlite3
         from types import SimpleNamespace
         from unittest.mock import patch
-        import claude_adapter
+        from bsproof import claude_adapter
 
         valid = {"funding_class": "undisclosed", "evidence_span": None}
 
@@ -433,8 +433,8 @@ class UniversalNegativeRepairTests(unittest.TestCase):
             {"extraction_version": "v1.24", "arms": []}))
         self.assertFalse(Draft7Validator(schemas["s7_form.json"]).is_valid(
             {"extraction_version": "v1.24", "arms": []}))
-        import claude_adapter
-        import grok_adapter
+        from bsproof import claude_adapter
+        from bsproof import grok_adapter
         self.assertEqual(claude_adapter.PROMPT_VERSION, "v1.28")
         shared = (Path(__file__).parents[1] / "prompts" / "_shared.md").read_text()
         self.assertIn("schema object directly", shared)
@@ -448,8 +448,8 @@ class UniversalNegativeRepairTests(unittest.TestCase):
             self.assertIn("DIRECT argument object", claude)
             self.assertEqual(grok_adapter._system_prompt(prompt_f), neutral)
         root = Path(__file__).parents[1]
-        production_source = (root / "claude_adapter.py").read_text()
-        grok_source = (root / "grok_adapter.py").read_text()
+        production_source = (root / "bsproof" / "claude_adapter.py").read_text()
+        grok_source = (root / "bsproof" / "grok_adapter.py").read_text()
         self.assertIn("system = _claude_system_prompt(prompt_f)", production_source)
         self.assertIn("system = _system_prompt(prompt_f)", grok_source)
 
