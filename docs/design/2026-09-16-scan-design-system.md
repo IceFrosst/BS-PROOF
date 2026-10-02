@@ -240,14 +240,7 @@ Measured with `scripts/design_shots.mjs` against `tests/fixtures/scan-photo-rich
 
 The preview adds only 308px at each width versus pass 3 and remains 47% shorter
 than the pre-redesign 390 page (5227 vs 9911) and 48% shorter at 360 (5445 vs
-10424). Final references copied from `/tmp/four-lines-shots`:
-
-- `docs/design/ref/four-lines-preview/390-5-result-full.png`
-- `docs/design/ref/four-lines-preview/390-5-result-tile-01.png`
-- `docs/design/ref/four-lines-preview/390-5-result-tile-02.png`
-- `docs/design/ref/four-lines-preview/360-5-result-full.png`
-- `docs/design/ref/four-lines-preview/360-5-result-tile-01.png`
-- `docs/design/ref/four-lines-preview/360-5-result-tile-02.png`
+10424) (screenshots removed from the repo 2026-10-02; regenerate with `node scripts/design_shots.mjs`).
 
 Decisions taken against the wireframe while looking at the tiles:
 
@@ -284,7 +277,7 @@ and shows its full card with the four full-width tracks. Tapping a list row
 opens that outcome's tab and moves focus to the panel; `← All outcomes` returns.
 WAI-ARIA tablist/tab/tabpanel with arrow/Home/End keys; strip scrolls
 horizontally on phones; 44 px targets. Result height @390: 4253 px (was 5227
-with all cards stacked). Screenshots: `docs/design/ref/tabs-preview/`.
+with all cards stacked).
 
 ### Outcomes list, revised (founder, 2026-09-16 evening)
 Rows are progress bars: name, score as a percentage, bar filled to it, and a
@@ -348,12 +341,7 @@ surfaces were changed together so the lab card and `/scan` stay identical:
    above the list, and gated outcomes rendering "—" over a hatched track.
 
 Result height @390 is 4226px (was 4230 before these changes); horizontal
-overflow 0px at both 390 and 360. References (Playwright, iPhone 13 / Pixel 5
-emulation and a 1440px desktop):
-`docs/design/ref/tabs-preview/2026-09-16-*.png` plus the refreshed
-`390-5b/5c`, `360-5b/5c`, `lab-ab-hero.png`, `lab-warning-collapsed.png` and
-`lab-warning-open.png`; `public/previews/lab-ab-hero.png` and
-`public/previews/scan-tabs-outcomes-390.png` were refreshed from the same run.
+overflow 0px at both 390 and 360 (screenshots removed from the repo 2026-10-02; regenerate with `node scripts/design_shots.mjs`).
 Tests: `tests/evidence-warnings.test.tsx` (concern-only construction, plus a new
 case proving an unknown-status outcome renders no warnings block),
 `tests/effect-presentation.test.ts` (row is one unit, one button, chevron order;
@@ -426,19 +414,11 @@ note. Statuses were shortened once after looking at the screenshots ("Evidence
 is about one ingredient", "Daily dose not computed", "Disclosure only") so each
 summary wraps to two lines and the three-row stack does not read as cramped.
 
-References (Playwright, 1440px desktop, `DESIGN_LAB=1` production build on
-:3111), `docs/design/ref/tabs-preview/`:
-`2026-09-16-lab-warning-real-publication-{collapsed,open}.png` (creatine
-"Strength when you lift weights": publication bias only),
-`2026-09-16-lab-warning-fictional-product-{collapsed,open,rows-expanded}.png`
-(blend D "Cognitive function": 3 warnings, multi-ingredient → servings → cap),
-`2026-09-16-lab-warning-fictional-mlm-{open,rows-expanded}.png` (extract C
-"Energy": MLM → cap), `2026-09-16-lab-warning-real-gate-open.png` (magnesium
-"Diagnosed anxiety disorder": the cap on a real audit) and
-`2026-09-16-lab-warning-none.png` (magnesium "Sleep quality (poor sleepers)":
-no block at all). `public/previews/lab-warning-collapsed.png` and
-`lab-warning-open.png` were refreshed from the blend-D pair, which is the
-scenario that shows the stack and the count.
+Scenarios reviewed (1440px desktop, `DESIGN_LAB=1` production build): creatine
+"Strength when you lift weights" (publication bias only); blend D "Cognitive
+function" (3 warnings, multi-ingredient → servings → cap); extract C "Energy"
+(MLM → cap); magnesium "Diagnosed anxiety disorder" (the cap on a real audit);
+magnesium "Sleep quality (poor sleepers)" (no block at all) (screenshots removed from the repo 2026-10-02; regenerate with `node scripts/design_shots.mjs`).
 Tests: `tests/evidence-warnings.test.tsx` — declared-nothing builds nothing,
 one row per declared fact in product order, production-wording equality (read
 out of `lib/analyze/scan.ts` and out of `businessModelDisclosure`), the gate
@@ -501,12 +481,8 @@ summary had `display:flex` and so lost its disclosure triangle (it read as a
 heading), and the opened block sat at the same weight as the body — the caret
 and the indented smaller quotation fixed both.
 
-References (Playwright, 1440px desktop, `DESIGN_LAB=1` production build on
-:3111), `docs/design/ref/tabs-preview/`:
-`2026-09-16-plain-effect-body.png` (creatine "Strength when you lift weights",
-Effect expanded: plain body under the untouched stamp and warnings block),
-`2026-09-16-plain-effect-verbatim-{closed,open}.png` and
-`2026-09-16-plain-evidence-verbatim-{closed,open}.png`.
+Reviewed on creatine "Strength when you lift weights" with Effect expanded and
+the verbatim blocks closed and open (screenshots removed from the repo 2026-10-02; regenerate with `node scripts/design_shots.mjs`).
 Tests: `tests/plain-language.test.tsx` — all 30 retained audit outcomes have a
 sidecar entry with all four dimensions, each file parses with no empty string
 and a malformed one throws, the rendered card shows the plain text ABOVE the
@@ -611,13 +587,9 @@ publication-bias sentence were each one long clause-joined sentence, which also
 became the collapsed one-line lede on `/scan` (`firstSentence()`); both were
 split in two so the lede is short and the body reads in phone-sized sentences.
 
-References (Playwright, `DESIGN_LAB=1` production build on :3111),
-`docs/design/ref/tabs-preview/`:
-`2026-09-16-plainwarn-scan-{390,360}-bundle-open.png` (the `/scan` warnings
-bundle expanded with all four bodies open, from `scripts/design_shots.mjs`,
-which gained the expand-and-shoot step),
-`2026-09-16-plainwarn-scan-390-viewport.png`, and the lab rows
-`2026-09-16-plainwarn-lab-{product-warnings,publication,gate,mlm}.png`.
+Reviewed with the `/scan` warnings bundle expanded at 390 and 360
+(`scripts/design_shots.mjs` gained the expand-and-shoot step) and the four lab
+warning rows (screenshots removed from the repo 2026-10-02; regenerate with `node scripts/design_shots.mjs`).
 Tests: `tests/plain-language-prompts.test.ts` (block byte-identical in all five
 prompts, each rule present, absent from `_shared.md`/`label.md`/the S-prompts,
 all four constants bumped) plus the updated
@@ -729,14 +701,10 @@ broke mid-word ("Endurance performanc/e") under the page-wide
 expansion read "0.80 on the evidence ladder (ladder)" because the arc's `basis`
 is literally `ladder`.
 
-References (`docs/design/ref/tabs-preview/`, prefix `2026-09-16-shipped-`):
-`scan-{390,360}-outcomes`, `scan-{390,360}-outcome`, `scan-390-dose-open`,
-`scan-390-form-open`, `scan-360-evidence-open`, `scan-390-untested-0pct` beside
-`scan-390-failed-100pct` (invariant 8, side by side), `scan-{390,360}-result-full`,
-`scan-390-{landing,loading,manual-full,error-503,not-a-label,not-supported}`, and
-the design-lab reference at the same width, `lab-390-outcomes` / `lab-390-outcome`.
-`public/previews/scan-tabs-outcomes-390.png` and
-`public/previews/scan-tabs-outcome-390.png` were refreshed from the same run.
+Reviewed at 390/360 across outcomes, one outcome, each expansion, the
+`0% untested` vs `100% negative` pair (invariant 8, side by side), the full
+result, every capture/error state and the design-lab card at the same width
+(screenshots removed from the repo 2026-10-02; regenerate with `node scripts/design_shots.mjs`).
 Tests: `tests/scan-result-state.test.tsx` (four rows with verdict **and**
 coverage per outcome, the expansion built from real run facts with no person bar /
 no ordinals / no interval, the population as a fact line, `0.00 @ 0%` vs
@@ -780,7 +748,7 @@ transport has no web access.
 
 The port to the shared `ab.css` primitives was already structurally right; this
 pass closed the differences that were still visible at 390 next to
-`docs/design/ref/tabs-preview/2026-09-16-shipped-lab-390-outcome(s).png`, and
+the shipped lab card at the same width, and
 fixed two defects the earlier captures hid. Presentation only: no scoring, API,
 prompt, schema or pipeline change, and no new number.
 
@@ -831,6 +799,4 @@ Result heights at this pass: unmatched 1678px @390 / 1693px @360, matched
 `scripts/design_shots.mjs` gained an `-11-matched-*` pass that mocks the exact
 body `POST /api/scan` returns for a 4 g single-active creatine label, so the
 fully scored card is reviewable; before it, every review shot was the unmatched
-"Not assessed" shell. Shots: `docs/design/ref/tabs-preview/2026-09-22-scan-actual-ab-*`;
-`public/previews/scan-tabs-{outcomes,outcome}-390.png` refreshed from the matched
-pass. A live scan was NOT exercised: no model API key exists in this environment.
+"Not assessed" shell. A live scan was NOT exercised: no model API key exists in this environment.

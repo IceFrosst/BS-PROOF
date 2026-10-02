@@ -229,9 +229,8 @@ from the reference:
 Founder: "make design coherent, simplistic but look scientific … world class,
 not vibecoded … phone optimised." Full plan, tokens, wireframe and the list of
 template tells removed: `docs/design/2026-09-16-scan-design-system.md`;
-before/after phone screenshots: `docs/design/ref/before/`, `docs/design/ref/after/`
-(both 390 and 360 wide, every state, plus consecutive viewport tiles of the
-result). Nothing in `lib/analyze/**`, `app/api/**`, a prompt, a schema or a
+phone screenshots of every state at 390 and 360 come from
+`node scripts/design_shots.mjs` (no longer committed). Nothing in `lib/analyze/**`, `app/api/**`, a prompt, a schema or a
 scoring constant changed; this is `components/scan-flow.tsx`,
 `components/supplement-search.tsx` (one option label), `app/globals.css`
 (everything from the `/scan` block on, scoped to `.scan-page` / `.sc-*` /

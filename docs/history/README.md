@@ -14,3 +14,8 @@ Live equivalents:
 | open questions between agents | `docs/REVIEW_PENDING.md` |
 | uncalibrated constants and open design questions | `docs/SPEC.md` §13 |
 | what a run does | `pipeline_v2_demo.excalidraw` |
+| dated change notes (newest first) | `docs/history/project-log.md` |
+
+Archives that are not audits: `2026-10-02-claude-md-archive.md` (the full root
+`CLAUDE.md` before it was shortened) and `2026-08-handoff-changelog.md` (the old
+root `HANDOFF.md` team log).

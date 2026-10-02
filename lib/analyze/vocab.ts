@@ -139,7 +139,7 @@ export interface ResolvedProduct {
  * Repair the model's most common vocabulary slip: the FORM id in the
  * ingredient field.
  *
- * MEASURED 2026-08-23 on the live DeepSeek backend (HANDOFF.md "KNOWN QUIRK"):
+ * MEASURED 2026-08-23 on the live DeepSeek backend (docs/history/2026-08-handoff-changelog.md "KNOWN QUIRK"):
  * a creatine monohydrate label came back as
  * `ingredient_vocab_id: "creatine_monohydrate"`, which matches no catalog
  * ingredient, so the scored-run lookup missed and a fully-scored product fell

@@ -13,7 +13,6 @@ __pycache__
 *.sqlite-*
 reports/archive
 docs/history
-pipeline_v1.excalidraw
 pipeline_v2_demo.excalidraw
 
 # Playwright output. Gitignored, but .vercelignore is a SEPARATE list and the

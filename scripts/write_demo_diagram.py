@@ -3,8 +3,8 @@ Generate the teammate-facing Excalidraw diagram of a demo run.
 
     python3 scripts/write_demo_diagram.py
 
-Writes `pipeline_v2_demo.excalidraw` at the repo root. `pipeline_v1.excalidraw`
-is the older technical drawing and is left alone.
+Writes `pipeline_v2_demo.excalidraw` at the repo root. (The older hand-drawn
+`pipeline_v1.excalidraw` was removed 2026-10-02; it is in git history.)
 
 WHY A GENERATOR AND NOT A HAND-DRAWN FILE: the diagram quotes constants
 (weights, s_i values, k, the transfer tiers). Hand-editing a 150 kB JSON blob

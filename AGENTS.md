@@ -10,10 +10,11 @@ Before changing this repository:
    existing work instead of replacing it.
 3. Read `docs/SPEC.md` before changing scoring, transfer factors, or any constant.
 
-Follow the multi-agent workflow in root `CLAUDE.md`. In the same change as the
-code, update `Current state` and `Next` (including the shared `Handoff:` line
-when work is in flight). Leave every pushed commit as a clean resume point for
-either of the other agents.
+Follow the workflow rules in root `CLAUDE.md`. In the same change as the code,
+add a dated entry to `docs/history/project-log.md` (what changed, what you
+verified, any handoff) and update `Current state` / `Next` in `CLAUDE.md` only if
+that snapshot changed — keep it a snapshot, not a diary. Leave every pushed
+commit as a clean resume point for either of the other agents.
 
 **Push completed, verified work straight to `main`** (founder, 2026-08-10). This
 replaces the old "never push directly to `main` without confirmation" rule, which
@@ -53,7 +54,7 @@ non-negotiable.
 
 ```bash
 python3 -m pipeline.invariants    # structural: model boundary, offline imports, agent wiring
-python3 -m pipeline.selftest      # 433 checks, no model, no network, ~0.5s
+python3 -m pipeline.selftest      # ~510 checks, no model, no network, ~0.5s
 ```
 
 Use `python3`, not `python` — bare `python` exists only inside `.venv`. Neither

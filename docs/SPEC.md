@@ -5,7 +5,7 @@
 **Status:** design, pre-build
 **Last updated:** 2026-08-05 (rev 3)
 **Companion artifacts:** `pipeline_v2_demo.excalidraw` (current, generated from
-the code), `pipeline_v1.excalidraw` (original sketch), `ANCHORS.md`, `anchors.csv`
+the code), `ANCHORS.md`, `anchors.csv`
 
 > This is a living document. When a decision changes, update the relevant section
 > *and* the changelog at the bottom, then regenerate the diagram.

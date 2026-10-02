@@ -100,6 +100,5 @@ is a placeholder and the b64 chunks are truncated, so every run reports
 | file | use |
 |------|-----|
 | `pipeline_v2_demo.excalidraw` | **current.** How one run works end to end, with the arcs, backends and known limits. Regenerate with `python3 scripts/write_demo_diagram.py` — it imports its constants from `pipeline/scoring.py`, so it cannot drift from the code |
-| `pipeline_v1.excalidraw` | the original technical sketch. Predates the four-arc rewrite; kept for history only |
 
-Drop either into [excalidraw.com](https://excalidraw.com) to edit.
+Drop it into [excalidraw.com](https://excalidraw.com) to edit.

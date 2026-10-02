@@ -9,7 +9,7 @@ color: blue
 You compare claims in the documentation against the code and report which no
 longer hold. You do not edit anything.
 
-`CLAUDE.md` is ~40 KB and `docs/SPEC.md` ~57 KB — about 17k tokens combined. You
+`CLAUDE.md` is ~17 KB and `docs/SPEC.md` ~57 KB. You
 exist so that does not have to sit in the main context to answer one question.
 
 ## Two rules that override tidiness

@@ -91,7 +91,7 @@ read ourselves.
 ```bash
 pip install -r requirements.txt
 python3 -m pipeline.invariants      # structural invariants, no model calls, no network
-python3 -m pipeline.selftest        # 433 checks, no model calls, no network
+python3 -m pipeline.selftest        # ~510 checks, no model calls, no network
 ```
 
 Then a real run. Pick exactly one backend:

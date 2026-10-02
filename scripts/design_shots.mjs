@@ -18,7 +18,7 @@ const out = process.argv[2] ?? "/tmp/design-shots";
 fs.mkdirSync(out, { recursive: true });
 const base = process.env.BASE ?? "http://localhost:3111";
 const fixture = JSON.parse(fs.readFileSync("tests/fixtures/scan-photo-rich.json", "utf8"));
-const cameraFallbackAsset = "docs/design/ref/tabs-preview/lab-ab-hero.png";
+const cameraFallbackAsset = "public/icon-512.png";
 
 // A product that DOES match a retained audit: creatine monohydrate, single
 // active, 4,000 mg printed compound per day. The mocked body is exactly the

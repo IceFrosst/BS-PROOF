@@ -8,7 +8,7 @@ fallback.
 ## Day 0 (today) — foundations + scoring
 - [x] Kill switch: quick label analysis toggled OFF while we prep
       (`LABEL_ANALYZER_ENABLED=0` on Vercel prod; code `2fe9d24`)
-- [x] `HANDOFF.md` running change log at repo root — append after every change
+- [x] `HANDOFF.md` running change log at repo root (now `docs/history/2026-08-handoff-changelog.md`) — append after every change
 - [ ] **Scoring tune FIRST, before the big runs.** Artifacts are stamped with
       the scoring model and mismatches get QUARANTINED at build time. Order:
       retune constants in Python (canonical) → regenerate

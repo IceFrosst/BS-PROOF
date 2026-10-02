@@ -1,7 +1,7 @@
 /*
  * resolveIngredientForm — the deterministic repair for the model's most common
  * vocabulary slip: the FORM id in the ingredient field. Measured live on the
- * DeepSeek backend 2026-08-23 (HANDOFF.md): "creatine_monohydrate" arrived as
+ * DeepSeek backend 2026-08-23 (docs/history/2026-08-handoff-changelog.md): "creatine_monohydrate" arrived as
  * the ingredient, matched no catalog entry, and a fully-scored product fell
  * through to not_scored + census. Every form id has exactly one parent in
  * vocab/form.json, so the repair invents nothing.
