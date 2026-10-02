@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { ScanFlow } from "@/components/scan-flow";
+import { ScanFlow } from "@/components/scan/scan-flow";
 import { ingredientCatalog } from "@/lib/analyze/catalog";
 
 /*
@@ -15,7 +15,7 @@ import { ingredientCatalog } from "@/lib/analyze/catalog";
  * page chrome (the methodology link) and the dark scoping class.
  *
  * The page's white-to-dark ground is scoped by `body:has(.scan-page)` in
- * globals.css so the shared header stays -- restyled dark here -- for the
+ * app/styles/scan.css so the shared header stays -- restyled dark here -- for the
  * skip link, the home link and the methodology nav link, without touching
  * the root layout or any other route.
  *

@@ -1,6 +1,6 @@
 /*
  * THE LIVE CAMERA VIEWFINDER's two pure(ish) jobs, split out of
- * components/scan-camera.tsx so they are unit-testable without mounting React
+ * components/scan/scan-camera.tsx so they are unit-testable without mounting React
  * or a real camera (2026-09-16 redesign, founder: "use your eyes" — the
  * reference is a live getUserMedia viewfinder, not the platform camera app).
  *
@@ -133,7 +133,7 @@ export async function captureFrameToBlob(
 }
 
 /** Convenience wrapper for the real DOM: draws `video` itself via
- * `drawImage`, the shape components/scan-camera.tsx actually needs. Split
+ * `drawImage`, the shape components/scan/scan-camera.tsx actually needs. Split
  * from `captureFrameToBlob` above so tests can mock canvas creation and
  * drawing without a real <video> element decoding frames. */
 export async function captureVideoFrame(video: HTMLVideoElement, options: CaptureOptions = {}): Promise<Blob | null> {

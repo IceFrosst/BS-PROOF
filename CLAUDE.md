@@ -19,10 +19,10 @@ that doesn't match the specific product. Two parts:
 
 1. **Evidence pipeline** (Python, offline): retrieve papers → extract facts with
    model "subagents" S1–S8 → deterministic scoring → immutable run artifacts in
-   `reports/runs/`. Design: `docs/SPEC.md`, `docs/ARCHITECTURE.md`.
+   `reports/runs/`. Design: `docs/SPEC.md` (method), `docs/PIPELINE.md` (how to run).
 2. **App** (Next.js 16 on Vercel): `/scan` reads a supplement label (photo or
    typed) and scores the product against the retained runs. Design:
-   `docs/SYSTEM_DESIGN.md`, `docs/design/`.
+   `docs/SYSTEM_DESIGN.md`.
 
 Scores are signed −100…+100 internally, displayed 0–100, and always carry four
 arcs (effect / form / dose / evidence), each a verdict plus its coverage.
@@ -63,7 +63,7 @@ image; `--max-turns 3`, one tool, scoped dir). Do not cite it for an extractor.
 | S1–S8 (`prompts/s*.md`, `_shared.md`) | `PROMPT_VERSION` in `claude_adapter.py` (shared with Grok) |
 | `prompts/label.md` | `LABEL_PROMPT_VERSION` in **both** `lib/analyze/vision.ts` and `label_adapter.py` |
 | compatibility / company / literature_warnings / evidence_prior | their own `*_PROMPT_VERSION` in `lib/analyze/` |
-| research_audit / effect_research (design lab only) | version stamped in the prompt / `app/design-lab/ab/effect-contract.ts` |
+| research_audit / effect_research (design lab only) | version stamped in the prompt / `lib/evidence-ledger/effect-contract.ts` |
 
 Separate cache domains on purpose: bumping `PROMPT_VERSION` invalidates ~1000
 cached extractions. A hook warns when a prompt or schema changes without a bump.
@@ -194,7 +194,7 @@ lib/scan-history/ lib/auth/   optional Supabase history + Google sign-in
 prompts/*.md  schemas/*.json  vocab/*.json
 reports/runs/          immutable run archive (current SCORING_MODEL only)
 reports/archive/<model>/  runs from superseded scoring models
-docs/                  SPEC, ARCHITECTURE, SYSTEM_DESIGN, ANCHORS, design/, history/
+docs/                  SPEC (method), PIPELINE (running it), SYSTEM_DESIGN (app), ANCHORS, history/
 scripts/               report/artifact writers, rescoring, experiments
 tests/                 vitest (TS) + Python tests; tests/e2e/ Playwright
 ```

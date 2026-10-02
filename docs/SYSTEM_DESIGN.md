@@ -1,5 +1,11 @@
 # BS-PROOF scan — system design
 
+**Living doc for the app** (`/scan`, `POST /api/scan`, the Evidence Ledger card,
+history, sign-in, PWA). Code cites its sections by number ("SYSTEM_DESIGN §6"),
+so never renumber them; add new sections at the end. Last reviewed 2026-10-02.
+Dated entries below record when each part was decided; newer sections win
+where they disagree (e.g. §1d's camera policy is now `camera=(self)`).
+
 **Status:** implemented 2026-09-07 (founder: "a finalized version of the product
 where users scan a supplement and they get a result through deepseek api …
 analyzes all parts of a background of the supplement: dose effectiveness,
@@ -115,7 +121,7 @@ facts are shown; neither is allowed to colour the other.
 `lib/analyze/business-model.ts` holds the field's TYPE and the pure
 `businessModelDisclosure()` rendering decision, deliberately split out of
 `lib/analyze/company.ts` (which imports `node:fs` to read the prompt) so the
-client component `components/scan-flow.tsx` can import the decision without
+client component `components/scan/scan-flow.tsx` can import the decision without
 pulling a filesystem import into the browser bundle. `confirmed_mlm` /
 `suspected_mlm` render the SAME warning visual language already used
 elsewhere on this page for disclosures (`.la-alert.la-alert-warn` — the
@@ -191,7 +197,7 @@ nav`), the staged-file name/size hint, and the "Only the evidence run
 produces a number…" footer line. These are the founder-specified differences
 from the reference:
 
-- **Live camera, not the platform camera app.** `components/scan-camera.tsx`
+- **Live camera, not the platform camera app.** `components/scan/scan-camera.tsx`
   requests `getUserMedia({video:{facingMode:{ideal:"environment"}},
   audio:false})` the moment nothing is staged and shows the feed in one big
   rounded (24px) block -- 3:4 portrait under 640px, 16:9 at or above it -- with
@@ -212,7 +218,7 @@ from the reference:
   (every other directive unchanged) -- production was blocking `getUserMedia`
   outright before this change; see §1a above, which is now superseded.
 - **"Search your supplement" moved above the block** as a full-width pill
-  button, opening `<SearchSheet>` (`components/search-sheet.tsx`) -- an
+  button, opening `<SearchSheet>` (`components/scan/search-sheet.tsx`) -- an
   accessible dialog (`role="dialog"`, `aria-modal`, a focus trap, Escape and
   backdrop-click to close) around the unchanged `<SupplementSearch>` --
   instead of the 2026-09-15 inline expand/collapse panel below the capture
@@ -228,11 +234,11 @@ from the reference:
 
 Founder: "make design coherent, simplistic but look scientific … world class,
 not vibecoded … phone optimised." Full plan, tokens, wireframe and the list of
-template tells removed: `docs/design/2026-09-16-scan-design-system.md`;
+template tells removed: `docs/history/2026-09-16-scan-design-log.md` (summary in §11);
 phone screenshots of every state at 390 and 360 come from
 `node scripts/design_shots.mjs` (no longer committed). Nothing in `lib/analyze/**`, `app/api/**`, a prompt, a schema or a
-scoring constant changed; this is `components/scan-flow.tsx`,
-`components/supplement-search.tsx` (one option label), `app/globals.css`
+scoring constant changed; this is `components/scan/scan-flow.tsx`,
+`components/scan/supplement-search.tsx` (one option label), `app/styles/scan.css`
 (everything from the `/scan` block on, scoped to `.scan-page` / `.sc-*` /
 `.scan-*` — shared `.la-*` rules are untouched and get `.scan-page .la-*`
 overrides), `app/manifest.ts` (`background_color` back to white, pinned by
@@ -518,7 +524,7 @@ never lost to a navigation.
 
 **How it works.** The Google Identity Services script
 (`https://accounts.google.com/gsi/client`) loads LAZILY, only when sign-in is
-configured and a person has not signed in yet (`components/google-sign-in.tsx`).
+configured and a person has not signed in yet (`components/scan/google-sign-in.tsx`).
 Its button (`google.accounts.id.renderButton`, theme `filled_black`, size
 `large`) returns an ID token; `supabase.auth.signInWithIdToken({provider:
 "google", token})` turns that into a Supabase session, persisted the library's
@@ -630,10 +636,18 @@ lib/auth/use-supabase-session.ts hook: session state (email/access token) for <S
 lib/auth/claim.ts                server-side: verifies a Supabase access token, claims a scan_runs row, upserts scan_users
 app/api/scan/route.ts            multipart → analyzeScan; JSON → analyzeManual; GET catalog; wires scan-run history
 app/api/scan/claim/route.ts      POST { run_id } + Authorization: Bearer <token> → attaches the signed-in user to a run
-app/scan/page.tsx, components/scan-flow.tsx, components/supplement-search.tsx   the UI
-components/scan-camera.tsx       the live camera viewfinder block + shutter (2026-09-16)
-components/search-sheet.tsx      accessible dialog wrapping <SupplementSearch> (2026-09-16)
-components/google-sign-in.tsx    lazy-loaded Google button + the "Save your result" card (2026-09-16)
+app/scan/page.tsx, components/scan/scan-flow.tsx   the UI shell; state machine in components/scan/flow-state.ts
+components/scan/capture-views.tsx     landing / staged / loading states
+components/scan/ledger-tabs.tsx       the Evidence Ledger card (outcome tabs, four dimension rows)
+components/scan/report-sections.tsx   label details, literature, dose, compatibility, company, legend, technical details
+components/scan/primitives.tsx, format.ts   shared badges/sections/notices and pure formatting
+components/scan/supplement-search.tsx the manual search combobox
+components/evidence-ledger/           the lab card (/design-lab/ab, /tests/supplements) and its shared ab.css
+lib/evidence-ledger/                  ledger types + score(), retained audits (audits/), plain-language sidecars
+app/styles/*.css                      per-surface stylesheets, imported in cascade order by app/globals.css
+components/scan/scan-camera.tsx       the live camera viewfinder block + shutter (2026-09-16)
+components/scan/search-sheet.tsx      accessible dialog wrapping <SupplementSearch> (2026-09-16)
+components/scan/google-sign-in.tsx    lazy-loaded Google button + the "Save your result" card (2026-09-16)
 public/scan-mark.svg             transparent scanner mark; derived by scripts/write_scan_mark.mjs
 prompts/label.md (v1.1), prompts/company.md (v1.1), prompts/compatibility.md,
 prompts/evidence_prior.md, prompts/literature_warnings.md
@@ -682,3 +696,140 @@ scored outcome headlines, an aggregation outside canonical per-outcome
 `score()` and explicitly not a probability of benefit. The audit remains
 heuristic and unvalidated; arbitrary-product expansion needs a source-retrieval
 service because the deployed model transport cannot open live sources.
+
+## 11. `/scan` design system
+
+Merged 2026-10-02 from the design log (full history, including every design
+pass and its measurements: `docs/history/2026-09-16-scan-design-log.md`).
+Regenerate phone screenshots of every state with
+`npm run build && PORT=3111 npm run start &` then `node scripts/design_shots.mjs`.
+
+**Brief (founder):** "make design coherent, simplistic but look scientific …
+world class, not vibecoded … phone optimised." Subject: a lab-grade evidence
+report about one supplement, read on a phone in a shop aisle, by a buyer
+sceptical of marketing. Primary job: answer "does it work, at my dose, in my
+form" honestly in the first two screens, then let them dig.
+
+### Tokens (scoped to `.scan-page`, defined in `app/styles/scan.css`)
+
+| token | value | role |
+|---|---|---|
+| `--sp-white` | `#ffffff` | the only ground (no cream on this page) |
+| `--sp-paper` | `#fafbfa` | the Evidence Ledger card shell |
+| `--sp-tint` | `#f3f5f4` | the one grey tint: tracks, thumbnail wells, code |
+| `--sp-line` | `#dde1df` | every 1px rule and card edge |
+| `--sp-mute` | `#5a6660` | secondary text (6.3:1 on white) |
+| `--sp-ink` | `#16231d` | text, the score, the dose marker |
+| `--sp-measured` | `#0b6b5a` | **measured** things only |
+| `--sp-unverified` | `#885a00` | **model-recalled / read-with-care** only (the "Model knowledge" badge) |
+| `--sp-danger` | `#a92f24` | errors |
+| `--sp-arc-effect` / `-form` / `-dose` / `-evidence` | `#087769` / `#315ca8` / `#d85d42` / `#a06a00` | identity cues for the four dimensions, never verdicts |
+
+Score colour comes from ONE ramp, `scoreSignalColor` (red → amber → green by
+score); `usage: "text"` darkens the same hue for WCAG contrast. Type: system
+stack, scale `--fs-1…6` = 13 / 15 / 17 / 22 / 28 / 40 px (40 is the score, the
+page's one bold moment); sentence case, no tracked ALL-CAPS, `tabular-nums` in
+columns, prose capped at 62ch. Shape: `--sp-radius` 12px is the one radius
+(the viewfinder keeps 24px); rules, not boxes; spacing 4/8/12/16/24/32; targets
+≥ 44px; no shadows on the report.
+
+**Invariant 8 on screen:** a 0%-coverage dimension gets a striped track and the
+words "0% · untested", so `0.00 @ 0%` can never look like `−0.70 @ 100%`.
+
+### State model
+
+```
+landing ──shutter/upload──▶ staged ──"Scan this label"──▶ loading ──▶ result
+   ▲                          │ Retake                        │          │
+   │                          ▼                               ▼          │
+   └──────────────────────  landing                        error ◀───────┘
+   ▲                                                                     │
+   └───────────── "Search your supplement" ──▶ sheet ──▶ loading(manual) ─┘
+```
+
+| state | what owns the viewport | primary action |
+|---|---|---|
+| **landing** | search pill, dark viewfinder with H1 overlay, shutter, "Upload a photo" | shutter |
+| **staged** | the photo, full width | "Scan this label"; Retake / choose another |
+| **loading** | progress panel: dimmed thumbnail, stage list with the current step, indeterminate bar; the Google "Save your result" card when configured | — |
+| **result** | capture chrome is GONE; compact scanned-product header (thumbnail or "Typed by you" chip, name, brand, "Scan another"); focus and scroll move to it (instant under `prefers-reduced-motion`) | "Scan another" (header and end of report) |
+| **error / not a label / ingredient not supported** | the same header slot plus one note saying what happened and what it needs | "Scan another" |
+
+The run-validity banner always renders before the first number. Warnings,
+label facts, company facts and technical details are collapsed `<details>`,
+always in the DOM. Sign-in lock (configured, signed out): the report is blurred
+and `inert` under the "Save your result" card.
+
+## 12. Evidence Ledger rubric (retained audits only)
+
+Current part of the rubric note; its prototype "Overall tab" sections and the
+first live-audit calibration observations are in
+`docs/history/2026-09-10-evidence-ledger-rubric.md`.
+
+**Scope (founder 2026-09-17):** used only for the three exact source-verified
+audits in §10. Heuristic and unvalidated — not a probability of benefit. Every
+constant is a founder call (CLAUDE.md invariant 4). It is separate from
+`pipeline/scoring.py` and never sync'd with it. Implementation:
+`lib/evidence-ledger/index.ts` (`score()`); prompt `prompts/research_audit.md`
+(reserved for a future source-retrieval service; the retained artifacts record
+`audit-v0.2`).
+
+**Principle:** the model fills a ledger (inventory + gate facts + checklist
+judgements); **code** computes the four dimensions and the headline.
+
+| Dimension | Points | How code derives it |
+|---|---|---|
+| **Effect** E | −3 … +3 | harm −3 · no meaningful effect 0 · small +1 · moderate +2 · large +3 · CI spanning both → no headline ("unclear") |
+| **Certainty** C | 0 … 4 | 4 if RCT/meta-analysis, 2 if observational; −1 per checklist `concern` (risk of bias, consistency, precision, directness). Publication bias and funding are **disclosures only** and never lower C. `unknown` costs nothing but is shown. Floor 0, then gate caps |
+| **Form fit** F | 0 … 4 | exact preparation 4 · same family/standardization 3 · plausible equivalence 2 · different 1 · untested → **unknown** (hatched, priced 0.10, never shown as 0/4) |
+| **Dose fit** D | 0 … 4 | inside tested effective range 4 · ±20% 3 · 50–80% or up to 2× 2 · <50% or >2× 1 · regimen unknown → **unknown** |
+
+Gate caps on Certainty (minimum wins; each fired gate is printed): no human
+controlled trial → no headline · exactly one RCT → C ≤ 1 · largest RCT n < 50,
+or < 4 weeks for a chronic outcome → C ≤ 2 · surrogate biomarker → C ≤ 3.
+
+```
+signal        = (E / 3) × (C / 4)                          −1 … +1
+applicability = mean(F / 4, D / 4)   (unknown axis → 0.10)   0 … 1
+headline      = 50 + 50 × signal × (applicability if signal > 0 else 1)
+```
+
+The v14 identity (SPEC §9) on the ledger scale: 50 means "points nowhere",
+applicability discounts benefit only, bands ≥ 65 works · 55–64 probably works ·
+45–54 unclear · 30–44 probably does not work · < 30 against / harm. Person fit
+is dropped (no user profile is collected). Not in the number: safety, marketing
+flags, company background, source counts, the model's self-confidence.
+
+**Known rubric flaws, open founder calls:** the one-RCT cap misfires on
+mega-trials (VITAL-DEP n=18,353 reads "Unclear"); `C = 0` renders "Not scored",
+indistinguishable from never studied. Validation still open: an anchor test on
+6–8 well-known claims, and repeat-run stability.
+
+## 13. Legacy continuous v14 scorer (the backup path)
+
+The continuous scorer remains the compatibility path for API consumers and
+historical artifacts: `lib/analyze/product-score.ts`, `lib/analyze/scoring.ts`
+and the Python pipeline compute the signed v14 result and four arcs from
+retained runs. When a product matches a retained Evidence Ledger audit exactly,
+`/scan` shows the Ledger; otherwise the API still returns the continuous
+`evidence.rows` and the UI shows the same card shell as "Not assessed". Ledger
+values are never derived from production coverage, and continuous rows are
+never relabelled as Ledger grades. Expanding live audits to arbitrary products
+needs a source-retrieval service; the deployed model transport cannot do it.
+
+## 14. Installable PWA
+
+- Manifest `app/manifest.ts` → `/manifest.webmanifest`; launches `/scan/`,
+  `display: standalone`, `background_color #ffffff`, `theme_color #0B0F14`.
+- Icons: Android 192/512 px in `any` and `maskable` variants; iOS
+  `public/apple-touch-icon.png` 180 px opaque; `public/favicon.svg`;
+  one-colour `public/logo-white.svg`. Palette: green frame `#12B76A`, white
+  bottle, blue data pixels `#1A73F0` on `#0B0F14` (green = verification,
+  blue = data). `scripts/write_scan_mark.mjs` derives the in-page mark; a test
+  pins the two together.
+- No service worker or offline cache, on purpose: cached evidence would go stale.
+- Phone check: iOS Safari on `/scan/` → Share → Add to Home Screen (starting
+  from `/` can make older iOS reopen `/`); Android Chrome → Install app (record
+  if it only offers "Add to Home screen"). Launch should open `/scan/` without
+  browser chrome; the live camera needs `Permissions-Policy: camera=(self)`
+  (`vercel.json`).

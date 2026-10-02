@@ -1,6 +1,6 @@
 /**
- * The audit JSON in app/design-lab/ab/audits/ is what a live model returns for
- * prompts/research_audit.md (now audit-v0.4; the three retained files were run
+ * The audit JSON in lib/evidence-ledger/audits/ is what a live model returns for
+ * prompts/research_audit.md (now audit-v0.5; the three retained files were run
  * against audit-v0.2 and still record that, because that is the prompt they
  * were actually produced under -- v0.3 changed the WRITING rules only, not the
  * schema or any gate). These pin the contract between the
@@ -13,14 +13,14 @@ import { join } from "node:path";
 import Ajv2020 from "ajv/dist/2020";
 import { describe, expect, it } from "vitest";
 
-import { ledgerFromAudit, score, type AuditFile } from "@/app/design-lab/ab/ledger";
+import { ledgerFromAudit, score, type AuditFile } from "@/lib/evidence-ledger";
 
-const AUDIT_DIR = join(process.cwd(), "app/design-lab/ab/audits");
+const AUDIT_DIR = join(process.cwd(), "lib/evidence-ledger/audits");
 const schema = JSON.parse(readFileSync(join(process.cwd(), "schemas/research_audit.json"), "utf8"));
 const files = readdirSync(AUDIT_DIR).filter((f) => f.endsWith(".json"));
 const load = (f: string) => JSON.parse(readFileSync(join(AUDIT_DIR, f), "utf8")) as AuditFile;
 
-describe("research_audit schema (prompt audit-v0.4, retained files audit-v0.2)", () => {
+describe("research_audit schema (prompt audit-v0.5, retained files audit-v0.2)", () => {
   const ajv = new Ajv2020({ allErrors: true, strict: false });
   const validate = ajv.compile(schema);
 
@@ -37,9 +37,9 @@ describe("research_audit schema (prompt audit-v0.4, retained files audit-v0.2)",
     expect(ok).toBe(true);
   });
 
-  it.each(files)("%s keeps its historical prompt metadata while allowing current audit-v0.4", (f) => {
+  it.each(files)("%s keeps its historical prompt metadata while allowing current audit-v0.5", (f) => {
     const prompt = load(f).meta.prompt;
-    expect(["audit-v0.2", "audit-v0.4"]).toContain(prompt);
+    expect(["audit-v0.2", "audit-v0.5"]).toContain(prompt);
     // These checked-in retained audits were actually produced under v0.2; do
     // not rewrite their provenance merely because the current prompt is v0.4.
     expect(prompt).toBe("audit-v0.2");

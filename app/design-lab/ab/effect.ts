@@ -2,7 +2,7 @@
  * Effect grading — data driven, umbrella-review shaped. PROPOSED, demo-only.
  *
  * Replaces "the model picks an effect tier" with "code computes one from the
- * best-conducted sources". Four steps, per docs/design/2026-09-10-evidence-ledger-rubric.md:
+ * best-conducted sources". Four steps, per docs/history/2026-09-10-evidence-ledger-rubric.md (current rubric: docs/SYSTEM_DESIGN.md §12):
  *
  *   1. QUALITY   score each source from objective reported facts (short-form AMSTAR-2).
  *   2. OVERLAP   corrected covered area; heavily overlapping reviews are ONE source.

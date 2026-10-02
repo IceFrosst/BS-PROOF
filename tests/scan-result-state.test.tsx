@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ScanFlow } from "@/components/scan-flow";
+import { ScanFlow } from "@/components/scan/scan-flow";
 import { ingredientCatalog } from "@/lib/analyze/catalog";
 import { retainedAuditForProduct } from "@/lib/evidence-ledger/retained-audits";
 
@@ -130,8 +130,8 @@ describe("/scan result state", () => {
 
   it("uses shared A/B styling once and the real photo hero with a fallback jar", () => {
     const globals = readFileSync(join(process.cwd(), "app", "globals.css"), "utf8");
-    expect(globals).toContain('@import "./design-lab/ab/ab.css"');
-    expect(readFileSync(join(process.cwd(), "app", "scan-lab-result.css"), "utf8")).not.toContain(".ab-photo-hero{");
+    expect(globals).toContain('@import "../components/evidence-ledger/ab.css"');
+    expect(readFileSync(join(process.cwd(), "app", "styles", "scan-ledger-result.css"), "utf8")).not.toContain(".ab-photo-hero{");
   });
 
   it("uses the shared A/B primitives and styles the selected tab", async () => {

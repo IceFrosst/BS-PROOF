@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { score, type Ledger } from "@/app/design-lab/ab/ledger";
+import { score, type Ledger } from "@/lib/evidence-ledger";
 
-// Pins the worked examples in docs/design/2026-09-10-evidence-ledger-rubric.md
+// Pins the worked examples in docs/history/2026-09-10-evidence-ledger-rubric.md (current rubric: docs/SYSTEM_DESIGN.md §12)
 // so the design doc and the demo arithmetic cannot drift apart silently.
 const base: Ledger = {
   effectPoints: 2,

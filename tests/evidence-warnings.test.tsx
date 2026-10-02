@@ -1,14 +1,14 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import AbPrototype from "@/app/design-lab/ab/prototype";
-import { score, ledgerFromAudit, type AuditFile, type Ledger } from "@/app/design-lab/ab/ledger";
-import { auditWarnings, evidenceDetail, gateWarnings, productWarnings } from "@/app/design-lab/ab/evidence-warnings";
+import AbPrototype from "@/components/evidence-ledger/ledger-lab-card";
+import { score, ledgerFromAudit, type AuditFile, type Ledger } from "@/lib/evidence-ledger";
+import { auditWarnings, evidenceDetail, gateWarnings, productWarnings } from "@/lib/evidence-ledger/evidence-warnings";
 import { businessModelDisclosure } from "@/lib/analyze/business-model";
-import { outcomeKey } from "@/app/design-lab/ab/effect-presentation";
-import creatine from "@/app/design-lab/ab/audits/creatine.json";
-import vitaminD from "@/app/design-lab/ab/audits/vitamin-d.json";
-import magnesium from "@/app/design-lab/ab/audits/magnesium.json";
+import { outcomeKey } from "@/lib/evidence-ledger/effect-presentation";
+import creatine from "@/lib/evidence-ledger/audits/creatine.json";
+import vitaminD from "@/lib/evidence-ledger/audits/vitamin-d.json";
+import magnesium from "@/lib/evidence-ledger/audits/magnesium.json";
 
 const audits = [creatine, vitaminD, magnesium] as unknown as AuditFile[];
 const byName = (a: AuditFile, name: string) => {
@@ -283,7 +283,7 @@ describe("test-site disclosure-only policy", () => {
 
   it("/scan still carries the same three product warnings in its own bundle", () => {
     // Nothing in this task changes /scan; this pins that the surfaces agree.
-    const flow = readFileSync("components/scan-flow.tsx", "utf8");
+    const flow = readFileSync("components/scan/scan-flow.tsx", "utf8");
     expect(flow).toContain("businessModelDisclosure");
     expect(flow).toMatch(/warningCount = \(data\?\.caveats\?\.length \?\? 0\)[^\n]*\(mlm \? 1 : 0\)/);
     const scanSource = readFileSync("lib/analyze/scan.ts", "utf8");

@@ -1,0 +1,560 @@
+/* /scan: tokens (--sp-*), capture states and the report (docs/SYSTEM_DESIGN.md §11).
+   Split out of app/globals.css on 2026-10-02; globals.css imports the files in
+   their original order, so the cascade is unchanged. */
+
+/* ---------------------------------------------------------------- SCAN ----
+   /scan design system (2026-09-16, docs/history/2026-09-16-scan-design-log.md; current summary in docs/SYSTEM_DESIGN.md §11).
+   A lab-grade evidence report read on a phone. One white ground, one grey
+   tint, one hairline, one radius; two accents each with ONE meaning --
+   green = a trial measured this, amber = a model recalled this / read this
+   before trusting a number. No cream, no shadows on the report, no ALL-CAPS
+   eyebrows, no middle-dot meta strings. The score is the one bold moment.
+
+   Scoping: everything here hangs off `.scan-page` or a `.sc-*` / `.scan-*`
+   class that only components/scan/ renders. Shared `.la-*` rules
+   (used by /tester's label-analyzer) are NOT edited -- where /scan needs a
+   different look for `.la-alert`, `.la-empty`, `.la-dim`, `.la-result`,
+   `.la-spans`, `.la-census*` it gets a `.scan-page .la-*` override below.
+   The header's Methodology link is hidden on this page only (founder); the
+   result's Technical details link to /methodology instead. */
+.scan-page {
+  --sp-white: #ffffff;
+  --sp-tint: #f3f5f4;
+  --sp-line: #dde1df;
+  --sp-mute: #5a6660;
+  --sp-ink: #16231d;
+  --sp-measured: #0b6b5a;
+  --sp-unverified: #885a00;
+  --sp-danger: #a92f24;
+  /* Preview: restrained identity for the four evidence dimensions. Labels and
+     values still carry every meaning; hue only helps the four tracks scan. */
+  --sp-arc-effect: #087769;
+  --sp-arc-form: #315ca8;
+  --sp-arc-dose: #d85d42;
+  --sp-arc-evidence: #a06a00;
+  /* The design-lab card's calm paper surface, translated into this page's
+     neutral ramp: a card that sits a shade off the white ground, no cream and
+     no shadow (2026-09-16 token rule kept). */
+  --sp-paper: #fafbfa;
+  --sp-radius: 12px;
+  --fs-1: 13px;
+  --fs-2: 15px;
+  --fs-3: 17px;
+  --fs-4: 22px;
+  --fs-5: 28px;
+  --fs-6: 40px;
+  background: var(--sp-white);
+  color: var(--sp-ink);
+  font-size: var(--fs-2);
+  line-height: 1.5;
+}
+body:has(.scan-page) { background: #fff; }
+body:has(.scan-page) .site-header { background: #fff; border-bottom-color: #dde1df; }
+body:has(.scan-page) .site-header nav { display: none; }
+body:has(.scan-page) .site-footer { background: #fff; border-top-color: #dde1df; padding-bottom: calc(34px + env(safe-area-inset-bottom, 0px)); }
+/* The shared footer's second line is a middle-dot tagline; on this page only
+   the "not medical advice" sentence stays. */
+body:has(.scan-page) .footer-inner p:last-child { display: none; }
+.scan-page .shell { width: min(1180px, calc(100% - 32px)); }
+.scan-page h2, .scan-page h3, .scan-page h4 { letter-spacing: -0.01em; line-height: 1.2; overflow-wrap: anywhere; }
+.scan-page p { max-width: 62ch; }
+
+.scan-hero { display: grid; justify-items: stretch; padding-top: 12px; padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
+.scan-page .la { width: 100%; max-width: 640px; margin-inline: auto; padding-block: 8px 0; }
+.scan-page .la-result { margin-top: 0; text-align: left; display: grid; gap: 0; }
+.scan-page .la-alert { text-align: left; }
+
+/* Shared-primitive overrides for this page only. */
+.scan-page .la-dim { color: var(--sp-mute); font-weight: 400; }
+.scan-page .la-spans { margin: 8px 0 0; color: var(--sp-mute); font-size: var(--fs-1); font-style: normal; }
+.scan-page .la-empty { gap: 6px; padding: 16px; border: 1px solid var(--sp-line); border-radius: var(--sp-radius); background: var(--sp-white); margin-top: 16px; }
+.scan-page .la-empty > strong { font-size: var(--fs-3); }
+.scan-page .la-empty > span { color: var(--sp-mute); font-size: var(--fs-2); }
+.scan-page .la-census { border-top-color: var(--sp-line); }
+.scan-page .la-census-tag { color: var(--sp-mute); }
+.scan-page .la-alert { margin-top: 0; padding: 12px 14px; border: 1px solid var(--sp-line); border-left: 3px solid var(--sp-line); background: var(--sp-white); border-radius: 0 var(--sp-radius) var(--sp-radius) 0; }
+.scan-page .la-alert span { color: var(--sp-mute); font-size: var(--fs-2); }
+.scan-page .la-alert-warn { border-left-color: var(--sp-unverified); }
+.scan-page .la-alert-ok { border-left-color: var(--sp-measured); }
+.scan-page .la-alert-bad { border-left-color: var(--sp-danger); }
+
+/* -------- landing: search pill, viewfinder, shutter, upload -------- */
+.sc-search-cta {
+  display: flex; align-items: center; justify-content: center; width: 100%; min-height: 52px;
+  margin-bottom: 14px; padding: 12px 20px; border: 1.5px solid var(--sp-ink); border-radius: 999px; cursor: pointer;
+  background: var(--sp-white); color: var(--sp-ink); font-weight: 700; font-size: var(--fs-2);
+}
+.sc-search-cta:hover { background: var(--sp-tint); }
+
+.sc-capture { position: relative; display: grid; gap: 16px; justify-items: stretch; width: 100%; padding: 0; border-radius: var(--sp-radius); }
+.sc-capture.is-dragging { outline: 2px dashed var(--sp-measured); outline-offset: 8px; }
+
+.sc-viewfinder-wrap { display: grid; gap: 18px; justify-items: center; width: 100%; }
+.sc-viewfinder {
+  position: relative; width: 100%; aspect-ratio: 3 / 4; overflow: hidden;
+  /* Cap so the shutter stays inside the first viewport on short phones:
+     header (~72px) + search pill (~66px) + shutter row (~110px). */
+  max-height: calc(100svh - 260px); min-height: 360px; margin-inline: auto;
+  border-radius: 24px; background: #05070c; box-shadow: 0 24px 60px rgb(22 35 29 / 22%);
+}
+@media (min-width: 640px) { .sc-viewfinder { aspect-ratio: 16 / 9; } }
+.sc-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.sc-video.is-hidden { visibility: hidden; }
+.sc-viewfinder-fill { position: absolute; inset: 0; background: radial-gradient(120% 90% at 50% 0%, #12233c 0%, #05070c 70%); }
+.sc-viewfinder-overlay {
+  position: absolute; inset: 0; z-index: 2; display: grid; align-content: start; justify-items: center;
+  gap: 10px; padding: clamp(18px, 5vw, 30px) 22px 0; text-align: center; pointer-events: none;
+  background: linear-gradient(180deg, rgb(2 6 15 / 88%) 0%, rgb(2 6 15 / 48%) 45%, transparent 75%);
+}
+.sc-viewfinder-brand { display: flex; align-items: center; gap: 8px; }
+.sc-viewfinder-mark { width: 34px; height: 34px; }
+.sc-viewfinder-word { color: #fff; font-weight: 800; font-size: 0.92rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.sc-headline { margin: 8px 0 0; color: #fff; font-size: clamp(1.55rem, 6.6vw, 2.2rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1.08; max-width: 15ch; text-shadow: 0 2px 20px rgb(0 0 0 / 60%); }
+.sc-viewfinder-overlay p.sc-subline { margin: 0; color: rgba(255, 255, 255, 0.86); font-size: clamp(0.94rem, 3.4vw, 1.05rem); font-weight: 600; text-shadow: 0 1px 12px rgb(0 0 0 / 60%); }
+.sc-camera-fallback, .sc-camera-starting { position: absolute; z-index: 1; inset: 0; display: grid; place-items: center; padding: 0 12%; text-align: center; }
+.sc-camera-fallback p, .sc-camera-starting p { margin: 0; color: rgba(255, 255, 255, 0.7); font-size: 1rem; line-height: 1.5; }
+
+.sc-shutter {
+  width: 78px; height: 78px; margin-top: -8px; padding: 0; border-radius: 50%; border: 3px solid var(--sp-ink);
+  background: #fff; display: grid; place-items: center; cursor: pointer;
+}
+.sc-shutter-ring { width: 60px; height: 60px; border-radius: 50%; background: var(--sp-ink); transition: transform 120ms ease; }
+.sc-shutter:active .sc-shutter-ring { transform: scale(0.86); }
+.sc-shutter:disabled { opacity: 0.5; cursor: default; }
+
+.sc-below-block { display: grid; justify-items: center; gap: 4px; margin-top: -4px; text-align: center; }
+.sc-fallback-photo { min-height: 48px; width: 100%; color: var(--sp-ink); border-color: var(--sp-line); background: #fff; margin-bottom: 8px; }
+.sc-upload-link { display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px; color: var(--sp-ink); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.sc-hint { color: var(--sp-mute); font-size: var(--fs-1); text-align: center; }
+
+/* -------- staged -------- */
+.sc-staged { display: grid; gap: 10px; justify-items: stretch; width: 100%; }
+.sc-secondary-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.scan-page .sc-primary { min-height: 54px; font-size: var(--fs-3); font-weight: 700; }
+.sc-secondary { min-height: 48px; color: var(--sp-ink); border-color: var(--sp-line); background: #fff; font-weight: 600; }
+.sc-secondary:hover { background: var(--sp-tint); }
+.scan-page .sc-preview { justify-self: center; width: 100%; max-height: min(60svh, 520px); object-fit: contain; border-radius: var(--sp-radius); border: 1px solid var(--sp-line); background: var(--sp-tint); }
+/* The <label> is the visible control; move the hidden input's focus ring onto it. */
+.sc:has(> #scan-capture:focus-visible) label[for="scan-capture"],
+.sc:has(> #scan-file:focus-visible) label[for="scan-file"] { outline: 3px solid var(--sp-ink); outline-offset: 4px; }
+.scan-page :focus-visible { outline: 3px solid var(--sp-ink); outline-offset: 3px; }
+
+/* -------- loading: the progress panel -------- */
+.sc-progress { display: grid; gap: 16px; padding: 16px; border: 1px solid var(--sp-line); border-radius: var(--sp-radius); background: var(--sp-white); }
+.sc-progress-head { display: grid; grid-template-columns: 56px 1fr; gap: 14px; align-items: center; }
+.sc-progress-title { margin: 0; font-size: var(--fs-3); font-weight: 700; }
+.sc-progress-sub { margin: 2px 0 0; color: var(--sp-mute); font-size: var(--fs-1); }
+.sc-thumb { display: grid; place-items: center; width: 56px; height: 56px; object-fit: cover; border-radius: var(--sp-radius); border: 1px solid var(--sp-line); background: var(--sp-tint); }
+.sc-thumb-dim { opacity: 0.55; }
+.sc-thumb-typed { color: var(--sp-mute); font-size: var(--fs-3); font-weight: 700; letter-spacing: -0.02em; }
+.sc-progress-bar { position: relative; height: 4px; overflow: hidden; border-radius: 999px; background: var(--sp-tint); }
+.sc-progress-bar > span { position: absolute; inset: 0 auto 0 0; width: 38%; border-radius: 999px; background: var(--sp-measured); animation: sc-slide 1.6s ease-in-out infinite; }
+@keyframes sc-slide { 0% { transform: translateX(-110%); } 100% { transform: translateX(290%); } }
+.sc-stages { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.sc-stages li { display: grid; grid-template-columns: 16px 1fr; gap: 10px; align-items: baseline; color: var(--sp-mute); }
+.sc-stage-mark { display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--sp-line); background: var(--sp-white); align-self: center; }
+.sc-stages li.is-done { color: var(--sp-mute); }
+.sc-stages li.is-done .sc-stage-mark { background: var(--sp-measured); border-color: var(--sp-measured); }
+.sc-stages li.is-current { color: var(--sp-ink); font-weight: 600; }
+.sc-stages li.is-current .sc-stage-mark { border-color: var(--sp-measured); box-shadow: inset 0 0 0 2px var(--sp-white), inset 0 0 0 6px var(--sp-measured); animation: sc-pulse 1.2s ease-in-out infinite alternate; }
+@keyframes sc-pulse { from { opacity: 1; } to { opacity: 0.45; } }
+.scan-page .la-stage { color: inherit; font-weight: inherit; font-size: var(--fs-2); }
+.sc-progress .sc-signin-card { max-width: none; margin-top: 4px; }
+
+/* -------- sign-in card + result lock -------- */
+.sc-signin-card {
+  display: grid; gap: 8px; justify-items: center; width: 100%; max-width: 360px;
+  padding: 16px; border: 1px solid var(--sp-line); border-radius: var(--sp-radius);
+  background: var(--sp-white); color: var(--sp-ink); text-align: center;
+}
+.sc-signin-card strong { font-size: var(--fs-3); }
+.sc-signin-card p { margin: 0; color: var(--sp-mute); font-size: var(--fs-1); line-height: 1.45; }
+.sc-google-btn { display: flex; justify-content: center; min-height: 44px; width: 100%; }
+.sc-result-wrap { display: grid; gap: 12px; justify-items: stretch; }
+.sc-result-wrap .sc-signin-card { max-width: none; }
+.la-result.sc-locked { filter: blur(9px); user-select: none; pointer-events: none; }
+.sc-signed-in-line { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; margin: 0 0 12px; color: var(--sp-mute); font-size: var(--fs-1); }
+.sc-signout { min-height: 32px; padding: 0 4px; border: none; background: none; color: var(--sp-ink); font-weight: 700; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+
+/* -------- result: scanned-product header -------- */
+.sc-scanned { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 4px 0 12px; border-bottom: 1px solid var(--sp-line); }
+.sc-scanned:focus { outline: none; }
+.sc-scanned-main { min-width: 0; }
+.sc-scanned-kicker { margin: 0 0 1px; color: var(--sp-mute); font-size: var(--fs-1); }
+.sc-scanned-name { margin: 0; font-size: var(--fs-3); font-weight: 700; line-height: 1.2; }
+.sc-scanned-brand { margin: 1px 0 0; color: var(--sp-mute); font-size: var(--fs-1); }
+.sc-again { min-height: 44px; padding: 0 12px; border: 1.5px solid var(--sp-ink); border-radius: 999px; background: var(--sp-white); color: var(--sp-ink); font-weight: 700; font-size: var(--fs-1); cursor: pointer; white-space: nowrap; }
+.sc-again:hover { background: var(--sp-tint); }
+.sc-again-bottom { width: 100%; margin-top: 8px; }
+.sc-error { margin-top: 0; }
+
+/* -------- facts: the report's 2-column definition list -------- */
+.sc-facts { display: grid; gap: 0; margin: 0; }
+.sc-facts > div { display: grid; grid-template-columns: minmax(96px, 38%) 1fr; gap: 12px; padding: 4px 0; border-top: 1px solid var(--sp-line); font-size: var(--fs-2); }
+.sc-facts > div:first-child { border-top: 0; }
+.sc-facts dt { color: var(--sp-mute); }
+.sc-facts dd { margin: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.sc-facts dd code { font-size: var(--fs-1); background: var(--sp-tint); padding: 1px 6px; border-radius: 6px; }
+.sc-identity { padding: 12px 0 0; }
+.sc-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 0; max-width: none; font-size: var(--fs-2); }
+.sc-summary > span:first-child::first-letter { text-transform: uppercase; }
+.sc-identity-details { margin-top: 8px; }
+.sc-identity-details > summary { min-height: 44px; font-weight: 600; color: var(--sp-mute); }
+.sc-identity-details .sc-facts > div { font-size: var(--fs-1); padding: 4px 0; }
+.sc-typed-note { margin: 8px 0 0; font-size: var(--fs-1); }
+
+/* -------- before you read the score: one stack -------- */
+.sc-notices { display: grid; gap: 6px; padding: 16px 0 0; }
+.sc-notices-title, .scan-section-head h3 { margin: 0; font-size: var(--fs-4); font-weight: 700; }
+.sc-notices-title { margin-bottom: 4px; font-size: var(--fs-3); }
+.scan-page .sc-notice { display: block; padding: 0; }
+.scan-page .sc-notice-open { display: grid; gap: 2px; padding: 10px 14px; }
+.scan-page .sc-notice-open strong { font-size: var(--fs-2); }
+/* Collapsed row = ONE line: title, then the lede truncated, then the chevron. */
+.sc-notice-details > summary { display: grid; grid-template-columns: auto minmax(0, 1fr) 12px; align-items: center; gap: 8px; min-height: 44px; padding: 6px 14px; cursor: pointer; list-style: none; }
+.sc-notice-details > summary::-webkit-details-marker { display: none; }
+.sc-notice-details > summary::after { content: ""; width: 8px; height: 8px; margin-top: -4px; border-right: 1.5px solid var(--sp-mute); border-bottom: 1.5px solid var(--sp-mute); transform: rotate(45deg); transition: transform 120ms ease; }
+.sc-notice-details[open] > summary::after { transform: rotate(225deg); margin-top: 4px; }
+.sc-notice-details > summary strong { font-size: var(--fs-2); white-space: nowrap; }
+.sc-notice-lede { color: var(--sp-mute); font-size: var(--fs-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sc-notice-details[open] .sc-notice-lede { visibility: hidden; }
+.sc-notice-details > p { margin: 0; padding: 0 14px 12px; color: var(--sp-mute); font-size: var(--fs-2); }
+.sc-warning-bundle { border: 1px solid #d6b46c; border-radius: 12px; background: #fffaf0; overflow: hidden; }
+/* One clean row: the warning count is the whole label (the "Open before
+   deciding" sub-line was deleted 2026-09-16), chevron hard right. */
+.sc-warning-bundle > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 8px 14px; cursor: pointer; list-style: none; }
+.sc-warning-bundle > summary::-webkit-details-marker { display: none; }
+.sc-warning-bundle > summary span { font-size: var(--fs-2); font-weight: 700; color: #7a5200; }
+.sc-warning-bundle > summary::after { content: ""; flex: 0 0 auto; width: 8px; height: 8px; margin-top: -4px; border-right: 1.5px solid #7a5200; border-bottom: 1.5px solid #7a5200; transform: rotate(45deg); transition: transform 120ms ease; }
+.sc-warning-bundle[open] > summary::after { transform: rotate(225deg); margin-top: 4px; }
+.sc-warning-list { display: grid; gap: 6px; padding: 0 8px 8px; }
+.sc-warning-list .sc-notice { background: var(--sp-white); }
+@media (max-width: 420px) {
+  .sc-notice-details > summary { grid-template-columns: minmax(0, 1fr) 12px; }
+  .sc-notice-details > summary strong { white-space: normal; }
+  .sc-notice-lede { display: none; }
+}
+
+/* -------- sections: rules, not boxes -------- */
+.scan-section { display: grid; gap: 12px; padding: 16px 0 8px; margin-top: 8px; border-top: 1px solid var(--sp-line); }
+.scan-section-head { display: grid; gap: 8px; }
+.scan-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+.scan-badge { display: inline-flex; align-items: center; min-height: 22px; padding: 1px 9px; border-radius: 999px; border: 1px solid var(--sp-mute); background: var(--sp-white); color: var(--sp-mute); font-size: var(--fs-1); font-weight: 600; line-height: 1.3; white-space: nowrap; }
+.scan-badge-model_prior { border-style: dashed; border-color: var(--sp-unverified); color: var(--sp-unverified); }
+.scan-note { margin: 0; color: var(--sp-mute); font-size: var(--fs-1); }
+.sc-label { color: var(--sp-mute); font-size: var(--fs-1); }
+.sc-fine { margin: 6px 0 0; font-size: var(--fs-1); }
+.sc-sub { display: grid; gap: 8px; }
+.sc-sub + .sc-sub { padding-top: 12px; border-top: 1px solid var(--sp-line); }
+.sc-sub .scan-item-head strong { font-size: var(--fs-2); }
+
+/* -------- evidence: the outcome card --------
+   Geometry adopted 2026-09-16 from the design-lab A/B card
+   (components/evidence-ledger/ledger-lab-card.tsx): the big number in its own rounded tile
+   beside the outcome name, then one TAPPABLE line per dimension -- label,
+   the plain word production actually computes, the signed value, its coverage
+   and a chevron -- with the coloured track full-width underneath and the
+   detail expanding in place. The lab's own rubric ordinals ("2/4"), its
+   person-fit bar and its reported-interval axis are NOT adopted: this
+   pipeline has no such values (see docs/history/2026-09-16-scan-design-log.md; current summary in docs/SYSTEM_DESIGN.md §11). */
+.scan-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
+.scan-card { display: grid; gap: 10px; padding: 12px 14px 10px; border: 1px solid var(--sp-line); border-radius: var(--sp-radius); background: var(--sp-white); color: var(--sp-ink); }
+/* Inside the tab panel the card IS the panel: no second box around it. */
+.scan-page .sc-tabpanel .scan-evidence { padding: 0; border: 0; background: transparent; gap: 12px; }
+.scan-evidence-gated { background: var(--sp-tint); }
+.scan-page .sc-tabpanel .scan-evidence-gated { background: transparent; }
+.sc-outcome-headline {
+  --sc-score-color: var(--sp-measured); --sc-score-text: var(--sp-measured);
+  display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 14px; align-items: center;
+  padding: 12px; border-radius: 16px;
+  background: color-mix(in srgb, var(--sc-score-color) 10%, var(--sp-white));
+  border: 1px solid color-mix(in srgb, var(--sc-score-color) 20%, var(--sp-line));
+}
+.sc-outcome-number {
+  display: grid; place-content: center; justify-items: center; width: 84px; height: 84px; margin: 0;
+  border-radius: 18px; background: var(--sp-white);
+  border: 1px solid color-mix(in srgb, var(--sc-score-color) 26%, var(--sp-line));
+  color: var(--sc-score-text, var(--sc-score-color)); font-variant-numeric: tabular-nums;
+}
+.sc-outcome-number strong { font-size: 34px; font-weight: 700; letter-spacing: -0.04em; line-height: 1; }
+.sc-outcome-number span { margin-top: 3px; color: var(--sp-mute); font-size: 11px; }
+.sc-outcome-headline-main { min-width: 0; }
+/* Break between words, never mid-word: "Endurance performanc/e" was a real bug. */
+.scan-page .sc-outcome-headline-main h4 { margin: 0; font-size: 20px; font-weight: 700; line-height: 1.15; overflow-wrap: break-word; }
+.sc-verdict { margin: 3px 0 0; color: var(--sp-mute); font-size: var(--fs-2); }
+.sc-pop { margin: 5px 0 0; color: var(--sp-mute); font-size: var(--fs-1); line-height: 1.35; }
+.sc-pop b { color: var(--sp-ink); font-weight: 600; margin-right: 4px; }
+
+.sc-arcs { list-style: none; display: grid; gap: 0; margin: 0; padding: 0; }
+.sc-arc {
+  --sc-arc-color: var(--sp-arc-effect);
+  min-width: 0; border-top: 1px solid var(--sp-line);
+  font-size: var(--fs-1); font-variant-numeric: tabular-nums;
+}
+.sc-arc:first-child { border-top: 0; }
+.sc-arc-form { --sc-arc-color: var(--sp-arc-form); }
+.sc-arc-dose { --sc-arc-color: var(--sp-arc-dose); }
+.sc-arc-evidence { --sc-arc-color: var(--sp-arc-evidence); }
+/* The row IS the control: one focusable 44px+ target, nothing nested inside. */
+.sc-arc-row {
+  display: grid; width: 100%; min-height: 56px; padding: 10px 2px 12px;
+  grid-template-columns: auto minmax(0, 1fr) auto 16px; grid-template-rows: auto auto auto;
+  column-gap: 8px; row-gap: 7px; align-items: center;
+  border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.sc-arc-row:hover .sc-arc-label { color: var(--sp-ink); }
+.sc-arc-label { grid-column: 1; grid-row: 1; color: var(--sp-mute); font-size: var(--fs-2); font-weight: 600; white-space: nowrap; }
+.sc-arc-word { grid-column: 2; grid-row: 1; min-width: 0; color: var(--sp-mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sc-arc-word:empty { display: none; }
+.sc-arc-value { grid-column: 3; grid-row: 1; justify-self: end; font-size: var(--fs-2); font-weight: 700; color: var(--sp-ink); }
+.sc-arc-value:empty { display: none; }
+/* A verdict AGAINST is coloured so it cannot be skimmed as one in favour; the
+   minus sign already says it, the colour only repeats it. */
+.sc-arc-value[data-sign="negative"] { color: var(--sp-danger); }
+/* The coverage keeps its own line under the track so the verdict NEVER travels
+   without it in full words, at any width (invariant 8). */
+.sc-arc-cov { grid-column: 1 / -1; grid-row: 3; justify-self: start; color: var(--sp-mute); white-space: nowrap; }
+.sc-arc-chev { grid-column: 4; grid-row: 1; justify-self: end; display: flex; color: var(--sp-mute); }
+.sc-arc-chev svg { transition: transform 160ms ease; }
+.sc-arc.is-open .sc-arc-chev svg { transform: rotate(180deg); }
+.sc-arc-track {
+  grid-column: 1 / -1; grid-row: 2;
+  position: relative; display: block; width: 100%; height: 10px; overflow: hidden;
+  border-radius: 999px; background: var(--sp-tint); box-shadow: inset 0 0 0 1px rgb(22 35 29 / 5%);
+}
+.sc-arc-fill { display: block; height: 100%; border-radius: 999px; background: var(--sc-arc-color); }
+.sc-arc-untested .sc-arc-cov { color: var(--sp-ink); font-weight: 600; }
+.sc-arc-untested .sc-arc-track {
+  background-color: var(--sp-tint);
+  background-image: repeating-linear-gradient(135deg, transparent 0 4px, var(--sp-line) 4px 7px);
+  box-shadow: inset 0 0 0 1px var(--sp-line);
+}
+.sc-arc-unknown .sc-arc-track { background: var(--sp-white); border: 1px dashed var(--sp-line); box-shadow: none; }
+/* The expansion: only facts the retained run carries. No audit prose exists on
+   this path, so nothing here is narrated. */
+.sc-arc-detail { display: grid; gap: 6px; padding: 0 2px 14px; color: var(--sp-mute); line-height: 1.5; overflow-wrap: anywhere; }
+.scan-page .sc-arc-detail p { margin: 0; max-width: 62ch; font-size: var(--fs-1); }
+.sc-arc-detail b { color: var(--sp-ink); font-weight: 700; margin-right: 4px; }
+.sc-arc-detail code { padding: 1px 5px; border-radius: 6px; background: var(--sp-tint); font-size: 12px; }
+.scan-page .sc-arc-what { padding: 7px 9px; border-radius: 8px; background: var(--sp-tint); color: var(--sp-ink); }
+.scan-page .sc-arc-note { color: var(--sp-mute); }
+/* Retained Evidence Ledger rows use their native scales, not production arc
+   coverage. Effect remains -3..+3; certainty/form/dose print x/4 or a dash. */
+.scan-page .sc-ledger-row .sc-arc-row { grid-template-rows: auto; min-height: 56px; padding-bottom: 10px; }
+.scan-page .sc-ledger-row .sc-arc-label { color: var(--sp-ink); }
+.scan-page .sc-ledger-row .sc-arc-value { color: var(--sp-ink); }
+.scan-page .sc-ledger-row .sc-arc-word { color: var(--sp-mute); }
+.scan-page .sc-ledger-validity { display: grid; gap: 4px; }
+.scan-page .sc-no-ledger-audit { margin: 0 0 12px; padding: 10px 12px; border: 1px dashed var(--sp-line); border-radius: 10px; color: var(--sp-mute); font-size: var(--fs-1); }
+.scan-page .sc-audit-exact { margin-top: 5px; padding-top: 5px; border-top: 1px solid var(--sp-line); }
+.scan-page .sc-audit-exact summary { cursor: pointer; color: var(--sp-ink); font-size: var(--fs-1); }
+.scan-page .sc-audit-sources { display: grid; gap: 4px; margin-top: 4px; }
+.scan-page .sc-audit-sources span { display: block; overflow-wrap: anywhere; }
+.scan-page .sc-audit-sources a { color: var(--sp-ink); text-decoration: underline; text-underline-offset: 2px; }
+.scan-page .sc-audit-sources small { color: var(--sp-mute); }
+@media (max-width: 400px) {
+  .sc-arc-label, .sc-arc-value { font-size: 14px; }
+  .sc-arc-word { font-size: 12px; }
+}
+
+/* -------- dose -------- */
+.scan-doses { display: grid; gap: 14px; }
+.scan-dose { display: grid; gap: 4px; }
+.scan-dose-head { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+.scan-dose-head strong { font-size: var(--fs-2); font-weight: 600; }
+.scan-dose-head span { color: var(--sp-mute); font-size: var(--fs-1); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.scan-dosebar { position: relative; height: 10px; border-radius: 999px; background: var(--sp-tint); overflow: visible; }
+.scan-band { position: absolute; top: 0; height: 100%; border-radius: 999px; }
+.scan-band-benefit { background: var(--sp-measured); }
+.scan-band-null { background: var(--sp-mute); opacity: 0.45; }
+.scan-marker { position: absolute; top: -4px; width: 3px; height: 18px; margin-left: -1.5px; border-radius: 2px; background: var(--sp-ink); box-shadow: 0 0 0 2px var(--sp-white); }
+.scan-dose-scale { display: flex; justify-content: space-between; color: var(--sp-mute); font-size: var(--fs-1); font-variant-numeric: tabular-nums; }
+.scan-reading { margin: 0; font-size: var(--fs-1); color: var(--sp-mute); }
+.scan-dose-in_range .scan-reading { color: var(--sp-measured); }
+.scan-dose-key { display: flex; flex-wrap: wrap; gap: 4px 16px; color: var(--sp-mute); font-size: var(--fs-1); }
+.scan-key { display: inline-block; width: 14px; height: 6px; margin-right: 6px; border-radius: 3px; vertical-align: middle; }
+.scan-key-benefit { background: var(--sp-measured); }
+.scan-key-null { background: var(--sp-mute); opacity: 0.45; }
+.scan-key-marker { width: 3px; height: 12px; background: var(--sp-ink); }
+
+/* -------- lists, items, model-knowledge containers -------- */
+.scan-list, .scan-recalls, .scan-plain { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.scan-plain { list-style: disc; padding-left: 20px; gap: 4px; font-size: var(--fs-2); }
+.scan-item { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid var(--sp-line); border-radius: var(--sp-radius); background: var(--sp-white); }
+.scan-item p { margin: 0; font-size: var(--fs-2); }
+.scan-item a { color: var(--sp-ink); font-size: var(--fs-1); font-weight: 600; overflow-wrap: anywhere; }
+.scan-item-model_prior { border-style: dashed; border-color: var(--sp-unverified); }
+.scan-item-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.scan-item-head strong { font-size: var(--fs-2); }
+.scan-sev { color: var(--sp-mute); font-size: var(--fs-1); }
+.scan-sev-moderate .scan-sev, .scan-sev-high .scan-sev { color: var(--sp-unverified); font-weight: 600; }
+.scan-actives { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.scan-chips { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.scan-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 26px; padding: 2px 10px; border-radius: 999px; background: var(--sp-tint); font-size: var(--fs-1); font-weight: 500; }
+.scan-chip-dose { color: var(--sp-mute); font-variant-numeric: tabular-nums; }
+.scan-formfit { margin: 0; font-size: var(--fs-2); }
+.scan-formfit strong { font-weight: 600; }
+.scan-overall { margin-top: 2px; }
+.scan-recalls li { display: grid; gap: 2px; padding: 10px 12px; border-left: 3px solid var(--sp-danger); background: var(--sp-tint); border-radius: 0 var(--sp-radius) var(--sp-radius) 0; font-size: var(--fs-2); }
+.scan-recall-meta { display: flex; flex-wrap: wrap; gap: 2px 12px; color: var(--sp-mute); font-size: var(--fs-1); font-variant-numeric: tabular-nums; }
+.scan-reg li { display: grid; gap: 2px; font-size: var(--fs-2); }
+.scan-reg li strong { font-weight: 600; }
+.scan-profile { display: grid; gap: 10px; }
+.scan-profile p { margin: 0; }
+
+/* -------- collapsed details: legend + technical -------- */
+.sc-details { margin-top: 12px; border-top: 1px solid var(--sp-line); }
+.sc-details > summary { display: flex; align-items: center; justify-content: space-between; min-height: 44px; padding: 6px 0; cursor: pointer; font-weight: 700; font-size: var(--fs-2); list-style: none; }
+.sc-details > summary::-webkit-details-marker { display: none; }
+.sc-details > summary::after { content: ""; width: 8px; height: 8px; margin-right: 6px; border-right: 1.5px solid var(--sp-mute); border-bottom: 1.5px solid var(--sp-mute); transform: rotate(45deg); transition: transform 120ms ease; }
+.sc-details[open] > summary::after { transform: rotate(225deg); }
+.sc-details > *:not(summary) { margin-bottom: 12px; }
+.sc-details p { color: var(--sp-mute); font-size: var(--fs-2); }
+.sc-details p a { color: var(--sp-ink); }
+.scan-legend ol { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.scan-legend li { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; color: var(--sp-mute); font-size: var(--fs-1); }
+.sc-inline-details { margin-top: 4px; border-top: 0; }
+.sc-inline-details > summary { min-height: 44px; padding: 4px 0; font-weight: 600; font-size: var(--fs-1); color: var(--sp-mute); }
+.sc-inline-details .sc-facts > div { font-size: var(--fs-1); }
+.sc-technical .sc-facts { font-size: var(--fs-1); }
+.sc-technical .sc-facts > div { font-size: var(--fs-1); padding: 4px 0; }
+
+/* Evidence ORIENTATION (stage 2b): the model's recollection when no extraction
+   exists. Every item is dashed + badged model knowledge. */
+.scan-disclaimer { margin: 0; padding: 10px 12px; border-left: 3px solid var(--sp-unverified); background: var(--sp-tint); color: var(--sp-ink); font-size: var(--fs-1); border-radius: 0 var(--sp-radius) var(--sp-radius) 0; }
+.scan-prior { gap: 6px; }
+.scan-dirchip { padding: 1px 8px; border-radius: 999px; font-size: var(--fs-1); border: 1px solid var(--sp-mute); color: var(--sp-mute); }
+.scan-dir-benefit { border-color: var(--sp-measured); color: var(--sp-measured); }
+.scan-dir-harm { border-color: var(--sp-danger); color: var(--sp-danger); }
+.scan-dir-insufficient { border-style: dashed; }
+.scan-strength { color: var(--sp-mute); font-size: var(--fs-1); }
+.scan-dose-hit { margin: 0; color: var(--sp-measured); font-size: var(--fs-2); font-weight: 600; }
+.scan-dose-miss { margin: 0; color: var(--sp-ink); font-size: var(--fs-2); font-weight: 600; }
+
+/* -------- "Search your supplement" sheet -------- */
+.sc-sheet-backdrop {
+  position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; justify-content: center;
+  background: rgb(2 6 15 / 62%); padding: 0;
+}
+@media (min-width: 640px) { .sc-sheet-backdrop { align-items: center; padding: 24px; } }
+.sc-sheet {
+  width: 100%; max-width: 560px; max-height: 92svh; overflow-y: auto;
+  background: #fff; color: var(--sp-ink, #16231d); border-radius: 20px 20px 0 0;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (min-width: 640px) { .sc-sheet { border-radius: 18px; } }
+.sc-sheet-head { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px 14px 20px; background: #fff; border-bottom: 1px solid #dde1df; }
+.sc-sheet-head h2 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+.sc-sheet-close { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; border: 1px solid #dde1df; background: #fff; color: inherit; cursor: pointer; }
+.sc-sheet-close:hover { background: #f3f5f4; }
+.sc-sheet-body { display: grid; gap: 16px; padding: 16px 20px 24px; }
+.sc-search-lede { margin: 0; color: #5a6660; font-size: 15px; line-height: 1.5; }
+
+.sc-search { display: grid; gap: 16px; }
+.sc-field { display: grid; gap: 6px; }
+.sc-field > label, .sc-dose legend { color: #16231d; font-size: 13px; font-weight: 600; }
+.sc-field input, .sc-field select {
+  width: 100%; min-height: 48px; padding: 10px 14px;
+  color: #16231d; background: #fff; border: 1px solid #b9c2be; border-radius: 12px;
+  font-size: 16px;
+}
+.sc-field input:disabled, .sc-field select:disabled { color: #5a6660; background: #f3f5f4; }
+.sc-combo { position: relative; }
+.sc-listbox {
+  position: absolute; z-index: 30; inset: calc(100% + 4px) 0 auto 0;
+  margin: 0; padding: 6px; list-style: none;
+  background: #fff; border: 1px solid #dde1df; border-radius: 12px; box-shadow: 0 14px 40px rgb(20 30 24 / 12%);
+  max-height: 280px; overflow-y: auto;
+}
+.sc-listbox[hidden] { display: none; }
+.sc-option { display: grid; gap: 2px; min-height: 44px; padding: 10px 12px; border-radius: 8px; cursor: pointer; }
+.sc-option small { color: #5a6660; font-size: 13px; }
+.sc-option.is-active, .sc-option:hover { background: #f3f5f4; }
+.sc-option[aria-selected="true"] { outline: 2px solid #0b6b5a; outline-offset: -2px; }
+.sc-help { margin: 0; color: #5a6660; font-size: 13px; line-height: 1.45; }
+.sc-dose { display: grid; gap: 12px; margin: 0; padding: 14px; border: 1px solid #dde1df; border-radius: 12px; }
+.sc-dose-row { display: grid; grid-template-columns: 1.4fr 0.8fr 1fr; gap: 10px; }
+.sc-problem { margin: 0; padding: 10px 14px; border-left: 3px solid #a92f24; background: #f3f5f4; color: #16231d; font-size: 15px; border-radius: 0 12px 12px 0; }
+.sc-submit { min-height: 52px; font-weight: 700; }
+/* Intentionally disabled: a quiet, filled-tint button with readable text and
+   no ghosting -- it should read "not yet", not "broken". */
+.sc-submit[disabled] { background: #f3f5f4; color: #5a6660; border: 1px solid #dde1df; cursor: not-allowed; opacity: 1; }
+
+@media (max-width: 620px) {
+  .sc-secondary-row { grid-template-columns: 1fr; }
+  .sc-dose-row { grid-template-columns: 1fr 1fr; }
+  .sc-dose-row > .sc-field:first-child { grid-column: 1 / -1; }
+}
+@media (max-width: 380px) {
+  .sc-scanned { grid-template-columns: 48px minmax(0, 1fr) auto; gap: 10px; }
+  .sc-scanned .sc-thumb { width: 48px; height: 48px; }
+  .sc-again { padding: 0 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sc-progress-bar > span { animation: none; width: 100%; opacity: 0.5; }
+  .sc-stages li.is-current .sc-stage-mark { animation: none; }
+  .sc-shutter-ring, .sc-details > summary::after, .sc-notice-details > summary::after, .sc-arc-chev svg { transition: none; }
+}
+
+/* ---- /scan outcome tabs (preview): "Outcomes" list first, one tab per outcome ---- */
+.scan-page .sc-tabs { display: grid; gap: 14px; }
+.scan-page .sc-tablist {
+  display: flex; gap: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; padding: 2px 0 6px;
+}
+.scan-page .sc-tablist::-webkit-scrollbar { display: none; }
+.scan-page .sc-tab {
+  flex: 0 0 auto; min-height: 44px; padding: 0 16px; border-radius: 999px;
+  border: 1px solid var(--sp-line); background: var(--sp-white); color: var(--sp-ink);
+  font: inherit; font-size: var(--fs-1); font-weight: 600; white-space: nowrap; cursor: pointer;
+}
+.scan-page .sc-tab-selected { background: var(--sp-ink); border-color: var(--sp-ink); color: var(--sp-white); }
+.scan-page .sc-ledger-tabs .sc-tab:not(.sc-tab-selected) { color: var(--sc-tab-score, var(--sp-ink)); border-color: color-mix(in srgb, var(--sc-tab-score, var(--sp-ink)) 32%, var(--sp-line)); }
+.scan-page .sc-tab:focus-visible, .scan-page .sc-outcome-row:focus-visible, .scan-page .sc-tab-back:focus-visible { outline: 2px solid var(--sp-measured); outline-offset: 2px; }
+/* THE CARD SHELL (adopted from the design-lab A/B card, 2026-09-16): the tab
+   panel is one calm paper surface holding the landing list or one outcome, so
+   the result reads as a card rather than as loose sections. The page ground
+   stays white and the report keeps its no-shadow rule. */
+.scan-page .sc-tabpanel {
+  outline: none; display: grid; gap: 12px;
+  padding: 12px; border: 1px solid var(--sp-line); border-radius: 18px; background: var(--sp-paper);
+}
+.scan-page .sc-outcome-list { list-style: none; margin: 0; padding: 0; border: 0; background: transparent; overflow: hidden; }
+.scan-page .sc-outcome-list li + li { border-top: 1px solid var(--sp-line); }
+/* ONE UNIT PER OUTCOME (rebuilt 2026-09-16, same geometry as the design-lab
+   card): line 1 is the name, the score and one chevron; the bar spans the full
+   width directly underneath. The button is the whole row: 44px+, one focus
+   ring, nothing interactive nested inside it. */
+.scan-page .sc-outcome-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto 16px; grid-template-rows: auto auto; align-items: baseline; gap: 8px 10px;
+  width: 100%; min-height: 64px; padding: 12px 14px; border: 0; background: transparent; color: inherit;
+  font: inherit; text-align: left; cursor: pointer;
+}
+.scan-page .sc-outcome-row:hover { background: var(--sp-tint); }
+.scan-page .sc-outcome-row-name { grid-column: 1; grid-row: 1; min-width: 0; }
+.scan-page .sc-outcome-row-name strong { font-size: var(--fs-3); font-weight: 600; }
+/* The population the run scored: a plain fact line above the list, never a bar
+   and never repeated per row (it is recorded per run, not per outcome). */
+.scan-page .sc-list-pop { margin: 2px 2px 0; }
+.scan-page .sc-outcome-row-score { grid-column: 2; grid-row: 1; justify-self: end; font-variant-numeric: tabular-nums; }
+.scan-page .sc-outcome-row-score strong { font-size: var(--fs-4); font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
+.scan-page .sc-outcome-row-track { grid-column: 1 / 4; grid-row: 2; align-self: end; display: block; height: 8px; margin: 0; border-radius: 999px; background: var(--sp-tint); overflow: hidden; }
+.scan-page .sc-outcome-row-gated .sc-outcome-row-track { background: repeating-linear-gradient(135deg, var(--sp-tint) 0 5px, transparent 5px 9px); border: 1px dashed var(--sp-line); }
+.scan-page .sc-outcome-row-fill { display: block; height: 100%; border-radius: 999px; background: var(--sp-measured); }
+.scan-page .sc-ledger-tabs .sc-outcome-row-fill { background: var(--sc-row-score, var(--sp-measured)); }
+.scan-page .sc-outcome-row-more {
+  grid-column: 3; grid-row: 1; justify-self: end; align-self: baseline; position: relative; top: 2px;
+  display: inline-flex; align-items: center; justify-content: center; color: var(--sp-mute);
+}
+.scan-page .sc-outcome-row:hover .sc-outcome-row-more { color: var(--sp-ink); }
+.scan-page .sc-tab-back {
+  justify-self: start; min-height: 44px; padding: 0 14px; border: 1px solid var(--sp-line); border-radius: 999px;
+  background: var(--sp-white); color: var(--sp-ink); font: inherit; font-size: var(--fs-1); font-weight: 600; cursor: pointer;
+}
+
+/* General score immediately above the Outcomes list: compact score tile. */
+.scan-page .sc-general { --sc-score-color: var(--sp-measured); --sc-score-text: var(--sp-measured); display: grid; grid-template-columns: 86px 1fr; align-items: center; gap: 16px; padding: 14px; border: 1px solid color-mix(in srgb, var(--sc-score-color) 22%, var(--sp-line)); border-radius: 16px; background: color-mix(in srgb, var(--sc-score-color) 13%, var(--sp-white)); }
+.scan-page .sc-general-score { display: grid; place-items: center; width: 86px; height: 86px; border: 1px solid color-mix(in srgb, var(--sc-score-color) 28%, var(--sp-line)); border-radius: 20px; background: var(--sp-white); color: var(--sc-score-text, var(--sc-score-color)); font-size: var(--fs-6); font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.scan-page .sc-general-name { display: grid; gap: 5px; }
+.scan-page .sc-general-name strong { font-size: var(--fs-4); font-weight: 700; line-height: 1.05; }
+.scan-page .sc-general-name small { font-size: var(--fs-1); line-height: 1.4; color: var(--sp-mute); }

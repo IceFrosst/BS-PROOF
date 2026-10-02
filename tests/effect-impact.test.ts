@@ -14,11 +14,11 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { parseEffectResearch, type EffectOutcome, type EffectThreshold } from "@/app/design-lab/ab/effect-contract";
-import { IMPACT_WORDS, canPromote, impact, isBenefit, spansNull } from "@/app/design-lab/ab/effect-impact";
+import { parseEffectResearch, type EffectOutcome, type EffectThreshold } from "@/lib/evidence-ledger/effect-contract";
+import { IMPACT_WORDS, canPromote, impact, isBenefit, spansNull } from "@/lib/evidence-ledger/effect-impact";
 
 const load = (name: string) =>
-  parseEffectResearch(JSON.parse(readFileSync(join(process.cwd(), `app/design-lab/ab/effect-research/${name}.json`), "utf8")));
+  parseEffectResearch(JSON.parse(readFileSync(join(process.cwd(), `lib/evidence-ledger/effect-research/${name}.json`), "utf8")));
 const CREATINE = load("creatine-effect");
 const CAFFEINE = load("caffeine");
 const OMEGA3 = load("omega3-effect");

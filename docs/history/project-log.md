@@ -10,6 +10,43 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-03 — repository cleanup, step 3: docs and front-end
+
+**Docs.** Living docs are now `README.md`, `CLAUDE.md`, `docs/SPEC.md`
+(method), new `docs/PIPELINE.md` (merged ARCHITECTURE + ON_MACHINE_STEPS +
+GROK_CLI_SETUP), `docs/SYSTEM_DESIGN.md` (app; gained §11 design system, §12
+Evidence Ledger rubric, §13 v14 backup, §14 PWA), `ANCHORS.md`,
+`REVIEW_PENDING.md`. SPEC and SYSTEM_DESIGN kept their names and section
+numbers because code cites them ("SPEC §13"). Dated design notes, research,
+the demo plan, the Aykhan handoff, the design log and SPEC's changelog moved to
+`docs/history/` (same file names). README rewritten after the intro.
+`prompts/research_audit.md` → `audit-v0.5` (file references only).
+
+**Front-end.**
+- Production no longer depends on the dev-only lab: retained audits, effect
+  research data and ledger logic moved to `lib/evidence-ledger/`; the lab card
+  and `ab.css` to `components/evidence-ledger/`. `app/design-lab/` keeps only the
+  `/ab` page and the deliberately unwired `effect.ts`; the stale 09-09 layout
+  prototypes (`/design-lab`, `/design-lab/mobile`) were deleted.
+- `components/scan-flow.tsx` (1,238 lines) split into `components/scan/`:
+  `scan-flow.tsx` (406), `flow-state.ts` (reducer replacing 8 useStates),
+  `capture-views.tsx`, `ledger-tabs.tsx`, `report-sections.tsx`,
+  `primitives.tsx`, `format.ts`; the duplicated warnings JSX is one
+  `WarningNotices`. Scan-only components moved alongside.
+- `app/globals.css` split by surface into `app/styles/*.css`, imported in the
+  original order (rule-for-rule identical, verified). CSS Modules were NOT used:
+  tests pin class names (`.la-alert.la-alert-warn`, `.sc-*`, `.ab-*`) as
+  contracts.
+- Verified: typecheck, lint, 491 unit tests, build, both Python gates, 52/52
+  Playwright (desktop + mobile), and a screenshot diff of every `/scan` state
+  old vs new: 47/48 byte-identical, the 48th differs only in the fake camera's
+  timestamp; page heights identical.
+
+**Found, not fixed:** `prompts/effect_research.md` says `effect-research-v0.3`
+while `EFFECT_RESEARCH_PROMPT_VERSION` and `schemas/effect_research.json` say
+`v0.2`, and the prompt still cites `app/design-lab/ab/effect-contract.ts`
+(now `lib/evidence-ledger/`). Left for a deliberate version decision.
+
 ## 2026-10-02 — repository cleanup, step 2
 
 - `reports/`: 68 MB → ~2.5 MB. Kept only the current run

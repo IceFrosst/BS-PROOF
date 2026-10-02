@@ -22,19 +22,19 @@ import { join } from "node:path";
 import Ajv2020 from "ajv/dist/2020";
 import { describe, expect, it } from "vitest";
 
-import creatineAudit from "@/app/design-lab/ab/audits/creatine.json";
-import magnesiumAudit from "@/app/design-lab/ab/audits/magnesium.json";
-import vitaminDAudit from "@/app/design-lab/ab/audits/vitamin-d.json";
-import caffeineRaw from "@/app/design-lab/ab/effect-research/caffeine.json";
+import creatineAudit from "@/lib/evidence-ledger/audits/creatine.json";
+import magnesiumAudit from "@/lib/evidence-ledger/audits/magnesium.json";
+import vitaminDAudit from "@/lib/evidence-ledger/audits/vitamin-d.json";
+import caffeineRaw from "@/lib/evidence-ledger/effect-research/caffeine.json";
 import {
   EFFECT_RESEARCH_PROMPT_VERSION, parseEffectResearch, sourceUrl, validateEffectResearch,
-} from "@/app/design-lab/ab/effect-contract";
+} from "@/lib/evidence-ledger/effect-contract";
 import {
   NOT_ASSESSED_WORD, NO_EVIDENCE_WORD, NO_MEANINGFUL_BENEFIT_WORD, PREVIOUS_AUDIT_LABEL, REPORTED_ESTIMATE_LABEL,
   SIZE_NOT_GRADED_WORD, fictionalEffectBar, intervalScale, legacyEffectBar, notAssessedReason, outcomeKey, pickByKey,
   researchEffectBar, sourcesFor,
-} from "@/app/design-lab/ab/effect-presentation";
-import AbPrototype from "@/app/design-lab/ab/prototype";
+} from "@/lib/evidence-ledger/effect-presentation";
+import AbPrototype from "@/components/evidence-ledger/ledger-lab-card";
 
 const caffeine = parseEffectResearch(caffeineRaw);
 type LegacyAudit = {

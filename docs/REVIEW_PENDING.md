@@ -329,7 +329,7 @@ not re-extracted.
 
 ## OPEN — Evidence Ledger (design-lab prototype) · what earns a LARGE effect
 
-Source: `docs/design/2026-09-11-what-earns-a-large-effect.md` (Claude Opus 5 xhigh,
+Source: `docs/history/2026-09-11-what-earns-a-large-effect.md` (Claude Opus 5 xhigh,
 live Europe PMC + WHO/CDC, every headline computed by the real
 `app/design-lab/ab/ledger.ts`). **No constants were changed.** Each item below is a
 founder call.
@@ -385,7 +385,7 @@ Three conditions held for every verified 3, and each failure explains a rejectio
 
 ### Creatine "share of achievable gain" — extraction result (2026-09-11)
 
-Source: `docs/design/2026-09-11-creatine-share-of-gain.md` (Opus 5 xhigh, live retrieval,
+Source: `docs/history/2026-09-11-creatine-share-of-gain.md` (Opus 5 xhigh, live retrieval,
 placebo arms extracted from 6 primary trials; 4 of 7 arms reproduce the meta-analysis forest-plot
 differences exactly).
 
@@ -420,7 +420,7 @@ Open founder calls this raises:
 ## TODO — full-context critical review by Astra or Fable 5.1 before launch
 
 **Independent review delivered (2026-09-11):**
-`docs/design/2026-09-11-independent-launch-review.md` records the main-session
+`docs/history/2026-09-11-independent-launch-review.md` records the main-session
 review with official methods references and a separate code-review pass.
 The previous prompt's model identity/availability assertions were not verified
 and are not prerequisites for independent reasoning. A specifically requested
@@ -440,7 +440,7 @@ The brief is deliberately broad and adversarial:
 - Review **all of the launch work**, not one file: `prompts/research_audit.md`
   (audit-v0.2), `schemas/research_audit.json`, `app/design-lab/ab/*`
   (`ledger.ts`, `effect.ts`, `prototype.tsx`), the three audits in
-  `app/design-lab/ab/audits/`, the rubric doc, the two 2026-09-11 design notes,
+  `lib/evidence-ledger/audits/`, the rubric doc, the two 2026-09-11 design notes,
   and every open item in this file.
 - **Hold the whole product vision in mind**, not just code correctness: BS Proof
   is a consumer-facing AI wrapper whose entire value is telling people the truth

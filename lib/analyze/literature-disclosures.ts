@@ -2,7 +2,7 @@
  * FUNDING & INDEPENDENCE / PUBLICATION BIAS DISCLOSURES — pure, browser-safe
  * (no fs/path, no model boundary). Split out of literature-warnings.ts (which
  * imports node:fs to read prompts/literature_warnings.md) so
- * components/scan-flow.tsx -- a client component -- can import the rendering
+ * components/scan/scan-flow.tsx -- a client component -- can import the rendering
  * decision without pulling a server-only filesystem import into the browser
  * bundle. Same split as lib/analyze/business-model.ts / company.ts.
  *

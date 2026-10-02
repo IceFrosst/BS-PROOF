@@ -50,7 +50,7 @@ vi.mock("@/lib/auth/supabase-browser", () => ({
   getSupabaseBrowserClient: () => (configured ? fakeSupabaseClient : null),
 }));
 
-const { ScanFlow } = await import("@/components/scan-flow");
+const { ScanFlow } = await import("@/components/scan/scan-flow");
 
 const catalog = ingredientCatalog();
 

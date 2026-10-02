@@ -16,7 +16,7 @@
  *   -  separate track        deficiency correction or treatment: not enhancement
  *
  * WHY RUNG 3 IS HARD, measured rather than assumed. Three best-shot products
- * were researched live on 2026-09-11 (docs/design/2026-09-11-effect-ladder-test.md):
+ * were researched live on 2026-09-11 (docs/history/2026-09-11-effect-ladder-test.md):
  * creatine squat +5.64 kg, caffeine tiredness -12.34 VAS, omega-3 soreness
  * -0.93 VAS. All three landed at 2, and all three for the SAME reason - almost
  * every published important-difference threshold is derived in patients

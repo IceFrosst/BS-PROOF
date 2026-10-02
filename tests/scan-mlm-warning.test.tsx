@@ -13,7 +13,7 @@ import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import { ScanFlow } from "@/components/scan-flow";
+import { ScanFlow } from "@/components/scan/scan-flow";
 import type { BusinessModel } from "@/lib/analyze/business-model";
 import { ingredientCatalog } from "@/lib/analyze/catalog";
 import type { CompanySection } from "@/lib/analyze/company";
@@ -131,7 +131,7 @@ async function key(el: HTMLElement, keyName: string) {
 async function searchCreatineMonohydrate(el: HTMLElement) {
   await act(async () => {
     // 2026-09-16 redesign: "Search your supplement" is a button that opens an
-    // accessible dialog (components/search-sheet.tsx) rather than the earlier
+    // accessible dialog (components/scan/search-sheet.tsx) rather than the earlier
     // inline expand/collapse panel; find it by its accessible name, not a
     // class that no longer exists.
     Array.from(el.querySelectorAll("button")).find((b) => /search your supplement/i.test(b.textContent ?? ""))?.click();

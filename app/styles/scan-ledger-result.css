@@ -1,5 +1,5 @@
 /* Production composition for /scan. The card, tabs, hero and row primitives are
-   imported from design-lab/ab/ab.css; this file only places those primitives in
+   imported from components/evidence-ledger/ab.css; this file only places those primitives in
    the real page and keeps the old capture/error state untouched. */
 body:has(.scan-lab-result) { background: #f6f3ea; }
 .scan-page:has(.scan-lab-result) .scan-hero,

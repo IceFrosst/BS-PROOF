@@ -1,5 +1,5 @@
 /*
- * Effect PRESENTATION — what the Effect bar is allowed to say. Development-only.
+ * Effect PRESENTATION — what the Effect bar is allowed to say. Used by the lab card (/design-lab/ab, dev-only, and the public /tests/supplements page).
  *
  * This replaces the old `effectPoints / 3` noticeability fill, which drew a
  * partially filled bar out of a tier a model had chosen and rendered "no number

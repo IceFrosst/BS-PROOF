@@ -3,9 +3,9 @@ import { dirname, join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const ROOT = process.cwd();
-const ENTRY = join(ROOT, "components", "scan-flow.tsx");
+const ENTRY = join(ROOT, "components", "scan", "scan-flow.tsx");
 const EXTENSIONS = [".ts", ".tsx", ".js", ".jsx"];
-const FORBIDDEN_PATH = /(?:retained-audits|app[\\/]design-lab[\\/]ab[\\/]audits)/;
+const FORBIDDEN_PATH = /(?:retained-audits|lib[\\/]evidence-ledger[\\/]audits)/;
 const FORBIDDEN_IMPORT = /^\\s*import\\s+(?!type\\b)[\\s\\S]*?\\sfrom\\s+["']node:(?:fs|path)["'];?/m;
 
 function resolveImport(from: string, specifier: string): string | null {

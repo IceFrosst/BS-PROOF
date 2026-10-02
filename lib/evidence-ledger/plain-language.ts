@@ -1,5 +1,5 @@
 /*
- * Plain-language sidecars for the retained audits. Development-only.
+ * Plain-language sidecars for the retained audits. Used by the lab card (/design-lab/ab, dev-only, and the public /tests/supplements page).
  *
  * `audits/plain/*.json` holds a MODEL-WRITTEN rewrite of the audit prose in
  * shop-floor language. It is a presentation layer and nothing else:

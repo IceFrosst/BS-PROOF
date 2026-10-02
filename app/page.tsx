@@ -35,7 +35,7 @@ import { WaitlistForm } from "@/components/waitlist-form";
  * below the fold (how it works / why a product score / project status) is
  * gone, and the "see how it works" cue with it — a scroll cue pointing at
  * nothing is worse than no cue. So the page is one screen again, deliberately:
- * the hero stretches to fill the viewport (see .front-hero in globals.css)
+ * the hero stretches to fill the viewport (see .front-hero in app/styles/front-door.css)
  * rather than stopping halfway down with paper underneath it.
  *
  * This route still reads no catalog at all, so it renders the same whether or

@@ -1,10 +1,11 @@
 /*
  * effect-research-v0.1 — typed contract + runtime validation for an EFFECT-ONLY
- * research file (app/design-lab/ab/effect-research/*.json, produced by
+ * research file (lib/evidence-ledger/effect-research/*.json, produced by
  * prompts/effect_research.md against schemas/effect_research.json).
  *
- * Development-only. Nothing here is wired into a production route, and it does
- * NOT touch the older audit files in app/design-lab/ab/audits/ or their schema.
+ * Used only by the lab card (/design-lab/ab and the unlisted /tests/supplements
+ * page); not wired into /scan or any score, and it does
+ * NOT touch the older audit files in lib/evidence-ledger/audits/ or their schema.
  *
  * Three decisions this file encodes, because they are the point of the pass:
  *

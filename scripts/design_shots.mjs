@@ -26,8 +26,8 @@ const cameraFallbackAsset = "public/icon-512.png";
 // its plain sidecar and the provenance stamp — so the fully populated card can
 // be reviewed. Without it every review shot is the unmatched "Not assessed"
 // shell and the scored design is never seen.
-const retainedAudit = JSON.parse(fs.readFileSync("app/design-lab/ab/audits/creatine.json", "utf8"));
-const retainedPlain = JSON.parse(fs.readFileSync("app/design-lab/ab/audits/plain/creatine.json", "utf8"));
+const retainedAudit = JSON.parse(fs.readFileSync("lib/evidence-ledger/audits/creatine.json", "utf8"));
+const retainedPlain = JSON.parse(fs.readFileSync("lib/evidence-ledger/audits/plain/creatine.json", "utf8"));
 const matchedFixture = {
   ...fixture,
   label: {

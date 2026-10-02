@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import AbPrototype from "@/app/design-lab/ab/prototype";
+import AbPrototype from "@/components/evidence-ledger/ledger-lab-card";
 
 export const metadata: Metadata = {
   title: "Supplement tests",

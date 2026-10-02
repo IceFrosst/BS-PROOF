@@ -41,7 +41,7 @@ export function renderSafeMarkdown(markdown: string): string {
       h2: () => ({ tagName: "h3", attribs: {} }),
       h3: () => ({ tagName: "h4", attribs: {} }),
       // MAKE THE REPORT'S OWN SCROLL BOXES KEYBOARD-REACHABLE.
-      // .markdown-report table and pre are overflow-x: auto in globals.css, so
+      // .markdown-report table and pre are overflow-x: auto in app/styles/dashboard.css, so
       // on a narrow viewport they scroll. A region that scrolls but cannot take
       // focus is unreachable without a mouse -- axe reports it as
       // scrollable-region-focusable (serious), and it fired on the summary

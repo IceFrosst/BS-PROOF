@@ -1,7 +1,7 @@
 /*
  * MLM / DIRECT-SELLING DISCLOSURE — pure, browser-safe (no fs/path, no
  * model boundary). Split out of company.ts (which imports node:fs to read
- * prompts/company.md) so components/scan-flow.tsx — a client component — can
+ * prompts/company.md) so components/scan/scan-flow.tsx — a client component — can
  * import the rendering decision without pulling a server-only module and its
  * filesystem import into the browser bundle.
  *
@@ -33,7 +33,7 @@ export interface BusinessModelDisclosure {
  * Turns a `business_model` read into what the UI shows. `confirmed_mlm` /
  * `suspected_mlm` get the yellow disclosure warning (same visual language as
  * the app's other model-knowledge disclosures — see `.scan-warning` in
- * globals.css), titled "MLM / direct-selling business model", never "pyramid
+ * app/styles/scan.css), titled "MLM / direct-selling business model", never "pyramid
  * scheme" and never an accusation of illegality. `no_evidence`, `unknown` and
  * an absent field render NOTHING (founder 2026-09-16: "only show the mlm if
  * confirmed or suspected") -- a warning that appears on every company would

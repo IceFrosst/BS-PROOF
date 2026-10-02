@@ -88,66 +88,51 @@ read ourselves.
 
 ## Quick start
 
-```bash
-pip install -r requirements.txt
-python3 -m pipeline.invariants      # structural invariants, no model calls, no network
-python3 -m pipeline.selftest        # ~510 checks, no model calls, no network
-```
-
-Then a real run. Pick exactly one backend:
-
-```bash
-# no model at all — proves the plumbing end to end
-python3 run_pipeline.py creatine --form creatine_monohydrate --wiring
-
-# Grok backend (grok CLI, signed in)
-python3 run_pipeline.py magnesium --form magnesium_glycinate --grok \
-        --per-outcome --dose 400 --limit 120
-
-# Claude production — your Claude subscription, no key to provision
-python3 run_pipeline.py creatine --form creatine_monohydrate
-```
-
-`--dose` is your product's **elemental** mg. Without it the dose arc reads
-"not assessable" and means it.
-
-## Private evidence dashboard
-
-The root Next.js app is a read-only dashboard over immutable
-`reports/runs/*_dashboard.json` artifacts. It exposes no pipeline controls,
-uploads, runtime API, or database connection. A new run is `experimental` until
-`reports/run_statuses.json` explicitly changes its status; the retained 2026-08-07
-creatine/Grok run is shown only in the invalid Lab archive.
+### The app (`/scan`)
 
 ```bash
 npm ci
-npm run dev          # local dashboard
-npm run typecheck
-npm run lint
-npm run test:unit
-npm run build
-npm run test:e2e
+cp .env.example .env.local   # set DEEPSEEK_API_KEY for photo reads
+npm run dev                  # http://localhost:3000/scan
 ```
 
-Every numeric outcome travels with effect, form, dose, and evidence arcs. Gated
-outcomes render as unavailable rather than zero. Full reports are rendered from
-Markdown with raw HTML disabled. `scripts/dashboard_artifact.py` emits the
-versioned, deploy-safe `DashboardRunV1` projection and rejects inconsistent ECU
-or usage totals before writing it.
+Photograph a Supplement Facts label (or type ingredient + form + dose) and get
+that product's evidence: verdicts with their four arcs, dose effectiveness,
+form compatibility and company background. Without a model key the photo path
+returns 503; the typed path still scores. Supabase history and Google sign-in
+are optional (`docs/SYSTEM_DESIGN.md` §6–§7). Testing on a phone with the live
+camera: Android `adb reverse tcp:3000 tcp:3000` then open `localhost:3000/scan`
+(the camera needs HTTPS or localhost).
 
-Cost terminology is deliberately strict: **recorded marginal spend** is what the
-run actually added to the bill, while **API-equivalent cost** is a counterfactual
-price from retained model telemetry. Subscription runs may therefore show `$0`
-marginal spend beside a nonzero API-equivalent cost. Missing token, price, or
-latency fields stay null and display as unavailable. Vercel hosting is separate,
-Supabase is unused in v1, and free literature APIs are not counted as model cost.
+Gates: `npm run typecheck && npm run lint && npm test && npm run build`;
+`npm run test:e2e` for the Playwright + axe suite.
 
-The dashboard is intended for a protected Vercel preview. A public release needs
-a clean validated run and separate approval.
+### The evidence pipeline
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+python3 -m pipeline.invariants      # structural invariants, no model, no network
+python3 -m pipeline.selftest        # ~510 checks, no model, no network
+
+# no model at all — proves the plumbing end to end
+.venv/bin/python run_pipeline.py creatine --form creatine_monohydrate --wiring
+# Claude production — your Claude subscription, no key to provision
+.venv/bin/python run_pipeline.py creatine --form creatine_monohydrate
+# Grok backend (grok CLI, signed in) — stored and reported separately
+.venv/bin/python run_pipeline.py magnesium --form magnesium_glycinate --grok --per-outcome --dose 400
+```
+
+`--dose` is your product's **elemental** mg. Without it the dose arc reads
+"not assessable" and means it. Full guide: `docs/PIPELINE.md`.
+
+Runs land in `reports/runs/` as immutable artifacts; the app serves the newest
+non-invalid `*_dashboard.json` per ingredient × form, and the reviewer pages at
+`/runs/<id>` render them. Every retained run is `public_claims_allowed: false`
+until validated.
 
 ## What is actually verified
 
-`python3 -m pipeline.selftest` — zero cost, no network:
+Examples from `python3 -m pipeline.selftest` (~510 checks, zero cost, no network):
 
 | Test | Result |
 |---|---|
@@ -167,33 +152,32 @@ a clean validated run and separate approval.
 
 | file | what it is |
 |---|---|
-| **[`CLAUDE.md`](CLAUDE.md)** | the invariants, the workflow, and current state. **Read before changing code.** |
-| **[`docs/SPEC.md`](docs/SPEC.md)** | full design; §13 is every open question and uncalibrated constant |
-| **[`docs/ANCHORS.md`](docs/ANCHORS.md)** | the **35**-anchor calibration set (not yet run; the doc said 28 until 2026-08-06 — `docs/anchors.csv` is authoritative) |
-| **[`pipeline_v2_demo.excalidraw`](pipeline_v2_demo.excalidraw)** | how one run works, end to end. The one to show people. Regenerated by `scripts/write_demo_diagram.py`, which imports its constants from `pipeline/scoring.py` so it cannot drift |
-| **[`docs/history/`](docs/history/)** | completed audits and sign-offs, kept for the record |
+| **[`CLAUDE.md`](CLAUDE.md)** | the rules, workflow and current state. **Read before changing code.** (`AGENTS.md` points other agents there) |
+| **[`docs/SPEC.md`](docs/SPEC.md)** | the scoring method; §13 is every open question and uncalibrated constant |
+| **[`docs/PIPELINE.md`](docs/PIPELINE.md)** | what one extraction run does and how to run one |
+| **[`docs/SYSTEM_DESIGN.md`](docs/SYSTEM_DESIGN.md)** | the app: `/scan`, the API, the Evidence Ledger card, design system, history, sign-in, PWA |
+| **[`docs/ANCHORS.md`](docs/ANCHORS.md)** | the 35-anchor calibration set (`docs/anchors.csv` is authoritative) |
+| **[`docs/REVIEW_PENDING.md`](docs/REVIEW_PENDING.md)** | open questions and proposed constant changes awaiting the founder |
+| **[`pipeline_v2_demo.excalidraw`](pipeline_v2_demo.excalidraw)** | how one run works, end to end; regenerated from the code by `scripts/write_demo_diagram.py` |
+| **[`docs/history/`](docs/history/)** | closed audits, archives and the dated project log — not a task list |
 
 ## Status
 
-**Deterministic core: built and tested.** Retrieval, dedup, full-text ladder,
-scoring, arcs, storage, reports — 236 selftest checks, no network required.
-
-**Model layer: proven and runnable.** S1–S8 all return schema-valid output with
-evidence spans. Both backends run on a signed-in subscription — nothing to
-provision, no metered spend. The remaining ceiling is throughput, not access: a
-subscription is rate-limited by time, so batch size and concurrency are the
-things to tune.
+**Deterministic core: built and tested** — retrieval, dedup, full-text ladder,
+scoring, arcs, storage, reports. **Model layer: proven and runnable** on
+subscriptions (S1–S8 schema-valid with evidence spans); the ceiling is
+throughput, not access. **App: live** at `/scan` with one retained evidence run
+(creatine monohydrate) and three exact Evidence Ledger audits.
 
 **Not yet true, and load-bearing:**
 
-- **No constant is calibrated.** `k`, the transfer factors, RoB thresholds, the
-  OA penalty and the review-quality bands are all guesses awaiting the anchor
-  eval. Do not read a score as accurate.
-- **Coverage is 77.5%** of methods-level facts against an ≥80% target, measured
-  on the full 20 155-record corpus.
-- **Retrieval specificity is the gating problem.** `("magnesium") AND RCT` is
-  ~25% IV/procedural magnesium. It has already produced a visibly wrong answer:
-  creatine scored 22/100 "does not work" for muscle strength, because
-  Parkinson's and HIV trials landed in that outcome.
-- **SR inheritance is unmeasured.** Six defects that guaranteed it returned zero
-  are fixed; it has never run end to end on a live backend.
+- **No constant is calibrated.** `k`, transfer factors, RoB thresholds, the OA
+  penalty and the review-quality bands await the anchor eval. Do not read a
+  score as accurate.
+- **Extraction stability is unmeasured** and is the binding precision problem:
+  rewording one prompt field moved scores by up to 15 points.
+- **Coverage is 77.5%** of methods-level facts against an ≥80% target.
+- **Retrieval specificity is the gating problem** — the ingredient must be
+  constrained to the intervention, not the document.
+- **SR inheritance adds ~nothing on creatine** (measured 2026-08-25; 0 of 32
+  candidates entered evidence mass). Its value on thin corpora is untested.

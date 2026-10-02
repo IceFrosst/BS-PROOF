@@ -1,5 +1,5 @@
 import { businessModelDisclosure, type BusinessModel } from "@/lib/analyze/business-model";
-import type { AuditFile, Ledger } from "./ledger";
+import type { AuditFile, Ledger } from "./index";
 
 export type EvidenceWarningId =
   | "multi_ingredient_product"

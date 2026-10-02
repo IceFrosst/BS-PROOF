@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import AbPrototype from "./prototype";
+import AbPrototype from "@/components/evidence-ledger/ledger-lab-card";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Result card A/B · Design lab" };

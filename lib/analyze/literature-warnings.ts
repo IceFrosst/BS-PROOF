@@ -23,7 +23,7 @@
  *
  * The TYPE and the pure rendering decision (`literatureDisclosures`) live in
  * ./literature-disclosures.ts, which imports neither `node:fs` nor this file,
- * so components/scan-flow.tsx -- a client component -- never pulls a
+ * so components/scan/scan-flow.tsx -- a client component -- never pulls a
  * filesystem import into the browser bundle. This file imports and re-exports
  * that type, the same split as business-model.ts / company.ts.
  */

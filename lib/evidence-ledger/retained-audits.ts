@@ -15,7 +15,7 @@ function readRetainedJson(file: string, plain = false): unknown {
   // Keep the server read statically scoped to the retained audit directory.
   // This prevents Next tracing the whole repository while still allowing the
   // selector to read only the one matched audit and sidecar.
-  const directory = path.join(ROOT, "app", "design-lab", "ab", "audits", ...(plain ? ["plain"] : []));
+  const directory = path.join(ROOT, "lib", "evidence-ledger", "audits", ...(plain ? ["plain"] : []));
   return JSON.parse(fs.readFileSync(path.join(directory, `${file}.json`), "utf8"));
 }
 function exactMassMicrograms(mg: number | null): number | null {

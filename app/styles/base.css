@@ -1,0 +1,116 @@
+/* Design tokens, page shell, header/footer, buttons, home hero. Shared by every route.
+   Split out of app/globals.css on 2026-10-02; globals.css imports the files in
+   their original order, so the cascade is unchanged. */
+
+:root {
+  --paper: #f4f0e7;
+  --paper-2: #e9e3d6;
+  --ink: #16231d;
+  --ink-soft: #4e5c55;
+  --night: #10201a;
+  --night-2: #193229;
+  --line: #c7c1b4;
+  --white: #fffdf8;
+  --coral: #d85d42;
+  --teal: #087769;
+  --blue: #315ca8;
+  --gold: #a06a00;
+  /* TEXT-ONLY variants. axe flagged three serious WCAG 2 AA colour-contrast
+     failures on small bold text: .eyebrow on the tint (4.26), .arc-effect
+     .arc-label (3.31) and .arc-evidence .arc-label (4.05), all against a 4.5
+     requirement. The vivid values above are kept for GRAPHICS -- rings, dots,
+     chart marks -- where the contrast rule does not apply; only text switches
+     to these. Each clears 4.5 against BOTH page tints (#e9e3d6 and #f4f0e7). */
+  --teal-text: #087164;
+  --coral-text: #a44732;
+  --gold-text: #885a00;
+  --lime: #d9ef73;
+  --danger: #a92f24;
+  --radius: 18px;
+  --shadow: 0 18px 60px rgb(20 30 24 / 10%);
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+/* Sticky footer. A short page -- the public front door most of all -- used to
+   render its footer wherever the content happened to stop, leaving half a
+   desktop viewport of bare paper BELOW the footer rule. That reads as a page
+   that failed to load the rest of itself. Every route's root element is
+   <main id="main-content">, so one flex row here fixes all of them; 100svh
+   rather than 100vh because mobile browser chrome makes vh overshoot. */
+body {
+  margin: 0;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  color: var(--ink);
+  background: var(--paper);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.55;
+  overflow-x: clip;
+}
+body > main { flex: 1 0 auto; }
+a { color: inherit; text-underline-offset: 0.2em; }
+button, input { font: inherit; }
+button, a { -webkit-tap-highlight-color: transparent; }
+img, svg { max-width: 100%; }
+h1, h2, h3, p { overflow-wrap: anywhere; }
+h1, h2, h3 { line-height: 1.02; letter-spacing: -0.045em; }
+h1 { font-size: clamp(3rem, 8vw, 7rem); margin: 0; }
+h2 { font-size: clamp(2.1rem, 5vw, 4.5rem); margin: 0; }
+h3 { font-size: 1.35rem; margin: 0; }
+p { margin-block: 0 1rem; }
+:focus-visible { outline: 3px solid var(--coral); outline-offset: 4px; }
+.shell { width: min(1180px, calc(100% - 40px)); margin-inline: auto; }
+.section { padding-block: clamp(72px, 10vw, 132px); }
+.section-tint { background: var(--paper-2); }
+.section-dark { background: var(--night); color: var(--white); }
+.section-dark .eyebrow { color: var(--lime); }
+/* ...but that is a DESCENDANT selector, so it also painted the eyebrows inside
+   the WHITE cards nested in a dark section. Lime (#d9ef73) on --white (#fffdf8)
+   is 1.24 contrast -- the text is effectively invisible, and axe rated it
+   serious. Reset those back to the accessible teal (5.81 on white). The lime
+   stays where it belongs: directly on the dark ground. */
+.section-dark .telemetry-heading .eyebrow,
+.section-dark .model-card > .eyebrow { color: var(--teal-text); }
+.section-dark .section-heading > p { color: #bdc9c2; }
+.eyebrow { margin: 0 0 0.8rem; color: var(--teal-text); font-size: 0.75rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.skip-link { position: fixed; z-index: 100; top: 12px; left: 12px; padding: 11px 16px; color: var(--white); background: var(--danger); border-radius: 8px; transform: translateY(-160%); }
+.skip-link:focus { transform: translateY(0); }
+
+.site-header { position: relative; z-index: 20; background: var(--paper); border-bottom: 1px solid var(--line); }
+.header-inner { min-height: 74px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.wordmark { display: inline-flex; align-items: center; gap: 9px; font-size: 1.05rem; font-weight: 850; letter-spacing: -0.03em; text-decoration: none; text-transform: uppercase; }
+.wordmark-mark { display: grid; place-items: center; width: 38px; height: 38px; color: var(--white); background: var(--night); border-radius: 50%; font-size: 0.7rem; letter-spacing: 0; }
+.site-header nav { display: flex; gap: 26px; font-size: 0.88rem; font-weight: 700; }
+.site-header nav a { text-decoration: none; }
+.site-header nav a:hover { text-decoration: underline; }
+.site-footer { padding-block: 34px; border-top: 1px solid var(--line); font-size: 0.82rem; color: var(--ink-soft); }
+.footer-inner { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.footer-inner p { margin: 0; }
+
+.button { display: inline-flex; min-height: 46px; align-items: center; justify-content: center; gap: 24px; padding: 11px 18px; border: 1px solid transparent; border-radius: 999px; font-weight: 800; text-decoration: none; cursor: pointer; }
+.button-dark { color: var(--white); background: var(--night); }
+.button-dark:hover { background: var(--night-2); }
+.button-light { color: var(--night); background: var(--lime); }
+.button-outline { color: currentColor; background: transparent; border-color: currentColor; }
+.back-link { display: inline-block; margin-top: 24px; font-weight: 800; }
+
+.home-hero { color: var(--white); background-color: var(--night); background-image: radial-gradient(rgb(255 255 255 / 13%) 1px, transparent 1px); background-size: 22px 22px; padding: clamp(64px, 9vw, 112px) 0 0; }
+.hero-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.7fr); gap: clamp(40px, 8vw, 110px); align-items: end; }
+.hero-kicker { color: var(--lime); }
+.home-hero h1 { font-size: clamp(5.5rem, 16vw, 12.5rem); font-weight: 900; line-height: 0.72; letter-spacing: -0.085em; }
+.home-hero h1 em { color: var(--lime); font-style: normal; }
+.hero-copy { padding-bottom: 12px; color: #c7d2cc; }
+.hero-lede { color: var(--white); font-size: clamp(1.2rem, 2vw, 1.65rem); line-height: 1.3; letter-spacing: -0.025em; }
+.hero-copy .button { margin-top: 18px; }
+.hero-ledger { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: clamp(65px, 9vw, 120px); border: 1px solid rgb(255 255 255 / 22%); border-bottom: 0; }
+.hero-ledger > div { min-height: 120px; display: flex; flex-direction: column; justify-content: center; padding: 22px; border-right: 1px solid rgb(255 255 255 / 22%); }
+.hero-ledger > div:last-child { border: 0; }
+.hero-ledger strong { font-size: 2.4rem; line-height: 1; }
+.hero-ledger span { color: #b6c3bc; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.12em; }
+
+.section-heading { margin-bottom: 36px; }
+.split-heading { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 0.45fr); gap: 50px; align-items: end; }
+.split-heading > p { color: var(--ink-soft); margin: 0; }

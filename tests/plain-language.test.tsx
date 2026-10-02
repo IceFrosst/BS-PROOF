@@ -8,16 +8,16 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import AbPrototype from "@/app/design-lab/ab/prototype";
-import { outcomeKey } from "@/app/design-lab/ab/effect-presentation";
+import AbPrototype from "@/components/evidence-ledger/ledger-lab-card";
+import { outcomeKey } from "@/lib/evidence-ledger/effect-presentation";
 import {
   PLAIN_DIMENSIONS, VERBATIM_SUMMARY, parsePlainFile, plainFor, plainPair, plainText,
   type PlainDimension, type PlainProductKey,
-} from "@/app/design-lab/ab/plain-language";
-import type { AuditFile } from "@/app/design-lab/ab/ledger";
-import creatine from "@/app/design-lab/ab/audits/creatine.json";
-import vitaminD from "@/app/design-lab/ab/audits/vitamin-d.json";
-import magnesium from "@/app/design-lab/ab/audits/magnesium.json";
+} from "@/lib/evidence-ledger/plain-language";
+import type { AuditFile } from "@/lib/evidence-ledger";
+import creatine from "@/lib/evidence-ledger/audits/creatine.json";
+import vitaminD from "@/lib/evidence-ledger/audits/vitamin-d.json";
+import magnesium from "@/lib/evidence-ledger/audits/magnesium.json";
 
 type AuditOutcome = AuditFile["outcomes"][number] & { absolute_effect?: string; clinically_meaningful?: string };
 const products: { key: PlainProductKey; file: string; audit: AuditFile }[] = [
@@ -50,7 +50,7 @@ describe("plain-language sidecars", () => {
 
   it("(b) each sidecar file parses, is keyed name||population, and holds no empty string", () => {
     for (const { key, file } of products) {
-      const raw: unknown = JSON.parse(readFileSync(`app/design-lab/ab/audits/plain/${file}`, "utf8"));
+      const raw: unknown = JSON.parse(readFileSync(`lib/evidence-ledger/audits/plain/${file}`, "utf8"));
       expect(() => parsePlainFile(raw, file)).not.toThrow();
       const parsed = parsePlainFile(raw, file);
       expect(Object.keys(parsed).length).toBeGreaterThan(0);

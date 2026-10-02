@@ -19,7 +19,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import HomePage from "@/app/page";
 import ScanPage from "@/app/scan/page";
 import TesterPage from "@/app/tester/page";
-import { matchCatalog, SupplementSearch } from "@/components/supplement-search";
+import { matchCatalog, SupplementSearch } from "@/components/scan/supplement-search";
 import { ingredientCatalog } from "@/lib/analyze/catalog";
 import type { ManualScanInput } from "@/lib/analyze/scan";
 
@@ -342,7 +342,7 @@ describe("/ vs /scan vs /tester", () => {
     container = document.createElement("div");
     document.body.appendChild(container);
     root = createRoot(container);
-    const { ScanFlow } = await import("@/components/scan-flow");
+    const { ScanFlow } = await import("@/components/scan/scan-flow");
     const { ingredientCatalog } = await import("@/lib/analyze/catalog");
     await act(async () => {
       root?.render(createElement(ScanFlow, { catalog: ingredientCatalog() }));
