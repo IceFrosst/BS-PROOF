@@ -1,5 +1,5 @@
 /*
- * effect-research-v0.1 — typed contract + runtime validation for an EFFECT-ONLY
+ * Effect-research contract — typed shape + runtime validation for an EFFECT-ONLY
  * research file (lib/evidence-ledger/effect-research/*.json, produced by
  * prompts/effect_research.md against schemas/effect_research.json).
  *
@@ -21,8 +21,24 @@
  *     id the file never declared.
  */
 
-/** Own cache domain (invariant 3). Not the shared pipeline PROMPT_VERSION. */
-export const EFFECT_RESEARCH_PROMPT_VERSION = "effect-research-v0.2";
+/** Own cache domain (invariant 3). Not the shared pipeline PROMPT_VERSION.
+ * Must equal the version printed at the top of prompts/effect_research.md. */
+export const EFFECT_RESEARCH_PROMPT_VERSION = "effect-research-v0.4";
+
+/**
+ * The output-contract versions a research file may carry. The CONTRACT (fields,
+ * metrics, required keys) has not changed since v0.2; v0.3 and v0.4 changed
+ * only the prompt's wording and file references. So a retained file stamped
+ * v0.2 -- the three in effect-research/, which is the prompt they were actually
+ * produced under -- validates exactly like a file from the current prompt.
+ * Add a version here only when its contract is identical; a contract change
+ * needs its own validation, not a longer list. (Resolved 2026-10-03: the prompt
+ * had said v0.3 while this constant and the schema said v0.2.)
+ */
+export const ACCEPTED_EFFECT_RESEARCH_VERSIONS: readonly string[] = [
+  "effect-research-v0.2",
+  EFFECT_RESEARCH_PROMPT_VERSION,
+];
 
 /**
  * v0.2 adds the two things the 2026-09-11 three-product test showed we needed:
@@ -233,7 +249,7 @@ function checkEstimate(raw: unknown, where: string, ids: Set<string>, errors: st
   }
 }
 
-/** Validate an unknown blob against effect-research-v0.1. Refuses, never repairs. */
+/** Validate an unknown blob against the effect-research contract. Refuses, never repairs. */
 export function validateEffectResearch(raw: unknown): ValidationResult {
   const errors: string[] = [];
   if (!isRec(raw)) return { ok: false, errors: ["file must be a JSON object"] };
@@ -241,8 +257,8 @@ export function validateEffectResearch(raw: unknown): ValidationResult {
   const meta = raw.meta;
   if (!isRec(meta)) errors.push("meta is required");
   else {
-    if (meta.prompt !== EFFECT_RESEARCH_PROMPT_VERSION) {
-      errors.push(`meta.prompt must be "${EFFECT_RESEARCH_PROMPT_VERSION}" (got ${JSON.stringify(meta.prompt)})`);
+    if (typeof meta.prompt !== "string" || !ACCEPTED_EFFECT_RESEARCH_VERSIONS.includes(meta.prompt)) {
+      errors.push(`meta.prompt must be one of ${ACCEPTED_EFFECT_RESEARCH_VERSIONS.map((v) => `"${v}"`).join(", ")} (got ${JSON.stringify(meta.prompt)})`);
     }
     if (!isStr(meta.run_at) || !/^\d{4}-\d{2}-\d{2}$/.test(meta.run_at)) errors.push("meta.run_at must be an ISO date");
     if (!isStr(meta.model)) errors.push("meta.model is required");

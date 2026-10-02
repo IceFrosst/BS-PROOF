@@ -10,6 +10,20 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-03 — effect-research version mismatch resolved
+
+`prompts/effect_research.md` said `effect-research-v0.3` while
+`EFFECT_RESEARCH_PROMPT_VERSION` and `schemas/effect_research.json` said `v0.2`
+(the prompt was reworded and bumped in 46936c9 without the constant). The
+output contract has not changed since v0.2, and the three retained files are
+stamped v0.2 because that is what produced them. Fix, same pattern as
+`research_audit`: prompt + constant → `effect-research-v0.4` (file references
+repointed, no instruction changed); validator and schema accept exactly
+`ACCEPTED_EFFECT_RESEARCH_VERSIONS` = v0.2 and the current version. New tests
+pin that the retained file keeps v0.2, that the current version validates, that
+v0.3 (never produced) is refused, and that the constant equals the version
+printed in the prompt. No model call was made; no cache exists for this prompt.
+
 ## 2026-10-03 — repository cleanup, step 4: tooling, CI, dead code, structure
 
 **Small items.** `reports/latest*.md` dropped (writers no longer create them;

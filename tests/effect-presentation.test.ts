@@ -27,7 +27,7 @@ import magnesiumAudit from "@/lib/evidence-ledger/audits/magnesium.json";
 import vitaminDAudit from "@/lib/evidence-ledger/audits/vitamin-d.json";
 import caffeineRaw from "@/lib/evidence-ledger/effect-research/caffeine.json";
 import {
-  EFFECT_RESEARCH_PROMPT_VERSION, parseEffectResearch, sourceUrl, validateEffectResearch,
+  ACCEPTED_EFFECT_RESEARCH_VERSIONS, EFFECT_RESEARCH_PROMPT_VERSION, parseEffectResearch, sourceUrl, validateEffectResearch,
 } from "@/lib/evidence-ledger/effect-contract";
 import {
   NOT_ASSESSED_WORD, NO_EVIDENCE_WORD, NO_MEANINGFUL_BENEFIT_WORD, PREVIOUS_AUDIT_LABEL, REPORTED_ESTIMATE_LABEL,
@@ -200,7 +200,7 @@ describe("the three shipped audits keep their own text, stamped and not reverifi
   });
 });
 
-describe("effect-research-v0.1 refuses malformed data rather than scoring it", () => {
+describe("the effect-research contract refuses malformed data rather than scoring it", () => {
   const clone = () => JSON.parse(JSON.stringify(caffeineRaw)) as Record<string, unknown>;
   const outcomesOf = (f: Record<string, unknown>) => f.outcomes as Array<Record<string, unknown>>;
   const errorsFor = (mutate: (f: Record<string, unknown>) => void): string[] => {
@@ -214,8 +214,24 @@ describe("effect-research-v0.1 refuses malformed data rather than scoring it", (
   it("accepts the shipped caffeine file", () => {
     const result = validateEffectResearch(caffeineRaw);
     expect(result.ok).toBe(true);
-    expect(caffeine.meta.prompt).toBe(EFFECT_RESEARCH_PROMPT_VERSION);
+    // Retained files keep the version they were produced under (v0.2); the
+    // contract is unchanged since, so they validate alongside current output.
+    expect(caffeine.meta.prompt).toBe("effect-research-v0.2");
+    expect(ACCEPTED_EFFECT_RESEARCH_VERSIONS).toContain(caffeine.meta.prompt);
     expect(caffeine.meta.human_verified).toBe(false);
+  });
+
+  it("accepts the current prompt version and refuses any other", () => {
+    const current = clone();
+    (current.meta as Record<string, unknown>).prompt = EFFECT_RESEARCH_PROMPT_VERSION;
+    expect(validateEffectResearch(current).ok).toBe(true);
+    const errors = errorsFor((f) => { (f.meta as Record<string, unknown>).prompt = "effect-research-v0.3"; });
+    expect(errors.join(" ")).toMatch(/meta\.prompt must be one of/);
+  });
+
+  it("keeps the code constant equal to the version printed in the prompt", () => {
+    const prompt = readFileSync(join(process.cwd(), "prompts/effect_research.md"), "utf8");
+    expect(prompt).toContain(`**Version \`${EFFECT_RESEARCH_PROMPT_VERSION}\`.`);
   });
 
   it("rejects an interval that does not bracket its estimate", () => {

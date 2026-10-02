@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Effect-only research pass (effect-research-v0.1)",
+  "title": "Effect-only research pass (contract unchanged since effect-research-v0.2)",
   "description": "One product, EFFECT ONLY. Produced by prompts/effect_research.md. It carries reported effect estimates in their own metric and unit, the quote they came from, the comparator, population, timeframe, dose applicability, source methods, cross-checks with their overlap status and funding as disclosure. It carries NO ledger, certainty, form, dose or person score, and no overall number: the bars it did not assess are named in not_assessed. Separate file family and separate schema from schemas/research_audit.json \u2014 the audit files in app/design-lab/ab/audits/ are unaffected by this contract.",
   "type": "object",
   "additionalProperties": false,
@@ -28,7 +28,7 @@
       ],
       "properties": {
         "prompt": {
-          "const": "effect-research-v0.2"
+          "enum": ["effect-research-v0.2", "effect-research-v0.4"]
         },
         "run_at": {
           "type": "string",

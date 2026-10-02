@@ -1,17 +1,22 @@
 # Effect research — ONE product, ONE question per outcome, effect only
 
-**Version `effect-research-v0.3`. Output must validate against
+**Version `effect-research-v0.4`. Output must validate against
 `schemas/effect_research.json` and the runtime checks in
-`app/design-lab/ab/effect-contract.ts`.**
+`lib/evidence-ledger/effect-contract.ts`.**
+
+v0.4 (2026-10-03) changes no instruction: it repoints file references after the
+code moved, and brings the version constant back in line with this file (v0.3
+had been bumped here only). The output contract is unchanged since v0.2, so
+retained files stamped `effect-research-v0.2` remain valid.
 
 Caller contract: inject the variables in ROLE and provide the COMPLETE
 `schemas/effect_research.json` alongside this prompt. A repository path does not
 transmit the schema. Do not tell the model to read repository files.
 
 This prompt has its **own cache domain**
-(`EFFECT_RESEARCH_PROMPT_VERSION` in `app/design-lab/ab/effect-contract.ts`),
-deliberately separate from the shared pipeline `PROMPT_VERSION` and from
-`audit-v0.4` in `prompts/research_audit.md`. Bump the version here and in that
+(`EFFECT_RESEARCH_PROMPT_VERSION` in `lib/evidence-ledger/effect-contract.ts`),
+deliberately separate from the shared pipeline `PROMPT_VERSION` and from the
+audit prompt's own version in `prompts/research_audit.md`. Bump the version here and in that
 constant together (invariant 3). Editing this file does **not** invalidate any
 audit cache, and editing the audit prompt does not invalidate this one.
 
