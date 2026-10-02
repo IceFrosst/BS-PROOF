@@ -561,6 +561,18 @@ do not drop it.
 
 ## Current state
 
+**2026-10-03 — research comparison preview shared.**
+`docs/design/research-benchmark-preview/overview.png` shows the actual saved
+Sonnet 5.5 xhigh and Opus 5.5 high categorical outputs for all five benchmark
+cases; `magnesium.png` includes the first detailed side-by-side result.
+These are preliminary static previews, not live scan results, validated clinical
+scores or an end-to-end scan benchmark. Model timings exclude retrieval.
+Full per-case visual/source-context review remains in progress. **Handoff:**
+Google-required scan results and private Scan/History are being implemented in
+isolated worktrees and are not enabled on production yet. Multi-ingredient
+implementation remains paused; its fifth benchmark case is frozen test data.
+
+
 **2026-10-02 — multi-ingredient visual options.**
 `docs/design/multi-ingredient-options.jpg` is an illustrative, generated design
 comparison: ingredient tabs, an expandable ingredient list, and outcome-first
@@ -1483,6 +1495,11 @@ extraction was spent on the fix; the first real `--with-sr` production run is
 still the unmeasured SR-uplift experiment (Next item 3).
 
 ## Next
+
+- Finish review of the detailed benchmark visuals; preserve exact product/dose
+  inputs, limitations and the distinction between quote matching and medical
+  verification. Preliminary overview and magnesium previews are already shared.
+
 
 - Choose the multi-ingredient layout from the shared visual options before
   implementing it; avoid whole-blend averages and implied additive benefits.
