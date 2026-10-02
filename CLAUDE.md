@@ -36,7 +36,6 @@ arcs (effect / form / dose / evidence), each a verdict plus its coverage.
 | File | Role |
 |---|---|
 | `claude_adapter.py` | Claude production extraction (subscription + `--safe-mode`) |
-| `pilot_adapter.py` | Claude pilot — superseded, not for public claims |
 | `grok_adapter.py` | Grok extraction (separate backend, separate store) |
 | `label_adapter.py` | Local CLI read of a label image |
 | `lib/analyze/llm.ts` | **The app's one model transport.** Label vision read (`vision.ts`), compatibility, company profile, literature warnings, evidence prior. DeepSeek by default (`DEEPSEEK_API_KEY`); `MODEL_API_URL` / `LABEL_MODEL` / `TEXT_MODEL` swap provider without code changes |
@@ -110,7 +109,7 @@ API field or headline without arcs. `0.00 @ 0%` ("untested") and `−0.70 @ 100%
 ### 9. Dual backends: never silent-merge
 
 Claude and Grok extractions run, store and report separately
-(`claude` / `claude-pilot` / `grok`). On disagreement: discard or human review,
+(`claude` / `grok`). On disagreement: discard or human review,
 never average or pick the higher.
 
 ---
@@ -149,7 +148,6 @@ Things that look simplifiable and are not:
 | Path | Auth | Public claims? |
 |---|---|---|
 | `claude_adapter` (production) | Claude subscription + `--safe-mode` | Yes |
-| `pilot_adapter` | Claude subscription | No — superseded |
 | `grok_adapter` | Grok CLI, signed in | Only after anchor eval |
 
 Extraction has no metered spend; the limit is subscription **throughput**.
@@ -167,9 +165,9 @@ is not a valid CLI id and failed a run 0/80).
 ## Layout
 
 ```
-claude_adapter.py pilot_adapter.py grok_adapter.py label_adapter.py   model boundaries
+claude_adapter.py grok_adapter.py label_adapter.py   model boundaries
 workers.py              fan-out; model injected via call=
-run_pipeline.py         one ingredient end to end (--wiring / --pilot / --grok / --with-sr)
+run_pipeline.py         one ingredient end to end (--wiring / --grok / --with-sr)
 run_sr_inheritance.py   SR-table uplift alone
 run_coverage.py         OA + methods-fact coverage, no model
 
@@ -251,7 +249,7 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
 ## Current state (snapshot, 2026-10-02)
 
 - **Evidence:** exactly one retained run — creatine monohydrate
-  (`20260904_185830`, v14 re-composition of `20260825_175339`). Every run is
+  (`20260904_185830`, v14 re-composition of `20260825_175339`, which is now only in git history). Every run is
   `public_claims_allowed: false`; anchors are not calibrated. Run-to-run
   extraction variance (not the formula) is the binding precision problem.
 - **App:** `/scan` is the product surface. Photo (live camera via

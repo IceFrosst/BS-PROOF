@@ -100,11 +100,6 @@ Writes: `out/grok_creatine.sqlite` (separate from Claude).
 
 ---
 
-## Step 7 — Claude pilot (optional, separate)
-
-```bash
-python3 run_pipeline.py creatine --form creatine_monohydrate --pilot
-```
 
 Writes: `out/pilot_creatine.sqlite`. **Do not merge** with Grok scores.
 
@@ -128,7 +123,6 @@ git push
 | Command | AI | Store |
 |---------|----|-------|
 | `--wiring` | No (fake) | `out/wiring_demo.sqlite` |
-| `--pilot` | Claude subscription (superseded) | `out/pilot_<ingredient>.sqlite` |
 | `--grok` | Grok CLI | `out/grok_<ingredient>.sqlite` |
 | production (no flag) | Claude subscription | `out/bsproof.sqlite` |
 

@@ -27,7 +27,7 @@ class SRWiring(unittest.TestCase):
         The initial declaration before backend selection is allowed to be
         None; every BACKEND branch must assign a real callable. We therefore
         allow at most ONE None assignment (the declaration) and require that
-        at least three non-None assignments exist (grok, pilot, production).
+        at least two non-None assignments exist (grok, production; pilot removed 2026-10-02).
         """
         none_assigns, real_assigns = 0, 0
         for node in ast.walk(self.tree):
@@ -46,8 +46,8 @@ class SRWiring(unittest.TestCase):
             "(`with_sr and call_fn is not None`) makes that branch silently "
             "skip SR inheritance while the report still says -sr")
         self.assertGreaterEqual(
-            real_assigns, 3,
-            "expected grok, pilot AND production to each inject a callable")
+            real_assigns, 2,
+            "expected grok AND production to each inject a callable")
 
     def test_production_branch_injects_the_claude_adapter(self):
         """The production branch must set call_fn to the claude adapter's call."""

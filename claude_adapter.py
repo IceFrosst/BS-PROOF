@@ -911,7 +911,7 @@ def _is_fatal(detail: str) -> bool:
 def _envelope_tokens(raw: str) -> dict:
     """
     Token counts from the CLI envelope. Separate from _extract_payload so that
-    function keeps its two-value contract (pilot_adapter unpacks it).
+    function keeps its two-value contract.
 
     WHY BOTH NUMBERS MATTER. On a subscription the per-call spend is zero, so
     `total_cost_usd` is not what this run cost -- it is what the SAME work would

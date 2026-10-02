@@ -28,7 +28,7 @@ import { compositeOf, outcomeIdOf, rowsOf } from "./helpers";
 type Json = Record<string, unknown>;
 
 const REPO_ROOT = process.cwd();
-const RETAINED_ARTIFACT_PATH = `reports/runs/${RETAINED_RUN_ID}_dashboard.json`;
+const RETAINED_ARTIFACT_PATH = `tests/fixtures/dashboard/${RETAINED_RUN_ID}_dashboard.json`;
 
 const RUN_A = "20260807_164410_creatine_creatine-monohydrate_grok-a";
 const RUN_B = "20260809_090000_creatine_creatine-monohydrate_grok-b";

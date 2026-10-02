@@ -55,7 +55,7 @@ Writes to **`out/grok_creatine.sqlite`** (never mixed with Claude pilot DB).
 ## 5. Compare vs Claude (separately)
 
 ```bash
-python3 run_pipeline.py creatine --form creatine_monohydrate --pilot   # Claude
+python3 run_pipeline.py creatine --form creatine_monohydrate          # Claude
 python3 run_pipeline.py creatine --form creatine_monohydrate --grok    # Grok
 # Do NOT merge scores. Archive both under reports/runs/
 ```
@@ -73,9 +73,8 @@ python3 run_pipeline.py creatine --form creatine_monohydrate --grok    # Grok
 
 ## Limits
 
-- Default batch: **100** studies on `--grok`, **40** on `--pilot`
-  (`run_pipeline.DEFAULT_GROK_LIMIT` / `DEFAULT_PILOT_LIMIT`). Change with
-  `--limit`. A study costs ~10 model calls, and about half of those are S6,
+- No default cap: a run scores the whole available corpus unless you pass
+  `--limit N`. A study costs ~10 model calls, and about half of those are S6,
   which fires once per extracted claim.
 - Grok weekly limits apply to subscription usage; stop and resume with a higher
   offset later if needed (future: resume cursor).

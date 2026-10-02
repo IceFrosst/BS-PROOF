@@ -10,6 +10,33 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-02 — repository cleanup, step 2
+
+- `reports/`: 68 MB → ~2.5 MB. Kept only the current run
+  `20260904_185830_creatine_creatine-monohydrate_claude-sr-ft-top5-suppl` (the
+  one `/scan` and `/runs` serve). Deleted every superseded or invalid run in
+  `reports/runs/` (2026-08-09 → 2026-08-25, incl. the synthetic demo run) and all
+  of `reports/archive/` (scoring models v1–v13). All recoverable from git history;
+  why each run was invalid is recorded in `2026-10-02-claude-md-archive.md`.
+- The invalid 2026-08-07 Grok run is the dashboard test fixture: moved to
+  `tests/fixtures/dashboard/` (its `run_statuses.json` entry stays, the writer
+  test reads it). `run_statuses.json` otherwise keeps only the `20260825_072759`
+  incident entries a test pins.
+- `scripts/`: deleted 12 unreferenced files (`compare_runs`, `determinism_experiment`,
+  `effect_axis_ab`, `import_predatory_xlsx`, `mixture_compare`,
+  `null_numbers_experiment`, `policy_experiment`, `write_demo_artifact`,
+  `watch_run.sh`, `MEETING_DEMO_RUNS.md`, `check_design_lab.mjs`,
+  `check_mobile_design_lab.mjs`). Experiments cited by SPEC or pipeline comments
+  were kept. `test_dashboard_artifact.py` moved to `tests/`.
+- Removed `pilot_adapter.py` (superseded by `claude_adapter --safe-mode`) and
+  every `--pilot` path: `run_pipeline.py --pilot` now exits with the equivalent
+  production flags; `run_sr_inheritance.py` defaults to `--claude`;
+  `pipeline.invariants`, the gates hook, `verify_helpers.py` and two tests updated.
+  Also dropped the unused `DEFAULT_PILOT_LIMIT` / `DEFAULT_GROK_LIMIT` constants
+  and the unused barrel `lib/dashboard/index.ts`. Diagram regenerated.
+- Verified: invariants, selftest, 48 Python tests (`.venv`), typecheck, lint,
+  491 unit tests, build, 26/26 desktop Playwright tests.
+
 ## 2026-10-02 — repository cleanup, step 1
 
 - Deleted 13 one-off Playwright scratch scripts from the repo root

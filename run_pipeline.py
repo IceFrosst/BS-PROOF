@@ -35,8 +35,6 @@ from pipeline.retrieve import retrieve
 
 WIRING_DB = DEFAULT_DB.parent / "wiring_demo.sqlite"
 
-DEFAULT_PILOT_LIMIT = 40
-DEFAULT_GROK_LIMIT = 100
 DEFAULT_WIRING_SCORE_CAP = 40
 DEFAULT_TOP_OUTCOMES = 5
 RETRIEVE_MAX_PRIMARIES = int(os.environ.get("SP_RETRIEVE_MAX_PRIMARIES", "600"))
@@ -51,12 +49,6 @@ _OA_RANK = {
     "full_text": 0, "fulltext": 0, "green_oa": 1, "hybrid": 2,
     "bronze": 3, "abstract_only": 4, "closed": 5, "unknown": 6,
 }
-
-
-def _pilot_db(ingredient: str, scope: str):
-    return DEFAULT_DB.parent / (
-        f"pilot_{ingredient}{'_supp' if scope != 'broad' else ''}.sqlite"
-    )
 
 
 def _grok_db(ingredient: str, scope: str):
@@ -402,16 +394,20 @@ def main(argv: list[str]) -> int:
     wiring = "--wiring" in args
     if wiring:
         args.remove("--wiring")
-    pilot = "--pilot" in args
-    if pilot:
-        args.remove("--pilot")
+    if "--pilot" in args:
+        # pilot_adapter was removed 2026-10-02 (superseded by claude_adapter's
+        # --safe-mode on the same subscription). Its demo defaults are flags:
+        print("--pilot was removed. Use the default Claude production backend, e.g.\n"
+              "  run_pipeline.py <ingredient> --form <form> --limit 40 "
+              "--full-text-only --intervention-scope")
+        return 1
     grok = "--grok" in args
     if grok:
         args.remove("--grok")
     demo = "--demo" in args
     if demo:
         args.remove("--demo")
-    full_text_only = grok or pilot
+    full_text_only = grok
     if "--all-oa" in args:
         args.remove("--all-oa"); full_text_only = False
     if "--full-text-only" in args:
@@ -426,11 +422,11 @@ def main(argv: list[str]) -> int:
     if "--top-outcomes" in args:
         i = args.index("--top-outcomes")
         top_n = int(args[i + 1]); del args[i:i + 2]
-    if sum([wiring, pilot, grok]) > 1:
-        print("Pick only one of --wiring, --pilot, --grok")
+    if sum([wiring, grok]) > 1:
+        print("Pick only one of --wiring, --grok")
         return 1
 
-    scope = "intervention" if (grok or pilot) else "broad"
+    scope = "intervention" if grok else "broad"
     if "--broad-scope" in args:
         args.remove("--broad-scope"); scope = "broad"
     if "--supplement-scope" in args:
@@ -462,7 +458,7 @@ def main(argv: list[str]) -> int:
     ingredients = args or ["magnesium"]
     ingredient = ingredients[0]
 
-    if not wiring and not pilot and not grok:
+    if not wiring and not grok:
         # Imported here, not at module scope: a --wiring run must not load the
         # model boundary at all. preflight() checks the subscription is signed
         # in, which is the whole configuration story now.
@@ -496,8 +492,6 @@ def main(argv: list[str]) -> int:
         db = WIRING_DB
     elif grok:
         db = _grok_db(ingredient, scope)
-    elif pilot:
-        db = _pilot_db(ingredient, scope)
     else:
         db = DEFAULT_DB
 
@@ -654,17 +648,6 @@ def main(argv: list[str]) -> int:
                 # the run (and the report) that this was the FULL corpus and
                 # not a sample, which changes how the score may be read.
                 run_context["concurrency"] = ga.MAX_CONCURRENCY
-                run_context["studies_in_flight"] = in_flight
-            elif pilot:
-                import pilot_adapter as pa
-                if not pa.preflight():
-                    return 1
-                call_fn = lambda agent, payload: pa.call(agent, payload, verified=True)
-                prompt_version = f"{pa.PROMPT_VERSION}+{pa.PILOT_MARKER}"
-                tag = "PILOT "
-                in_flight = 4
-                ga = None
-                run_context["concurrency"] = 4
                 run_context["studies_in_flight"] = in_flight
             else:
                 # PRODUCTION. This branch used to live below in an `else:` of
@@ -1042,7 +1025,7 @@ def main(argv: list[str]) -> int:
     # report; a run labelled by the wrong backend is worse than an unlabelled
     # one, because it invites exactly the cross-provider comparison that
     # invariant forbids. Fixed 2026-08-09.
-    mode = "grok" if grok else "pilot" if pilot else "claude"
+    mode = "grok" if grok else "claude"
     if demo:
         mode += "-demo"
     if with_sr:
@@ -1056,7 +1039,7 @@ def main(argv: list[str]) -> int:
     if not wiring:
         run_context["mode"] = mode
         run_context["provider"] = (
-            "grok" if grok else "claude-pilot" if pilot else "claude"
+            "grok" if grok else "claude"
         )
         run_context["wall_time_s"] = round(time.monotonic() - _run_started, 4)
         _auto_push_report(ingredient, form, mode, run_context=run_context)

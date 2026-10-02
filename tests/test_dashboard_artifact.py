@@ -344,7 +344,7 @@ class DashboardArtifactTests(unittest.TestCase):
         self.assertNotIn("DO-NOT-EXPORT-RICH-CACHE", safe)
 
     def test_historical_creatine_truth_and_invalid_override(self) -> None:
-        path = ROOT / "reports" / "runs" / f"{HISTORICAL_RUN}_context.json"
+        path = ROOT / "tests" / "fixtures" / "dashboard" / f"{HISTORICAL_RUN}_context.json"
         context = json.loads(path.read_text(encoding="utf-8"))
         artifact = build_dashboard_run(
             context,

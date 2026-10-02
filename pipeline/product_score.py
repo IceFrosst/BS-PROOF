@@ -91,11 +91,11 @@ def _is_demo(artifact: dict) -> bool:
     """
     A synthetic fixture must never answer a product question.
 
-    `reports/runs/20260812_000000_demo-*` is hand-written data for previewing
-    the reviewer UI -- "every number, study and quote is invented" per its own
-    run_statuses entry. It is marked `invalid`, so UNUSABLE_STATUSES already
-    excludes it; this is the second, independent check, because a fixture that
-    leaks into a consumer answer is the worst failure this module could have.
+    A hand-written demo run (`20260812_000000_demo-*`, removed 2026-10-02) once
+    lived in reports/runs/ to preview the reviewer UI -- "every number, study
+    and quote is invented". Status registry entries already exclude invalid
+    runs; this is the second, independent check, because a fixture that leaks
+    into a consumer answer is the worst failure this module could have.
     """
     run = artifact.get("run") or {}
     product = artifact.get("product") or {}

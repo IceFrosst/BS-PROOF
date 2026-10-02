@@ -49,7 +49,6 @@ CRITICAL = {
     "docs/anchors.csv": "the calibration harness itself",
     "claude_adapter.py": "model boundary, tiers, PROMPT_VERSION",
     "grok_adapter.py": "model boundary; verify ids with `grok models`",
-    "pilot_adapter.py": "model boundary",
     "prompts/": "extraction contract -- needs a PROMPT_VERSION bump",
     "schemas/": "extraction contract -- needs a PROMPT_VERSION bump",
     "vocab/": "outcome/form vocabulary and polarity",

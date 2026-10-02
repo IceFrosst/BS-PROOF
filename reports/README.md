@@ -1,66 +1,23 @@
-## Layout
+# Reports
 
 ```
-runs/              runs from the CURRENT scoring model only
-archive/<model>/   runs from an earlier model — readable, never deleted
-INDEX.md           both, listed separately
-latest*.md         regenerated pointers to the newest run
+runs/              runs from the CURRENT scoring model only (immutable)
+archive/<model>/   created by scripts/archive_reports.py when SCORING_MODEL changes
+INDEX.md           table of runs
+latest*.md         pointers to the newest run
+run_statuses.json  validity registry; an unlisted run is `experimental`
 ```
 
-Every report carries a machine-readable `scoring_model:` line. When
-`scoring.SCORING_MODEL` changes, run:
+Each run writes `<id>_summary.md`, `<id>_full.md`, `<id>_context.json` and the
+deployable `<id>_dashboard.json` (contract: `schemas/dashboard_run_v1.schema.json`).
+The app (`/scan`, `/runs`) reads the newest non-invalid `*_dashboard.json` per
+ingredient × form, so a new run changes what users see.
 
-```bash
-python3 scripts/archive_reports.py --apply
-```
+Every report carries a `scoring_model:` line. **Never compare numbers across
+models** — the formula moved, not the evidence. After changing
+`scoring.SCORING_MODEL`, run `python3 scripts/archive_reports.py --apply`.
 
-**Never compare numbers across models.** The same corpus scores +30 under
-`v1-transfer-in-weight` and 46/100 under `v2-four-arc` — the formula moved,
-not the evidence.
-
----
-
-# Reports — all test runs on GitHub
-
-```text
-reports/
-  INDEX.md          # table of every committed run
-  latest.md         # copy of the newest run (convenient link)
-  runs/             # ONE FILE PER RUN (never overwrite history)
-    20260806_201500_creatine_creatine-monohydrate_wiring.md
-    …
-```
-
-## Browse
-
-- **History:** [`INDEX.md`](./INDEX.md)
-- **Newest:** [`latest.md`](./latest.md)
-- **All files:** [`runs/`](./runs/)
-
-## Regenerate + archive a run
-
-```bash
-cd ~/BS-PROOF && git pull
-python3 scripts/write_demo_report.py --wiring --ingredient creatine --form creatine_monohydrate
-
-git add reports/
-git commit -m "Report: creatine monohydrate wiring audit"
-git push
-```
-
-Each invocation **appends** a new file under `runs/` and refreshes `INDEX.md` + `latest.md`.
-
-## What each report contains
-
-Product input, corpus counts, study tables with PubMed/DOI/NCT links, ECU scores,
-component breakdown (d/c/H/E), per-study weights, selftest status, pilot DB summary if present.
-
-## Demo caps (wiring path in this build)
-
-| Stage | Cap |
-|-------|----:|
-| Retrieve primaries | 150 |
-| Retrieve syntheses | 50 |
-| Scored in wiring report | ≤ 40 RCT-rank primaries |
-
-Retrieval is by **ingredient** (e.g. `creatine`). Form (`creatine_monohydrate`) affects transfer matching at score time, not how many papers are fetched.
+Never edit or overwrite a run in place; generate a new one. Earlier runs
+(2026-08-07 → 2026-08-25, and archives v1–v13) were removed on 2026-10-02 and
+are in git history; the reasons each was invalid or superseded are recorded in
+`docs/history/2026-10-02-claude-md-archive.md`.

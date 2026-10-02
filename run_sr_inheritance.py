@@ -3,7 +3,7 @@
 SR-table inheritance — the last unbuilt rung of the coverage ladder.
 
     python3 run_sr_inheritance.py magnesium --limit 5 --grok
-    python3 run_sr_inheritance.py magnesium --limit 5 --pilot   # default
+    python3 run_sr_inheritance.py magnesium --limit 5 --claude  # default
 
 WHY THIS IS THE REMAINING WORK
 Coverage on the full corpus is 77.5% methods-level facts against a >=80% target.
@@ -24,9 +24,9 @@ Syntheses never enter evidence mass (invariant 6). Nothing here changes E.
 Inherited RoB carries the 0.85 penalty -- it is another team's judgement.
 
 BACKENDS
---grok / --pilot / --claude, one per run, never blended (invariant 9). Results
-are written to out/sr_inheritance_<backend>.json. The pilot backend is a
-subscription and must not back public claims.
+--grok / --claude (default), one per run, never blended (invariant 9). Results
+are written to out/sr_inheritance_<backend>.json. (The --pilot backend was
+removed 2026-10-02 with pilot_adapter.)
 """
 from __future__ import annotations
 import json
@@ -58,16 +58,10 @@ def backend(name: str):
     if name == "claude":
         import claude_adapter as ca
         return (lambda agent, payload: ca.call(agent, payload)), "claude-production"
-    import pilot_adapter as pa
-    probe = pa.hermeticity_probe()
-    print(f"hermeticity: {'PASS' if probe['hermetic'] else 'FAIL'} — {probe['detail']}")
-    if not probe["hermetic"]:
-        return None, "claude-pilot"
-    return (lambda agent, payload: pa.call(agent, payload, verified=True, timeout=300)), \
-        "claude-pilot"
+    return None, f"unknown backend {name!r}"
 
 
-def run(ingredient: str, limit: int, *, mode: str = "pilot",
+def run(ingredient: str, limit: int, *, mode: str = "claude",
         verbose: bool = True) -> dict:
     call, label = backend(mode)
     if call is None:
@@ -156,8 +150,8 @@ def main(argv: list[str]) -> int:
     if "--limit" in args:
         i = args.index("--limit")
         limit = int(args[i + 1]); del args[i:i + 2]
-    mode = "pilot"
-    for flag in ("--grok", "--pilot", "--claude"):
+    mode = "claude"
+    for flag in ("--grok", "--claude"):
         if flag in args:
             args.remove(flag); mode = flag[2:]
     ingredient = args[0] if args else "magnesium"

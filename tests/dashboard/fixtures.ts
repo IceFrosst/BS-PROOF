@@ -2,7 +2,7 @@ export const RETAINED_RUN_ID =
   "20260807_164410_creatine_creatine-monohydrate_grok-sr-ft-per-o";
 
 export const RETAINED_CONTEXT_PATH =
-  "reports/runs/20260807_164410_creatine_creatine-monohydrate_grok-sr-ft-per-o_context.json";
+  "tests/fixtures/dashboard/20260807_164410_creatine_creatine-monohydrate_grok-sr-ft-per-o_context.json";
 
 const completeArcs = {
   effect: { verdict: 0.6, coverage: 1 },

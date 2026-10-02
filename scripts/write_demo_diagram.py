@@ -375,9 +375,8 @@ not decoration.
 qx, qw = 2120, 620
 qy = 40
 
-qy = panel(qx, qy, qw, "THREE EXTRACTION BACKENDS", """
+qy = panel(qx, qy, qw, "TWO EXTRACTION BACKENDS", """
   claude_adapter   subscription + safe   production
-  pilot_adapter    subscription          superseded
   grok_adapter     grok CLI, signed in   after anchor eval
 
 Same prompts, same schemas, same PROMPT_VERSION.

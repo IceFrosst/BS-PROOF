@@ -15,7 +15,7 @@ except Exception: print("")' 2>/dev/null)
 
 # Only the layers the gates actually cover.
 case "$FILE" in
-  *pipeline/*.py|*sources/*.py|*vocab/*.json|*claude_adapter.py|*grok_adapter.py|*pilot_adapter.py) ;;
+  *pipeline/*.py|*sources/*.py|*vocab/*.json|*claude_adapter.py|*grok_adapter.py) ;;
   *) exit 0 ;;
 esac
 

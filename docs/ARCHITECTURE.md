@@ -61,7 +61,6 @@ This file is the middle layer: what runs, in what order.
 | Path | Flag | Auth |
 |------|------|------|
 | Claude production | (default) | Claude subscription + `--safe-mode` |
-| Claude pilot | `--pilot` | Claude subscription (superseded — see `pilot_adapter.py`) |
 | Grok pure-function | `--grok` | Grok CLI, signed in |
 
 ## Demo / quality flags

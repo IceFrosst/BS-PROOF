@@ -16,8 +16,5 @@ The dashboard projection deliberately excludes raw prompts, adapter error
 output, secrets and cache keys. Every artifact carries a versioned usage block;
 unknown values are `null`, never rendered as measured zeroes.
 
-The retained 2026-08-07 Grok run predates rich token and price telemetry. Its
-usage block is `partial`: exact retained call/latency aggregates are present,
-while token and price fields remain `null`. `DashboardRunV1` accepts the complete
-usage block when a future Grok context supplies it, but this branch does not
-change Grok's owned CLI envelope parser (`grok_adapter.py`).
+The historical 2026-08-07 Grok run (invalid) now lives only as a test fixture
+in `tests/fixtures/dashboard/`.

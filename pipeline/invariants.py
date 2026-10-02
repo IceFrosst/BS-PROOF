@@ -57,7 +57,7 @@ ROOT = Path(__file__).resolve().parent.parent
 # feature and must never import it; the orchestration happens in
 # scripts/analyze_label.py, which is the injection layer by design (see
 # CHECKED_DIRS below).
-MODEL_MODULES = ("claude_adapter", "pilot_adapter", "grok_adapter",
+MODEL_MODULES = ("claude_adapter", "grok_adapter",
                  "label_adapter")
 
 # The deterministic layer. NOT scripts/, run_pipeline.py or workers.py -- those

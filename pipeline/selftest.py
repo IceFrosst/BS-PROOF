@@ -2718,7 +2718,7 @@ def main():
         "from-import":     "from claude_adapter import _key\n",
         "line-wrapped":    "from claude_adapter import (\n    _key,\n)\n",
         "class method":    "class C:\n    def m(self):\n        from grok_adapter import call\n",
-        "importlib":       "import importlib\nimportlib.import_module('pilot_adapter')\n",
+        "importlib":       "import importlib\nimportlib.import_module('grok_adapter')\n",
         "__import__":      "m = __import__('claude_adapter')\n",
         "try-guarded":     "try:\n    import claude_adapter\nexcept ImportError:\n    pass\n",
     }

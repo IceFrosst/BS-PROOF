@@ -38,7 +38,7 @@ describe("DashboardRunSchema", () => {
   it("enforces the exact JSON contract used by the production build", () => {
     const retained = JSON.parse(
       readFileSync(
-        resolve(process.cwd(), "reports/runs/20260807_164410_creatine_creatine-monohydrate_grok-sr-ft-per-o_dashboard.json"),
+        resolve(process.cwd(), "tests/fixtures/dashboard/20260807_164410_creatine_creatine-monohydrate_grok-sr-ft-per-o_dashboard.json"),
         "utf8",
       ),
     );
