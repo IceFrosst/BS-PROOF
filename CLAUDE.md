@@ -561,6 +561,13 @@ do not drop it.
 
 ## Current state
 
+**2026-10-02 — multi-ingredient visual options.**
+`docs/design/multi-ingredient-options.jpg` is an illustrative, generated design
+comparison: ingredient tabs, an expandable ingredient list, and outcome-first
+navigation. It is not implemented UI or clinical evidence. Placeholder states
+are not scores; implementation must use neutral/hatched unknown tracks and
+keep formula-level evidence separate from ingredient findings.
+
 **2026-10-02 — Vercel project consolidation (owner-authorized).** Keep only
 `bs-proof-dashboard` (`prj_LVkNjXw2Sw96J18MUbGOx5AUkCMx`) in the IceFrost team.
 The independently reviewed obsolete projects were deleted only after their ID,
@@ -1477,6 +1484,8 @@ still the unmeasured SR-uplift experiment (Next item 3).
 
 ## Next
 
+- Choose the multi-ingredient layout from the shared visual options before
+  implementing it; avoid whole-blend averages and implied additive benefits.
 - Finish the five-case subscription research benchmark, then implement the
   source-backed PC research worker and its secure website job connection.
   Preserve the approved four-axis result format, distinguish ingredient from
