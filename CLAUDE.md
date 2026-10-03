@@ -562,8 +562,13 @@ do not drop it.
 
 ## Current state
 
-**2026-10-03 -- website -> PC live-research QUEUE (backend only): IMPLEMENTED on local branch `feat/scan-research-queue-20261003`
-(base `3ef1218`), NOT pushed, NOT deployed, SQL NOT applied, NO worker token created, flag OFF.** A signed-in person queues a
+**2026-10-03 -- website -> PC live-research queue: WIP CHECKPOINT, NOT ACTIVE.** Branch `feat/scan-research-queue-20261003`
+contains queue backend commit `33593f5`, worker consumer commit `a74160e`, and merge commit `e6b97f1`; this WIP branch is being published
+separately from `main` at the user's explicit request. The separate consumer ref `feat/pc-research-worker-20261003` is also being
+published at `a74160e`, without modifying its worktree. The failed Claude integration attempt `ed59fa52` stopped at ~99% session quota;
+there are no partial edits in the current clean worktree. **Integration is unfinished:** reconcile the exact worker/backend contract and
+client; finish UI/presence/waiting state and source-provenance review; then complete final security and owner review. No research feature is
+active: NOT deployed, SQL NOT applied, NO worker token created, worker NOT installed/started, flag OFF.** A signed-in person queues a
 live-source research audit of one of their own saved scans; a worker on the founder's main PC (no public port) polls the website
 over HTTPS, runs it through the founder's Claude SUBSCRIPTION (no API key, no metered spend, so no per-job auth budget; the cost
 control is one job per scan + max 3 open jobs per owner + the flag) and posts the audit back. No model is called from Vercel
@@ -581,9 +586,11 @@ content-verified request event for that id exists) and the server stamps `proven
 approval, not human verified, does not affect any score. No scoring constant changed. Tests: `tests/scan-research.test.ts`
 (31, routes against an in-memory mirror of the SQL), `tests/scan-research-target-sql.test.ts` (13). The SQL was ALSO executed
 twice (idempotent) against PGlite with stand-in roles: lifecycle, expiry/re-claim, stale fail, privileges all as specified;
-PGlite is single-connection, so `skip locked` concurrency is reasoned, not exercised. **Handoff:** the PC-worker branch
-(`feat/pc-research-worker-20261003`) implements the consumer to this contract; neither is deployed. Rollout order is in
-`docs/research-jobs.sql` ("ORDER OF RELEASE").
+PGlite is single-connection, so `skip locked` concurrency is reasoned, not exercised. **Handoff (WIP checkpoint, 2026-10-03):**
+both refs are published separately; queue branch `feat/scan-research-queue-20261003` is at `e6b97f1` and consumer branch
+`feat/pc-research-worker-20261003` at `a74160e`. Claude integration stopped at ~99% quota; contract/client, UI,
+source-provenance reconciliation and final security/owner review remain unfinished. Preserve both branch histories and resume from
+the merge commit; do not claim the feature is active. Rollout order is in `docs/research-jobs.sql` ("ORDER OF RELEASE").
 
 **2026-10-03 — Google-required scan + private Scan/History: IMPLEMENTED, on `main` (`2555166`), PROVISIONED (SQL applied,
 Vercel production env set), DEPLOYED -- but Google sign-in is BROKEN in production: `400 origin_mismatch` (see "Release stage").** Founder: real results depend on a Google login, and a signed-in person can
@@ -1794,13 +1801,14 @@ still the unmeasured SR-uplift experiment (Next item 3).
 
 ## Next
 
-- **Live-research queue (backend written, nothing provisioned): human-gated rollout.** (1) review the diff on
-  `feat/scan-research-queue-20261003`, run both Python gates and the TS gates, merge with the PC-worker branch once the worker
-  speaks this contract; (2) in the shared Supabase project run the read-only PREFLIGHT in `docs/research-jobs.sql`, then apply
-  it once (SQL Editor); (3) generate `BS_PROOF_RESEARCH_WORKER_TOKEN` (>= 32 random chars), set it in Vercel (server env, never
-  `NEXT_PUBLIC_`) and on the PC; (4) deploy, start the PC worker, smoke-test claim with an empty queue; (5) only then set
-  `SCAN_LIVE_RESEARCH_ENABLED=1`. No UI calls these routes yet. Owner decisions still open: retention/deletion of jobs (kept
-  indefinitely, like `scan_runs`), and whether the 3-open-jobs-per-owner cap is right.
+- **Live-research queue (WIP branches published; no provisioning):** resume integration from `e6b97f1` on
+  `feat/scan-research-queue-20261003`; consumer is separately visible at `a74160e` on `feat/pc-research-worker-20261003`.
+  Claude's integration attempt stopped at ~99% session quota and left no partial edits. First reconcile backend/worker contract and client;
+  finish the UI/presence/waiting state and source-provenance handling; then require final security and owner review. No UI calls these routes
+  yet. Only AFTER reviewed integration: run/review TS gates and both Python gates, then do the shared Supabase read-only PREFLIGHT and
+  separately owner-authorized SQL apply; create/set the worker token only with owner approval, deploy/install/start only with owner approval,
+  smoke-test, and keep `SCAN_LIVE_RESEARCH_ENABLED` off until the full human-gated rollout is approved. Nothing is active, deployed, clinically
+  verified, or provisioned now. Owner decisions still open: job retention/deletion and whether the 3-open-jobs-per-owner cap is right.
 - **Google-required scan + private History: provisioned 2026-10-03; real-service verification still open (see
   "Release stage" in `Current state`; runbook `docs/SYSTEM_DESIGN.md` §7d).** DONE at release: preflight, SQL applied
   and verified on the shared project, URL/key pair checked, Vercel production env set, Google provider read only.
