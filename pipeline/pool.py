@@ -18,7 +18,11 @@ Per outcome:
   4. Pool Hedges' g with REML random effects; Hartung-Knapp CI when k >= 3,
      normal CI at k = 2; prediction interval when k >= 3. A natural-unit
      (mean difference) pool only when every MD in it shares one unit.
-  5. Report every refusal with its reason, the estimand mix (change scores and
+  5. Dual extraction (pipeline/review.py): a claim the two reviewers disagree
+     on is refused for human adjudication; an agreed claim pools only the
+     numbers both read; a single-extracted claim pools, flagged "reviewed":
+     False so GRADE can say so.
+  6. Report every refusal with its reason, the estimand mix (change scores and
      final values are flagged, not silently mixed) and a leave-one-out range.
 
 Effects come from pipeline/effect_size.py on numbers pipeline/span_check.py
@@ -32,6 +36,8 @@ from dataclasses import dataclass, field
 
 from pipeline import meta_effects as me
 from pipeline import vocab
+from pipeline.assemble import _s7_for_claim, study_dose
+from pipeline.dose import dose_match_for
 from pipeline.effect_size import Effect, effect_from_claim
 from pipeline.eligibility import _ineligible
 
@@ -53,6 +59,8 @@ class StudyEffect:
     form_match: str | None = None     # vocab.form_match tier vs the product
     pop_match: str | None = None      # vocab.pop_match tier vs the product
     design_rank: int | None = None
+    reviewed: bool = False            # both reviewers agreed (pipeline/review.py)
+    dose_match: str | None = None     # product dose vs this trial's (dose_match_tier); None = no product dose
 
 
 def study_form(s7: dict | None, claim: dict) -> str | None:
@@ -72,6 +80,22 @@ def study_form(s7: dict | None, claim: dict) -> str | None:
     if len(forms) == 1:
         return next(iter(forms))
     return s7.get("form_vocab_id")
+
+
+def dose_match_tier(ingredient: str, s7: dict | None, s3: dict | None, claim: dict,
+                    product: dict) -> str | None:
+    """The product's dose against THIS trial's dose, on SPEC §8's tiers with the
+    trial's own daily elemental dose as the band (pipeline/dose.dose_match_for):
+    in_band (1-2x the trial dose) | low_50_99 | below_50 | above_200 |
+    unspecified (trial dose unknown or an interval straddling a tier). None when
+    the product carries no dose. The tested arm's dose is joined by label
+    (assemble._s7_for_claim), never by position."""
+    lo, hi = product.get("dose_low_mg"), product.get("dose_high_mg")
+    if lo is None or hi is None:
+        return None
+    modern = (s7 or {}).get("extraction_version") == "v1.24"
+    dose = study_dose(ingredient, _s7_for_claim(s7, claim, s3, modern=modern))
+    return dose_match_for(lo, hi, {"low": dose["dose_low_mg"], "high": dose["dose_high_mg"]})
 
 
 def rob_status(s4: dict | None) -> str:
@@ -137,21 +161,32 @@ def _study_effects(item: dict, product: dict, polarity: dict) -> tuple[dict[str,
             continue
         nums = o.get("numbers_v2") or {}
         claim = o.get("claim") or {}
-        eff, why = effect_from_claim(claim, nums.get("verified") or {}, polarity=polarity.get(oid),
+        review = nums.get("review") or {"status": "single", "verified": nums.get("verified") or {}}
+        if review["status"] == "disagreed":
+            refusals.setdefault(oid, "reviewers disagree (human adjudication)")
+            continue
+        eff, why = effect_from_claim(claim, review["verified"], polarity=polarity.get(oid),
                                      abs_only=nums.get("abs_only") or ())
         if eff is None:
             refusals.setdefault(oid, why)
             continue
-        verified = nums.get("verified") or {}
+        verified = review["verified"]
         arm_n = (verified.get("n_ingredient"), verified.get("n_control"))
-        n = sum(arm_n) if all(isinstance(x, int) for x in arm_n) else s3.get("n_analysed") or s3.get("n_randomised")
+        if not all(isinstance(x, int) for x in arm_n):
+            n = s3.get("n_analysed") or s3.get("n_randomised")
+        elif claim.get("design_kind") == "crossover":
+            n = max(arm_n)            # the same people in both periods: not 2n
+        else:
+            n = sum(arm_n)
         s7 = ext.get("S7") if isinstance(ext.get("S7"), dict) else {}
         cand = StudyEffect(item["id"], eff.route, eff, bool(claim.get("is_primary_outcome")), i,
                            n=n if isinstance(n, int) else None,
                            rob=rob_status(ext.get("S4") if isinstance(ext.get("S4"), dict) else None),
                            form_match=vocab.form_match(product.get("ingredient") or "",
                                                        study_form(s7, claim), product.get("form_vocab_id")),
-                           pop_match=pop, design_rank=record.get("design_rank"))
+                           pop_match=pop, design_rank=record.get("design_rank"),
+                           reviewed=review["status"] == "agreed",
+                           dose_match=dose_match_tier(product.get("ingredient") or "", s7, s3, claim, product))
         cur = best.get(oid)
         key = lambda s: (not s.primary, ROUTE_RANK.get(s.route, 9), s.claim_index)
         if cur is None or key(cand) < key(cur):
@@ -186,7 +221,8 @@ def pool_outcomes(items: list[dict], product: dict) -> dict[str, OutcomePool]:
                          "estimand": s.effect.estimand, "primary": s.primary,
                          "flags": list(s.effect.flags), "n": s.n, "rob": s.rob,
                          "form_match": s.form_match, "pop_match": s.pop_match,
-                         "design_rank": s.design_rank} for s in studies]
+                         "design_rank": s.design_rank, "reviewed": s.reviewed,
+                         "dose_match": s.dose_match} for s in studies]
         smd = [s for s in studies if s.effect.smd_variance is not None]
         pool.k = len(smd)
         if smd:

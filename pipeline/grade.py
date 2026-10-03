@@ -19,7 +19,8 @@ handbook rules of thumb, chosen for the shadow pipeline and listed for founder
 review in docs/REVIEW_PENDING.md; none feeds a production score.
 
 The meaningful-change threshold comes from `vocab/outcome.json` ("mcid" with
-{"smd": value, "source": ...}) once a value is approved. Until then the
+{"smd": value, "source": ..., "approved": true}) once the founder approves it;
+a proposed value carries "approved": false and is ignored. Until then the
 statistical convention 0.2 SD is used and the result says so.
 """
 from __future__ import annotations
@@ -73,6 +74,7 @@ class Grade:
     threshold_sensitive: bool = False
     letters_at: dict[str, str] = field(default_factory=dict)
     reason: str | None = None
+    registry: dict | None = None      # pipeline/registry_bias.registry_check, reported only
 
 
 # ------------------------------------------------------------------ helpers
@@ -165,19 +167,39 @@ def certainty(pool, threshold: float) -> Certainty:
     if not_pop:
         not_assessed.append(f"population: {not_pop:.0%} of the weight from adjacent populations "
                             "(one sex or unreported axes) -- reported, not downgraded")
-    not_assessed.append("dose indirectness (product dose not compared yet)")
+    # Dose: the product's dose against each trial's, on SPEC §8's existing
+    # tiers (no new constant): only "in_band" (1-2x the trial's daily dose) is
+    # direct. The same weight share as form decides; a trial with no
+    # extractable dose is reported, never counted as a mismatch.
+    dosed = [s for s in studies if s.get("dose_match") is not None]
+    if not dosed:
+        not_assessed.append("dose indirectness (no product dose given)")
+    else:
+        known = lambda s: s.get("dose_match") not in (None, "unspecified")
+        off_dose = _share(studies, w, lambda s: known(s) and s["dose_match"] != "in_band")
+        if off_dose > RULES["indirect_weight_serious"]:
+            indirect += 1
+            reasons.append(f"{off_dose:.0%} of the weight from trials at a dose unlike the product's")
+        unknown = _share(studies, w, lambda s: not known(s))
+        if unknown:
+            not_assessed.append(f"dose: {unknown:.0%} of the weight from trials with no comparable dose")
     if indirect:
         down["indirectness"] = (min(indirect, 2), "; ".join(reasons))
 
     # 5. Publication bias
     if len(studies) < RULES["egger_min_k"]:
-        not_assessed.append(f"publication bias (fewer than {RULES['egger_min_k']} trials; "
-                            "registry check not built yet)")
+        not_assessed.append(f"publication bias: Egger needs {RULES['egger_min_k']}+ trials")
     else:
         eg = egger_test([s["g"] for s in studies], [s["g_variance"] for s in studies])
         crit = me.student_t_ppf(1 - RULES["egger_alpha"] / 2, len(studies) - 2)
         if eg and abs(eg[1]) > crit:
             down["publication_bias"] = (1, f"Egger intercept {eg[0]:+.2f} (t = {eg[1]:.2f})")
+
+    # Dual extraction is a review-conduct standard, not a GRADE domain: an
+    # effect read by one extractor only is reported, never downgraded.
+    single = sum(1 for s in studies if not s.get("reviewed"))
+    if single:
+        not_assessed.append(f"second reviewer: {single} of {len(studies)} effects single-extracted")
 
     level = max(1, start - sum(points for points, _ in down.values()))
     return Certainty(level, LEVELS[level], down, not_assessed)
@@ -204,16 +226,28 @@ def _letter(benefit_cat: str, level: int) -> str:
     return "I" if benefit_cat == "inconclusive" else TABLE[benefit_cat][level]
 
 
-def grade(pool, mcid: dict | None = None) -> Grade:
-    """Letter grade for one outcome pool. `mcid` = {"smd": value, "source": str}."""
-    if mcid and isinstance(mcid.get("smd"), (int, float)) and mcid["smd"] > 0:
+def _registry_note(registry: dict | None) -> str | None:
+    if not registry:
+        return None
+    return (f"registry: {len(registry['unpublished'])} of {registry['registered']} registered, completed "
+            "trials have no results or result publication (upper bound; reported, not downgraded)")
+
+
+def grade(pool, mcid: dict | None = None, registry: dict | None = None) -> Grade:
+    """Letter grade for one outcome pool. `mcid` = {"smd", "source", "approved"}."""
+    if (mcid and mcid.get("approved") is True
+            and isinstance(mcid.get("smd"), (int, float)) and mcid["smd"] > 0):
         m, source = float(mcid["smd"]), str(mcid.get("source") or "approved MCID")
     else:
+        # A proposed value ("approved": false) is a constant awaiting the
+        # founder (invariant 4) and is never used, even when it equals 0.2.
         m, source = RULES["default_mcid_smd"], "statistical convention (0.2 SD), no approved MCID"
     if not pool.smd:
         return Grade(pool.outcome, "I", "no data", Certainty(1, LEVELS[1]), m, source,
-                     reason="no trial with a verified, poolable effect")
+                     reason="no trial with a verified, poolable effect", registry=registry)
     cert = certainty(pool, m)
+    if _registry_note(registry):
+        cert.not_assessed.append(_registry_note(registry))
     est, ci = pool.smd["estimate"], pool.smd["ci"]
     cat = benefit(est, ci, m)
     letters = {"half": _letter(benefit(est, ci, m / 2), certainty(pool, m / 2).level),
@@ -221,5 +255,5 @@ def grade(pool, mcid: dict | None = None) -> Grade:
     letter = _letter(cat, cert.level)
     return Grade(pool.outcome, letter, cat, cert, m, source,
                  harm=cat == "harm", letters_at=letters,
-                 threshold_sensitive=any(v != letter for v in letters.values()),
+                 threshold_sensitive=any(v != letter for v in letters.values()), registry=registry,
                  reason="CI too wide for any benefit category" if cat == "inconclusive" else None)

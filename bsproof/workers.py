@@ -49,6 +49,47 @@ def _numeric_tables_enabled() -> bool:
     return _v13_shadow_enabled() or os.environ.get("SP_NUMERIC_TABLES", "1") == "1"
 
 
+def _second_reviewer_enabled() -> bool:
+    """Evidence method v2 dual extraction (S5R, pipeline/review.py). OFF by
+    default: it adds one call per study with poolable numbers, on a different
+    and heavier model. SP_SECOND_REVIEWER=1 turns it on."""
+    return os.environ.get("SP_SECOND_REVIEWER", "0") == "1"
+
+
+def _second_review(out: dict, record: dict, text: str, sections: dict | None,
+                   s3_facts: dict, call) -> None:
+    """Send reviewer 2 every MAPPED claim that has span-verified numbers, in one
+    call per study, and attach the reconciliation to each outcome's numbers_v2.
+    Claims with nothing verified have nothing to confirm and are not sent."""
+    from pipeline.review import reconcile_study
+    outcomes = out.get("outcomes") or []
+    sent = {i for i, o in enumerate(outcomes)
+            if not o.get("discarded") and ((o.get("numbers_v2") or {}).get("verified"))}
+    reviews = None
+    if sent:
+        payload = _payload("S5R", record, text, None, sections, s3_facts=s3_facts)
+        payload["claims"] = [{"index": i, **{k: outcomes[i]["claim"].get(k) for k in
+                                             ("outcome_raw", "measure", "timepoint",
+                                              "ingredient_arm", "control_arm")}}
+                             for i in sorted(sent)]
+        try:
+            result, meta = call("S5R", payload)
+        except Exception as exc:
+            result, meta = None, {"error": str(exc)}
+        out.setdefault("_meta", {})["S5R"] = meta
+        if result is None:
+            # A failed review leaves every claim single-extracted; it never
+            # passes as an agreement.
+            err = str((meta or {}).get("error") or "")
+            if any(k in err.lower() for k in ("session limit", "usage limit", "rate limit")):
+                out["_quota_exhausted"] = err
+            out.setdefault("_failed", []).append({"agent": "S5R", "error": err})
+            sent = set()
+        reviews = (result or {}).get("reviews")
+    out["review_v2"] = {"sent": len(sent),
+                        "adjudication": reconcile_study(outcomes, reviews, sent)}
+
+
 def _verify_numbers(out: dict, record: dict) -> list[dict]:
     """Span-check every S5 claim's numbers (pipeline/span_check.py), by claim
     index. Deterministic; tables are fetched only when a claim cites one, and
@@ -503,6 +544,8 @@ def extract_study(record: dict, text: str, registry: dict | None = None, *,
                 "rationale": (result or {}).get("rationale"),
                 "numbers_v2": numbers[i] if i < len(numbers) else None,
             })
+    if _second_reviewer_enabled():
+        _second_review(out, record, text, sections, s3_facts, call)
     return out
 
 

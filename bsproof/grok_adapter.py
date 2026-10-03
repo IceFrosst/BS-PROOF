@@ -39,6 +39,9 @@ TIER_MODEL = {
     "A": os.environ.get("SP_GROK_MODEL_A", "grok-4.5"),
     "B": os.environ.get("SP_GROK_MODEL_B", "grok-4.5"),
     "C": os.environ.get("SP_GROK_MODEL_C", "grok-4.5"),
+    # S5R second reviewer (pipeline/review.py). Claude-only for now; set this to
+    # a model different from tier B before using it on the Grok backend.
+    "R": os.environ.get("SP_GROK_MODEL_R", "grok-4.5"),
 }
 
 # ~10% under previous aggressive default for desktop stability

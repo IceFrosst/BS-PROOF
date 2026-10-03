@@ -137,7 +137,8 @@ class EffectSize(unittest.TestCase):
         v = {"effect_size": 0.4, "ci_low": 0.1, "ci_high": 0.7}
         cases = [
             ({**smd, "effect_favours": "neither"}, "sign unknown"),
-            ({**smd, "effect_favours": "ingredient", "design_kind": "crossover"}, "not parallel"),
+            ({**smd, "effect_favours": "ingredient", "design_kind": "crossover"}, "d_z"),
+            ({**smd, "effect_favours": "ingredient", "design_kind": "cluster"}, "not parallel or crossover"),
             ({**smd, "effect_favours": "ingredient", "contrast": "within_group"}, "ingredient-free"),
             ({**smd, "effect_favours": "ingredient", "estimate_kind": "relative_percent"}, "own scale"),
         ]
@@ -146,6 +147,24 @@ class EffectSize(unittest.TestCase):
                 eff, reason = effect_from_claim(claim, v, polarity="higher_better")
                 self.assertIsNone(eff)
                 self.assertIn(why, reason)
+
+    def test_crossover_arm_stats_are_analysed_as_parallel(self):
+        # Cochrane Handbook §23.2.6: conservative (too-wide CI), never over-weighted.
+        v = {"mean_ingredient": 85.2, "sd_ingredient": 9.1, "n_ingredient": 12,
+             "mean_control": 80.0, "sd_control": 8.7, "n_control": 12}
+        eff, route = effect_from_claim({**BASE, "design_kind": "crossover", "effect_unit": "kg"}, v,
+                                       polarity="higher_better")
+        self.assertEqual(route, "arm_stats")
+        self.assertAlmostEqual(eff.smd, me.hedges_g(85.2, 9.1, 12, 80.0, 8.7, 12).g)
+        self.assertIn("crossover_as_parallel", eff.flags)
+
+    def test_crossover_paired_mean_difference_is_kept(self):
+        claim = {**BASE, "design_kind": "crossover", "estimate_kind": "mean_difference",
+                 "effect_favours": "ingredient", "ci_level": 0.95, "effect_unit": "W"}
+        eff, route = effect_from_claim(claim, {"effect_size": 30.0, "ci_low": 10.0, "ci_high": 50.0},
+                                       polarity="higher_better")
+        self.assertEqual(route, "reported_md_ci")
+        self.assertIn("crossover_paired_ci", eff.flags)
 
     def test_percent_arm_values_are_refused(self):
         v = {"mean_ingredient": 75.0, "mean_control": 50.0, "sd_ingredient": 10.0,

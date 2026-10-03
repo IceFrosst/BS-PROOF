@@ -1,0 +1,215 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BS-PROOF S5R second-reviewer number extraction",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "reviews"
+  ],
+  "properties": {
+    "reviews": {
+      "type": "array",
+      "maxItems": 60,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "index": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000
+          },
+          "found": {
+            "type": "boolean"
+          },
+          "evidence_span": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 600
+          },
+          "n_ingredient": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 1000000
+          },
+          "n_control": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 1000000
+          },
+          "mean_ingredient": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": -1000000000000.0,
+            "maximum": 1000000000000.0
+          },
+          "mean_control": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": -1000000000000.0,
+            "maximum": 1000000000000.0
+          },
+          "sd_ingredient": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "exclusiveMinimum": 0,
+            "maximum": 1000000000000.0
+          },
+          "sd_control": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "exclusiveMinimum": 0,
+            "maximum": 1000000000000.0
+          },
+          "effect_size": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": -1000000000000.0,
+            "maximum": 1000000000000.0
+          },
+          "effect_unit": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 60
+          },
+          "effect_favours": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "ingredient",
+              "control",
+              "neither",
+              null
+            ]
+          },
+          "estimate_kind": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "smd",
+              "mean_difference",
+              "ratio",
+              "relative_percent",
+              "percentage_points",
+              null
+            ]
+          },
+          "ci_low": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": -1000000000000.0,
+            "maximum": 1000000000000.0
+          },
+          "ci_high": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": -1000000000000.0,
+            "maximum": 1000000000000.0
+          },
+          "ci_level": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "exclusiveMinimum": 0,
+            "exclusiveMaximum": 1
+          },
+          "p_value": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 1
+          },
+          "estimand": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "endpoint",
+              "change_from_baseline",
+              null
+            ]
+          },
+          "design_kind": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "parallel",
+              "crossover",
+              "cluster",
+              null
+            ]
+          },
+          "contrast": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "vs_ingredient_free",
+              "vs_ingredient_arm",
+              "within_group",
+              "unclear",
+              null
+            ]
+          }
+        },
+        "required": [
+          "index",
+          "found",
+          "evidence_span",
+          "n_ingredient",
+          "n_control",
+          "mean_ingredient",
+          "mean_control",
+          "sd_ingredient",
+          "sd_control",
+          "effect_size",
+          "effect_unit",
+          "effect_favours",
+          "estimate_kind",
+          "ci_low",
+          "ci_high",
+          "ci_level",
+          "p_value",
+          "estimand",
+          "design_kind",
+          "contrast"
+        ]
+      }
+    }
+  }
+}

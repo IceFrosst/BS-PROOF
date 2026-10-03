@@ -20,11 +20,26 @@ Routes, best first (the first that applies wins; each is recorded):
   reported_smd_p   a reported SMD + an EXACT p           -> SE from the p
   reported_smd_n   a reported SMD + both arm sizes       -> variance from n
 
+Crossover trials (added 2026-10-03, Cochrane Handbook ch. 23):
+
+  arm_stats        analysed AS IF PARALLEL: "take all measurements from
+                   intervention E periods and all measurements from intervention
+                   C periods and analyse these as if the trial were a
+                   parallel-group trial" (§23.2.6). It ignores the within-person
+                   correlation, so the CI is too wide -- "conservative, in that
+                   studies are under-weighted rather than over-weighted". The g
+                   is standardised by the SD of measurements, as §23.2.7.2
+                   requires. Flagged `crossover_as_parallel`.
+  reported_md_ci   a paired mean difference with its CI is valid as printed
+                   (the CI already carries the pairing). Flagged.
+  reported SMD     REFUSED: a crossover paper's "d" is often standardised by
+                   the SD of the within-person differences (d_z), which §23.2.7.2
+                   says not to use, and the text rarely says which.
+
 Refused, each with its reason: anything not a between-arm contrast against an
-ingredient-free control; crossover / cluster / unstated designs (they need a
-correlation or ICC the papers rarely print); ratios and percent-change kinds
-(they need their own scale); a favoured arm of "neither"; percentage values
-used as arm means without SDs.
+ingredient-free control; cluster / unstated designs (they need an ICC the papers
+rarely print); ratios and percent-change kinds (they need their own scale); a
+favoured arm of "neither"; percentage values used as arm means without SDs.
 """
 from __future__ import annotations
 
@@ -65,8 +80,10 @@ def effect_from_claim(claim: dict, verified: dict, *, polarity: str | None,
     """(Effect, route) or (None, refusal reason)."""
     if claim.get("contrast") != "vs_ingredient_free":
         return None, "not a contrast against an ingredient-free control"
-    if claim.get("design_kind") != "parallel":
-        return None, f"design is {claim.get('design_kind') or 'unstated'}, not parallel"
+    design = claim.get("design_kind")
+    if design not in ("parallel", "crossover"):
+        return None, f"design is {design or 'unstated'}, not parallel or crossover"
+    crossover = design == "crossover"
     kind = claim.get("estimate_kind")
     if kind in ("ratio", "relative_percent"):
         return None, f"{kind} needs its own scale; not pooled with differences"
@@ -93,6 +110,8 @@ def effect_from_claim(claim: dict, verified: dict, *, polarity: str | None,
         md = v["mean_ingredient"] - v["mean_control"]
         md_var = (v["sd_ingredient"] ** 2 / v["n_ingredient"]
                   + v["sd_control"] ** 2 / v["n_control"])
+        if crossover:
+            flags = flags + ("crossover_as_parallel",)
         return Effect("arm_stats", orient * g.g, g.variance, orient * md, md_var,
                       claim.get("effect_unit") or claim.get("measure"), estimand, flags), "arm_stats"
 
@@ -115,6 +134,10 @@ def effect_from_claim(claim: dict, verified: dict, *, polarity: str | None,
     level = claim.get("ci_level")
     if has_ci and level is None:
         flags = flags + ("ci_level_unstated",)
+    if kind == "smd" and crossover:
+        return None, "crossover SMD may be standardised by the SD of differences (d_z); not poolable"
+    if crossover:
+        flags = flags + ("crossover_paired_ci",)
     if kind == "smd":
         if has_ci and level is not None:
             try:

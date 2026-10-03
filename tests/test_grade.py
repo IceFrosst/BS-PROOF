@@ -5,9 +5,10 @@ from pipeline.grade import RULES, TABLE, benefit, certainty, egger_test, grade
 from pipeline.pool import OutcomePool
 
 
-def st(g=0.4, var=0.04, n=200, rob="low", form="exact", pop="exact", design=4):
+def st(g=0.4, var=0.04, n=200, rob="low", form="exact", pop="exact", design=4, dose="in_band",
+       reviewed=True):
     return {"g": g, "g_variance": var, "n": n, "rob": rob, "form_match": form,
-            "pop_match": pop, "design_rank": design}
+            "pop_match": pop, "design_rank": design, "dose_match": dose, "reviewed": reviewed}
 
 
 def make_pool(studies, estimate=0.5, ci=(0.3, 0.7), i2=0.0, tau2=0.0):
@@ -69,9 +70,29 @@ class CertaintyDomains(unittest.TestCase):
         observational = certainty(make_pool([st(design=6) for _ in range(3)]), 0.2)
         self.assertEqual(observational.level, 2)
 
+    def test_dose_indirectness(self):
+        off = certainty(make_pool([st(dose="below_50") for _ in range(3)]), 0.2)
+        self.assertEqual(off.downgrades["indirectness"][0], 1)
+        both = certainty(make_pool([st(dose="above_200", form="different") for _ in range(3)]), 0.2)
+        self.assertEqual(both.downgrades["indirectness"][0], 2)
+        unknown = certainty(make_pool([st(dose="unspecified") for _ in range(3)]), 0.2)
+        self.assertNotIn("indirectness", unknown.downgrades)
+        self.assertTrue(any(x.startswith("dose:") for x in unknown.not_assessed))
+        no_product = certainty(make_pool([st(dose=None) for _ in range(3)]), 0.2)
+        self.assertTrue(any("no product dose" in x for x in no_product.not_assessed))
+
+    def test_single_extraction_is_reported_not_downgraded(self):
+        c = certainty(make_pool([st(reviewed=False) for _ in range(3)]), 0.2)
+        self.assertEqual(c.level, 4)
+        self.assertTrue(any("3 of 3 effects single-extracted" in x for x in c.not_assessed))
+
     def test_publication_bias_needs_ten_trials(self):
         few = certainty(make_pool(CLEAN), 0.2)
         self.assertTrue(any("publication bias" in x for x in few.not_assessed))
+        reg = {"registered": 12, "in_corpus": 4, "unpublished": ["NCT1", "NCT2"], "upper_bound": True}
+        g = grade(make_pool(CLEAN), registry=reg)
+        self.assertEqual(g.certainty.level, 4)                      # reported, not downgraded
+        self.assertTrue(any(x.startswith("registry: 2 of 12") for x in g.certainty.not_assessed))
         # Small trials with big effects, big trials with small ones: asymmetric.
         skewed = [st(g=1.2 - 0.1 * i, var=0.30 - 0.025 * i, n=60 + 40 * i) for i in range(11)]
         c = certainty(make_pool(skewed, estimate=0.6, ci=(0.4, 0.8)), 0.2)
@@ -99,8 +120,24 @@ class Letters(unittest.TestCase):
         self.assertEqual(g.threshold, RULES["default_mcid_smd"])
 
     def test_an_approved_mcid_is_used(self):
-        g = grade(make_pool(CLEAN, estimate=0.5, ci=(0.3, 0.7)), {"smd": 0.4, "source": "anchor study X"})
+        g = grade(make_pool(CLEAN, estimate=0.5, ci=(0.3, 0.7)),
+                  {"smd": 0.4, "source": "anchor study X", "approved": True})
         self.assertEqual((g.threshold, g.benefit, g.threshold_source), (0.4, "meaningful", "anchor study X"))
+
+    def test_a_proposed_mcid_is_ignored_until_approved(self):
+        g = grade(make_pool(CLEAN, estimate=0.5, ci=(0.3, 0.7)),
+                  {"smd": 0.4, "source": "anchor study X", "approved": False})
+        self.assertEqual(g.threshold, RULES["default_mcid_smd"])
+        self.assertIn("no approved MCID", g.threshold_source)
+
+    def test_vocab_mcids_are_cited_and_explicitly_approved_or_not(self):
+        from pipeline import vocab
+        mcids = {o["id"]: o["mcid"] for o in vocab.load("outcome")["outcomes"] if "mcid" in o}
+        self.assertIn("muscle_strength", mcids)
+        for oid, m in mcids.items():
+            self.assertTrue(m["source"], oid)
+            self.assertIn(m["tier"], (1, 2, 3, 4), oid)
+            self.assertIsInstance(m["approved"], bool, f"{oid}: approval is an explicit founder decision")
 
     def test_threshold_sensitivity_is_flagged(self):
         g = grade(make_pool(CLEAN, estimate=0.3, ci=(0.25, 0.35)))   # meaningful at 0.2, large at 0.1

@@ -312,8 +312,8 @@ def agent_wiring_problems(root: Path | None = None) -> list[str]:
             out.append(f"AGENTS[{sid}]: expected (tier, schema, prompt), got {spec!r}")
             continue
         tier, schema, prompt = spec
-        if tier not in ("A", "B", "C"):
-            out.append(f"AGENTS[{sid}]: unknown tier {tier!r} (expected A, B or C)")
+        if tier not in ("A", "B", "C", "R"):
+            out.append(f"AGENTS[{sid}]: unknown tier {tier!r} (expected A, B, C or R)")
         for sub, fname in (("schemas", schema), ("prompts", prompt)):
             if not (root / sub / fname).exists():
                 out.append(f"AGENTS[{sid}]: {sub}/{fname} does not exist")

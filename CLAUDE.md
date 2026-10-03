@@ -186,6 +186,7 @@ pipeline/   deterministic, NO MODEL, unit-tested
   meta_effects.py                  v2: Hedges' g, REML random-effects, Hartung-Knapp CIs
   pool.py                          v2 SHADOW: per-outcome pooling of verified effects (not read by v14)
   grade.py                         v2 SHADOW: GRADE certainty + the §4 letter table
+  review.py registry_bias.py       v2 SHADOW: second-reviewer disagreement rule; registered-but-unpublished trials
   claim_arms.py eligibility.py     invariant-7 counterfactual firewall and scope refusals
   effect_s.py                      reported effect -> signed contribution s
   calibration.py                   anchor harness
@@ -296,8 +297,10 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
    (`docs/history/2026-10-03-phase1-measurements.md`). Phase 2 step 1 done
    (span check, effect sizes, table route on by default), the `max_turns` fix
    (free-text schema headroom), shadow pooling (`pipeline/pool.py`) and GRADE +
-   letter grades (`pipeline/grade.py`). Remaining: see `docs/EVIDENCE_METHOD.md`
-   §8; heavy jobs (rerun B, second reviewer, re-extraction) wait for quota.
+   letter grades (`pipeline/grade.py`), second reviewer (`pipeline/review.py`,
+   `SP_SECOND_REVIEWER=1`), crossover + dose indirectness, registry check. Next:
+   founder sign-off on `docs/REVIEW_PENDING.md` #0 (MCIDs, GRADE rules); heavy
+   jobs (rerun B, re-extraction with the reviewer on, benchmark) wait for quota.
 1. Verify on a real phone: live camera, a busy label read after the
    thinking-mode fix, PWA install.
 2. Check whether the text calls (`deepseek-chat`) also need thinking disabled

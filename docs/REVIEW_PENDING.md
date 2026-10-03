@@ -30,6 +30,36 @@ grades **I** ("inconclusive"). Also: risk of bias per trial = HIGH if
 randomisation, blinding or attrition is inadequate, LOW only if randomisation
 and blinding are adequate.
 
+**Added later on 2026-10-03 (second reviewer, MCIDs, method gaps):**
+
+- **MCID table — approve or amend** (`vocab/outcome.json` `"mcid"`, all
+  `"approved": false`, so the grade still uses the flagged 0.2 SD default):
+
+  | outcome | proposed | tier | source |
+  |---|---|---|---|
+  | muscle_strength, muscle_power, muscular_endurance, exercise_endurance | 0.2 SD | 3 (distribution-based "smallest worthwhile change") | Hopkins, *Sportscience* 8:1–7, 2004 — quoted in the vocab entry |
+  | lean_body_mass | 0.2 SD | 4 (convention) | no published MCID in healthy adults found |
+
+  Also recorded, not used: grip-strength MCID 5.0–6.5 kg (Bohannon, *J Phys
+  Ther Sci* 2019, patient populations). Tier-2 values may only make a grade
+  stricter; it was not applied because `muscle_strength` pools many tests in SD
+  units. Approving a row = setting `"approved": true`.
+- **Second reviewer** (`pipeline/review.py`): two readings agree within 1 %
+  relative or 0.005 absolute (`RULES`); any categorical or numeric conflict
+  refuses the claim for human adjudication; a number only reviewer 1 read is
+  dropped; reviewer 2 cannot add numbers. Single-extracted effects are reported,
+  not downgraded. Reviewer model defaults to `claude-opus-5` (`SP_MODEL_R`).
+- **Dose indirectness**: −1 when > 50 % of the weight comes from trials whose
+  dose is not SPEC §8 `in_band` against the product (reuses the existing tiers;
+  no new constant). Form + dose together cap at −2.
+- **Crossover trials**: arm statistics are pooled as if parallel (Cochrane
+  Handbook §23.2.6, conservative); a paired mean difference with CI is kept;
+  a crossover SMD is refused (may be d_z).
+- **Registry check** (`pipeline/registry_bias.py`): registered, completed trials
+  with no results and no linked publication are **reported, not downgraded**.
+  Proposal to decide: −1 publication bias when unpublished registered trials ≥
+  the number pooled. The count is an upper bound (registry links are incomplete).
+
 ### 1. Predatory list flags nothing, and that is now deliberate
 
 **Fixed 2026-08-08, but read the second half.**

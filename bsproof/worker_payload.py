@@ -319,6 +319,12 @@ def _payload(agent: str, record: dict, text: str, registry: dict | None,
                 "target_ingredient": record.get("ingredient"),
                 "s3_arm_facts": (s3_facts or {}).get("arms", []),
                 "s3_extraction_version": (s3_facts or {}).get("extraction_version")}
+    if agent == "S5R":
+        # The second reviewer reads the SAME paper and tables as S5 but is never
+        # shown S5's numbers -- only which claims to read (workers.py adds them).
+        return {**base, "tables": _tables_text(record),
+                "target_ingredient": record.get("ingredient"),
+                "s3_arm_facts": (s3_facts or {}).get("arms", [])}
     if agent == "S7":
         ingredient = record["ingredient"]
         # Dose sentences harvested from the FULL text by regex, because the

@@ -264,7 +264,8 @@
     "grip strength",
     "1RM"
    ],
-   "polarity": "higher_better"
+   "polarity": "higher_better",
+   "mcid": {"smd": 0.2, "tier": 3, "basis": "distribution-based smallest worthwhile change", "source": "Hopkins WG. How to Interpret Changes in an Athletic Performance Test. Sportscience 8, 1-7, 2004 (sportsci.org/jour/04/wghtests.htm)", "quote": "an appropriate default for the smallest change in test performance is one-fifth of the between-athlete standard deviation (a standardized or Cohen effect size of 0.20)", "population": "athletes (team sports); the convention used across sports-science trials", "approved": false, "also_found": [{"tier": 2, "value": "5.0-6.5 kg (grip strength only)", "source": "Bohannon RW. Minimal clinically important difference for grip strength: a systematic review. J Phys Ther Sci 2019;31:75-78 (PMC6348186)", "quote": "In the meantime changes of 5.0 to 6.5 kg may be reasonable estimates of meaningful changes in grip strength.", "population": "patients (post-stroke, distal radius fracture); within-person change, not a between-group difference", "use": "sensitivity only: a different population may only make a grade stricter, and this outcome pools many strength tests in SD units"}]}
   },
   {
    "id": "muscle_power",
@@ -285,7 +286,8 @@
     "sprint",
     "vertical jump"
    ],
-   "polarity": "higher_better"
+   "polarity": "higher_better",
+   "mcid": {"smd": 0.2, "tier": 3, "basis": "distribution-based smallest worthwhile change", "source": "Hopkins WG. How to Interpret Changes in an Athletic Performance Test. Sportscience 8, 1-7, 2004 (sportsci.org/jour/04/wghtests.htm)", "quote": "an appropriate default for the smallest change in test performance is one-fifth of the between-athlete standard deviation (a standardized or Cohen effect size of 0.20)", "population": "athletes (team sports); the convention used across sports-science trials", "approved": false}
   },
   {
    "id": "exercise_endurance",
@@ -310,7 +312,8 @@
     "VO2max",
     "time trial"
    ],
-   "polarity": "higher_better"
+   "polarity": "higher_better",
+   "mcid": {"smd": 0.2, "tier": 3, "basis": "distribution-based smallest worthwhile change", "source": "Hopkins WG. How to Interpret Changes in an Athletic Performance Test. Sportscience 8, 1-7, 2004 (sportsci.org/jour/04/wghtests.htm)", "quote": "an appropriate default for the smallest change in test performance is one-fifth of the between-athlete standard deviation (a standardized or Cohen effect size of 0.20)", "population": "athletes (team sports); the convention used across sports-science trials", "approved": false}
   },
   {
    "id": "muscular_endurance",
@@ -337,7 +340,8 @@
     "repetitions to failure",
     "reps to failure"
    ],
-   "polarity": "higher_better"
+   "polarity": "higher_better",
+   "mcid": {"smd": 0.2, "tier": 3, "basis": "distribution-based smallest worthwhile change", "source": "Hopkins WG. How to Interpret Changes in an Athletic Performance Test. Sportscience 8, 1-7, 2004 (sportsci.org/jour/04/wghtests.htm)", "quote": "an appropriate default for the smallest change in test performance is one-fifth of the between-athlete standard deviation (a standardized or Cohen effect size of 0.20)", "population": "athletes (team sports); the convention used across sports-science trials", "approved": false}
   },
   {
    "id": "exercise_recovery",
@@ -416,7 +420,8 @@
     "fat-free mass",
     "body composition"
    ],
-   "polarity": "higher_better"
+   "polarity": "higher_better",
+   "mcid": {"smd": 0.2, "tier": 4, "basis": "statistical convention (Cohen's small effect)", "source": "no published MCID for lean mass in healthy adults found (Europe PMC search 2026-10-03: MCID/minimal important difference AND lean/fat-free mass, 542 hits, none deriving one)", "quote": null, "population": null, "approved": false}
   },
   {
    "id": "joint_pain",

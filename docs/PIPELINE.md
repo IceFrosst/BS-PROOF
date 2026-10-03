@@ -181,6 +181,12 @@ A study costs ~10 model calls, about half of them S6. Since 2026-10-03 the
 that has table candidates) is on by default for evidence method v2; it adds a
 few calls per study and moves no v14 score. `SP_NUMERIC_TABLES=0` turns it off.
 
+**Second reviewer (evidence method v2, off by default).** `SP_SECOND_REVIEWER=1`
+adds one `S5R` call per study on a different model (`SP_MODEL_R`, default
+`claude-opus-5`) that re-reads the poolable numbers blind; `pipeline/review.py`
+keeps only numbers both readings agree on and queues conflicts in
+`review_v2.adjudication`. It roughly adds 1 heavier call per study: run it solo.
+
 ### Step 5 — archive results
 
 Every human-facing run goes under `reports/runs/` with a row in `INDEX.md`

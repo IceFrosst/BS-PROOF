@@ -3,7 +3,7 @@
 Evidence method v2 SHADOW pooling report (pipeline/pool.py). NO MODEL CALLS.
 
     .venv/bin/python scripts/experiments/pool_shadow.py out/stability/A.json
-    .venv/bin/python scripts/experiments/pool_shadow.py reports/runs/<run>_context.json [--json OUT]
+    .venv/bin/python scripts/experiments/pool_shadow.py reports/runs/<run>_context.json [--json OUT] [--registry]
 
 Accepts a stability-harness file ({id: {record, extraction}}) or a run context
 (`studies_list`, whose per-study record keeps arm-level facts and `numbers_v2`
@@ -50,6 +50,8 @@ def main(argv: list[str]) -> int:
     ap.add_argument("source", type=Path)
     ap.add_argument("--form", help="product form vocabulary id (default: from the source)")
     ap.add_argument("--json", type=Path, help="write the full result as JSON")
+    ap.add_argument("--registry", action="store_true",
+                    help="search ClinicalTrials.gov for registered-but-unpublished trials (network, no model)")
     args = ap.parse_args(argv)
     items, ingredient, form = items_from(args.source)
     pv = vocab.population_variants()[0]
@@ -58,14 +60,25 @@ def main(argv: list[str]) -> int:
     pools = pool_outcomes(items, product)
     print(f"SHADOW POOLING (evidence method v2) — {ingredient}, {len(items)} studies, "
           f"population '{pv['id']}'. Not a production score.\n")
-    mcids = {o["id"]: o.get("mcid") for o in vocab.load("outcome")["outcomes"]}
+    outcomes = {o["id"]: o for o in vocab.load("outcome")["outcomes"]}
+    registry = {}
+    if args.registry:
+        from pipeline.registry_bias import registry_check
+        from sources.clinicaltrials import search_completed
+        records = search_completed(ingredient)
+        ncts = {str(i["record"].get("registration_id") or "") for i in items}
+        registry = {oid: registry_check(records, ingredient, outcomes[oid].get("search_terms") or [], ncts)
+                    for oid in pools if oid in outcomes}
     grades = {}
     for oid, p in pools.items():
-        g = grades[oid] = grade(p, mcids.get(oid))
+        g = grades[oid] = grade(p, (outcomes.get(oid) or {}).get("mcid"), registry.get(oid))
         print(f"{oid:<20} GRADE {g.letter:<3} benefit {g.benefit:<12} certainty {g.certainty.label}"
               + ("  ⚠ harm" if g.harm else "") + ("  (threshold-sensitive)" if g.threshold_sensitive else ""))
         for domain, (points, why) in g.certainty.downgrades.items():
             print(f"{'':<26}-{points} {domain}: {why}")
+        for note in g.certainty.not_assessed:
+            if note.startswith(("registry:", "dose:", "second reviewer:")):
+                print(f"{'':<26}note: {note}")
         s = p.smd
         head = (f"g = {s['estimate']:+.2f}  [{s['ci'][0]:+.2f}, {s['ci'][1]:+.2f}]  {s['method']}"
                 if s else "no poolable effect")

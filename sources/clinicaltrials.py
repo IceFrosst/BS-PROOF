@@ -182,3 +182,31 @@ def facts_for(nct_id: str) -> dict | None:
         "design": design_facts(rec),
         "unpublished": unpublished_flag(rec),
     }
+
+
+SEARCH_FIELDS = ("NCTId,BriefTitle,OverallStatus,CompletionDate,HasResults,StudyType,"
+                 "ReferencesModule,OutcomesModule,ArmsInterventionsModule")
+
+
+def search_completed(ingredient: str, *, max_pages: int = 20, page_size: int = 100) -> list[dict]:
+    """
+    Every COMPLETED interventional trial registered with `ingredient` as an
+    intervention -- the registry side of the publication-bias check
+    (pipeline/registry_bias.py). Raw records; the caller filters.
+
+    Raises SourceError on any failure and when the result would be truncated
+    (more pages than max_pages): a partial list would under-count unpublished
+    trials and read as "no publication bias", the reassuring wrong answer.
+    """
+    out, token = [], None
+    for _ in range(max_pages):
+        params = {"format": "json", "query.intr": ingredient, "pageSize": page_size,
+                  "filter.overallStatus": "COMPLETED", "fields": SEARCH_FIELDS}
+        if token:
+            params["pageToken"] = token
+        page = get_json(API, params)
+        out.extend(page.get("studies") or [])
+        token = page.get("nextPageToken")
+        if not token:
+            return out
+    raise SourceError(f"registry search for {ingredient!r} exceeded {max_pages} pages", status=None)

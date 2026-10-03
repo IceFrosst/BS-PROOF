@@ -78,6 +78,23 @@ class Pool(unittest.TestCase):
         self.assertIn("2 different units", p.note)
         self.assertEqual(p.k, 2)                             # the SMD pool still forms
 
+    def test_crossover_counts_participants_once(self):
+        o = outcome(90, 80)
+        o["claim"]["design_kind"] = "crossover"
+        p = pool_outcomes([study("x", [o])], PRODUCT)["muscle_strength"]
+        self.assertEqual(p.studies[0]["n"], 20)              # not 40: same people, two periods
+        self.assertIn("crossover_as_parallel", p.studies[0]["flags"])
+
+    def test_dose_is_matched_against_each_trial(self):
+        from pipeline.pool import dose_match_tier
+        s7 = lambda mg: {"form_vocab_id": "creatine_monohydrate", "elemental_dose_mg": mg,
+                         "dose_basis": "elemental_stated"}
+        five_g = {"dose_low_mg": 5000, "dose_high_mg": 5000}
+        self.assertEqual(dose_match_tier("creatine", s7(5000), {}, {}, five_g), "in_band")
+        self.assertEqual(dose_match_tier("creatine", s7(20000), {}, {}, five_g), "below_50")   # a loading dose
+        self.assertEqual(dose_match_tier("creatine", None, {}, {}, five_g), "unspecified")
+        self.assertIsNone(dose_match_tier("creatine", s7(5000), {}, {}, {}))                  # no product dose
+
     def test_estimand_mix_is_reported(self):
         items = [study("a", [outcome(90, 80)]), study("b", [outcome(5, 2, estimand="change_from_baseline")])]
         p = pool_outcomes(items, PRODUCT)["muscle_strength"]

@@ -352,6 +352,12 @@ TIER_MODEL = {
     # run. SPEC 15 calls tiers "a prior, not a measurement"; this is a small
     # measurement, not the anchor eval. Revert with SP_MODEL_C=claude-opus-5.
     "C": os.environ.get("SP_MODEL_C", "claude-sonnet-5"),
+    # R: the evidence-method-v2 SECOND REVIEWER (S5R, docs/EVIDENCE_METHOD.md
+    # §9 decision 5). It must be a DIFFERENT model from the S5 extractor it
+    # double-checks -- call() refuses otherwise -- so its misreadings are not
+    # simply reviewer 1's misreadings again. Opus by default: the reviewer only
+    # reads numbers, and the stronger reader is the point. Not yet measured.
+    "R": os.environ.get("SP_MODEL_R", "claude-opus-5"),
 }
 
 # Tier -> reasoning effort, or None to omit the flag and take the CLI default.
@@ -398,6 +404,7 @@ TIER_EFFORT = {
     # sonnet instead of opus. Dropping to sonnet at default effort is arm C of
     # the earlier per-claim test, which was the only arm to fail a study.
     "C": os.environ.get("SP_EFFORT_C", "high") or None,
+    "R": os.environ.get("SP_EFFORT_R") or None,
 }
 VALID_EFFORT = ("low", "medium", "high", "xhigh", "max")
 
@@ -444,6 +451,9 @@ AGENTS = {
     "S6B": ("C", "s6b_outcome_batch.json", "s6b_outcome_batch.md"),
     "S7": ("B", "s7_form.json",       "s7_form.md"),
     "S8": ("A", "s8_funding.json",    "s8_funding.md"),
+    # Evidence method v2 second reviewer: re-reads S5's poolable numbers blind
+    # (pipeline/review.py). Off unless SP_SECOND_REVIEWER=1 (workers.py).
+    "S5R": ("R", "s5_review.json",    "s5_review.md"),
 }
 
 
@@ -1109,6 +1119,11 @@ def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
         # a bad flag value that the CLI rejects turns every call into a partial
         # failure that reads as "this study reported nothing".
         raise ValueError(f"SP_EFFORT_{tier}={effort!r} is not one of {VALID_EFFORT}")
+
+    if tier == "R" and model == TIER_MODEL[AGENTS["S5"][0]]:
+        # Two reads by the same model are one reviewer twice, not two reviewers.
+        raise ValueError(f"SP_MODEL_R={model!r} is the S5 extractor's model; "
+                         "the second reviewer must be a different model")
 
     schema = (SCHEMAS / schema_f).read_text()
     system = _claude_system_prompt(prompt_f)

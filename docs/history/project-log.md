@@ -10,6 +10,31 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-03 — v2: second reviewer, MCID proposal, crossover, dose, registry (shadow)
+
+- **Second reviewer** (`pipeline/review.py`, agent `S5R`, tier `R` =
+  `claude-opus-5`, `SP_MODEL_R`): one call per study re-reads every mapped claim
+  with span-verified numbers, blind to S5's numbers. Deterministic rule: any
+  conflict refuses the claim for human adjudication (`review_v2.adjudication`);
+  unconfirmed numbers are dropped; never averaged. `call()` refuses a reviewer
+  model equal to S5's. Off by default (`SP_SECOND_REVIEWER=1`); no model calls
+  were made. New prompt/schema `s5_review`; `PROMPT_VERSION` NOT bumped (a new
+  agent has its own cache keys; bumping would invalidate ~1000 extractions).
+- **MCIDs proposed**, unapproved, in `vocab/outcome.json`: performance outcomes
+  0.2 SD (Hopkins 2004, quoted), lean mass 0.2 SD convention (Europe PMC search
+  found no healthy-adult MCID); grip 5.0–6.5 kg (Bohannon 2019) recorded for
+  sensitivity. `grade()` uses a value only when `"approved": true`.
+- **Crossover** (`effect_size.py`): arm stats as if parallel (Cochrane §23.2.6),
+  paired MD+CI kept, crossover SMD refused; pool counts crossover n once.
+- **Dose indirectness** (`grade.py`, `pool.dose_match_tier`): SPEC §8 tiers
+  against each trial's dose, −1 when > 50 % of the weight is off-dose.
+- **Registry** (`sources/clinicaltrials.search_completed`,
+  `pipeline/registry_bias.py`, `pool_shadow.py --registry`): measured on
+  creatine — 207 completed hits, 112 name creatine as an intervention; possibly
+  unpublished (upper bound): strength 16/21, power 6/7, lean mass 19/25,
+  endurance 7/10. Reported, not downgraded (founder call).
+- Gates: invariants ok, selftest ALL PASSED, 117 Python tests.
+
 ## 2026-10-03 — evidence method v2: GRADE certainty + letter grades (shadow)
 
 `pipeline/grade.py`: GRADE certainty per outcome (start High for RCTs, Low
