@@ -561,8 +561,8 @@ do not drop it.
 
 ## Current state
 
-**2026-10-03 — Google-required scan + private Scan/History: IMPLEMENTED, on `main`, PROVISIONED (SQL applied,
-Vercel production env set); the real Google sign-in is NOT yet verified (see "Release stage").** Founder: real results depend on a Google login, and a signed-in person can
+**2026-10-03 — Google-required scan + private Scan/History: IMPLEMENTED, on `main` (`2555166`), PROVISIONED (SQL applied,
+Vercel production env set), DEPLOYED -- but Google sign-in is BROKEN in production: `400 origin_mismatch` (see "Release stage").** Founder: real results depend on a Google login, and a signed-in person can
 reopen their own saved results. Two isolated worktree commits were cherry-picked `--no-commit` onto
 `main` `6a1734d` (component base `4a87e22`; no conflicts; committed together with the later fix passes in the release commit):
 backend `8da4137dd994bd1ef4274f6b82037701f3ef06d5` (server auth, owner binding, history API, SQL) and
@@ -601,10 +601,39 @@ integration seam `tests/scan-auth-history-integration.test.tsx` and one selector
   settings were only READ, never changed; `disable_signup` is `false`, so open Google sign-up IS on in the shared
   project (accepted by the operator; there is no allow-list or quota). Retention is indefinite with no notice or deletion
   path (open owner decisions, `docs/SYSTEM_DESIGN.md` §7e).
-  **Still NOT done / not verified at this commit:** a real Google credential -> Supabase session; one phone sign-in ->
-  scan -> History -> replay; the live PostgREST list query; whether the Google client's Authorized JavaScript origins
-  include the production origin; the production deployment of this commit (its checks are recorded in a follow-up
-  entry only if they were actually run -- do not assume them).
+  **Pushed and deployed (checked at release):** `main` = remote = `2555166422e0636efbf0c3428e0db04329103cfe` (`ls-remote`);
+  the canonical deployment `dpl_CAex4bCP4rw3ivQPhw9yWt3i78td` (project `prj_LVkNjXw2Sw96J18MUbGOx5AUkCMx`, target
+  production, READY, `githubCommitSha` = that SHA) is aliased to `https://bs-proof-dashboard.vercel.app`. Production
+  (log `/tmp/bsproof-release/logs/prod-checks.txt`): `/scan/`, `/tester/`, `/tests/supplements/` and retained run pages 200;
+  unauthenticated `POST /api/scan/` and `POST /api/analyze-label/` -> 401 `unauthorized` `no-store` (bodies empty, so no
+  model call), also with a bogus bearer (never anonymous); unauthenticated `GET /api/scan/history/` and
+  `/api/scan/history/<uuid>/` -> 401 `no-store`; public capability `GET`s 200. (Routes use trailing slashes: without one
+  Vercel answers a 308.)
+  **REAL Google sign-in was ATTEMPTED and FAILS (2026-10-03, Pi browser profile, user-designated agent account, no
+  secret typed): clicking the Google button on `https://bs-proof-dashboard.vercel.app/scan/` (History tab) opens
+  `accounts.google.com/signin/oauth/error` -> "Access blocked: authorization error ... Error 400: origin_mismatch" (screenshot kept
+  privately outside the repo; not published). The button renders, the origin is simply not an Authorized JavaScript
+  origin of the Google OAuth client (the one the shared Supabase provider uses, client id sha256-12 `f98873ac6ff8`). Fix is a
+  Google Cloud Console edit of that SHARED client by its owner: add `https://bs-proof-dashboard.vercel.app` (and any other
+  production alias people will use) to Authorized JavaScript origins. NOT done by the release stage on purpose (shared client
+  setting / permission expansion; no replacement of the provider). Until then NO ONE can sign in from that origin, so with
+  `SCAN_REQUIRE_AUTH=1` every scan/`/tester` analysis is refused (fail closed; the retained pages and the public GETs are fine).
+  The only mitigation identified without the shared client owner's edit is removing `SCAN_REQUIRE_AUTH` from Vercel production, which re-opens anonymous model use --
+  an owner decision, deliberately not taken.**
+  **Docs-only follow-up (2026-10-03):** the `origin_mismatch` finding in this and the sections below, and in
+  `docs/SYSTEM_DESIGN.md` §7d, was recorded in a LATER commit that changes only `CLAUDE.md` and `docs/SYSTEM_DESIGN.md`:
+  no app code, scientific constant, SQL, Vercel env, shared OAuth/Supabase provider setting or provider/deployment setting was
+  touched, so the deployed APP is unchanged (`2555166` is the last code commit; if the Git integration redeploys production from the
+  docs commit, it builds identical app code on the same canonical project -- check the production SHA instead of assuming).
+  Doc gates for it, all passed on the final diff: `git diff --check`, `python3 -m pipeline.invariants`,
+  `python3 -m pipeline.selftest`. The runtime TypeScript gates are N/A for a docs-only change and were NOT re-run; the
+  704 unit / 838 browser (10 mode-gated skipped) / 18 configured-build focused (4 skipped) / 0 production-audit-vulnerability
+  figures recorded for `2555166` come from its actual logs (`/tmp/bsproof-release/logs/final/`, `/tmp/bsproof-owner-fix/logs/`),
+  not from this pass.
+  No patient, phone-session or Google-session proof exists or is claimed: nothing was typed into Google, and the only
+  real sign-in outcome observed is the failure above.
+  **Still NOT done / not verified:** a real Google credential -> Supabase session (blocked by the above); one phone
+  sign-in -> scan -> History -> replay; the live PostgREST list query; authenticated live owner queries.
 - **Server is the protection** (`lib/auth/server-auth.ts`). With `SCAN_REQUIRE_AUTH` on (fail-closed:
   anything but unset/0/false/no/off), `POST /api/scan` **and the legacy `POST /api/analyze-label` (what
   `/tester` calls; see the owner-fix entry below)** demand a Supabase-VERIFIED Google bearer token
@@ -763,12 +792,12 @@ integration seam `tests/scan-auth-history-integration.test.tsx` and one selector
 - **Pitfall found on this machine:** the shell exports `NEXT_PUBLIC_SUPABASE_URL` and
   `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `next build` inlines them. Build the ORDINARY artifact with the
   `NEXT_PUBLIC_*` sign-in vars unset (`env -u ...`), or it silently becomes a configured build.
-- **Not verified:** a real Google credential → real Supabase session; the PostgREST JSON-path `select` in the
-  history list against the live project (the structure it reads now exists, with 0 rows); a real phone camera;
-  whether the Google client's Authorized JavaScript origins include the production origin. (Superseded at release: the
+- **Not verified:** a real Google credential → real Supabase session (a real attempt failed with `400 origin_mismatch`);
+  the PostgREST JSON-path `select` in the history list against the live project (the structure it reads now exists, with 0
+  rows); a real phone camera. The Google client's Authorized JavaScript origins do NOT include the production origin. (Superseded at release: the
   preflight snapshot WAS re-taken on 2026-10-03 and is clean; the real tables/bucket/grants now exist and were checked
-  read-only; open Google sign-up is ON, `disable_signup=false`, read not changed -- all in "Release stage" above.) A parent probe that the canonical origin renders the Google button without an origin refusal
-  is NOT token-exchange proof. `outputFileTracingIncludes` was left unchanged (the new routes read no
+  read-only; open Google sign-up is ON, `disable_signup=false`, read not changed -- all in "Release stage" above.) A parent probe that the canonical origin renders the Google button
+  is NOT token-exchange proof: Google's origin refusal appears only after the click, and it did (`origin_mismatch`). `outputFileTracingIncludes` was left unchanged (the new routes read no
   files); note the History routes inherit the same ~32 MB `/api/scan/*` trace overlap the existing
   `/api/scan/claim` route already has.
 
@@ -786,8 +815,10 @@ them as one. **Handoff:** Google-required scan results and private Scan/History
 are IMPLEMENTED, committed to `main` (release commit, `git log -1 -- docs/scan-history.sql`), and provisioned: the
 SQL is applied on the shared project and the production env is set on the canonical Vercel project (entry
 "Release stage", above). What remains is human/real-service verification: one phone Google sign-in -> scan ->
-History -> replay, a signed-in and a signed-out `/tester` attempt, and the live list query. **Handoff (2026-10-03,
-owner-fix):** the legacy `/api/analyze-label` + `/tester` gate, the blank-result fix, the shared-project SQL
+History -> replay, a signed-in `/tester` attempt and the live list query are BLOCKED until the production origin is added to
+the Google OAuth client (real attempt: `400 origin_mismatch`, "Release stage" above); the signed-out `/tester` attempt (Google
+card, nothing sent) needs no sign-in and can still be checked.
+**Handoff (2026-10-03, owner-fix):** the legacy `/api/analyze-label` + `/tester` gate, the blank-result fix, the shared-project SQL
 hardening and the runbook/retention docs ("Owner-fix pass", above) are in the same release commit; snapshot
 `/tmp/bsproof-auth-owner-needswork.patch` is the PRIOR (pre-fix) diff, retained only for audit.
 Multi-ingredient implementation remains paused; its fifth benchmark case is
@@ -1726,17 +1757,20 @@ still the unmeasured SR-uplift experiment (Next item 3).
 - **Google-required scan + private History: provisioned 2026-10-03; real-service verification still open (see
   "Release stage" in `Current state`; runbook `docs/SYSTEM_DESIGN.md` §7d).** DONE at release: preflight, SQL applied
   and verified on the shared project, URL/key pair checked, Vercel production env set, Google provider read only.
-  STILL OPEN (human, do not claim done): (a) one real phone Google sign-in -> scan -> History -> replay, one signed-in
-  `/tester` analysis and one signed-out `/tester` attempt (Google card, nothing sent) -- a Google/MFA consent step the
-  agent must not fake; confirm the Google client's Authorized JavaScript origins include the production origin
-  (otherwise the button reports an origin refusal); confirm the list query against live PostgREST; (b) owner decisions:
+  **FIRST, a human owner step (known broken today, observed for real): the Google OAuth client rejects the production origin
+  with `400 origin_mismatch` -- add `https://bs-proof-dashboard.vercel.app` to that client's Authorized JavaScript origins in
+  Google Cloud Console (shared client; replace nothing, change no other setting).** THEN (human, do not claim done): (a) one real
+  phone Google sign-in -> scan -> History -> replay, one signed-in `/tester` analysis and one signed-out `/tester` attempt
+  (Google card, nothing sent) -- a Google/MFA consent step the agent must not fake; confirm the list query against live
+  PostgREST; (b) owner decisions:
   a retention notice and a deletion path (everything is kept indefinitely today; promise nothing), whether open Google
   sign-up on the shared project (`disable_signup=false`) stays acceptable given there is no quota or allow-list, and
   optionally tightening the SQL guard's text match on `qual`/`with_check` (native-review W3). If sign-in returns 401
   for everyone, check the `SUPABASE_URL` / service-key pair first (a wrong pair looks like an expired session). The
   10 dev-only `npm audit` findings remain (see the pass-1 entry).
 - **After Google, in this order: PR3 / full EN–LT translation, then live PC research.** Neither was
-  started. Redo the original audit; the earlier categorical benchmark is not a valid exact-UI comparison.
+  started: the next independent PR3 / full EN–LT and PC-research workers remain PENDING (not launched by the release or by
+  the docs-only follow-up). Redo the original audit; the earlier categorical benchmark is not a valid exact-UI comparison.
 
 - Finish review of the detailed benchmark visuals; preserve exact product/dose
   inputs, limitations and the distinction between quote matching and medical
@@ -1755,10 +1789,16 @@ still the unmeasured SR-uplift experiment (Next item 3).
   review `verified-addendum-review.md` under the `comparison-reporting` subagent output) was independently reviewed PASS,
   read-only, no model call and no research rerun. An actual COMPONENT screenshot capture and fidelity check was started
   in an isolated old-clean visual worktree (reported only as "worktree75") and `/tmp/bsproof-valid-benchmark/parallel-render` (workflow
-  `1974d801-906d-4ff8-8900-3a139d105f8b`), with NO root-checkout writes and NO publication; at the last look here that
-  directory did not exist yet. **The later benchmark phase MUST reuse BOTH the completed `parallel-v2` research AND the
+  `1974d801-906d-4ff8-8900-3a139d105f8b`), with NO root-checkout writes and NO publication; at an EARLIER look that
+  directory did not exist yet (superseded by the status below). **The later benchmark phase MUST reuse BOTH the completed `parallel-v2` research AND the
   reviewed `parallel-render` capture manifest** -- no model reruns and no duplicate capture work -- and treat
-  `parallel-render` as unusable until its review has passed. **Case 5 (whole-formula): ONLY row 0 may be graded; the
+  `parallel-render` as unusable until its review has passed. **Status at the docs-only follow-up (2026-10-03, read-only look,
+  nothing written to either directory):** `parallel-v2/manifest.json` state is `finished_all_cases_verified` and all 10
+  lane-case results (`opus-high` and `sonnet-xhigh` x cases 1-5, each with `audit.json` + `report.json`) exist and are
+  immutable inputs; the addendum review is PASS as reported by the parent orchestrator (not re-reviewed here).
+  `parallel-render` now exists and its screenshots are still being written by the ACTIVE workflow `1974d801` (separate
+  worktree), so it stays unusable until reviewed: reuse the 10 results and that one capture; start no duplicate research or
+  capture. **Case 5 (whole-formula): ONLY row 0 may be graded; the
   context rows are DO NOT GRADE, and there is NO averaged formula score.** **Required caveat on any reporting of the
   source-access numbers:** 311 WebFetch calls, of which 116 were non-access (tool error, HTTP 403/other 4xx, unfollowed
   redirect, captcha/cookie wall) and 21 were Haiku refusals; the remaining 174 are only an UPPER BOUND on content actually
@@ -1773,7 +1813,8 @@ still the unmeasured SR-uplift experiment (Next item 3).
   whole-formula evidence, and keep unknown daily intake unknown. No live
   research capability is implied by this deployment cleanup.
 - Obtain the other account owner's access/cooperation to retire or redirect
-  `bs-proof.vercel.app`; only the IceFrost team's BS-PROOF projects are
+  `bs-proof.vercel.app` (a redirect-only alternative is under READ-ONLY assessment by the parent orchestrator; it is NOT
+  implemented, and nothing about `bs-proof.vercel.app` was changed by the release or the docs-only follow-up); only the IceFrost team's BS-PROOF projects are
   consolidated so far. Canonical link: `https://bs-proof-dashboard.vercel.app`.
 
 
