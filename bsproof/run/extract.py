@@ -136,6 +136,19 @@ def _study_extraction(ext: dict) -> dict | None:
             "is_primary_outcome": cl.get("is_primary_outcome"),
             "contrast": cl.get("contrast"),
             "evidence_span": _span(cl.get("evidence_span")),
+            # Evidence method v2 (2026-10-03): the arm-level facts pooling needs.
+            # Until then this projection dropped them, so a retained run could
+            # not be re-pooled without re-extraction.
+            **{k: cl.get(k) for k in (
+                "estimate_kind", "estimate_basis", "estimand", "design_kind",
+                "n_ingredient", "n_control", "mean_ingredient", "mean_control",
+                "sd_ingredient", "sd_control", "standard_error", "ci_level",
+                "p_value_kind", "p_operator")},
+            "timepoint": _span(cl.get("timepoint"), 120),
+            "ingredient_arm": _span(cl.get("ingredient_arm"), 120),
+            "control_arm": _span(cl.get("control_arm"), 120),
+            "table_provenance": cl.get("table_provenance"),
+            "numbers_v2": o.get("numbers_v2"),
         })
     return {
         "s3": None if not s3 else {
@@ -150,6 +163,10 @@ def _study_extraction(ext: dict) -> dict | None:
             "deficiency_status": s3.get("deficiency_status"),
             "registration_id": _span(s3.get("registration_id"), 60),
             "evidence_spans": _spans(s3.get("evidence_spans")),
+            "arms": [{"label": _span(a.get("label"), 120), "n": a.get("n"),
+                      "is_control": a.get("is_control"),
+                      "target_ingredient_presence": a.get("target_ingredient_presence")}
+                     for a in (s3.get("arms") or []) if isinstance(a, dict)],
         },
         "s4": None if not s4 else {
             **{f"item{i}_{n}": s4.get(f"item{i}_{n}") for i, n in (

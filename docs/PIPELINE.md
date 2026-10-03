@@ -176,7 +176,10 @@ grok models                    # verify model ids
 | `--top-outcomes N` / `--all-outcomes` | Showcase top-N outcomes by RCT count (default 5) / full vocabulary |
 | `--demo` | Exact form only + ignore population (**not production**) |
 
-A study costs ~10 model calls, about half of them S6.
+A study costs ~10 model calls, about half of them S6. Since 2026-10-03 the
+**table route** for arm-level numbers (S1 design facts + one S5T call per claim
+that has table candidates) is on by default for evidence method v2; it adds a
+few calls per study and moves no v14 score. `SP_NUMERIC_TABLES=0` turns it off.
 
 ### Step 5 — archive results
 

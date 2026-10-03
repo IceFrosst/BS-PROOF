@@ -182,10 +182,12 @@ pipeline/   deterministic, NO MODEL, unit-tested
   dedup.py classify.py relevance.py retrieve.py predatory.py
   synthesis.py synthesis_bridge.py SR resolution, SR-derived trials
   dose.py product_score.py         dose bands; product lookup behind the app
+  span_check.py effect_size.py     v2: verify extracted numbers; numbers -> signed effect + variance
+  meta_effects.py                  v2: Hedges' g, REML random-effects, Hartung-Knapp CIs
   claim_arms.py eligibility.py     invariant-7 counterfactual firewall and scope refusals
   effect_s.py                      reported effect -> signed contribution s
   calibration.py                   anchor harness
-  meta_effects.py effect_harvest.py  effect-size utilities
+  effect_harvest.py                deterministic table candidates for the S5T table route
   v13_shadow.py                    shadow analysis, NOT imported by production scoring
   storage.py vocab.py preview.py showcase.py
   invariants.py selftest/          the two gates (selftest is a package; run with -m)
@@ -289,8 +291,9 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
 0. **Evidence method v2** (`docs/EVIDENCE_METHOD.md` §8). Phase 1a done: papers
    carry poolable numbers (93% of PMC full texts) but current extractions make
    only 5–27% of trials poolable. Phase 1b: run the stability harness solo
-   (`docs/history/2026-10-03-phase1-measurements.md`), then Phase 2 (arm-level
-   extraction). Items 4–6 below fold into its phases.
+   (`docs/history/2026-10-03-phase1-measurements.md`). Phase 2 step 1 done
+   (span check, effect sizes, table route on by default); next: the second
+   reviewer, re-extraction, then shadow pooling. Items 4–6 fold into its phases.
 1. Verify on a real phone: live camera, a busy label read after the
    thinking-mode fix, PWA install.
 2. Check whether the text calls (`deepseek-chat`) also need thinking disabled

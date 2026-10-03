@@ -10,6 +10,36 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-03 — evidence method v2, Phase 2 step 1: span check + effect sizes
+
+Found first: the S5 schema already requires per-arm n / mean / SD / SE, CI
+level, estimand and table provenance (the v1.24 contract), and the switched-off
+v13 shadow path already had a conservative table route (deterministic
+candidates + S5T selector + cell-for-cell validation). No prompt changed, so no
+`PROMPT_VERSION` bump.
+
+- `pipeline/span_check.py`: every numeric claim field must be printed in the
+  claim's quote, in its cited table row (arm-per-row tables checked per arm), or
+  — for n only — in the matching S3 arm; otherwise refused. Handles Unicode
+  minus, en-dash ranges, decimal commas after 0, printed precision; a sign that
+  only came from words is flagged.
+- `pipeline/effect_size.py`: verified numbers → benefit-positive effect + variance
+  via ranked routes (arm_stats → Hedges' g + mean difference; reported SMD + CI /
+  exact p / n; reported MD + CI). Refuses non-parallel designs, ratios and
+  relative percents, "favours neither", unoriented outcomes, % arm values.
+- `bsproof/workers.py`: table route ON by default (`SP_NUMERIC_TABLES=0` turns it
+  off); `numbers_v2` verification attached to every mapped outcome. v14 reads none
+  of it — all v14 baselines unchanged.
+- `bsproof/run/extract.py`: the per-study run record now keeps the arm-level
+  fields and S3 arm sizes (it dropped them, which made Phase 1a part 1
+  undercount).
+- Live check on doi:10.1080/15502783.2022.2108683 caught two real defects, both
+  fixed and pinned by tests: arm-per-row tables (control row never matched) and
+  the decimal comma "0,001". After the fix all four jump outcomes produce
+  Hedges' g from table-verified change scores (e.g. squat jump g = 0.30, hand
+  re-computed).
+Tests: `tests/test_effect_size.py` (16).
+
 ## 2026-10-03 — evidence method v2 adopted; Phase 1a measured
 
 Founder decisions recorded in `docs/EVIDENCE_METHOD.md` §9 (adopted; §4 grade

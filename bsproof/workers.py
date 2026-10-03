@@ -40,6 +40,33 @@ def _v13_shadow_enabled() -> bool:
     """Return whether the experimental v13 wiring is explicitly enabled."""
     return os.environ.get("SP_V13_SHADOW", "0") == "1"
 
+
+def _numeric_tables_enabled() -> bool:
+    """The table route for arm-level numbers (S1 design facts + the S5T table
+    selector, bsproof/worker_shadow.py). ON by default since 2026-10-03 for
+    evidence method v2 (docs/EVIDENCE_METHOD.md §8 Phase 2); SP_NUMERIC_TABLES=0
+    turns it off. It adds calls but no v14 score reads its fields."""
+    return _v13_shadow_enabled() or os.environ.get("SP_NUMERIC_TABLES", "1") == "1"
+
+
+def _verify_numbers(out: dict, record: dict) -> list[dict]:
+    """Span-check every S5 claim's numbers (pipeline/span_check.py), by claim
+    index. Deterministic; tables are fetched only when a claim cites one, and
+    through the worker_payload MODULE so tests that patch it stay offline."""
+    from pipeline.span_check import verify_claim_numbers
+    from bsproof import worker_payload as _wp
+    claims = ((out.get("S5") or {}).get("claims")) or []
+    s3_arms = (out.get("S3") or {}).get("arms") if isinstance(out.get("S3"), dict) else None
+    tables = None
+    if any(isinstance(c, dict) and c.get("table_provenance") for c in claims):
+        try:
+            tables = _wp._tables_structured(record)
+        except Exception:
+            tables = None  # an unreadable table refuses its numbers; it never passes them
+    return [verify_claim_numbers(c, tables=tables, s3_arms=s3_arms) if isinstance(c, dict)
+            else {"verified": {}, "source": {}, "abs_only": [], "rejected": {"claim": "malformed"}}
+            for c in claims]
+
 # Batched outcome mapping (S6B): one call per STUDY instead of one per claim.
 #
 # A/B/C MEASURED 2026-08-09 on the same 7 creatine RCTs, each arm run cold with
@@ -183,7 +210,8 @@ def _self_check_v13_shadow_wiring() -> None:
         # The table helpers are looked up in two modules since the 2026-10-03
         # split: worker_payload (via _payload) and worker_shadow (via
         # _shadow_enrich_claims). Patch both, or one path reads real tables.
-        with patch.dict(os.environ, {"SP_V13_SHADOW": "1"} if shadow else {},
+        with patch.dict(os.environ, {"SP_V13_SHADOW": "1"} if shadow else
+                        {"SP_NUMERIC_TABLES": "0"},
                         clear=not shadow), patch.object(
                             _wp, "_tables_text",
                             lambda _record, **_kw: tables), patch.object(
@@ -354,7 +382,7 @@ def extract_study(record: dict, text: str, registry: dict | None = None, *,
                 "outcomes": []}
 
     out: dict = {}
-    shadow = _v13_shadow_enabled()
+    tables_route = _numeric_tables_enabled()
 
     def run_agent(agent: str, *, facts: dict | None = None):
         payload = _payload(agent, record, text, registry, sections,
@@ -406,15 +434,19 @@ def extract_study(record: dict, text: str, registry: dict | None = None, *,
     with ThreadPoolExecutor(max_workers=max_workers) as pool:
         futures = {agent: pool.submit(run_agent, agent, facts=s3_facts)
                    for agent in (("S1", "S4", "S5", "S7", "S8")
-                                 if shadow else ("S4", "S5", "S7", "S8"))}
+                                 if tables_route else ("S4", "S5", "S7", "S8"))}
         for agent, fut in futures.items():
             try:
                 store(agent, fut.result())
             except Exception as exc:
                 store(agent, (None, {"error": str(exc)}))
 
-    if shadow:
+    if tables_route:
         _shadow_enrich_claims(out, record, call)
+    # Evidence method v2: which numbers are actually printed where the claim
+    # says. Runs after the table route so its table-sourced values are checked
+    # the same way. Attached to out["outcomes"][i] below.
+    numbers = _verify_numbers(out, record)
 
     # S6 runs after S5 because it consumes S5's raw outcome strings, but the
     # claims are independent of each other -- fan them out.
@@ -458,7 +490,7 @@ def extract_study(record: dict, text: str, registry: dict | None = None, *,
                                                 "measure": cl.get("measure"),
                                                 "vocabulary": vocabulary})),
                     claims))
-        for claim, (result, _meta) in mapped:
+        for i, (claim, (result, _meta)) in enumerate(mapped):
             vid = (result or {}).get("outcome_vocab_id")
             # If allowlist is active and S6 still returned something outside it
             # (should not), discard — showcase is a hard product boundary.
@@ -469,6 +501,7 @@ def extract_study(record: dict, text: str, registry: dict | None = None, *,
                 "outcome_vocab_id": vid,
                 "discarded": vid is None,
                 "rationale": (result or {}).get("rationale"),
+                "numbers_v2": numbers[i] if i < len(numbers) else None,
             })
     return out
 

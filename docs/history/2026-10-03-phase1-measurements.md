@@ -32,6 +32,12 @@ Per outcome, trials with at least one poolable claim:
 | exercise_endurance | 19 | 1 (5%) |
 | energy_levels | 2 | 1 |
 
+**Caveat found in Phase 2 (same day):** the S5 schema already asks for per-arm
+n / mean / SD on every claim, but the retained run's per-study record DROPPED
+those fields, so this table only sees the summary-effect route and understates
+what the extractor captures. The record now keeps them (`bsproof/run/extract.py`);
+re-measure after the next extraction.
+
 ### What is IN THE PAPERS (deterministic scan)
 
 | Text available | Studies | Arm-level mean ± SD/SEM or a CI | Exact p | Only "p < x" |
