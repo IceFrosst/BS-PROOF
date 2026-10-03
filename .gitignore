@@ -21,3 +21,6 @@ test-results/
 
 # ...but the template IS committed; it carries no secrets.
 !.env.example
+
+# research-worker release tarballs (deploy/pc_research_worker_release.sh build)
+/dist/

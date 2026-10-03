@@ -2721,6 +2721,13 @@ def main():
         "importlib":       "import importlib\nimportlib.import_module('pilot_adapter')\n",
         "__import__":      "m = __import__('claude_adapter')\n",
         "try-guarded":     "try:\n    import claude_adapter\nexcept ImportError:\n    pass\n",
+        # live-research boundary lives IN pipeline/, so every spelling of its name counts
+        "research dotted from":  "from pipeline.claude_research_adapter import run_research\n",
+        "research from pipeline": "from pipeline import claude_research_adapter\n",
+        "research relative":     "from . import claude_research_adapter\n",
+        "research relative mod": "from .claude_research_adapter import run_research\n",
+        "research dotted import": "import pipeline.claude_research_adapter as r\n",
+        "research importlib":    "import importlib\nimportlib.import_module('pipeline.claude_research_adapter')\n",
     }
     _missed = [k for k, s in _evasions.items() if not _inv.model_imports(s, "pipeline/x.py")]
     check("no formatting trick hides a model import", not _missed,
