@@ -10,6 +10,16 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-03 — blank env vars no longer break the model call
+
+A local `/scan` failed with "label read: could not reach the model API:
+TypeError: Failed to parse URL from". `.env.local` had been copied from
+`.env.example`, which lists `MODEL_API_URL=`, `LABEL_MODEL=`, `TEXT_MODEL=` with
+empty values; `lib/analyze/llm.ts` read them with `??`, so "" won over the
+DeepSeek default and fetch got an empty URL. Blank or whitespace values now
+count as unset (`envValue()`), as the API keys already did. Pinned by
+`tests/llm-env.test.ts`. No prompt, model choice or scoring changed.
+
 ## 2026-10-03 — /tester retired, run_pipeline split, dashboard legacy paths
 
 **Retired `/tester` and `POST /api/analyze-label`** (the pre-/scan analyzer):

@@ -89,16 +89,25 @@ export function providerConfigured(): boolean {
   return Boolean(apiKey());
 }
 
+/** An env var that is unset OR blank counts as absent. `.env.example` lists every
+ * variable with an empty value, so a copied template sets them to "" -- and
+ * `??` would then send the request to an empty URL ("Failed to parse URL from").
+ * The API keys above already used `||` for the same reason. */
+function envValue(name: string): string | undefined {
+  const value = process.env[name]?.trim();
+  return value ? value : undefined;
+}
+
 export function endpoint(): string {
-  return process.env.MODEL_API_URL ?? process.env.VISION_API_URL ?? DEFAULT_URL;
+  return envValue("MODEL_API_URL") ?? envValue("VISION_API_URL") ?? DEFAULT_URL;
 }
 
 export function visionModel(): string {
-  return process.env.LABEL_MODEL ?? DEFAULT_VISION_MODEL;
+  return envValue("LABEL_MODEL") ?? DEFAULT_VISION_MODEL;
 }
 
 export function textModel(): string {
-  return process.env.TEXT_MODEL ?? DEFAULT_TEXT_MODEL;
+  return envValue("TEXT_MODEL") ?? DEFAULT_TEXT_MODEL;
 }
 
 /** Does this endpoint document DeepSeek's `thinking` switch? */
