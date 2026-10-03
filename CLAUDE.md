@@ -303,10 +303,13 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
    `SP_SECOND_REVIEWER=1`), crossover + dose indirectness, registry check. Next:
    S5 claim rule (v1.29) + measure hierarchy done; v2 grades flow run ->
    artifact `evidence_v2` -> `lib/analyze/grade-v2.ts` -> `/scan` grade card
-   (dev preview: `EVIDENCE_V2_RUNS_DIR`). BLOCKER before the re-extraction:
-   smoke runs found 0/13 claims poolable (S5 frames outcomes as change scores
-   and leaves arm values empty) — next is a dedicated per-claim numbers
-   extractor (measurements note, "Pre-re-extraction smoke tests").
+   (dev preview: `EVIDENCE_V2_RUNS_DIR`). Per-claim numbers extractor S5N
+   built (v1.33, on by default; per-arm SE/CI -> SD in `effect_size`): smoke
+   RSMOKE5 makes 7/11 mapped claims poolable, all reviewer-agreed; v1.34 adds
+   the before/after/∆ consistency guard (refuses) and the baseline-imbalance
+   flag (downgrades via RoB) -- RSMOKE6 confirmed both live. Next: the
+   benchmark table (published creatine meta-analyses), then the creatine
+   re-extraction (`--resume` the intermittent S5/S7 `max_turns` failures).
 1. Verify on a real phone: live camera, a busy label read after the
    thinking-mode fix, PWA install.
 2. Check whether the text calls (`deepseek-chat`) also need thinking disabled

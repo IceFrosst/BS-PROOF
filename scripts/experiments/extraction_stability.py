@@ -11,6 +11,8 @@ and score by score.
     .venv/bin/python scripts/experiments/extraction_stability.py run --label B
     # 2. compare (offline)
     .venv/bin/python scripts/experiments/extraction_stability.py compare A B
+    # v2 poolability of ONE run, per mapped claim: which reader, effect, review
+    .venv/bin/python scripts/experiments/extraction_stability.py numbers RSMOKE3
 
     # harness check with a fake model (no model calls)
     .venv/bin/python scripts/experiments/extraction_stability.py run --label FAKE --fake --n 3
@@ -213,7 +215,7 @@ def _effects_by_outcome(ext: dict) -> dict[str, tuple]:
         nums = o.get("numbers_v2")
         if not oid or o.get("discarded") or not isinstance(nums, dict):
             continue
-        claim = o.get("claim") or {}
+        claim = nums.get("claim") or o.get("claim") or {}   # S5N's claim when it read the numbers
         eff, why = effect_from_claim(claim, nums.get("verified") or {},
                                      polarity=polarity.get(oid), abs_only=nums.get("abs_only") or ())
         if eff is None:
@@ -311,6 +313,40 @@ def _score_both(a: dict, b: dict, ids: list[str]) -> dict:
     return {oid: {"A": ra.get(oid), "B": rb.get(oid)} for oid in SHOWCASE}
 
 
+def numbers_report(run: dict) -> dict:
+    """Per mapped claim: who read its numbers (S5 / S5N), the effect route they
+    make (pipeline/effect_size.py) or the refusal, and the second review."""
+    from pipeline import vocab
+    from pipeline.effect_size import effect_from_claim
+    polarity = {o["id"]: o.get("polarity") for o in vocab.load("outcome")["outcomes"]}
+    rows, totals = [], collections.Counter()
+    for cid, res in sorted(run.items()):
+        ext = res.get("extraction") or {}
+        for i, o in enumerate(ext.get("outcomes") or []):
+            if o.get("discarded") or not o.get("outcome_vocab_id"):
+                continue
+            nums = o.get("numbers_v2") or {}
+            claim = nums.get("claim") or o.get("claim") or {}
+            review = nums.get("review") or {}
+            eff, why = effect_from_claim(claim, review.get("verified", nums.get("verified")) or {},
+                                         polarity=polarity.get(o["outcome_vocab_id"]),
+                                         abs_only=nums.get("abs_only") or ())
+            totals["mapped"] += 1
+            totals[f"reader_{nums.get('reader') or 'S5'}"] += 1
+            totals["found_false"] += nums.get("found") is False
+            totals["effect"] += eff is not None
+            totals[f"review_{review.get('status') or 'none'}"] += 1
+            rows.append({"study": cid, "claim": i, "outcome": o["outcome_vocab_id"],
+                         "raw": (claim.get("outcome_raw") or "")[:50], "reader": nums.get("reader"),
+                         "estimand": claim.get("estimand"), "verified": sorted(nums.get("verified") or {}),
+                         "rejected": sorted(nums.get("rejected") or {}),
+                         "effect": eff.route if eff else None, "refusal": None if eff else why,
+                         "review": review.get("status"), "conflicts": review.get("conflicts") or []})
+    failed = collections.Counter(f.get("agent") for res in run.values()
+                                 for f in (res.get("extraction") or {}).get("_failed") or [])
+    return {"totals": dict(totals), "failed_agents": dict(failed), "claims": rows}
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -324,11 +360,14 @@ def main(argv: list[str]) -> int:
     c.add_argument("a")
     c.add_argument("b")
     c.add_argument("--out", type=Path)
+    nr = sub.add_parser("numbers")
+    nr.add_argument("label")
+    nr.add_argument("--out", type=Path)
     args = ap.parse_args(argv)
     if args.cmd == "run":
         return run(args.label, args.n, args.fake, args.resume, args.in_flight)
     load = lambda label: json.loads((OUT / f"{label}.json").read_text(encoding="utf-8"))
-    result = compare_runs(load(args.a), load(args.b))
+    result = numbers_report(load(args.label)) if args.cmd == "numbers" else compare_runs(load(args.a), load(args.b))
     text = json.dumps(result, indent=1)
     print(text)
     if args.out:

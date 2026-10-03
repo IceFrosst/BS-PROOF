@@ -28,7 +28,12 @@ import re
 # Numeric S5 claim fields a meta-analysis can consume.
 NUMERIC_FIELDS = ("effect_size", "ci_low", "ci_high", "p_value", "standard_error", "effect_sd",
                   "mean_ingredient", "mean_control", "sd_ingredient", "sd_control",
-                  "n_ingredient", "n_control")
+                  "n_ingredient", "n_control",
+                  # per-arm SE / CI of the mean (S5N), for the derived-SD route
+                  "se_ingredient", "se_control", "ci_ingredient_low", "ci_ingredient_high",
+                  "ci_control_low", "ci_control_high",
+                  # per-arm baseline / post values (S5N), for the consistency guard
+                  "pre_ingredient", "post_ingredient", "pre_control", "post_control")
 _N_FIELDS = {"n_ingredient": "ingredient_arm", "n_control": "control_arm"}
 
 # A number token: optional sign (ASCII or Unicode minus / en dash used as minus),
@@ -113,7 +118,12 @@ def table_rows(provenance: dict | None, tables: list[dict] | None) -> list[list[
 
 _ARM_OF_FIELD = {"mean_ingredient": "ingredient_arm", "sd_ingredient": "ingredient_arm",
                  "n_ingredient": "ingredient_arm", "mean_control": "control_arm",
-                 "sd_control": "control_arm", "n_control": "control_arm"}
+                 "sd_control": "control_arm", "n_control": "control_arm",
+                 "se_ingredient": "ingredient_arm", "ci_ingredient_low": "ingredient_arm",
+                 "ci_ingredient_high": "ingredient_arm", "se_control": "control_arm",
+                 "ci_control_low": "control_arm", "ci_control_high": "control_arm",
+                 "pre_ingredient": "ingredient_arm", "post_ingredient": "ingredient_arm",
+                 "pre_control": "control_arm", "post_control": "control_arm"}
 
 
 def _row_text_for(field: str, claim: dict, rows: list[list[str]]) -> str | None:

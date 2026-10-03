@@ -1,13 +1,13 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "BS-PROOF S5R second-reviewer number extraction",
+  "title": "BS-PROOF S5N per-claim numbers extraction (evidence method v2, reviewer 1)",
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "reviews"
+    "numbers"
   ],
   "properties": {
-    "reviews": {
+    "numbers": {
       "type": "array",
       "maxItems": 60,
       "items": {
@@ -28,6 +28,30 @@
               "null"
             ],
             "maxLength": 600
+          },
+          "table_provenance": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": false,
+            "required": [
+              "caption",
+              "row",
+              "column"
+            ],
+            "properties": {
+              "caption": {
+                "type": "string"
+              },
+              "row": {
+                "type": "string"
+              },
+              "column": {
+                "type": "string"
+              }
+            },
+            "description": "Verbatim table caption, row label, and column header(s) supporting extracted values."
           },
           "n_ingredient": {
             "type": [
@@ -279,6 +303,7 @@
           "index",
           "found",
           "evidence_span",
+          "table_provenance",
           "n_ingredient",
           "n_control",
           "mean_ingredient",

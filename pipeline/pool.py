@@ -46,8 +46,8 @@ from pipeline.dose import dose_match_for
 from pipeline.effect_size import Effect, effect_from_claim
 from pipeline.eligibility import _ineligible
 
-ROUTE_RANK = {"arm_stats": 0, "reported_smd_ci": 1, "reported_smd_p": 2, "reported_smd_n": 3,
-              "reported_md_ci": 4}
+ROUTE_RANK = {"arm_stats": 0, "arm_stats_derived": 1, "reported_smd_ci": 2, "reported_smd_p": 3,
+              "reported_smd_n": 4, "reported_md_ci": 5}
 CONFIDENCE = 0.95
 
 
@@ -194,13 +194,15 @@ def _study_effects(item: dict, product: dict, polarity: dict,
             refusals[oid] = "study: off-target population"
             continue
         nums = o.get("numbers_v2") or {}
-        claim = o.get("claim") or {}
+        # S5N's claim when it read the numbers (pipeline/review.numbers_claim).
+        claim = nums.get("claim") or o.get("claim") or {}
         review = nums.get("review") or {"status": "single", "verified": nums.get("verified") or {}}
         if review["status"] == "disagreed":
             refusals.setdefault(oid, "reviewers disagree (human adjudication)")
             continue
         eff, why = effect_from_claim(claim, review["verified"], polarity=polarity.get(oid),
-                                     abs_only=nums.get("abs_only") or ())
+                                     abs_only=nums.get("abs_only") or (),
+                                     checks=nums.get("verified") or {})
         if eff is None:
             refusals.setdefault(oid, why)
             continue
@@ -212,12 +214,18 @@ def _study_effects(item: dict, product: dict, polarity: dict,
             n = max(arm_n)            # the same people in both periods: not 2n
         else:
             n = sum(arm_n)
+        rob = rob_status(ext.get("S4") if isinstance(ext.get("S4"), dict) else None)
+        if "baseline_imbalance" in eff.flags and rob == "low":
+            # Founder 2026-10-03: downgrade, never refuse. A trial whose arms
+            # started further apart than the endpoint difference cannot count
+            # as low risk of bias (RoB 2 domain 1); GRADE's rule does the rest.
+            rob = "unclear"
         s7 = ext.get("S7") if isinstance(ext.get("S7"), dict) else {}
         form_id = study_form(s7, claim)
         dose = trial_dose(product.get("ingredient") or "", s7, s3, claim)
         cand = StudyEffect(item["id"], eff.route, eff, bool(claim.get("is_primary_outcome")), i,
                            n=n if isinstance(n, int) else None,
-                           rob=rob_status(ext.get("S4") if isinstance(ext.get("S4"), dict) else None),
+                           rob=rob,
                            form_match=vocab.form_match(product.get("ingredient") or "",
                                                        form_id, product.get("form_vocab_id")),
                            pop_match=pop, design_rank=record.get("design_rank"),

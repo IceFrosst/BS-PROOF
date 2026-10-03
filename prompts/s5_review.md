@@ -40,7 +40,21 @@ answer; a wrong number is not.
                                 change, if the paper reports change scores)
   sd_ingredient, sd_control     each arm's STANDARD DEVIATION. If the paper prints
                                 a standard error or a CI per arm, leave the SD
-                                null -- never convert.
+                                null -- never convert. Values given as
+                                "mean ± SE" (or SEM) are not SDs.
+  se_ingredient, se_control     each arm's STANDARD ERROR of the mean, when the
+                                paper prints SE / SEM instead of an SD
+  ci_ingredient_low/_high,      each arm's own confidence interval of its mean
+  ci_control_low/_high          (or mean change), when printed per arm
+  arm_ci_level                  the level of those per-arm CIs as a fraction
+                                (0.95), only when the paper states it
+  pre_ingredient, pre_control   each arm's BASELINE (before / pre / week 0) mean
+                                for this outcome, when printed
+  post_ingredient, post_control each arm's mean AT THE TIMEPOINT (after / post /
+                                final), when printed -- copy both pre and post
+                                whenever they are printed, whatever the estimand;
+                                a deterministic check uses them to catch
+                                misprinted change columns
   effect_size, effect_unit      the paper's own between-arm estimate (a mean
                                 difference or a standardised effect such as
                                 Cohen's d / Hedges' g), as printed
@@ -63,6 +77,6 @@ answer; a wrong number is not.
                                 ingredient) | vs_ingredient_arm (both arms got
                                 it) | within_group | unclear
 
-NEVER CALCULATE. Do not derive a mean from a change, an SD from an SE, a
+NEVER CALCULATE. Do not derive a mean from a change, an SD from an SE or a CI, a
 difference from two means, a CI from a p, or a total n from a percentage. Copy
 what is printed, at the precision printed.

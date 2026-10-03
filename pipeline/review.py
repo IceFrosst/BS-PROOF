@@ -3,8 +3,10 @@ Evidence method v2, stage 3: the second reviewer's disagreement rule.
 NO MODEL MAY ENTER THIS FILE. SHADOW ONLY until the Phase 4 switch.
 
 Systematic reviews extract every number twice, independently, and only numbers
-both extractors agree on are analysed. Here reviewer 1 is S5 (+ the S5T table
-route, then the deterministic span check) and reviewer 2 is S5R: a DIFFERENT
+both extractors agree on are analysed. Here reviewer 1 is S5N, the per-claim
+numbers extractor (`numbers_claim`; S5's own numbers + the S5T table route when
+S5N is off or returned nothing), then the deterministic span check; reviewer 2
+is S5R: a DIFFERENT
 Claude model that is shown the same paper and the claim's identity (outcome,
 timepoint, arm labels) but NOT reviewer 1's numbers, and extracts them again.
 (docs/EVIDENCE_METHOD.md §9 decision 5: a second Claude model for now; a
@@ -58,8 +60,19 @@ RULES = {
 # and estimate kinds that no effect route read.)
 _REPORTED_CATS = ("effect_favours", "estimate_kind", "design_kind", "contrast", "estimand")
 ROUTE_FIELDS = {
+    # pre_* / post_* feed the consistency guard (pipeline/effect_size.py): a
+    # misread baseline is a misread like any other.
     "arm_stats": (("n_ingredient", "n_control", "mean_ingredient", "mean_control",
-                   "sd_ingredient", "sd_control"), ("design_kind", "contrast", "estimand")),
+                   "sd_ingredient", "sd_control", "pre_ingredient", "pre_control",
+                   "post_ingredient", "post_control"), ("design_kind", "contrast", "estimand")),
+    # An SD derived from a per-arm SE / CI (pipeline/effect_size._derive_arm_sds):
+    # the printed SE / CI bounds are compared, never the derived SD, and the
+    # CI's stated level is a fact the derivation reads.
+    "arm_stats_derived": (("n_ingredient", "n_control", "mean_ingredient", "mean_control",
+                           "sd_ingredient", "sd_control", "se_ingredient", "se_control",
+                           "ci_ingredient_low", "ci_ingredient_high", "ci_control_low",
+                           "ci_control_high", "pre_ingredient", "pre_control", "post_ingredient",
+                           "post_control"), ("design_kind", "contrast", "estimand", "arm_ci_level")),
     "reported_smd_ci": (("effect_size", "ci_low", "ci_high"), _REPORTED_CATS),
     "reported_md_ci": (("effect_size", "ci_low", "ci_high"), _REPORTED_CATS),
     "reported_smd_p": (("effect_size", "p_value"), _REPORTED_CATS),
@@ -72,6 +85,33 @@ MUST_CONFIRM = ("effect_favours",)
 # Signs of reported estimates come from `effect_favours`, not the printed sign,
 # so these are compared by magnitude (pipeline/effect_size.py).
 _ABS_COMPARED = ("effect_size",)
+
+
+# What S5N reads for a claim (schemas/s5_numbers.json minus index/found). When
+# S5N answered, these REPLACE S5's values for the v2 effect.
+S5N_FIELDS = ("evidence_span", "table_provenance", "n_ingredient", "n_control",
+              "mean_ingredient", "mean_control", "sd_ingredient", "sd_control",
+              "se_ingredient", "se_control", "ci_ingredient_low", "ci_ingredient_high",
+              "ci_control_low", "ci_control_high", "arm_ci_level",
+              "pre_ingredient", "pre_control", "post_ingredient", "post_control",
+              "effect_size", "effect_unit", "effect_favours", "estimate_kind",
+              "ci_low", "ci_high", "ci_level", "p_value", "estimand", "design_kind", "contrast")
+
+
+def numbers_claim(claim: dict, entry: dict | None) -> dict | None:
+    """The claim the v2 effect is computed from when S5N read its numbers: S5's
+    identity (outcome, arms, timepoint, primary flag, ...) with EVERY number and
+    every field an effect route reads taken from S5N alone. S5's own numbers are
+    cleared first, never mixed in: a union of two extractions is not one
+    extraction. None when S5N gave no entry for the claim."""
+    from pipeline.span_check import NUMERIC_FIELDS
+    if not isinstance(entry, dict):
+        return None
+    out = {**claim, **{f: None for f in NUMERIC_FIELDS}, "table_provenance": None}
+    out.update({f: entry.get(f) for f in S5N_FIELDS})
+    # S5N's p is exact by contract (a threshold is null), so the span check may use it.
+    out["p_value_kind"] = "exact" if entry.get("p_value") is not None else None
+    return out
 
 
 def _same_number(a: float, b: float, field: str) -> bool:
@@ -141,7 +181,8 @@ def reconcile_study(outcomes: list[dict], reviews: list[dict] | None,
         nums = o.get("numbers_v2")
         if not isinstance(nums, dict):
             continue
-        rec = reconcile(o.get("claim") or {}, nums, by_index.get(i) if i in sent else None,
+        rec = reconcile(nums.get("claim") or o.get("claim") or {}, nums,
+                        by_index.get(i) if i in sent else None,
                         (polarity or {}).get(o.get("outcome_vocab_id")))
         nums["review"] = rec
         if rec["status"] == "disagreed":

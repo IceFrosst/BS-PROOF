@@ -163,3 +163,85 @@ Proposed next design (not built): a dedicated per-claim NUMBERS extractor
 (Sonnet) shaped like S5R, run beside S5R (Opus) as the two independent
 reviewers, so S5 keeps direction/eligibility and numbers come from two focused
 reads that the span check and `pipeline/review.py` reconcile.
+
+## S5N numbers extractor smoke test (2026-10-03, later) — RSMOKE4, v1.32
+
+The per-claim NUMBERS extractor proposed above was built (S5N, Sonnet tier B,
+`prompts/s5_numbers.md`, `bsproof/workers._extract_numbers`, on by default;
+S5R Opus stays reviewer 2). Same 6 studies as RSMOKE3, `SP_SECOND_REVIEWER=1`,
+0 failed agents, 101 s. Report: `extraction_stability.py numbers RSMOKE4`.
+
+**Still 0/12 mapped claims make an effect — but S5N reads correctly.** By claim:
+
+| claims | what the paper prints | S5N read | why no effect |
+|---|---|---|---|
+| 4 (jump tests) | arm-per-row table: CrM row, CON row, change ± SD | all six arm numbers, correct | span quoted only the CrM row and `table_provenance.row` combined both labels ("SJ (cm) / CrM; SJ (cm) / CON"), so the span check could not find the control values |
+| 3 (leg/chest press, grip) | per-arm change with **95% CI**, no SD | means, SD null (correct: never convert) | no SD; a per-arm CI -> SD conversion would make all three |
+| 1 (whole-body FFM) | post mean ± **SE** (methods: "mean ± SE") | means, SD null (correct) | no SD; SE -> SD (x sqrt n) would make it |
+| 4 | text only (NS / "p<0.05" / one exact p, crossover) | nothing, or p only | genuinely not poolable |
+
+Conclusion: reviewer 1 is no longer the binding problem. Two fixes would make
+8 of the 12 poolable: (a) prompt — quote every arm's row and give the row
+label alone; (b) documented per-arm SE -> SD and CI -> SD conversions
+(Cochrane Handbook 6.5.2.2), deterministic and flagged, which needs S5N to
+report per-arm SE / CI. The second reviewer never ran live (no effect-making
+claims). The nutrients paper's 3 claims are cognitive outcomes outside the
+smoke run's 5-outcome allowlist.
+
+## RSMOKE5 (v1.33): both fixes — 7/11 effects, all reviewer-agreed
+
+Same 6 studies, `SP_SECOND_REVIEWER=1`, 120 s. Fixes: S5N quotes every arm's
+row with a single row label; per-arm SE / CI copied into their own fields and
+converted deterministically (`effect_size._derive_arm_sds`, Cochrane §6.5.2.2,
+route `arm_stats_derived`, flagged).
+
+- **7 of 11 mapped claims make an effect; S5R (Opus) agreed on all 7, 0
+  conflicts.** 4 jump tests `arm_stats`; chest press + hand grip SD from the
+  per-arm 95% CI; whole-body FFM SD from SE.
+- The 4 without an effect are correct refusals: text-only results (1RM, 8
+  exercises), TTE (exact p only, crossover), sprint (no ingredient-free
+  contrast stated), leg press (the creatine arm's analysed n is not printed --
+  "one participant ... was unable to complete the leg press" -- so S5N left it
+  null). Ceiling on these papers: 7/11 reached.
+- 1 failed agent: S5 `max_turns` on the cognitive paper (intermittent; it
+  passed in RSMOKE4; its outcomes are outside the smoke allowlist).
+- Shadow pool: muscle_power k=1 g=+0.60, muscle_strength k=1 g=-0.40,
+  lean_body_mass k=1 g=-0.30; every grade I (one trial each), as expected.
+
+**Two validity problems the double extraction cannot catch** (both readers copy
+the same printed numbers faithfully):
+
+1. **Misprinted / misparsed table cells.** In doi:10.1080/15502783.2022.2108683
+   Table 2 the ∆ cells of DJ and CMJ are swapped (DJ: 1.1 -> 1.6 printed ∆ 4.1;
+   CMJ: 31.1 -> 35.2 printed ∆ 0.5). Whether the paper or our table parser
+   swapped them is not yet checked. Proposed guard (deterministic, not built):
+   when before, after and ∆ are all printed, refuse the claim if ∆ != after -
+   before at printed precision -- needs S5N to also copy the before / after
+   values.
+2. **Endpoint values under baseline imbalance.** Whole-body FFM: creatine
+   62.9 -> 65.4 kg, placebo 68.0 -> 67.6 kg. Change favours creatine, but
+   the post values (the only ones with a spread) give g = -0.30 because the
+   arms started 5 kg apart (n = 10 per arm). Cochrane accepts endpoint values
+   for RCTs, but with small arms this flips the sign. Needs a rule (founder
+   call): e.g. refuse or downgrade an endpoint-only effect when the baseline
+   difference exceeds the effect.
+
+## RSMOKE6 (v1.34): consistency guard + baseline-imbalance flag, live
+
+Same 6 studies, `SP_SECOND_REVIEWER=1`, 135 s. Both readers now copy each
+arm's printed baseline / post values (`pre_*` / `post_*`), span-verified on
+every claim that printed them.
+
+- **Guard works on the real swap:** DJ (printed ∆ 4.1, post − pre 0.5) and
+  CMJ (printed ∆ 0.5, post − pre 4.1) are refused as "printed numbers
+  inconsistent"; SJ and ABJ pass and are reviewer-agreed. muscle_power now
+  pools SJ (g = +0.30) instead of the swapped CMJ value.
+- **Imbalance flag works:** whole-body FFM carries `baseline_imbalance`
+  (baselines 62.9 vs 68 kg, endpoint difference 2.2). Its S4 risk of bias was
+  already "high", so the cap changed nothing here.
+- 13 mapped claims (S5 split one more), 5 effects, all reviewer-agreed; the
+  other 8 are correct refusals (2 by the guard, leg press n unknown, 5 with no
+  usable printed numbers or no ingredient-free contrast).
+- **2 failed agents: S7 `max_turns`** (2 of 6 studies; S5 hit the same
+  intermittent failure once in RSMOKE5). S7 supplies form and dose, which v2
+  uses for indirectness, so a full run must `--resume` its failures.

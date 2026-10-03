@@ -10,6 +10,32 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-03 — S5N per-claim numbers extractor (v1.32-v1.34)
+
+- New agent S5N (`prompts/s5_numbers.md`, `schemas/s5_numbers.json`, tier B
+  Sonnet): reviewer 1 for v2 numbers on every mapped claim, chunked 8 per call
+  (`SP_S5N_CHUNK`), blind to S5's numbers and estimand; picks the estimand the
+  paper prints in full. `pipeline/review.numbers_claim` replaces S5's numbers
+  (never mixes); pool / reviewer read `numbers_v2.claim`. Fallback to S5's
+  numbers (`reader: "S5"`) on omission or failure. On by default,
+  `SP_NUMBERS_EXTRACTOR=0` off. S5R refuses S5N's model too.
+- Verified: invariants, selftest, 138 Python tests (12 new in
+  `tests/test_numbers_extractor.py`).
+- Smoke RSMOKE4: 0/12 effects, but S5N's readings are correct; the losses are
+  arm-per-row span coverage and per-arm SE / CI instead of SD. Measurements
+  note, "S5N numbers extractor smoke test".
+- v1.33: both arm rows quoted, single row label; per-arm SE / CI fields in
+  S5N and S5R; deterministic SD derivation (Cochrane §6.5.2.2,
+  `arm_stats_derived`, flagged, ranked after printed SDs). 147 Python tests.
+- Smoke RSMOKE5: **7/11 effects, reviewer agreed on all 7**; the other 4 are
+  correct refusals. Two open validity issues (swapped table cells; endpoint
+  values under baseline imbalance) -- measurements note, "RSMOKE5".
+- v1.34 (founder): printed-table consistency guard (change must equal post −
+  pre; refuses) and baseline imbalance (endpoint gap > effect -> flag + RoB
+  capped at "unclear"; downgrades, never refuses). Readers copy `pre_*` /
+  `post_*`. 157 Python tests. RSMOKE6: the swapped DJ/CMJ cells are refused,
+  FFM flagged; 5/13 effects, all agreed; 2 intermittent S7 `max_turns`.
+
 ## 2026-10-03 — dose rule relaxed; reviewer fixed; re-extraction held back
 
 - Founder: dose indirectness only for `below_50` / `above_200`

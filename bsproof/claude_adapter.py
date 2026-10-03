@@ -335,7 +335,24 @@ def _claude_bin() -> str:
 #   pre/post values printed and no printed change, report the post values
 #   (endpoint). Measured on a 6-study smoke run: 0 of 13 mapped claims made an
 #   effect, mostly computed change scores the span check (rightly) refused.
-PROMPT_VERSION = "v1.31"
+# v1.32 (2026-10-03): new S5N agent, the per-claim NUMBERS extractor (reviewer
+#   1 for evidence method v2; S5 keeps direction and eligibility). RSMOKE3
+#   under v1.31 still made 0/13 effects: S5 kept framing claims as change
+#   scores with no printed SD and left arm fields empty, while the focused S5R
+#   prompt read the same paper's printed post means ± SD correctly. S5N picks
+#   the estimand the paper prints IN FULL (change ± SD, else post ± SD).
+# v1.33 (2026-10-03): S5N quotes EVERY arm's row/sentence and gives a single
+#   row label; S5N and S5R copy per-arm SE and per-arm CI (+ level) into their
+#   own fields (pipeline/effect_size derives the SD, Cochrane §6.5.2.2).
+#   Measured on RSMOKE4 (v1.32, 6 studies): S5N's numbers were right but 0/12
+#   made an effect -- 4 lost the control row (span quoted only the creatine
+#   row, row labels joined), 4 printed SE or a per-arm 95% CI instead of an SD.
+# v1.34 (2026-10-03): S5N and S5R also copy each arm's printed baseline and
+#   post means (pre_* / post_*) for the deterministic consistency guard and the
+#   baseline-imbalance flag (pipeline/effect_size.py). Measured on RSMOKE5: a
+#   swapped ∆ column (DJ / CMJ) passed both readers; a 5 kg baseline gap
+#   flipped an endpoint g's sign.
+PROMPT_VERSION = "v1.34"
 
 # Tier -> model. FULL IDs, NOT ALIASES.
 #
@@ -472,6 +489,10 @@ AGENTS = {
     # Evidence method v2 second reviewer: re-reads S5's poolable numbers blind
     # (pipeline/review.py). Off unless SP_SECOND_REVIEWER=1 (workers.py).
     "S5R": ("R", "s5_review.json",    "s5_review.md"),
+    # Evidence method v2 reviewer 1 for numbers: reads the per-arm numbers of
+    # every MAPPED S5 claim (workers._extract_numbers). Tier B (sonnet, low
+    # effort) so it is cheap AND a different model from S5R's opus.
+    "S5N": ("B", "s5_numbers.json",   "s5_numbers.md"),
 }
 
 
@@ -1138,9 +1159,9 @@ def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
         # failure that reads as "this study reported nothing".
         raise ValueError(f"SP_EFFORT_{tier}={effort!r} is not one of {VALID_EFFORT}")
 
-    if tier == "R" and model == TIER_MODEL[AGENTS["S5"][0]]:
+    if tier == "R" and model in (TIER_MODEL[AGENTS["S5"][0]], TIER_MODEL[AGENTS["S5N"][0]]):
         # Two reads by the same model are one reviewer twice, not two reviewers.
-        raise ValueError(f"SP_MODEL_R={model!r} is the S5 extractor's model; "
+        raise ValueError(f"SP_MODEL_R={model!r} is the S5/S5N extractor's model; "
                          "the second reviewer must be a different model")
 
     schema = (SCHEMAS / schema_f).read_text()

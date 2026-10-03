@@ -56,6 +56,76 @@ def _second_reviewer_enabled() -> bool:
     return os.environ.get("SP_SECOND_REVIEWER", "0") == "1"
 
 
+def _numbers_extractor_enabled() -> bool:
+    """Evidence method v2 reviewer 1 for numbers (S5N). ON by default: v2 has
+    no poolable numbers without it (RSMOKE3, v1.31: 0/13 mapped S5 claims made
+    an effect). One call per S5N_CHUNK mapped claims; no v14 score reads it.
+    SP_NUMBERS_EXTRACTOR=0 falls back to S5's own numbers."""
+    return os.environ.get("SP_NUMBERS_EXTRACTOR", "1") == "1"
+
+
+# Mapped claims per S5N call. Coverage first, cost second (founder 2026-10-03):
+# a long claim list in one call risks silently skipped claims, so a study with
+# many claims is split; the chunks run one after another so every call after
+# the first reads the paper from the prompt cache.
+S5N_CHUNK = int(os.environ.get("SP_S5N_CHUNK", "8"))
+_S5N_IDENTITY = ("outcome_raw", "measure", "timepoint", "ingredient_arm", "control_arm")
+
+
+def _claim_for_numbers(o: dict) -> dict:
+    """The claim the v2 effect reads: S5N's when it read the numbers, else S5's."""
+    return (o.get("numbers_v2") or {}).get("claim") or o.get("claim") or {}
+
+
+def _extract_numbers(out: dict, record: dict, text: str, sections: dict | None,
+                     s3_facts: dict, call) -> None:
+    """S5N reads the numbers of every MAPPED claim (not only the ones S5 already
+    gave numbers: those are the misses this agent exists for), told only each
+    claim's identity -- never S5's numbers or estimand. Each answer becomes the
+    claim's numbers_v2: pipeline.review.numbers_claim + the span check. A claim
+    S5N gave no entry for (call failed, omitted) keeps S5's own numbers_v2,
+    marked reader "S5", so the run says which reader every number came from."""
+    from pipeline.review import numbers_claim
+    outcomes = out.get("outcomes") or []
+    todo = [i for i, o in enumerate(outcomes) if not o.get("discarded")]
+    for o in outcomes:
+        if isinstance(o.get("numbers_v2"), dict):
+            o["numbers_v2"]["reader"] = "S5"
+    if not todo:
+        return
+    base = _payload("S5N", record, text, None, sections, s3_facts=s3_facts)
+    entries: dict[int, dict] = {}
+    metas = []
+    for start in range(0, len(todo), max(1, S5N_CHUNK)):
+        chunk = todo[start:start + max(1, S5N_CHUNK)]
+        payload = {**base, "claims": [{"index": i, **{k: outcomes[i]["claim"].get(k) for k in _S5N_IDENTITY}}
+                                      for i in chunk]}
+        try:
+            result, meta = call("S5N", payload)
+        except Exception as exc:
+            result, meta = None, {"error": str(exc)}
+        metas.append(meta)
+        if result is None:
+            err = str((meta or {}).get("error") or "")
+            if any(k in err.lower() for k in ("session limit", "usage limit", "rate limit")):
+                out["_quota_exhausted"] = err
+            out.setdefault("_failed", []).append({"agent": "S5N", "error": err})
+            continue
+        # Matched BY INDEX, and only indices this chunk asked for.
+        for e in (result.get("numbers") or []):
+            if isinstance(e, dict) and e.get("index") in chunk:
+                entries.setdefault(e["index"], e)
+    out.setdefault("_meta", {})["S5N"] = metas
+    merged = {i: numbers_claim(outcomes[i]["claim"], e) for i, e in entries.items()}
+    checked = _verify_numbers(out, record, [merged[i] for i in sorted(merged)])
+    for i, nums in zip(sorted(merged), checked):
+        outcomes[i]["numbers_v2"] = {**nums, "reader": "S5N", "found": bool(entries[i].get("found")),
+                                     "claim": merged[i]}
+    out["numbers_extraction_v2"] = {"sent": len(todo), "returned": len(entries),
+                                    "found": sum(bool(e.get("found")) for e in entries.values()),
+                                    "calls": len(metas)}
+
+
 def _second_review(out: dict, record: dict, text: str, sections: dict | None,
                    s3_facts: dict, call) -> None:
     """Send reviewer 2 every MAPPED claim whose span-verified numbers make an effect, in one
@@ -68,12 +138,14 @@ def _second_review(out: dict, record: dict, text: str, sections: dict | None,
     # refuse anyway has nothing worth a second reading (and costs a call).
     sent = {i for i, o in enumerate(outcomes)
             if not o.get("discarded") and effect_route(
-                o.get("claim") or {}, (o.get("numbers_v2") or {}).get("verified") or {},
+                _claim_for_numbers(o), (o.get("numbers_v2") or {}).get("verified") or {},
                 polarity.get(o.get("outcome_vocab_id")))}
     reviews = None
     if sent:
         payload = _payload("S5R", record, text, None, sections, s3_facts=s3_facts)
-        payload["claims"] = [{"index": i, **{k: outcomes[i]["claim"].get(k) for k in
+        # The estimand is reviewer 1's (S5N's when it read the numbers), so both
+        # readers read the same quantity; it is identity, not a number.
+        payload["claims"] = [{"index": i, **{k: _claim_for_numbers(outcomes[i]).get(k) for k in
                                              ("outcome_raw", "measure", "timepoint", "estimand",
                                               "ingredient_arm", "control_arm")}}
                              for i in sorted(sent)]
@@ -95,13 +167,15 @@ def _second_review(out: dict, record: dict, text: str, sections: dict | None,
                         "adjudication": reconcile_study(outcomes, reviews, sent, polarity)}
 
 
-def _verify_numbers(out: dict, record: dict) -> list[dict]:
+def _verify_numbers(out: dict, record: dict, claims: list[dict] | None = None) -> list[dict]:
     """Span-check every S5 claim's numbers (pipeline/span_check.py), by claim
-    index. Deterministic; tables are fetched only when a claim cites one, and
-    through the worker_payload MODULE so tests that patch it stay offline."""
+    index -- or the given claims (S5N's). Deterministic; tables are fetched only
+    when a claim cites one, and through the worker_payload MODULE so tests that
+    patch it stay offline."""
     from pipeline.span_check import verify_claim_numbers
     from bsproof import worker_payload as _wp
-    claims = ((out.get("S5") or {}).get("claims")) or []
+    if claims is None:
+        claims = ((out.get("S5") or {}).get("claims")) or []
     s3_arms = (out.get("S3") or {}).get("arms") if isinstance(out.get("S3"), dict) else None
     tables = None
     if any(isinstance(c, dict) and c.get("table_provenance") for c in claims):
@@ -549,6 +623,8 @@ def extract_study(record: dict, text: str, registry: dict | None = None, *,
                 "rationale": (result or {}).get("rationale"),
                 "numbers_v2": numbers[i] if i < len(numbers) else None,
             })
+    if _numbers_extractor_enabled():
+        _extract_numbers(out, record, text, sections, s3_facts, call)
     if _second_reviewer_enabled():
         _second_review(out, record, text, sections, s3_facts, call)
     return out

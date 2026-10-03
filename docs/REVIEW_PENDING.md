@@ -65,6 +65,20 @@ and blinding are adequate.
   against 5 g-creatine trials loses one certainty level. Option: count
   `low_50_99` as direct too (only `below_50` / `above_200` indirect). One line
   in `grade.indirectness` + the TS port + goldens. Founder call.
+- **DECIDED 2026-10-03 (founder) — baseline imbalance downgrades, never
+  refuses.** An endpoint effect whose arms' printed baselines differ by more
+  than the endpoint difference is flagged `baseline_imbalance`
+  (`pipeline/effect_size.py`); the pool caps that trial's risk of bias at
+  "unclear" (`pipeline/pool.py`), so the existing GRADE risk-of-bias rule above
+  downgrades when such trials carry ≥ half the weight. No new constant: the
+  trigger is "gap > effect", the downgrade is the existing rule. Measured case:
+  whole-body FFM, baselines 62.9 vs 68.0 kg, endpoint g = −0.30 while the
+  change favoured creatine (RSMOKE5).
+- **Per-arm SD from SE / CI** (Cochrane Handbook §6.5.2.2): SD = SE·√n, or
+  √n·(upper − lower)/(2·t), from printed values only, flagged; ranked after a
+  printed SD. **Printed-table consistency guard:** a change mean that does not
+  equal post − pre (or an endpoint mean that is not the post value) at printed
+  precision refuses the claim. Both built 2026-10-03 at the founder's request.
 - **Crossover trials**: arm statistics are pooled as if parallel (Cochrane
   Handbook §23.2.6, conservative); a paired mean difference with CI is kept;
   a crossover SMD is refused (may be d_z).
