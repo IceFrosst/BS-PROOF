@@ -140,6 +140,7 @@ const COPY = {
     retake: "Retake photo",
     chooseOther: "Choose a different image",
     switchTo: "Lietuviškai",
+    signOut: "Sign out",
   },
   lt: {
     headline: "Ar tavo papildas tikrai veikia?",
@@ -161,6 +162,7 @@ const COPY = {
     retake: "Fotografuoti iš naujo",
     chooseOther: "Pasirinkti kitą nuotrauką",
     switchTo: "English",
+    signOut: "Atsijungti",
   },
 } as const;
 
@@ -982,9 +984,16 @@ export function ScanFlow({ catalog, auth: sharedAuth, active = true, initialResu
               {lang === "en" ? "LT" : "EN"}
             </button>
             {auth.configured && auth.email ? (
-              <span className="sc-avatar" title={auth.email} aria-label={`Signed in as ${auth.email}`}>
-                {auth.email.charAt(0).toUpperCase()}
-              </span>
+              <>
+                <span className="sc-avatar" title={auth.email} aria-label={`Signed in as ${auth.email}`}>
+                  {auth.email.charAt(0).toUpperCase()}
+                </span>
+                {/* Sign-out stays reachable from the landing, not only from a
+                    result or the History tab. */}
+                <button type="button" className="sc-signout" onClick={() => void signOut()}>
+                  {t.signOut}
+                </button>
+              </>
             ) : null}
           </span>
         </div>
