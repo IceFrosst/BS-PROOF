@@ -316,6 +316,9 @@ not re-extracted.
 
 ## RESOLVED — kept only as pointers
 
+- **Evidence method v2** (2026-10-03): adopted; all six decisions recorded in
+  `docs/EVIDENCE_METHOD.md` §9.
+
 | was | outcome |
 |---|---|
 | Form in `w_study` vs form arc | **Settled.** Now CLAUDE.md invariant 8: form, dose and population are OUT of the weight, and each is an arc carrying a verdict + coverage. Four arcs, not three. |

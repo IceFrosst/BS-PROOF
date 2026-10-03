@@ -254,7 +254,14 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
 
 ---
 
-## Current state (snapshot, 2026-10-02)
+## Current state (snapshot, 2026-10-03)
+
+- **Method:** evidence method v2 (`docs/EVIDENCE_METHOD.md`) was **adopted
+  2026-10-03**: random-effects meta-analysis + GRADE + per-outcome letter
+  grades, replacing the v14 aggregation (which fails its creatine-strength
+  face-validity check). Decisions in its §9 — second reviewer is a second Claude
+  model for now (a different-vendor reviewer is future work); vitamin C is the
+  next ingredient. Implementation is at **Phase 1**; production still scores v14.
 
 - **Evidence:** exactly one retained run — creatine monohydrate
   (`20260904_185830`, v14 re-composition of `20260825_175339`, which is now only in git history). Every run is
@@ -279,6 +286,11 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
 
 ## Next
 
+0. **Evidence method v2** (`docs/EVIDENCE_METHOD.md` §8). Phase 1a done: papers
+   carry poolable numbers (93% of PMC full texts) but current extractions make
+   only 5–27% of trials poolable. Phase 1b: run the stability harness solo
+   (`docs/history/2026-10-03-phase1-measurements.md`), then Phase 2 (arm-level
+   extraction). Items 4–6 below fold into its phases.
 1. Verify on a real phone: live camera, a busy label read after the
    thinking-mode fix, PWA install.
 2. Check whether the text calls (`deepseek-chat`) also need thinking disabled

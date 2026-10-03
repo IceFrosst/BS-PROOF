@@ -10,6 +10,35 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-03 — evidence method v2 adopted; Phase 1a measured
+
+Founder decisions recorded in `docs/EVIDENCE_METHOD.md` §9 (adopted; §4 grade
+table; MCID policy delegated → §5 source hierarchy + sensitivity, values still
+need approval; Evidence Ledger keep-then-retire; second reviewer = a second
+Claude model for now, different-vendor reviewer as future work; vitamin C next).
+`REVIEW_PENDING.md` #0 resolved.
+
+Phase 1a (`scripts/experiments/poolability.py`, no model calls): 79 of 85 PMC
+full texts (93%) report arm-level mean ± SD/SEM or CIs, but current extractions
+make only 10/37 strength, 4/32 power, 6/25 lean-mass and 1/19 endurance trials
+poolable. Phase 1b harness `scripts/experiments/extraction_stability.py` built and
+unit-tested; a 1-study live smoke already showed run-to-run differences (S7
+`max_turns` failure, one direction flip). Full 25-study run pending (solo).
+Details: `docs/history/2026-10-03-phase1-measurements.md`.
+
+## 2026-10-03 — evidence method v2 proposed
+
+`docs/EVIDENCE_METHOD.md`: a proposal to replace the v14 aggregation with a
+Cochrane-style pipeline — arm-level numeric extraction with dual independent
+extraction and span checks, Hedges' g / mean differences, REML random-effects
+pooling with Hartung–Knapp CIs and prediction intervals (the existing
+`pipeline/meta_effects.py`), GRADE certainty (form/dose/population mismatch as
+indirectness), per-outcome MCIDs, and letter grades from a fixed
+(benefit × certainty) table with "I" for insufficient evidence. Validation by
+run-to-run agreement and benchmarking against published meta-analyses. Pointers
+added to `CLAUDE.md`, `docs/SPEC.md`, `README.md`; the six founder decisions are
+`docs/REVIEW_PENDING.md` #0. No code or score changed.
+
 ## 2026-10-03 — blank env vars no longer break the model call
 
 A local `/scan` failed with "label read: could not reach the model API:

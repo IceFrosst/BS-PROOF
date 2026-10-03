@@ -153,7 +153,8 @@ Examples from `python3 -m pipeline.selftest` (~510 checks, zero cost, no network
 | file | what it is |
 |---|---|
 | **[`CLAUDE.md`](CLAUDE.md)** | the rules, workflow and current state. **Read before changing code.** (`AGENTS.md` points other agents there) |
-| **[`docs/SPEC.md`](docs/SPEC.md)** | the scoring method; §13 is every open question and uncalibrated constant |
+| **[`docs/SPEC.md`](docs/SPEC.md)** | the scoring method in production (v14); §13 is every open question and uncalibrated constant |
+| **[`docs/EVIDENCE_METHOD.md`](docs/EVIDENCE_METHOD.md)** | **adopted** successor (in progress): meta-analysis + GRADE certainty + letter grades, with phases and open decisions |
 | **[`docs/PIPELINE.md`](docs/PIPELINE.md)** | what one extraction run does and how to run one |
 | **[`docs/SYSTEM_DESIGN.md`](docs/SYSTEM_DESIGN.md)** | the app: `/scan`, the API, the Evidence Ledger card, design system, history, sign-in, PWA |
 | **[`docs/ANCHORS.md`](docs/ANCHORS.md)** | the 35-anchor calibration set (`docs/anchors.csv` is authoritative) |
@@ -168,6 +169,10 @@ scoring, arcs, storage, reports. **Model layer: proven and runnable** on
 subscriptions (S1–S8 schema-valid with evidence spans); the ceiling is
 throughput, not access. **App: live** at `/scan` with one retained evidence run
 (creatine monohydrate) and three exact Evidence Ledger audits.
+
+**A method change was adopted 2026-10-03** (`docs/EVIDENCE_METHOD.md`, being implemented): the current score
+is not yet a valid measurement — it fails its own creatine-strength sanity check —
+and the proposal replaces its aggregation with standard meta-analysis + GRADE.
 
 **Not yet true, and load-bearing:**
 
