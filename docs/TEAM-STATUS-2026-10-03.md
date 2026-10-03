@@ -1,5 +1,12 @@
 # Team status — 2026-10-03 (BIO-RED pitch day)
 
+## Update: Google origin/referrer diagnosis
+
+- Owner's saved JavaScript origin and deployed client ID are correct. Actual root cause: production's `Referrer-Policy: no-referrer` removes the public origin from the GSI button request.
+- Controlled browser test changed only document policy to `strict-origin`: Referer contained only the canonical HTTPS origin; GSI returned 200 and rendered a clickable button instead of HTTP 400. No production/provider configuration was changed during that test.
+- Owner approved the `/scan`-only metadata fix, with explicit `no-referrer` root metadata and unchanged global Vercel security headers. Policy/Google tests (16), typecheck, scoped lint, both Python gates and build (296 pages) passed. Fresh independent source/security review accepted the fix; verified publication is the next step.
+- Next: verify deployed HTML policy, real Google consent → Supabase session, owner-private History, authenticated scan and replay. A working button alone is not full-flow verification.
+
 ## Update: reviewed translation-cache release
 
 - Preserves Ignas's logo commit `eb30db0` and the merged UI/EN-LT work.
