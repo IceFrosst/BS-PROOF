@@ -561,6 +561,29 @@ do not drop it.
 
 ## Current state
 
+**2026-10-03 -- website -> PC live-research QUEUE (backend only): IMPLEMENTED on local branch `feat/scan-research-queue-20261003`
+(base `3ef1218`), NOT pushed, NOT deployed, SQL NOT applied, NO worker token created, flag OFF.** A signed-in person queues a
+live-source research audit of one of their own saved scans; a worker on the founder's main PC (no public port) polls the website
+over HTTPS, runs it through the founder's Claude SUBSCRIPTION (no API key, no metered spend, so no per-job auth budget; the cost
+control is one job per scan + max 3 open jobs per owner + the flag) and posts the audit back. No model is called from Vercel
+code (`pipeline.invariants` "ts boundary" still passes). Exact contract: header of `lib/scan-research/contract.ts`.
+Files: `lib/scan-research/{contract,target,result,store,worker-auth,http}.ts`, `app/api/scan/research/route.ts` (POST),
+`app/api/scan/research/[id]/route.ts` (GET, owner only, same 404), `app/api/scan/research/worker/route.ts` (POST
+claim|heartbeat|complete|fail, `BS_PROOF_RESEARCH_WORKER_TOKEN`, constant-time), `docs/research-jobs.sql` (private
+`public.bsproof_research_jobs`: RLS on, every privilege revoked even from service_role, six service-role-only SECURITY DEFINER
+functions, hashed lease tokens, atomic claim, CAS complete/fail, immutability trigger, guard that refuses foreign objects).
+Server flag `SCAN_LIVE_RESEARCH_ENABLED` (off unless `1|true|on|yes`). The target is `ResearchJobV1`: supplement facts only,
+derived on the server from the owner's saved scan, uncertain facts `null`, servings never inferred, component rows never blend
+efficacy. The result is validated against the unchanged `schemas/research_audit.json` plus a strict `SourceAccessV1` log
+(request / error / wall / refusal kept apart; an inventory entry may claim snippet/abstract/full_text only if a
+content-verified request event for that id exists) and the server stamps `provenance` = experimental, unvalidated, not clinical
+approval, not human verified, does not affect any score. No scoring constant changed. Tests: `tests/scan-research.test.ts`
+(31, routes against an in-memory mirror of the SQL), `tests/scan-research-target-sql.test.ts` (13). The SQL was ALSO executed
+twice (idempotent) against PGlite with stand-in roles: lifecycle, expiry/re-claim, stale fail, privileges all as specified;
+PGlite is single-connection, so `skip locked` concurrency is reasoned, not exercised. **Handoff:** the PC-worker branch
+(`feat/pc-research-worker-20261003`) implements the consumer to this contract; neither is deployed. Rollout order is in
+`docs/research-jobs.sql` ("ORDER OF RELEASE").
+
 **2026-10-03 — Google-required scan + private Scan/History: IMPLEMENTED, on `main` (`2555166`), PROVISIONED (SQL applied,
 Vercel production env set), DEPLOYED -- but Google sign-in is BROKEN in production: `400 origin_mismatch` (see "Release stage").** Founder: real results depend on a Google login, and a signed-in person can
 reopen their own saved results. Two isolated worktree commits were cherry-picked `--no-commit` onto
@@ -853,7 +876,7 @@ not a claim about current `main`. Deployment age alone was misleading, not
 evidence of a stale release. `bs-proof.vercel.app`
 is still live under another account and cannot be removed with the current
 IceFrost access. Unrelated projects and canonical deployment aliases were not
-touched. **Handoff:** subscription-backed live research is not implemented yet;
+touched. **Handoff:** subscription-backed live research: the website queue is written on `feat/scan-research-queue-20261003` (not deployed, flag off; see `Current state`);
 source-constrained five-case Sonnet 5.5 xhigh versus Opus 5.5 high benchmarking
 is in progress. DeepSeek remains the photo reader. Never assume servings/day;
 read an explicit daily regimen from the photo or ask the user to confirm it.
@@ -1754,6 +1777,13 @@ still the unmeasured SR-uplift experiment (Next item 3).
 
 ## Next
 
+- **Live-research queue (backend written, nothing provisioned): human-gated rollout.** (1) review the diff on
+  `feat/scan-research-queue-20261003`, run both Python gates and the TS gates, merge with the PC-worker branch once the worker
+  speaks this contract; (2) in the shared Supabase project run the read-only PREFLIGHT in `docs/research-jobs.sql`, then apply
+  it once (SQL Editor); (3) generate `BS_PROOF_RESEARCH_WORKER_TOKEN` (>= 32 random chars), set it in Vercel (server env, never
+  `NEXT_PUBLIC_`) and on the PC; (4) deploy, start the PC worker, smoke-test claim with an empty queue; (5) only then set
+  `SCAN_LIVE_RESEARCH_ENABLED=1`. No UI calls these routes yet. Owner decisions still open: retention/deletion of jobs (kept
+  indefinitely, like `scan_runs`), and whether the 3-open-jobs-per-owner cap is right.
 - **Google-required scan + private History: provisioned 2026-10-03; real-service verification still open (see
   "Release stage" in `Current state`; runbook `docs/SYSTEM_DESIGN.md` §7d).** DONE at release: preflight, SQL applied
   and verified on the shared project, URL/key pair checked, Vercel production env set, Google provider read only.
