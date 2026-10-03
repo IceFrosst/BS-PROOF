@@ -85,7 +85,8 @@ CLI 2.1.287 and runtime dependencies. It does not claim a job or call a model.
 
 `deploy/worker.env.example` is an example only. The dedicated worker token is the
 only worker secret; never commit its real value. `deploy/bsproof-research-worker.service.example`
-is not installed or enabled. `deploy/pc_research_worker_release.sh` can package
+(user unit) and `deploy/bsproof-research-worker.system.service.example` (system unit,
+preferred on the mainPC; see the owner install section) are not installed or enabled. `deploy/pc_research_worker_release.sh` can package
 an isolated versioned runtime; build/install/start/provisioning are human-owned
 operations and are not part of local validation. No account, network, service,
 secret, or SQL provisioning was done in this phase.
@@ -93,6 +94,105 @@ secret, or SQL provisioning was done in this phase.
 Per-job worker diagnostics stay under a private unique directory at the configured
 data path. The lease token is not written there. They may include raw stream and
 operational details, so keep that directory private and out of owner-facing APIs.
+
+## Owner-only install path on the mainPC (prepared, NOT executed)
+
+Status: prepared and reviewed as text only. Nothing below has been run; the mainPC
+runtime is untouched, no env file, token, service, or SQL exists. The run order
+(each step is an owner decision) is: provision scoped SQL/token (parent), install the
+runtime, create the 0600 env file, `check`, install the unit, one model smoke.
+
+Why a system unit: on the mainPC (WSL2, systemd 249) the user manager's private socket
+is orphaned and there is no user D-Bus, so `systemctl --user` cannot work. A system
+unit running as `User=icefrost` avoids the user manager entirely.
+`deploy/bsproof-research-worker.system.service.example` is that unit: `User=icefrost`,
+`Group=icefrost`, `HOME=/home/icefrost`, absolute paths (`%h` would be `/root` in a
+system unit), `EnvironmentFile=/home/icefrost/.config/bsproof-research-worker/worker.env`,
+runtime `/home/icefrost/.local/share/bsproof-research-worker/current`, data
+`/home/icefrost/.local/share/bsproof-research-worker/data` (0700), `UMask=0077`,
+`NoNewPrivileges=yes`, `Restart=on-failure`, `WantedBy=multi-user.target`, and PATH
+including `/home/icefrost/.nvm/versions/node/v22.23.2/bin`. The Claude CLI is a
+native ELF binary that does not need node; the node dir is kept on PATH only in case a
+CLI subprocess needs it. ProtectHome is deliberately NOT set: the CLI needs its
+own `~/.claude`. API-credential variables are explicitly unset in the unit. The user unit
+example got the same PATH fix and is only for a host where `systemctl --user` works.
+
+Rules: never restart `user@1000`, dbus, WSL, or any session for this. Do not change
+sudoers, permissions, auth, or provider configuration. Never paste the sudo password
+to an agent or write it down. `sudo` below is typed by the owner only.
+
+Verify the template off-box before installing (needs no sudo; copy to a `.service` name
+because `systemd-analyze` rejects other suffixes; on a laptop the mainPC paths do not
+exist, so "executable not found" findings are expected there and are NOT a PASS for the
+real paths):
+
+```bash
+cp deploy/bsproof-research-worker.system.service.example /tmp/bsproof-research-worker.service
+systemd-analyze verify /tmp/bsproof-research-worker.service
+```
+
+On the mainPC (owner), after the runtime is installed and the 0600 env file exists,
+the same command must report no missing-path findings. Then:
+
+```bash
+# 0. pre-install check: the unit has Group=icefrost, so that group must exist and be
+#    icefrost's primary group (verify will not catch this; start would fail with 216/GROUP)
+id -gn icefrost
+# 1. one-time install of the runtime (as icefrost; writes only under ~/.local/share and ~/.config)
+deploy/pc_research_worker_release.sh install <tgz> <sha256>
+# 2. owner creates ~/.config/bsproof-research-worker/worker.env (chmod 0600, dir 0700) from worker.env.example
+#    with the dedicated token; research stays OFF until the flag is flipped on the website.
+# 3. local preflight, no model call (see the note below this block)
+env -u ANTHROPIC_API_KEY -u ANTHROPIC_AUTH_TOKEN \
+  BS_PROOF_CLAUDE_BIN=/home/icefrost/.local/bin/claude \
+  PATH=/home/icefrost/.local/bin:/home/icefrost/.nvm/versions/node/v22.23.2/bin:/usr/local/bin:/usr/bin:/bin \
+  /home/icefrost/.local/share/bsproof-research-worker/current/venv/bin/python \
+  /home/icefrost/.local/share/bsproof-research-worker/current/scripts/pc_research_worker.py check
+# 4. install ONLY this unit
+sudo install -o root -g root -m 0644 deploy/bsproof-research-worker.system.service.example \
+  /etc/systemd/system/bsproof-research-worker.service
+sudo systemd-analyze verify /etc/systemd/system/bsproof-research-worker.service
+sudo systemctl daemon-reload
+# 5. enable and start only when the single smoke is authorized
+sudo systemctl enable bsproof-research-worker.service
+sudo systemctl start bsproof-research-worker.service
+# 6. status / logs
+systemctl status bsproof-research-worker.service --no-pager
+journalctl -u bsproof-research-worker.service -n 100 --no-pager
+```
+
+Step 3 note: `check` reads the token and API base from `worker.env`, but that file is
+NOT exported into the process environment (the worker merges it into its own config
+only). `BS_PROOF_CLAUDE_BIN` must therefore be in the process environment of the `check`
+command, as above (the unit sets it itself via `Environment=`). Without it `check`
+raises an uncaught error instead of a clean PASS/FAIL. The `env -u` clears any API
+credential from the owner shell so the preflight uses only the subscription login.
+
+Runtime rollback (this unit only; the unit stays installed):
+
+```bash
+sudo systemctl stop bsproof-research-worker.service          # SIGTERM; running lease is left to expire
+deploy/pc_research_worker_release.sh rollback                # switch to the previous release
+sudo systemctl start bsproof-research-worker.service         # only if desired
+```
+
+Full removal of the unit (separate from runtime rollback; do not run both blocks in
+sequence):
+
+```bash
+sudo systemctl disable --now bsproof-research-worker.service
+sudo rm /etc/systemd/system/bsproof-research-worker.service
+sudo systemctl daemon-reload
+```
+
+Revoking the dedicated worker token (parent/owner, server side) is the actual kill
+switch; stopping the unit does not by itself invalidate it. After revoking the token,
+ALSO run `sudo systemctl disable --now bsproof-research-worker.service`: a revoked
+token makes the worker log auth errors and keep polling with backoff (up to 300 s)
+rather than exit, and a bad config exits and, under `Restart=on-failure` with
+`RestartSec=30` (which never hits the default start limit), restarts every 30 s and
+fills the journal with config errors. The token is created by the
+parent only after the reviewed scoped provision, never by this doc or the unit.
 
 ## Residual limits
 

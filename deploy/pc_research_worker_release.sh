@@ -9,6 +9,11 @@
 # The runtime contains five files and nothing else: the worker, the adapter, the
 # live prompt, the audit schema and the requirements. It never touches an app
 # checkout, never writes a secret, never enables or starts a service.
+#
+# Restarting after `rollback` is a separate OWNER step for whichever unit is installed:
+#   system unit (preferred on the mainPC): sudo systemctl restart bsproof-research-worker.service
+#   user unit (only if `systemctl --user` works): systemctl --user restart bsproof-research-worker
+# Never restart user@1000, dbus, WSL or a session for this. See docs/research/pc-research-worker.md.
 set -euo pipefail
 
 ROOT="${BS_PROOF_RESEARCH_ROOT:-$HOME/.local/share/bsproof-research-worker}"
@@ -58,7 +63,7 @@ rollback)
   prev="$(readlink "$ROOT/previous")"; cur="$(readlink "$ROOT/current" || true)"
   ln -sfn "$prev" "$ROOT/current.new" && mv -Tf "$ROOT/current.new" "$ROOT/current"
   [ -n "$cur" ] && ln -sfn "$cur" "$ROOT/previous"
-  echo "current -> $prev (was $cur). Restart the service to pick it up: systemctl --user restart bsproof-research-worker"
+  echo "current -> $prev (was $cur). Restart is an owner step for the installed unit; see docs/research/pc-research-worker.md (system unit: sudo systemctl restart bsproof-research-worker.service)"
   ;;
 list)
   ls -1 "$ROOT/releases" 2>/dev/null || true

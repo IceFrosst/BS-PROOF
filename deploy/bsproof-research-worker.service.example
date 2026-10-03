@@ -1,6 +1,12 @@
 # systemd USER unit for the BS-PROOF mainPC research worker. EXAMPLE ONLY: it is not
 # installed anywhere. Install path: ~/.config/systemd/user/bsproof-research-worker.service
 #
+# NOTE (2026-10-03): on the current mainPC the user manager is unreachable (orphaned
+# private socket, no user D-Bus), so `systemctl --user` fails there. The preferred,
+# owner-installed path is the dedicated system unit
+# bsproof-research-worker.system.service.example (same worker, User=icefrost). Use this
+# user unit only if `systemctl --user is-system-running` works for the owner.
+#
 # Outbound-only: the worker opens no listening socket; it POSTs to the website over
 # HTTPS and runs the already-logged-in Claude CLI as a child (subscription login,
 # no API key). It runs from the isolated, versioned runtime under
@@ -15,7 +21,9 @@ After=network-online.target
 [Service]
 Type=simple
 EnvironmentFile=%h/.config/bsproof-research-worker/worker.env
-Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+# The Claude CLI is a native ELF binary and does not need node. The nvm node dir
+# (v22.23.2) is kept on PATH only in case a CLI subprocess needs it.
+Environment=PATH=%h/.local/bin:/home/icefrost/.nvm/versions/node/v22.23.2/bin:/usr/local/bin:/usr/bin:/bin
 Environment=BS_PROOF_CLAUDE_BIN=/home/icefrost/.local/bin/claude
 Environment=PYTHONUNBUFFERED=1
 Environment=PYTHONDONTWRITEBYTECODE=1

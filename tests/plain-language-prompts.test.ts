@@ -64,7 +64,7 @@ describe("the plain-language rule is in the prompts themselves", () => {
   });
 
   it("bumped every version constant alongside the prompt it pins", () => {
-    expect(COMPAT_PROMPT_VERSION).toBe("compat-v1.1");
+    expect(COMPAT_PROMPT_VERSION).toBe("compat-v1.2");
     expect(COMPANY_PROMPT_VERSION).toBe("company-v1.2");
     expect(EVIDENCE_PRIOR_PROMPT_VERSION).toBe("evidence-prior-v1.1");
     expect(LITERATURE_WARNINGS_PROMPT_VERSION).toBe("literature-warnings-v1.1");
