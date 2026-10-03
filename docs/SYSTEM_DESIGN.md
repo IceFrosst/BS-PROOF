@@ -976,3 +976,12 @@ scored outcome headlines, an aggregation outside canonical per-outcome
 `score()` and explicitly not a probability of benefit. The audit remains
 heuristic and unvalidated; arbitrary-product expansion needs a source-retrieval
 service because the deployed model transport cannot open live sources.
+
+**Published original-contract research comparison (2026-10-03, docs and assets only).**
+`docs/design/research-original-contract-comparison/` publishes ten raw `audit-v0.4` audits (Sonnet 5.5 xhigh and Opus 5.5
+high, five frozen cases) and 16 annotated renders of them through the unchanged `/scan` evidence-ledger card, with a portable
+hash manifest and a stdlib verifier. It is **not** a retained audit and does not touch this section's selector: the renders
+used a browser-side fixture that bypasses `retainedAuditForProduct`, were drawn from the card at commit `4a87e22` (runtime
+identical to `6a1734d`, not today's `/scan`), and change no matcher, constant, authorization or production behaviour. Every
+image is experimental, unvalidated and not clinical advice; the access numbers are 311 fetches = 116 non-access + 21 Haiku
+refusals + at most 174 content-bearing summaries (the 174 is an upper bound, not papers read); there is no provider ranking.

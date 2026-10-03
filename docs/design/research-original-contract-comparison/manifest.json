@@ -1,0 +1,700 @@
+{
+  "manifest_version": 1,
+  "kind": "BS-PROOF original-contract research comparison: public portable manifest",
+  "assembled_for": "Sonnet 5.5 xhigh versus Opus 5.5 high, original audit-v0.4 contract, five frozen cases",
+  "assembled_on_top_of_origin_main": "eb30db083e3a2039385e6cbfa3269ebf1a0d814b",
+  "status": {
+    "experimental": true,
+    "unvalidated_rubric": true,
+    "not_clinical_advice": true,
+    "non_production_fixture_render": true,
+    "not_end_to_end_photo_scan": true,
+    "no_clinical_source_validation": true,
+    "no_provider_winner_or_ranking": true,
+    "no_sla_or_latency_claim": true,
+    "no_formal_stopping_rule_or_exhaustiveness_claim": true,
+    "not_production_retained_audits": true,
+    "scientific_grade_authorization_changed": false,
+    "new_production_score_created": false,
+    "supersedes": "the preliminary categorical preview in docs/design/research-benchmark-preview (archived, obsolete)"
+  },
+  "frozen_inputs": [
+    {
+      "case": 1,
+      "slug": "magnesium",
+      "ingredient": "magnesium",
+      "form": "bisglycinate",
+      "daily_dose_as_supplied": "200 mg ELEMENTAL magnesium/day, supplied test regimen; serving count unknown",
+      "outcome_goal": "sleep",
+      "population": "adult, health status unspecified; no other patient facts supplied",
+      "bundle_product_name": "Magnesium bisglycinate",
+      "bundle_form_text": "magnesium bisglycinate (glycinate chelate)",
+      "bundle_reference_dose_as_supplied": "200 mg ELEMENTAL magnesium per day",
+      "bundle_reference_dose_basis": "elemental"
+    },
+    {
+      "case": 2,
+      "slug": "ashwagandha",
+      "ingredient": "ashwagandha",
+      "form": "root extract standardised to 5% withanolides",
+      "daily_dose_as_supplied": "600 mg extract/day, supplied test regimen; serving count unknown",
+      "outcome_goal": "stress",
+      "population": "adult, health status unspecified; no other patient facts supplied",
+      "bundle_product_name": "Ashwagandha root extract",
+      "bundle_form_text": "root extract standardised to 5% withanolides",
+      "bundle_reference_dose_as_supplied": "600 mg/day extract (5% withanolides)",
+      "bundle_reference_dose_basis": "extract mass as supplied; withanolide content 5% per label (dose of extract, not of withanolides)"
+    },
+    {
+      "case": 3,
+      "slug": "omega3",
+      "ingredient": "omega-3",
+      "form": "fish oil providing EPA+DHA",
+      "daily_dose_as_supplied": "1000 mg EPA+DHA/day combined, NOT total oil mass; supplied regimen; serving count unknown",
+      "outcome_goal": "primary cardiovascular prevention",
+      "population": "adult, health status unspecified; no other patient facts supplied",
+      "bundle_product_name": "Fish oil",
+      "bundle_form_text": "fish oil providing EPA+DHA",
+      "bundle_reference_dose_as_supplied": "1000 mg EPA+DHA per day (combined EPA and DHA, not total fish-oil capsule mass)",
+      "bundle_reference_dose_basis": "sum of EPA+DHA"
+    },
+    {
+      "case": 4,
+      "slug": "zinc",
+      "ingredient": "zinc",
+      "form": "zinc gluconate",
+      "daily_dose_as_supplied": "15 mg ELEMENTAL zinc/day, supplied test regimen; serving count unknown",
+      "outcome_goal": "common cold prevention",
+      "population": "adult, health status unspecified; no other patient facts supplied",
+      "bundle_product_name": "Zinc gluconate",
+      "bundle_form_text": "zinc gluconate",
+      "bundle_reference_dose_as_supplied": "15 mg ELEMENTAL zinc per day",
+      "bundle_reference_dose_basis": "elemental"
+    },
+    {
+      "case": 5,
+      "slug": "blend",
+      "ingredient": "vitamin D3 + vitamin C + zinc",
+      "form": "vitamin D3 plus vitamin C (chemical form unspecified) plus zinc gluconate, exact combination",
+      "daily_dose_as_supplied": "25 mcg D3/day + 500 mg vitamin C/day + 10 mg ELEMENTAL zinc/day, supplied regimen; serving count unknown",
+      "outcome_goal": "common cold prevention by this exact combination, NOT an average of component benefits",
+      "population": "adult, health status unspecified; no other patient facts supplied",
+      "bundle_product_name": "Combination: vitamin D3 + vitamin C + zinc gluconate",
+      "bundle_form_text": "fixed combination of three components",
+      "bundle_reference_dose_as_supplied": "D3 25 mcg/day + vitamin C 500 mg/day + zinc gluconate 10 mg ELEMENTAL zinc/day",
+      "bundle_reference_dose_basis": "D3 in mcg (as supplied; 25 mcg = 1000 IU); vitamin C in mg; zinc as elemental mg"
+    }
+  ],
+  "frozen_input_invariants": [
+    "magnesium dose is ELEMENTAL magnesium, not compound mass",
+    "zinc doses are ELEMENTAL zinc (cases 4 and 5)",
+    "fish oil dose is 1000 mg EPA+DHA combined, not total oil mass",
+    "vitamin C chemical form is unspecified",
+    "population is adult, health status unspecified; no other patient facts; serving count unknown in every case"
+  ],
+  "contract": {
+    "prompt": {
+      "version": "audit-v0.4",
+      "repo_path": "prompts/research_audit.md",
+      "sha256": "c701b7f4e1903574436113b04ea00db8c146ec9936e4cbfcab1282380cd07cb6",
+      "note": "rendered system prompts equal this template with only its four {{...}} placeholders substituted (byte-checked at capture time)"
+    },
+    "canonical_schema": {
+      "repo_path": "schemas/research_audit.json",
+      "sha256": "0cef5ec381e653e4fbc55ec6f4eebe0204b7d534671bad3bdfa4f3fb8ba64c2b",
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "role": "final validation of every audit.json"
+    },
+    "wire_schema": {
+      "sha256": "0a2c04c61ef55737e3277494d009d15a1657ef840a1457ace4a19b45682eeed3",
+      "derivation": "canonical schema minus the single top-level \"$schema\" line and nothing else (reproducible; checked by verify_publication.py)",
+      "why": "the Claude CLI --json-schema flag (Ajv draft-07 default) rejected the 2020-12 $schema URI before any model call"
+    },
+    "frozen_original_run_case_sha256": "6a8736b31ac6b9657735deb533c800176d477db78748a2bbba44583a53448a0e",
+    "bundle_case_inputs_sha256": "a48b52f45a9a2e88fbce0789fd0c3d4944922662d3370f886e3f7bbda7d18dc1",
+    "cli_user_request_template": "Audit the supplied test case under the system prompt. Research live sources with your web tools. Return the schema-valid audit; never write a headline score. The daily regimen is supplied for this test, not inferred from a photograph. Population: adult, health status unspecified; no other patient facts supplied. This is an experimental benchmark, not a human-verified medical assessment. Run time UTC: <timestamp>",
+    "scorer_baseline": {
+      "git_head": "6a1734de28ab02b413b7ca85aba04760a5bc4abe",
+      "file_sha256": {
+        "lib/evidence-ledger/index.ts": "5f06cd5d431d721b777c4d430e719375fb750603d7a2fe8e47dc329eb3470af2",
+        "lib/evidence-ledger/retained-audits.ts": "7e8fdfa9fbfc7d15bc87de7c9e2dd3d24cf5b648940715c2b028acde30875fb8",
+        "docs/SPEC.md": "fbe8a2c055ac45247af905666620dd416b718e1b7a1aa8970d1b4e265ef8d70c"
+      },
+      "scorer_run_on_audits_during_capture": false,
+      "note": "the scorer was not modified; the cards were fed the unchanged evidence-ledger code at this baseline"
+    }
+  },
+  "run": {
+    "lanes": [
+      {
+        "lane": "sonnet-xhigh",
+        "model": "claude-sonnet-5-5",
+        "effort": "xhigh"
+      },
+      {
+        "lane": "opus-high",
+        "model": "claude-opus-5-5",
+        "effort": "high"
+      }
+    ],
+    "cli": "2.1.287 (Claude Code)",
+    "auth": "Claude.ai subscription through the local Claude Code CLI; API keys and alternative-provider variables stripped; no fallback model flag",
+    "flags": "--safe-mode --strict-mcp-config --tools WebSearch,WebFetch --allowedTools WebSearch,WebFetch --permission-mode dontAsk --no-session-persistence --output-format stream-json --verbose --json-schema <wire schema> --system-prompt <rendered original prompt>",
+    "caps": "no max-turns, no process timeout, no budget flag, no tool runtime caps",
+    "process": "a fresh process per (case, model); the two models of a case ran concurrently",
+    "run_date": "2026-10-03",
+    "reruns_or_retries": "none; zero harness-caused failures; 10 of 10 captures complete",
+    "web_tools_note": "WebFetch returns a Haiku 4.5 summary of the page, not the verbatim page (caveat W1)"
+  },
+  "totals_all_10_captures": {
+    "web_fetch_requests": 311,
+    "non_access": 116,
+    "haiku_refusals": 21,
+    "content_bearing_upper_bound": 174,
+    "web_search_requests_stream": 166,
+    "tool_flagged_error": 1,
+    "http_403": 60,
+    "http_other_4xx": 7,
+    "redirect_not_followed": 20,
+    "captcha_cookie_wall": 28,
+    "reading": "311 = 116 non-access + 21 Haiku refusals + at most 174 content-bearing Haiku summaries; 174 is an UPPER BOUND on content read, not papers read"
+  },
+  "audits": [
+    {
+      "lane": "sonnet-xhigh",
+      "case": 1,
+      "case_id": "magnesium",
+      "path": "audits/sonnet-xhigh/case1/audit.json",
+      "bytes": 25748,
+      "sha256": "21360008cc0c8cd1b1dca111879113d0bc6bce3bb2eb7ef3a0ebe7536e8ca11f",
+      "recorded_source_sha256": "21360008cc0c8cd1b1dca111879113d0bc6bce3bb2eb7ef3a0ebe7536e8ca11f",
+      "model_requested": "claude-sonnet-5-5",
+      "effort_requested": "xhigh",
+      "primary_model_actual": "claude-sonnet-5-5",
+      "run_at": "2026-10-03",
+      "prompt_version": "audit-v0.4",
+      "outcomes_in_audit": 3,
+      "source_recorded_schema_valid": true,
+      "source_recorded_complete": true
+    },
+    {
+      "lane": "sonnet-xhigh",
+      "case": 2,
+      "case_id": "ashwagandha",
+      "path": "audits/sonnet-xhigh/case2/audit.json",
+      "bytes": 29216,
+      "sha256": "4bc278496ada6e08d26b4403b1759b5d59d4ba96c5f74f21318c8084713781f7",
+      "recorded_source_sha256": "4bc278496ada6e08d26b4403b1759b5d59d4ba96c5f74f21318c8084713781f7",
+      "model_requested": "claude-sonnet-5-5",
+      "effort_requested": "xhigh",
+      "primary_model_actual": "claude-sonnet-5-5",
+      "run_at": "2026-10-03",
+      "prompt_version": "audit-v0.4",
+      "outcomes_in_audit": 3,
+      "source_recorded_schema_valid": true,
+      "source_recorded_complete": true
+    },
+    {
+      "lane": "sonnet-xhigh",
+      "case": 3,
+      "case_id": "omega3",
+      "path": "audits/sonnet-xhigh/case3/audit.json",
+      "bytes": 36550,
+      "sha256": "16e4dbe69f4940cdcb6da4373427b87da127e5e7536cb2a764019f436d33e476",
+      "recorded_source_sha256": "16e4dbe69f4940cdcb6da4373427b87da127e5e7536cb2a764019f436d33e476",
+      "model_requested": "claude-sonnet-5-5",
+      "effort_requested": "xhigh",
+      "primary_model_actual": "claude-sonnet-5-5",
+      "run_at": "2026-10-03",
+      "prompt_version": "audit-v0.4",
+      "outcomes_in_audit": 4,
+      "source_recorded_schema_valid": true,
+      "source_recorded_complete": true
+    },
+    {
+      "lane": "sonnet-xhigh",
+      "case": 4,
+      "case_id": "zinc",
+      "path": "audits/sonnet-xhigh/case4/audit.json",
+      "bytes": 29928,
+      "sha256": "9d76d5b11a3d83ff33032bb94af468307ed65607ac1fe00c98713bddc3357fae",
+      "recorded_source_sha256": "9d76d5b11a3d83ff33032bb94af468307ed65607ac1fe00c98713bddc3357fae",
+      "model_requested": "claude-sonnet-5-5",
+      "effort_requested": "xhigh",
+      "primary_model_actual": "claude-sonnet-5-5",
+      "run_at": "2026-10-03",
+      "prompt_version": "audit-v0.4",
+      "outcomes_in_audit": 4,
+      "source_recorded_schema_valid": true,
+      "source_recorded_complete": true
+    },
+    {
+      "lane": "sonnet-xhigh",
+      "case": 5,
+      "case_id": "blend",
+      "path": "audits/sonnet-xhigh/case5/audit.json",
+      "bytes": 46579,
+      "sha256": "4d0cde61260656a6930e1ad596f376797d1b1263c8080b04417cbcc8ffec1662",
+      "recorded_source_sha256": "4d0cde61260656a6930e1ad596f376797d1b1263c8080b04417cbcc8ffec1662",
+      "model_requested": "claude-sonnet-5-5",
+      "effort_requested": "xhigh",
+      "primary_model_actual": "claude-sonnet-5-5",
+      "run_at": "2026-10-03",
+      "prompt_version": "audit-v0.4",
+      "outcomes_in_audit": 7,
+      "source_recorded_schema_valid": true,
+      "source_recorded_complete": true
+    },
+    {
+      "lane": "opus-high",
+      "case": 1,
+      "case_id": "magnesium",
+      "path": "audits/opus-high/case1/audit.json",
+      "bytes": 24376,
+      "sha256": "b4e40d7eb68e3cab3cffccae1e89abd351cdd46b466d7b87872299f1ae48261d",
+      "recorded_source_sha256": "b4e40d7eb68e3cab3cffccae1e89abd351cdd46b466d7b87872299f1ae48261d",
+      "model_requested": "claude-opus-5-5",
+      "effort_requested": "high",
+      "primary_model_actual": "claude-opus-5-5",
+      "run_at": "2026-10-03",
+      "prompt_version": "audit-v0.4",
+      "outcomes_in_audit": 4,
+      "source_recorded_schema_valid": true,
+      "source_recorded_complete": true
+    },
+    {
+      "lane": "opus-high",
+      "case": 2,
+      "case_id": "ashwagandha",
+      "path": "audits/opus-high/case2/audit.json",
+      "bytes": 22371,
+      "sha256": "5c03c36ad7ad238cf6204a30006e8f1c071eebd6b381d9dd9b797c7718bcfa55",
+      "recorded_source_sha256": "5c03c36ad7ad238cf6204a30006e8f1c071eebd6b381d9dd9b797c7718bcfa55",
+      "model_requested": "claude-opus-5-5",
+      "effort_requested": "high",
+      "primary_model_actual": "claude-opus-5-5",
+      "run_at": "2026-10-03",
+      "prompt_version": "audit-v0.4",
+      "outcomes_in_audit": 3,
+      "source_recorded_schema_valid": true,
+      "source_recorded_complete": true
+    },
+    {
+      "lane": "opus-high",
+      "case": 3,
+      "case_id": "omega3",
+      "path": "audits/opus-high/case3/audit.json",
+      "bytes": 29355,
+      "sha256": "9babb57fae2efc1af6d74e1b2ad062dde2a4c3ec57708bb4fd31891b4968895f",
+      "recorded_source_sha256": "9babb57fae2efc1af6d74e1b2ad062dde2a4c3ec57708bb4fd31891b4968895f",
+      "model_requested": "claude-opus-5-5",
+      "effort_requested": "high",
+      "primary_model_actual": "claude-opus-5-5",
+      "run_at": "2026-10-03",
+      "prompt_version": "audit-v0.4",
+      "outcomes_in_audit": 4,
+      "source_recorded_schema_valid": true,
+      "source_recorded_complete": true
+    },
+    {
+      "lane": "opus-high",
+      "case": 4,
+      "case_id": "zinc",
+      "path": "audits/opus-high/case4/audit.json",
+      "bytes": 27061,
+      "sha256": "a5ef51a140f71ce16a9e7d338356aa746ae09c1ad2da381ad725c732170128a8",
+      "recorded_source_sha256": "a5ef51a140f71ce16a9e7d338356aa746ae09c1ad2da381ad725c732170128a8",
+      "model_requested": "claude-opus-5-5",
+      "effort_requested": "high",
+      "primary_model_actual": "claude-opus-5-5",
+      "run_at": "2026-10-03",
+      "prompt_version": "audit-v0.4",
+      "outcomes_in_audit": 4,
+      "source_recorded_schema_valid": true,
+      "source_recorded_complete": true
+    },
+    {
+      "lane": "opus-high",
+      "case": 5,
+      "case_id": "blend",
+      "path": "audits/opus-high/case5/audit.json",
+      "bytes": 24885,
+      "sha256": "7447cdbb32c9a40e8414b6e496da6a29757c9c8978b52da66e21edb9bd5f5a37",
+      "recorded_source_sha256": "7447cdbb32c9a40e8414b6e496da6a29757c9c8978b52da66e21edb9bd5f5a37",
+      "model_requested": "claude-opus-5-5",
+      "effort_requested": "high",
+      "primary_model_actual": "claude-opus-5-5",
+      "run_at": "2026-10-03",
+      "prompt_version": "audit-v0.4",
+      "outcomes_in_audit": 3,
+      "source_recorded_schema_valid": true,
+      "source_recorded_complete": true
+    }
+  ],
+  "images": {
+    "count": 16,
+    "compositions": [
+      {
+        "path": "assets/overview__10-actual-card-crops.jpg",
+        "kind": "overview",
+        "lane": null,
+        "case": null,
+        "bytes": 914275,
+        "sha256": "590e76c208f5b98ee024a3bcfffef7dc3ad1c89584d9280cda3bbbe5ce3b72fb",
+        "pixel_width": 2415,
+        "pixel_height": 2140,
+        "css_width": 1932,
+        "css_height": 1712,
+        "device_scale_factor": 1.25,
+        "overlay_text_sha256": "0c84309eea625968de338d562ba39dcc4a444597c138ef747bb42418bb68fd52",
+        "fully_annotated": true
+      },
+      {
+        "path": "assets/side-by-side/case1__sonnet-xhigh_vs_opus-high.jpg",
+        "kind": "side-by-side",
+        "lane": null,
+        "case": 1,
+        "bytes": 1100703,
+        "sha256": "ddb268a80f9f0494ecebfe8b9ac8101063757ec52a0851769abe218b852ce4e6",
+        "pixel_width": 1656,
+        "pixel_height": 3678,
+        "css_width": 828,
+        "css_height": 1839,
+        "device_scale_factor": 2,
+        "overlay_text_sha256": "ee3735a01271b238c8bc724bf1ccd184856ca6b2e5b744b30151b4c9e4920384",
+        "fully_annotated": true
+      },
+      {
+        "path": "assets/side-by-side/case2__sonnet-xhigh_vs_opus-high.jpg",
+        "kind": "side-by-side",
+        "lane": null,
+        "case": 2,
+        "bytes": 1165123,
+        "sha256": "a72727503f3c3d0d3e581fdf914b65152a3f4fc570dab271c3684aeab8ff3fd2",
+        "pixel_width": 1656,
+        "pixel_height": 3916,
+        "css_width": 828,
+        "css_height": 1958,
+        "device_scale_factor": 2,
+        "overlay_text_sha256": "47367cd0fad6b26b29743da78f05d5276f3719f3b636a64620f4ff22f8c3ebbd",
+        "fully_annotated": true
+      },
+      {
+        "path": "assets/side-by-side/case3__sonnet-xhigh_vs_opus-high.jpg",
+        "kind": "side-by-side",
+        "lane": null,
+        "case": 3,
+        "bytes": 1122598,
+        "sha256": "4c4b1017b69e4c041af5af50f3f2318fb21c154afaa123cc4aad1046b6eda763",
+        "pixel_width": 1656,
+        "pixel_height": 3686,
+        "css_width": 828,
+        "css_height": 1843,
+        "device_scale_factor": 2,
+        "overlay_text_sha256": "95d75d44c75cd55b08fe7507479b7808bd9320e884e3046a9163709d59b17f58",
+        "fully_annotated": true
+      },
+      {
+        "path": "assets/side-by-side/case4__sonnet-xhigh_vs_opus-high.jpg",
+        "kind": "side-by-side",
+        "lane": null,
+        "case": 4,
+        "bytes": 1050503,
+        "sha256": "850787096e0127e39e24a0709e00a9b7cfd4b2efb55287501bbf3049bbadd722",
+        "pixel_width": 1656,
+        "pixel_height": 3490,
+        "css_width": 828,
+        "css_height": 1745,
+        "device_scale_factor": 2,
+        "overlay_text_sha256": "7a2946135fe2360361aea5343abc20c30b13379cb53ef78d26f310da1b0bb897",
+        "fully_annotated": true
+      },
+      {
+        "path": "assets/side-by-side/case5__sonnet-xhigh_vs_opus-high.jpg",
+        "kind": "side-by-side",
+        "lane": null,
+        "case": 5,
+        "bytes": 1211594,
+        "sha256": "3511bbad46aff23b038810d767840eb888066374f05bb1aef750d7ff52f5406e",
+        "pixel_width": 1656,
+        "pixel_height": 3844,
+        "css_width": 828,
+        "css_height": 1922,
+        "device_scale_factor": 2,
+        "overlay_text_sha256": "15214b0e95034a5e1295b533cd631103874169318dbcf6996706e23ac736cec1",
+        "fully_annotated": true
+      },
+      {
+        "path": "assets/individual/case1__opus-high.jpg",
+        "kind": "individual",
+        "lane": "opus-high",
+        "case": 1,
+        "bytes": 686769,
+        "sha256": "0fade507f25892914c94ec4ccab65b52e0a0ed089ec54b4fbc250ea549b5bca1",
+        "pixel_width": 828,
+        "pixel_height": 4138,
+        "css_width": 414,
+        "css_height": 2069,
+        "device_scale_factor": 2,
+        "overlay_text_sha256": "39bc183a67c13d5d2fd5d55ad6a016cfa6c4e2e0553b67ac497a18d9fb61cf83",
+        "fully_annotated": true
+      },
+      {
+        "path": "assets/individual/case1__sonnet-xhigh.jpg",
+        "kind": "individual",
+        "lane": "sonnet-xhigh",
+        "case": 1,
+        "bytes": 660613,
+        "sha256": "6ab1f756c7510c9cf453b21ec13b78d86349005d1065c117406719f9a4c85d2a",
+        "pixel_width": 828,
+        "pixel_height": 4010,
+        "css_width": 414,
+        "css_height": 2005,
+        "device_scale_factor": 2,
+        "overlay_text_sha256": "a8eff25f20b44639ad3a49a9eccdf2f3b2599a07417f6488a22fe1a5ea34965a",
+        "fully_annotated": true
+      },
+      {
+        "path": "assets/individual/case2__opus-high.jpg",
+        "kind": "individual",
+        "lane": "opus-high",
+        "case": 2,
+        "bytes": 765222,
+        "sha256": "f1908cf11be08a91357b55b0b79a863f7393f73a24576f8e2a228b2171b543b5",
+        "pixel_width": 828,
+        "pixel_height": 4406,
+        "css_width": 414,
+        "css_height": 2203,
+        "device_scale_factor": 2,
+        "overlay_text_sha256": "9d54736748638a86e14afe864886efdf05d56b1b536012d14b897b4e81063818",
+        "fully_annotated": true
+      },
+      {
+        "path": "assets/individual/case2__sonnet-xhigh.jpg",
+        "kind": "individual",
+        "lane": "sonnet-xhigh",
+        "case": 2,
+        "bytes": 636347,
+        "sha256": "ec64e78841c04f980f792b86a26179c02e06786389552d5e5bc03711b249586c",
+        "pixel_width": 828,
+        "pixel_height": 3874,
+        "css_width": 414,
+        "css_height": 1937,
+        "device_scale_factor": 2,
+        "overlay_text_sha256": "050c01c3f96ac274652711daa5a41085163a0d329d7a9e3d1cdd8ad8d82d4c38",
+        "fully_annotated": true
+      },
+      {
+        "path": "assets/individual/case3__opus-high.jpg",
+        "kind": "individual",
+        "lane": "opus-high",
+        "case": 3,
+        "bytes": 669742,
+        "sha256": "f7dbdaa6224acdf71ff77bf76a004254af438e78085947d226f4a1796b9ad33a",
+        "pixel_width": 828,
+        "pixel_height": 4010,
+        "css_width": 414,
+        "css_height": 2005,
+        "device_scale_factor": 2,
+        "overlay_text_sha256": "5d913fbff9375ef9bf1645237f12721c21eec28ad27e287654a4f9d7d198c885",
+        "fully_annotated": true
+      },
+      {
+        "path": "assets/individual/case3__sonnet-xhigh.jpg",
+        "kind": "individual",
+        "lane": "sonnet-xhigh",
+        "case": 3,
+        "bytes": 701626,
+        "sha256": "131374b82ad4fb01f798072fad9a6acc5438de576f8b658d3fc71ef5eb22f39e",
+        "pixel_width": 828,
+        "pixel_height": 4146,
+        "css_width": 414,
+        "css_height": 2073,
+        "device_scale_factor": 2,
+        "overlay_text_sha256": "5ecde1544ea3c7426365ffac349a1ce2c895ca36fb59ab274d11c2fed11c0afd",
+        "fully_annotated": true
+      },
+      {
+        "path": "assets/individual/case4__opus-high.jpg",
+        "kind": "individual",
+        "lane": "opus-high",
+        "case": 4,
+        "bytes": 636780,
+        "sha256": "3c656002b244f6e4b5dcbc59a22b364e1b92345ecccdff11aa06755518aad110",
+        "pixel_width": 828,
+        "pixel_height": 3950,
+        "css_width": 414,
+        "css_height": 1975,
+        "device_scale_factor": 2,
+        "overlay_text_sha256": "1cb1d3c5d8f8a14d85924d4f38cdbb9c57ca19072ce6ad6ac435aeb1d9815ab1",
+        "fully_annotated": true
+      },
+      {
+        "path": "assets/individual/case4__sonnet-xhigh.jpg",
+        "kind": "individual",
+        "lane": "sonnet-xhigh",
+        "case": 4,
+        "bytes": 642319,
+        "sha256": "1e799e1605cfb9f3dabb325655e1ba65e020da08160ea5bf2389684cb4339908",
+        "pixel_width": 828,
+        "pixel_height": 3896,
+        "css_width": 414,
+        "css_height": 1948,
+        "device_scale_factor": 2,
+        "overlay_text_sha256": "61facf2cf7cf95d67e33f6686eec27d7d4c39ee02cbbb4bed7cdb9f799004080",
+        "fully_annotated": true
+      },
+      {
+        "path": "assets/individual/case5__opus-high.jpg",
+        "kind": "individual",
+        "lane": "opus-high",
+        "case": 5,
+        "bytes": 722864,
+        "sha256": "64f996e090ab4bb9e687e4f488f5dc5960a204faef7ab55db0d794ae6a819c79",
+        "pixel_width": 828,
+        "pixel_height": 4258,
+        "css_width": 414,
+        "css_height": 2129,
+        "device_scale_factor": 2,
+        "overlay_text_sha256": "82506ba899c2692d4e2eaa4b9b2c3e20bd51880ef523a6f8be2b83dc5a253461",
+        "fully_annotated": true
+      },
+      {
+        "path": "assets/individual/case5__sonnet-xhigh.jpg",
+        "kind": "individual",
+        "lane": "sonnet-xhigh",
+        "case": 5,
+        "bytes": 761740,
+        "sha256": "717cb74d09c76811417486a43b41bfa4c198157f65182ddd12ab9b11617a344f",
+        "pixel_width": 828,
+        "pixel_height": 4464,
+        "css_width": 414,
+        "css_height": 2232,
+        "device_scale_factor": 2,
+        "overlay_text_sha256": "37d6edcbca09808e5fc3df7c5cfc80c3a208a05dc736d049d9262e45b2385c4c",
+        "fully_annotated": true
+      }
+    ],
+    "composition_policy": "only the 16 fully annotated compositions are published, each whole (the outside-the-card qualifications are part of the image); the 108 card-crop and supplemental captures are private and never published standalone"
+  },
+  "report_csv": {
+    "path": "report.csv",
+    "rows": 10,
+    "meaning": "per-capture actual wall time and aggregate access counts from the reviewed access addendum; no cost, no stream content, no ranking",
+    "wall_time_label": "actual, contention-affected, not an SLA or provider speed comparison (caveat W7)"
+  },
+  "ledger_inconsistencies_recorded_not_repaired": {
+    "opus-high/case1": [
+      {
+        "outcome_index": 3,
+        "name": "Poor sleep with low Mg diet",
+        "codes": [
+          "bodyIsRct_false_but_rctCount_gt_0"
+        ]
+      }
+    ],
+    "opus-high/case2": [
+      {
+        "outcome_index": 2,
+        "name": "Stress with a mental disorder",
+        "codes": [
+          "largestRctN_0_but_rctCount_gt_0",
+          "longestRctWeeks_0_but_rctCount_gt_0"
+        ]
+      }
+    ],
+    "sonnet-xhigh/case5": [
+      {
+        "outcome_index": 2,
+        "context_row_hidden_in_images": true
+      },
+      {
+        "outcome_index": 3,
+        "context_row_hidden_in_images": true
+      },
+      {
+        "outcome_index": 4,
+        "context_row_hidden_in_images": true
+      },
+      {
+        "outcome_index": 5,
+        "context_row_hidden_in_images": true
+      }
+    ],
+    "rule": "recorded, not repaired; a card's Evidence/gate display on these rows derives from those gates and must not be trusted blindly"
+  },
+  "case5_rule": "only outcomes[0] (the exact-combination row) is shown or gradable; every other case-5 row is component/treatment context, DO_NOT_GRADE, never averaged into any number or headline; case 5 raw JSON still contains those context rows",
+  "caveats_verbatim_from_reviewed_addendum": {
+    "C1": "A WebFetch with is_error=false is NOT access: HTTP 4xx, unfollowed redirects, captcha/cookie walls and Haiku refusals all arrive is_error=false.",
+    "W1": "WebFetch returns a Haiku 4.5 summary written to the agent's prompt, not the verbatim original page; inventory.access=\"full_text\" therefore means \"a model-summarised view of a full-text page\". Spot-checks verified claim-vs-tool-summary, NOT claim-vs-original-paper and NOT clinical validation.",
+    "W2": "ID-match diagnostics in report.json are mechanical and noisy (bare IDs, truncated DOIs with parentheses, junk captures such as doi:...&resulttype=core). Never present \"N unmatched\" as hallucination. sonnet-xhigh/case3 \"11 not string-matched\" is an artefact.",
+    "W3": "Composite / non-standard / bare-numeric inventory IDs are kept unresolved; no DOI/PMID link is synthesised for them. Even clean IDs are syntax-only; resolution to the cited title is unverified.",
+    "W4": "Internal ledger inconsistencies are recorded, not repaired; a later scorer must not trust `gates` blindly on those rows.",
+    "W5": "Case 5: only the exact-combination row is eligible; component/treatment rows are context and must never feed a product-level number or averaged headline.",
+    "W6": "opus-high/case2: Lopresti 2019 is access=\"abstract\" taken from WebSearch-returned abstract text (see its id row); defensible but borderline against \"snippet\".",
+    "W7": "Timing is actual-run, non-SLA, contention-affected (two models per case ran concurrently); ended-minus-started also includes post-processing. Not a provider speed comparison.",
+    "W8": "Use stream tool counts, not audit.searches_run (model self-report), and never present stream counts as \"model searches run\".",
+    "U1": "Unique content-bearing URLs / page keys are not distinct papers; guideline/factsheet/registry/query pages are counted separately where possible; no \"papers read\" count exists in this addendum.",
+    "U2": "Experimental, unvalidated benchmark rubric; not clinical advice; no provider ranking; no timing SLA; Claude-only (Haiku 4.5 appears only as the web-tool summariser)."
+  },
+  "render": {
+    "what": "each audit's outcomes[0] fed through the app's unchanged /scan evidence-ledger card (real components, a browser-side route fixture, no server model call); outside-the-card overlay carries the qualifications",
+    "render_commit": "4a87e223d3cec4f6408ca885d7b0eabcc6382e4d",
+    "runtime_baseline_commit": "6a1734de28ab02b413b7ca85aba04760a5bc4abe",
+    "runtime_code_identical_to_baseline_except_docs": true,
+    "key_file_blobs_equal_at_both_commits": true,
+    "installed_next": "16.3.8",
+    "render_commit_package_pin_next": "16.3.0",
+    "react": "19.2.8",
+    "playwright": "1.62.1",
+    "chromium": "151.0.7922.34",
+    "viewport": "390x844 CSS px, device scale factor 2, mobile, touch, light",
+    "not_current_main": "these cards are the /scan card at the render commit, NOT the current deployed /scan (main has since merged a new landing and EN/LT localization)",
+    "fixture_field_mapping": "Typed (source:'manual') fixture field mapping, exactly as build_fixtures.mjs wrote it (fixtures NOT rebuilt by the disclosure fix): input.form_label = bundled.product.name (the bundle product name, e.g. 'Magnesium bisglycinate'; case 5: 'Combination: vitamin D3 + vitamin C + zinc gluconate' is a product name, not a form); input.form = product.form = bundled.product.form (bundle form text); input.ingredient / ingredient_label = frozen addendum ingredient. The in-card 'FORM <label>' jar text and the 'What you entered' Form row therefore read input.form_label (product name); only the supplemental page-context captures draw that slot. The 'Form as supplied' line in the top banner of every composition is the frozen addendum input (supplied_input_frozen.form), preserved unchanged. Chosen option: record the mapping (no re-run), per the fix card.",
+    "production_wording": "'Retained audit · not reverified' is the existing production card wording; these are NOT production retained audits: non-production fixture that bypasses the production matcher.",
+    "non_production_fixture_notice": "Playwright route fixture answers POST /api/scan with a typed ScanAnalysis-shaped payload whose ledger_audit is the benchmark audit. It deliberately bypasses the production retained-audit matcher (exact printed-dose matches for creatine / vitamin D3 / magnesium glycinate only). Non-production; no expansion of production retained-audit authorization; no numeric or clinical authority."
+  },
+  "verification": {
+    "render_parity": {
+      "checks": 1831,
+      "failed": 0,
+      "pass": true
+    },
+    "render_negative_control": {
+      "checks": 177,
+      "failed": 15,
+      "meaning": "a deliberately mutated fixture; the failures are the expected detection, not a defect"
+    },
+    "disclosure_check": {
+      "checks": 188,
+      "failed": 0,
+      "note": "annotation presence/wording, hash lists, immutability of the capture inputs"
+    },
+    "private_render_hash_list": {
+      "entries": 184,
+      "all_match": true
+    },
+    "capture_inputs_immutable": "all 70 capture files and 10 audit.json files re-hashed equal to the immutable capture manifest; mode 0400",
+    "reviews": [
+      {
+        "id": "actual-component fidelity",
+        "verdict": "first review NEEDS WORK (W4 / W6 / production wording / form_label / unlabelled crops); disclosure fix applied to overlays and metadata only; fresh read-only recheck PASS (ACCEPT), 0 critical, 4 warnings recorded in the README"
+      },
+      {
+        "id": "source and method",
+        "verdict": "capture integrity and method PASS (sound, reusable, no rerun); its reporting-layer NEEDS WORK was closed by the access addendum"
+      },
+      {
+        "id": "access addendum",
+        "verdict": "PASS (counts reproduce independently from the raw streams; 4 display warnings W1-W4 carried into the README)"
+      }
+    ],
+    "public_check": "python3 scripts/verify_publication.py  (and --self-test)"
+  },
+  "not_published": [
+    "raw Claude CLI streams, stderr, rendered system prompts, request files, per-capture reports (cost, session ids)",
+    "the 108 card-crop and supplemental captures (not standalone) and the private render manifest",
+    "any 'General score' tile, cross-lane ranking or winner",
+    "private build scratch and its absolute paths"
+  ]
+}

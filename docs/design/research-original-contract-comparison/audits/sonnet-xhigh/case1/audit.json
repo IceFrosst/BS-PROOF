@@ -1,0 +1,304 @@
+{
+  "meta": {
+    "run_at": "2026-10-03",
+    "model": "claude-sonnet-5-5",
+    "prompt": "audit-v0.4",
+    "note": "Experimental benchmark run with live web tools. Not human-verified. Several pages returned access errors (see could_not_access), so some figures come from search summaries or abstract-level pages. The 200 mg elemental daily regimen was supplied for the test."
+  },
+  "product": "Magnesium bisglycinate, 200 mg elemental magnesium per day (supplied test regimen; serving count unknown)",
+  "ingredient": "magnesium",
+  "form": "Magnesium bisglycinate (magnesium bound to two glycine molecules, a chelate)",
+  "daily_dose": "200 mg elemental magnesium/day (supplied test regimen; serving count unknown)",
+  "dose_note": "This audit reads the label as 200 mg of ELEMENTAL magnesium per day in total. That is the magnesium itself, not the weight of the powder. In the one bisglycinate trial, 893 mg of compound held 125 mg elemental magnesium (about 14%) plus 761.5 mg glycine. If this product has the same ratio, 200 mg elemental is about 1.43 g of compound and about 1.2 g of glycine. The product's own ratio is unknown. The serving count and the timing of doses are unknown. The one bisglycinate trial gave 250 mg elemental as 2 capsules 30 to 60 minutes before bed. Every verdict assumes 200 mg a day taken over several weeks. A search summary reports that small glycine-only sleep studies used 3 g, but I did not open them. Search summaries also quote the US upper limit for supplemental magnesium as 350 mg a day (Institute of Medicine, 1997) and the former EU Scientific Committee on Food figure as 250 mg a day, both set because of diarrhea. 200 mg is below both. I could not open the NIH page or the original EU opinion.",
+  "for_whom": {
+    "reasonable": "Adults who sleep badly and want to try a low-cost option for a small possible gain. People who eat little magnesium may have more reason, but that rests on one exploratory finding.",
+    "not_shown": "Nothing shown for adults with no sleep complaint, diagnosed insomnia, people over 65 on bisglycinate, or a sleep gain people would notice.",
+    "source": "I found no guideline that recommends magnesium for insomnia. Consumer articles quote an American Academy of Sleep Medicine board member saying the evidence is not there. The AASM names CBT-I (a talking therapy for insomnia) as first-line treatment for chronic insomnia. I could not open the NIH ODS magnesium fact sheet."
+  },
+  "outcomes": [
+    {
+      "name": "Sleep and insomnia symptoms",
+      "population": "Adults 18-65 with self-reported poor sleep",
+      "sentence": "One 4-week trial of 155 adults: insomnia score fell 3.9 points on magnesium bisglycinate vs 2.3 on placebo (p = 0.049). A small gap.",
+      "ledger": {
+        "effectPoints": "1",
+        "effect_basis": "One randomised, double-blind, placebo-controlled trial of magnesium bisglycinate (Schuster 2025, DOI 10.2147/NSS.S524348, full text read) supplies this row. The Insomnia Severity Index (ISI, a 0 to 28 questionnaire, higher is worse) fell by 3.9 points (95% CI -5.8 to -2.0) on magnesium and 2.3 points (95% CI -4.1 to -0.4) on placebo over 4 weeks. The between-group result was p = 0.049, Cohen's d = 0.2 (a statistical convention for a small effect). The gap between the two group averages is 1.6 points by my own subtraction; I did not see a CI for the gap. Yang 2009 proposed at least 4 ISI points as a meaningful group difference and 6 points for one person's response, so 1.6 is below both. I chose tier 1 (small, mostly visible in the data) because the pre-specified ISI result met p < 0.05 in the right direction. It is a fragile result: one trial, p just under 0.05, and every other sleep, fatigue, stress and mood measure showed no group difference (for example Regensburg Insomnia Scale p = 0.186, single-item sleep quality p = 0.069). I did not use the other-form magnesium L-threonate trials to set this tier because the form differs.",
+        "bodyIsRct": true,
+        "checklist": {
+          "risk_of_bias": "supported",
+          "consistency": "unknown",
+          "precision": "concern",
+          "directness": "supported",
+          "publication_bias": "unknown"
+        },
+        "gates": {
+          "rctCount": 1,
+          "largestRctN": 155,
+          "longestRctWeeks": 4,
+          "chronicOutcome": true,
+          "surrogate": false,
+          "allPositiveIndustryOrOneLab": true
+        },
+        "formFit": "4",
+        "doseFit": "3",
+        "effective_daily_range": "250 mg elemental magnesium a day as bisglycinate, taken 30 to 60 minutes before bed for 4 weeks. This is the only bisglycinate dose tested for sleep. Nobody has tested 200 mg."
+      },
+      "detail": {
+        "effect": {
+          "found": "At 4 weeks the insomnia score fell 3.9 points on magnesium bisglycinate and 2.3 points on placebo (p = 0.049, Cohen's d = 0.2, a small effect). The starting score averaged 15.5, which is a moderate level of symptoms. None of the other measures differed between groups, including the Regensburg Insomnia Scale (p = 0.186), the single-item sleep quality scale (p = 0.069), daytime sleepiness (p = 0.624), fatigue (p = 0.391) and stress (p = 0.708).",
+          "missing": "Any objective sleep measure. No sleep tracker or sleep lab was used, and fewer than 10% of people filled in the sleep diary. Results beyond 4 weeks are also missing, and so is a repeat trial.",
+          "move": "A second independent trial with a sleep tracker, run for 8 to 12 weeks, would show whether the small gap holds."
+        },
+        "evidence": {
+          "found": "One double-blind trial supports this row: 155 people randomised, 153 in the main analysis, 134 finished. The placebo was a visually identical cellulose capsule. Few side effects were reported: 2 events on magnesium and 7 on placebo, mostly gut complaints.",
+          "missing": "A second trial of this form in this group. I did not open the trial registration (DRKS00031494), so I cannot say whether ISI was the registered primary outcome. Many people dropped out (21 of 155) for mostly unstated reasons.",
+          "move": "An independent, pre-registered replication with ISI as the primary outcome."
+        },
+        "form": {
+          "found": "The trial used magnesium bisglycinate, the same chemical form as this product. Each capsule held 893 mg of compound, which is 125 mg elemental magnesium plus 761.5 mg glycine. Other forms have been tested in similar people. Two magnesium L-threonate trials (Frontiers in Nutrition 2026, 100 adults, 6 weeks; Sleep Medicine X 2024, 80 adults, 21 days) had mixed results and are not counted here.",
+          "missing": "This product's brand and compound-to-elemental ratio. The trial capsules were made by Biogena (Austria). Nobody has compared bisglycinate head to head with other magnesium forms for sleep.",
+          "move": "A head-to-head trial of bisglycinate against another magnesium salt using the same sleep measures."
+        },
+        "dose": {
+          "found": "This product gives 200 mg elemental magnesium a day. The one bisglycinate trial used 250 mg a day, so 200 mg is 80% of that dose. Both sit below the US upper limit for supplemental magnesium (350 mg a day) and the EU scientific committee figure (250 mg a day for the first, 250 for the second).",
+          "missing": "Nobody has tested 200 mg of bisglycinate for sleep. This product's serving count and timing are unknown. There are no dose-response data for bisglycinate.",
+          "move": "A trial comparing 200 mg, 250 mg and placebo with the same timing before bed."
+        }
+      },
+      "inventory": [
+        {
+          "id": "10.2147/NSS.S524348",
+          "year": 2025,
+          "design": "rct",
+          "n": 155,
+          "direction": "benefit",
+          "access": "full_text",
+          "funding": "independent",
+          "note": "Schuster et al. 4 weeks, 250 mg elemental Mg as bisglycinate before bed, adults 18-65 with poor sleep. ISI -3.9 vs -2.3, p = 0.049, d = 0.2. Funded by a university institute. Capsules made by Biogena. One author runs a contract research firm that takes nutraceutical funding. All secondary outcomes null."
+        }
+      ],
+      "absolute_effect": "ISI fell 3.9 points (95% CI -5.8 to -2.0) on magnesium bisglycinate and 2.3 points (95% CI -4.1 to -0.4) on placebo at week 4. Between-group p = 0.049, Cohen's d = 0.2. The difference between group averages is 1.6 points (my subtraction; the paper's CI for the gap was not seen). No NNT can be derived.",
+      "clinically_meaningful": "No. Yang 2009 (Curr Med Res Opin) proposed at least 4 ISI points as a meaningful difference between groups and 6 points for one person's response. The 1.6-point gap is below both. Cohen's d = 0.2 is only a statistical convention for a small effect, not a sign that anyone would notice it.",
+      "strongest_study": "Schuster 2025, Nature and Science of Sleep (DOI 10.2147/NSS.S524348). 155 adults, 4 weeks, double-blind, identical placebo capsules, 250 mg elemental magnesium as bisglycinate before bed. Full text read.",
+      "strongest_doubt": "The main result sits just under the usual cut-off (p = 0.049) in a single trial from one research group. Every other sleep, fatigue, stress and mood measure showed no group difference. Both groups improved a lot (placebo -2.3 points). All outcomes were self-reported over 4 weeks. The claim that low-magnesium eaters benefit more is a within-group correlation (Spearman rho -0.25, p = 0.036) built on a non-validated one-question diet scale, with no interaction test. I treat it as a hypothesis only.",
+      "study_that_would_move_this": "An independent, pre-registered trial of 200 mg elemental magnesium bisglycinate for 8 to 12 weeks. It would add a sleep tracker or sleep lab measure, a validated magnesium intake or blood or urine measure, and a formal interaction test for low-intake people.",
+      "studied_in": {
+        "sex": "mixed",
+        "age_min": 18,
+        "age_max": 65,
+        "sex_note": "79.7% female",
+        "age_note": "Mean age 41.5 years. BMI 18.5 to 35. No diagnosed sleep disorder.",
+        "ethnicity": "not reported in the sections I read",
+        "confidence": "verified"
+      },
+      "subgroup_hypothesis_only": false
+    },
+    {
+      "name": "Sleep and insomnia symptoms",
+      "population": "Adults over 50 with poor sleep, other Mg forms",
+      "sentence": "Two small trials in older adults, pooled: falling asleep 17.36 min sooner (95% CI -27.27 to -7.44). A third found no gap. Low certainty.",
+      "ledger": {
+        "effectPoints": "unclear",
+        "effect_basis": "The only systematic review (Mah and Pitre 2021, PMID 33865376, full text read, search to October 2020) found 3 trials with 151 older adults. Two trials were pooled (Abbasi 2012, n = 46; Held 2002, n = 12; 55 people in total). Sleep onset latency was 17.36 minutes shorter (95% CI -27.27 to -7.44, p = 0.0006) and total sleep time 16.06 minutes longer (95% CI -5.99 to 38.12, not significant), with I2 = 0 (the two trials did not disagree statistically). The third trial, Nielsen 2010 (n = 96 analysed), found sleep quality (PSQI) improved equally in both groups. The review rated all three trials at moderate-to-high risk of bias and certainty as low to very low. None used bisglycinate, and all used higher doses than this product. No threshold for a meaningful change in sleep onset time was found. The evidence cannot answer the question for this product, so I mark the effect unclear.",
+        "bodyIsRct": true,
+        "checklist": {
+          "risk_of_bias": "concern",
+          "consistency": "concern",
+          "precision": "concern",
+          "directness": "concern",
+          "publication_bias": "unknown"
+        },
+        "gates": {
+          "rctCount": 3,
+          "largestRctN": 100,
+          "longestRctWeeks": 8,
+          "chronicOutcome": true,
+          "surrogate": false,
+          "allPositiveIndustryOrOneLab": false
+        },
+        "formFit": "2",
+        "doseFit": "1",
+        "effective_daily_range": "320 to 729 mg elemental magnesium a day as oxide or citrate, for 20 days to 8 weeks. This product's 200 mg is below all three trial doses."
+      },
+      "detail": {
+        "effect": {
+          "found": "Abbasi 2012 (500 mg elemental magnesium as oxide, 8 weeks) found a lower insomnia score (p = 0.006), shorter sleep onset (p = 0.02) and better sleep efficiency (p = 0.03), but no clear change in total sleep time (p = 0.37). Pooled with Held 2002, sleep onset was 17.36 minutes shorter (95% CI -27.27 to -7.44). Nielsen 2010 (320 mg as citrate) found sleep quality improved equally on magnesium and placebo.",
+          "missing": "A reliable effect size. Held was a 12-person crossover trial using sleep EEG, at high risk of bias. Nielsen's group-difference numbers were shown only in a figure, according to the review.",
+          "move": "Larger independent trials in older adults, using one magnesium form and a sleep tracker."
+        },
+        "evidence": {
+          "found": "The 2021 review included 3 trials and rated all three at moderate-to-high risk of bias. Certainty was low to very low. Only 55 people entered the pooled numbers. Only Held reported side effects: soft stools at up to 729 mg a day. A second review (Arab 2022, PMID 35184264, 9 studies, 7,582 people, mixed observational and trial designs; summary only) concluded that trial evidence on supplements was uncertain.",
+          "missing": "I found no older-adult trial published after October 2020. The review left Nielsen out of the pooled numbers. I did not open Arab 2022 in full.",
+          "move": "A new pre-registered older-adult trial with at least a few hundred people and 8 or more weeks."
+        },
+        "form": {
+          "found": "None of the three trials used bisglycinate. Abbasi and Held used magnesium oxide and Nielsen used magnesium citrate. These are different chemical forms from this product.",
+          "missing": "Any comparison of forms for sleep. Results from oxide and citrate may or may not carry over to bisglycinate.",
+          "move": "A head-to-head trial of two magnesium forms in older adults."
+        },
+        "dose": {
+          "found": "Trial doses were 500 mg (Abbasi), 729 mg (Held) and 320 mg (Nielsen) elemental magnesium a day. This product gives 200 mg, which is lower than all three.",
+          "missing": "Whether 200 mg does anything in older adults. No dose-response data exist.",
+          "move": "A trial that tests a lower dose against placebo in older adults."
+        }
+      },
+      "inventory": [
+        {
+          "id": "33865376",
+          "year": 2021,
+          "design": "sr_ma",
+          "n": 151,
+          "direction": "benefit",
+          "access": "full_text",
+          "funding": "unknown",
+          "note": "Mah and Pitre, BMC Complement Med Ther. 3 RCTs, 151 older adults. Pooled 2 trials (n = 55) for sleep onset and total sleep time. Certainty low to very low. Corrected Dec 2024 for text and PRISMA reporting."
+        },
+        {
+          "id": "23853635",
+          "year": 2012,
+          "design": "rct",
+          "n": 46,
+          "direction": "benefit",
+          "access": "full_text",
+          "funding": "independent",
+          "pooled_in": "PMID 33865376",
+          "note": "Abbasi et al. Iran, ages 60 to 75, 500 mg elemental Mg as oxide, 8 weeks. ISI p = 0.006, sleep onset p = 0.02, total sleep time p = 0.37. Funded by a national nutrition research institute."
+        },
+        {
+          "id": "21199787",
+          "year": 2010,
+          "design": "rct",
+          "n": 100,
+          "direction": "none",
+          "access": "abstract",
+          "funding": "independent",
+          "pooled_in": "PMID 33865376 (reviewed, left out of the pooled numbers)",
+          "note": "Nielsen et al. USDA, 320 mg Mg as citrate, adults over 51 with poor sleep (PSQI above 5). Sleep quality improved equally in both groups. Duration given as 7 weeks in the abstract and 8 weeks in the review. Review rated it high risk of bias for selective reporting."
+        },
+        {
+          "id": "35184264",
+          "year": 2022,
+          "design": "sr_ma",
+          "n": 7582,
+          "direction": "unclear",
+          "access": "snippet",
+          "funding": "unknown",
+          "note": "Arab et al., Biol Trace Elem Res. 9 studies (cross-sectional, cohort, RCT). Search summary only. Concluded trials gave an uncertain link between supplements and sleep. May overlap with trials above."
+        }
+      ],
+      "absolute_effect": "Pooled sleep onset latency -17.36 min (95% CI -27.27 to -7.44, p = 0.0006) and total sleep time +16.06 min (95% CI -5.99 to 38.12), from two trials and 55 people. Nielsen 2010: equal PSQI improvement in both groups, numbers in a figure only.",
+      "clinically_meaningful": "Unknown. I found no agreed smallest-noticeable change for sleep onset time in the sources I opened. The review authors called the literature substandard for clinical recommendations.",
+      "strongest_study": "Mah and Pitre 2021 (PMID 33865376), full text read. It pools Abbasi 2012 and Held 2002 and reports Nielsen 2010 separately. Certainty is low to very low.",
+      "strongest_doubt": "The pooled benefit rests on 55 people in two trials at moderate-to-high risk of bias, while the larger Nielsen trial showed equal improvement in both groups. No trial used bisglycinate. The trial doses were 1.6 to 3.6 times this product's dose.",
+      "study_that_would_move_this": "A large independent trial in adults over 50 with insomnia, using one magnesium form at a stated dose for 8 or more weeks, with a sleep tracker or sleep EEG outcome alongside questionnaires.",
+      "studied_in": {
+        "sex": "mixed",
+        "age_min": 51,
+        "age_max": 85,
+        "sex_note": "Only Nielsen's split was seen: 78 women and 22 men. Other trials not checked.",
+        "age_note": "Nielsen 51 to 85; Abbasi 60 to 75; Held 60 to 80.",
+        "ethnicity": "not reported",
+        "confidence": "verified"
+      },
+      "subgroup_hypothesis_only": false
+    },
+    {
+      "name": "Sleep and insomnia symptoms",
+      "population": "Adults with no sleep complaint",
+      "sentence": "I found no trial of magnesium bisglycinate in adults with no sleep complaint, so there is nothing to say about them.",
+      "ledger": {
+        "effectPoints": "unclear",
+        "effect_basis": "I found no randomised trial of magnesium bisglycinate, or any other magnesium form, that enrolled adults without a sleep complaint and measured sleep. This is a case of no evidence found, not evidence of no benefit. Every sleep trial I found enrolled people who reported poor sleep or insomnia.",
+        "bodyIsRct": false,
+        "checklist": {
+          "risk_of_bias": "unknown",
+          "consistency": "unknown",
+          "precision": "unknown",
+          "directness": "unknown",
+          "publication_bias": "unknown"
+        },
+        "gates": {
+          "rctCount": 0,
+          "largestRctN": 0,
+          "longestRctWeeks": 0,
+          "chronicOutcome": true,
+          "surrogate": false,
+          "allPositiveIndustryOrOneLab": false
+        },
+        "formFit": "unknown",
+        "doseFit": "unknown",
+        "effective_daily_range": "No data for this population."
+      },
+      "detail": {
+        "effect": {
+          "found": "No trial was found, so no effect can be stated for adults who already sleep well.",
+          "missing": "Any measurement of sleep in this group. Whether there is room to improve is also untested.",
+          "move": "A trial that enrols adults with no sleep complaint and measures sleep with a tracker."
+        },
+        "evidence": {
+          "found": "My searches turned up no trial in this population. This is a finding about my searches, not proof that none exists.",
+          "missing": "Every trial I opened enrolled people with poor sleep or insomnia. Nothing here speaks to adults without those problems.",
+          "move": "A registered trial in adults without a sleep complaint."
+        },
+        "form": {
+          "found": "Not applicable because no trial was found.",
+          "missing": "Everything about form in this group.",
+          "move": "Not applicable."
+        },
+        "dose": {
+          "found": "Not applicable because no trial was found.",
+          "missing": "Everything about dose in this group.",
+          "move": "Not applicable."
+        }
+      },
+      "inventory": [],
+      "absolute_effect": "No data.",
+      "clinically_meaningful": "Unknown. No trial exists to judge, and no agreed threshold was found for sleep outcomes in people without a complaint.",
+      "strongest_study": "None found for this population.",
+      "strongest_doubt": "Nobody appears to have tested this group. I cannot rule out that I missed a trial.",
+      "study_that_would_move_this": "A randomised, placebo-controlled trial in adults without a sleep complaint, using a validated sleep measure and a sleep tracker.",
+      "studied_in": {
+        "sex": "unknown",
+        "age_min": null,
+        "age_max": null,
+        "confidence": "unknown"
+      },
+      "subgroup_hypothesis_only": false
+    }
+  ],
+  "searches_run": [
+    "magnesium supplementation sleep quality systematic review meta-analysis randomized controlled trials",
+    "magnesium bisglycinate sleep randomized controlled trial",
+    "Mah Pitre 2021 systematic review magnesium supplementation sleep quality BMC Complementary Medicine",
+    "magnesium insomnia older adults randomized double-blind placebo Abbasi 2012 Journal of Research in Medical Sciences",
+    "magnesium supplementation sleep randomized placebo-controlled trial 2024 2025 2026 adults (extended)",
+    "magnesium supplementation sleep meta-analysis 2023 2024 2025 randomized trials PSQI sleep quality healthy adults pooled",
+    "Cochrane OR guideline magnesium supplement insomnia recommendation American Academy of Sleep Medicine",
+    "The Role of Magnesium in Sleep Health: a Systematic Review of Available Literature (Arab 2022)",
+    "magnesium glycinate sleep placebo-controlled trial insomnia glycinate chelate",
+    "Nielsen 2010 magnesium supplementation sleep quality older adults magnesium citrate 320 mg",
+    "2025 systematic review meta-analysis magnesium supplementation insomnia sleep quality randomized trials pooled SMD (extended)",
+    "EFSA tolerable upper intake level supplemental magnesium 250 mg/day; US IOM UL 350 mg",
+    "magnesium supplementation sleep randomized trial pregnant OR postmenopausal OR athletes OR insomnia 2023",
+    "glycine 3 g before bed sleep quality randomized Yamadera 2007 Inagawa 2006",
+    "Hausenblas magnesium L-threonate sleep quality Sleep Medicine X 2024",
+    "Schuster 2025 magnesium bisglycinate Nature and Science of Sleep DOI",
+    "Abbasi 2012 magnesium primary insomnia elderly PMID",
+    "Yang Morin 2009 Insomnia Severity Index minimally important difference",
+    "magnesium glycinate OR bisglycinate sleep trial results 2026 insomnia severity placebo (extended)",
+    "magnesium supplementation sleep quality postmenopausal women randomized clinical trial Iran 12 weeks"
+  ],
+  "could_not_access": [
+    "NIH ODS magnesium fact sheets (professional and consumer): HTTP 403. The NIH position was not checked directly.",
+    "PubMed abstract pages for PMID 35184264, 40918053 and 21199787: cookie wall. I used the PMC full text, Europe PMC and search summaries instead.",
+    "Springer and ScienceDirect pages (Mah and Pitre 2021 on Springer; Hausenblas 2024 magnesium L-threonate trial): redirect or HTTP 403. I read the Mah and Pitre review through PMC. The Hausenblas trial was seen in search summaries only.",
+    "Cureus 2024 systematic review of magnesium, anxiety and sleep: HTTP 403, so it was not used.",
+    "Held 2002 crossover trial itself: no verified identifier retrieved, so it is described only through the Mah and Pitre review.",
+    "Iranian trial in 82 postmenopausal women (magnesium, 12 weeks, PSQI p = 0.199, form unknown): the Tabriz university record failed to load, the IRCT PDF could not be read, and I found no DOI or PMID. It is not in the inventory.",
+    "Registry entry DRKS00031494 for the bisglycinate trial: not opened.",
+    "EU Scientific Committee on Food opinion and the 2023 perspective paper on magnesium upper limits (PMC10509448): the paper was blocked by a captcha. The upper-limit figures come from search summaries.",
+    "Glycine sleep studies (Yamadera 2007, Inagawa 2006): seen only in search summaries."
+  ],
+  "self_confidence": "medium",
+  "confidence_note": "The thin-evidence picture is fairly secure. I read the one bisglycinate trial and the older-adult meta-analysis in full, and the older-adult trials were checked through the review or an abstract. The main limits are these. First, bisglycinate for sleep has only one RCT that I could find, from one research group, with a result at p = 0.049. Second, the older-adult evidence uses other magnesium forms at higher doses. Third, I could not open the NIH page, several PubMed pages and a few trials, so some numbers come from search summaries. The upper-limit figures (350 mg US, 250 mg EU) and the ISI thresholds (4 and 6 points) come from search summaries, not from the primary documents. I may have missed trials registered or published in the last few months, including recent registrations on ClinicalTrials.gov. The effect tier for the poor-sleep row (1, small) is a judgement call. It could reasonably be read as 0 given the 1.6-point gap against a 4-point threshold and the null secondary outcomes. No human has verified this audit."
+}
