@@ -1,3 +1,9 @@
+> **OBSOLETE — archived, do not quote.** This preliminary preview (a bounded saved-source categorical run) was not produced
+> through the exact four-axis `/scan` format, so it was never a valid exact-UI comparison. The actual study — Sonnet 5.5 xhigh
+> versus Opus 5.5 high under the original `audit-v0.4` contract, shown through the unchanged `/scan` card with its limits —
+> is published in [`../research-original-contract-comparison/`](../research-original-contract-comparison/README.md). The
+> images below are kept only as an archive; they are not validated clinical results and not a new scorer.
+
 # Saved research benchmark — preliminary visual previews
 
 - [All five cases: Sonnet xhigh vs Opus high](overview.png)

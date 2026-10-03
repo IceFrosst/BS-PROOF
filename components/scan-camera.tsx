@@ -29,7 +29,7 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
-import { blobToCaptureFile, cameraSupported, captureVideoFrame, startCamera, stopCamera } from "@/lib/camera/capture";
+import { blobToCaptureFile, cameraSupported, captureVideoFrame, coverCropRect, startCamera, stopCamera } from "@/lib/camera/capture";
 
 type CameraStatus = "idle" | "starting" | "live" | "unavailable";
 
@@ -81,6 +81,7 @@ export function ScanCamera({
   labels?: CameraLabels;
 }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const frameRef = useRef<HTMLDivElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [status, setStatus] = useState<CameraStatus>("idle");
   const [torchSupported, setTorchSupported] = useState(false);
@@ -175,7 +176,13 @@ export function ScanCamera({
     if (!videoRef.current || disabled) return;
     // 2560 keeps the small print of a dense panel legible and stays well
     // under the 4.5 MB request limit at this quality.
-    const blob = await captureVideoFrame(videoRef.current, { maxLongEdge: 2560, quality: 0.92 });
+    // Keep only what is inside the on-screen guide (plus a small margin):
+    // what you frame is what gets read.
+    const video = videoRef.current;
+    const crop = frameRef.current
+      ? coverCropRect(video.videoWidth, video.videoHeight, video.getBoundingClientRect(), frameRef.current.getBoundingClientRect())
+      : null;
+    const blob = await captureVideoFrame(video, { maxLongEdge: 2560, quality: 0.92 }, crop);
     if (!blob) return;
     const file = blobToCaptureFile(blob, "image/jpeg");
     // Stop the stream the instant a frame is captured, per spec — the parent
@@ -223,9 +230,9 @@ export function ScanCamera({
         {isLive ? null : <div className="sc-viewfinder-fill" aria-hidden="true" />}
 
         {/* The framing guide (2026-10-03): darkened surround, four corners
-            where the Supplement Facts panel goes, one plain hint. Purely
-            visual -- it does not crop the captured frame. */}
-        <div className="sc-frame" aria-hidden="true">
+            where the Supplement Facts panel goes, one plain hint. The shutter
+            crops the photo to this box (coverCropRect). */}
+        <div className="sc-frame" ref={frameRef} aria-hidden="true">
           <svg viewBox="0 0 100 100" preserveAspectRatio="none">
             <path d="M0 16V6Q0 0 6 0H14M86 0H94Q100 0 100 6V16M100 84V94Q100 100 94 100H86M14 100H6Q0 100 0 94V84" vectorEffect="non-scaling-stroke" />
           </svg>

@@ -1,0 +1,659 @@
+{
+  "meta": {
+    "run_at": "2026-10-03",
+    "model": "Sonnet 5.5 (claude-sonnet-5-5)",
+    "prompt": "audit-v0.4",
+    "note": "Experimental benchmark. No human has verified this audit. The daily regimen was supplied by the caller, not read from a label. PubMed, the Cochrane Library, BMJ, NIH ODS and Lancet/ScienceDirect pages returned access errors. Most abstracts were read through Europe PMC records, and two full texts (Martineau 2017 via Europe PMC, Lenhart 2020 via PMC) were opened."
+  },
+  "product": "Vitamin D3 + vitamin C + zinc gluconate combination (25 mcg D3, 500 mg vitamin C, 10 mg elemental zinc per day, as supplied)",
+  "ingredient": "vitamin D3 + vitamin C + zinc",
+  "form": "vitamin D3 plus vitamin C (chemical form unspecified) plus zinc gluconate, exact combination",
+  "daily_dose": "25 mcg D3 (1,000 IU) + 500 mg vitamin C + 10 mg elemental zinc per day, supplied regimen; serving count unknown",
+  "dose_note": "Vitamin D3: 25 mcg equals 1,000 IU (1 mcg = 40 IU). Zinc: the label figure is elemental zinc, so 10 mg is the zinc itself. Zinc gluconate is about 14% zinc by weight, so 10 mg of zinc equals roughly 70 mg of the gluconate salt. Vitamin C form is not stated. The regimen is read as one daily serving with all three together. The serving count is unknown, so if the real regimen is two or more servings a day, every dose here doubles or more. Every verdict below assumes one serving a day. The single-ingredient trials used many different doses, so they match this product only loosely.",
+  "for_whom": {
+    "reasonable": "People with very low vitamin D (blood level under 25 nmol/L) had fewer infections with vitamin D alone in a 2017 analysis, but a 2025 update did not confirm it. Nothing shows this combination prevents colds.",
+    "not_shown": "Nobody has tested this exact combination for cold prevention in anyone. Taken alone, vitamin D, vitamin C and zinc each showed little or no cold prevention in healthy adults.",
+    "source": "No guideline body takes a position on this exact combination. NIH Office of Dietary Supplements fact sheets (read only as search excerpts, pages not opened) say regular vitamin C of at least 200 mg a day does not reduce colds in the general population, and that zinc lozenges or syrup taken early in a cold may shorten it."
+  },
+  "outcomes": [
+    {
+      "name": "Cold prevention, this combination",
+      "population": "Adults, health status unspecified",
+      "sentence": "Nobody has tested this exact mix of vitamin D3, vitamin C and zinc for preventing colds, so there is no direct answer.",
+      "ledger": {
+        "effectPoints": "unclear",
+        "effect_basis": "Searches of Europe PMC and the web found no randomised trial that gave vitamin D3, vitamin C and zinc together, without other ingredients, to prevent colds. The closest items are multi-ingredient formulas (see the multivitamin row) and a 5-day treatment pack that also held echinacea (see the treatment row). A 2025 network meta-analysis of 107 trials in 101,751 adults (PMID 40969681) also reported no studies of the three-way combination. This is a case of nobody having tested it, not a case of a test that found nothing. The component evidence in the other rows is indirect and is not averaged into this row.",
+        "bodyIsRct": false,
+        "checklist": {
+          "risk_of_bias": "unknown",
+          "consistency": "unknown",
+          "precision": "unknown",
+          "directness": "unknown",
+          "publication_bias": "unknown"
+        },
+        "gates": {
+          "rctCount": 0,
+          "largestRctN": 0,
+          "longestRctWeeks": 0,
+          "chronicOutcome": true,
+          "surrogate": false,
+          "allPositiveIndustryOrOneLab": false
+        },
+        "formFit": "unknown",
+        "doseFit": "unknown",
+        "effective_daily_range": "No tested dose range exists for this combination."
+      },
+      "detail": {
+        "effect": {
+          "found": "No trial measured cold rates with this exact combination.",
+          "missing": "Any effect size. Whether the three ingredients add up, cancel out or do nothing together is unknown.",
+          "move": "A placebo-controlled trial of this exact combination over a cold season, counting colds."
+        },
+        "evidence": {
+          "found": "Zero direct trials found in Europe PMC and general web searches. The 2025 network meta-analysis (PMID 40969681) did not identify studies of vitamin C plus zinc plus vitamin D together.",
+          "missing": "Any trial, registered or published, of this combination for prevention.",
+          "move": "A registered, adequately sized trial."
+        },
+        "form": {
+          "found": "Not tested as a combination. The product uses vitamin D3, vitamin C in an unstated form and zinc gluconate.",
+          "missing": "Whether this form mix matters.",
+          "move": "A trial that reports the exact forms."
+        },
+        "dose": {
+          "found": "No dose range exists for this combination.",
+          "missing": "Any dose-response for the three together.",
+          "move": "A trial with at least two dose levels."
+        }
+      },
+      "inventory": [],
+      "absolute_effect": "None available. No trial reports an effect for this combination.",
+      "clinically_meaningful": "unknown. No MCID (smallest change that matters to patients) exists for cold incidence, and no data exist for this combination.",
+      "strongest_study": "None. No trial of this exact combination was found.",
+      "strongest_doubt": "A missing trial is not evidence of no effect. The ingredients could interact in either direction, and nobody has measured it.",
+      "study_that_would_move_this": "A double-blind placebo trial of this combination at 25 mcg D3, 500 mg vitamin C and 10 mg zinc a day, run over a cold season in a few thousand adults, counting colds and sick days.",
+      "studied_in": {
+        "sex": "unknown",
+        "age_min": null,
+        "age_max": null,
+        "age_note": "No study exists.",
+        "ethnicity": "not reported",
+        "confidence": "unknown"
+      },
+      "subgroup_hypothesis_only": false
+    },
+    {
+      "name": "Colds: multivitamin formulas",
+      "population": "Healthy adults taking multi-ingredient formulas",
+      "sentence": "One small trial of a multivitamin with D, C and zinc found odds of a cold of 0.74 (0.49 to 1.11), not statistically significant.",
+      "ledger": {
+        "effectPoints": "unclear",
+        "effect_basis": "Lenhart 2020 (PLoS One) is a double-blind pilot trial (a small first test) in 259 healthy adults aged 18 to 65, followed for 12 weeks across two cold seasons. The caplet held vitamins A, D, C, E, B6, B12, folic acid, zinc, selenium, copper and iron; the doses sit in an appendix I could not read. The primary result was not significant: odds ratio 0.74 (95% CI 0.49 to 1.11, p=0.14) for catching a cold. Secondary results were lower odds of runny nose (OR 0.53, p=0.01) and cough (OR 0.51, p=0.04), with no difference in severity. The product's developer is an author and paid for the supplement and placebo. Survey response fell from 80.3% in week 1 to 59.8% in week 12, and the arms were unbalanced by sex (p=0.04). Fantacone 2020 (Redoxon VI, 12 weeks, about 42 adults aged 55 to 75) measured blood vitamin status and immune function, not cold counts, so it does not answer the question. Wang 2025 is an observational cohort of 3,415 community adults in China: infection prevalence 29.9% with a multivitamin-mineral supplement versus 45.6% without, OR 0.508 (p<0.001), and OR 0.572 after matching. People who choose supplements differ from those who do not, so that cannot show cause. The tier is unclear because the one RCT is small, imprecise and not independent.",
+        "bodyIsRct": true,
+        "checklist": {
+          "risk_of_bias": "concern",
+          "consistency": "unknown",
+          "precision": "concern",
+          "directness": "concern",
+          "publication_bias": "unknown"
+        },
+        "gates": {
+          "rctCount": 1,
+          "largestRctN": 259,
+          "longestRctWeeks": 12,
+          "chronicOutcome": true,
+          "surrogate": false,
+          "allPositiveIndustryOrOneLab": true
+        },
+        "formFit": "1",
+        "doseFit": "unknown",
+        "effective_daily_range": "Not established. The doses in the one cold-counting trial were in an appendix I could not read."
+      },
+      "detail": {
+        "effect": {
+          "found": "In the one cold-counting trial, the odds of catching a cold were 0.74 times as high with the supplement (95% CI 0.49 to 1.11, p=0.14). That is 26% lower odds, but the range includes no difference.",
+          "missing": "A clear answer. The trial was a pilot and was too small to rule a real effect in or out.",
+          "move": "A larger trial with a primary outcome set in advance."
+        },
+        "evidence": {
+          "found": "One small pilot RCT that counted colds, one small RCT that did not, and one observational cohort.",
+          "missing": "Independent replication. A registered 52-week trial in 320 older adults in Ecuador (NCT01971112; vitamins A, B6, B12, D, E, folate and iron plus 500 mg vitamin C and 14 mg zinc daily) is the closest dose match, and I found no results for it. Its registry status has been unknown since 2013.",
+          "move": "Publication of the Ecuador trial's results."
+        },
+        "form": {
+          "found": "The tested caplets had eleven ingredients. That is a different product from a three-ingredient pill.",
+          "missing": "The form of each nutrient in the tested caplets.",
+          "move": "A trial that tests the three ingredients alone."
+        },
+        "dose": {
+          "found": "Doses were in a supplementary appendix that I could not open.",
+          "missing": "Whether the doses match 25 mcg D3, 500 mg vitamin C and 10 mg zinc.",
+          "move": "Read the appendix of Lenhart 2020."
+        }
+      },
+      "inventory": [
+        {
+          "id": "PMID:32841256 (DOI 10.1371/journal.pone.0237491)",
+          "year": 2020,
+          "design": "rct",
+          "n": 259,
+          "direction": "none",
+          "access": "full_text",
+          "funding": "industry",
+          "note": "Pilot, 12-week follow-up, multi-ingredient caplet with D, C and zinc among eleven ingredients. Primary OR 0.74 (0.49 to 1.11), p=0.14. Developer is an author and funded the supplement."
+        },
+        {
+          "id": "PMID:32823974",
+          "year": 2020,
+          "design": "rct",
+          "n": 42,
+          "direction": "unclear",
+          "access": "abstract",
+          "funding": "unknown",
+          "note": "Redoxon VI in adults 55 to 75, 12 weeks. Outcomes were blood status and immune function, not cold counts. An investigator discloses consulting for Bayer. The n of 42 comes from a news report."
+        },
+        {
+          "id": "PMID:40738727",
+          "year": 2025,
+          "design": "cohort",
+          "n": 3415,
+          "direction": "benefit",
+          "access": "abstract",
+          "funding": "unknown",
+          "note": "Observational, Chinese community cohort, 3 months. Infection prevalence 29.9% vs 45.6%, OR 0.508 (p<0.001). Formula not stated in the abstract. Confounding likely."
+        }
+      ],
+      "absolute_effect": "Lenhart 2020: OR 0.74 (95% CI 0.49 to 1.11, p=0.14) for any upper respiratory infection over 12 weeks; absolute risks not retrieved, so no risk difference or NNT can be given. Wang 2025 (observational): prevalence 29.9% vs 45.6%, OR 0.508 (p<0.001) over 3 months.",
+      "clinically_meaningful": "unknown. No MCID exists for cold incidence. The trial's range (0.49 to 1.11) includes both a large benefit and no benefit.",
+      "strongest_study": "Lenhart 2020 (PLoS One): double-blind pilot RCT, 259 healthy adults, 12-week follow-up. The primary result was not significant: OR 0.74 (0.49 to 1.11). The product's developer funded it.",
+      "strongest_doubt": "One small trial run by the product's developer cannot carry a conclusion. Its positive hints are secondary symptom outcomes with no correction for testing many outcomes. The formula differs from this three-ingredient product.",
+      "study_that_would_move_this": "Results of the registered Ecuador trial (NCT01971112), or an independent trial of a formula with 1,000 IU D3, 500 mg vitamin C and 10 mg zinc, powered to detect a change in cold counts.",
+      "why_positive_signal_is_unreliable": "The positive hints come from secondary symptom outcomes in a pilot trial run by the developer, from a trial that did not count colds, and from an observational cohort where supplement users differ from non-users. None of these can show cause.",
+      "studied_in": {
+        "sex": "mixed",
+        "sex_note": "Lenhart reports both sexes, with an imbalance between arms. Other studies not checked.",
+        "age_min": 18,
+        "age_max": 75,
+        "age_note": "Lenhart 18 to 65; Fantacone 55 to 75; Wang cohort ages not retrieved.",
+        "ethnicity": "not reported",
+        "confidence": "inferred"
+      },
+      "subgroup_hypothesis_only": false
+    },
+    {
+      "name": "Colds: vitamin D alone",
+      "population": "Adults, not selected for low vitamin D",
+      "sentence": "Vitamin D alone, 40 studies and 61,589 people: odds of a respiratory infection 0.94 (0.88 to 1.00), so little or no prevention.",
+      "ledger": {
+        "effectPoints": "0",
+        "effect_basis": "Jolliffe 2025 (Lancet Diabetes and Endocrinology, PMID 39993397) pooled 40 studies with 61,589 participants: OR 0.94 (95% CI 0.88 to 1.00, p=0.057), I2 = 26.4% (the trials disagreed only a little). The abstract says the 95% CI now includes 1.00, so there is no statistically significant protection. Its abstract says funding: none. CORONAVIT (BMJ 2022, 6,200 UK people aged 16 and over, open-label) gave 800 or 3,200 IU a day for 6 months to those with a low level and found no drop in respiratory infection: control 4.6%, 800 IU 5.7% (OR 1.26, 0.96 to 1.66), 3,200 IU 5.0% (OR 1.09, 0.82 to 1.46). A 2025 network meta-analysis (PMID 40969681, 107 trials) gave RR 0.97 (0.93 to 1.02) for standard doses under 2,000 IU a day and 0.94 (0.89 to 1.00) for 2,000 IU or more. A 2024 review (PMID 39143549, 43 trials) gave RR 0.99 (0.97 to 1.01) overall. These reviews overlap and are not independent. This product's 1,000 IU a day falls in the standard-dose group. The best estimate is a few percent lower odds at most, with a range that reaches no effect, so the tier is 0.",
+        "bodyIsRct": false,
+        "checklist": {
+          "risk_of_bias": "unknown",
+          "consistency": "supported",
+          "precision": "supported",
+          "directness": "concern",
+          "publication_bias": "unknown"
+        },
+        "gates": {
+          "rctCount": 40,
+          "largestRctN": 6200,
+          "longestRctWeeks": 26,
+          "chronicOutcome": true,
+          "surrogate": false,
+          "allPositiveIndustryOrOneLab": false
+        },
+        "formFit": "3",
+        "doseFit": "3",
+        "effective_daily_range": "No dose range has been shown to prevent colds in the general population. Network meta-analysis 2025: under 2,000 IU a day RR 0.97 (0.93 to 1.02); 2,000 IU or more RR 0.94 (0.89 to 1.00). This product gives 1,000 IU a day."
+      },
+      "detail": {
+        "effect": {
+          "found": "Across 40 studies the odds of any acute respiratory infection were 6% lower with vitamin D: OR 0.94 (95% CI 0.88 to 1.00, p=0.057). The range reaches 1.00, which means no difference. The 6,200-person CORONAVIT trial found no drop in infections.",
+          "missing": "A clear benefit in people who are not low in vitamin D. Whether 1,000 IU a day does anything on its own for colds is not shown.",
+          "move": "Trials in people with a measured low level, with infections confirmed by test."
+        },
+        "evidence": {
+          "found": "Many large trials. A second 2025 analysis of 107 trials gave RR 0.97 (0.93 to 1.02) for standard doses (moderate certainty).",
+          "missing": "I read abstracts, not the full text of the 2025 pooled analysis, so I did not check each trial's bias rating.",
+          "move": "A full-text check of bias in the largest trials."
+        },
+        "form": {
+          "found": "The trials I could read used vitamin D3 by mouth, given alone.",
+          "missing": "Trials with vitamin C and zinc in the same pill.",
+          "move": "A trial of the combination."
+        },
+        "dose": {
+          "found": "This product gives 25 mcg (1,000 IU) a day, inside the under-2,000 IU group (RR 0.97, 0.93 to 1.02). The 2017 analysis covered daily doses from 10 to 100 mcg.",
+          "missing": "A dose shown to prevent colds in general adults. A 2024 review reported a subgroup benefit with daily dosing (RR 0.92) and best results at 400 to 1,200 IU a day in cooler months, but its overall result was RR 0.99 (0.97 to 1.01). That is a subgroup finding only.",
+          "move": "Trials that compare doses head to head."
+        }
+      },
+      "inventory": [
+        {
+          "id": "PMID:39993397",
+          "year": 2025,
+          "design": "sr_ma",
+          "n": 61589,
+          "direction": "none",
+          "access": "abstract",
+          "funding": "independent",
+          "note": "40 studies, OR 0.94 (0.88 to 1.00), p=0.057, I2 26.4%. Abstract states funding: none. No effect modification by age, baseline level, dosing frequency or dose size."
+        },
+        {
+          "id": "PMID:36215226",
+          "year": 2022,
+          "design": "rct",
+          "n": 6200,
+          "direction": "none",
+          "access": "abstract",
+          "funding": "unknown",
+          "note": "CORONAVIT, open-label test-and-treat, 800 or 3,200 IU a day for 6 months. No reduction in infection. May sit inside the 2025 pooled analysis; I did not verify that."
+        },
+        {
+          "id": "PMID:40969681",
+          "year": 2025,
+          "design": "sr_ma",
+          "n": 101751,
+          "direction": "none",
+          "access": "full_text",
+          "funding": "unknown",
+          "note": "Network meta-analysis of 107 trials in adults. Standard-dose vitamin D RR 0.97 (0.93 to 1.02), moderate certainty. n is the whole review. Overlaps with the other reviews."
+        },
+        {
+          "id": "PMID:39143549",
+          "year": 2024,
+          "design": "sr_ma",
+          "n": 49320,
+          "direction": "none",
+          "access": "abstract",
+          "funding": "unknown",
+          "note": "43 trials, overall RR 0.99 (0.97 to 1.01). Subgroup of daily dosing RR 0.92. Overlaps with the other reviews."
+        }
+      ],
+      "absolute_effect": "Pooled OR 0.94 (95% CI 0.88 to 1.00) for any acute respiratory infection (Jolliffe 2025). CORONAVIT: control 4.6% (136 of 2,949), 800 IU 5.7% (87 of 1,515), OR 1.26 (0.96 to 1.66); 3,200 IU 5.0% (76 of 1,515), OR 1.09 (0.82 to 1.46). No absolute risk reduction or NNT can be derived from the pooled OR in the sources I read.",
+      "clinically_meaningful": "no. No MCID exists for cold or respiratory infection incidence. The best estimate is 6% lower odds with a range that reaches no difference (1.00), which is too small and too uncertain to count as meaningful.",
+      "strongest_study": "Jolliffe 2025, Lancet Diabetes and Endocrinology: pooled data from 40 studies and 61,589 people. OR 0.94 (95% CI 0.88 to 1.00), p=0.057.",
+      "strongest_doubt": "I read only the abstract record of the pooled result. A 2017 analysis of 25 trials had found aOR 0.88 (0.81 to 0.96), and the 2025 analysis with more trials landed at 0.94 (0.88 to 1.00), so a small real effect cannot be ruled out. These trials gave vitamin D alone, not a three-ingredient pill.",
+      "study_that_would_move_this": "A trial of about 1,000 IU a day in adults with infections confirmed by test, and a full-text subgroup analysis of the 2025 pooled data.",
+      "why_positive_signal_is_unreliable": "Earlier and smaller analyses pointed to benefit (aOR 0.88 in 2017 with 25 trials). Adding more and larger trials pulled the estimate toward no effect, so the newer pooled result is the better guide.",
+      "studied_in": {
+        "sex": "mixed",
+        "sex_note": "Both sexes in the pooled trials.",
+        "age_min": null,
+        "age_max": null,
+        "age_note": "Pooled trials span children to older adults. CORONAVIT enrolled people aged 16 and over.",
+        "ethnicity": "not reported",
+        "confidence": "inferred"
+      },
+      "subgroup_hypothesis_only": false
+    },
+    {
+      "name": "Colds: vitamin D if deficient",
+      "population": "Adults with 25(OH)D under 25 nmol/L",
+      "sentence": "In people with very low vitamin D, a 2017 analysis found odds of infection 0.30 (0.17 to 0.53). A 2025 update reported no subgroup differences.",
+      "ledger": {
+        "effectPoints": "unclear",
+        "effect_basis": "Martineau 2017 (BMJ, PMID 28202713) pooled individual data from 25 trials (11,321 people). Among people on daily or weekly vitamin D without extra large bolus doses, those starting below 25 nmol/L had adjusted odds ratio (aOR) 0.30 (95% CI 0.17 to 0.53) of an acute respiratory infection, versus 0.75 (0.60 to 0.95) for those at 25 nmol/L or above. The number needed to treat was 4 (95% CI 3 to 7), and the test for whether the effect differs by starting level gave P=0.006. In the full text, 538 people in 14 trials started below 25 nmol/L. The 2025 update (PMID 39993397, 40 studies, 61,589 people) states: pre-specified subgroup analysis did not reveal evidence of effect modification by age, baseline vitamin D status, dosing frequency, or dose size. The two analyses disagree, and I could not open the 2025 full text to see the under-25 nmol/L group alone. These are vitamin D alone, not this combination. The tier is unclear.",
+        "bodyIsRct": false,
+        "checklist": {
+          "risk_of_bias": "unknown",
+          "consistency": "concern",
+          "precision": "concern",
+          "directness": "concern",
+          "publication_bias": "unknown"
+        },
+        "gates": {
+          "rctCount": 14,
+          "largestRctN": 0,
+          "longestRctWeeks": 0,
+          "chronicOutcome": true,
+          "surrogate": false,
+          "allPositiveIndustryOrOneLab": false
+        },
+        "formFit": "3",
+        "doseFit": "3",
+        "effective_daily_range": "Daily or weekly vitamin D3 in the 2017 analysis; daily doses ran from 10 to 100 mcg across the 25 trials. This product's 25 mcg a day is inside that range. The stratum's largest trial size and longest duration were not retrieved, so those gate values show 0."
+      },
+      "detail": {
+        "effect": {
+          "found": "On daily or weekly vitamin D, people starting under 25 nmol/L had aOR 0.30 (95% CI 0.17 to 0.53) of an acute respiratory infection. The number needed to treat (how many people must take it for one to benefit) was 4 (95% CI 3 to 7). The test for a difference by starting level gave P=0.006.",
+          "missing": "Agreement between analyses. The 2025 analysis found no evidence that baseline status changes the effect. Whether the combination works in this group is untested.",
+          "move": "A trial enrolling only people with a measured low level."
+        },
+        "evidence": {
+          "found": "538 people in 14 trials started below 25 nmol/L (all dosing schedules). The 2017 test of effect by starting level was P=0.006, which is a proper interaction test.",
+          "missing": "Why the two analyses disagree. The 2025 abstract does not show the under-25 nmol/L group alone, and I could not open its full text.",
+          "move": "A full-text read of the 2025 analysis."
+        },
+        "form": {
+          "found": "Vitamin D3, given daily or weekly, in the 2017 analysis.",
+          "missing": "Whether D3 inside a three-ingredient pill acts the same. This was not tested.",
+          "move": "A trial of the pill."
+        },
+        "dose": {
+          "found": "Daily D3 doses in the 25 trials ran from 10 to 100 mcg. This product's 25 mcg is inside that range.",
+          "missing": "A dose-response in the deficient group alone.",
+          "move": "A trial with two dose arms in deficient people."
+        }
+      },
+      "inventory": [
+        {
+          "id": "PMID:28202713",
+          "year": 2017,
+          "design": "sr_ma",
+          "n": 11321,
+          "direction": "benefit",
+          "access": "full_text",
+          "funding": "unknown",
+          "note": "Individual-data meta-analysis of 25 RCTs (10,933 with data). Under 25 nmol/L on daily or weekly dosing: aOR 0.30 (0.17 to 0.53), NNT 4 (3 to 7), P for interaction 0.006. 538 people in 14 trials were below 25 nmol/L."
+        },
+        {
+          "id": "PMID:39993397",
+          "year": 2025,
+          "design": "sr_ma",
+          "n": 61589,
+          "direction": "unclear",
+          "access": "abstract",
+          "funding": "independent",
+          "note": "40 studies. Abstract reports no effect modification by baseline vitamin D status. Under-25 group result not seen. Includes most of the 2017 trials, so it is not independent."
+        }
+      ],
+      "absolute_effect": "aOR 0.30 (95% CI 0.17 to 0.53) for people under 25 nmol/L on daily or weekly vitamin D; NNT 4 (95% CI 3 to 7). For those at 25 nmol/L or above, aOR 0.75 (0.60 to 0.95). Overall in 2017: aOR 0.88 (0.81 to 0.96). The 2025 overall result is OR 0.94 (0.88 to 1.00).",
+      "clinically_meaningful": "unknown. No MCID exists for infection incidence. An NNT of 4 would be large if true, but the 2025 analysis did not find that starting level changes the effect, so I cannot say it holds.",
+      "strongest_study": "Martineau 2017, BMJ: individual data from 25 trials (11,321 people). The effect was strongest in people starting under 25 nmol/L on daily or weekly doses (aOR 0.30, 0.17 to 0.53; interaction P=0.006).",
+      "strongest_doubt": "The newer 2025 pooled analysis of 40 studies found no evidence that baseline vitamin D level changes the effect. Only 538 people in the 2017 analysis started under 25 nmol/L. Both analyses are of vitamin D alone, not this product.",
+      "study_that_would_move_this": "A large placebo-controlled trial enrolling only people with a measured level under 25 nmol/L, giving about 1,000 IU a day, with infections confirmed by test.",
+      "studied_in": {
+        "sex": "mixed",
+        "sex_note": "Both sexes in the pooled trials.",
+        "age_min": 0,
+        "age_max": 95,
+        "age_note": "Ages 0 to 95 across all 2017 trials; the deficient group's ages not retrieved.",
+        "ethnicity": "not reported",
+        "confidence": "inferred"
+      },
+      "subgroup_hypothesis_only": false
+    },
+    {
+      "name": "Colds: vitamin C alone",
+      "population": "General-population adults (not athletes/soldiers)",
+      "sentence": "Vitamin C taken regularly at 200 mg or more: cold risk ratio 0.97 (0.94 to 1.00) in 29 trials. Colds ran 8% shorter in adults.",
+      "ledger": {
+        "effectPoints": "0",
+        "effect_basis": "Hemilä and Chalker 2013 (Cochrane, PMID 23440782) pooled 29 trials with 11,306 people taking at least 0.2 g a day: risk ratio (RR) 0.97 (95% CI 0.94 to 1.00) for developing a cold in the general population. Cold duration was 8% shorter in adults (3% to 12%) and 14% shorter in children (7% to 21%). The review also reports a pooled RR of 0.48 in people under severe physical stress such as marathon runners and soldiers; I could not retrieve that group's CI or trial count. A 2025 network meta-analysis (PMID 40969681) found RR 0.96 (0.87 to 1.06) for 500 mg or less and 0.93 (0.86 to 1.00) for 501 to 1,000 mg, both moderate certainty, with no significant benefit above 1,000 mg. This product's 500 mg falls in the lowest group. Both sources agree there is no meaningful prevention in general adults. The tier is 0 for incidence.",
+        "bodyIsRct": false,
+        "checklist": {
+          "risk_of_bias": "unknown",
+          "consistency": "supported",
+          "precision": "supported",
+          "directness": "concern",
+          "publication_bias": "unknown"
+        },
+        "gates": {
+          "rctCount": 29,
+          "largestRctN": 0,
+          "longestRctWeeks": 0,
+          "chronicOutcome": true,
+          "surrogate": false,
+          "allPositiveIndustryOrOneLab": false
+        },
+        "formFit": "3",
+        "doseFit": "3",
+        "effective_daily_range": "No dose has been shown to prevent colds in the general population. The Cochrane review used 0.2 g a day or more. The 2025 network analysis found no significant benefit at 500 mg or less (RR 0.96, 0.87 to 1.06). Largest trial size and longest duration were not retrieved, so those gate values show 0."
+      },
+      "detail": {
+        "effect": {
+          "found": "In the general population the risk of catching a cold was 3% lower: RR 0.97 (95% CI 0.94 to 1.00). When colds happened, adults had them 8% shorter (3% to 12%).",
+          "missing": "A benefit for general adults. The review reports a bigger drop (RR 0.48) in people under severe physical stress; its CI and trial count were not retrieved, and this product was not tested in that group.",
+          "move": "A trial of 500 mg a day in adults with confirmed colds."
+        },
+        "evidence": {
+          "found": "29 trials with 11,306 people, plus a 2025 network analysis. Both found no meaningful drop in colds in general adults.",
+          "missing": "I read only the abstract of the Cochrane review. Bias ratings were not checked.",
+          "move": "A full-text check of trial bias."
+        },
+        "form": {
+          "found": "The tested form is mostly plain vitamin C, given alone.",
+          "missing": "The form of vitamin C in this product is not stated.",
+          "move": "A trial that states the form."
+        },
+        "dose": {
+          "found": "This product's 500 mg a day is above the Cochrane review's 200 mg floor and inside the 2025 lowest group (500 mg or less).",
+          "missing": "A dose shown to prevent colds in general adults.",
+          "move": "Dose comparison trials in general adults."
+        }
+      },
+      "inventory": [
+        {
+          "id": "PMID:23440782",
+          "year": 2013,
+          "design": "sr_ma",
+          "n": 11306,
+          "direction": "none",
+          "access": "abstract",
+          "funding": "independent",
+          "note": "29 trials, regular vitamin C 0.2 g a day or more. General population RR 0.97 (0.94 to 1.00). Duration 8% shorter in adults. Stress subgroup RR 0.48 reported; CI not retrieved."
+        },
+        {
+          "id": "PMID:40969681",
+          "year": 2025,
+          "design": "sr_ma",
+          "n": 101751,
+          "direction": "none",
+          "access": "full_text",
+          "funding": "unknown",
+          "note": "Network meta-analysis of 107 trials in adults. Vitamin C 500 mg or less RR 0.96 (0.87 to 1.06). n is the whole review. Overlaps with the Cochrane trials."
+        }
+      ],
+      "absolute_effect": "RR 0.97 (95% CI 0.94 to 1.00) for developing a cold in the general population (Cochrane 2013). Duration 8% shorter in adults (95% CI 3% to 12%). Network analysis 2025: RR 0.96 (0.87 to 1.06) at 500 mg or less. No absolute risk difference or NNT retrieved.",
+      "clinically_meaningful": "no. No MCID exists for cold incidence. A 3% lower risk with a range that touches no difference is too small to count as meaningful. An 8% shorter cold is also small in absolute terms; this threshold is my judgement, not a published MCID.",
+      "strongest_study": "Hemilä and Chalker 2013, Cochrane review: 29 trials, 11,306 people, RR 0.97 (0.94 to 1.00) for developing a cold with regular vitamin C.",
+      "strongest_doubt": "I read only the abstract of the Cochrane review, so risk of bias was not checked. The review and the 2025 network analysis pool overlapping trials. The benefit signal in people under heavy physical stress (RR 0.48) comes from a different group, and I could not verify its size.",
+      "study_that_would_move_this": "A modern placebo-controlled trial of 500 mg a day over a cold season in general adults, with colds confirmed by test.",
+      "why_positive_signal_is_unreliable": "The positive signal sits in people under severe physical stress, a separate group. It does not carry over to general adults, where the pooled result is a null.",
+      "studied_in": {
+        "sex": "unknown",
+        "sex_note": "Not retrieved.",
+        "age_min": null,
+        "age_max": null,
+        "age_note": "Cochrane reports adults and children separately; ages not retrieved.",
+        "ethnicity": "not reported",
+        "confidence": "unknown"
+      },
+      "subgroup_hypothesis_only": false
+    },
+    {
+      "name": "Colds: zinc alone",
+      "population": "People taking zinc daily to prevent colds",
+      "sentence": "Zinc for prevention: Cochrane 2024 risk ratio 0.93 (0.85 to 1.01), low certainty; a 2025 adult analysis found 0.69 (0.50 to 0.94).",
+      "ledger": {
+        "effectPoints": "unclear",
+        "effect_basis": "Nault 2024 (Cochrane, PMID 38719213) found for prevention: RR 0.93 (95% CI 0.85 to 1.01), I2 = 20%, 9 studies, 1,449 people, low certainty. For the mean number of colds over 5 to 18 months, mean difference -0.90 (-1.93 to 0.12), 2 studies, 1,284 people, I2 = 96% (the trials disagreed a lot), low certainty. For side effects with preventive use, RR 1.11 (0.84 to 1.47), 7 studies, 1,517 people, very low certainty. The 2025 network meta-analysis in adults (PMID 40969681) reported zinc RR 0.69 (0.50 to 0.94), low certainty; I could not see its trial count, dose or form. The two analyses disagree on size. Cochrane also reports that zinc may shorten a cold already under way, mean difference -2.37 days (low certainty); that is a different use, with different doses, and is not scored here. The tier is unclear.",
+        "bodyIsRct": false,
+        "checklist": {
+          "risk_of_bias": "unknown",
+          "consistency": "concern",
+          "precision": "concern",
+          "directness": "concern",
+          "publication_bias": "unknown"
+        },
+        "gates": {
+          "rctCount": 9,
+          "largestRctN": 642,
+          "longestRctWeeks": 78,
+          "chronicOutcome": true,
+          "surrogate": false,
+          "allPositiveIndustryOrOneLab": false
+        },
+        "formFit": "unknown",
+        "doseFit": "unknown",
+        "effective_daily_range": "Not retrieved for preventive zinc. This product gives 10 mg of elemental zinc a day. Largest trial size 642 is a lower bound (two studies sum to 1,284); longest duration 78 weeks is 18 months."
+      },
+      "detail": {
+        "effect": {
+          "found": "The Cochrane review found little or no drop in colds with zinc: RR 0.93 (95% CI 0.85 to 1.01). A 2025 adult analysis found a larger drop: RR 0.69 (0.50 to 0.94).",
+          "missing": "Agreement between the two. Which doses and forms drove each result is unknown to me.",
+          "move": "A trial of 10 mg elemental zinc a day in adults."
+        },
+        "evidence": {
+          "found": "9 prevention studies with 1,449 people in Cochrane, rated low certainty. The 2025 network result is also low certainty.",
+          "missing": "A Hemilä and Chalker 2024 critique of the Cochrane review exists; I did not read its details.",
+          "move": "Full-text review of the preventive trials."
+        },
+        "form": {
+          "found": "Zinc forms in the preventive trials were not retrieved.",
+          "missing": "Whether zinc gluconate behaves differently in a daily pill.",
+          "move": "Trials that report the form."
+        },
+        "dose": {
+          "found": "This product gives 10 mg of elemental zinc a day (about 70 mg of zinc gluconate).",
+          "missing": "The dose range in the preventive trials was not retrieved.",
+          "move": "Read the dose tables of the Cochrane review."
+        }
+      },
+      "inventory": [
+        {
+          "id": "PMID:38719213",
+          "year": 2024,
+          "design": "sr_ma",
+          "n": 1449,
+          "direction": "none",
+          "access": "abstract",
+          "funding": "independent",
+          "note": "Cochrane, 34 trials in total; prevention: 9 studies, RR 0.93 (0.85 to 1.01), I2 20%, low certainty. n is the prevention pool."
+        },
+        {
+          "id": "PMID:40969681",
+          "year": 2025,
+          "design": "sr_ma",
+          "n": 101751,
+          "direction": "benefit",
+          "access": "full_text",
+          "funding": "unknown",
+          "note": "Network meta-analysis in adults. Zinc RR 0.69 (0.50 to 0.94), low certainty. n is the whole review; zinc trial count not retrieved. Overlaps with Cochrane trials."
+        }
+      ],
+      "absolute_effect": "RR 0.93 (95% CI 0.85 to 1.01) for developing a cold (Cochrane 2024); mean colds MD -0.90 (-1.93 to 0.12). Network analysis 2025: RR 0.69 (0.50 to 0.94). No absolute risk difference or NNT retrieved.",
+      "clinically_meaningful": "unknown. No MCID exists for cold incidence. The two analyses disagree, and the Cochrane range reaches no difference (1.01).",
+      "strongest_study": "Nault 2024, Cochrane review: 34 trials in total, 8,526 people; for prevention, RR 0.93 (0.85 to 1.01) in 9 studies with 1,449 people.",
+      "strongest_doubt": "The two pooled analyses disagree (RR 0.93 vs 0.69), both are low certainty, and I could not see which trials or doses drove either one. Zinc was tested alone, not with vitamin C and D.",
+      "study_that_would_move_this": "An independent large trial of 10 mg of elemental zinc a day to prevent colds in adults, or a full-text review explaining why the two analyses differ.",
+      "studied_in": {
+        "sex": "unknown",
+        "sex_note": "Not retrieved.",
+        "age_min": null,
+        "age_max": null,
+        "age_note": "Cochrane pooled adults and children; ages not retrieved.",
+        "ethnicity": "not reported",
+        "confidence": "unknown"
+      },
+      "subgroup_hypothesis_only": false
+    },
+    {
+      "name": "Treating a cold (echinacea pack)",
+      "population": "Outpatients with a cold already (not prevention)",
+      "sentence": "A 5-day echinacea, zinc and vitamin C pack gave recovery 1.39 days sooner (90% CI 1.05 to 1.73). Adding vitamin D showed no benefit or harm.",
+      "ledger": {
+        "effectPoints": "unclear",
+        "effect_basis": "Radhakrishnan 2023 (Infection and Drug Resistance, PMID 37163146) was a double-blind RCT in 360 US outpatients with an upper respiratory infection, with three arms: placebo, EZC Pak (echinacea, zinc and vitamin C for 5 days) and EZC Pak plus vitamin D. EZC Pak recovered 1.39 days faster than placebo (90% CI 1.05 to 1.73, p=0.017). Severity was 17.43% lower (90% CI 17.1 to 17.8, p=0.029). Adding vitamin D showed no benefit or harm. I read only the abstract record. Doses and funding were not visible. This is treatment of a cold already present, with a short course and an added herb. It does not show that the three vitamins and minerals prevent colds. The tier is unclear.",
+        "bodyIsRct": true,
+        "checklist": {
+          "risk_of_bias": "unknown",
+          "consistency": "unknown",
+          "precision": "concern",
+          "directness": "concern",
+          "publication_bias": "unknown"
+        },
+        "gates": {
+          "rctCount": 1,
+          "largestRctN": 360,
+          "longestRctWeeks": 0.7,
+          "chronicOutcome": false,
+          "surrogate": false,
+          "allPositiveIndustryOrOneLab": true
+        },
+        "formFit": "1",
+        "doseFit": "unknown",
+        "effective_daily_range": "Not retrieved. The pack was taken for 5 days, which is not a daily preventive regimen."
+      },
+      "detail": {
+        "effect": {
+          "found": "People with a cold recovered 1.39 days faster with the pack than with placebo (90% CI 1.05 to 1.73, p=0.017). Adding vitamin D showed no benefit or harm.",
+          "missing": "A 95% CI, doses, and any result for prevention.",
+          "move": "An independent replication with a prevention arm."
+        },
+        "evidence": {
+          "found": "One double-blind trial of 360 people, abstract only.",
+          "missing": "Funding, doses and a second trial.",
+          "move": "Open the full text and look for a replication."
+        },
+        "form": {
+          "found": "The pack also held echinacea, so it is a different product.",
+          "missing": "Which forms of zinc and vitamin C it used.",
+          "move": "Read the full methods."
+        },
+        "dose": {
+          "found": "A 5-day course, not a daily maintenance dose.",
+          "missing": "All doses.",
+          "move": "Read the full methods."
+        }
+      },
+      "inventory": [
+        {
+          "id": "PMID:37163146",
+          "year": 2023,
+          "design": "rct",
+          "n": 360,
+          "direction": "benefit",
+          "access": "abstract",
+          "funding": "unknown",
+          "note": "Three arms: placebo, echinacea-zinc-vitamin C pack, same pack plus vitamin D. Pack recovered 1.39 days faster (90% CI 1.05 to 1.73, p=0.017). Treatment, not prevention."
+        }
+      ],
+      "absolute_effect": "EZC Pak vs placebo: recovery 1.39 days faster (90% CI 1.05 to 1.73, p=0.017); severity 17.43% lower (90% CI 17.1 to 17.8, p=0.029). Vitamin D arm: no benefit or harm over the pack.",
+      "clinically_meaningful": "unknown. No MCID for cold recovery time was found. This is one trial, read at abstract level only, and it reports 90% CIs rather than the usual 95%.",
+      "strongest_study": "Radhakrishnan 2023: double-blind RCT, 360 outpatients with an upper respiratory infection; the 5-day echinacea, zinc and vitamin C pack recovered 1.39 days faster than placebo (90% CI 1.05 to 1.73).",
+      "strongest_doubt": "One trial, abstract only, unknown funding, a product with echinacea, and a treatment setting. It says nothing about daily use to prevent colds.",
+      "study_that_would_move_this": "An independent replication of the pack, plus a prevention trial of the three nutrients without echinacea.",
+      "why_positive_signal_is_unreliable": "A single trial with unseen funding and doses, and with a 90% CI instead of the usual 95%.",
+      "studied_in": {
+        "sex": "unknown",
+        "sex_note": "Not retrieved.",
+        "age_min": null,
+        "age_max": null,
+        "age_note": "Ages not retrieved. US outpatients.",
+        "ethnicity": "not reported",
+        "confidence": "unknown"
+      },
+      "subgroup_hypothesis_only": false
+    }
+  ],
+  "searches_run": [
+    "vitamin D vitamin C zinc combination common cold prevention randomized trial (web, standard)",
+    "vitamin D supplementation acute respiratory infection prevention meta-analysis individual participant data Martineau 2017 BMJ (web)",
+    "Cochrane vitamin C common cold prevention Hemila 2013 review (web)",
+    "zinc supplementation prevention of common cold systematic review Cochrane 2024 (web, two queries)",
+    "multivitamin zinc vitamin C vitamin D supplement randomized trial respiratory infection healthy adults placebo (web)",
+    "vitamin D vitamin C zinc supplement randomized placebo-controlled upper respiratory tract infection incidence healthy adults combination (web, extended)",
+    "Europe PMC REST queries for vitamin D + vitamin C + zinc RCTs on cold or respiratory infection, 2015 to 2026, including prophylaxis and cholecalciferol/ascorbic acid variants",
+    "Europe PMC record lookups by PMID for Martineau 2017, Jolliffe 2025, CORONAVIT, Nault 2024, Hemila 2013, Lenhart 2020, Fantacone 2020, Wang 2025, Radhakrishnan 2023, Sinopoli 2024",
+    "Europe PMC full text of Martineau 2017 (PMC5310969) for stratum counts, NNT and interaction P",
+    "Lenhart 2020 full text on PMC (PMC7447041); ClinicalTrials.gov API records NCT01971112 and NCT02119143",
+    "Comparative effectiveness of oral nutritional supplements for RTI prevention network meta-analysis 2025 (PMC12441711)",
+    "Exact-dose search: 1000 IU D3, 500 mg vitamin C, 10 mg zinc supplement RCT (web, extended)",
+    "NIH ODS fact sheet excerpts on vitamin C, zinc and immune function (web search restricted to ods.od.nih.gov)"
+  ],
+  "could_not_access": [
+    "PubMed pages (cookie wall), so no PubMed abstracts were opened directly; Europe PMC records were used instead.",
+    "Cochrane Library pages for the vitamin C and zinc reviews (HTTP 403). The Cochrane results come from Europe PMC abstract records, and the Hemila PDF could not be parsed.",
+    "BMJ site for Martineau 2017 (HTTP 403); the full text was read through Europe PMC instead.",
+    "Lancet/eClinicalMedicine and ScienceDirect pages for the 2025 network meta-analysis (HTTP 403); a PMC page summary was used.",
+    "NIH ODS fact sheets for vitamin C, zinc, vitamin D and immune function (HTTP 403); only search-result excerpts were seen.",
+    "Lenhart 2020 supplementary appendix S2 with the caplet doses.",
+    "Wang 2025 multivitamin-mineral cohort PDF (binary, unreadable); only the abstract record was seen.",
+    "Full texts of Jolliffe 2025, CORONAVIT, Nault 2024, Hemila 2013, Radhakrishnan 2023 and Fantacone 2020; all were read at abstract level or through summaries.",
+    "Results of registered trial NCT01971112 (Ecuador, older adults): none found; the registry record shows no results and an unknown status."
+  ],
+  "self_confidence": "medium",
+  "confidence_note": "The main finding is solid: I found no trial of this exact combination for cold prevention, and each ingredient alone showed little or no cold prevention in general adults (vitamin D OR 0.94, 0.88 to 1.00; vitamin C RR 0.97, 0.94 to 1.00; zinc RR 0.93, 0.85 to 1.01, with a conflicting 2025 estimate of 0.69). That is a finding of no direct evidence, not of a tested null for the combination. Confidence is held at medium because most sources were read at abstract level through Europe PMC and tool summaries, not full text, and several publisher pages were blocked. Some gate values (largest trial size, longest duration for the vitamin C and deficient-vitamin D rows) were not retrievable and are recorded as 0 with a note. The Cochrane vitamin C subgroup in heavily exercising people (RR 0.48) could not be checked for its CI or trial count. Registered but unreported trials may exist. The audit is an experimental benchmark and no human has verified it."
+}

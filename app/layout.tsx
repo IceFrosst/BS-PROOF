@@ -7,6 +7,8 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL("https://bs-proof-dashboard.vercel.app"),
   applicationName: "BS Proof",
+  // Keep the default explicit so client navigation away from /scan restores it.
+  referrer: "no-referrer",
   title: { default: "BS Proof · Evidence dashboard", template: "%s · BS Proof" },
   description: "Inspect retained supplement evidence runs, outcome scores, scoring arcs, quality limits, and source reports.",
   manifest: "/manifest.webmanifest",

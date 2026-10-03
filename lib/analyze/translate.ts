@@ -145,20 +145,22 @@ export function guardTranslation(source: string, translated: unknown): string | 
 const CACHE_LIMIT = 800;
 const cache = new Map<string, string>();
 
-function cacheKey(text: string): string {
-  return `${TRANSLATE_PROMPT_VERSION}\u0000${text}`;
+function cacheKey(cacheScope: string, text: string): string {
+  // A serialized tuple gives scope and text unambiguous boundaries; neither can
+  // forge another caller's key by containing a separator.
+  return JSON.stringify([TRANSLATE_PROMPT_VERSION, cacheScope, text]);
 }
 
 export function clearTranslationCache(): void {
   cache.clear();
 }
 
-function remember(text: string, translated: string): void {
+function remember(cacheScope: string, text: string, translated: string): void {
   if (cache.size >= CACHE_LIMIT) {
     const oldest = cache.keys().next().value;
     if (oldest !== undefined) cache.delete(oldest);
   }
-  cache.set(cacheKey(text), translated);
+  cache.set(cacheKey(cacheScope, text), translated);
 }
 
 /* ----------------------------- the call ------------------------------------- */
@@ -172,9 +174,12 @@ export function defaultTranslateDeps(): TranslateDeps {
 }
 
 /** Never throws. Texts the model cannot be trusted with come back as null. */
-export async function translateTexts(texts: string[], deps: TranslateDeps): Promise<TranslateResult> {
+export async function translateTexts(texts: string[], deps: TranslateDeps, cacheScope?: string): Promise<TranslateResult> {
   const base = { prompt_version: TRANSLATE_PROMPT_VERSION, model: null as string | null };
-  const result: Array<string | null> = texts.map((text) => cache.get(cacheKey(text)) ?? null);
+  // Only a server-verified caller identity enables reuse. Anonymous/direct calls
+  // remain uncached rather than sharing a public bucket.
+  const scope = typeof cacheScope === "string" && cacheScope.length > 0 ? cacheScope : null;
+  const result: Array<string | null> = texts.map((text) => scope !== null ? cache.get(cacheKey(scope, text)) ?? null : null);
   const todo = texts.map((text, i) => ({ text, i })).filter(({ i }) => result[i] === null);
   if (!todo.length) return { status: "ok", translations: result, reason: null, ...base };
   if (!deps.chatJson) {
@@ -201,7 +206,7 @@ export async function translateTexts(texts: string[], deps: TranslateDeps): Prom
         const checked = guardTranslation(text, value.translations[k]);
         if (checked !== null) {
           result[i] = checked;
-          remember(text, checked);
+          if (scope !== null) remember(scope, text, checked);
         }
       });
     }

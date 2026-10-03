@@ -140,13 +140,57 @@ export async function captureFrameToBlob(
  * `drawImage`, the shape components/scan-camera.tsx actually needs. Split
  * from `captureFrameToBlob` above so tests can mock canvas creation and
  * drawing without a real <video> element decoding frames. */
-export async function captureVideoFrame(video: HTMLVideoElement, options: CaptureOptions = {}): Promise<Blob | null> {
+export async function captureVideoFrame(video: HTMLVideoElement, options: CaptureOptions = {}, crop?: CropRect | null): Promise<Blob | null> {
+  if (crop) {
+    return captureFrameToBlob(
+      { videoWidth: crop.w, videoHeight: crop.h },
+      () => document.createElement("canvas"),
+      (ctx, width, height) => ctx.drawImage(video, crop.x, crop.y, crop.w, crop.h, 0, 0, width, height),
+      options,
+    );
+  }
   return captureFrameToBlob(
     video,
     () => document.createElement("canvas"),
     (ctx, width, height) => ctx.drawImage(video, 0, 0, width, height),
     options,
   );
+}
+
+export interface CropRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/**
+ * The part of the camera frame the person actually sees inside the on-screen
+ * guide (2026-10-03: the photo used to be the whole sensor frame, much wider
+ * than the guide). The <video> is `object-fit: cover`, so the sensor frame is
+ * scaled up and centred; this maps the guide's on-screen box back to sensor
+ * pixels. `pad` (fraction of the guide) keeps a little margin so a panel
+ * touching the corners is not clipped. Null when anything has no size.
+ */
+export function coverCropRect(
+  videoW: number,
+  videoH: number,
+  view: { left: number; top: number; width: number; height: number },
+  guide: { left: number; top: number; width: number; height: number },
+  pad = 0.06,
+): CropRect | null {
+  if (!videoW || !videoH || !view.width || !view.height || !guide.width || !guide.height) return null;
+  const scale = Math.max(view.width / videoW, view.height / videoH);
+  const ox = (view.width - videoW * scale) / 2;
+  const oy = (view.height - videoH * scale) / 2;
+  const px = guide.width * pad;
+  const py = guide.height * pad;
+  const x0 = Math.max(0, (guide.left - px - view.left - ox) / scale);
+  const y0 = Math.max(0, (guide.top - py - view.top - oy) / scale);
+  const x1 = Math.min(videoW, (guide.left + guide.width + px - view.left - ox) / scale);
+  const y1 = Math.min(videoH, (guide.top + guide.height + py - view.top - oy) / scale);
+  if (x1 - x0 < 1 || y1 - y0 < 1) return null;
+  return { x: Math.round(x0), y: Math.round(y0), w: Math.round(x1 - x0), h: Math.round(y1 - y0) };
 }
 
 let captureCounter = 0;

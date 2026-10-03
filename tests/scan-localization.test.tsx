@@ -137,13 +137,13 @@ describe("the persisted choice", () => {
     expect(text(el.querySelector("h1"))).toBe("Does your Supplement actually work?");
   });
 
-  it("exactly one language switch is visible: the PR3 top bar on Scan, the workspace's on History", async () => {
+  it("exactly one language switch is visible, the workspace top bar, on both tabs", async () => {
     stubApi();
     const el = await mountWorkspace();
     const toggles = () => Array.from(el.querySelectorAll<HTMLElement>('[data-testid="lang-toggle"]')).filter((t) => !t.closest("[hidden]"));
     expect(toggles().map((t) => t.className)).toEqual(["sc-lang"]);
     await click(Array.from(el.querySelectorAll<HTMLElement>('[role="tab"]'))[1]);
-    expect(toggles().map((t) => t.className)).toEqual(["sw-lang"]);
+    expect(toggles().map((t) => t.className)).toEqual(["sc-lang"]);
     await click(toggles()[0]);
     expect(window.localStorage.getItem(LANG_KEY)).toBe("lt");
     expect(Array.from(el.querySelectorAll('[role="tab"]')).map((t) => t.textContent)).toEqual(["Skenuoti", "Istorija"]);

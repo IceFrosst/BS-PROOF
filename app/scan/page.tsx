@@ -31,6 +31,9 @@ import "../scan-workspace.css";
  */
 export const metadata: Metadata = {
   title: "Scan",
+  // GSI validates this public origin via Referer. Send only the HTTPS origin,
+  // never a scan/history path or query; other routes keep no-referrer.
+  referrer: "strict-origin",
   robots: { index: false, follow: false, nocache: true },
 };
 

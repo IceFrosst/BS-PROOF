@@ -563,6 +563,92 @@ do not drop it.
 
 **2026-10-03 — Magnesium elemental label-dose correction (local uncommitted).** Preserved prior `printed_elemental_dose_mg` edits. This continuation fixes replay's optional-field null check, aligns `/api/analyze-label` basis to `elemental_stated`, and updates the label prompt size-limit header to v1.5. Added route parity, retained-audit refusal/control, TS/Python contradictory active-row validation, compatibility prompt basis, and stubbed Python `analyze()` tests. Added an actual ScanFlow saved-result replay regression for EN and LT: a legacy active missing `printed_elemental_dose_mg` renders `200 mg compound per serving` / `200 mg junginio porcijoje` in the rendered chip, not elemental/dash copy, and makes no scan POST. The Python elemental fixture now nulls compound dose for its printed-elemental case so the real validation contract accepts it. Focused gates (localization Vitest 20 tests, typecheck, localization ESLint, Python unittest 4 tests, and diff check) pass. No scoring constants, retained fixtures, or exact-match rules changed. **Handoff:** independent review required; do not promote until accepted.
 
+**2026-10-03 — Google origin/referrer fix:** Google Cloud origin settings were correct; production's `no-referrer` policy removed the Referer from GSI button requests. A controlled browser test on the canonical domain changed only document policy to `strict-origin`: request sent only `https://bs-proof-dashboard.vercel.app/`, Google returned 200 instead of 400 and rendered a clickable button. Owner approved a narrow permanent fix: `/scan` metadata is `strict-origin`, root metadata explicitly restores `no-referrer`; Vercel's restrictive global headers stay unchanged. Focused policy/Google tests (16), typecheck, scoped ESLint, both Python gates and build (296 pages) passed. Fresh independent source/security review accepted the narrow fix. **Handoff:** publish the verified change, then check hard-load/soft-navigation metadata and Google consent → Supabase session → private Scan/History/replay. Button success is not proof of the full flow. No cookies, credentials, provider settings or authentication enforcement changed.
+
+**2026-10-03 — Original-contract research comparison PUBLISHED (docs and assets only; NO app, scorer, constant, schema,
+prompt, SQL, env, provider or service change).** `docs/design/research-original-contract-comparison/` (README,
+`manifest.json`, `report.csv`, `SHA256SUMS`, `scripts/verify_publication.py`, 16 images, 10 raw audits) is the actual
+comparison of the original `audit-v0.4` contract run by Sonnet 5.5 xhigh (`claude-sonnet-5-5`) and Opus 5.5 high
+(`claude-opus-5-5`) on five frozen typed cases (elemental Mg and Zn; 1000 mg EPA+DHA, not total oil; vitamin C chemical form
+unspecified; adult, health status and serving count unknown), 10 of 10 captures complete, no reruns, no turn/time/budget
+caps. It **supersedes** the "research comparison preview shared" entry below and the redo request; the old preview under
+`docs/design/research-benchmark-preview/` is kept only as an archive with an OBSOLETE banner (no asset deleted).
+- **What is published.** Only the 16 fully annotated compositions (1 overview + 5 side-by-side + 10 individual), byte-identical
+  to the reviewed `parallel-render` set (sha256 preserved), and the 10 raw `audit.json` byte-identical to the immutable
+  `parallel-v2` captures (recorded hashes equal; canonical 2020-12 schema; the CLI wire copy is canonical minus only
+  `$schema`). NOT published: raw CLI streams/stderr/system prompts/request files/per-capture reports (cost, session ids), the
+  108 card-crop and supplemental captures (non-standalone), any "General score" tile or ranking. `report.csv` carries the
+  actual wall time and aggregate access counts per capture, labelled contention-affected, not an SLA, no ranking.
+- **How far to trust it (kept in every image and in the README).** Experimental, unvalidated rubric, not clinical advice, no
+  provider winner, no ranking, no clinical source validation, no formal stopping rule or exhaustiveness claim. Access
+  numbers: 311 WebFetch = 116 non-access + 21 Haiku refusals + AT MOST 174 content-bearing Haiku 4.5 summaries (an upper bound,
+  not papers read). Case 5 shows only `outcomes[0]` (exact combination); its other rows are DO_NOT_GRADE and never averaged.
+  W4 ledger inconsistencies are recorded, NOT repaired (Opus case 1 row 3, Opus case 2 row 2; Sonnet case 5 rows 2-5 are
+  hidden), so those displays are untrustworthy; W6 (Opus case 2 Lopresti 2019, abstract via search) is borderline. Unresolved
+  and not-string-found IDs stay plain text with no fabricated link. The cards are the unchanged `/scan` card at `4a87e22`
+  (runtime identical to `6a1734d`) fed through a non-production fixture that bypasses the production matcher: **not**
+  production retained audits (the "Retained audit - not reverified" wording is the existing card text), not an
+  end-to-end photo scan, not today's `/scan`; installed Next 16.3.8 versus that commit's 16.3.0 lock (React 19.2.8) is
+  disclosed. No scientific-grade authorization changed; the three approvable cached datasets are separate; no new production
+  score exists.
+- **Reviews (independent, read-only).** Fidelity: first review NEEDS WORK, overlay/metadata fix, fresh recheck PASS; source
+  and method: capture integrity PASS (its reporting-layer NEEDS WORK was closed by the addendum); access addendum: PASS.
+- **One disclosure choice for the owner pass.** 15 of the 16 images print the raw audit's location in the private build
+  scratch area (no user name, no credential). They were NOT altered, because the byte hashes and the fidelity PASS are the
+  point of the set; the README says so and points at `audits/`.
+- **Gates at publication (fresh, this tree; private logs under the publisher's build scratch):**
+  `docs/design/research-original-contract-comparison/scripts/verify_publication.py` 35/35 (36/36 with `--source-dir` against
+  the private immutable captures) and `--self-test` 21/21 mutations caught (the exclusive ones prove one named check bites);
+  an independent Ajv 2020 (strict, the repo's ajv 8.18.0) check of the 10 audits: 10 valid, four mutated copies rejected;
+  `pipeline.invariants` and `pipeline.selftest` ALL PASSED; `git diff --cached --check` clean; `npm run typecheck` 0 errors;
+  `npm run lint` 0 errors / 6 pre-existing warnings; `npm run test:unit` 58 files / 848 passed (the tree includes the 13:27 translation-cache commit); ordinary `npm run build` OK;
+  `npm audit --omit=dev --audit-level=high` 0 vulnerabilities. Playwright e2e was NOT run (docs and assets only, no UI/API
+  change); the earlier release's 838 passed / 10 skipped belongs to that earlier tree and is not claimed for this one. The
+  Claude Code OWNER verification (read-only, `claude-sonnet-5-5` at xhigh, credential-free snapshot; a full pass and a delta
+  confirmation) and its verdict are recorded in the commit body, not here.
+- **Handoff (publication, 2026-10-03):** the root publication writer is COMPLETE with the commit that carries this text
+  (`git log -1 -- docs/design/research-original-contract-comparison/manifest.json`). No other LOCAL process wrote to the root
+  checkout (a point-in-time check of process working directories); other people do push to `main` (the founder account and
+  Ignas pushed 19 new commits to `main` after the `3ef1218` record, which is why the root was fast-forwarded to `eb30db0`
+  before anything was edited). Three
+  independent components remain in PRIVATE worktrees, each unmerged, unpushed to `main` and not deployed, besides other old
+  unmerged worktrees (see the reconciliation below). Not done and not claimed: any clinical or source validation of the audits,
+  a re-render at today's `/scan`, any change to production behaviour.
+
+**Status reconciliation (2026-10-03, 13:08-13:38 EEST). Commits, branches and worktree states below were read from `git`; the Vercel
+status from the GitHub commit-status/deployments API; HTTP 200s from `curl`; run ids and the provider-timeout note are as
+reported by the parent orchestrator (not independently checked); none of it comes from the older entries.**
+`main` = `origin/main` = `d89bf92` (the founder account's 13:27 translation-cache release, listed just below this entry; this
+publication not yet included at the time of the check); Vercel Production status "success" for `700557a`, `eb30db0` and
+`d89bf92`; canonical `/scan/`, `/` and `/tests/supplements/` return 200 (curl, 13:37). **The older statements
+that the PR3 landing and the EN/LT localization are "NOT merged to main and NOT deployed", and that PR3 / full EN-LT had "not
+started", are SUPERSEDED:** Ignas' PR3 landing and the shared EN/LT localization were merged to `main` by others at `700557a`
+(12:11; checks recorded in `docs/TEAM-STATUS-2026-10-03.md`: typecheck, lint, vitest 844/844, build; NOT run: Playwright e2e,
+a real phone, real Google sign-in). This entry re-assesses none of that: the founder-account entry below (13:27) calls the older WIP notes historical
+checkpoints and says the LT copy was proofread by a teammate, and the review gates (C1/C2/W1-W6 above) are not claimed
+closed here. **Google sign-in:** the 12:30 team status recorded `origin_mismatch`; its 13:27 update says the user saved the
+exact canonical origin on the deployed Google client, but the last fresh browser check (theirs, not repeated here) still
+returned HTTP 400 origin-not-allowed, and propagation plus a real consent/session/scan/History verification remain open, so
+scans stay blocked until a person observes it working. Separate PRIVATE component worktrees at the time of the check (not `main`, not
+deployed, whatever their commits say): PR3 / full EN-LT worker run `197cdde3`, branch `pi-subagents/pr3-enlt-3ef1218-s0-t0` at
+`4f71da7` plus about 30 uncommitted files (a different, unmerged variant than what Ignas merged); PC research backend, branch `pc-research-backend-2555166-s0-t0`, local commits
+`f1a8b3b` then `5019164` (12:55, "no default run limits; strict 2020-12 local schema check fails closed (review fix)"; fresh
+review/fix run `71458ad6`; unpushed, not owner-verified), distinct from the pushed WIP branches
+`feat/scan-research-queue-20261003` and `feat/pc-research-worker-20261003` that the team status lists as deliberately NOT
+merged; Google PKCE alternative component in `/tmp/bsproof-benchmark-preview-publication` (branch
+`pi-subagents/google-pkce-component-3ef1218`, base `3ef1218`, about 30 uncommitted files; run `c505591f`, reported as resumed
+after a provider request timeout). Other unmerged worktrees also exist and are not part of this: the old
+`preview/restore-four-evidence-lines` preview worktree (13 commits ahead of `main`), `bs-proof-aykhan` (2 commits ahead, 2
+uncommitted files) and the finished render worktree (branch `pi-subagents/benchmark-visuals-75a7b4f-2971-s0-t0`, clean, at `4a87e22`). **The pending PKCE assessment concerns the CANONICAL `bs-proof-dashboard.vercel.app`**, not the other account's
+`bs-proof.vercel.app` (that one is only the separate redirect-retirement question in `Next`). It awaits a HUMAN approval, as
+reported by the parent orchestrator and NOT applied by anyone here: an EXACT add-only Supabase redirect entry
+`https://bs-proof-dashboard.vercel.app/auth/callback/`, preserving the existing 18 entries, the site URL and the providers.
+That alternative needs no edit to the shared Google Cloud client, but a real Google consent and token exchange is still
+unverified; it may prove unnecessary if the origin the user saved on the Google client takes effect. Nothing in the Google, Supabase or Vercel configuration was changed by this publication.
+
+**2026-10-03 — Translation cache isolation release:** `translateTexts` scopes reusable entries to the authenticated Supabase user ID supplied by the server route; callers without verified identity bypass cache reads and writes. Serialized tuple keys prevent scope/text collisions; identities never enter model prompts, responses or logs. Focused translation/client tests passed (85), typecheck, changed-file ESLint, both Python gates, diff check, and production build (296 pages) passed. Fresh independent Anthropic source/security review accepted the patch; owner Claude Code verification and live model translation remain separate, unperformed checks. Numeric/unit guards and visible unverified disclosure remain unchanged: word-level mistranslation is still possible. Ignas's logo commit `eb30db0` is preserved. **Handoff:** this is the reviewed cache-only release; the separate magnesium patch is still uncommitted and needs regression completion/review. Research provisioning/activation remains prohibited by the current owner handoff; Google origin was saved by the user but last fresh browser check still returned origin rejection.
+
+
 **2026-10-03 — Shared persisted EN/LT localization of the whole `/scan` workspace, integrated with Ignas PR3 and the local UI
 merge `17359c5`: IMPLEMENTED on branch `fix/scan-localization-20261003`; the localization continuation below is an UNREVIEWED WIP checkpoint, pushed only to this branch, NOT merged to main and NOT deployed.**
 Merges on this branch: `origin/main` `3ef1218` (docs), `origin/ignas-pr3` `1f86403` (Ignas ancestry kept) and the local
@@ -573,7 +659,7 @@ only conflict surface is `components/scan-flow.tsx`). **Handoff:** actual-source
 UI branch, a Lithuanian proofread of `lib/i18n/copy/*` and `prompts/translate.md`, then push; nothing is published.
 
 - **2026-10-03 localization WIP checkpoint (not a fix/review PASS).** Partial pre-existing uncommitted edits were preserved and checkpointed: translation route, server guard/client limits, AI translation disclosure, locale/UI wiring, vision limits, and scan/translation tests. A narrow translation test passed (71 tests), along with `pipeline.invariants`, `pipeline.selftest`, and `git diff --check`; these do not amount to full localization verification. Source review report `locale-source-review.md` (session output `e80b1614-372a-4941-9ea8-5c46fa6ab284`) previously found C1 (successful model translations lacked an always-visible unverified disclosure) and C2 (sign/comparator/unit safety guard incomplete), plus W1-W6: translator kill-switch, request byte cap, blocked-storage locale fallback, dose-string clip edge cases, oversized-client batch loop, and stale failure state after auth changes. Current partial edits exist in the C1/C2/route/client/locale/vision surfaces, but have NOT been independently reviewed against each issue; treat every cited finding as unverified until a fresh source review and focused tests confirm it. Lithuanian proofreading, broader changed-file tests/typecheck/lint, and end-to-end behavior remain undone. This is a private WIP branch save only; no production/release claim.
-- **Next for localization:** review all partial code against C1/C2 and W1-W6, specifically confirm successful translations visibly marked unverified, originals accessible, signs/comparators/units fail closed, route byte cap and kill-switch, client oversized-string termination and retry state; add/fix tests as needed. Then run focused localization tests, typecheck and changed-file lint; independent review and Lithuanian proofread required before any release/promotion.
+- **Next for localization:** verify deployed cache release; retain display-only/unverified caveats, and run real signed-in EN/LT scan → History → replay once Google origin authorization propagates. Prior UI/localization work is merged and LT copy was teammate-proofread; older WIP notes below are historical checkpoints, not current release blockers.
 
 - **Integration decisions (PR3 + UI + localization).** `scan-flow.tsx` keeps the released auth/History/replay code and
   the UI merge's behaviour: static "This check covers" list (no timer, no done ticks, no determinate bar -- `/api/scan`
@@ -1877,6 +1963,23 @@ still the unmeasured SR-uplift experiment (Next item 3).
 - **Magnesium dose correction (local uncommitted work):** EN/LT legacy replay rendered-chip assertions and realistic Python elemental fixture are implemented; focused Vitest (20 tests), typecheck, ESLint, Python unittest (4 tests), and diff check pass. Independent review required before promotion. No constants/exact-match changes.
 - **Immediate blocker (owner action):** add `https://bs-proof-dashboard.vercel.app` to the NEW Google OAuth client's Authorized JavaScript origins, then verify Google button + real consent/session, phone scan, History/replay, and live owner query. Current production sign-in is still blocked despite the READY redeploy; do not claim auth works until observed end-to-end.
 - **Resume published WIP without merging blindly:** UI branch `fix/scan-ignas-en-lt-20261003` (`c898d03`) needs malformed/non-array active handling and History/signout reachability proof; localization branch `fix/scan-localization-20261003` (`e3a748b`) needs independent C1/C2 and all-source-findings review, focused remaining checks and Lithuanian proofread. Research queue (`00b17d9`) and consumer (`a74160e`) still require contract/client, UI/presence/waiting states, source provenance and final security/owner review; do not provision SQL/token/worker or activate flag.
+- **Research comparison: PUBLISHED 2026-10-03 (top entry of `Current state`).** The benchmark reuse rule below was followed
+  (the immutable `parallel-v2` audits and the reviewed `parallel-render` set were reused; no model reruns, no duplicate
+  capture), so the bullets below about waiting for those workflows, redoing the original audit and finishing the detailed
+  benchmark visuals are DONE/SUPERSEDED. Still open: independent clinical and source validation of the audits (none was done;
+  the images must stay labelled experimental), repairing or re-auditing the W4 rows (never silently), and a re-render at
+  today's `/scan` only if a new capture and review are run. Never turn the access numbers into a "papers read" claim or any
+  ranking.
+- **Stale statements SUPERSEDED, 2026-10-03 13:3x (the old text is left in place, not edited; this note points at it):** "PR3 / full EN-LT not
+  started", the localization header that says it is not on `main`, and the heads (`c898d03`, `e3a748b`) in "Resume published
+  WIP" predate the merge to `main` at `700557a`; see "Status reconciliation" in `Current state` (their remaining review gates
+  now apply to what is on `main`; the private PR3, PC-backend and PKCE worktrees are separate and unmerged). The pending PKCE assessment belongs to the canonical
+  `bs-proof-dashboard.vercel.app`, not to `bs-proof.vercel.app`.
+- **Human steps still open (nothing here applied or observed):** the user saved the canonical origin on the Google client
+  (13:27 team status) but sign-in was still refused at the last check, so wait for propagation and re-check; the alternative
+  exact add-only Supabase redirect entry `https://bs-proof-dashboard.vercel.app/auth/callback/` (keep the 18 existing entries,
+  the site URL and the providers) remains an optional human approval; either way a person must run a real sign-in -> scan ->
+  History -> replay.
 - **Google-required scan + private History: provisioned 2026-10-03; real-service verification still open (see
   "Release stage" in `Current state`; runbook `docs/SYSTEM_DESIGN.md` §7d).** DONE at release: preflight, SQL applied
   and verified on the shared project, URL/key pair checked, Vercel production env set, Google provider read only.
