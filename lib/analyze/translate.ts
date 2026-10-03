@@ -34,9 +34,7 @@ const ROOT = process.cwd();
 /** Bump together with prompts/translate.md. Its own cache domain (invariant 3). */
 export const TRANSLATE_PROMPT_VERSION = "translate-lt-v1.0";
 
-export const TRANSLATE_MAX_ITEMS = 24;
-export const TRANSLATE_MAX_ITEM_CHARS = 4_000;
-export const TRANSLATE_MAX_TOTAL_CHARS = 24_000;
+export { TRANSLATE_MAX_ITEMS, TRANSLATE_MAX_ITEM_CHARS, TRANSLATE_MAX_TOTAL_CHARS, TRANSLATE_MAX_BODY_BYTES } from "@/lib/i18n/translate-limits";
 
 export type TranslateStatus = "ok" | "unavailable";
 
@@ -56,9 +54,65 @@ export interface TranslateDeps {
 
 /* ----------------------------- the guard ----------------------------------- */
 
-/** Every number-like token, e.g. "4,000", "0.048", "2.39", "10". */
+/*
+ * What the guard compares is not the bare digits but the whole numeric FACT as
+ * written: the sign or comparator attached in front (-, −, +, ±, <, >, ≤, ≥,
+ * ≈, ~, =) + the number + the percent sign or measurement unit attached behind
+ * (%, mg, g, mcg, IU, mL, kg/m², mmHg ...). "−0.31" -> "0.31", "p<0.05" ->
+ * "p>0.05", "10 mg" -> "10 g" and "95%" -> "95" are all DIFFERENT facts, so the
+ * translation is refused and the screen keeps the English.
+ *
+ * Whitespace between the parts is ignored ("p < 0.05" == "p<0.05",
+ * "10 mg" == "10mg", "95 %" == "95%"), every dash-like character counts as the
+ * same minus (hyphen, non-breaking hyphen, en/em dash, U+2212), "<=" is "≤".
+ * An ASCII/typographic dash only counts when it touches the number ("5-10"
+ * keeps "-10" as a fact, so "5 10" is refused; "Omega-3" -> "Omega 3" too:
+ * fail-closed). Only SYMBOL units are matched, and only at a word boundary:
+ * words that really are translated ("weeks", "days", "grams") are not facts,
+ * and neither are "m"/"h"/"d", which are ordinary Lithuanian abbreviations
+ * ("2019 m.", "val.") and would refuse every year.
+ * What this cannot see (the words "less than", "increase", "not") stays the
+ * prompt's job -- see prompts/translate.md -- and is listed as a limit in
+ * CLAUDE.md.
+ */
+const DASHES = "\\-\u2010-\u2015\u2212\uFE63\uFF0D";
+const NUMBER = "\\d(?:[\\d.,]*\\d)?";
+const UNITS = [
+  "mcg", "µg", "μg", "ug", "mg", "kg", "g", "ng", "pg", "IU", "mEq", "mmol", "µmol", "μmol", "nmol", "pmol", "mol",
+  "kcal", "kJ", "cal", "mmHg", "mL", "ml", "dL", "dl", "L", "mm", "cm", "µm", "μm", "nm", "kDa", "Da", "Hz",
+  "ppm", "ppb", "CFU", "cfu", "bpm", "min",
+]
+  .sort((x, y) => y.length - x.length)
+  .join("|");
+const PER_UNITS = "kg|g|mg|mcg|µg|μg|L|mL|ml|dL|dl|m²|m2|cm²";
+const WORD_CHAR = "A-Za-z\\u00C0-\\u024F";
+const FACT = new RegExp(
+  // prefix: comparator / sign run (U+2212 may be spaced from the digit; the others must touch it)
+  `((?:[<>≤≥≈~±+=]\\s{0,2}|\\u2212\\s{0,2}|[${DASHES}](?=[\\d<>≤≥≈~±+=${DASHES}]))*)` +
+    `(${NUMBER})` +
+    // suffix: percent / degree / a symbol unit (optionally per another), at a word boundary
+    `(?:\\s{0,2}(%|‰|°[CF]?|(?:${UNITS})(?:\\/(?:${PER_UNITS}))?(?![${WORD_CHAR}\\d])))?`,
+  "g",
+);
+
+function canonicalPrefix(raw: string): string {
+  return raw
+    .replace(/\s+/g, "")
+    .replace(new RegExp(`[${DASHES}]`, "g"), "-")
+    .replace("<=", "≤")
+    .replace(">=", "≥")
+    .replace("+-", "±");
+}
+
+function canonicalSuffix(raw: string): string {
+  return raw.replace(/\s+/g, "").replace(/^[µμ]/, "µ").replace(/^ml/, "mL").replace(/^dl/, "dL").replace(/^cfu/, "CFU");
+}
+
+/** Every numeric fact as written, e.g. "-0.31", "<0.05", "95%", "10mg", "4,000", sorted. */
 function numberTokens(text: string): string[] {
-  return (text.match(/\d(?:[\d.,]*\d)?/g) ?? []).slice().sort();
+  const facts: string[] = [];
+  for (const m of text.matchAll(FACT)) facts.push(`${canonicalPrefix(m[1])}${m[2]}${canonicalSuffix(m[3] ?? "")}`);
+  return facts.sort();
 }
 
 /** Text inside straight or curly double quotes: verbatim source quotes. */

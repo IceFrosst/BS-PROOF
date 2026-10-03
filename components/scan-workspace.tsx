@@ -68,9 +68,9 @@ export function ScanWorkspace({ catalog }: { catalog: CatalogIngredient[] }) {
 
   // Display translation asks the server with the same bearer token a scan uses.
   const { configured, getAccessToken, userId } = auth;
-  const translateHeaders = useCallback<TranslateHeaders>(async (): Promise<Record<string, string> | null> => {
+  const translateHeaders = useCallback<TranslateHeaders>(async (options): Promise<Record<string, string> | null> => {
     if (!configured) return {};
-    const token = await getAccessToken({ userId });
+    const token = await getAccessToken({ userId, forceRefresh: options?.forceRefresh });
     return token ? { Authorization: `Bearer ${token}` } : null;
   }, [configured, getAccessToken, userId]);
 
@@ -78,7 +78,7 @@ export function ScanWorkspace({ catalog }: { catalog: CatalogIngredient[] }) {
   const goToScan = useCallback(() => setTab("scan"), []);
 
   return (
-    <TranslationProvider getHeaders={translateHeaders}>
+    <TranslationProvider getHeaders={translateHeaders} ownerKey={userId}>
     <div className="scan-workspace">
       <div className="sw-bar">
       <div className="sw-tabs" role="tablist" aria-label={t.workspaceLabel}>

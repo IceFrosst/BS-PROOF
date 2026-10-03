@@ -37,6 +37,8 @@ export function normalizeLang(value: unknown): Lang {
 
 /** Stored language, or English when storage is blocked / empty / unknown. */
 export function readStoredLang(): Lang {
+  const remembered = memoryChoice();
+  if (remembered !== null) return remembered;
   try {
     return normalizeLang(window.localStorage.getItem(LANG_KEY));
   } catch {
@@ -44,16 +46,34 @@ export function readStoredLang(): Lang {
   }
 }
 
-// Only when storage is BLOCKED (reading it throws) is the choice kept in
-// memory, so it still switches for this visit. Whenever storage works it is
-// the single source of truth -- a stale in-memory copy never overrides it.
+// The in-memory copy exists ONLY while storage cannot be WRITTEN (setItem
+// throws -- quota, Safari private mode, a locked-down profile), whether or not
+// reading still works: then it is the visit's choice and wins over whatever
+// is readable, so the toggle still switches. It belongs to the storage object
+// that failed (`memoryStore`): a different/replaced storage, or the next
+// successful write, drops it and storage is the single source of truth again.
 let memoryLang: Lang | null = null;
+let memoryStore: Storage | null = null;
+
+function currentStore(): Storage | null {
+  try {
+    return window.localStorage ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function memoryChoice(): Lang | null {
+  return memoryLang !== null && currentStore() === memoryStore ? memoryLang : null;
+}
 
 function snapshot(): Lang {
+  const remembered = memoryChoice();
+  if (remembered !== null) return remembered;
   try {
     return normalizeLang(window.localStorage.getItem(LANG_KEY));
   } catch {
-    return memoryLang ?? "en";
+    return "en";
   }
 }
 
@@ -61,8 +81,10 @@ export function writeLang(next: Lang): void {
   try {
     window.localStorage.setItem(LANG_KEY, next);
     memoryLang = null;
+    memoryStore = null;
   } catch {
     memoryLang = next;
+    memoryStore = currentStore();
     /* storage blocked: the in-memory choice still applies for this visit */
   }
   window.dispatchEvent(new Event(CHANGE_EVENT));
@@ -71,6 +93,7 @@ export function writeLang(next: Lang): void {
 /** Test seam: forget the in-memory copy so the stored value is read again. */
 export function resetLangMemory(): void {
   memoryLang = null;
+  memoryStore = null;
 }
 
 function subscribe(listener: () => void): () => void {

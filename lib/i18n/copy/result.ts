@@ -197,6 +197,8 @@ export interface ResultCopy {
   // translation status
   translating: string;
   translationPartial: string;
+  machineTranslated: string;
+  showOriginal: string;
 }
 
 const EN: ResultCopy = {
@@ -395,6 +397,8 @@ const EN: ResultCopy = {
   persistenceStatus: {},
   translating: "Translating…",
   translationPartial: "Some text is shown in the original English.",
+  machineTranslated: "Some text on this page is machine-translated from English and has not been checked by a person. The English original is the record.",
+  showOriginal: "Show the English original",
 };
 
 const LT: ResultCopy = {
@@ -615,6 +619,8 @@ const LT: ResultCopy = {
   },
   translating: "Verčiama…",
   translationPartial: "Dalis teksto rodoma originalia anglų kalba.",
+  machineTranslated: "Dalis šio puslapio teksto išversta automatiškai iš anglų kalbos ir žmogaus netikrinta. Tikrasis įrašas – angliškas originalas.",
+  showOriginal: "Rodyti anglišką originalą",
 };
 
 export const RESULT_COPY: Record<Lang, ResultCopy> = { en: EN, lt: LT };

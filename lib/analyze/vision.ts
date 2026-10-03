@@ -137,9 +137,14 @@ const OPTIONAL_DEFAULTS: Record<string, unknown> = {
  *
  *  - Identifier fields (ingredient_vocab_id, form_vocab_id) are NEVER cut: a
  *    shortened id is a different id. They still fail closed.
- *  - A string is cut back to a whole word and never ends on a bare number, so
- *    "Zinc 15 mg" cannot become "Zinc 1" or a unitless "Zinc 15". Dropped
- *    trailing words are dropped, not rewritten.
+ *  - A string is cut back to a whole word, and ONLY when what is dropped holds no
+ *    number a person would read as a dose or strength ("15 mg", "(50", "1,000",
+ *    "5%"). A tail that carries one -- or a cut that would leave a bare number
+ *    ("Zinc 15") or no word boundary at all -- is not clipped: the string stays
+ *    over-long and the read fails closed. Digits inside a name ("D3", "K2",
+ *    "B12", "menaquinone-7") are not doses and may be dropped with the tail.
+ *  - `dose_unit_as_printed` (top level and per active) is the printed strength
+ *    itself: it is NEVER cut and fails closed when over its limit.
  *  - The dosed-active lists (`actives`, `other_actives`) are NEVER shortened:
  *    silently losing the 31st active would hide it from the multi-active
  *    compatibility check. Over the schema's item limit they still fail closed.
@@ -147,22 +152,33 @@ const OPTIONAL_DEFAULTS: Record<string, unknown> = {
  *    claims) keep their first items in panel order, as the prompt asks.
  *  - Types, enums, required fields and minimums are untouched and fail closed.
  */
-const NEVER_CUT_KEYS = new Set(["ingredient_vocab_id", "form_vocab_id"]);
+const NEVER_CUT_KEYS = new Set(["ingredient_vocab_id", "form_vocab_id", "dose_unit_as_printed"]);
 const NEVER_SHORTEN_LISTS = new Set(["actives", "other_actives"]);
 
 type SchemaNode = { maxLength?: number; maxItems?: number; items?: SchemaNode; properties?: Record<string, SchemaNode> };
 let labelSchemaProps: Record<string, SchemaNode> | null = null;
 
-/** Cut to at most `max` characters on a word boundary, never ending on a bare number. */
+/** A number at the start of a token: reads as a dose/strength ("15", "(50", "1,000", "5%", "500mg"),
+ * unlike a digit glued into a name ("D3", "K2", "B12", "menaquinone-7"). */
+const DOSE_LIKE_NUMBER = /(?:^|[\s(\[/])\d[\d.,]*/;
+
+/**
+ * Cut to at most `max` characters on a word boundary. Returns the text
+ * UNCHANGED (still over-long, so the schema check fails the read closed) when
+ * the cut would drop a dose-like number, leave a bare number, or has no word
+ * boundary to cut at.
+ */
 function clipText(text: string, max: number): string {
   if (text.length <= max) return text;
   let cut = text.slice(0, max);
   if (!/\s/.test(text.charAt(max))) {
     const space = cut.search(/\s\S*$/);
-    if (space > 0) cut = cut.slice(0, space);
+    if (space <= 0) return text;
+    cut = cut.slice(0, space);
   }
-  cut = cut.replace(/(?:\s+[\d.,]+)+\s*$/, "").trimEnd();
-  return cut.length > 0 ? cut : text.slice(0, max);
+  cut = cut.replace(/(?:\s+[(\[]?[\d.,]+)+\s*$/, "").trimEnd();
+  if (cut.length === 0 || DOSE_LIKE_NUMBER.test(text.slice(cut.length))) return text;
+  return cut;
 }
 
 function clip(value: unknown, node: SchemaNode | undefined, keepAllItems = false): unknown {
@@ -175,7 +191,7 @@ function clip(value: unknown, node: SchemaNode | undefined, keepAllItems = false
   if (value && typeof value === "object" && node.properties) {
     const row = value as Record<string, unknown>;
     for (const [key, child] of Object.entries(node.properties)) {
-      if (key in row) row[key] = clip(row[key], child);
+      if (key in row && !NEVER_CUT_KEYS.has(key)) row[key] = clip(row[key], child);
     }
   }
   return value;
@@ -206,15 +222,22 @@ export function validateLabel(obj: Record<string, unknown>): LabelRead {
         if (a && typeof a === "object") {
           const row = a as Record<string, unknown>;
           return {
-            name: String(row.name ?? "").slice(0, 120),
+            // No silent .slice() here: an over-long name/unit/form goes on to
+            // clipToLabelSchema (word-safe, dose-safe) or fails the schema check.
+            name: String(row.name ?? ""),
             compound_dose_mg: typeof row.compound_dose_mg === "number" ? row.compound_dose_mg : null,
-            dose_unit_as_printed: row.dose_unit_as_printed == null ? null : String(row.dose_unit_as_printed).slice(0, 60),
-            form_text: row.form_text == null ? null : String(row.form_text).slice(0, 120),
+            dose_unit_as_printed: row.dose_unit_as_printed == null ? null : String(row.dose_unit_as_printed),
+            form_text: row.form_text == null ? null : String(row.form_text),
           };
         }
         return null;
       })
       .filter((a): a is LabelActive => Boolean(a && a.name));
+  }
+  // An other_actives entry that is not a string (an object, a number) would be
+  // dropped by the filter below and hide a dosed active: refuse the read.
+  if (Array.isArray(obj.other_actives) && obj.other_actives.some((x) => x !== null && x !== undefined && typeof x !== "string")) {
+    throw new LabelReadError("other_actives entries must be strings");
   }
   for (const key of ["certifications", "warnings_printed", "claims_printed", "other_actives"]) {
     if (!Array.isArray(obj[key])) obj[key] = [];

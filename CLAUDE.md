@@ -562,13 +562,16 @@ do not drop it.
 ## Current state
 
 **2026-10-03 — Shared persisted EN/LT localization of the whole `/scan` workspace, integrated with Ignas PR3 and the local UI
-merge `17359c5`: IMPLEMENTED on branch `fix/scan-localization-20261003`, committed, NOT pushed, NOT deployed.**
+merge `17359c5`: IMPLEMENTED on branch `fix/scan-localization-20261003`; the localization continuation below is an UNREVIEWED WIP checkpoint, pushed only to this branch, NOT merged to main and NOT deployed.**
 Merges on this branch: `origin/main` `3ef1218` (docs), `origin/ignas-pr3` `1f86403` (Ignas ancestry kept) and the local
 UI merge `17359c5` (`/tmp/bsproof-ui-en-lt`, branch `fix/scan-ignas-en-lt-20261003`, itself UNPUBLISHED and with an
 open independent verification -- the external reviewer's "NEEDS WORK" had no diff, so it means *unverified*, not a
 found defect). A separate fresh UI fixer/verifier owns that worktree; if it moves `17359c5`, re-merge it here (the
 only conflict surface is `components/scan-flow.tsx`). **Handoff:** actual-source review of this branch + the
 UI branch, a Lithuanian proofread of `lib/i18n/copy/*` and `prompts/translate.md`, then push; nothing is published.
+
+- **2026-10-03 localization WIP checkpoint (not a fix/review PASS).** Partial pre-existing uncommitted edits were preserved and checkpointed: translation route, server guard/client limits, AI translation disclosure, locale/UI wiring, vision limits, and scan/translation tests. A narrow translation test passed (71 tests), along with `pipeline.invariants`, `pipeline.selftest`, and `git diff --check`; these do not amount to full localization verification. Source review report `locale-source-review.md` (session output `e80b1614-372a-4941-9ea8-5c46fa6ab284`) previously found C1 (successful model translations lacked an always-visible unverified disclosure) and C2 (sign/comparator/unit safety guard incomplete), plus W1-W6: translator kill-switch, request byte cap, blocked-storage locale fallback, dose-string clip edge cases, oversized-client batch loop, and stale failure state after auth changes. Current partial edits exist in the C1/C2/route/client/locale/vision surfaces, but have NOT been independently reviewed against each issue; treat every cited finding as unverified until a fresh source review and focused tests confirm it. Lithuanian proofreading, broader changed-file tests/typecheck/lint, and end-to-end behavior remain undone. This is a private WIP branch save only; no production/release claim.
+- **Next for localization:** review all partial code against C1/C2 and W1-W6, specifically confirm successful translations visibly marked unverified, originals accessible, signs/comparators/units fail closed, route byte cap and kill-switch, client oversized-string termination and retry state; add/fix tests as needed. Then run focused localization tests, typecheck and changed-file lint; independent review and Lithuanian proofread required before any release/promotion.
 
 - **Integration decisions (PR3 + UI + localization).** `scan-flow.tsx` keeps the released auth/History/replay code and
   the UI merge's behaviour: static "This check covers" list (no timer, no done ticks, no determinate bar -- `/api/scan`
@@ -1877,8 +1880,7 @@ still the unmeasured SR-uplift experiment (Next item 3).
   for everyone, check the `SUPABASE_URL` / service-key pair first (a wrong pair looks like an expired session). The
   10 dev-only `npm audit` findings remain (see the pass-1 entry).
 - **After Google, in this order: PR3 / full EN–LT translation, then live PC research.** PR3 + the full EN–LT pass are
-  integrated on `fix/scan-localization-20261003` (see the top of `Current state`), unpushed, awaiting actual-source
-  review and a Lithuanian proofread of `lib/i18n/copy/*` and `prompts/translate.md`. Live PC research was not
+  integrated on `fix/scan-localization-20261003` (see the top of `Current state`); a partial localization continuation is saved as an unreviewed branch WIP checkpoint, NOT main/deployed. Follow the localization Next checklist in `Current state`: fresh actual-source review, remaining gate checks and Lithuanian proofreading of `lib/i18n/copy/*` and `prompts/translate.md` are required before any promotion. Live PC research was not
   started. Redo the original audit; the earlier categorical benchmark is not a valid exact-UI comparison.
 
 - Finish review of the detailed benchmark visuals; preserve exact product/dose

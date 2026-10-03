@@ -93,7 +93,7 @@ import { FLOW_COPY } from "@/lib/i18n/copy/flow";
 import { RESULT_COPY, enumWord, ledgerWord, populationPieces, strengthLabel } from "@/lib/i18n/copy/result";
 import { doseNoteText, doseReadingBody, knownServerText } from "@/lib/i18n/deterministic";
 import { useLang, type Lang } from "@/lib/i18n/locale";
-import { TranslationProvider, TranslationStatus, useHasTranslationProvider, useTr } from "@/lib/i18n/translate-client";
+import { TranslationProvider, TranslationStatus, useHasTranslationProvider, useTr, type TranslateHeaders } from "@/lib/i18n/translate-client";
 
 type Basis = keyof ScanAnalysis["basis_legend"];
 type NullableNumber = number | null;
@@ -574,13 +574,13 @@ export function ScanFlow(props: ScanFlowProps) {
 function StandaloneScanFlow(props: ScanFlowProps & { auth: AuthSession }) {
   const { auth } = props;
   const { configured, getAccessToken, userId } = auth;
-  const headers = useCallback(async (): Promise<Record<string, string> | null> => {
+  const headers = useCallback<TranslateHeaders>(async (options): Promise<Record<string, string> | null> => {
     if (!configured) return {};
-    const token = await getAccessToken({ userId });
+    const token = await getAccessToken({ userId, forceRefresh: options?.forceRefresh });
     return token ? { Authorization: `Bearer ${token}` } : null;
   }, [configured, getAccessToken, userId]);
   return (
-    <TranslationProvider getHeaders={headers}>
+    <TranslationProvider getHeaders={headers} ownerKey={userId}>
       <ScanFlowInner {...props} />
     </TranslationProvider>
   );
@@ -1173,6 +1173,8 @@ function ScanFlowInner({ catalog, auth: sharedAuth, active = true, initialResult
               <span>{errorText(error)}</span>
             </div>
           ) : null}
+          {/* A server error sentence can be machine-translated too (see errorText); a result carries its own status line below. */}
+          {error ? <TranslationStatus /> : null}
           {/* Successful results switch to the field-notebook primitive. */}
           {labResult ? (<div className="scan-lab-result">
             <header className="ab-top scan-lab-top sc-scanned" ref={replay ? undefined : setResultTop} tabIndex={-1}>
