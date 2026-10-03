@@ -27,6 +27,7 @@ Allowed model boundaries (nothing else):
 | `pilot_adapter.py` | Claude subscription pilot (not production) |
 | `grok_adapter.py` | Grok pure-function path (separate backend) |
 | `label_adapter.py` | Reads a supplement LABEL off an uploaded image, via the local CLI (added 2026-08-21) |
+| `pipeline/claude_research_adapter.py` | **Live web research on the mainPC (added 2026-10-03).** One audit of one product via the subscription CLI, tools `WebSearch,WebFetch` only, `--safe-mode`, no API key, no turn/token/runtime cap. Its only caller is `scripts/pc_research_worker.py`; `pipeline.invariants` forbids every spelling of an import of it from `pipeline/`/`sources/` (`MODEL_LEAF_MODULES`). Prompt `prompts/research_audit_live.md` (`live-research-v0.1`) is distinct from `audit-v0.4` |
 | `lib/analyze/llm.ts` | **The deployed app's ONE model transport (since 2026-09-07).** Every model call the site makes goes through `chat`/`chatJson` here: the label vision read (prompt and contract in `lib/analyze/vision.ts`, same `prompts/label.md` as `label_adapter`), the ingredient-compatibility fill-in (`prompts/compatibility.md`), the company profile (`prompts/company.md`) and the funding-independence / publication-bias literature disclosures (`prompts/literature_warnings.md`) behind `POST /api/scan`. Default provider is **DeepSeek** (`DEEPSEEK_API_KEY`; `VISION_API_KEY`/`GEMINI_API_KEY` still read); `MODEL_API_URL`/`LABEL_MODEL`/`TEXT_MODEL` swap providers with no code change. Temperature 0, one shot, JSON validated by Ajv against `schemas/*.json`. Model text from the text prompts is displayed under a "model knowledge — unverified" badge and **never enters a score** — see `docs/SYSTEM_DESIGN.md` |
 
 `pipeline.invariants` enforces the Python side by AST and the TS side by scan:
@@ -800,6 +801,22 @@ integration seam `tests/scan-auth-history-integration.test.tsx` and one selector
   is NOT token-exchange proof: Google's origin refusal appears only after the click, and it did (`origin_mismatch`). `outputFileTracingIncludes` was left unchanged (the new routes read no
   files); note the History routes inherit the same ~32 MB `/api/scan/*` trace overlap the existing
   `/api/scan/claim` route already has.
+
+**2026-10-03 — PC research worker coded on the laptop (NOT installed, NOT integrated).**
+Branch `feat/pc-research-worker-20261003`, local commit only, nothing installed or started on the mainPC, no
+secret created, nothing published. New: `scripts/pc_research_worker.py` (outbound-only HTTPS consumer; actions
+`claim|heartbeat|complete|fail` on `POST /api/scan/research/worker/`, bearer `BS_PROOF_RESEARCH_WORKER_TOKEN`),
+`pipeline/claude_research_adapter.py` (the one new model boundary: Claude CLI subscription, `claude-sonnet-5-5`
+`--effort xhigh`, `--safe-mode`, `WebSearch,WebFetch` only, allowlisted child env), `prompts/research_audit_live.md`
+(`live-research-v0.1`; `audit-v0.4` untouched), `deploy/` (systemd user unit example, 0600 env example, versioned
+release script) and `tests/test_pc_research_worker.py` (39 focused tests, fake CLI + loopback fake API; no model,
+no benchmark rerun). Runbook, exact wire contract, install/health/rollback: `docs/research/pc-research-worker.md`.
+The completion carries the real schema-valid audit plus `source_access` provenance (classes ported unchanged from
+the immutable benchmark classifier; WebFetch = Haiku summary, upper bound, not papers read). Failures (quota, auth,
+CLI error, schema-invalid, contract violation) are reported with a code and never repaired. **Still open:** the
+backend queue/route (`/api/scan/research/worker/`), its token and presence/"waiting" display, and the reconciliation
+of the assumed ResearchJobV1 `target` keys (`daily_dose`/`dose`, `components`/`ingredients`) are the integrator's;
+no live research capability is claimed until that integration is reviewed and a real end-to-end run is recorded.
 
 **2026-10-03 — research comparison preview shared.**
 `docs/design/research-benchmark-preview/overview.png` shows the actual saved
@@ -1809,6 +1826,9 @@ still the unmeasured SR-uplift experiment (Next item 3).
   implementing it; avoid whole-blend averages and implied additive benefits.
 - Finish the five-case subscription research benchmark, then implement the
   source-backed PC research worker and its secure website job connection.
+  (2026-10-03: the worker half is coded, tested against a fake CLI/API and not on main -- branch
+  `feat/pc-research-worker-20261003`, runbook `docs/research/pc-research-worker.md`; the website queue/route, token,
+  reviewed integration, mainPC install and one real recorded end-to-end run are still open.)
   Preserve the approved four-axis result format, distinguish ingredient from
   whole-formula evidence, and keep unknown daily intake unknown. No live
   research capability is implied by this deployment cleanup.

@@ -60,6 +60,16 @@ ROOT = Path(__file__).resolve().parent.parent
 MODEL_MODULES = ("claude_adapter", "pilot_adapter", "grok_adapter",
                  "label_adapter")
 
+# `claude_research_adapter` (2026-10-03) is the boundary for LIVE web research on the
+# mainPC. It has to live in pipeline/ (the owner's layout) although pipeline/ is the
+# deterministic layer, so a root-name match cannot protect it: `from pipeline import
+# claude_research_adapter`, `from pipeline.claude_research_adapter import x` and the
+# relative `from . import claude_research_adapter` all have a different root. Any
+# import naming this leaf, by any spelling, from the checked directories is a
+# violation. Its only legitimate caller is scripts/pc_research_worker.py, which is
+# the injection layer by design and is not scanned (see CHECKED_DIRS).
+MODEL_LEAF_MODULES = ("claude_research_adapter",)
+
 # The deterministic layer. NOT scripts/, run_pipeline.py or workers.py -- those
 # are the injection layer by design (`call=` is passed down from there), so
 # checking them would be all allowlist and no signal.
@@ -120,7 +130,14 @@ def model_imports(src: str, path: str = "<string>") -> list[tuple[str, int, str]
                 root = node.module.split(".")[0]
                 if root in MODEL_MODULES:
                     found.append((root, node.lineno, "from-import"))
-        elif isinstance(node, ast.Call):
+        if isinstance(node, (ast.Import, ast.ImportFrom)):
+            names = ([a.name for a in node.names] if isinstance(node, ast.Import)
+                     else ([node.module] if node.module else []) + [a.name for a in node.names])
+            for n in names:
+                for leaf in MODEL_LEAF_MODULES:
+                    if leaf in n.split("."):
+                        found.append((leaf, node.lineno, "leaf import"))
+        if isinstance(node, ast.Call):
             # Dynamic evasion, only for a CONSTANT argument. A computed module
             # name is not caught -- stated here rather than pretended away.
             if _called_name(node) in ("__import__", "import_module") and node.args:
@@ -129,6 +146,9 @@ def model_imports(src: str, path: str = "<string>") -> list[tuple[str, int, str]
                     root = arg.value.split(".")[0]
                     if root in MODEL_MODULES:
                         found.append((root, node.lineno, "dynamic import"))
+                    for leaf in MODEL_LEAF_MODULES:
+                        if leaf in arg.value.split("."):
+                            found.append((leaf, node.lineno, "dynamic import"))
     return found
 
 

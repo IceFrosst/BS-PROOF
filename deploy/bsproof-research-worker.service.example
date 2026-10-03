@@ -1,0 +1,32 @@
+# systemd USER unit for the BS-PROOF mainPC research worker. EXAMPLE ONLY: it is not
+# installed anywhere. Install path: ~/.config/systemd/user/bsproof-research-worker.service
+#
+# Outbound-only: the worker opens no listening socket; it POSTs to the website over
+# HTTPS and runs the already-logged-in Claude CLI as a child (subscription login,
+# no API key). It runs from the isolated, versioned runtime under
+# ~/.local/share/bsproof-research-worker, never from an app checkout.
+#
+# The token lives ONLY in the 0600 EnvironmentFile below; never put it in this file.
+[Unit]
+Description=BS-PROOF research worker (outbound-only, Claude subscription)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=%h/.config/bsproof-research-worker/worker.env
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=%h/.local/share/bsproof-research-worker/current/venv/bin/python %h/.local/share/bsproof-research-worker/current/scripts/pc_research_worker.py run
+Restart=on-failure
+RestartSec=30
+# SIGTERM cancels a running research call; the lease is left to expire (no result is
+# sent for a run that was cut off). Give it time to kill the CLI process group.
+KillMode=control-group
+TimeoutStopSec=60
+NoNewPrivileges=yes
+UMask=0077
+
+[Install]
+WantedBy=default.target
