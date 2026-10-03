@@ -758,26 +758,31 @@ policies that both name their bucket), the SQL applied through the Management
 API, and the resulting structure (RLS on, zero policies, no `anon` /
 `authenticated` privilege, private bucket, everything else unchanged).
 
-**Still NOT verified, because nothing real was available:** a real Google
-credential becoming a real Supabase session (`signInWithIdToken`); the PostgREST
+**Still NOT verified:** a real Google
+credential becoming a real Supabase session (`signInWithIdToken`) — a real attempt
+on 2026-10-03 FAILED with Google `400 origin_mismatch` (§7d); the PostgREST
 JSON-path `select` in the list query (`analysis->label->>product_name`, …)
 against the live project — it is emulated in tests only (the table now exists
 but holds 0 rows); a real phone camera. Before the release the SQL file had only
 been executed against an in-memory Postgres with stand-ins for the Supabase roles
 and `storage` schema. A probe that the canonical origin renders the
-Google button without an "origin not allowed" refusal shows only that the
-origin is accepted — it is **not** proof that a token exchange works.
+Google button shows only that the button renders: Google's origin refusal
+appears after the click, and it did (`origin_mismatch`, §7d). A rendered button
+is **not** proof that a token exchange works.
 
-### 7d. Production provisioning — steps 1–3 DONE 2026-10-03, steps 4–5 open
+### 7d. Production provisioning — steps 1–3 DONE 2026-10-03, step 4 read-only, step 5 BLOCKED (`origin_mismatch`)
 
 **Status at release (2026-10-03):** steps 1–3 below were executed on the shared
 project and the canonical Vercel project (production only) and checked; the exact
 results are in `CLAUDE.md` → `Current state` → "Release stage". Step 4 was
 **read only** (the provider was neither replaced nor changed; its client ID
 equals the one in `NEXT_PUBLIC_GOOGLE_CLIENT_ID`; `disable_signup` is `false`).
-Step 5 (the real phone sign-in → scan → History → replay) and the Google client's
-Authorized JavaScript origins are **not verified** and need a person at a
-phone. The runbook below stays as written for any re-provisioning.
+A real sign-in attempt on 2026-10-03 FAILED with Google `400 origin_mismatch`: the
+production origin `https://bs-proof-dashboard.vercel.app` is not an Authorized
+JavaScript origin of the Google OAuth client the shared Supabase provider uses, so
+no one can sign in from it (and, with `SCAN_REQUIRE_AUTH=1`, scans are refused) until that
+shared client's owner adds it in Google Cloud Console. Step 5 (the real phone
+sign-in → scan → History → replay) is therefore **blocked and not verified**. The runbook below stays as written for any re-provisioning.
 
 Do these IN ORDER. The Supabase project is shared with other apps; nothing here
 may replace, recreate or reconfigure anything that is not BS-PROOF's.
