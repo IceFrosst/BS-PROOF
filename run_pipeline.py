@@ -13,7 +13,7 @@ in TITLE/ABSTRACT as the thing being tested. Showcase top-N outcomes are chosen
 by Europe PMC RCT hit counts (most-studied first), not a fixed marketing list.
 
 This file only wires the stages together; each stage lives in bsproof/run/
-(options, corpus, extract, score, report) since 2026-10-03.
+(options, corpus, extract, score, evidence, report) since 2026-10-03.
 """
 from __future__ import annotations
 
@@ -25,6 +25,7 @@ from pipeline import vocab
 from pipeline.storage import Store
 
 from bsproof.run.corpus import load_corpus, store_path
+from bsproof.run.evidence import evidence_stage
 from bsproof.run.extract import extract_stage
 from bsproof.run.options import RunOptions, parse_args
 from bsproof.run.report import finish
@@ -104,6 +105,7 @@ def main(argv: list[str]) -> int:
             return extracted
         score_stage(store, opts, product, db, extracted, outcome_allowlist,
                     run_context, n_available)
+        evidence_stage(opts, product, extracted, run_context)
 
     finish(opts, outcome_allowlist, run_context, run_started)
     return 0

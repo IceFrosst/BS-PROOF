@@ -187,6 +187,7 @@ pipeline/   deterministic, NO MODEL, unit-tested
   pool.py                          v2 SHADOW: per-outcome pooling of verified effects (not read by v14)
   grade.py                         v2 SHADOW: GRADE certainty + the §4 letter table
   review.py registry_bias.py       v2 SHADOW: second-reviewer disagreement rule; registered-but-unpublished trials
+  evidence_v2.py                   v2 SHADOW: pool + GRADE per outcome -> run artifact `evidence_v2` (bsproof/run/evidence.py)
   claim_arms.py eligibility.py     invariant-7 counterfactual firewall and scope refusals
   effect_s.py                      reported effect -> signed contribution s
   calibration.py                   anchor harness
@@ -200,7 +201,7 @@ app/        Next.js routes: /scan (product), /api/scan, /runs (run archive) and
             /runs/<id>, /tests/supplements, /methodology, /design-lab (dev only,
             404 in production), / (waitlist). /tester + /api/analyze-label retired 2026-10-03
 components/ scan/ (the /scan UI), evidence-ledger/ (lab card), run/dashboard components
-lib/analyze/        the scan: llm.ts (model transport), vision.ts, scan.ts, TS scoring ports
+lib/analyze/        the scan: llm.ts (model transport), vision.ts, scan.ts, TS scoring ports, grade-v2.ts (v2 letter per product)
 lib/evidence-ledger/  rubric + retained audits used by /scan for exact matches
 lib/scan-history/ lib/auth/   optional Supabase history + Google sign-in
 
@@ -293,14 +294,19 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
 
 0. **Evidence method v2** (`docs/EVIDENCE_METHOD.md` §8). Phase 1a done: papers
    carry poolable numbers (93% of PMC full texts) but current extractions make
-   only 5–27% of trials poolable. Phase 1b: run the stability harness solo
+   only 5–27% of trials poolable. Phase 1b done: same-endpoint numbers
+   reproduce; WHICH endpoints become poolable does not
    (`docs/history/2026-10-03-phase1-measurements.md`). Phase 2 step 1 done
    (span check, effect sizes, table route on by default), the `max_turns` fix
    (free-text schema headroom), shadow pooling (`pipeline/pool.py`) and GRADE +
    letter grades (`pipeline/grade.py`), second reviewer (`pipeline/review.py`,
    `SP_SECOND_REVIEWER=1`), crossover + dose indirectness, registry check. Next:
-   founder sign-off on `docs/REVIEW_PENDING.md` #0 (MCIDs, GRADE rules); heavy
-   jobs (rerun B, re-extraction with the reviewer on, benchmark) wait for quota.
+   S5 claim rule (v1.29) + measure hierarchy done; v2 grades flow run ->
+   artifact `evidence_v2` -> `lib/analyze/grade-v2.ts` -> `/scan` grade card
+   (dev preview: `EVIDENCE_V2_RUNS_DIR`). BLOCKER before the re-extraction:
+   smoke runs found 0/13 claims poolable (S5 frames outcomes as change scores
+   and leaves arm values empty) — next is a dedicated per-claim numbers
+   extractor (measurements note, "Pre-re-extraction smoke tests").
 1. Verify on a real phone: live camera, a busy label read after the
    thinking-mode fix, PWA install.
 2. Check whether the text calls (`deepseek-chat`) also need thinking disabled

@@ -64,6 +64,25 @@ class Pool(unittest.TestCase):
         self.assertEqual([s["study"] for s in p.studies], ["healthy"])
         self.assertEqual(p.refused, {"study: off-target population": 1})
 
+    def test_measure_hierarchy_beats_claim_order_and_primary(self):
+        regional = outcome(95, 80, oid="lean_body_mass", primary=True)
+        regional["claim"]["outcome_raw"] = "Appendicular lean mass (ALM, kg)"
+        whole = outcome(81, 80, oid="lean_body_mass")
+        whole["claim"]["outcome_raw"] = "Total fat-free mass (FFM, g)"
+        for order in ([regional, whole], [whole, regional]):
+            p = pool_outcomes([study("s", order)], PRODUCT)["lean_body_mass"]
+            self.assertEqual(p.studies[0]["measure"], "Total fat-free mass (FFM, g)")
+            self.assertEqual(p.studies[0]["measure_rank"], 0)
+
+    def test_measure_rank_tiers(self):
+        from pipeline.pool import measure_rank
+        h = vocab.load("outcome")
+        power = next(o for o in h["outcomes"] if o["id"] == "muscle_power")["measure_hierarchy"]
+        self.assertEqual(measure_rank({"outcome_raw": "Countermovement jump (CMJ) height"}, power), 1)
+        self.assertEqual(measure_rank({"outcome_raw": "Abalakov jump (ABJ)"}, power), 3)
+        self.assertEqual(measure_rank({"outcome_raw": "something else"}, power), len(power))
+        self.assertEqual(measure_rank({"outcome_raw": "x"}, None), 0)
+
     def test_one_effect_per_study_primary_first(self):
         items = [study("s1", [outcome(81, 80), outcome(95, 80, primary=True)])]
         p = pool_outcomes(items, PRODUCT)["muscle_strength"]

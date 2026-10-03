@@ -222,6 +222,10 @@ export const DashboardRunSchema = z
     // cited the 11:33 run whose page therefore 404'd. Two validators disagreeing
     // about one artifact is worse than either being strict alone.
     v13_shadow: z.record(z.string(), z.unknown()).nullable().optional(),
+    // Evidence method v2 (2026-10-03): pooled effect + GRADE per outcome.
+    // Declared here for the same reason as v13_shadow; lib/analyze/grade-v2.ts
+    // validates the parts it reads.
+    evidence_v2: z.record(z.string(), z.unknown()).nullable().optional(),
   })
   .strict()
   .superRefine((value, context) => {

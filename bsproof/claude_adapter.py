@@ -317,7 +317,25 @@ def _claude_bin() -> str:
 # every answer valid under v1.28 is valid now -- so bumping would only discard
 # ~1000 cached extractions. The prompts still state the shorter targets.
 # tests/test_schema_headroom.py pins the headroom.
-PROMPT_VERSION = "v1.28"
+# v1.29 (2026-10-03): evidence method v2 Phase 1b result. S5's unit becomes
+#   one claim per SEPARATELY REPORTED MEASURE (tests split, timepoint /
+#   subgroup / body-site grids still collapse; whole-body lean mass first), and
+#   _shared.md forbids properties the schema does not define. Measured on the
+#   A/B stability pair: same-endpoint numbers were identical, but merged jump
+#   tests lost their SDs and invented fields failed S3/S7. Downstream keeps one
+#   claim per trial per outcome (v14 _one_study_one_vote; v2 pool hierarchy),
+#   so the split cannot double-count. Also covers the new S5R agent.
+# v1.30 (2026-10-03): S5R (second reviewer) told what `found` means (the
+#   outcome is reported, even when numbers are not) and which estimand to read.
+#   Measured on a 2-study smoke run: 3/3 claims returned found:false on a paper
+#   whose numbers were in figures, and 4/4 read endpoint values for claims
+#   framed as change-from-baseline. No full v1.29 run existed, so the bump cost
+#   only the smoke run's cache.
+# v1.31 (2026-10-03): S5 arm means/SDs are COPIED, never computed; with
+#   pre/post values printed and no printed change, report the post values
+#   (endpoint). Measured on a 6-study smoke run: 0 of 13 mapped claims made an
+#   effect, mostly computed change scores the span check (rightly) refused.
+PROMPT_VERSION = "v1.31"
 
 # Tier -> model. FULL IDs, NOT ALIASES.
 #

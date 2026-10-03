@@ -114,11 +114,21 @@ def run(label: str, n: int, fake: bool, resume: bool, in_flight: int = 5) -> int
     call = _fake_call if fake else ca.call
 
     done = json.loads(dest.read_text()) if dest.exists() else {}
-    todo = [s for s in select_studies(n) if s["canonical_id"] not in done]
+    # --resume also REDOES studies with failed agents: their successful agents
+    # replay from this run's own cache, so only the failures cost calls.
+    # (Measured 2026-10-03: run B's first pass hit the session limit, 93 failed
+    # agents across 25 studies, 64 successful calls cached.)
+    incomplete = lambda r: bool(r.get("error") or (r.get("extraction") or {}).get("_failed"))
+    todo = [s for s in select_studies(n)
+            if s["canonical_id"] not in done or incomplete(done[s["canonical_id"]])]
+    print(f"[{label}] {len(todo)} studies to (re)extract", flush=True)
     lock = threading.Lock()
     started = time.monotonic()
+    stop = threading.Event()
 
     def one(study: dict) -> None:
+        if stop.is_set():
+            return
         cid = study["canonical_id"]
         rec = rebuild_record(study)
         if rec is None:
@@ -127,6 +137,14 @@ def run(label: str, n: int, fake: bool, resume: bool, in_flight: int = 5) -> int
             ext = workers.extract_study(rec, _best_text(rec), call=call, outcome_allowlist=SHOWCASE,
                                         sections=_sections(rec))
             result = {"record": rec, "extraction": ext}
+            if ext.get("_quota_exhausted"):
+                # Stop at the FIRST limit hit and keep the previous record: a
+                # study failed by quota is not a measurement, and every further
+                # call would fail the same way. Resume after the reset.
+                stop.set()
+                print(f"[{label}] QUOTA HIT on {cid}: stopping; rerun with --resume after the reset",
+                      flush=True)
+                return
         with lock:  # save after every study, so an interrupted run resumes
             done[cid] = result
             dest.write_text(json.dumps(done, indent=1, default=str), encoding="utf-8")
@@ -140,8 +158,8 @@ def run(label: str, n: int, fake: bool, resume: bool, in_flight: int = 5) -> int
     with ThreadPoolExecutor(max_workers=max(1, in_flight)) as pool:
         for fut in [pool.submit(one, s) for s in todo]:
             fut.result()
-    print(f"wrote {dest}")
-    return 0
+    print(f"wrote {dest}" + ("  (STOPPED on quota; resume later)" if stop.is_set() else ""))
+    return 2 if stop.is_set() else 0
 
 
 # ------------------------------------------------------------------- compare
@@ -179,23 +197,33 @@ def _claims_by_outcome(ext: dict) -> dict[str, dict]:
 
 
 def _effects_by_outcome(ext: dict) -> dict[str, tuple]:
-    """Evidence method v2 view: (route, smd) per mapped outcome from the first
-    claim whose span-verified numbers yield an effect, else (refusal, None)."""
+    """Evidence method v2 view: (route, smd) per mapped outcome from the claim
+    the POOL would choose (pipeline/pool.py measure hierarchy, then primary,
+    then route, then order), else (refusal, None)."""
     from pipeline import vocab
     from pipeline.effect_size import effect_from_claim
-    polarity = {o["id"]: o.get("polarity") for o in vocab.load("outcome")["outcomes"]}
+    from pipeline.pool import ROUTE_RANK, measure_rank
+    outcomes = vocab.load("outcome")["outcomes"]
+    polarity = {o["id"]: o.get("polarity") for o in outcomes}
+    hierarchy = {o["id"]: o.get("measure_hierarchy") for o in outcomes}
+    best: dict[str, tuple] = {}
     out: dict[str, tuple] = {}
-    for o in ext.get("outcomes") or []:
+    for i, o in enumerate(ext.get("outcomes") or []):
         oid = o.get("outcome_vocab_id")
         nums = o.get("numbers_v2")
         if not oid or o.get("discarded") or not isinstance(nums, dict):
             continue
-        eff, why = effect_from_claim(o.get("claim") or {}, nums.get("verified") or {},
+        claim = o.get("claim") or {}
+        eff, why = effect_from_claim(claim, nums.get("verified") or {},
                                      polarity=polarity.get(oid), abs_only=nums.get("abs_only") or ())
-        if eff is not None and (oid not in out or out[oid][1] is None):
-            out[oid] = (eff.route, eff.smd if eff.smd is not None else eff.md)
-        elif oid not in out:
-            out[oid] = ("refused", None)
+        if eff is None:
+            out.setdefault(oid, ("refused", None))
+            continue
+        key = (measure_rank(claim, hierarchy.get(oid)), not claim.get("is_primary_outcome"),
+               ROUTE_RANK.get(eff.route, 9), i)
+        if oid not in best or key < best[oid][0]:
+            best[oid] = (key, (eff.route, eff.smd if eff.smd is not None else eff.md))
+    out.update({oid: v for oid, (_k, v) in best.items()})
     return out
 
 

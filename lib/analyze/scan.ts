@@ -75,6 +75,7 @@ import { literatureWarningsSection, type LiteratureWarningsSection } from "./lit
 import { chatJson, providerConfigured, type ChatJsonFn } from "./llm";
 import type { AppVersionInfo, ScanHistoryOutcome } from "@/lib/scan-history/store";
 import { checkManualDose, checkServingsPerDay, type ManualDoseUnit } from "./manual-dose";
+import { gradeProductV2, type ProductGradesV2 } from "./grade-v2";
 import { availableProducts, scoreProduct } from "./product-score";
 import { readLabel, type LabelActive, type LabelMediaType, type LabelRead } from "./vision";
 import { elementalDoseRangeMg, ingredientIds, resolveIngredientForm } from "./vocab";
@@ -210,6 +211,12 @@ export interface ScanAnalysis {
   evidence?: Json;
   /** One exact retained ledger audit only. Absent means no /4 audit for this exact product. */
   ledger_audit?: RetainedLedgerAudit;
+  /**
+   * Evidence method v2 letter grades (pooled effect + GRADE), re-matched to
+   * THIS product's form and daily dose (lib/analyze/grade-v2.ts). "not_assessed"
+   * until a retained run carries an evidence_v2 block for the ingredient.
+   */
+  evidence_v2?: ProductGradesV2;
   /** Stage 2b. Present ONLY when no retained run could answer (see scan.ts header). */
   evidence_prior?: EvidencePriorSection;
   dose_effectiveness?: DoseEffectivenessSection;
@@ -540,6 +547,10 @@ export async function analyzeFromLabel(label: ProductFacts, run: ScanRun): Promi
   // ---- stage 2: evidence (deterministic) ---------------------------------
   const tEvidence = deps.now();
   const result = deps.scoreProduct(ingredient, formId ?? "", scored.dose) as Json;
+  // v2 grades: the dose term needs a DAILY elemental dose; a per-serving dose
+  // with unknown servings is not one, so it is passed as unknown (no dose
+  // indirectness is judged rather than a wrong one).
+  out.evidence_v2 = gradeProductV2(ingredient, formId, scored.basis === "daily" ? scored.dose : null);
   stages.evidence = seconds(deps.now() - tEvidence);
   out.evidence = result;
 

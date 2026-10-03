@@ -179,17 +179,17 @@ readable and the change can be compared run for run.
 
 | Phase | Goal | Model calls | Exit criterion |
 |---|---|---|---|
-| **1. Measure** — 1a DONE, 1b harness ready (`docs/history/2026-10-03-phase1-measurements.md`) | (a) extraction stability: the same 20–30 cached creatine studies extracted twice, agreement measured; (b) poolability: share of creatine trials whose papers yield mean/SD/n, CI or exact p | (a) yes, solo; (b) none | Two numbers we can plan on |
-| **2. Shadow** — DONE: span check (`pipeline/span_check.py`), effect sizes (`pipeline/effect_size.py`), table route on by default, arm-level facts kept in run records, `max_turns` fix (schema headroom), shadow pooling (`pipeline/pool.py`), second reviewer + disagreement rule (`pipeline/review.py`, S5R, off by default: `SP_SECOND_REVIEWER=1`), crossover trials (Cochrane §23.2.6). PENDING (quota): rerun B, creatine re-extraction with the reviewer on, benchmark | Extended extraction (arm-level numbers + span check), dual extraction, effect sizes, pooling — run **beside** v14 on creatine | Yes (re-extraction under a new `PROMPT_VERSION`) | Pooled creatine-strength estimate overlaps the 7 published CIs |
+| **1. Measure** — DONE (1b result in the measurements note: methods facts stable, endpoint selection is not) (`docs/history/2026-10-03-phase1-measurements.md`) | (a) extraction stability: the same 20–30 cached creatine studies extracted twice, agreement measured; (b) poolability: share of creatine trials whose papers yield mean/SD/n, CI or exact p | (a) yes, solo; (b) none | Two numbers we can plan on |
+| **2. Shadow** — DONE: span check (`pipeline/span_check.py`), effect sizes (`pipeline/effect_size.py`), table route on by default, arm-level facts kept in run records, `max_turns` fix (schema headroom), shadow pooling (`pipeline/pool.py`), second reviewer + disagreement rule (`pipeline/review.py`, S5R, off by default: `SP_SECOND_REVIEWER=1`), crossover trials (Cochrane §23.2.6). PENDING: S5 claim rule fix (endpoint stability, Phase 1b result), then (quota) creatine re-extraction with the reviewer on, benchmark | Extended extraction (arm-level numbers + span check), dual extraction, effect sizes, pooling — run **beside** v14 on creatine | Yes (re-extraction under a new `PROMPT_VERSION`) | Pooled creatine-strength estimate overlaps the 7 published CIs |
 | **3. Certainty & grades** — GRADE + letter table DONE in shadow (`pipeline/grade.py`), dose indirectness, registry search (`pipeline/registry_bias.py`, reported), MCID table PROPOSED in `vocab/outcome.json` (unapproved). PENDING: founder sign-off (`docs/REVIEW_PENDING.md` #0) | MCID table with sources; GRADE module; letter table; registry search for unpublished trials | Research only | Founder sign-off on MCIDs and the grade table |
-| **4. Switch** | `/runs` and `/scan` show v2 grades; vitamin D and magnesium run; v14 archived; Evidence Ledger retired | Yes | Benchmark on ≥10 published meta-analyses passes |
+| **4. Switch** — app path BUILT (run stage, artifact block, `lib/analyze/grade-v2.ts`, `/scan` grade card); PENDING: a retained run with the block, benchmark, Ledger retirement | `/runs` and `/scan` show v2 grades; vitamin D and magnesium run; v14 archived; Evidence Ledger retired | Yes | Benchmark on ≥10 published meta-analyses passes |
 
 ## 9. Founder decisions (2026-10-03)
 
 1. **Adopted** as the successor to v14.
 2. **Letter grades, with the §4 table as written.**
-3. **MCIDs:** method delegated — the policy in §5. The values themselves still
-   need founder approval as a table before they score anything.
+3. **MCIDs:** method delegated — the policy in §5. The values need founder
+   approval as a table before they score anything (approved: item 7).
 4. **Evidence Ledger: keep-then-retire** (§6 option 1).
 5. **Second reviewer: a second Claude model for now** (a different model from
    the primary extractor). **Future work:** replace it with a reviewer from a
@@ -197,6 +197,11 @@ readable and the change can be compared run for run.
    blind spots and are not truly independent reviewers.
 6. **Next ingredient after creatine: vitamin C.** Vitamin D and magnesium are
    still needed before the Evidence Ledger can retire (§6).
+7. **(later 2026-10-03)** GRADE thresholds, the two policy choices and the
+   MCID table accepted "for now, may revisit"; reviewer = Opus with a 1 %
+   agreement tolerance; registry rule: −1 publication bias when registered,
+   unpublished trials ≥ trials pooled. Details: `docs/REVIEW_PENDING.md` #0.
+   Dose indirectness: off-dose only under half or over double the trial dose.
 
 ## 10. Risks
 

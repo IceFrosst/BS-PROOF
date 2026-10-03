@@ -12,9 +12,14 @@ Per outcome:
   2. Population: the stored v14 policy (variant B) -- a study whose population
      is "different" from the product's (e.g. a disease trial for a
      healthy-adult product) answers a different question and is left out.
-  3. ONE effect per study per outcome: primary-outcome claims first, then the
-     strongest route (arm statistics > reported SMD+CI > SMD+exact p > SMD+n),
-     then claim order. Pooling two endpoints of one trial would count it twice.
+  3. ONE effect per study per outcome, chosen by a FIXED order so two
+     extractions of one paper pick the same measure: the outcome's
+     `measure_hierarchy` tier (vocab/outcome.json; e.g. whole-body before
+     appendicular lean mass), then primary-outcome claims, then the strongest
+     route (arm statistics > reported SMD+CI > SMD+exact p > SMD+n), then claim
+     order. Pooling two endpoints of one trial would count it twice. (Measured
+     2026-10-03: run-to-run differences came from WHICH measure was picked,
+     never from the numbers read.)
   4. Pool Hedges' g with REML random effects; Hartung-Knapp CI when k >= 3,
      normal CI at k = 2; prediction interval when k >= 3. A natural-unit
      (mean difference) pool only when every MD in it shares one unit.
@@ -61,6 +66,13 @@ class StudyEffect:
     design_rank: int | None = None
     reviewed: bool = False            # both reviewers agreed (pipeline/review.py)
     dose_match: str | None = None     # product dose vs this trial's (dose_match_tier); None = no product dose
+    measure_rank: int = 0             # tier in the outcome's measure_hierarchy (0 = preferred)
+    measure: str | None = None
+    # The trial's own form and daily elemental dose, so a reader (the app) can
+    # re-match them against ANOTHER product without re-pooling.
+    form_id: str | None = None
+    dose_low_mg: float | None = None
+    dose_high_mg: float | None = None
 
 
 def study_form(s7: dict | None, claim: dict) -> str | None:
@@ -82,6 +94,13 @@ def study_form(s7: dict | None, claim: dict) -> str | None:
     return s7.get("form_vocab_id")
 
 
+def trial_dose(ingredient: str, s7: dict | None, s3: dict | None, claim: dict) -> dict:
+    """The tested arm's daily elemental dose interval (assemble.study_dose),
+    joined by label (assemble._s7_for_claim), never by position."""
+    modern = (s7 or {}).get("extraction_version") == "v1.24"
+    return study_dose(ingredient, _s7_for_claim(s7, claim, s3, modern=modern))
+
+
 def dose_match_tier(ingredient: str, s7: dict | None, s3: dict | None, claim: dict,
                     product: dict) -> str | None:
     """The product's dose against THIS trial's dose, on SPEC §8's tiers with the
@@ -93,9 +112,23 @@ def dose_match_tier(ingredient: str, s7: dict | None, s3: dict | None, claim: di
     lo, hi = product.get("dose_low_mg"), product.get("dose_high_mg")
     if lo is None or hi is None:
         return None
-    modern = (s7 or {}).get("extraction_version") == "v1.24"
-    dose = study_dose(ingredient, _s7_for_claim(s7, claim, s3, modern=modern))
+    dose = trial_dose(ingredient, s7, s3, claim)
     return dose_match_for(lo, hi, {"low": dose["dose_low_mg"], "high": dose["dose_high_mg"]})
+
+
+def measure_rank(claim: dict, hierarchy: list[dict] | None) -> int:
+    """The claim's tier in its outcome's measure hierarchy (0 = preferred), read
+    from the claim's own outcome_raw + measure text; unmatched = last. A
+    pre-specified hierarchy, as a review protocol would state it."""
+    text = f"{claim.get('outcome_raw') or ''} {claim.get('measure') or ''}".lower()
+    for rank, tier in enumerate(hierarchy or []):
+        if re.search(tier["match"], text) and not (tier.get("exclude") and re.search(tier["exclude"], text)):
+            return rank
+    return len(hierarchy or [])
+
+
+def selection_key(effect: "StudyEffect") -> tuple:
+    return (effect.measure_rank, not effect.primary, ROUTE_RANK.get(effect.route, 9), effect.claim_index)
 
 
 def rob_status(s4: dict | None) -> str:
@@ -141,7 +174,8 @@ def _pool(effects: list[float], variances: list[float]) -> dict:
             "method": "REML + Hartung-Knapp" if k >= 3 else "REML, normal CI (k = 2)"}
 
 
-def _study_effects(item: dict, product: dict, polarity: dict) -> tuple[dict[str, StudyEffect], dict]:
+def _study_effects(item: dict, product: dict, polarity: dict,
+                   hierarchy: dict | None = None) -> tuple[dict[str, StudyEffect], dict]:
     """Best effect per outcome for one study, plus per-outcome refusal reasons."""
     ext, record = item["extraction"], item.get("record") or {}
     refusals: dict[str, str] = {}
@@ -179,17 +213,21 @@ def _study_effects(item: dict, product: dict, polarity: dict) -> tuple[dict[str,
         else:
             n = sum(arm_n)
         s7 = ext.get("S7") if isinstance(ext.get("S7"), dict) else {}
+        form_id = study_form(s7, claim)
+        dose = trial_dose(product.get("ingredient") or "", s7, s3, claim)
         cand = StudyEffect(item["id"], eff.route, eff, bool(claim.get("is_primary_outcome")), i,
                            n=n if isinstance(n, int) else None,
                            rob=rob_status(ext.get("S4") if isinstance(ext.get("S4"), dict) else None),
                            form_match=vocab.form_match(product.get("ingredient") or "",
-                                                       study_form(s7, claim), product.get("form_vocab_id")),
+                                                       form_id, product.get("form_vocab_id")),
                            pop_match=pop, design_rank=record.get("design_rank"),
                            reviewed=review["status"] == "agreed",
-                           dose_match=dose_match_tier(product.get("ingredient") or "", s7, s3, claim, product))
+                           dose_match=dose_match_tier(product.get("ingredient") or "", s7, s3, claim, product),
+                           measure_rank=measure_rank(claim, (hierarchy or {}).get(oid)),
+                           measure=claim.get("outcome_raw"), form_id=form_id,
+                           dose_low_mg=dose["dose_low_mg"], dose_high_mg=dose["dose_high_mg"])
         cur = best.get(oid)
-        key = lambda s: (not s.primary, ROUTE_RANK.get(s.route, 9), s.claim_index)
-        if cur is None or key(cand) < key(cur):
+        if cur is None or selection_key(cand) < selection_key(cur):
             best[oid] = cand
     for oid in best:
         refusals.pop(oid, None)
@@ -198,14 +236,16 @@ def _study_effects(item: dict, product: dict, polarity: dict) -> tuple[dict[str,
 
 def pool_outcomes(items: list[dict], product: dict) -> dict[str, OutcomePool]:
     """items: [{"id", "record", "extraction"}] in the worker's extraction format."""
-    polarity = {o["id"]: o.get("polarity") for o in vocab.load("outcome")["outcomes"]}
+    outcomes = vocab.load("outcome")["outcomes"]
+    polarity = {o["id"]: o.get("polarity") for o in outcomes}
+    hierarchy = {o["id"]: o.get("measure_hierarchy") for o in outcomes}
     per_outcome: dict[str, list[StudyEffect]] = collections.defaultdict(list)
     refused: dict[str, collections.Counter] = collections.defaultdict(collections.Counter)
     for item in items:
         ext = item.get("extraction") or {}
         if ext.get("_skipped"):
             continue
-        best, refusals = _study_effects(item, product, polarity)
+        best, refusals = _study_effects(item, product, polarity, hierarchy)
         for oid, se in best.items():
             per_outcome[oid].append(se)
         for oid, why in refusals.items():
@@ -222,7 +262,9 @@ def pool_outcomes(items: list[dict], product: dict) -> dict[str, OutcomePool]:
                          "flags": list(s.effect.flags), "n": s.n, "rob": s.rob,
                          "form_match": s.form_match, "pop_match": s.pop_match,
                          "design_rank": s.design_rank, "reviewed": s.reviewed,
-                         "dose_match": s.dose_match} for s in studies]
+                         "dose_match": s.dose_match, "measure": s.measure,
+                         "measure_rank": s.measure_rank, "form_id": s.form_id,
+                         "dose_low_mg": s.dose_low_mg, "dose_high_mg": s.dose_high_mg} for s in studies]
         smd = [s for s in studies if s.effect.smd_variance is not None]
         pool.k = len(smd)
         if smd:

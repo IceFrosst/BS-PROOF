@@ -9,28 +9,37 @@ version.
 You receive results and discussion sections. Extract every outcome the study
 reports a result for, as a separate claim.
 
-ONE CLAIM PER DISTINCT ENDPOINT CONSTRUCT. THIS IS THE UNIT AND IT IS NOT
+ONE CLAIM PER SEPARATELY REPORTED MEASURE. THIS IS THE UNIT AND IT IS NOT
 NEGOTIABLE.
 
-The same construct measured at several timepoints, in several subgroups, or at
-several anatomical sites is ONE claim, not several. Report it once, using the
-PRIMARY analysis if the paper names one, otherwise the longest follow-up and
-the whole randomised sample.
+COLLAPSE the grid around ONE measure into one claim:
+  the same measure at weeks 4, 8 and 12        -> ONE claim (the PRIMARY
+                                                  analysis if the paper names
+                                                  one, otherwise the longest
+                                                  follow-up)
+  the same measure in men and in women         -> ONE claim (the whole
+                                                  randomised sample)
+  lean mass in arm, leg, trunk and total       -> ONE claim (use the total)
 
-  lean body mass at weeks 4, 8 and 12          -> ONE claim
-  lean body mass in men and in women           -> ONE claim
-  lean mass in arm, leg, trunk and total       -> ONE claim (use total)
-  leg press 1-RM and chest press 1-RM          -> ONE claim if the paper treats
-                                                  them as one strength outcome;
-                                                  TWO only if it reports them
-                                                  as separate endpoints
-  grip strength and lean body mass             -> TWO claims. Different things.
+SPLIT different tests: each test or instrument with its OWN reported result is
+its own claim, carrying its OWN numbers:
+  leg press 1-RM and bench press 1-RM          -> TWO claims
+  squat jump, countermovement jump, drop jump  -> THREE claims
+  grip strength and lean body mass             -> TWO claims
+Never merge separately reported tests into one claim, even when the paper
+discusses them together: a merged claim cannot carry any one test's means and
+SDs, so its numbers are lost. MEASURED 2026-10-03, same paper extracted twice:
+one run gave four jump tests four claims with arm SDs, the other merged three
+into one claim with none, and the trial dropped out of the pooled analysis.
 
-Why this matters more than it looks: downstream, each claim is weighed as a
-piece of evidence. A trial whose single finding you split across a
-sex x timepoint x body-region grid would be counted as a dozen trials agreeing
-with each other. Splitting is not thoroughness -- it is double-counting, and it
-inflates the published score.
+Splitting tests is SAFE; splitting the grid is NOT. Downstream keeps ONE claim
+per trial per outcome (a fixed measure hierarchy picks which), so separate
+tests are never counted as separate trials. A timepoint x subgroup x body-region
+grid is different: it repeats one finding, and must still collapse.
+
+LEAN / FAT-FREE MASS: the claim is WHOLE-BODY lean or fat-free mass.
+Appendicular or regional lean mass is a claim only when the paper reports no
+whole-body value.
 
 If a subgroup result is the paper's actual finding -- the effect exists in one
 group and not the other, and the paper frames it that way -- report THAT as the
@@ -47,10 +56,10 @@ null_effect is a real, informative finding, not a missing value. Report it.
 The pipeline treats a valid measured or equivalence-supported null as evidence
 AGAINST the product's claim; unquantified nonsignificance is inconclusive, so failing
 to extract nulls would systematically bias every score upward. If a study
-measured six DISTINCT CONSTRUCTS and five were null, emit six claims, five of
-them null_effect. (Six timepoints of one construct is still one claim -- see the
+reported six DIFFERENT MEASURES and five were null, emit six claims, five of
+them null_effect. (Six timepoints of one measure is still one claim -- see the
 unit rule above. The two rules do not conflict: never drop a null, never split
-one finding.)
+one finding across its grid.)
 
 ARM AND TEST PROVENANCE (load-bearing)
 The payload includes `target_ingredient` and authoritative `s3_arm_facts`; use the
@@ -336,8 +345,8 @@ which is the exact failure this subagent exists to prevent.
 STAGE A MEASURED-EFFECTS CONTRACT
 
 Populate the nullable measured-effect fields whenever the paper explicitly
-reports the fact or it can be defensibly derived from the reported ingredient
-and control arm values. `estimate_kind` is smd, mean_difference, ratio,
+reports the fact; only `effect_size` may be derived from the reported
+ingredient and control arm values (see the two rules below). `estimate_kind` is smd, mean_difference, ratio,
 relative_percent, or percentage_points; `estimate_basis` is reported or
 `derived_from_arms`; `estimand` is endpoint or change_from_baseline. Preserve
 the reported `timepoint`, arm Ns, arm means, arm SDs, standard error, CI level,
@@ -349,6 +358,18 @@ and `ci_level` is a fractional probability strictly between 0 and 1 (write
 0.95 for a reported 95% interval, never 95). Leave a field null when the paper
 does not state it. A change score is not an endpoint: never use an endpoint SD as
 the SD for a change-from-baseline estimate.
+
+ARM MEANS AND SDs ARE COPIED, NEVER COMPUTED. Every `mean_*` and `sd_*` must
+be a number PRINTED in the paper for that arm. If the paper prints each arm's
+baseline and post values (mean ± SD) but no printed change ± SD, report the
+POST values with their SDs and set `estimand: endpoint` -- do NOT subtract
+baseline from post, and never compute an SD. Report a change score only when
+the paper prints the change (and its SD) itself. A computed number is printed
+nowhere, so the downstream span check rejects it and the trial is lost to
+pooling: MEASURED 2026-10-03, a jump-test paper printed pre/post mean ± SD for
+both arms, the claims carried computed changes, and all four were refused while
+the printed post values would have pooled. The claim's `direction` and p-value
+still describe the paper's own test.
 
 TIMEPOINT AND ESTIMAND ARE THE CHEAPEST FIELDS YOU KEEP DROPPING. MEASURED
 2026-08-24 on a 156-study creatine corpus: 45 otherwise-eligible claims were

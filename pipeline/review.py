@@ -13,6 +13,8 @@ different-vendor reviewer is future work.)
 `reconcile` compares the two, field by field. It never averages and never picks
 one side (invariant 9):
 
+  ONLY the fields the claim's effect route reads are compared
+  (`ROUTE_FIELDS`); a claim whose verified numbers make no effect is not sent.
   categorical field differs      -> "disagreed": the claim's effect is refused
                                     and queued for human adjudication
   a span-verified number differs -> "disagreed" (someone misread: SD vs SE,
@@ -49,12 +51,24 @@ RULES = {
     "abs_tol": 0.005,
 }
 
-# Numbers the effect-size routes read (pipeline/effect_size.py).
-NUMBER_FIELDS = ("n_ingredient", "n_control", "mean_ingredient", "mean_control",
-                 "sd_ingredient", "sd_control", "effect_size", "ci_low", "ci_high", "p_value")
-# Categorical facts that choose the route or the sign. They must match exactly
-# (null on both sides matches). ci_level is compared as a number.
-CATEGORICAL_FIELDS = ("effect_favours", "estimate_kind", "estimand", "design_kind", "contrast")
+# Per effect route (pipeline/effect_size.py): the numbers it reads and the
+# categorical facts that pick its sign or scale. ONLY these are compared -- a
+# field the effect never uses cannot make the effect wrong. (Measured
+# 2026-10-03 smoke test: comparing every field refused 7/7 claims over p-values
+# and estimate kinds that no effect route read.)
+_REPORTED_CATS = ("effect_favours", "estimate_kind", "design_kind", "contrast", "estimand")
+ROUTE_FIELDS = {
+    "arm_stats": (("n_ingredient", "n_control", "mean_ingredient", "mean_control",
+                   "sd_ingredient", "sd_control"), ("design_kind", "contrast", "estimand")),
+    "reported_smd_ci": (("effect_size", "ci_low", "ci_high"), _REPORTED_CATS),
+    "reported_md_ci": (("effect_size", "ci_low", "ci_high"), _REPORTED_CATS),
+    "reported_smd_p": (("effect_size", "p_value"), _REPORTED_CATS),
+    "reported_smd_n": (("effect_size", "n_ingredient", "n_control"), _REPORTED_CATS),
+}
+# The sign of a reported estimate comes from this field alone, so reviewer 2
+# must CONFIRM it; for the other categorical facts a null from reviewer 2 is
+# "not stated", not a conflict.
+MUST_CONFIRM = ("effect_favours",)
 # Signs of reported estimates come from `effect_favours`, not the printed sign,
 # so these are compared by magnitude (pipeline/effect_size.py).
 _ABS_COMPARED = ("effect_size",)
@@ -66,28 +80,44 @@ def _same_number(a: float, b: float, field: str) -> bool:
     return math.isclose(a, b, rel_tol=RULES["rel_tol"], abs_tol=RULES["abs_tol"])
 
 
-def reconcile(claim: dict, numbers: dict | None, review: dict | None) -> dict:
-    """The review record for one claim: {"status", "verified", "dropped",
-    "conflicts"}. `numbers` is the claim's numbers_v2 (span-check output);
-    `review` is reviewer 2's entry for this claim, or None."""
+def effect_route(claim: dict, verified: dict, polarity: str | None) -> str | None:
+    """The route reviewer 1's verified numbers take, or None (no effect)."""
+    from pipeline.effect_size import effect_from_claim
+    eff, _why = effect_from_claim(claim, verified, polarity=polarity)
+    return eff.route if eff is not None else None
+
+
+def reconcile(claim: dict, numbers: dict | None, review: dict | None,
+              polarity: str | None = None) -> dict:
+    """The review record for one claim: {"status", "route", "verified",
+    "dropped", "conflicts"}. `numbers` is the claim's numbers_v2 (span-check
+    output); `review` is reviewer 2's entry for this claim, or None. Only the
+    fields of the effect route reviewer 1's numbers take are compared, and only
+    those reach the pool."""
     verified = dict((numbers or {}).get("verified") or {})
-    if review is None:
-        return {"status": "single", "verified": verified, "dropped": [], "conflicts": []}
+    route = effect_route(claim, verified, polarity)
+    if review is None or route is None:
+        return {"status": "single", "route": route, "verified": verified, "dropped": [], "conflicts": []}
     if not review.get("found"):
-        return {"status": "disagreed", "verified": {}, "dropped": [],
+        return {"status": "disagreed", "route": route, "verified": {}, "dropped": [],
                 "conflicts": ["reviewer 2 did not find this outcome"]}
+    num_fields, cat_fields = ROUTE_FIELDS[route]
 
     conflicts: list[str] = []
-    for f in CATEGORICAL_FIELDS:
-        if (claim.get(f) or None) != (review.get(f) or None):
-            conflicts.append(f"{f}: {claim.get(f)!r} vs {review.get(f)!r}")
+    for f in cat_fields:
+        a, b = claim.get(f) or None, review.get(f) or None
+        if (b is None and f in MUST_CONFIRM) or (a is not None and b is not None and a != b):
+            conflicts.append(f"{f}: {a!r} vs {b!r}")
     level_1, level_2 = claim.get("ci_level"), review.get("ci_level")
-    if level_1 is not None and level_2 is not None and not math.isclose(level_1, level_2, abs_tol=1e-6):
+    if ("ci_low" in num_fields and level_1 is not None and level_2 is not None
+            and not math.isclose(level_1, level_2, abs_tol=1e-6)):
         conflicts.append(f"ci_level: {level_1} vs {level_2}")
 
     kept, dropped = {}, []
-    for f, v in verified.items():
-        r = review.get(f)
+    for f in num_fields:
+        if f not in verified:
+            continue
+        v, r = verified[f], review.get(f)
         if not isinstance(r, (int, float)) or isinstance(r, bool):
             dropped.append(f)
         elif _same_number(float(v), float(r), f):
@@ -95,12 +125,12 @@ def reconcile(claim: dict, numbers: dict | None, review: dict | None) -> dict:
         else:
             conflicts.append(f"{f}: {v} vs {r}")
     if conflicts:
-        return {"status": "disagreed", "verified": {}, "dropped": [], "conflicts": conflicts}
-    return {"status": "agreed", "verified": kept, "dropped": sorted(dropped), "conflicts": []}
+        return {"status": "disagreed", "route": route, "verified": {}, "dropped": [], "conflicts": conflicts}
+    return {"status": "agreed", "route": route, "verified": kept, "dropped": sorted(dropped), "conflicts": []}
 
 
 def reconcile_study(outcomes: list[dict], reviews: list[dict] | None,
-                    sent: set[int]) -> list[dict]:
+                    sent: set[int], polarity: dict | None = None) -> list[dict]:
     """Attach a review record to each outcome's numbers_v2, IN PLACE, matching
     reviewer 2's entries by claim index (never by position). Outcomes that were
     sent but got no entry back are "single", like outcomes never sent; the
@@ -111,7 +141,8 @@ def reconcile_study(outcomes: list[dict], reviews: list[dict] | None,
         nums = o.get("numbers_v2")
         if not isinstance(nums, dict):
             continue
-        rec = reconcile(o.get("claim") or {}, nums, by_index.get(i) if i in sent else None)
+        rec = reconcile(o.get("claim") or {}, nums, by_index.get(i) if i in sent else None,
+                        (polarity or {}).get(o.get("outcome_vocab_id")))
         nums["review"] = rec
         if rec["status"] == "disagreed":
             queue.append({"claim_index": i, "outcome": o.get("outcome_vocab_id"),

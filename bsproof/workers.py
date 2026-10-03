@@ -58,18 +58,23 @@ def _second_reviewer_enabled() -> bool:
 
 def _second_review(out: dict, record: dict, text: str, sections: dict | None,
                    s3_facts: dict, call) -> None:
-    """Send reviewer 2 every MAPPED claim that has span-verified numbers, in one
+    """Send reviewer 2 every MAPPED claim whose span-verified numbers make an effect, in one
     call per study, and attach the reconciliation to each outcome's numbers_v2.
-    Claims with nothing verified have nothing to confirm and are not sent."""
-    from pipeline.review import reconcile_study
+    Claims whose verified numbers make no effect are not sent."""
+    from pipeline.review import effect_route, reconcile_study
     outcomes = out.get("outcomes") or []
+    polarity = {o["id"]: o.get("polarity") for o in vocab.load("outcome")["outcomes"]}
+    # Only claims whose verified numbers make an effect: a claim the pool would
+    # refuse anyway has nothing worth a second reading (and costs a call).
     sent = {i for i, o in enumerate(outcomes)
-            if not o.get("discarded") and ((o.get("numbers_v2") or {}).get("verified"))}
+            if not o.get("discarded") and effect_route(
+                o.get("claim") or {}, (o.get("numbers_v2") or {}).get("verified") or {},
+                polarity.get(o.get("outcome_vocab_id")))}
     reviews = None
     if sent:
         payload = _payload("S5R", record, text, None, sections, s3_facts=s3_facts)
         payload["claims"] = [{"index": i, **{k: outcomes[i]["claim"].get(k) for k in
-                                             ("outcome_raw", "measure", "timepoint",
+                                             ("outcome_raw", "measure", "timepoint", "estimand",
                                               "ingredient_arm", "control_arm")}}
                              for i in sorted(sent)]
         try:
@@ -87,7 +92,7 @@ def _second_review(out: dict, record: dict, text: str, sections: dict | None,
             sent = set()
         reviews = (result or {}).get("reviews")
     out["review_v2"] = {"sent": len(sent),
-                        "adjudication": reconcile_study(outcomes, reviews, sent)}
+                        "adjudication": reconcile_study(outcomes, reviews, sent, polarity)}
 
 
 def _verify_numbers(out: dict, record: dict) -> list[dict]:

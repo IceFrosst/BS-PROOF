@@ -10,14 +10,25 @@ INPUT
   target_ingredient     the supplement under study
   s3_arm_facts          the study's arms, with their exact labels
   claims                the outcomes to read, each with `index`, `outcome_raw`,
-                        `measure`, `timepoint`, `ingredient_arm`, `control_arm`
+                        `measure`, `timepoint`, `estimand`, `ingredient_arm`,
+                        `control_arm`
 
 OUTPUT
 One entry in `reviews` per claim, with the claim's `index` copied exactly. Do
-not add, drop or reorder claims. If you cannot find the named outcome for the
-named arms at the named timepoint, return `found: false` with every other field
-null. Do not substitute a nearby outcome, another timepoint, a subgroup or a
-different arm pair.
+not add, drop or reorder claims.
+
+`found` answers ONE question: does the paper report this outcome, for these
+arms, at this timepoint? If it does, `found: true` -- EVEN IF some or all of the
+numbers are not printed; those numbers are simply null. `found: false` only
+when the outcome itself is absent, or is reported only for other arms or
+another timepoint. Do not substitute a nearby outcome, another timepoint, a
+subgroup or a different arm pair.
+
+READ THE NAMED ESTIMAND. `estimand: endpoint` means each arm's value AT the
+timepoint; `estimand: change_from_baseline` means each arm's CHANGE. Read the
+means and SDs for that estimand only, and copy `estimand` back as given when the
+paper reports it that way. If the paper prints only the other one, give null
+numbers and the estimand the paper actually uses -- never convert between them.
 
 When `found: true`, quote the sentence or table row you read in
 `evidence_span`, and fill each field ONLY with a value printed in the paper for
@@ -45,7 +56,8 @@ answer; a wrong number is not.
                                 threshold ("p < 0.05", "NS") is not exact: null.
                                 A time or within-group p is not between-arm: null.
   estimand                      endpoint (values at the timepoint) |
-                                change_from_baseline (changes, deltas)
+                                change_from_baseline (changes, deltas) -- see
+                                READ THE NAMED ESTIMAND above
   design_kind                   parallel | crossover | cluster
   contrast                      vs_ingredient_free (control got no target
                                 ingredient) | vs_ingredient_arm (both arms got

@@ -93,3 +93,21 @@ body:has(.scan-lab-result) > .site-header, body:has(.scan-lab-result) > .site-fo
 @media (prefers-reduced-motion: reduce) {
   .scan-lab-result * { transition: none !important; animation: none !important; }
 }
+
+/* Evidence method v2 grade card (components/scan/grade-card.tsx): a letter
+   badge per outcome on the same row primitive as the ledger card. Colours
+   follow the card's own palette; "I" is neutral, never the failing colour,
+   because it means "not enough evidence", not a low mark. */
+.gv2-list li > button { grid-template-columns: 46px minmax(0, 1fr) 20px; grid-template-rows: auto; align-items: center; min-height: 58px; }
+.gv2-list .ab-bar-name { display: flex; flex-direction: column; gap: 3px; font-weight: 650; }
+.gv2-list .ab-bar-name small { font-weight: 400; font-size: 12px; color: var(--ab-muted); line-height: 1.35; }
+.gv2-letter { display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; border-radius: 12px; font-size: 17px; font-weight: 750; letter-spacing: -0.02em; border: 1px solid transparent; }
+.gv2-a { background: #e1ecdb; color: var(--ab-r1); border-color: #b9d0b0; }
+.gv2-b { background: #eaf0dc; color: #4f7a49; border-color: #cbd9b4; }
+.gv2-c { background: #f3f0da; color: #7a6a1f; border-color: #e0d7a8; }
+.gv2-d { background: #f8eadb; color: var(--ab-r4); border-color: #ecd0ac; }
+.gv2-f { background: var(--ab-warn-bg); color: var(--ab-warn); border-color: #ecc3ad; }
+.gv2-insufficient { background: #ecece4; color: var(--ab-muted); border-color: var(--ab-line); }
+.gv2-reasons { margin: 4px 0 8px; padding-left: 18px; font-size: 12px; line-height: 1.5; color: var(--ab-muted); }
+.gv2-reasons b { color: var(--ab-ink); font-weight: 650; }
+.gv2-legend { margin-top: 10px; font-size: 11px; }

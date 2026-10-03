@@ -17,51 +17,73 @@ def review(**over):
     return {"found": True, **CLAIM, **VERIFIED, **over}
 
 
+HB = "higher_better"
+SMD_CLAIM = {**CLAIM, "estimate_kind": "smd", "ci_level": 0.95}
+SMD_NUMS = {"verified": {"effect_size": 0.4, "ci_low": 0.1, "ci_high": 0.7}}
+
+
 class Reconcile(unittest.TestCase):
     def test_agreement_keeps_every_number(self):
-        r = reconcile(CLAIM, NUMS, review())
-        self.assertEqual((r["status"], r["verified"]), ("agreed", VERIFIED))
+        r = reconcile(CLAIM, NUMS, review(), HB)
+        self.assertEqual((r["status"], r["route"], r["verified"]), ("agreed", "arm_stats", VERIFIED))
 
     def test_rounding_is_not_a_disagreement(self):
-        r = reconcile(CLAIM, NUMS, review(mean_ingredient=85.04))
-        self.assertEqual(r["status"], "agreed")
+        self.assertEqual(reconcile(CLAIM, NUMS, review(mean_ingredient=85.04), HB)["status"], "agreed")
 
     def test_a_misread_number_refuses_the_claim(self):
-        r = reconcile(CLAIM, NUMS, review(sd_control=2.2))          # an SE read as the SD
-        self.assertEqual(r["status"], "disagreed")
-        self.assertEqual(r["verified"], {})
+        r = reconcile(CLAIM, NUMS, review(sd_control=2.2), HB)          # an SE read as the SD
+        self.assertEqual((r["status"], r["verified"]), ("disagreed", {}))
         self.assertIn("sd_control", r["conflicts"][0])
 
-    def test_a_categorical_difference_refuses_the_claim(self):
-        r = reconcile(CLAIM, NUMS, review(effect_favours="control"))
-        self.assertEqual(r["status"], "disagreed")
-        r = reconcile(CLAIM, NUMS, review(estimand="change_from_baseline"))
+    def test_only_fields_the_route_reads_are_compared(self):
+        # arm_stats never reads p or the favoured arm: a different p is not a conflict,
+        # and an unused verified number does not reach the pool.
+        nums = {"verified": {**VERIFIED, "p_value": 0.449}}
+        r = reconcile(CLAIM, nums, review(p_value=0.121, effect_favours="control", estimate_kind=None), HB)
+        self.assertEqual(r["status"], "agreed")
+        self.assertNotIn("p_value", r["verified"])
+
+    def test_a_categorical_difference_on_the_route_refuses_the_claim(self):
+        self.assertEqual(reconcile(CLAIM, NUMS, review(estimand="change_from_baseline"), HB)["status"], "disagreed")
+        r = reconcile(SMD_CLAIM, SMD_NUMS, review(**SMD_NUMS["verified"], effect_favours="control"), HB)
         self.assertEqual(r["status"], "disagreed")
 
+    def test_the_favoured_arm_must_be_confirmed_for_a_reported_estimate(self):
+        r = reconcile(SMD_CLAIM, SMD_NUMS, review(**SMD_NUMS["verified"], effect_favours=None), HB)
+        self.assertEqual(r["status"], "disagreed")
+        ok = reconcile(SMD_CLAIM, SMD_NUMS, review(**SMD_NUMS["verified"], estimate_kind="smd", ci_level=0.95), HB)
+        self.assertEqual((ok["status"], ok["route"]), ("agreed", "reported_smd_ci"))
+
+    def test_a_null_from_reviewer_two_on_other_facts_is_not_a_conflict(self):
+        self.assertEqual(reconcile(CLAIM, NUMS, review(estimand=None), HB)["status"], "agreed")
+
     def test_an_unconfirmed_number_is_dropped_not_averaged(self):
-        r = reconcile(CLAIM, NUMS, review(sd_control=None))
-        self.assertEqual(r["status"], "agreed")
-        self.assertEqual(r["dropped"], ["sd_control"])
+        r = reconcile(CLAIM, NUMS, review(sd_control=None), HB)
+        self.assertEqual((r["status"], r["dropped"]), ("agreed", ["sd_control"]))
         self.assertNotIn("sd_control", r["verified"])
 
     def test_reviewer_two_cannot_add_numbers(self):
-        r = reconcile(CLAIM, {"verified": {"effect_size": 0.4}}, review(effect_size=0.4, p_value=0.01))
-        self.assertEqual(r["verified"], {"effect_size": 0.4})
+        r = reconcile(SMD_CLAIM, SMD_NUMS, review(**SMD_NUMS["verified"], estimate_kind="smd",
+                                                  mean_ingredient=90.0), HB)
+        self.assertEqual(set(r["verified"]), {"effect_size", "ci_low", "ci_high"})
 
     def test_effect_size_is_compared_by_magnitude(self):
-        r = reconcile(CLAIM, {"verified": {"effect_size": -0.4}}, review(effect_size=0.4))
+        nums = {"verified": {"effect_size": -0.4, "ci_low": 0.1, "ci_high": 0.7}}
+        r = reconcile(SMD_CLAIM, nums, review(effect_size=0.4, ci_low=0.1, ci_high=0.7, estimate_kind="smd"), HB)
         self.assertEqual(r["status"], "agreed")
 
-    def test_not_found_and_not_reviewed(self):
-        self.assertEqual(reconcile(CLAIM, NUMS, {"found": False})["status"], "disagreed")
-        single = reconcile(CLAIM, NUMS, None)
+    def test_not_found_not_reviewed_and_no_effect(self):
+        self.assertEqual(reconcile(CLAIM, NUMS, {"found": False}, HB)["status"], "disagreed")
+        single = reconcile(CLAIM, NUMS, None, HB)
         self.assertEqual((single["status"], single["verified"]), ("single", VERIFIED))
+        no_effect = reconcile(CLAIM, {"verified": {"p_value": 0.4, "n_ingredient": 12}}, review(), HB)
+        self.assertEqual((no_effect["status"], no_effect["route"]), ("single", None))
 
     def test_study_matches_by_index_and_queues_disagreements(self):
         outcomes = [{"claim": CLAIM, "outcome_vocab_id": "muscle_strength", "numbers_v2": dict(NUMS)},
                     {"claim": CLAIM, "outcome_vocab_id": "lean_body_mass", "numbers_v2": dict(NUMS)}]
         reviews = [{"index": 1, **review(mean_control=60.0)}, {"index": 0, **review()}]   # reordered
-        queue = reconcile_study(outcomes, reviews, {0, 1})
+        queue = reconcile_study(outcomes, reviews, {0, 1}, {"muscle_strength": HB, "lean_body_mass": HB})
         self.assertEqual(outcomes[0]["numbers_v2"]["review"]["status"], "agreed")
         self.assertEqual(outcomes[1]["numbers_v2"]["review"]["status"], "disagreed")
         self.assertEqual([q["outcome"] for q in queue], ["lean_body_mass"])
@@ -104,6 +126,7 @@ class WorkerWiring(unittest.TestCase):
         payload = dict(calls)["S5R"]
         self.assertEqual(payload["claims"][0]["outcome_raw"], "bench press 1-RM")
         self.assertNotIn("mean_ingredient", payload["claims"][0])
+        self.assertEqual(payload["claims"][0]["estimand"], "endpoint")         # identity, not a number
         self.assertEqual(out["outcomes"][0]["numbers_v2"]["review"]["status"], "agreed")
         self.assertEqual(out["review_v2"], {"sent": 1, "adjudication": []})
 

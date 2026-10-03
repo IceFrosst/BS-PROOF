@@ -10,6 +10,62 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-03 — dose rule relaxed; reviewer fixed; re-extraction held back
+
+- Founder: dose indirectness only for `below_50` / `above_200`
+  (`grade.OFF_DOSE`, TS `OFF_DOSE`, goldens regenerated).
+- Second reviewer made route-aware (`review.ROUTE_FIELDS`, `MUST_CONFIRM`),
+  sent only effect-making claims, told the estimand and what `found` means
+  (v1.30). S5 told to copy arm values, never compute them (v1.31).
+- Three smoke runs (14 studies, ~150 calls): 0 of 13 mapped claims made an
+  effect after the fixes, so the full creatine re-extraction was NOT started.
+  Details and the proposed per-claim numbers extractor:
+  `2026-10-03-phase1-measurements.md` "Pre-re-extraction smoke tests".
+
+## 2026-10-03 — v2 end to end: S5 claim rule (v1.29), run stage, app port, grade card
+
+- **S5 unit** is one claim per separately reported measure (grids still
+  collapse; whole-body lean mass first); `_shared.md` forbids undefined
+  properties. `PROMPT_VERSION` v1.28 -> v1.29 (cache invalidated; the creatine
+  re-extraction needed it anyway). Pool picks one claim per trial by a fixed
+  `measure_hierarchy` (vocab/outcome.json) before primary/route/order: on the
+  A/B pair, same-endpoint effects now agree 7/7 with max difference 0.0.
+- **Run stage** `bsproof/run/evidence.py` -> `pipeline/evidence_v2.py`: pool +
+  GRADE + registry check, stored as `evidence_v2` in the context and dashboard
+  artifact (JSON schema + zod both declare it). `grade.py` split into
+  `base_domains` (stored) + `indirectness` (per product); Python's own letter is
+  composed from the same halves (`grade_record` / `letter_from_record`).
+- **App** `lib/analyze/grade-v2.ts`: re-matches stored trials to the scanned
+  form and ELEMENTAL daily dose; one run grades every form of the ingredient.
+  Pinned to Python by `tests/golden_grade_v2.json` (`scripts/golden_grade_v2.py`,
+  7 products, letters A/B/D-/F/I). Scan responses carry `evidence_v2`.
+- **UI** `components/scan/grade-card.tsx`: letter per outcome, every downgrade
+  with its reason; replaces the Ledger card only when a run carries the block.
+  Dev preview: `scripts/experiments/v2_preview.py` + `EVIDENCE_V2_RUNS_DIR`
+  (ignored in production).
+- Found by the scan test: 5 g monohydrate = ~4.4 g creatine, which is
+  `low_50_99` against 5 g trials and so counts as off-dose (one level). Raised
+  in `docs/REVIEW_PENDING.md` #0.
+- Gates: invariants, selftest, 123 Python tests, 506 vitest, typecheck, lint,
+  production build. Playwright not run.
+
+## 2026-10-03 — founder decisions on REVIEW_PENDING #0; run B resumed
+
+- Founder accepted the GRADE thresholds, both policy choices and the MCID table
+  "for now, may revisit" (`vocab/outcome.json` `"approved": true`); reviewer =
+  Opus, 1 % tolerance; registry rule implemented: −1 publication bias when
+  registered-unpublished ≥ pooled trials (`grade.RULES["registry_unpublished_ratio"]`,
+  never stacked on Egger).
+- `extraction_stability.py run --resume` now redoes studies with failed agents
+  (successful agents replay from the run's own cache) and stops at the first
+  quota hit instead of recording quota failures. Run B's first pass is kept as
+  `out/stability/B_firstpass.json` / `cache_B_firstpass.sqlite`.
+- **Run B completed** (18 studies, 342 s, no quota hit). Methods facts
+  reproduce well (kappa 0.5–1.0); same-endpoint numbers are identical across
+  runs; the instability is which endpoints become poolable (claim splitting,
+  endpoint choice, S3 failure cascade). Full numbers:
+  `2026-10-03-phase1-measurements.md` "Phase 1b result".
+
 ## 2026-10-03 — v2: second reviewer, MCID proposal, crossover, dose, registry (shadow)
 
 - **Second reviewer** (`pipeline/review.py`, agent `S5R`, tier `R` =

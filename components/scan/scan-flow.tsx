@@ -57,6 +57,7 @@ import { LandingView, LoadingPanel, StagedView } from "./capture-views";
 import { MANUAL_STAGES, MAX_BYTES, PHOTO_STAGES, flowReducer, initialFlowState, receivedAction } from "./flow-state";
 import { mg, words } from "./format";
 import { SaveResultCard } from "./google-sign-in";
+import { GradeCard } from "./grade-card";
 import { LabTabs, LabValidity, LabWarnings, auditConcernNotices } from "./ledger-tabs";
 import type { Basis } from "./primitives";
 import {
@@ -176,6 +177,7 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
   const typed = data?.source === "manual";
   const product = data?.product;
   const ledgerAudit = data?.ledger_audit ?? null;
+  const gradesV2 = data?.evidence_v2?.status === "graded" ? data.evidence_v2 : null;
   const evidence = data?.evidence as ScanEvidence | undefined;
   const rows = evidence?.rows ?? [];
   const prior = data?.evidence_prior;
@@ -364,7 +366,13 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
 
                 {/* The validity stamp and disclosures live inside the lab card,
                     immediately before its first score. */}
-                {product ? (
+                {/* Evidence method v2: when a retained run carries pooled
+                    grades for this ingredient, they replace the ledger card
+                    (keep-then-retire, docs/EVIDENCE_METHOD.md §6). */}
+                {product && gradesV2 ? (
+                  <GradeCard grades={gradesV2} warnings={<LabWarnings count={warningCount}>{warnings}</LabWarnings>} />
+                ) : null}
+                {product && !gradesV2 ? (
                   <LabTabs
                     audit={ledgerAudit}
                     unmatchedRows={ledgerAudit ? undefined : rows}

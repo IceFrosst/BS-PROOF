@@ -803,6 +803,25 @@ def _safe_v13_shadow(value: Any) -> dict | None:
             "eligible": _integer(value.get("eligible"))}
 
 
+def _safe_evidence_v2(value: Any) -> dict | None:
+    """Bound the evidence-method-v2 block (pipeline/evidence_v2.summarise). It is
+    deterministic output, so it is copied, capped and left to the schema."""
+    if not isinstance(value, dict):
+        return None
+    out = _json_copy(value)
+    out["outcomes"] = [o for o in (out.get("outcomes") or []) if isinstance(o, dict)][:60]
+    for o in out["outcomes"]:
+        o["studies"] = (o.get("studies") or [])[:400]
+        o["note"] = _cap_text(o.get("note"), 400)
+        for s in o["studies"]:
+            s["measure"] = _cap_text(s.get("measure"), 240)
+            s["unit"] = _cap_text(s.get("unit"), 80)
+            s["flags"] = [str(f)[:120] for f in (s.get("flags") or [])[:12]]
+        for v in ((o.get("record") or {}).get("variants") or {}).values():
+            v["not_assessed"] = [str(x)[:400] for x in (v.get("not_assessed") or [])[:20]]
+    return out
+
+
 def _safe_dose(value: Any) -> dict | None:
     if not isinstance(value, dict):
         return None
@@ -1001,6 +1020,8 @@ def build_dashboard_run(context: dict, *, run_id: str, mode: str | None = None,
     }
     if "v13_shadow" in context:
         artifact["v13_shadow"] = _safe_v13_shadow(context.get("v13_shadow"))
+    if isinstance(context.get("evidence_v2"), dict):
+        artifact["evidence_v2"] = _safe_evidence_v2(context.get("evidence_v2"))
     validate_dashboard_run(artifact)
     return artifact
 

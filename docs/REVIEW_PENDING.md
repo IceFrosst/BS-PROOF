@@ -17,6 +17,12 @@ Last swept: **2026-08-08**.
 
 ### 0. Evidence method v2 — GRADE rule thresholds (FOUNDER REVIEW, 2026-10-03)
 
+**DECIDED 2026-10-03 (founder): everything below is accepted "for now, may
+revisit"** — the GRADE thresholds and both policy choices, the MCID table (now
+`"approved": true`), the reviewer settings (Opus, 1 % tolerance), and the
+registry rule as proposed (implemented: `RULES["registry_unpublished_ratio"]`).
+Kept here, not moved to RESOLVED, because the founder may revisit 1–3.
+
 `pipeline/grade.py` `RULES` uses GRADE-handbook rules of thumb, shadow only
 (no production score reads them): default threshold 0.2 SD when no MCID is
 approved; risk of bias — no downgrade if ≥ 50% of the weight is low-risk, −2 if
@@ -33,7 +39,7 @@ and blinding are adequate.
 **Added later on 2026-10-03 (second reviewer, MCIDs, method gaps):**
 
 - **MCID table — approve or amend** (`vocab/outcome.json` `"mcid"`, all
-  `"approved": false`, so the grade still uses the flagged 0.2 SD default):
+  approved 2026-10-03):
 
   | outcome | proposed | tier | source |
   |---|---|---|---|
@@ -43,7 +49,7 @@ and blinding are adequate.
   Also recorded, not used: grip-strength MCID 5.0–6.5 kg (Bohannon, *J Phys
   Ther Sci* 2019, patient populations). Tier-2 values may only make a grade
   stricter; it was not applied because `muscle_strength` pools many tests in SD
-  units. Approving a row = setting `"approved": true`.
+  units.
 - **Second reviewer** (`pipeline/review.py`): two readings agree within 1 %
   relative or 0.005 absolute (`RULES`); any categorical or numeric conflict
   refuses the claim for human adjudication; a number only reviewer 1 read is
@@ -52,13 +58,20 @@ and blinding are adequate.
 - **Dose indirectness**: −1 when > 50 % of the weight comes from trials whose
   dose is not SPEC §8 `in_band` against the product (reuses the existing tiers;
   no new constant). Form + dose together cap at −2.
+- **DECIDED 2026-10-03 (founder: agreed) — dose indirectness relaxed:** only
+  `below_50` / `above_200` are off-dose (`grade.OFF_DOSE`). Original question: Only SPEC §8
+  `in_band` (1–2× the trial's daily dose) counts as direct, so a product at
+  `low_50_99` is "off-dose": 5 g creatine monohydrate (~4.4 g creatine)
+  against 5 g-creatine trials loses one certainty level. Option: count
+  `low_50_99` as direct too (only `below_50` / `above_200` indirect). One line
+  in `grade.indirectness` + the TS port + goldens. Founder call.
 - **Crossover trials**: arm statistics are pooled as if parallel (Cochrane
   Handbook §23.2.6, conservative); a paired mean difference with CI is kept;
   a crossover SMD is refused (may be d_z).
 - **Registry check** (`pipeline/registry_bias.py`): registered, completed trials
-  with no results and no linked publication are **reported, not downgraded**.
-  Proposal to decide: −1 publication bias when unpublished registered trials ≥
-  the number pooled. The count is an upper bound (registry links are incomplete).
+  with no results and no linked publication. **Decided:** −1 publication bias
+  when unpublished registered trials ≥ the number pooled (not stacked on an
+  Egger downgrade). The count is an upper bound (registry links are incomplete).
 
 ### 1. Predatory list flags nothing, and that is now deliberate
 

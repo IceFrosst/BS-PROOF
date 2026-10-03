@@ -90,9 +90,12 @@ class CertaintyDomains(unittest.TestCase):
         few = certainty(make_pool(CLEAN), 0.2)
         self.assertTrue(any("publication bias" in x for x in few.not_assessed))
         reg = {"registered": 12, "in_corpus": 4, "unpublished": ["NCT1", "NCT2"], "upper_bound": True}
-        g = grade(make_pool(CLEAN), registry=reg)
-        self.assertEqual(g.certainty.level, 4)                      # reported, not downgraded
+        g = grade(make_pool(CLEAN), registry=reg)                    # 2 missing < 3 pooled
+        self.assertEqual(g.certainty.level, 4)
         self.assertTrue(any(x.startswith("registry: 2 of 12") for x in g.certainty.not_assessed))
+        reg3 = {**reg, "unpublished": ["NCT1", "NCT2", "NCT3"]}      # 3 missing >= 3 pooled
+        g3 = grade(make_pool(CLEAN), registry=reg3)
+        self.assertEqual((g3.certainty.level, g3.certainty.downgrades["publication_bias"][0]), (3, 1))
         # Small trials with big effects, big trials with small ones: asymmetric.
         skewed = [st(g=1.2 - 0.1 * i, var=0.30 - 0.025 * i, n=60 + 40 * i) for i in range(11)]
         c = certainty(make_pool(skewed, estimate=0.6, ci=(0.4, 0.8)), 0.2)

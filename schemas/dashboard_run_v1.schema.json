@@ -422,9 +422,430 @@
     },
     "v13_shadow": {
       "$ref": "#/$defs/v13Shadow"
+    },
+    "evidence_v2": {
+      "$ref": "#/$defs/evidenceV2"
     }
   },
   "$defs": {
+    "evidenceV2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "method",
+        "status",
+        "population",
+        "registry_checked",
+        "outcomes"
+      ],
+      "properties": {
+        "method": {
+          "const": "evidence-v2"
+        },
+        "status": {
+          "enum": [
+            "shadow",
+            "live"
+          ]
+        },
+        "population": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 80
+        },
+        "registry_checked": {
+          "type": "boolean"
+        },
+        "outcomes": {
+          "type": "array",
+          "maxItems": 60,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "outcome",
+              "label",
+              "polarity",
+              "k",
+              "smd",
+              "md",
+              "estimand_mix",
+              "leave_one_out",
+              "refused",
+              "note",
+              "record",
+              "studies",
+              "run_grade"
+            ],
+            "properties": {
+              "outcome": {
+                "type": "string",
+                "maxLength": 120
+              },
+              "label": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "polarity": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 40
+              },
+              "k": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "smd": {
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "md": {
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "estimand_mix": {
+                "type": "object"
+              },
+              "leave_one_out": {
+                "type": [
+                  "array",
+                  "null"
+                ]
+              },
+              "refused": {
+                "type": "object"
+              },
+              "note": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 400
+              },
+              "record": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "outcome",
+                  "threshold",
+                  "threshold_source",
+                  "registry",
+                  "variants"
+                ],
+                "properties": {
+                  "outcome": {
+                    "type": "string"
+                  },
+                  "threshold": {
+                    "type": "number"
+                  },
+                  "threshold_source": {
+                    "type": "string",
+                    "maxLength": 400
+                  },
+                  "registry": {
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "variants": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "m": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "threshold",
+                          "benefit",
+                          "start",
+                          "downgrades",
+                          "not_assessed"
+                        ],
+                        "properties": {
+                          "threshold": {
+                            "type": "number"
+                          },
+                          "benefit": {
+                            "enum": [
+                              "large",
+                              "meaningful",
+                              "small",
+                              "none",
+                              "harm",
+                              "inconclusive"
+                            ]
+                          },
+                          "start": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 4
+                          },
+                          "downgrades": {
+                            "type": "object",
+                            "additionalProperties": {
+                              "type": "array",
+                              "minItems": 2,
+                              "maxItems": 2
+                            }
+                          },
+                          "not_assessed": {
+                            "type": "array",
+                            "maxItems": 20,
+                            "items": {
+                              "type": "string",
+                              "maxLength": 400
+                            }
+                          }
+                        }
+                      },
+                      "half": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "threshold",
+                          "benefit",
+                          "start",
+                          "downgrades",
+                          "not_assessed"
+                        ],
+                        "properties": {
+                          "threshold": {
+                            "type": "number"
+                          },
+                          "benefit": {
+                            "enum": [
+                              "large",
+                              "meaningful",
+                              "small",
+                              "none",
+                              "harm",
+                              "inconclusive"
+                            ]
+                          },
+                          "start": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 4
+                          },
+                          "downgrades": {
+                            "type": "object",
+                            "additionalProperties": {
+                              "type": "array",
+                              "minItems": 2,
+                              "maxItems": 2
+                            }
+                          },
+                          "not_assessed": {
+                            "type": "array",
+                            "maxItems": 20,
+                            "items": {
+                              "type": "string",
+                              "maxLength": 400
+                            }
+                          }
+                        }
+                      },
+                      "double": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "threshold",
+                          "benefit",
+                          "start",
+                          "downgrades",
+                          "not_assessed"
+                        ],
+                        "properties": {
+                          "threshold": {
+                            "type": "number"
+                          },
+                          "benefit": {
+                            "enum": [
+                              "large",
+                              "meaningful",
+                              "small",
+                              "none",
+                              "harm",
+                              "inconclusive"
+                            ]
+                          },
+                          "start": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 4
+                          },
+                          "downgrades": {
+                            "type": "object",
+                            "additionalProperties": {
+                              "type": "array",
+                              "minItems": 2,
+                              "maxItems": 2
+                            }
+                          },
+                          "not_assessed": {
+                            "type": "array",
+                            "maxItems": 20,
+                            "items": {
+                              "type": "string",
+                              "maxLength": 400
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "studies": {
+                "type": "array",
+                "maxItems": 400,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "study",
+                    "measure",
+                    "route",
+                    "g",
+                    "g_variance",
+                    "weight",
+                    "md",
+                    "unit",
+                    "n",
+                    "rob",
+                    "pop_match",
+                    "form_id",
+                    "dose_low_mg",
+                    "dose_high_mg",
+                    "reviewed",
+                    "estimand",
+                    "flags"
+                  ],
+                  "properties": {
+                    "study": {
+                      "type": "string",
+                      "maxLength": 200
+                    },
+                    "measure": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "maxLength": 240
+                    },
+                    "route": {
+                      "type": "string",
+                      "maxLength": 40
+                    },
+                    "g": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "g_variance": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "weight": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "md": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "unit": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "maxLength": 80
+                    },
+                    "n": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "rob": {
+                      "enum": [
+                        "low",
+                        "unclear",
+                        "high"
+                      ]
+                    },
+                    "pop_match": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "maxLength": 40
+                    },
+                    "form_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "maxLength": 120
+                    },
+                    "dose_low_mg": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "dose_high_mg": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "reviewed": {
+                      "type": "boolean"
+                    },
+                    "estimand": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "maxLength": 40
+                    },
+                    "flags": {
+                      "type": "array",
+                      "maxItems": 12,
+                      "items": {
+                        "type": "string",
+                        "maxLength": 120
+                      }
+                    }
+                  }
+                }
+              },
+              "run_grade": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
     "v13Shadow": {
       "type": "object",
       "additionalProperties": false,
