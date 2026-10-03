@@ -173,17 +173,25 @@ export const UPLOAD_REENCODE_BYTES = 3_500_000;
  */
 export async function shrinkForUpload(file: File, options: CaptureOptions = {}): Promise<File> {
   if (file.size <= UPLOAD_REENCODE_BYTES || typeof createImageBitmap !== "function") return file;
+  let bitmap: ImageBitmap | null = null;
   try {
-    const bitmap = await createImageBitmap(file);
+    bitmap = await createImageBitmap(file);
+    const decoded = bitmap;
     const blob = await captureFrameToBlob(
-      { videoWidth: bitmap.width, videoHeight: bitmap.height },
+      { videoWidth: decoded.width, videoHeight: decoded.height },
       () => document.createElement("canvas"),
-      (ctx, width, height) => ctx.drawImage(bitmap, 0, 0, width, height),
+      (ctx, width, height) => ctx.drawImage(decoded, 0, 0, width, height),
       { maxLongEdge: 2560, ...options },
     );
-    bitmap.close();
-    return blob ? blobToCaptureFile(blob, "image/jpeg") : file;
+    // Only ever swap in a SMALLER file; anything else keeps the original.
+    return blob && blob.size < file.size ? blobToCaptureFile(blob, "image/jpeg") : file;
   } catch {
     return file;
+  } finally {
+    try {
+      bitmap?.close();
+    } catch {
+      /* closing is best effort */
+    }
   }
 }
