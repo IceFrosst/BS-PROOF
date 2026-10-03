@@ -10,6 +10,20 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-03 — S7 max_turns fixed; v2 benchmark (step 3); effect_unit (v1.35)
+
+- S7 `max_turns`: optional arm `confidence` / `salt_family`; S5 `effect_unit`
+  cap 60 (loosen-only, no bump). Verified by RSMOKE6 `--resume`.
+- Benchmark: `vocab/benchmarks.json` (19 rows, 10 meta-analyses, verbatim
+  quotes), `pipeline/benchmark.py` (offline, like-for-like CI overlap),
+  `scripts/benchmark_v2.py verify|compare`, `tests/test_benchmark.py`.
+  `verify`: 19/19. The 2026-08-11 PUBLISHED table had 3 misattributed rows
+  (10.3390/nu17020238, no meta-analysis); excluded and annotated.
+- v1.35: S5N / S5R `effect_unit` = unit only (RSMOKE6 wrote measure names).
+  RSMOKE7: 0 failed agents, units clean; an endpoint arm's mean is now read
+  from its verified post value when only `post_*` is filled (FFM claim).
+- Gates: invariants, selftest, 170 Python tests.
+
 ## 2026-10-03 — S5N per-claim numbers extractor (v1.32-v1.34)
 
 - New agent S5N (`prompts/s5_numbers.md`, `schemas/s5_numbers.json`, tier B

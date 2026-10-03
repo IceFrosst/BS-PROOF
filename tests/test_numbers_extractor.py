@@ -284,6 +284,16 @@ class BaselineImbalance(unittest.TestCase):
         self.assertEqual(route, "arm_stats_derived")
         self.assertIn("baseline_imbalance", eff.flags)
 
+    def test_an_endpoint_mean_may_be_given_as_the_post_value_only(self):
+        from pipeline.effect_size import effect_from_claim
+        post_only = {k: x for k, x in FFM.items() if not k.startswith("mean_")}
+        eff, route = effect_from_claim({**BASE, "estimand": "endpoint"}, post_only, polarity="higher_better")
+        self.assertEqual(route, "arm_stats_derived")
+        self.assertAlmostEqual(eff.md, 65.4 - 67.6)
+        self.assertIn("baseline_imbalance", eff.flags)
+        # a change score is never read from post values
+        self.assertIsNone(effect_from_claim(BASE, post_only, polarity="higher_better")[0])
+
     def test_a_small_gap_or_a_change_score_is_not_flagged(self):
         from pipeline.effect_size import effect_from_claim
         small = {**FFM, "pre_control": 64.0}

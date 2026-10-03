@@ -435,7 +435,7 @@ class UniversalNegativeRepairTests(unittest.TestCase):
             {"extraction_version": "v1.24", "arms": []}))
         from bsproof import claude_adapter
         from bsproof import grok_adapter
-        self.assertEqual(claude_adapter.PROMPT_VERSION, "v1.34")
+        self.assertEqual(claude_adapter.PROMPT_VERSION, "v1.35")
         shared = (Path(__file__).parents[1] / "prompts" / "_shared.md").read_text()
         self.assertIn("schema object directly", shared)
         self.assertIn("Never stringify", shared)

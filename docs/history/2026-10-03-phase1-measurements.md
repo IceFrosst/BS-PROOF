@@ -245,3 +245,43 @@ every claim that printed them.
 - **2 failed agents: S7 `max_turns`** (2 of 6 studies; S5 hit the same
   intermittent failure once in RSMOKE5). S7 supplies form and dose, which v2
   uses for indirectness, so a full run must `--resume` its failures.
+
+## S7 `max_turns` root cause and the v2 benchmark (2026-10-03, later)
+
+**S7 failures fixed.** 6 of the 7 S7 `max_turns` failures across A, B and the
+smokes were arms carrying the top-level `confidence` / `salt_family` (the
+prompt asks for them; the arm schema refused them). Arm items now accept both,
+optional; S5 `effect_unit` cap 40 -> 60. No bump (loosen-only). RSMOKE6
+`--resume`: the 2 failed S7 calls succeed, every arm carries both fields.
+
+**Benchmark (Phase 2/4 validation).** `vocab/benchmarks.json`: 19 published
+pooled estimates from **10 creatine meta-analyses** (strength 9, lean mass 8,
+power 2), each with population, comparison, scale and a verbatim quote cut
+programmatically from the Europe PMC abstract / PMC full text / PMC table.
+`scripts/benchmark_v2.py verify`: **19/19 quotes found in the live sources,
+every number in its quote.** Comparison is like for like only
+(`pipeline/benchmark.py`: SMD vs our SMD pool, MD vs our MD pool in the same
+unit).
+
+**The 2026-08-11 "verbatim-verified" table was partly wrong.**
+10.3390/nu17020238 is a systematic review with no meta-analysis; its three rows
+were misattributed (CMJ 2.70 cm and Wingate 71.27 W are
+10.3389/fnut.2026.1800546's; exercise_endurance SMD 0.05 [-0.26, 0.36] is in
+none of the 12 sources). Recorded under `excluded`; the old script is
+annotated, not rewritten.
+
+**First comparison (RSMOKE6, k = 1 per outcome) is uninformative by design**:
+a one-trial CI (SMD -1.24 to +0.44) overlaps almost every published CI. CI
+overlap only discriminates once the full re-extraction gives real pools. It
+also exposed `effect_unit` holding measure names ("DXA total body BF-FFM"),
+which blocks the natural-unit pool and every kg benchmark -> v1.35.
+
+**RSMOKE7 (v1.35)**: 0 failed agents (first clean smoke since the S7 fix);
+`effect_unit` now "kg" / "cm" on every claim with a unit. One regression found
+and fixed deterministically: for the FFM claim S5N chose `endpoint` and filled
+only `post_*`, leaving `mean_*` null, so it lost its effect.
+`effect_size` now reads an endpoint arm's mean from its verified post value
+(the same printed number). Re-scored offline: 5/13 effects; every lean-mass kg
+benchmark is now comparable (still k = 1, so overlap is uninformative). That
+claim shows review "single" because review routing ran under the old code; a
+new run sends it.

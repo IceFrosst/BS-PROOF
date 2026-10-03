@@ -101,6 +101,14 @@ sys.path.insert(0, str(ROOT))
 POSITIVE_POLARITY = ("muscle_strength", "muscle_power",
                      "lean_body_mass", "exercise_endurance")
 
+# CORRECTION 2026-10-03 (re-read against the sources for the v2 benchmark,
+# vocab/benchmarks.json, which supersedes this table): the three
+# 10.3390/nu17020238 rows below are wrong -- that paper is a systematic review
+# with NO meta-analysis. Its CMJ 2.70 cm and Wingate 71.27 W rows belong to
+# 10.3389/fnut.2026.1800546; the exercise_endurance SMD 0.05 row was found in
+# none of the 12 sources. The other rows were confirmed verbatim. Kept unchanged
+# below because this script's 2026-08-11 measurement was made with them.
+#
 # The published pooled estimates, verbatim-verified 2026-08-11 by an adversarial
 # pass instructed to refute them (0 of 24 refuted). Recorded here so the
 # comparison is auditable without re-running any model. `pooled` is the review's

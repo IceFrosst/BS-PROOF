@@ -307,10 +307,11 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
    built (v1.33, on by default; per-arm SE/CI -> SD in `effect_size`): smoke
    RSMOKE5 makes 7/11 mapped claims poolable, all reviewer-agreed; v1.34 adds
    the before/after/∆ consistency guard (refuses) and the baseline-imbalance
-   flag (downgrades via RoB) -- RSMOKE6 confirmed both live. Next: the
-   benchmark table (published creatine meta-analyses), then the creatine
-   re-extraction (S7 `max_turns` root cause fixed: optional arm `confidence` /
-   `salt_family`; `--resume` any residual failures).
+   flag (downgrades via RoB) -- RSMOKE6 confirmed both live. Benchmark built:
+   `vocab/benchmarks.json` (19 rows, 10 creatine meta-analyses, quotes
+   verified by `scripts/benchmark_v2.py verify`), `pipeline/benchmark.py`.
+   Next: the creatine re-extraction (S7 `max_turns` root cause fixed), then
+   `scripts/benchmark_v2.py compare` on its artifact.
 1. Verify on a real phone: live camera, a busy label read after the
    thinking-mode fix, PWA install.
 2. Check whether the text calls (`deepseek-chat`) also need thinking disabled

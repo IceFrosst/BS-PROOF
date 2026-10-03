@@ -81,9 +81,15 @@ wrong number is not.
                                 whenever they are printed, whatever the estimand;
                                 a deterministic check uses them to catch
                                 misprinted change columns
-  effect_size, effect_unit      the paper's own between-arm estimate (a mean
+  effect_size                   the paper's own between-arm estimate (a mean
                                 difference or a standardised effect such as
                                 Cohen's d / Hedges' g), as printed
+  effect_unit                   the UNIT of measurement of the means (and of
+                                effect_size), as printed: kg, cm, W, s, reps,
+                                %, mmol/L ... -- the unit only, never the
+                                outcome's name or method ("kg", not "DXA lean
+                                mass"); null for a standardised effect or when
+                                no unit is printed
   estimate_kind                 smd | mean_difference | ratio | relative_percent |
                                 percentage_points -- the kind of effect_size
   effect_favours                ingredient | control | neither -- which arm the

@@ -355,7 +355,11 @@ def _claude_bin() -> str:
 #   baseline-imbalance flag (pipeline/effect_size.py). Measured on RSMOKE5: a
 #   swapped ∆ column (DJ / CMJ) passed both readers; a 5 kg baseline gap
 #   flipped an endpoint g's sign.
-PROMPT_VERSION = "v1.34"
+# v1.35 (2026-10-03): S5N / S5R `effect_unit` is the unit only ("kg"), never
+#   the outcome's name. Measured on RSMOKE6: S5N wrote "DXA total body BF-FFM",
+#   so the natural-unit pool and the kg benchmarks (vocab/benchmarks.json)
+#   could not be compared.
+PROMPT_VERSION = "v1.35"
 
 # Tier -> model. FULL IDs, NOT ALIASES.
 #

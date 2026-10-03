@@ -178,6 +178,12 @@ def effect_from_claim(claim: dict, verified: dict, *, polarity: str | None,
     # --- arm_stats: both arms' mean, SD and n --------------------------------
     arm_keys = ("mean_ingredient", "mean_control", "sd_ingredient", "sd_control",
                 "n_ingredient", "n_control")
+    if estimand == "endpoint":
+        # An endpoint mean IS the arm's post value: the same printed number,
+        # already span-verified. Readers given both fields often fill only
+        # post_* (measured RSMOKE7, v1.35: whole-body FFM lost its effect).
+        v = {**v, **{f"mean_{a}": v[f"post_{a}"] for a in ("ingredient", "control")
+                     if f"mean_{a}" not in v and f"post_{a}" in v}}
     v, derived = _derive_arm_sds(v, claim.get("arm_ci_level"))
     if all(k in v for k in arm_keys):
         bad = _inconsistent_arms(checks, estimand)
