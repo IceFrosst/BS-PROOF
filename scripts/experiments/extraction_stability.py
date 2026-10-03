@@ -164,6 +164,27 @@ def _claims_by_outcome(ext: dict) -> dict[str, dict]:
     return out
 
 
+def _effects_by_outcome(ext: dict) -> dict[str, tuple]:
+    """Evidence method v2 view: (route, smd) per mapped outcome from the first
+    claim whose span-verified numbers yield an effect, else (refusal, None)."""
+    from pipeline import vocab
+    from pipeline.effect_size import effect_from_claim
+    polarity = {o["id"]: o.get("polarity") for o in vocab.load("outcome")["outcomes"]}
+    out: dict[str, tuple] = {}
+    for o in ext.get("outcomes") or []:
+        oid = o.get("outcome_vocab_id")
+        nums = o.get("numbers_v2")
+        if not oid or o.get("discarded") or not isinstance(nums, dict):
+            continue
+        eff, why = effect_from_claim(o.get("claim") or {}, nums.get("verified") or {},
+                                     polarity=polarity.get(oid), abs_only=nums.get("abs_only") or ())
+        if eff is not None and (oid not in out or out[oid][1] is None):
+            out[oid] = (eff.route, eff.smd if eff.smd is not None else eff.md)
+        elif oid not in out:
+            out[oid] = ("refused", None)
+    return out
+
+
 def _failed_agents(ext: dict) -> set[str]:
     return {f.get("agent") for f in ext.get("_failed") or [] if f.get("agent")}
 
@@ -179,6 +200,7 @@ def compare_runs(a: dict, b: dict) -> dict:
             {f"claim.{f}": [] for f in CLAIM_FIELDS}
     failures = {"A": collections.Counter(), "B": collections.Counter()}
     jaccard, compared, scorable = [], [], []
+    effect_pairs = []
     for cid in ids:
         ea, eb = a[cid].get("extraction") or {}, b[cid].get("extraction") or {}
         if ea.get("_skipped") or eb.get("_skipped") or "record" not in a[cid] or "record" not in b[cid]:
@@ -203,12 +225,26 @@ def compare_runs(a: dict, b: dict) -> dict:
         for oid in set(ca) & set(cb):
             for f in CLAIM_FIELDS:
                 pairs[f"claim.{f}"].append((ca[oid].get(f), cb[oid].get(f)))
+        fa_eff, fb_eff = _effects_by_outcome(ea), _effects_by_outcome(eb)
+        for oid in set(fa_eff) | set(fb_eff):
+            effect_pairs.append((fa_eff.get(oid, ("unmapped", None)), fb_eff.get(oid, ("unmapped", None))))
+    produced = [(a, b) for a, b in effect_pairs if a[1] is not None or b[1] is not None]
+    both = [(a, b) for a, b in produced if a[1] is not None and b[1] is not None]
     return {
         "studies_compared": len(compared), "studies_in_both_files": len(ids),
         "studies_with_no_failed_agent_in_either_run": len(scorable),
         "agent_failures": {run: dict(c) for run, c in failures.items()},
         "outcome_mapping_jaccard_mean": round(sum(jaccard) / len(jaccard), 3) if jaccard else None,
         "fields": {k: _field_stats(v) for k, v in pairs.items()},
+        # v2: did the two runs produce the same effect size for an outcome?
+        "effects_v2": {
+            "outcome_pairs": len(effect_pairs),
+            "effect_in_either_run": len(produced),
+            "effect_in_both_runs": len(both),
+            "same_route": sum(1 for a, b in both if a[0] == b[0]),
+            "same_effect_within_0.05": sum(1 for a, b in both if abs(a[1] - b[1]) <= 0.05),
+            "max_abs_difference": round(max((abs(a[1] - b[1]) for a, b in both), default=0.0), 3),
+        },
         # Scores only from studies where every agent succeeded in BOTH runs, so a
         # score difference is extraction disagreement, not one run missing data.
         "scores": _score_both(a, b, scorable),
