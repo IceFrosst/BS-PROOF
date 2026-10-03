@@ -80,40 +80,56 @@ export function ScanWorkspace({ catalog }: { catalog: CatalogIngredient[] }) {
   return (
     <TranslationProvider getHeaders={translateHeaders} ownerKey={userId}>
     <div className="scan-workspace">
-      <div className="sw-bar">
-      <div className="sw-tabs" role="tablist" aria-label={t.workspaceLabel}>
-        {TABS.map((item, index) => (
-          <button
-            key={item.key}
-            ref={(node) => {
-              refs.current[index] = node;
-            }}
-            type="button"
-            role="tab"
-            id={tabId(item.key)}
-            className="sw-tab"
-            aria-selected={tab === item.key}
-            aria-controls={panelId(item.key)}
-            tabIndex={tab === item.key ? 0 : -1}
-            onClick={() => setTab(item.key)}
-            onKeyDown={(event) => onKeyDown(event, index)}
-          >
-            {item.label}
+      {/* One top bar for both tabs (2026-10-03, Ignas): brand left; on the
+          right the two tabs as icon buttons, the language switch and -- once
+          signed in -- the account initial. The tab labels stay in the DOM as
+          visually hidden text, so screen readers still hear "Scan"/"History". */}
+      <div className="sw-bar sc-topbar">
+        <span className="sc-brand">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="sc-lockup" src="/bsproof-lockup.svg" alt="BS-PROOF" width={130} height={26} />
+        </span>
+        <span className="sc-topbar-end">
+          <div className="sw-tabs" role="tablist" aria-label={t.workspaceLabel}>
+            {TABS.map((item, index) => (
+              <button
+                key={item.key}
+                ref={(node) => {
+                  refs.current[index] = node;
+                }}
+                type="button"
+                role="tab"
+                id={tabId(item.key)}
+                className="sw-tab"
+                aria-selected={tab === item.key}
+                aria-controls={panelId(item.key)}
+                tabIndex={tab === item.key ? 0 : -1}
+                title={item.label}
+                onClick={() => setTab(item.key)}
+                onKeyDown={(event) => onKeyDown(event, index)}
+              >
+                {item.key === "scan" ? (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M7 12h10" /></svg>
+                ) : (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></svg>
+                )}
+                <span className="sw-sr-only">{item.label}</span>
+              </button>
+            ))}
+          </div>
+          <button type="button" className="sc-lang" onClick={toggleLang} aria-label={t.switchTo} lang={lang === "en" ? "lt" : "en"} data-testid="lang-toggle">
+            {t.switchShort}
           </button>
-        ))}
-      </div>
-      {/* One switch is ever visible: on the Scan tab it is the top bar's (in
-          <ScanFlow>, Ignas PR3 layout); on History -- which has no top bar --
-          it is this one. Same state, same stored choice. */}
-      {tab === "history" ? (
-        <button type="button" className="sw-lang" onClick={toggleLang} aria-label={t.switchTo} lang={lang === "en" ? "lt" : "en"} data-testid="lang-toggle">
-          {t.switchShort}
-        </button>
-      ) : null}
+          {auth.configured && auth.email ? (
+            <span className="sc-avatar" title={auth.email} aria-label={`${t.signedInAs} ${auth.email}`}>
+              {auth.email.charAt(0).toUpperCase()}
+            </span>
+          ) : null}
+        </span>
       </div>
 
       <div role="tabpanel" id={panelId("scan")} aria-labelledby={tabId("scan")} className="sw-panel" hidden={tab !== "scan"}>
-        <ScanFlow catalog={catalog} auth={auth} active={tab === "scan"} onScanStored={onScanStored} />
+        <ScanFlow catalog={catalog} auth={auth} active={tab === "scan"} onScanStored={onScanStored} hideTopbar />
       </div>
 
       <div role="tabpanel" id={panelId("history")} aria-labelledby={tabId("history")} className="sw-panel" hidden={tab !== "history"}>

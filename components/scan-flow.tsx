@@ -485,6 +485,8 @@ export interface SavedScanResult {
 
 export interface ScanFlowProps {
   catalog: CatalogIngredient[];
+  /** True inside <ScanWorkspace>, which draws the one top bar for both tabs. */
+  hideTopbar?: boolean;
   /**
    * The workspace's shared session. Omit it when <ScanFlow> is rendered on its
    * own and it reads the session itself.
@@ -586,7 +588,7 @@ function StandaloneScanFlow(props: ScanFlowProps & { auth: AuthSession }) {
   );
 }
 
-function ScanFlowInner({ catalog, auth: sharedAuth, active = true, initialResult, onLeave, onScanStored }: ScanFlowProps) {
+function ScanFlowInner({ catalog, hideTopbar = false, auth: sharedAuth, active = true, initialResult, onLeave, onScanStored }: ScanFlowProps) {
   const { lang, toggleLang, f, r, tr } = useLocalized();
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -981,7 +983,7 @@ function ScanFlowInner({ catalog, auth: sharedAuth, active = true, initialResult
           Replaces the shared site header on this page (hidden in globals.css).
           This is THE language switch while the Scan tab shows; the workspace
           shows its own only on History, so exactly one is ever visible. */}
-      {!replay ? (
+      {!replay && !hideTopbar ? (
         <div className="sc-topbar">
           <span className="sc-brand">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1124,6 +1126,16 @@ function ScanFlowInner({ catalog, auth: sharedAuth, active = true, initialResult
                   ) : null
                 }
               />
+              {/* Inside the workspace the top bar has no room for sign-out; it
+                  stays reachable on the landing, just under the camera. */}
+              {hideTopbar && auth.configured && auth.email ? (
+                <p className="sc-signed-in-line sc-landing-account">
+                  {f.signedInAs} <strong>{auth.email}</strong>
+                  <button type="button" className="sc-signout" onClick={() => void signOut()}>
+                    {f.signOut}
+                  </button>
+                </p>
+              ) : null}
               {gate === "signin" ? (
                 <div className="sc-below-block">
                   <span className="sc-hint sc-signin-hint" data-testid="signin-hint">

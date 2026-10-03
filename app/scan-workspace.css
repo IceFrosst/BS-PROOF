@@ -13,31 +13,20 @@
 .scan-workspace { width: 100%; max-width: 640px; margin-inline: auto; }
 .scan-workspace .sw-panel[hidden] { display: none !important; }
 
-/* ---- the two tabs: a quiet segmented control above the search pill ---- */
-.scan-page .sw-bar { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; }
-.scan-page .sw-bar .sw-tabs { flex: 1 1 auto; min-width: 0; margin: 0; }
-/* EN/LT switch: one persisted choice for the whole workspace (bsproof.lang). */
-.scan-page .sw-lang {
-  flex: 0 0 auto; min-width: 48px; min-height: 48px; padding: 0 12px; border: 1px solid var(--sp-line); border-radius: 999px;
-  background: var(--sp-white); color: var(--sp-ink); font: inherit; font-size: var(--fs-2); font-weight: 800; cursor: pointer;
-}
-.scan-page .sw-lang:hover { background: var(--sp-tint); }
-.scan-page .sw-lang:focus-visible { outline: 2px solid var(--sp-measured); outline-offset: 2px; }
+/* ---- top bar: brand left; icon tabs + language + account right (2026-10-03) ---- */
+.scan-page .sw-bar { margin: 0 0 18px; }
 .scan-page .sc-translate-status { margin: 0 0 10px; color: var(--sp-mute); font-size: var(--fs-1); overflow-wrap: anywhere; }
 .scan-page .sw-tabs {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 0 0 12px; padding: 4px;
+  display: inline-grid; grid-template-columns: 1fr 1fr; gap: 2px; padding: 3px;
   border: 1px solid var(--sp-line); border-radius: 999px; background: var(--sp-white);
 }
 .scan-page .sw-tab {
-  min-height: 40px; padding: 0 16px; border: 0; border-radius: 999px; background: transparent; color: var(--sp-ink);
-  font: inherit; font-size: var(--fs-2); font-weight: 700; cursor: pointer;
+  width: 38px; height: 30px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 999px;
+  background: transparent; color: var(--sp-ink); cursor: pointer;
 }
 .scan-page .sw-tab:hover { background: var(--sp-tint); }
 .scan-page .sw-tab[aria-selected="true"] { background: var(--sp-ink); color: var(--sp-white); }
 .scan-page .sw-tab:focus-visible { outline: 2px solid var(--sp-measured); outline-offset: 2px; }
-/* The tab bar costs ~62px of the first screen; the viewfinder gives it back so
-   the shutter still lands inside the first viewport on a short phone. */
-.scan-workspace .sc-viewfinder { max-height: calc(100svh - 322px); }
 
 /* ---- History ---- */
 .scan-page .sw-title { margin: 4px 0 8px; font-size: var(--fs-5); font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
@@ -90,3 +79,4 @@
   background: var(--sp-white); color: var(--sp-ink); font-size: var(--fs-1); line-height: 1.45;
 }
 .scan-page .sc-replay-note:focus { outline: none; }
+.sc-landing-account { justify-content: center; margin: 4px 0 0; }
