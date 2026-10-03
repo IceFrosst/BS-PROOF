@@ -80,3 +80,10 @@
 }
 .scan-page .sc-replay-note:focus { outline: none; }
 .sc-landing-account { justify-content: center; margin: 4px 0 0; }
+
+/* Desktop (2026-10-03): headline on one line and a shorter viewfinder, so the
+   Upload / shutter / Search row is inside the first screen on a laptop. */
+@media (min-width: 900px) {
+  .scan-page .sc-headline { max-width: none; font-size: 2.2rem; }
+  .scan-workspace .sc-viewfinder { max-height: min(calc(100svh - 330px), 440px); min-height: 280px; }
+}
