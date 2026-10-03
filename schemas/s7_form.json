@@ -101,6 +101,20 @@
       ],
       "exclusiveMinimum": 0
      },
+     "confidence": {
+      "type": [
+       "number",
+       "null"
+      ],
+      "minimum": 0,
+      "maximum": 1
+     },
+     "salt_family": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
      "evidence_span": {
       "type": [
        "string",

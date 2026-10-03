@@ -309,7 +309,8 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
    the before/after/∆ consistency guard (refuses) and the baseline-imbalance
    flag (downgrades via RoB) -- RSMOKE6 confirmed both live. Next: the
    benchmark table (published creatine meta-analyses), then the creatine
-   re-extraction (`--resume` the intermittent S5/S7 `max_turns` failures).
+   re-extraction (S7 `max_turns` root cause fixed: optional arm `confidence` /
+   `salt_family`; `--resume` any residual failures).
 1. Verify on a real phone: live camera, a busy label read after the
    thinking-mode fix, PWA install.
 2. Check whether the text calls (`deepseek-chat`) also need thinking disabled

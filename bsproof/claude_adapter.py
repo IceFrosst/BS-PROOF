@@ -316,7 +316,10 @@ def _claude_bin() -> str:
 # passed). A looser maxLength cannot make any cached answer invalid or stale --
 # every answer valid under v1.28 is valid now -- so bumping would only discard
 # ~1000 cached extractions. The prompts still state the shorter targets.
-# tests/test_schema_headroom.py pins the headroom.
+# tests/test_schema_headroom.py pins the headroom. Same reasoning, also no bump
+# (2026-10-03, later): S7 arm items accept OPTIONAL `confidence` / `salt_family`
+# (the model copies them from the top level; 2/6 RSMOKE6 studies failed on it)
+# and S5 `effect_unit` maxLength 40 -> 60.
 # v1.29 (2026-10-03): evidence method v2 Phase 1b result. S5's unit becomes
 #   one claim per SEPARATELY REPORTED MEASURE (tests split, timepoint /
 #   subgroup / body-site grids still collapse; whole-body lean mass first), and

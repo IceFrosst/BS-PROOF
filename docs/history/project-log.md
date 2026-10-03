@@ -34,7 +34,13 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
   pre; refuses) and baseline imbalance (endpoint gap > effect -> flag + RoB
   capped at "unclear"; downgrades, never refuses). Readers copy `pre_*` /
   `post_*`. 157 Python tests. RSMOKE6: the swapped DJ/CMJ cells are refused,
-  FFM flagged; 5/13 effects, all agreed; 2 intermittent S7 `max_turns`.
+  FFM flagged; 5/13 effects, all agreed; 2 S7 `max_turns`.
+- S7 `max_turns` root cause: arms carried the top-level `confidence` /
+  `salt_family` (the prompt asks for them; the arm schema refused them) -- 6 of
+  the 7 S7 failures across A, B and the smokes. Arm items now accept both,
+  optional; S5 `effect_unit` cap 40 -> 60 (its one failure). Loosen-only, so no
+  `PROMPT_VERSION` bump (headroom precedent). Verified: RSMOKE6 `--resume`
+  re-ran the 2 failed S7 calls, 0 failures, every arm carries both fields.
 
 ## 2026-10-03 — dose rule relaxed; reviewer fixed; re-extraction held back
 
