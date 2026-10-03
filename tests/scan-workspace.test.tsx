@@ -72,6 +72,23 @@ describe("tabs", () => {
     expect(el.querySelector("#scan-capture")).not.toBeNull();
   });
 
+  it("the redesigned landing keeps the Scan | History tabs and a sign-out control reachable when signed in", async () => {
+    fakeAuth.configured = true;
+    fakeAuth.session = sessionFor(USER_A);
+    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse({ status: "ok", runs: [], next_cursor: null })));
+    const el = await mountWorkspace();
+    await settle();
+    expect(tabs(el).map((t) => t.textContent)).toEqual(["Scan", "History"]);
+    expect(el.querySelector(".sc-avatar")?.getAttribute("aria-label")).toBe(`Signed in as ${USER_A.email}`);
+    const signOut = buttonByText(visiblePanels(el)[0], /^sign out$/i);
+    expect(signOut).toBeDefined();
+    await click(signOut);
+    await settle();
+    expect(fakeAuth.signOutCalls).toBe(1);
+    expect(tabs(el).map((t) => t.textContent)).toEqual(["Scan", "History"]);
+    expect(el.querySelector(".sc-avatar")).toBeNull();
+  });
+
   it("click selects a tab and swaps the visible panel; exactly one h1 is exposed per tab", async () => {
     const el = await mountWorkspace();
     await click(tab(el, /history/i));

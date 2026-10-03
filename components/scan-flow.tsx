@@ -993,9 +993,16 @@ function ScanFlowInner({ catalog, auth: sharedAuth, active = true, initialResult
               {f.switchShort}
             </button>
             {auth.configured && auth.email ? (
-              <span className="sc-avatar" title={auth.email} aria-label={`${f.signedInAs} ${auth.email}`}>
-                {auth.email.charAt(0).toUpperCase()}
-              </span>
+              <>
+                <span className="sc-avatar" title={auth.email} aria-label={`${f.signedInAs} ${auth.email}`}>
+                  {auth.email.charAt(0).toUpperCase()}
+                </span>
+                {/* Sign-out stays reachable from the landing, not only from a
+                    result or the History tab. */}
+                <button type="button" className="sc-signout" onClick={() => void signOut()}>
+                  {f.signOut}
+                </button>
+              </>
             ) : null}
           </span>
         </div>

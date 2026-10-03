@@ -422,6 +422,19 @@ describe("model boundary helpers", () => {
     expect(validateLabel({ ...base, other_actives: ["Vitamin D", "", null] }).other_actives).toEqual(["Vitamin D"]);
   });
 
+  it("a malformed or non-array actives list fails closed instead of being silently hidden", () => {
+    const base = { ingredient_vocab_id: null, form_vocab_id: null, compound_dose_mg: null, is_multi_ingredient: true, confidence: "high", evidence_spans: ["x"] };
+    expect(() => validateLabel({ ...base, actives: "Zinc 15 mg" })).toThrow(/actives must be an array/);
+    expect(() => validateLabel({ ...base, actives: { name: "Zinc", compound_dose_mg: 15 } })).toThrow(LabelReadError);
+    expect(() => validateLabel({ ...base, other_actives: "Zinc 15 mg" })).toThrow(/other_actives must be an array/);
+    expect(() => validateLabel({ ...base, actives: ["Vitamin D", 15] })).toThrow(LabelReadError);
+    expect(() => validateLabel({ ...base, actives: [["Zinc", 15]] })).toThrow(LabelReadError);
+    expect(() => validateLabel({ ...base, actives: [{ compound_dose_mg: 15 }] })).toThrow(/non-empty string name/);
+    expect(() => validateLabel({ ...base, actives: [{ name: "Zinc", compound_dose_mg: "15 mg" }] })).toThrow(/compound_dose_mg/);
+    const ok = validateLabel({ ...base, actives: ["Vitamin D", "", null, { name: "Zinc", compound_dose_mg: 15 }] });
+    expect(ok.actives.map((a) => a.name)).toEqual(["Vitamin D", "Zinc"]);
+  });
+
   it("the dosed-active lists are never shortened: a 31st other active or 41st active still fails closed", () => {
     const base = { ingredient_vocab_id: null, form_vocab_id: null, compound_dose_mg: null, is_multi_ingredient: true, confidence: "high", evidence_spans: ["x"] };
     expect(() => validateLabel({ ...base, other_actives: Array.from({ length: 31 }, (_, i) => `Active ${i}`) })).toThrow(LabelReadError);

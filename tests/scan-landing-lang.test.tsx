@@ -221,3 +221,78 @@ describe("large uploads are shrunk below the Vercel body limit before POST", () 
     expect(((calls[0].body as FormData).get("image") as File).name).toBe("label.png");
   });
 });
+
+describe("camera denied: upload still works, and a failed shrink falls back to the original", () => {
+  const stubOkFetch = () => {
+    const calls: RecordedCall[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: unknown, init?: RequestInit) => {
+        calls.push(record(url, init));
+        return Promise.resolve(jsonResponse(analysis()));
+      }),
+    );
+    return calls;
+  };
+  const pickInto = async (el: HTMLElement, file: File) => {
+    const input = el.querySelector<HTMLInputElement>("#scan-file")!;
+    await act(async () => {
+      Object.defineProperty(input, "files", { value: [file], configurable: true });
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+  };
+
+  it("a denied getUserMedia shows the upload message and the fallback photo input, and an uploaded photo scans", async () => {
+    const getUserMedia = vi.fn().mockRejectedValue(Object.assign(new Error("denied"), { name: "NotAllowedError" }));
+    const original = Object.getOwnPropertyDescriptor(navigator, "mediaDevices");
+    Object.defineProperty(navigator, "mediaDevices", { value: { getUserMedia }, configurable: true });
+    try {
+      const calls = stubOkFetch();
+      const el = await mountFlow();
+      await settle();
+      expect(getUserMedia).toHaveBeenCalledTimes(1);
+      expect(el.textContent).toContain("Camera unavailable");
+      expect(el.querySelector('label[for="scan-capture"]')).not.toBeNull();
+      expect(el.querySelector("#scan-capture")?.getAttribute("capture")).toBe("environment");
+      expect(el.querySelector(".sc-shutter")).toBeNull();
+      await stagePhoto(el);
+      await click(buttonByText(el, /scan this label/i));
+      await settle();
+      expect(calls).toHaveLength(1);
+      expect(((calls[0].body as FormData).get("image") as File).name).toBe("label.png");
+    } finally {
+      if (original) Object.defineProperty(navigator, "mediaDevices", original);
+      else delete (navigator as unknown as Record<string, unknown>).mediaDevices;
+    }
+  });
+
+  it("a big photo the browser cannot decode is uploaded as the original, unchanged", async () => {
+    vi.stubGlobal("createImageBitmap", vi.fn().mockRejectedValue(new Error("cannot decode")));
+    const calls = stubOkFetch();
+    const el = await mountFlow();
+    const big = new File([new Uint8Array(UPLOAD_REENCODE_BYTES + 1)], "huge.heic", { type: "image/heic" });
+    await pickInto(el, big);
+    await click(buttonByText(el, /scan this label/i));
+    await settle();
+    expect(calls).toHaveLength(1);
+    expect((calls[0].body as FormData).get("image")).toBe(big);
+  });
+
+  it("a re-encode that is not smaller, or cannot be encoded, keeps the original", async () => {
+    const bitmap = { width: 100, height: 100, close: vi.fn() };
+    vi.stubGlobal("createImageBitmap", vi.fn().mockResolvedValue(bitmap));
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({ drawImage: () => {} } as never);
+    const toBlob = vi.spyOn(HTMLCanvasElement.prototype, "toBlob");
+    const big = new File([new Uint8Array(UPLOAD_REENCODE_BYTES + 1)], "huge.jpg", { type: "image/jpeg" });
+    const { shrinkForUpload } = await import("@/lib/camera/capture");
+
+    toBlob.mockImplementation((cb: BlobCallback) => cb(new Blob([new Uint8Array(UPLOAD_REENCODE_BYTES + 10)], { type: "image/jpeg" })));
+    expect(await shrinkForUpload(big)).toBe(big);
+    toBlob.mockImplementation((cb: BlobCallback) => cb(null));
+    expect(await shrinkForUpload(big)).toBe(big);
+    expect(bitmap.close).toHaveBeenCalledTimes(2);
+
+    const small = new File([new Uint8Array(10)], "s.jpg", { type: "image/jpeg" });
+    expect(await shrinkForUpload(small)).toBe(small);
+  });
+});
