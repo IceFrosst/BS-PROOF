@@ -212,6 +212,12 @@ export function validateLabel(obj: Record<string, unknown>): LabelRead {
   for (const [key, value] of Object.entries(OPTIONAL_DEFAULTS)) {
     if (obj[key] === null || obj[key] === undefined) obj[key] = value;
   }
+  // A dosed-active list that is not a list (a string, an object) cannot be
+  // normalised without guessing, and replacing it with [] would hide every
+  // active from the compatibility check: refuse the read.
+  for (const key of ["actives", "other_actives"]) {
+    if (!Array.isArray(obj[key])) throw new LabelReadError(`${key} must be an array`);
+  }
   // Tolerate the two shapes models actually emit for the actives list.
   if (Array.isArray(obj.actives)) {
     obj.actives = obj.actives
@@ -219,8 +225,16 @@ export function validateLabel(obj: Record<string, unknown>): LabelRead {
         if (typeof a === "string") {
           return { name: a, compound_dose_mg: null, dose_unit_as_printed: null, form_text: null };
         }
-        if (a && typeof a === "object") {
+        if (a && typeof a === "object" && !Array.isArray(a)) {
           const row = a as Record<string, unknown>;
+          // A row without a readable name, or with a dose that is not a number,
+          // would be dropped or nulled below and hide a dosed active: refuse.
+          if (typeof row.name !== "string" || !row.name.trim()) {
+            throw new LabelReadError("every actives entry needs a non-empty string name");
+          }
+          if (row.compound_dose_mg != null && typeof row.compound_dose_mg !== "number") {
+            throw new LabelReadError(`actives compound_dose_mg must be a number or null, got ${JSON.stringify(row.compound_dose_mg)}`);
+          }
           return {
             // No silent .slice() here: an over-long name/unit/form goes on to
             // clipToLabelSchema (word-safe, dose-safe) or fails the schema check.
@@ -230,7 +244,8 @@ export function validateLabel(obj: Record<string, unknown>): LabelRead {
             form_text: row.form_text == null ? null : String(row.form_text),
           };
         }
-        return null;
+        if (a === null || a === undefined) return null;
+        throw new LabelReadError(`actives entries must be strings or objects, got ${JSON.stringify(a)}`);
       })
       .filter((a): a is LabelActive => Boolean(a && a.name));
   }
