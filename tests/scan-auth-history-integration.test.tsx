@@ -159,8 +159,11 @@ describe("sign-in required + history required, UI wired to the real routes", () 
     await typedScan(el);
 
     // ---- the scan: Bearer in, owner bound at INSERT by the server, "Saved" because it really was
-    const post = apiCalls.filter((c) => c.method === "POST");
+    // The owner-private research panel probes /api/scan/research for the stored scan with the same
+    // Bearer (its own contract is in tests/scan-research-panel.test.tsx); it is not a scan request.
+    const post = apiCalls.filter((c) => c.method === "POST" && c.path !== "/api/scan/research");
     expect(post).toEqual([{ method: "POST", path: "/api/scan", authorization: "Bearer tok-a" }]);
+    expect(apiCalls.filter((c) => c.path === "/api/scan/research").every((c) => c.authorization === "Bearer tok-a")).toBe(true);
     expect(fake.runs).toHaveLength(1);
     const stored = fake.runs[0];
     expect(stored.user_id).toBe(SERVER_A);
@@ -189,7 +192,7 @@ describe("sign-in required + history required, UI wired to the real routes", () 
     const historyPanel = el.querySelectorAll<HTMLElement>(".sw-panel")[1]; // [0] = Scan, [1] = History (the result renderer nests its own tabpanels)
     expect(historyPanel.querySelector(".la-result")).not.toBeNull(); // the same result renderer, inside the History tab
     expect(historyPanel.querySelector('[data-testid="save-status"]')).toBeNull(); // a replay is not a new save
-    expect(apiCalls.filter((c) => c.method === "POST")).toHaveLength(1); // still just the original scan
+    expect(apiCalls.filter((c) => c.method === "POST" && c.path !== "/api/scan/research")).toHaveLength(1); // still just the original scan
     expect(fake.modelCalls).toBe(modelCallsAfterScan); // no reanalysis
     expect(fake.callsTo("/rest/v1/scan_runs").filter((c) => c.method === "POST")).toHaveLength(insertsAfterScan); // no new row
     expect(fake.nonGetRunWrites.filter((c) => c.method !== "POST")).toHaveLength(0); // never UPDATE/DELETE a run

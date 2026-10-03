@@ -66,6 +66,7 @@ function stubApi(routes: { list?: (call: RecordedCall) => Answer; detail?: (call
       if (path === "/api/scan/history") answer = routes.list?.(call);
       else if (path.startsWith("/api/scan/history/")) answer = routes.detail?.(call, decodeURIComponent(path.slice("/api/scan/history/".length)));
       else if (path === "/api/scan") answer = routes.scan?.(call);
+      else if (path === "/api/scan/research") answer = jsonResponse({ status: "research_disabled" }, 503);
       if (!answer) throw new Error(`unexpected request ${call.method} ${path}`);
       return answer;
     }),
@@ -205,9 +206,10 @@ describe("opening a saved scan", () => {
     await click(rows(el)[0]);
     await settle();
 
-    expect(calls.map((c) => `${c.method} ${c.url}`)).toEqual(["GET /api/scan/history", `GET /api/scan/history/${RUN_1}`]);
+    expect(calls.map((c) => `${c.method} ${c.url}`)).toEqual(["GET /api/scan/history", `GET /api/scan/history/${RUN_1}`, "POST /api/scan/research"]);
     expect(calls[1].headers.Authorization).toBe("Bearer tok-a");
-    expect(calls.some((c) => c.method === "POST")).toBe(false);
+    expect(calls[2].headers.Authorization).toBe("Bearer tok-a");
+    expect(JSON.parse(String(calls[2].body))).toEqual({ scan_id: RUN_1 });
     expect(calls.some((c) => c.url === "/api/scan")).toBe(false);
 
     const panel = historyPanel(el);

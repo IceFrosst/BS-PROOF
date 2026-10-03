@@ -87,3 +87,10 @@
   .scan-page .sc-headline { max-width: none; font-size: 2.2rem; }
   .scan-workspace .sc-viewfinder { max-height: min(calc(100svh - 330px), 440px); min-height: 280px; }
 }
+
+/* Owner-private live research is visually separate from the retained signed audit. */
+.sc-research { margin: 1.5rem 0; padding: 1.1rem; border: 1px solid var(--sp-line, #d9dfe2); border-radius: 14px; background: var(--sp-paper, #fff); }
+.sc-research h2 { margin: 0 0 .45rem; }
+.sc-research-stamp { color: var(--sp-mute, #657177); font-size: .9rem; }
+.sc-research-audit article { margin-top: 1rem; padding-top: .8rem; border-top: 1px solid var(--sp-line, #d9dfe2); }
+.sc-research-audit h3 { margin-bottom: .35rem; }

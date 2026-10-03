@@ -71,7 +71,10 @@ function stubFetch(answer: (call: RecordedCall) => Response | Promise<Response>)
     "fetch",
     vi.fn((url: unknown, init?: RequestInit) => {
       const call = record(url, init);
-      calls.push(call);
+      // The owner-private research panel probes /api/scan/research once a stored result is on screen
+      // (tests/scan-research-panel.test.tsx covers that contract). These tests are about the scan
+      // request, so the probe is answered like any other call but is not part of `calls`.
+      if (call.url !== "/api/scan/research") calls.push(call);
       return Promise.resolve(answer(call));
     }),
   );

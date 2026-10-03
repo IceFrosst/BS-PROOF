@@ -79,6 +79,7 @@ import { createContext, useCallback, useContext, useEffect, useId, useRef, useSt
 
 import { SignInCard } from "@/components/google-sign-in";
 import { ScanCamera } from "@/components/scan-camera";
+import { ScanResearchPanel } from "@/components/scan-research-panel";
 import { SearchSheet } from "@/components/search-sheet";
 import { shrinkForUpload } from "@/lib/camera/capture";
 import { SupplementSearch } from "@/components/supplement-search";
@@ -1272,6 +1273,7 @@ function ScanFlowInner({ catalog, hideTopbar = false, auth: sharedAuth, active =
                     </>}
                   />
                 ) : null}
+                {showingResult ? <ScanResearchPanel key={`${ownerKey ?? "anonymous"}:${replay ? initialResult?.runId ?? "replay" : data?.run_id ?? "unsaved"}`} scanId={replay ? initialResult?.runId ?? null : data?.persistence?.status === "stored" ? data.run_id ?? null : null} ownerId={auth.userId} lang={lang} getAccessToken={auth.getAccessToken} enabled={auth.configured} /> : null}
                 {/* Only when it has something to hold: with no product, no validity
                     and no warnings (analyzer_unavailable) this drew an empty card. */}
                 {!product && (ledgerAudit || evidence?.validity || warningCount > 0) ? <section className="ab-card scan-lab-card"><LabValidity audit={ledgerAudit} validity={evidence?.validity} /><LabWarnings count={warningCount}><>{data.caveats?.map((c) => <Notice key={c.code} title={caveatTitle(c.code)} lede={firstSentence(caveatBody(c.text))} body={caveatBody(c.text)} />)}{disclosures.map((d) => <Notice key={d.title} title={d.title} lede={firstSentence(d.body)} body={d.body} role="note" ariaLabel={r.disclosureAria(d.title)} />)}{mlm ? <Notice title={mlm.title} lede={mlmLede(mlm.body)} body={mlm.body} role="note" ariaLabel={r.businessModelAria} /> : null}{auditWarnings.map((warning) => <Notice key={warning.key} title={warning.title} lede={firstSentence(warning.body)} body={warning.body} role="note" ariaLabel={r.disclosureAria(warning.title)} />)}</></LabWarnings></section> : null}

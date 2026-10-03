@@ -1,0 +1,1 @@
+{"action":"fail","job_id":"aaaaaaaa-aaaa-4aaa-8aaa-000000000001","lease_token":"lease-token-0123456789abcdef0123456789abcdef","code":"claude_cli_not_found","message":"BS_PROOF_CLAUDE_BIN must name an absolute executable file","retryable":true}

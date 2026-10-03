@@ -1,5 +1,13 @@
 # Team status — 2026-10-03 (BIO-RED pitch day)
 
+## Update: live research code integrated on current main (WIP branch, research OFF)
+
+- Branch `feat/live-research-release-20261003` (from `main` `224715a`, which includes the dose release, `b30b017` desktop CSS and `5dcee28`) holds the reviewed backend + owner-private UI. Both lanes were independently reviewed and accepted (backend after its elemental-field fix; UI 14 tests). Main was not touched.
+- Integrated gates: 36 Vitest files/547 tests (research, History, localization, referrer/Google/auth, analyze-label/dose), 6 research files/89 tests, 49 Python tests/0 skips, typecheck, scoped ESLint, `pipeline.invariants` + `pipeline.selftest`, `bash -n` on the release script, `git diff --check`, `npm audit` (0 vulnerabilities) and the production build all passed. Two older sign-in tests were narrowed to ignore the panel's `/api/scan/research` probe. One test (`plain-language-prompts`, `compat-v1.1` vs `compat-v1.2`) already fails on pristine main `224715a`; not introduced here, not edited.
+- Research is OFF. No SQL, worker token, systemd service or model has been provisioned or smoke-tested. The mainPC user systemd socket is orphaned (no user DBus; sudo needs a password), so installing the persistent worker needs owner action; a small deployment fix (node PATH, system-unit variant, doc) comes first.
+- Next: scoped provision, one real job smoke, then parent promotion. Not claimed: owner Claude Code verification, real-phone test, Google consent/Supabase session roundtrip, clinical validation.
+- Supersedes the older 'offline lanes active / research unmerged / pending review' wording, the dose 'publish next' step, and the Google 'origin still rejected' note below; they stay as history.
+
 ## Update: verified dose release and live research next
 
 - Printed elemental mineral dose is preserved exactly once across scan, legacy label API, Python CLI and active rows; legacy compound conversion and exact retained audit matching are unchanged. EN/LT new results and old History replay preserve dose basis.

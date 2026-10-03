@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SourceAccessV2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "runner", "events", "summary"],
+  "properties": {
+    "version": {"const": "SourceAccessV2"},
+    "runner": {"type": "object", "additionalProperties": false, "required": ["model", "prompt_version", "cli_version", "adapter_version", "classifier_version", "api_key_source", "started_at", "finished_at"], "properties": {
+      "model": {"const": "claude-sonnet-5-5"}, "prompt_version": {"const": "live-research-v0.2"}, "cli_version": {"const": "2.1.287"},
+      "adapter_version": {"type": "string", "minLength": 1, "maxLength": 160}, "classifier_version": {"type": "string", "minLength": 1, "maxLength": 160}, "api_key_source": {"const": "none"},
+      "started_at": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,3})?Z$"}, "finished_at": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,3})?Z$"}
+    }},
+    "events": {"type": "array", "maxItems": 300, "items": {"type": "object", "additionalProperties": false, "required": ["tool", "tool_use_id", "kind", "returned_kind", "returned_text", "text_bytes", "text_sha256"], "properties": {
+      "tool": {"enum": ["WebSearch", "WebFetch"]}, "tool_use_id": {"type": "string", "minLength": 1, "maxLength": 160}, "kind": {"enum": ["request", "error", "wall", "refusal"]},
+      "returned_kind": {"enum": ["search_snippet", "fetch_model_summary", "no_content"]}, "returned_text": {"type": "string", "maxLength": 65536}, "text_bytes": {"type": "integer", "minimum": 0, "maximum": 262144}, "text_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+    }}},
+    "summary": {"type": "object", "additionalProperties": false, "required": ["requests", "errors", "walls", "refusals", "search_snippets", "fetch_summaries", "original_documents"], "properties": {
+      "requests": {"type": "integer", "minimum": 0, "maximum": 1000000}, "errors": {"type": "integer", "minimum": 0, "maximum": 1000000}, "walls": {"type": "integer", "minimum": 0, "maximum": 1000000}, "refusals": {"type": "integer", "minimum": 0, "maximum": 1000000}, "search_snippets": {"type": "integer", "minimum": 0, "maximum": 1000000}, "fetch_summaries": {"type": "integer", "minimum": 0, "maximum": 1000000}, "original_documents": {"const": 0}
+    }}
+  }
+}
