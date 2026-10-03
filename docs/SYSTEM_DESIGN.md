@@ -12,6 +12,8 @@ phone-first page where scanning owns the first viewport, and a second way in —
 ingredient × form × dose. §1a, §3a and §5 describe it. `/` remains the waitlist;
 `/tester` is unchanged.
 
+**Operational checkpoint (2026-10-03 11:48:57 EEST; see canonical `CLAUDE.md` → Current state):** the deployed app code at `2555166` includes Google-required Scan/History, but production Google sign-in is still blocked by an origin refusal. The new public OAuth client (`42984642369`) and accepted Supabase audience were configured and a redeploy is READY; owner must add `https://bs-proof-dashboard.vercel.app` to that client's Authorized JavaScript origins, then verify a real consent/session and phone scan→History→replay. No user flow is claimed verified. UI, localization and research implementations remain separate WIP branches, not part of production; research contract/UI/security review is unfinished and its flag is OFF. No research SQL/token/worker provisioning or activation has occurred. See `CLAUDE.md` for exact links, hashes, review gates, and next actions. This is status documentation, not a change to runtime design/configuration.
+
 ## 1. What the user gets
 
 One photo of a Supplement Facts panel → one page, five blocks, each stamped
@@ -771,6 +773,8 @@ appears after the click, and it did (`origin_mismatch`, §7d). A rendered button
 is **not** proof that a token exchange works.
 
 ### 7d. Production provisioning — steps 1–3 DONE 2026-10-03, step 4 read-only, step 5 BLOCKED (`origin_mismatch`)
+
+**Latest status, 2026-10-03 11:48:57 EEST:** since the original release record below, the public Google OAuth client was changed to `42984642369` and the accepted Supabase audience updated while preserving the prior primary/secret; production redeploy is READY. Sign-in remains blocked (origin refusal). The owner must add `https://bs-proof-dashboard.vercel.app` to the NEW client's Authorized JavaScript origins before retrying. Do not infer successful Google consent/session from a READY deployment; phone scan, History/replay and live owner-query verification remain outstanding. Never place client secrets or credential values in this document. This status was reported for the checkpoint; no cloud settings were changed by this docs update.
 
 **Status at release (2026-10-03):** steps 1–3 below were executed on the shared
 project and the canonical Vercel project (production only) and checked; the exact
