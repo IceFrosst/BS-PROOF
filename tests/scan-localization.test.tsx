@@ -126,14 +126,30 @@ describe("the persisted choice", () => {
     expect(Array.from(el.querySelectorAll('[role="tab"]')).map((t) => t.textContent)).toEqual(["Skenuoti", "Istorija"]);
     expect(el.querySelector('[role="tablist"]')?.getAttribute("aria-label")).toBe("Skenavimo erdvė");
     expect(text(el.querySelector("h1"))).toBe("Ar tavo papildas tikrai veikia?");
-    expect(buttonByText(el, /ieškoti papildo/i)).toBeDefined();
-    expect(text(el.querySelector(".sc-hint"))).toBe("PNG, JPEG arba WebP, iki 12 MB.");
+    expect(el.querySelector('button.sc-search-cta[aria-label="Ieškoti papildo"]')).not.toBeNull();
+    expect(el.querySelector('label.sc-icon-btn[aria-label="Įkelti nuotrauką"]')).not.toBeNull();
+    expect(text(el.querySelector(".sc-subline"))).toBe("Nuskenuok ir pamatyk.");
     expect(el.querySelector('.sc-viewfinder')?.getAttribute("aria-label")).toBe("Gyvas kameros vaizdas");
     expect(toggle().getAttribute("aria-label")).toBe("English");
     await click(toggle());
     expect(window.localStorage.getItem(LANG_KEY)).toBe("en");
     expect(document.documentElement.lang).toBe("en");
     expect(text(el.querySelector("h1"))).toBe("Does your Supplement actually work?");
+  });
+
+  it("exactly one language switch is visible: the PR3 top bar on Scan, the workspace's on History", async () => {
+    stubApi();
+    const el = await mountWorkspace();
+    const toggles = () => Array.from(el.querySelectorAll<HTMLElement>('[data-testid="lang-toggle"]')).filter((t) => !t.closest("[hidden]"));
+    expect(toggles().map((t) => t.className)).toEqual(["sc-lang"]);
+    await click(Array.from(el.querySelectorAll<HTMLElement>('[role="tab"]'))[1]);
+    expect(toggles().map((t) => t.className)).toEqual(["sw-lang"]);
+    await click(toggles()[0]);
+    expect(window.localStorage.getItem(LANG_KEY)).toBe("lt");
+    expect(Array.from(el.querySelectorAll('[role="tab"]')).map((t) => t.textContent)).toEqual(["Skenuoti", "Istorija"]);
+    await click(Array.from(el.querySelectorAll<HTMLElement>('[role="tab"]'))[0]);
+    expect(toggles().map((t) => t.className)).toEqual(["sc-lang"]);
+    expect(text(el.querySelector("h1"))).toBe("Ar tavo papildas tikrai veikia?");
   });
 
   it("a stored lt is honoured on load", async () => {

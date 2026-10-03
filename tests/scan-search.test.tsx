@@ -318,15 +318,15 @@ describe("/ vs /scan vs /tester", () => {
     // ...and a plain upload input remains as the fallback, without capture.
     expect(inputTag("scan-file")).toContain('type="file"');
     expect(inputTag("scan-file")).not.toContain("capture=");
-    // The page's single H1 is the overlay headline on the camera block, exact
-    // founder copy, and still carries #scan-title for tests/e2e continuity.
+    // The page's single H1 is the founder-copy headline, now ABOVE the camera
+    // block (2026-10-03), and still carries #scan-title for tests/e2e continuity.
     expect(html).toMatch(/<h1[^>]*id="scan-title"[^>]*>Does your Supplement actually work\?<\/h1>/);
     expect(html).toContain("Scan and see.");
     expect((html.match(/<h1[^>]*>/g) ?? []).length).toBe(1);
-    // "Search your supplement" is a button ABOVE the capture block, opening a
-    // dialog (not the 2026-09-15 inline expand/collapse panel) -- order in
-    // the first viewport: search cta, then the capture controls.
-    const order = ["Search your supplement", "sc-viewfinder", "Upload a photo"].map((s) => html.indexOf(s));
+    // 2026-10-03 layout: headline, then the camera block, then one control
+    // row -- Upload, shutter, Search. "Search your supplement" still opens a
+    // dialog (not the 2026-09-15 inline expand/collapse panel).
+    const order = ['id="scan-title"', "sc-viewfinder", "Upload a photo", "Search your supplement"].map((s) => html.indexOf(s));
     expect(order.every((i) => i >= 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
     // No inline expand/collapse toggle or "or" divider survive the redesign.

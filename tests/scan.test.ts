@@ -345,6 +345,24 @@ describe("model boundary helpers", () => {
     expect(read.certifications).toEqual([]);
     expect(read.other_actives).toEqual([]);
   });
+
+  it("an over-long printed string or list is clipped, not a failed read (2026-10-02 live failure)", () => {
+    const long = "Vitamin K2 (as menaquinone-7 from chickpea, MenaQ7) and Vitamin K1 (as phytonadione) blend";
+    const read = validateLabel({
+      ingredient_vocab_id: null,
+      form_vocab_id: null,
+      compound_dose_mg: null,
+      is_multi_ingredient: true,
+      confidence: "high",
+      evidence_spans: Array.from({ length: 15 }, (_, i) => `line ${i}`),
+      other_actives: ["Vitamin D", long],
+      actives: [{ name: long + long, compound_dose_mg: 0.1, dose_unit_as_printed: "mcg", form_text: null }],
+    });
+    expect(read.other_actives[1]).toBe(long.slice(0, 80));
+    expect(read.actives[0].name).toHaveLength(120);
+    expect(read.evidence_spans).toHaveLength(12);
+    expect(read.evidence_spans[0]).toBe("line 0");
+  });
 });
 
 describe("analyzeScan end to end (fakes only)", () => {

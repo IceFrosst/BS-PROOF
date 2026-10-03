@@ -956,6 +956,9 @@ thead th { color: var(--ink-soft); font-size: 0.7rem; text-transform: uppercase;
 body:has(.scan-page) { background: #fff; }
 body:has(.scan-page) .site-header { background: #fff; border-bottom-color: #dde1df; }
 body:has(.scan-page) .site-header nav { display: none; }
+/* 2026-10-03: the scan page draws its own top bar (.sc-topbar) with the
+   product's scan mark, so the shared header is not shown here. */
+body:has(.scan-page) .site-header { display: none; }
 body:has(.scan-page) .site-footer { background: #fff; border-top-color: #dde1df; padding-bottom: calc(34px + env(safe-area-inset-bottom, 0px)); }
 /* The shared footer's second line is a middle-dot tagline; on this page only
    the "not medical advice" sentence stays. */
@@ -983,56 +986,87 @@ body:has(.scan-page) .footer-inner p:last-child { display: none; }
 .scan-page .la-alert-ok { border-left-color: var(--sp-measured); }
 .scan-page .la-alert-bad { border-left-color: var(--sp-danger); }
 
-/* -------- landing: search pill, viewfinder, shutter, upload -------- */
-.sc-search-cta {
-  display: flex; align-items: center; justify-content: center; width: 100%; min-height: 52px;
-  margin-bottom: 14px; padding: 12px 20px; border: 1.5px solid var(--sp-ink); border-radius: 999px; cursor: pointer;
-  background: var(--sp-white); color: var(--sp-ink); font-weight: 700; font-size: var(--fs-2);
+/* -------- landing: headline, viewfinder with framing guide, control row --------
+   2026-10-03 (approved mockup): the H1 sits ABOVE the camera instead of over
+   it, one brand mark (the header's), a darkened surround with four corners
+   where the panel goes, and Upload / shutter / Search in one row. */
+.sc-topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+.sc-brand { display: inline-flex; align-items: center; gap: 9px; font-weight: 800; font-size: var(--fs-1); letter-spacing: 0.14em; }
+.sc-brand img { width: 28px; height: 28px; border-radius: 8px; }
+.sc-topbar-end { display: inline-flex; align-items: center; gap: 8px; }
+.sc-lang {
+  min-width: 44px; min-height: 36px; padding: 0 12px; border: 1px solid var(--sp-line); border-radius: 999px;
+  background: var(--sp-white); color: var(--sp-ink); font: inherit; font-size: var(--fs-1); font-weight: 700; letter-spacing: 0.04em; cursor: pointer;
 }
-.sc-search-cta:hover { background: var(--sp-tint); }
+.sc-lang:hover { background: var(--sp-tint); }
+.sc-avatar { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; background: var(--sp-measured); color: #fff; font-size: var(--fs-1); font-weight: 700; }
+.sc-intro { display: grid; gap: 4px; margin-bottom: 14px; }
+.scan-page .sc-headline { margin: 0; font-size: clamp(1.7rem, 7.4vw, 2.3rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1.06; max-width: 16ch; }
+.scan-page .sc-subline { margin: 0; color: var(--sp-mute); font-size: var(--fs-3); }
 
 .sc-capture { position: relative; display: grid; gap: 16px; justify-items: stretch; width: 100%; padding: 0; border-radius: var(--sp-radius); }
 .sc-capture.is-dragging { outline: 2px dashed var(--sp-measured); outline-offset: 8px; }
 
-.sc-viewfinder-wrap { display: grid; gap: 18px; justify-items: center; width: 100%; }
+.sc-viewfinder-wrap { display: grid; gap: 16px; justify-items: stretch; width: 100%; }
 .sc-viewfinder {
-  position: relative; width: 100%; aspect-ratio: 3 / 4; overflow: hidden;
-  /* Cap so the shutter stays inside the first viewport on short phones:
-     header (~72px) + search pill (~66px) + shutter row (~110px). */
-  max-height: calc(100svh - 260px); min-height: 360px; margin-inline: auto;
-  border-radius: 24px; background: #05070c; box-shadow: 0 24px 60px rgb(22 35 29 / 22%);
+  position: relative; width: 100%; aspect-ratio: 4 / 5; overflow: hidden;
+  /* Keep the control row inside the first viewport on short phones:
+     header (~72px) + headline (~110px) + controls (~110px). */
+  max-height: calc(100svh - 300px); min-height: 340px; margin-inline: auto;
+  border-radius: 24px; background: #0e1814;
 }
-@media (min-width: 640px) { .sc-viewfinder { aspect-ratio: 16 / 9; } }
+@media (min-width: 640px) { .sc-viewfinder { aspect-ratio: 16 / 10; } }
 .sc-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .sc-video.is-hidden { visibility: hidden; }
-.sc-viewfinder-fill { position: absolute; inset: 0; background: radial-gradient(120% 90% at 50% 0%, #12233c 0%, #05070c 70%); }
-.sc-viewfinder-overlay {
-  position: absolute; inset: 0; z-index: 2; display: grid; align-content: start; justify-items: center;
-  gap: 10px; padding: clamp(18px, 5vw, 30px) 22px 0; text-align: center; pointer-events: none;
-  background: linear-gradient(180deg, rgb(2 6 15 / 88%) 0%, rgb(2 6 15 / 48%) 45%, transparent 75%);
-}
-.sc-viewfinder-brand { display: flex; align-items: center; gap: 8px; }
-.sc-viewfinder-mark { width: 34px; height: 34px; }
-.sc-viewfinder-word { color: #fff; font-weight: 800; font-size: 0.92rem; letter-spacing: 0.08em; text-transform: uppercase; }
-.sc-headline { margin: 8px 0 0; color: #fff; font-size: clamp(1.55rem, 6.6vw, 2.2rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1.08; max-width: 15ch; text-shadow: 0 2px 20px rgb(0 0 0 / 60%); }
-.sc-viewfinder-overlay p.sc-subline { margin: 0; color: rgba(255, 255, 255, 0.86); font-size: clamp(0.94rem, 3.4vw, 1.05rem); font-weight: 600; text-shadow: 0 1px 12px rgb(0 0 0 / 60%); }
-.sc-camera-fallback, .sc-camera-starting { position: absolute; z-index: 1; inset: 0; display: grid; place-items: center; padding: 0 12%; text-align: center; }
-.sc-camera-fallback p, .sc-camera-starting p { margin: 0; color: rgba(255, 255, 255, 0.7); font-size: 1rem; line-height: 1.5; }
+.sc-viewfinder-fill { position: absolute; inset: 0; background: radial-gradient(120% 90% at 50% 35%, #2c3a34 0%, #142019 60%, #0b130f 100%); }
 
+.sc-frame {
+  position: absolute; z-index: 1; left: 6%; right: 6%; top: 24%; bottom: 30%;
+  border-radius: 16px; box-shadow: 0 0 0 999px rgb(9 18 14 / 55%); pointer-events: none;
+}
+.sc-frame svg { position: absolute; inset: -2px; width: calc(100% + 4px); height: calc(100% + 4px); overflow: visible; fill: none; stroke: #d9ef73; stroke-width: 3.5px; stroke-linecap: round; }
+.sc-scanline {
+  position: absolute; left: 8px; right: 8px; top: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, #d9ef73, transparent); box-shadow: 0 0 12px 2px rgb(217 239 115 / 50%);
+  animation: sc-scan 2.4s ease-in-out infinite alternate;
+}
+@keyframes sc-scan { from { top: 6%; } to { top: 92%; } }
+@media (prefers-reduced-motion: reduce) { .sc-scanline { animation: none; top: 50%; } }
+
+.sc-frame-hint {
+  position: absolute; z-index: 2; left: 50%; bottom: 16px; transform: translateX(-50%); margin: 0; max-width: none;
+  display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;
+  padding: 8px 14px 8px 10px; border-radius: 999px; background: rgb(9 18 14 / 66%); backdrop-filter: blur(8px);
+  color: #fff; font-size: var(--fs-1); font-weight: 600;
+}
+.sc-frame-hint img { width: 18px; height: 18px; }
+.sc-torch {
+  position: absolute; z-index: 2; top: 12px; right: 12px; width: 40px; height: 40px; border-radius: 50%;
+  display: grid; place-items: center; border: 0; cursor: pointer; color: #fff;
+  background: rgb(9 18 14 / 66%); backdrop-filter: blur(8px);
+}
+.sc-torch.is-on { background: #d9ef73; color: var(--sp-ink); }
+.sc-camera-fallback, .sc-camera-starting { position: absolute; z-index: 3; inset: 0; display: grid; place-items: center; padding: 0 12%; text-align: center; }
+.sc-camera-fallback p, .sc-camera-starting p { margin: 0; color: rgba(255, 255, 255, 0.78); font-size: 1rem; line-height: 1.5; }
+
+.sc-controls { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 6px; }
+.sc-control-slot { display: flex; justify-content: center; }
+.sc-control-center { display: grid; place-items: center; min-height: 78px; }
+.sc-icon-btn {
+  display: grid; justify-items: center; gap: 5px; min-width: 64px; padding: 0; border: 0; background: none; cursor: pointer;
+  color: var(--sp-mute); font: inherit; font-size: var(--fs-1); font-weight: 600;
+}
+.sc-icon { width: 50px; height: 50px; display: grid; place-items: center; border-radius: 16px; border: 1px solid var(--sp-line); background: var(--sp-white); color: var(--sp-ink); }
+.sc-icon-btn:hover .sc-icon { background: var(--sp-tint); }
 .sc-shutter {
-  width: 78px; height: 78px; margin-top: -8px; padding: 0; border-radius: 50%; border: 3px solid var(--sp-ink);
+  width: 78px; height: 78px; padding: 0; border-radius: 50%; border: 3px solid var(--sp-ink);
   background: #fff; display: grid; place-items: center; cursor: pointer;
 }
 .sc-shutter-ring { width: 60px; height: 60px; border-radius: 50%; background: var(--sp-ink); transition: transform 120ms ease; }
 .sc-shutter:active .sc-shutter-ring { transform: scale(0.86); }
 .sc-shutter:disabled { opacity: 0.5; cursor: default; }
+.sc-fallback-photo { min-height: 50px; padding: 0 18px; }
 
-.sc-below-block { display: grid; justify-items: center; gap: 4px; margin-top: -4px; text-align: center; }
-.sc-fallback-photo { min-height: 48px; width: 100%; color: var(--sp-ink); border-color: var(--sp-line); background: #fff; margin-bottom: 8px; }
-.sc-upload-link { display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px; color: var(--sp-ink); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
-.sc-hint { color: var(--sp-mute); font-size: var(--fs-1); text-align: center; }
-
-/* -------- staged -------- */
 .sc-staged { display: grid; gap: 10px; justify-items: stretch; width: 100%; }
 .sc-secondary-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .scan-page .sc-primary { min-height: 54px; font-size: var(--fs-3); font-weight: 700; }
@@ -1054,6 +1088,8 @@ body:has(.scan-page) .footer-inner p:last-child { display: none; }
 .sc-thumb-typed { color: var(--sp-mute); font-size: var(--fs-3); font-weight: 700; letter-spacing: -0.02em; }
 .sc-progress-bar { position: relative; height: 4px; overflow: hidden; border-radius: 999px; background: var(--sp-tint); }
 .sc-progress-bar > span { position: absolute; inset: 0 auto 0 0; width: 38%; border-radius: 999px; background: var(--sp-measured); animation: sc-slide 1.6s ease-in-out infinite; }
+.sc-progress-bar.is-steps { height: 6px; }
+.sc-progress-bar.is-steps > span { animation: none; transition: width 600ms ease; }
 @keyframes sc-slide { 0% { transform: translateX(-110%); } 100% { transform: translateX(290%); } }
 .sc-stages { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .sc-stages li { display: grid; grid-template-columns: 16px 1fr; gap: 10px; align-items: baseline; color: var(--sp-mute); }

@@ -27,19 +27,14 @@
  * boundary check would flag (CLAUDE.md invariant 1).
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { blobToCaptureFile, cameraSupported, captureVideoFrame, startCamera, stopCamera } from "@/lib/camera/capture";
 
 type CameraStatus = "idle" | "starting" | "live" | "unavailable";
 
-/* Visible and accessible copy, supplied by the parent so the language switch
- * reaches the camera. Same field names as the Ignas PR3 `CameraLabels` (hint,
- * unavailable, starting, torchOn, torchOff, shutter) plus the overlay copy that
- * still lives in this component on `main`. Defaults are English. */
 export interface CameraLabels {
-  headline: string;
-  subline: string;
+  /** Accessible name of the viewfinder region (added by the localization pass). */
   viewfinder: string;
   hint: string;
   unavailable: string;
@@ -49,9 +44,7 @@ export interface CameraLabels {
   shutter: string;
 }
 
-export const CAMERA_LABELS: CameraLabels = {
-  headline: "Does your Supplement actually work?",
-  subline: "Scan and see.",
+const CAMERA_LABELS: CameraLabels = {
   viewfinder: "Live camera viewfinder",
   hint: "Fill the frame · avoid glare",
   unavailable: "Camera unavailable — upload a photo instead.",
@@ -66,6 +59,9 @@ export function ScanCamera({
   disabled = false,
   onCapture,
   onUnavailable,
+  leading,
+  trailing,
+  fallback,
   labels = CAMERA_LABELS,
 }: {
   /** Whether the viewfinder should be running. The parent flips this to
@@ -75,12 +71,20 @@ export function ScanCamera({
   disabled?: boolean;
   onCapture: (file: File) => void;
   onUnavailable?: () => void;
+  /** Control beside the shutter, left (2026-10-03 layout: Upload). */
+  leading?: ReactNode;
+  /** Control beside the shutter, right (Search). */
+  trailing?: ReactNode;
+  /** Shown in the shutter's place while the live camera is unavailable. */
+  fallback?: ReactNode;
   /** Visible copy, so the parent can switch language. */
   labels?: CameraLabels;
 }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [status, setStatus] = useState<CameraStatus>("idle");
+  const [torchSupported, setTorchSupported] = useState(false);
+  const [torchOn, setTorchOn] = useState(false);
   const wasLiveRef = useRef(false);
 
   const closeStream = useCallback(() => {
@@ -100,6 +104,12 @@ export function ScanCamera({
       const stream = await startCamera();
       streamRef.current = stream;
       if (videoRef.current) videoRef.current.srcObject = stream;
+      // Torch is a non-standard capability (Chrome on Android); offer the
+      // button only where the track actually reports it.
+      const track = stream.getVideoTracks?.()[0];
+      const caps = (track?.getCapabilities?.() ?? {}) as { torch?: boolean };
+      setTorchSupported(Boolean(caps.torch));
+      setTorchOn(false);
       setStatus("live");
       wasLiveRef.current = true;
     } catch {
@@ -163,7 +173,9 @@ export function ScanCamera({
 
   const handleShutter = useCallback(async () => {
     if (!videoRef.current || disabled) return;
-    const blob = await captureVideoFrame(videoRef.current, { maxLongEdge: 2048, quality: 0.92 });
+    // 2560 keeps the small print of a dense panel legible and stays well
+    // under the 4.5 MB request limit at this quality.
+    const blob = await captureVideoFrame(videoRef.current, { maxLongEdge: 2560, quality: 0.92 });
     if (!blob) return;
     const file = blobToCaptureFile(blob, "image/jpeg");
     // Stop the stream the instant a frame is captured, per spec — the parent
@@ -173,6 +185,18 @@ export function ScanCamera({
     closeStream();
     onCapture(file);
   }, [disabled, onCapture, closeStream]);
+
+  const toggleTorch = useCallback(async () => {
+    const track = streamRef.current?.getVideoTracks?.()[0];
+    if (!track) return;
+    const next = !torchOn;
+    try {
+      await track.applyConstraints({ advanced: [{ torch: next } as MediaTrackConstraintSet] });
+      setTorchOn(next);
+    } catch {
+      setTorchSupported(false);
+    }
+  }, [torchOn]);
 
   const isLive = active && status === "live";
   const isStarting = active && status === "starting";
@@ -198,17 +222,26 @@ export function ScanCamera({
         <video ref={videoRef} className={`sc-video${isLive ? "" : " is-hidden"}`} playsInline muted autoPlay aria-hidden="true" />
         {isLive ? null : <div className="sc-viewfinder-fill" aria-hidden="true" />}
 
-        <div className="sc-viewfinder-overlay">
-          <div className="sc-viewfinder-brand">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img className="sc-viewfinder-mark" src="/scan-mark.svg" alt="" width={44} height={44} aria-hidden="true" />
-            <span className="sc-viewfinder-word">BS PROOF</span>
-          </div>
-          <h1 id="scan-title" className="sc-headline">
-            {labels.headline}
-          </h1>
-          <p className="sc-subline">{labels.subline}</p>
+        {/* The framing guide (2026-10-03): darkened surround, four corners
+            where the Supplement Facts panel goes, one plain hint. Purely
+            visual -- it does not crop the captured frame. */}
+        <div className="sc-frame" aria-hidden="true">
+          <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+            <path d="M0 16V6Q0 0 6 0H14M86 0H94Q100 0 100 6V16M100 84V94Q100 100 94 100H86M14 100H6Q0 100 0 94V84" vectorEffect="non-scaling-stroke" />
+          </svg>
+          {isLive ? <span className="sc-scanline" /> : null}
         </div>
+        <p className="sc-frame-hint">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/scan-mark.svg" alt="" width={18} height={18} aria-hidden="true" />
+          {labels.hint}
+        </p>
+
+        {isLive && torchSupported ? (
+          <button type="button" className={`sc-torch${torchOn ? " is-on" : ""}`} onClick={() => void toggleTorch()} aria-pressed={torchOn} aria-label={torchOn ? labels.torchOff : labels.torchOn}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true"><path d="M13 2 4.5 13.5H11L10 22l9.5-12H13z" /></svg>
+          </button>
+        ) : null}
 
         {isUnavailable ? (
           <div className="sc-camera-fallback" role="status">
@@ -222,17 +255,23 @@ export function ScanCamera({
         ) : null}
       </div>
 
-      {isLive ? (
-        <button
-          type="button"
-          className="sc-shutter"
-          onClick={() => void handleShutter()}
-          disabled={disabled}
-          aria-label={labels.shutter}
-        >
-          <span className="sc-shutter-ring" aria-hidden="true" />
-        </button>
-      ) : null}
+      <div className="sc-controls">
+        <div className="sc-control-slot">{leading}</div>
+        {isLive ? (
+          <button
+            type="button"
+            className="sc-shutter"
+            onClick={() => void handleShutter()}
+            disabled={disabled}
+            aria-label={labels.shutter}
+          >
+            <span className="sc-shutter-ring" aria-hidden="true" />
+          </button>
+        ) : (
+          <div className="sc-control-center">{isUnavailable ? fallback : null}</div>
+        )}
+        <div className="sc-control-slot">{trailing}</div>
+      </div>
     </div>
   );
 }

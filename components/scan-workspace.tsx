@@ -4,7 +4,7 @@
  * THE /scan WORKSPACE (2026-09-23): two tabs over one page -- Scan (default)
  * and History -- instead of a second route.
  *
- *   Scan     the approved camera-first <ScanFlow>, unchanged in look. It stays
+ *   Scan     the approved camera-first <ScanFlow> (Ignas PR3 layout). It stays
  *            MOUNTED while History is showing (the panel is only `hidden`), so
  *            a staged photo, a scan still running and a finished result all
  *            survive a trip to History. Its camera is switched off while hidden.
@@ -102,9 +102,14 @@ export function ScanWorkspace({ catalog }: { catalog: CatalogIngredient[] }) {
           </button>
         ))}
       </div>
-      <button type="button" className="sw-lang" onClick={toggleLang} aria-label={t.switchTo} lang={lang === "en" ? "lt" : "en"} data-testid="lang-toggle">
-        {t.switchShort}
-      </button>
+      {/* One switch is ever visible: on the Scan tab it is the top bar's (in
+          <ScanFlow>, Ignas PR3 layout); on History -- which has no top bar --
+          it is this one. Same state, same stored choice. */}
+      {tab === "history" ? (
+        <button type="button" className="sw-lang" onClick={toggleLang} aria-label={t.switchTo} lang={lang === "en" ? "lt" : "en"} data-testid="lang-toggle">
+          {t.switchShort}
+        </button>
+      ) : null}
       </div>
 
       <div role="tabpanel" id={panelId("scan")} aria-labelledby={tabId("scan")} className="sw-panel" hidden={tab !== "scan"}>

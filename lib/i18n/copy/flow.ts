@@ -34,8 +34,6 @@ export interface FlowCopy {
   footerLine2: string;
   // ---- camera ------------------------------------------------------------
   camera: {
-    headline: string;
-    subline: string;
     viewfinder: string;
     hint: string;
     unavailable: string;
@@ -47,7 +45,12 @@ export interface FlowCopy {
   // ---- landing / staging -------------------------------------------------
   scanRegion: string;
   savedScanRegion: string;
-  searchCta: string;
+  headline: string;
+  subline: string;
+  upload: string;
+  uploadLabel: string;
+  search: string;
+  searchLabel: string;
   captureInputLabel: string;
   fileInputLabel: string;
   takePhoto: string;
@@ -60,9 +63,8 @@ export interface FlowCopy {
   retake: string;
   chooseOther: string;
   // ---- loading -----------------------------------------------------------
-  scanningLabel: string;
-  analysingTyped: string;
-  usuallyUnderMinute: string;
+  loadingTitle: string;
+  loadingSub: string;
   photoStages: string[];
   manualStages: string[];
   // ---- sign-in -----------------------------------------------------------
@@ -141,8 +143,6 @@ export const FLOW_EN: FlowCopy = {
   footerLine1: "Evidence made inspectable. Scores are not medical advice.",
   footerLine2: "BS Proof · retained laboratory artifacts",
   camera: {
-    headline: "Does your Supplement actually work?",
-    subline: "Scan and see.",
     viewfinder: "Live camera viewfinder",
     hint: "Fill the frame · avoid glare",
     unavailable: "Camera unavailable — upload a photo instead.",
@@ -153,7 +153,12 @@ export const FLOW_EN: FlowCopy = {
   },
   scanRegion: "Scan a supplement",
   savedScanRegion: "Saved scan",
-  searchCta: "Search your supplement",
+  headline: "Does your Supplement actually work?",
+  subline: "Scan and see.",
+  upload: "Upload",
+  uploadLabel: "Upload a photo",
+  search: "Search",
+  searchLabel: "Search your supplement",
   captureInputLabel: "Photograph the label with the camera",
   fileInputLabel: "Choose an image of the label",
   takePhoto: "Take a photo",
@@ -165,21 +170,10 @@ export const FLOW_EN: FlowCopy = {
   checkingSignIn: "Checking your sign-in…",
   retake: "Retake photo",
   chooseOther: "Choose a different image",
-  scanningLabel: "Scanning the label",
-  analysingTyped: "Analysing what you entered",
-  usuallyUnderMinute: "Usually under a minute.",
-  photoStages: [
-    "Reading the label",
-    "Converting the printed dose to its active moiety",
-    "Matching against retained evidence runs",
-    "Checking the FDA enforcement registry",
-    "Asking the model about the company and the combination",
-  ],
-  manualStages: [
-    "Converting the dose you entered to its active moiety",
-    "Matching against retained evidence runs",
-    "Asking the model what the literature says",
-  ],
+  loadingTitle: "Checking your supplement",
+  loadingSub: "Usually about 10 seconds.",
+  photoStages: ["Reading the label", "Checking your dose", "Comparing with clinical trials", "Checking safety records", "Looking up the brand"],
+  manualStages: ["Checking your dose", "Comparing with clinical trials", "Looking up what is known"],
   signInScanTitle: "Sign in to scan this label",
   signInScanBody: "Results are saved to your Google account so you can find them again in History. Your photo stays on this device until you scan.",
   signInSearchTitle: "Sign in to search",
@@ -250,8 +244,6 @@ export const FLOW_LT: FlowCopy = {
   footerLine1: "Įrodymai, kuriuos galima patikrinti. Balai nėra medicininis patarimas.",
   footerLine2: "BS Proof · išsaugoti laboratoriniai artefaktai",
   camera: {
-    headline: "Ar tavo papildas tikrai veikia?",
-    subline: "Nuskenuok ir pamatyk.",
     viewfinder: "Gyvas kameros vaizdas",
     hint: "Užpildyk rėmelį · venk atspindžių",
     unavailable: "Kamera nepasiekiama — įkelk nuotrauką.",
@@ -262,7 +254,12 @@ export const FLOW_LT: FlowCopy = {
   },
   scanRegion: "Skenuoti papildą",
   savedScanRegion: "Išsaugotas skenavimas",
-  searchCta: "Ieškoti papildo",
+  headline: "Ar tavo papildas tikrai veikia?",
+  subline: "Nuskenuok ir pamatyk.",
+  upload: "Įkelti",
+  uploadLabel: "Įkelti nuotrauką",
+  search: "Ieškoti",
+  searchLabel: "Ieškoti papildo",
   captureInputLabel: "Nufotografuoti etiketę kamera",
   fileInputLabel: "Pasirinkti etiketės nuotrauką",
   takePhoto: "Fotografuoti",
@@ -274,21 +271,10 @@ export const FLOW_LT: FlowCopy = {
   checkingSignIn: "Tikrinamas prisijungimas…",
   retake: "Fotografuoti iš naujo",
   chooseOther: "Pasirinkti kitą nuotrauką",
-  scanningLabel: "Skenuojama etiketė",
-  analysingTyped: "Analizuojama tai, ką įvedei",
-  usuallyUnderMinute: "Paprastai trunka mažiau nei minutę.",
-  photoStages: [
-    "Skaitome etiketę",
-    "Atspausdintą dozę paverčiame veikliąja medžiaga",
-    "Lyginame su išsaugotais įrodymų paleidimais",
-    "Tikriname FDA vykdymo užtikrinimo registrą",
-    "Klausiame modelio apie įmonę ir derinį",
-  ],
-  manualStages: [
-    "Įvestą dozę paverčiame veikliąja medžiaga",
-    "Lyginame su išsaugotais įrodymų paleidimais",
-    "Klausiame modelio, ką sako literatūra",
-  ],
+  loadingTitle: "Tikriname tavo papildą",
+  loadingSub: "Paprastai apie 10 sekundžių.",
+  photoStages: ["Skaitome etiketę", "Tikriname dozę", "Lyginame su klinikiniais tyrimais", "Tikriname saugumo įrašus", "Ieškome gamintojo"],
+  manualStages: ["Tikriname dozę", "Lyginame su klinikiniais tyrimais", "Ieškome, kas žinoma"],
   signInScanTitle: "Prisijunk, kad nuskenuotum šią etiketę",
   signInScanBody: "Rezultatai išsaugomi tavo Google paskyroje, todėl vėliau gali juos rasti Istorijoje. Nuotrauka lieka tavo įrenginyje, kol nuskenuoji.",
   signInSearchTitle: "Prisijunk, kad galėtum ieškoti",

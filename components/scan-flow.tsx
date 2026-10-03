@@ -80,6 +80,7 @@ import { createContext, useCallback, useContext, useEffect, useId, useRef, useSt
 import { SignInCard } from "@/components/google-sign-in";
 import { ScanCamera } from "@/components/scan-camera";
 import { SearchSheet } from "@/components/search-sheet";
+import { shrinkForUpload } from "@/lib/camera/capture";
 import { SupplementSearch } from "@/components/supplement-search";
 import { businessModelDisclosure } from "@/lib/analyze/business-model";
 import type { CatalogIngredient } from "@/lib/analyze/catalog";
@@ -107,10 +108,12 @@ type StageKind = "photo" | "manual";
  * `tr` is identity in English; in Lithuanian it returns a fixed/translated
  * rendering when it has one and the ORIGINAL text otherwise (and queues it). */
 function useLocalized() {
-  const { lang } = useLang();
+  const { lang, toggleLang } = useLang();
   const tr = useTr();
-  return { lang, f: FLOW_COPY[lang], r: RESULT_COPY[lang], tr };
+  return { lang, toggleLang, f: FLOW_COPY[lang], r: RESULT_COPY[lang], tr };
 }
+
+const STAGE_STEP_MS = 2200;
 
 const ACCEPTED_TYPES = "image/png,image/jpeg,image/webp,image/gif";
 
@@ -583,7 +586,7 @@ function StandaloneScanFlow(props: ScanFlowProps & { auth: AuthSession }) {
 }
 
 function ScanFlowInner({ catalog, auth: sharedAuth, active = true, initialResult, onLeave, onScanStored }: ScanFlowProps) {
-  const { lang, f, r, tr } = useLocalized();
+  const { lang, toggleLang, f, r, tr } = useLocalized();
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [stage, setStage] = useState(0);
@@ -679,7 +682,7 @@ function ScanFlowInner({ catalog, auth: sharedAuth, active = true, initialResult
 
   useEffect(() => {
     if (!busy) return;
-    const id = setInterval(() => setStage((s) => Math.min(s + 1, stages.length - 1)), 6000);
+    const id = setInterval(() => setStage((s) => Math.min(s + 1, stages.length - 1)), STAGE_STEP_MS);
     return () => clearInterval(id);
   }, [busy, stages.length]);
 
@@ -851,9 +854,12 @@ function ScanFlowInner({ catalog, auth: sharedAuth, active = true, initialResult
   const submitPhoto = useCallback(async () => {
     if (!file) return;
     const picked = file;
-    await runScan("photo", (headers, signal) => {
+    // Shrunk once even if the request is retried after a token refresh.
+    let shrunk: Promise<File> | null = null;
+    await runScan("photo", async (headers, signal) => {
       const body = new FormData();
-      body.append("image", picked);
+      shrunk ??= shrinkForUpload(picked);
+      body.append("image", await shrunk);
       return fetch("/api/scan", { method: "POST", headers, body, signal });
     });
   }, [file, runScan]);
@@ -977,12 +983,30 @@ function ScanFlowInner({ catalog, auth: sharedAuth, active = true, initialResult
   return (
     <ScanIdScope.Provider value={idScope}>
     <section className="la scan sc" aria-label={replay ? f.savedScanRegion : f.scanRegion}>
-      {!replay && !busy && !showingResult ? (
-        <button type="button" className="sc-search-cta" onClick={() => setSearchOpen(true)}>
-          {f.searchCta}
-        </button>
+      {/* Page top bar (2026-10-03, Ignas PR3): the product's own scan mark, the
+          language switch, and -- only once signed in -- the account initial.
+          Replaces the shared site header on this page (hidden in globals.css).
+          This is THE language switch while the Scan tab shows; the workspace
+          shows its own only on History, so exactly one is ever visible. */}
+      {!replay ? (
+        <div className="sc-topbar">
+          <span className="sc-brand">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/favicon.svg" alt="" width={28} height={28} aria-hidden="true" />
+            BS PROOF
+          </span>
+          <span className="sc-topbar-end">
+            <button type="button" className="sc-lang" onClick={toggleLang} aria-label={f.switchTo} lang={lang === "en" ? "lt" : "en"} data-testid="lang-toggle">
+              {f.switchShort}
+            </button>
+            {auth.configured && auth.email ? (
+              <span className="sc-avatar" title={auth.email} aria-label={`${f.signedInAs} ${auth.email}`}>
+                {auth.email.charAt(0).toUpperCase()}
+              </span>
+            ) : null}
+          </span>
+        </div>
       ) : null}
-
       {/* Two inputs, one difference: `capture` hands off to the platform
           camera. Kept mounted at all times -- this is the fallback path
           that must remain when getUserMedia is unavailable/denied/an
@@ -1021,12 +1045,12 @@ function ScanFlowInner({ catalog, auth: sharedAuth, active = true, initialResult
                   </span>
                 )}
                 <div>
-                  <p className="sc-progress-title">{preview ? f.scanningLabel : f.analysingTyped}</p>
-                  <p className="sc-progress-sub">{f.usuallyUnderMinute}</p>
+                  <p className="sc-progress-title">{f.loadingTitle}</p>
+                  <p className="sc-progress-sub">{f.loadingSub}</p>
                 </div>
               </div>
-              <div className="sc-progress-bar" aria-hidden="true">
-                <span />
+              <div className="sc-progress-bar is-steps" aria-hidden="true">
+                <span style={{ width: `${Math.round(((stage + 1) / (stages.length + 1)) * 100)}%` }} />
               </div>
               <ol className="sc-stages">
                 {stages.map((s, i) => (
@@ -1065,28 +1089,53 @@ function ScanFlowInner({ catalog, auth: sharedAuth, active = true, initialResult
           ) : (
             /* ---------------- landing ---------------- */
             <>
-              <ScanCamera active={!file} disabled={busy} onCapture={stageFile} onUnavailable={() => setCameraUnavailable(true)} labels={f.camera} />
-              <div className="sc-below-block">
-                {cameraUnavailable ? (
-                  <label className="button button-outline sc-fallback-photo" htmlFor="scan-capture">
-                    {f.takePhoto}
+              <div className="sc-intro">
+                <h1 id="scan-title" className="sc-headline" lang={lang}>{f.headline}</h1>
+                <p className="sc-subline" lang={lang}>{f.subline}</p>
+              </div>
+              <ScanCamera
+                active={!file}
+                disabled={busy}
+                onCapture={stageFile}
+                onUnavailable={() => setCameraUnavailable(true)}
+                labels={f.camera}
+                leading={
+                  <label className="sc-icon-btn" htmlFor="scan-file" aria-label={f.uploadLabel}>
+                    <span className="sc-icon" aria-hidden="true">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="3" /><circle cx="9" cy="10" r="1.8" /><path d="m21 16-5-5-9 9" /></svg>
+                    </span>
+                    {f.upload}
                   </label>
-                ) : null}
-                <label className="sc-upload-link" htmlFor="scan-file">
-                  {f.uploadPhoto}
-                </label>
-                <span className="sc-hint">{f.fileHint}</span>
-                {gate === "signin" ? (
+                }
+                trailing={
+                  <button type="button" className="sc-icon-btn sc-search-cta" onClick={() => setSearchOpen(true)} aria-label={f.searchLabel}>
+                    <span className="sc-icon" aria-hidden="true">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="6.5" /><path d="m20 20-4.2-4.2" /></svg>
+                    </span>
+                    {f.search}
+                    {lang === "en" ? <span className="sr-only"> your supplement</span> : null}
+                  </button>
+                }
+                fallback={
+                  cameraUnavailable ? (
+                    <label className="button button-dark sc-fallback-photo" htmlFor="scan-capture">
+                      {f.takePhoto}
+                    </label>
+                  ) : null
+                }
+              />
+              {gate === "signin" ? (
+                <div className="sc-below-block">
                   <span className="sc-hint sc-signin-hint" data-testid="signin-hint">
                     {f.signInHint}
                   </span>
-                ) : null}
-                {gate === "signin" && authNotice ? (
-                  <p className="sc-signin-notice" role="status" data-testid="signin-notice">
-                    {authNotice}
-                  </p>
-                ) : null}
-              </div>
+                  {authNotice ? (
+                    <p className="sc-signin-notice" role="status" data-testid="signin-notice">
+                      {authNotice}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
             </>
           )}
         </div>
