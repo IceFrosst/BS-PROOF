@@ -985,8 +985,7 @@ function ScanFlowInner({ catalog, auth: sharedAuth, active = true, initialResult
         <div className="sc-topbar">
           <span className="sc-brand">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/favicon.svg" alt="" width={28} height={28} aria-hidden="true" />
-            BS PROOF
+            <img className="sc-lockup" src="/bsproof-lockup.svg" alt="BS-PROOF" width={130} height={26} />
           </span>
           <span className="sc-topbar-end">
             <button type="button" className="sc-lang" onClick={toggleLang} aria-label={f.switchTo} lang={lang === "en" ? "lt" : "en"} data-testid="lang-toggle">

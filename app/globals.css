@@ -993,6 +993,7 @@ body:has(.scan-page) .footer-inner p:last-child { display: none; }
 .sc-topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
 .sc-brand { display: inline-flex; align-items: center; gap: 9px; font-weight: 800; font-size: var(--fs-1); letter-spacing: 0.14em; }
 .sc-brand img { width: 28px; height: 28px; border-radius: 8px; }
+.sc-brand img.sc-lockup { width: auto; height: 26px; border-radius: 0; }
 .sc-topbar-end { display: inline-flex; align-items: center; gap: 8px; }
 .sc-lang {
   min-width: 44px; min-height: 36px; padding: 0 12px; border: 1px solid var(--sp-line); border-radius: 999px;
