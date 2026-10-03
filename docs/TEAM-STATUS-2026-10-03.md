@@ -1,5 +1,13 @@
 # Team status — 2026-10-03 (BIO-RED pitch day)
 
+## Update: verified dose release and live research next
+
+- Printed elemental mineral dose is preserved exactly once across scan, legacy label API, Python CLI and active rows; legacy compound conversion and exact retained audit matching are unchanged. EN/LT new results and old History replay preserve dose basis.
+- Final source review accepted all six regression groups. Integrated validation: 88 focused tests, four Python tests, typecheck, scoped lint, both Python gates, diff check and 296-page build passed. Owner Claude Code verification and a real vision read were not performed.
+- Preserves friend commit `c9730cf` (guide crop/single top bar), logo, caller-isolated translation cache, Google fix and benchmark publication.
+- Google origin fix is deployed: fresh production browser showed `strict-origin` metadata, GSI HTTP 200 and a clickable button without any temporary override. Full session/History roundtrip remains an independent verification item.
+- User now explicitly asks to enable live research with Sonnet 5.5. Offline backend/provenance and frontend lanes are active in separate worktrees; WIP baseline is backed up on `feat/live-sonnet-research-integration-20261003`. Main PC Claude subscription login is verified; no research job has run. Next: reconcile contracts, source-summary honesty and private UI, review security/SQL, then provision and prove a real job before enabling normal use. This supersedes the historical no-activation note only for that reviewed, gated rollout.
+
 ## Update: Google origin/referrer diagnosis
 
 - Owner's saved JavaScript origin and deployed client ID are correct. Actual root cause: production's `Referrer-Policy: no-referrer` removes the public origin from the GSI button request.
