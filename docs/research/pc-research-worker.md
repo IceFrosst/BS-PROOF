@@ -1,10 +1,12 @@
 # Main-PC research worker — contract, install, health, rollback
 
-Status (2026-10-03): **coded and locally tested; runtime release staged, not active.**
+Status (2026-10-03): **coded and locally tested; runtime release staged, DB provisioned, worker config created, not active.**
 Release `bsproof-research-worker-f8e8df82117e` is installed (unprivileged, isolated venv)
-under `~/.local/share/bsproof-research-worker/` on the main PC. No `worker.env`, token,
-system unit, service or job exists, and no model has been called. Keep runtime OFF until
-a human provisions it.
+under `~/.local/share/bsproof-research-worker/` on the main PC. The reviewed `docs/research-jobs.sql`
+is applied to the shared project and a dedicated `~/.config/bsproof-research-worker/worker.env`
+(0600) exists; `check` passes. No system unit, service or job exists, no model has been called
+and the private live smoke is blocked (service-role credential unavailable to the agent; research
+routes require a genuine Google identity). Keep runtime OFF until a human provisions it.
 
 Files: `scripts/pc_research_worker.py` (loop, HTTP, leases, validation),
 `pipeline/claude_research_adapter.py` (only model boundary),
