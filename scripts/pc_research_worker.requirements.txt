@@ -1,0 +1,3 @@
+# Runtime for scripts/pc_research_worker.py on the mainPC (isolated venv, never the app checkout).
+# The worker itself is stdlib-only; jsonschema (Draft 2020-12) validates every audit before it is sent.
+jsonschema>=4.0,<5
