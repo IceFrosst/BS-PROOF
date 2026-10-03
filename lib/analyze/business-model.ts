@@ -54,7 +54,7 @@ export function businessModelDisclosure(model: BusinessModel | null | undefined,
       title: "MLM / tiesioginių pardavimų verslo modelis",
       body:
         `Modelio žinios — nepatikrinta. Ši įmonė ${verb} organizuota kaip MLM — daugiapakopė rinkodara, dar vadinama ` +
-        "tiesioginiais pardavimais. Ji verbuoja platintojus, kurie gali užsidirbti ne tik iš savo paties pardavimų, bet ir iš " +
+        "tiesioginiais pardavimais. Ji verbuoja platintojus, kurie gali užsidirbti ne tik iš savo pačių pardavimų, bet ir iš " +
         `jų verbuojamų žmonių pardavimų. ${text ? `${text} ` : ""}(modelio pasitikėjimas: ${(locale.confidenceWord ?? ((value: string) => value))(confidence)}). ` +
         "Tai pardavimo būdas, o ne teisinis vertinimas, ir jis nieko nesako apie tai, ar produktas veikia. " +
         "Jis nekeičia įrodymų balo.",

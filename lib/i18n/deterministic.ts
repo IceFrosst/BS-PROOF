@@ -179,7 +179,7 @@ const PATTERNS_LT: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
   // manual-entry validators (lib/analyze/manual-dose.ts, lib/analyze/scan.ts)
   [
     /^The dose unit must be one of (.+)\. IU is not accepted — enter the mass printed beside it\.$/,
-    (m) => `Dozės vienetas turi būti vienas iš: ${m[1]}. TV (IU) nepriimamos — įvesk šalia atspausdintą masę.`,
+    (m) => `Dozės vienetas turi būti vienas iš: ${m[1]}. TV (IU) nepriimami — įvesk šalia atspausdintą masę.`,
   ],
   [/^The dose must be a positive number\.$/, () => "Dozė turi būti teigiamas skaičius."],
   [
@@ -194,7 +194,7 @@ const PATTERNS_LT: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
   [/^Pick an ingredient from the catalog\.$/, () => "Pasirink veikliąją medžiagą iš katalogo."],
   [/^Pick a form of (.+) from the catalog\.$/, (m) => `Pasirink ${m[1]} formą iš katalogo.`],
   [/^The dose must be an object with a value and a unit\.$/, () => "Dozė turi būti objektas su reikšme ir vienetu."],
-  [/^(.+) is dosed in CFU, which is a count, not a mass\. Leave the dose empty\.$/, (m) => `${m[1]} dozuojama KFV — tai skaičius, o ne masė. Dozės nepildyk.`],
+  [/^(.+) is dosed in CFU, which is a count, not a mass\. Leave the dose empty\.$/, (m) => `${m[1]} dozuojama KSV — tai skaičius, o ne masė. Dozės nepildyk.`],
   // readPriorDose (lib/analyze/evidence-prior.ts): numbers/ranges are captured verbatim.
   [/^Your dose could not be read off the label, so it cannot be compared\.$/, () => "Tavo dozės nepavyko nuskaityti iš etiketės, todėl jos palyginti negalima."],
   [

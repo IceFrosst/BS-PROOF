@@ -124,11 +124,11 @@ function literatureDisclosuresLt(data: LiteratureWarnings | null | undefined, lo
       tone: "warning",
       title: "Finansavimas ir nepriklausomumas",
       body:
-        "Modelio žinios — nepatikrinta. Tai apie tai, kas apmokėjo tyrimus, susijusius su šia veikliąja medžiaga. " +
-        `${basis ? tr(basis) : "Modelis prisimena čia esantį finansavimo modelį, apie kurį verta pasakyti."} ` +
+        "Modelio žinios — nepatikrinta. Tai susiję su tuo, kas finansavo šios veikliosios medžiagos tyrimus. " +
+        `${basis ? tr(basis) : "Modelis prisimena finansavimo dėsningumą, kurį verta paminėti."} ` +
         `${funders.length ? `Dažnai minimi finansuotojai: ${funders.join(", ")}. ` : ""}` +
         `(modelio pasitikėjimas: ${word(funding.confidence)}). ` +
-        "Nurodyti, kas sumokėjo, nereiškia, kad rezultatai klaidingi, ir tai nekeičia įrodymų balo.",
+        "Tai, kas finansavo tyrimus, dar nereiškia, kad rezultatai klaidingi, ir tai nekeičia įrodymų balo.",
     });
   }
 
@@ -142,7 +142,7 @@ function literatureDisclosuresLt(data: LiteratureWarnings | null | undefined, lo
       body:
         "Modelio žinios — nepatikrinta. Publikavimo šališkumas reiškia, kad tyrimai, kuriuose kažkas rasta, dažniau " +
         "publikuojami nei tyrimai, kuriuose nieko nerasta. Dėl to medžiaga gali atrodyti geresnė, nei yra. " +
-        `${basis ? tr(basis) : "Modelis prisimena čia esantį publikuotos literatūros dėsningumą, apie kurį verta pasakyti."} ` +
+        `${basis ? tr(basis) : "Modelis prisimena publikuotos literatūros dėsningumą, kurį verta paminėti."} ` +
         `${signals.length ? `Jo požymiai: ${signals.map((s) => tr(s)).join("; ")}. ` : ""}` +
         `(modelio pasitikėjimas: ${word(bias.confidence)}). ` +
         "Tai apibūdina publikuotą literatūrą. Tai nėra teiginys, kad rezultatai klaidingi, ir tai nekeičia įrodymų balo.",

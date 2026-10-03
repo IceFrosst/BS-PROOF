@@ -288,7 +288,7 @@ export const FLOW_LT: FlowCopy = {
   signOut: "Atsijungti",
   googleLoading: "Kraunamas prisijungimas su Google…",
   googleSigningIn: "Jungiama…",
-  googleLoadFailed: "Prisijungimas su Google neįsikėlė. Patikrink ryšį, išjunk accounts.google.com blokavimą ir bandyk dar kartą.",
+  googleLoadFailed: "Prisijungimas su Google neįsikrovė. Patikrink ryšį, išjunk accounts.google.com blokavimą ir bandyk dar kartą.",
   googleExchangeFailed: "Google tave priėmė, bet prisijungimas nebaigtas. Bandyk dar kartą paspausdamas Google mygtuką.",
   googleExchangeSlow: "Prisijungimas trunka ilgiau nei tikėtasi. Palauk akimirką arba bandyk dar kartą paspausdamas Google mygtuką.",
   tryAgain: "Bandyti dar kartą",
