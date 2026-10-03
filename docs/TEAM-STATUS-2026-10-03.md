@@ -1,4 +1,15 @@
-# Team status — 2026-10-03 12:30 (BIO-RED pitch day)
+# Team status — 2026-10-03 (BIO-RED pitch day)
+
+## Update: reviewed translation-cache release
+
+- Preserves Ignas's logo commit `eb30db0` and the merged UI/EN-LT work.
+- Translation cache is partitioned by the server-verified user ID; anonymous/unscoped callers do not share entries. User IDs never enter model prompts, responses or logs.
+- Validation: 85 focused translation/client tests, typecheck, changed-file ESLint, both Python gates, diff check, and production build (296 pages) passed. Fresh independent source/security review accepted; owner Claude Code verification and live model translation were not performed.
+- The user saved the exact canonical origin on the deployed Google client. Last fresh browser check still returned HTTP 400 with the origin-not-allowed message; propagation and real consent/session verification remain open. Vercel already serves the correct client ID, so no redeploy is needed for that Google setting. Authentication stays enforced.
+- Magnesium fix is separate, uncommitted WIP: remaining legacy-replay/API parity regressions and tests must pass before review/release. Research remains unmerged and inactive; do not provision or activate under the current owner note.
+- Next: complete magnesium regression coverage/review, then verify real sign-in → scan → History → replay. Research contract/source provenance and UI wiring remain offline follow-up work.
+
+## Earlier teammate checkpoint — 12:30
 
 Main = `700557a` (auto-deployed to https://bs-proof-dashboard.vercel.app, Vercel status: success).
 

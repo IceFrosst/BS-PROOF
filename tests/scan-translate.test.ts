@@ -175,12 +175,38 @@ describe("translateTexts", () => {
     expect(out.translations).toEqual([null, null]);
   });
 
-  it("caches per prompt version: the second request makes no model call", async () => {
+  it("reuses cache only within the same caller scope", async () => {
     const { fn, calls } = fakeChat((texts) => texts.map((t) => `LT ${t}`));
-    await translateTexts(["Same sentence."], { chatJson: fn, timeoutMs: 1000 });
-    const again = await translateTexts(["Same sentence.", "New sentence."], { chatJson: fn, timeoutMs: 1000 });
-    expect(again.translations).toEqual(["LT Same sentence.", "LT New sentence."]);
+    await translateTexts(["Same sentence."], { chatJson: fn, timeoutMs: 1000 }, "user-a");
+    const sameUser = await translateTexts(["Same sentence.", "New sentence."], { chatJson: fn, timeoutMs: 1000 }, "user-a");
+    expect(sameUser.translations).toEqual(["LT Same sentence.", "LT New sentence."]);
     expect(calls).toEqual([["Same sentence."], ["New sentence."]]);
+  });
+
+  it("does not let one caller poison another caller's translation", async () => {
+    const { fn, calls } = fakeChat((texts) => texts.map((t) => `${calls.length === 1 ? "A" : "B"} ${t}`));
+    await translateTexts(["Shared sentence."], { chatJson: fn, timeoutMs: 1000 }, "user-a");
+    const fromB = await translateTexts(["Shared sentence."], { chatJson: fn, timeoutMs: 1000 }, "user-b");
+    expect(fromB.translations).toEqual(["B Shared sentence."]);
+    expect(calls).toEqual([["Shared sentence."], ["Shared sentence."]]);
+  });
+
+  it("never caches a translation rejected by the guard", async () => {
+    const { fn, calls } = fakeChat((texts) => texts.map((t) => calls.length === 1 ? t.replace("5", "6") : `LT ${t}`));
+    const first = await translateTexts(["Dose 5 g"], { chatJson: fn, timeoutMs: 1000 }, "user-a");
+    const second = await translateTexts(["Dose 5 g"], { chatJson: fn, timeoutMs: 1000 }, "user-a");
+    expect(first.translations).toEqual([null]);
+    expect(second.translations).toEqual(["LT Dose 5 g"]);
+    expect(calls).toEqual([["Dose 5 g"], ["Dose 5 g"]]);
+  });
+
+  it("bypasses reusable cache without a caller scope", async () => {
+    const { fn, calls } = fakeChat((texts) => texts.map((t) => `${calls.length === 1 ? "first" : "second"} ${t}`));
+    const first = await translateTexts(["Anonymous sentence."], { chatJson: fn, timeoutMs: 1000 });
+    const second = await translateTexts(["Anonymous sentence."], { chatJson: fn, timeoutMs: 1000 });
+    expect(first.translations).toEqual(["first Anonymous sentence."]);
+    expect(second.translations).toEqual(["second Anonymous sentence."]);
+    expect(calls).toHaveLength(2);
   });
 
   it("degrades to 'keep English' when no provider is configured or the model fails", async () => {
@@ -258,18 +284,27 @@ describe("POST /api/scan/translate", () => {
     expect(bad.status).toBe(401);
   });
 
+  it("does not create an anonymous shared scope or accept one from the request body", async () => {
+    process.env.DEEPSEEK_API_KEY = "k";
+    translateSpy.mockResolvedValue({ status: "ok", translations: ["Labas"], prompt_version: "translate-lt-v1.0", model: "m", reason: null });
+    const res = await post({ lang: "lt", texts: ["Hello"], cacheScope: "attacker" });
+    expect(res.status).toBe(200);
+    expect(translateSpy.mock.calls[0][2]).toBeUndefined();
+  });
+
   it("answers a signed-in Google user and returns the model translator's guarded answer", async () => {
     process.env.SCAN_REQUIRE_AUTH = "1";
     process.env.SUPABASE_URL = FAKE_URL;
     process.env.SUPABASE_SERVICE_ROLE_KEY = FAKE_KEY;
     process.env.DEEPSEEK_API_KEY = "k";
     translateSpy.mockResolvedValue({ status: "ok", translations: ["Labas", null], prompt_version: "translate-lt-v1.0", model: "m", reason: null });
-    const res = await post({ lang: "lt", texts: ["Hello", "Dose 5 g"] }, { authorization: "Bearer tok-a" });
+    const res = await post({ lang: "lt", texts: ["Hello", "Dose 5 g"], cacheScope: "attacker" }, { authorization: "Bearer tok-a" });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ status: "ok", translations: ["Labas", null], prompt_version: "translate-lt-v1.0" });
     expect(res.headers.get("cache-control")).toBe("no-store");
     expect(translateSpy).toHaveBeenCalledTimes(1);
     expect(translateSpy.mock.calls[0][0]).toEqual(["Hello", "Dose 5 g"]);
+    expect(translateSpy.mock.calls[0][2]).toBe(USER_A);
   });
 
   it.each([

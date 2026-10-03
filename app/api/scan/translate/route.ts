@@ -102,7 +102,10 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ status: "translator_unavailable", error: "No model provider is configured." }, { status: 503, headers: NO_STORE });
   }
 
-  const result = await translateTexts(list, defaultTranslateDeps());
+  // Cache partitioning uses only Supabase's verified user ID. Never accept a
+  // caller-supplied scope, and do not pool anonymous requests into one bucket.
+  const cacheScope = auth.status === "authenticated" ? auth.user.id : undefined;
+  const result = await translateTexts(list, defaultTranslateDeps(), cacheScope);
   return NextResponse.json(
     { status: result.status === "ok" ? "ok" : "translator_unavailable", translations: result.translations, prompt_version: result.prompt_version },
     // 200 either way: a partly cached answer is still useful, and `null`
