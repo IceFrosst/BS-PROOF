@@ -74,6 +74,43 @@ describe("/scan result state", () => {
     expect(effect.querySelector("a[href^='https://']")).not.toBeNull();
   });
 
+  it("fills each dimension bar to exactly the value it prints (n/3 effect, n/4 axes)", async () => {
+    // Regression: the audit stores formFit/doseFit as strings, so the old
+    // typeof-number check drew "4/4" Form/Dose bars as the empty untested hatch,
+    // and the effect bar mapped -3..+3 onto the track so "0/3" looked half full.
+    const cases: Array<[string, string, string, string, string, string]> = [
+      // effectPoints, formFit, doseFit, expected effect text, effect width, form width
+      ["0", "4", "3", "0/3", "0%", "100%"],
+      ["2", "3", "4", "+2/3", `${(2 / 3) * 100}%`, "75%"],
+      ["3", "0", "4", "+3/3", "100%", "0%"],
+      ["-3", "4", "4", "−3/3", "100%", "100%"],
+    ];
+    for (const [effectPoints, formFit, doseFit, text, effectWidth, formWidth] of cases) {
+      const retained = audit()!;
+      Object.assign(retained.audit.outcomes[0].ledger, { effectPoints, formFit, doseFit });
+      const el = await mount(); await photo(el, { ...structuredClone(fixture), ledger_audit: retained });
+      await act(async () => el.querySelector<HTMLButtonElement>(".ab-bars.outcomes li > button")!.click());
+      const row = (id: string) => el.querySelector(`[data-row-id=${id}]`)!;
+      const bar = (id: string) => row(id).querySelector<HTMLElement>(".ab-bar-track i");
+      expect(row("effect").querySelector(".ab-bar-pts")!.textContent).toBe(text);
+      expect(row("effect").querySelector(".ab-bar-track")!.classList.contains("fill")).toBe(true);
+      expect(bar("effect")!.style.width).toBe(effectWidth);
+      expect(bar("effect")!.style.background).toBe(effectPoints.startsWith("-") ? "var(--ab-warn, #963d26)" : "var(--ab-accent)");
+      expect(row("form").querySelector(".ab-bar-track")!.classList.contains("fill")).toBe(true);
+      expect(bar("form")!.style.width).toBe(formWidth);
+      expect(bar("dose")!.style.width).toBe(`${(Number(doseFit) / 4) * 100}%`);
+      if (root) await act(async () => root?.unmount());
+      container?.remove(); root = null; container = null;
+    }
+    // Unknown stays the hatch: "not assessed" must never look like a measured 0.
+    const retained = audit()!;
+    Object.assign(retained.audit.outcomes[0].ledger, { effectPoints: "unclear", formFit: "unknown" });
+    const el = await mount(); await photo(el, { ...structuredClone(fixture), ledger_audit: retained });
+    await act(async () => el.querySelector<HTMLButtonElement>(".ab-bars.outcomes li > button")!.click());
+    expect(el.querySelector("[data-row-id=effect] .ab-bar-track")!.classList.contains("hatch")).toBe(true);
+    expect(el.querySelector("[data-row-id=form] .ab-bar-track")!.classList.contains("hatch")).toBe(true);
+  });
+
   it("keeps tab roving and panel labelling valid for punctuation in outcome keys", async () => {
     const retained = audit()!;
     retained.audit.outcomes[0].name = "Endurance / recovery (acute),";

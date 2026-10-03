@@ -336,13 +336,13 @@ function AuditSourceList({ outcome }: { outcome: AuditOutcome }) {
 /* Production result primitive: this is deliberately the same markup as the
  * field-notebook card in app/design-lab/ab. The scan only supplies real audit
  * values; it does not reuse the older report's .sc-* visual grammar. */
-function LabDimension({ id, label, value, word, fill, open, onToggle, children }: { id: string; label: string; value: string; word: string; fill: number | null; open: boolean; onToggle: () => void; children: ReactNode }) {
+function LabDimension({ id, label, value, word, fill, tone, open, onToggle, children }: { id: string; label: string; value: string; word: string; fill: number | null; tone?: "harm"; open: boolean; onToggle: () => void; children: ReactNode }) {
   const scope = useContext(ScanIdScope);
   return <li className={open ? "open" : ""} data-row-id={id}>
     <button type="button" aria-expanded={open} aria-controls={`${scope}ab-scan-${id}`} onClick={onToggle}>
       <span className="ab-bar-name">{label}</span><span className="ab-bar-word">{word}</span><span className="ab-bar-pts">{value}</span>
       <span className="ab-chev" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 6l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg></span>
-      <span className={`ab-bar-track ${fill === null ? "hatch" : "fill"}`}>{fill !== null ? <i style={{ width: `${Math.max(0, Math.min(100, fill * 100))}%`, background: "var(--ab-accent)" }} /> : null}</span>
+      <span className={`ab-bar-track ${fill === null ? "hatch" : "fill"}`}>{fill !== null ? <i style={{ width: `${Math.max(0, Math.min(100, fill * 100))}%`, background: tone === "harm" ? "var(--ab-warn, #963d26)" : "var(--ab-accent)" }} /> : null}</span>
     </button>
     {open ? <div id={`${scope}ab-scan-${id}`} className="ab-bar-detail">{children}</div> : null}
   </li>;
@@ -389,11 +389,15 @@ function LabTabs({ audit, unmatchedRows, population, emptyState, validity, warni
     const key = `${outcome.name}||${outcome.population ?? ""}`;
     const detail = (dimension: "effect" | "evidence" | "form" | "dose") => <AuditDetailText audit={audit!} outcome={outcome} dimension={dimension} />;
     const fit = (v: string) => v === "unknown" ? "—" : `${v}/4`;
-    const rows: Array<{ id: string; label: string; value: string; word: string; fill: number | null; body: ReactNode }> = [
-      { id: "effect", label: r.dimEffect, value: result.effect === "unclear" ? "—" : `${result.effect > 0 ? "+" : result.effect < 0 ? "−" : ""}${result.effect}/3`, word: lw(result.effectWord), fill: result.effect === "unclear" ? null : (result.effect + 3) / 6, body: <><p>{r.effectScaleNote}</p><DetailLine term={r.plainSummary}>{tr(auditPlainText(auditPlainEntry(audit!.plain, outcome), "summary", "sentence", outcome.sentence))}</DetailLine><DetailLine term={r.estimate}>{outcome.absolute_effect ? tr(outcome.absolute_effect) : r.noEstimate}</DetailLine><DetailLine term={r.meaningful}>{outcome.clinically_meaningful ? tr(outcome.clinically_meaningful) : r.unknownDot}</DetailLine><DetailLine term={r.strongestDoubt}>{tr(outcome.strongest_doubt)}</DetailLine>{detail("effect")}<AuditSourceList outcome={outcome} /></> },
+    // The audit stores formFit/doseFit as strings ("0".."4" | "unknown"); the
+    // parsed ledger holds the number, so the bar reads from that, not the raw
+    // string (which made every Form/Dose bar render as the untested hatch).
+    const parsed = ledgerFromAudit(outcome);
+    const rows: Array<{ id: string; label: string; value: string; word: string; fill: number | null; tone?: "harm"; body: ReactNode }> = [
+      { id: "effect", label: r.dimEffect, value: result.effect === "unclear" ? "—" : `${result.effect > 0 ? "+" : result.effect < 0 ? "−" : ""}${Math.abs(result.effect)}/3`, word: lw(result.effectWord), fill: result.effect === "unclear" ? null : Math.abs(result.effect) / 3, tone: result.effect !== "unclear" && result.effect < 0 ? "harm" : undefined, body: <><p>{r.effectScaleNote}</p><DetailLine term={r.plainSummary}>{tr(auditPlainText(auditPlainEntry(audit!.plain, outcome), "summary", "sentence", outcome.sentence))}</DetailLine><DetailLine term={r.estimate}>{outcome.absolute_effect ? tr(outcome.absolute_effect) : r.noEstimate}</DetailLine><DetailLine term={r.meaningful}>{outcome.clinically_meaningful ? tr(outcome.clinically_meaningful) : r.unknownDot}</DetailLine><DetailLine term={r.strongestDoubt}>{tr(outcome.strongest_doubt)}</DetailLine>{detail("effect")}<AuditSourceList outcome={outcome} /></> },
       { id: "evidence", label: r.dimEvidence, value: `${result.certainty}/4`, word: lw(result.certaintyWord), fill: result.certainty / 4, body: <><p>{r.certaintyNote}</p><DetailLine term={r.gates}>{result.firedGates.length ? result.firedGates.map(lw).join("; ") : r.noGate}</DetailLine><DetailLine term={r.checklist}>{Object.entries(outcome.ledger.checklist).map(([name, state]) => `${lang === "en" ? words(name) : r.checklistNames[name] ?? words(name)}: ${enumWord(lang, state)}`).join("; ")}</DetailLine>{detail("evidence")}<AuditSourceList outcome={outcome} /></> },
-      { id: "form", label: r.dimForm, value: fit(outcome.ledger.formFit), word: lw(result.formWord), fill: typeof outcome.ledger.formFit === "number" ? outcome.ledger.formFit / 4 : null, body: <><p>{r.formNote}</p>{detail("form")}<AuditSourceList outcome={outcome} /></> },
-      { id: "dose", label: r.dimDose, value: fit(outcome.ledger.doseFit), word: lw(result.doseWord), fill: typeof outcome.ledger.doseFit === "number" ? outcome.ledger.doseFit / 4 : null, body: <><p>{r.doseNote}</p><DetailLine term={r.effectiveRange}>{tr(outcome.ledger.effective_daily_range)}</DetailLine>{detail("dose")}<AuditSourceList outcome={outcome} /></> },
+      { id: "form", label: r.dimForm, value: fit(outcome.ledger.formFit), word: lw(result.formWord), fill: typeof parsed.formFit === "number" ? parsed.formFit / 4 : null, body: <><p>{r.formNote}</p>{detail("form")}<AuditSourceList outcome={outcome} /></> },
+      { id: "dose", label: r.dimDose, value: fit(outcome.ledger.doseFit), word: lw(result.doseWord), fill: typeof parsed.doseFit === "number" ? parsed.doseFit / 4 : null, body: <><p>{r.doseNote}</p><DetailLine term={r.effectiveRange}>{tr(outcome.ledger.effective_daily_range)}</DetailLine>{detail("dose")}<AuditSourceList outcome={outcome} /></> },
     ];
     return <>
       <div className="ab-headline" style={{ "--ab-score-color": scoreSignalColor(result.headline, result.certainty / 4) } as CSSProperties}>
