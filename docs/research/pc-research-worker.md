@@ -1,8 +1,10 @@
 # Main-PC research worker — contract, install, health, rollback
 
-Status (2026-10-03): **coded and locally tested only.** Nothing is installed or
-running on the main PC, no token exists, and no job has been run. Keep runtime OFF
-until the complete integration is reviewed and a human provisions it.
+Status (2026-10-03): **coded and locally tested; runtime release staged, not active.**
+Release `bsproof-research-worker-f8e8df82117e` is installed (unprivileged, isolated venv)
+under `~/.local/share/bsproof-research-worker/` on the main PC. No `worker.env`, token,
+system unit, service or job exists, and no model has been called. Keep runtime OFF until
+a human provisions it.
 
 Files: `scripts/pc_research_worker.py` (loop, HTTP, leases, validation),
 `pipeline/claude_research_adapter.py` (only model boundary),
