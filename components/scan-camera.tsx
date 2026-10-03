@@ -33,11 +33,40 @@ import { blobToCaptureFile, cameraSupported, captureVideoFrame, startCamera, sto
 
 type CameraStatus = "idle" | "starting" | "live" | "unavailable";
 
+/* Visible and accessible copy, supplied by the parent so the language switch
+ * reaches the camera. Same field names as the Ignas PR3 `CameraLabels` (hint,
+ * unavailable, starting, torchOn, torchOff, shutter) plus the overlay copy that
+ * still lives in this component on `main`. Defaults are English. */
+export interface CameraLabels {
+  headline: string;
+  subline: string;
+  viewfinder: string;
+  hint: string;
+  unavailable: string;
+  starting: string;
+  torchOn: string;
+  torchOff: string;
+  shutter: string;
+}
+
+export const CAMERA_LABELS: CameraLabels = {
+  headline: "Does your Supplement actually work?",
+  subline: "Scan and see.",
+  viewfinder: "Live camera viewfinder",
+  hint: "Fill the frame · avoid glare",
+  unavailable: "Camera unavailable — upload a photo instead.",
+  starting: "Opening the camera…",
+  torchOn: "Turn the flashlight on",
+  torchOff: "Turn the flashlight off",
+  shutter: "Take a photo",
+};
+
 export function ScanCamera({
   active,
   disabled = false,
   onCapture,
   onUnavailable,
+  labels = CAMERA_LABELS,
 }: {
   /** Whether the viewfinder should be running. The parent flips this to
    * false the instant a frame is captured or a file is staged another way,
@@ -46,6 +75,8 @@ export function ScanCamera({
   disabled?: boolean;
   onCapture: (file: File) => void;
   onUnavailable?: () => void;
+  /** Visible copy, so the parent can switch language. */
+  labels?: CameraLabels;
 }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -163,7 +194,7 @@ export function ScanCamera({
 
   return (
     <div className="sc-viewfinder-wrap">
-      <div className="sc-viewfinder" aria-label="Live camera viewfinder">
+      <div className="sc-viewfinder" aria-label={labels.viewfinder}>
         <video ref={videoRef} className={`sc-video${isLive ? "" : " is-hidden"}`} playsInline muted autoPlay aria-hidden="true" />
         {isLive ? null : <div className="sc-viewfinder-fill" aria-hidden="true" />}
 
@@ -174,19 +205,19 @@ export function ScanCamera({
             <span className="sc-viewfinder-word">BS PROOF</span>
           </div>
           <h1 id="scan-title" className="sc-headline">
-            Does your Supplement actually work?
+            {labels.headline}
           </h1>
-          <p className="sc-subline">Scan and see.</p>
+          <p className="sc-subline">{labels.subline}</p>
         </div>
 
         {isUnavailable ? (
           <div className="sc-camera-fallback" role="status">
-            <p>Camera unavailable — upload a photo instead.</p>
+            <p>{labels.unavailable}</p>
           </div>
         ) : null}
         {isStarting ? (
           <div className="sc-camera-starting" role="status" aria-live="polite">
-            <p>Opening the camera…</p>
+            <p>{labels.starting}</p>
           </div>
         ) : null}
       </div>
@@ -197,7 +228,7 @@ export function ScanCamera({
           className="sc-shutter"
           onClick={() => void handleShutter()}
           disabled={disabled}
-          aria-label="Take a photo"
+          aria-label={labels.shutter}
         >
           <span className="sc-shutter-ring" aria-hidden="true" />
         </button>

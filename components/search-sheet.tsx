@@ -23,12 +23,15 @@ export function SearchSheet({
   onClose,
   titleId,
   title,
+  closeLabel = "Close search",
   children,
 }: {
   open: boolean;
   onClose: () => void;
   titleId: string;
   title: string;
+  /** Accessible name of the close button (localized by the caller). */
+  closeLabel?: string;
   children: ReactNode;
 }) {
   const sheetRef = useRef<HTMLDivElement | null>(null);
@@ -81,7 +84,7 @@ export function SearchSheet({
       >
         <div className="sc-sheet-head">
           <h2 id={titleId}>{title}</h2>
-          <button type="button" className="sc-sheet-close" onClick={onClose} aria-label="Close search">
+          <button type="button" className="sc-sheet-close" onClick={onClose} aria-label={closeLabel}>
             <svg aria-hidden="true" viewBox="0 0 20 20" width="18" height="18">
               <path d="M5 5l10 10M15 5 5 15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>

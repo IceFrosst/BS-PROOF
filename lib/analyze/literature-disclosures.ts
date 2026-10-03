@@ -17,6 +17,16 @@
  * wrong, and it must never be read by scoring code.
  */
 
+import type { Lang } from "@/lib/i18n/lang";
+
+/** Display-only localization. `tr` translates model-authored text (basis, signals); templates are fixed. */
+export interface DisclosureLocale {
+  lang: Lang;
+  tr?: (text: string) => string;
+  /** Display word for a stored confidence value ("high" -> ...). */
+  confidenceWord?: (value: string) => string;
+}
+
 export type LiteratureWarningStatus = "concern" | "no_concern" | "unknown";
 
 export interface FundingIndependence {
@@ -56,8 +66,9 @@ export interface LiteratureDisclosure {
  * one, both, or neither -- and each explicitly says it does not affect the
  * evidence score.
  */
-export function literatureDisclosures(data: LiteratureWarnings | null | undefined): LiteratureDisclosure[] {
+export function literatureDisclosures(data: LiteratureWarnings | null | undefined, locale?: DisclosureLocale): LiteratureDisclosure[] {
   const out: LiteratureDisclosure[] = [];
+  if (locale?.lang === "lt") return literatureDisclosuresLt(data, locale);
 
   const funding = data?.funding_independence;
   if (funding?.status === "concern") {
@@ -90,6 +101,51 @@ export function literatureDisclosures(data: LiteratureWarnings | null | undefine
         `(model confidence: ${bias.confidence}). ` +
         "This describes the published record. It is not a claim that the results are wrong, and it does not " +
         "affect the evidence score.",
+    });
+  }
+
+  return out;
+}
+
+/* Lithuanian rendering of the same two disclosures. Same decision rule (only
+ * "concern" renders), same "does not affect the evidence score" promise; the
+ * model-authored `basis` and `signals` go through `tr`, funder names stay
+ * as the model wrote them. */
+function literatureDisclosuresLt(data: LiteratureWarnings | null | undefined, locale: DisclosureLocale): LiteratureDisclosure[] {
+  const tr = locale.tr ?? ((text: string) => text);
+  const word = locale.confidenceWord ?? ((value: string) => value);
+  const out: LiteratureDisclosure[] = [];
+
+  const funding = data?.funding_independence;
+  if (funding?.status === "concern") {
+    const basis = funding.basis?.trim();
+    const funders = (funding.notable_funders ?? []).filter((f) => f && f.trim());
+    out.push({
+      tone: "warning",
+      title: "Finansavimas ir nepriklausomumas",
+      body:
+        "Modelio žinios — nepatikrinta. Tai apie tai, kas apmokėjo tyrimus, susijusius su šia veikliąja medžiaga. " +
+        `${basis ? tr(basis) : "Modelis prisimena čia esantį finansavimo modelį, apie kurį verta pasakyti."} ` +
+        `${funders.length ? `Dažnai minimi finansuotojai: ${funders.join(", ")}. ` : ""}` +
+        `(modelio pasitikėjimas: ${word(funding.confidence)}). ` +
+        "Nurodyti, kas sumokėjo, nereiškia, kad rezultatai klaidingi, ir tai nekeičia įrodymų balo.",
+    });
+  }
+
+  const bias = data?.publication_bias;
+  if (bias?.status === "concern") {
+    const basis = bias.basis?.trim();
+    const signals = (bias.signals ?? []).filter((s) => s && s.trim());
+    out.push({
+      tone: "warning",
+      title: "Publikavimo šališkumas",
+      body:
+        "Modelio žinios — nepatikrinta. Publikavimo šališkumas reiškia, kad tyrimai, kuriuose kažkas rasta, dažniau " +
+        "publikuojami nei tyrimai, kuriuose nieko nerasta. Dėl to medžiaga gali atrodyti geresnė, nei yra. " +
+        `${basis ? tr(basis) : "Modelis prisimena čia esantį publikuotos literatūros dėsningumą, apie kurį verta pasakyti."} ` +
+        `${signals.length ? `Jo požymiai: ${signals.map((s) => tr(s)).join("; ")}. ` : ""}` +
+        `(modelio pasitikėjimas: ${word(bias.confidence)}). ` +
+        "Tai apibūdina publikuotą literatūrą. Tai nėra teiginys, kad rezultatai klaidingi, ir tai nekeičia įrodymų balo.",
     });
   }
 

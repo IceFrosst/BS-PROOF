@@ -561,6 +561,71 @@ do not drop it.
 
 ## Current state
 
+**2026-10-03 — Shared persisted EN/LT localization of the whole `/scan` workspace: IMPLEMENTED on branch
+`fix/scan-localization-20261003` (base `2555166`), NOT pushed, NOT integrated with Ignas PR3 (a separate UI worker
+integrates PR3 first; this branch must be merged on top of it). Handoff:** merge/rebase onto the PR3-integrated tree
+(the commit carrying this text: `git log -1 -- lib/i18n/locale.ts`), resolve the `scan-flow.tsx` / `scan-camera.tsx`
+seams listed under "PR3 seams" below, re-run the focused gates, then push once reviewed.
+
+- **One persisted choice.** `lib/i18n/locale.ts`: `useLang()` over `localStorage["bsproof.lang"]` with values
+  `"en" | "lt"` and **English default -- exactly PR3's key/values** (read from `origin/ignas-pr3`, whose state lived inside
+  `<ScanFlow>`). It is a tiny `useSyncExternalStore` (server snapshot `"en"`, so no hydration mismatch; blocked storage still
+  switches for the visit). `<ScanWorkspace>` owns the only toggle (`.sw-lang`, `data-testid="lang-toggle"`), sets
+  `<html lang>`, and provides `TranslationProvider`; the Scan tab, History list, a replayed scan, the sign-in card, the
+  Google button, the search sheet/forms, the camera labels, and the shared header/footer/skip link all read it.
+  `useScanLang()` keeps the shared chrome and the Google button English on every other route (`/`, `/methodology`,
+  `/tester`). Errors, auth notices and refusals are held as CODES, not text, so switching language rewords one already on
+  screen.
+- **Copy** lives in `lib/i18n/copy/{flow,result,history,search}.ts` (typed `Record<Lang, T>`; a missing LT key fails
+  `tsc` and `tests/localization-deterministic.test.ts`, which also fails if any LT string equals its EN twin). EN is the
+  wording the app always had (every existing test is unchanged and green); LT is informal "tu" like PR3's landing.
+- **What is deterministic (no model, no network).** Dose readings and the dose note are re-rendered in LT from the
+  STORED numbers (`lib/i18n/deterministic.ts`; its EN twin is pinned byte-for-byte to `dose-effectiveness.ts` by test).
+  Fixed server sentences (caveats, evidence-prior disclaimer, registry/seal notes, "no model provider configured"
+  reasons, manual-form validation messages, prior dose readings) have exact-match LT. Funding / publication-bias / MLM
+  disclosure templates and the retained-audit concern notices have LT templates (`literatureDisclosures(data, locale)`,
+  `businessModelDisclosure(model, locale)` take an optional locale; no argument = unchanged English). Ledger words
+  (effect / certainty / form / dose words, band labels, gates), badges, legend, enum display words
+  (confidence, direction, strength, checklist states...) are lookups applied at render to the stored value.
+- **What goes through the model boundary.** Model-authored and retained PROSE (company summary and notes, evidence-prior
+  text, compatibility notes, disclosure `basis`/`signals`, the retained audit's plain-language rewrite, outcome and population
+  names, `effective_daily_range`, `strongest_doubt`, validity notes, server `error` text) is translated at READ time by
+  `POST /api/scan/translate` -> `lib/analyze/translate.ts` -> `chatJson` in `lib/analyze/llm.ts` (the only model file).
+  New prompt `prompts/translate.md` + `schemas/translate.json`, **`TRANSLATE_PROMPT_VERSION = "translate-lt-v1.0"`**
+  (also the cache key; no other prompt or version changed). Same Google gate as `/api/scan` (SCAN_REQUIRE_AUTH ->
+  bearer, checked before the body is read), <= 24 strings / 4,000 chars each / 24,000 total, `no-store`, nothing
+  stored. **A translation is accepted only if every number token and every quoted span of the source survives byte-for-byte**
+  (`guardTranslation`); otherwise that string stays English. The client (`lib/i18n/translate-client.tsx`) queues only
+  the strings actually rendered, one batched POST per tick, and shows "Translating…" / a "some text is in English" note.
+- **Never translated, by design:** product, brand, firm, ingredient and form names; raw FDA recall records (product,
+  reason, firm, class, dates); label `evidence_spans` and the audit's "Exact wording from the audit" (original, with a
+  translated label); run ids, model names, prompt versions, DOIs/PMIDs/source titles; all numbers, units, scales
+  (-3..+3 effect, /4 axes, /100), ranges, closeness and counts. **No score constant, enum value, exact-match rule or
+  stored analysis changed**; `tests/localization-deterministic.test.ts` asserts the scoring/ledger/dose/catalog modules
+  import none of the i18n/translate code, and `tests/scan-localization.test.tsx` compares every number on an EN vs LT
+  card token-for-token. No servings/day and no audit score is ever invented.
+- **Known untranslated dynamic seams (NOT claimed complete):** (1) `/tester` (`label-analyzer.tsx`) is English-only; (2)
+  `/methodology` and the PWA manifest/`<title>` stay English; (3) names listed above, plus catalog/vocab labels
+  (`entry.form_label`, `words(form_vocab_id)`, interaction pair names, seal chips, `scored_forms`); (4) if the translator is
+  down, unavailable or rejected by the guard, the original English prose shows (with the note) -- there is no offline
+  corpus for model prose; English fallback text is not marked `lang="en"`; (5) unknown future server statuses/enums fall
+  back to their English `words()`; (6) the LT strings were written for review by a Lithuanian speaker -- not yet proofread.
+- **PR3 seams (for the integrating worker).** PR3's `scan-flow.tsx` keeps `lang` in `useState` with its own `COPY`,
+  a top-bar toggle (`.sc-lang`) and `ScanCamera labels` (`CameraLabels`: hint, unavailable, starting, torchOn, torchOff,
+  shutter). Here `ScanCamera` takes the SAME `labels` prop (superset: + headline, subline, viewfinder because main still
+  draws the H1 there). To merge: replace PR3's `useState<Lang>`/effect/`toggleLang` with `useLang()` (same key, a stored
+  choice carries over); fold PR3's landing strings (headline, subline, Upload/Search/Take a photo, camera labels, stage
+  lists, loading title/sub) into `FLOW_COPY` (my LT for the shared strings already matches PR3's); keep ONE toggle (the
+  workspace's covers History too; PR3's top-bar toggle should call `toggleLang`). PR3's English stage lists differ from
+  main's -- `FLOW_COPY.*.photoStages/manualStages` must follow whichever wins. Everything below the landing
+  (result, history, auth) is independent of PR3's diff (it touches only the landing/camera/vision/capture).
+- **Checked (focused, no full suite, no Playwright matrix, zero live model calls):** `tsc --noEmit`; eslint on every changed
+  file; `git diff --check`; `python3 -m pipeline.invariants` / `pipeline.selftest` ALL PASSED; ONE `npm run build`;
+  tests: the 14 existing scan/auth/history/disclosure files (151) + `tests/localization-deterministic.test.ts` (20),
+  `tests/scan-translate.test.ts` (24), `tests/scan-localization.test.tsx` (17). 390 px EN and LT screenshots of landing,
+  sign-in card, result (outcomes / all sections open / one outcome with the four axes), History list and a replayed scan,
+  with every disclosure open and a deliberately lengthened pseudo-LT: zero horizontal overflow (measured, scrollWidth 390).
+
 **2026-10-03 — Google-required scan + private Scan/History: IMPLEMENTED, on `main`, PROVISIONED (SQL applied,
 Vercel production env set); the real Google sign-in is NOT yet verified (see "Release stage").** Founder: real results depend on a Google login, and a signed-in person can
 reopen their own saved results. Two isolated worktree commits were cherry-picked `--no-commit` onto
@@ -1735,8 +1800,11 @@ still the unmeasured SR-uplift experiment (Next item 3).
   optionally tightening the SQL guard's text match on `qual`/`with_check` (native-review W3). If sign-in returns 401
   for everyone, check the `SUPABASE_URL` / service-key pair first (a wrong pair looks like an expired session). The
   10 dev-only `npm audit` findings remain (see the pass-1 entry).
-- **After Google, in this order: PR3 / full EN–LT translation, then live PC research.** Neither was
-  started. Redo the original audit; the earlier categorical benchmark is not a valid exact-UI comparison.
+- **After Google, in this order: PR3 / full EN–LT translation, then live PC research.** Full EN–LT translation is
+  IMPLEMENTED on `fix/scan-localization-20261003` (see the 2026-10-03 entry at the top of `Current state`), awaiting
+  PR3 integration + review + a Lithuanian proofread of `lib/i18n/copy/*` and `prompts/translate.md`; PR3 itself is
+  being integrated by a separate UI worker. Live PC research was not started. Redo the original audit; the earlier
+  categorical benchmark is not a valid exact-UI comparison.
 
 - Finish review of the detailed benchmark visuals; preserve exact product/dose
   inputs, limitations and the distinction between quote matching and medical

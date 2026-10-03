@@ -40,6 +40,9 @@ import {
   type ManualDoseUnit,
 } from "@/lib/analyze/manual-dose";
 import type { ManualScanInput } from "@/lib/analyze/scan";
+import { SEARCH_COPY, type SearchCopy } from "@/lib/i18n/copy/search";
+import { knownServerText } from "@/lib/i18n/deterministic";
+import { useLang } from "@/lib/i18n/locale";
 
 export const MAX_MATCHES = 8;
 
@@ -95,15 +98,15 @@ export function matchCatalog(catalog: CatalogIngredient[], query: string): Catal
   return ranked.slice(0, MAX_MATCHES).map((r) => r.match);
 }
 
-function conversionNote(form: CatalogForm, ingredient: CatalogIngredient): string {
-  if (ingredient.dose_basis_kind === "cfu") return "Counted in CFU, not mass — the analysis runs without a dose axis.";
+function conversionNote(form: CatalogForm, ingredient: CatalogIngredient, c: SearchCopy): string {
+  if (ingredient.dose_basis_kind === "cfu") return c.cfuNote;
   switch (form.dose_conversion) {
     case "exact":
-      return "A typed dose converts exactly to the active amount.";
+      return c.convExact;
     case "bounded":
-      return "This salt's hydration is often unstated, so a typed dose converts to a bounded range rather than one number.";
+      return c.convBounded;
     default:
-      return "A dose for this form cannot be converted to an active amount, so the dose axis stays unavailable. The rest of the analysis still runs.";
+      return c.convNone;
   }
 }
 
@@ -117,6 +120,8 @@ export function SupplementSearch({
   onSubmit: (input: ManualScanInput) => void;
 }) {
   const uid = useId();
+  const { lang } = useLang();
+  const c = SEARCH_COPY[lang];
   const inputId = `${uid}-ingredient`;
   const listId = `${uid}-listbox`;
   const formId = `${uid}-form`;
@@ -133,7 +138,11 @@ export function SupplementSearch({
   const [dose, setDose] = useState("");
   const [unit, setUnit] = useState<ManualDoseUnit>("mg");
   const [servings, setServings] = useState("");
-  const [problem, setProblem] = useState<string | null>(null);
+  // Held as the ENGLISH message (the validators in lib/analyze/manual-dose.ts
+  // are shared with the server) and reworded at render, so a language switch
+  // rewords a message already on screen.
+  const [problemKey, setProblem] = useState<string | null>(null);
+  const problem = problemKey === null ? null : knownServerText(lang, problemKey) ?? problemKey;
 
   const matches = useMemo(() => (ingredientId ? [] : matchCatalog(catalog, query)), [catalog, query, ingredientId]);
   const ingredient = useMemo(() => catalog.find((i) => i.id === ingredientId) ?? null, [catalog, ingredientId]);
@@ -218,11 +227,11 @@ export function SupplementSearch({
 
   const submit = () => {
     if (!ingredient) {
-      setProblem("Pick an ingredient from the list.");
+      setProblem(SEARCH_COPY.en.pickIngredient);
       return;
     }
     if (!chosenForm) {
-      setProblem("Pick the exact form. If the label does not say, choose the “not stated” entry.");
+      setProblem(SEARCH_COPY.en.pickForm);
       return;
     }
     // Only fields that are actually rendered may submit: a CFU-counted
@@ -264,7 +273,7 @@ export function SupplementSearch({
       noValidate
     >
       <div className="sc-field">
-        <label htmlFor={inputId}>Ingredient</label>
+        <label htmlFor={inputId}>{c.ingredient}</label>
         <div className="sc-combo">
           <input
             id={inputId}
@@ -272,7 +281,7 @@ export function SupplementSearch({
             role="combobox"
             autoComplete="off"
             spellCheck={false}
-            placeholder="e.g. magnesium, creatine, vitamin D"
+            placeholder={c.placeholder}
             value={query}
             disabled={busy}
             aria-expanded={listOpen}
@@ -288,7 +297,7 @@ export function SupplementSearch({
             onBlur={() => setOpen(false)}
             onKeyDown={onKeyDown}
           />
-          <ul id={listId} role="listbox" aria-label="Matching ingredients" className="sc-listbox" hidden={!listOpen}>
+          <ul id={listId} role="listbox" aria-label={c.matchingList} className="sc-listbox" hidden={!listOpen}>
             {matches.map((m, i) => (
               <li
                 key={m.ingredient.id}
@@ -305,41 +314,41 @@ export function SupplementSearch({
                 onMouseMove={() => setActive(i)}
               >
                 <span>{m.ingredient.label}</span>
-                {m.via ? <small>matches “{m.via}”</small> : null}
+                {m.via ? <small>{c.matchesVia(m.via)}</small> : null}
               </li>
             ))}
           </ul>
         </div>
         <p id={helpId} className="sc-help">
           {query && !ingredientId && !matches.length
-            ? "Nothing in the catalog matches. Only ingredients with a vocabulary entry can be analysed."
-            : `${catalog.length} ingredients in the catalog — the same vocabulary the label reader uses.`}
+            ? c.nothingMatches
+            : c.catalogCount(catalog.length)}
         </p>
       </div>
 
       {ingredient ? (
         <div className="sc-field">
-          <label htmlFor={formId}>Exact form of {ingredient.label}</label>
+          <label htmlFor={formId}>{c.exactFormOf(ingredient.label)}</label>
           <select id={formId} value={form} disabled={busy} onChange={(e) => setForm(e.target.value)} required>
-            <option value="">Choose the form…</option>
+            <option value="">{c.chooseForm}</option>
             {ingredient.forms.map((f) => (
               <option key={f.id} value={f.id}>
                 {f.label}
-                {f.scored ? " (has an evidence run)" : ""}
+                {f.scored ? c.hasEvidenceRun : ""}
               </option>
             ))}
           </select>
-          {chosenForm ? <p className="sc-help">{conversionNote(chosenForm, ingredient)}</p> : null}
+          {chosenForm ? <p className="sc-help">{conversionNote(chosenForm, ingredient, c)}</p> : null}
         </div>
       ) : null}
 
       {ingredient && chosenForm ? (
         <fieldset className="sc-dose">
-          <legend>Dose per serving (optional)</legend>
+          <legend>{c.doseLegend}</legend>
           {takesMass ? (
             <div className="sc-dose-row">
               <div className="sc-field">
-                <label htmlFor={doseId}>Amount</label>
+                <label htmlFor={doseId}>{c.amount}</label>
                 <input
                   id={doseId}
                   type="number"
@@ -347,14 +356,14 @@ export function SupplementSearch({
                   min={0}
                   max={maxManualDoseInUnit(unit)}
                   step="any"
-                  placeholder="e.g. 400"
+                  placeholder={c.amountPlaceholder}
                   value={dose}
                   disabled={busy}
                   onChange={(e) => setDose(e.target.value)}
                 />
               </div>
               <div className="sc-field">
-                <label htmlFor={unitId}>Unit</label>
+                <label htmlFor={unitId}>{c.unit}</label>
                 <select id={unitId} value={unit} disabled={busy} onChange={(e) => setUnit(e.target.value as ManualDoseUnit)}>
                   {MANUAL_DOSE_UNITS.map((u) => (
                     <option key={u} value={u}>
@@ -364,7 +373,7 @@ export function SupplementSearch({
                 </select>
               </div>
               <div className="sc-field">
-                <label htmlFor={servingsId}>Servings / day</label>
+                <label htmlFor={servingsId}>{c.servings}</label>
                 <input
                   id={servingsId}
                   type="number"
@@ -372,7 +381,7 @@ export function SupplementSearch({
                   min={1}
                   max={MAX_SERVINGS_PER_DAY}
                   step={1}
-                  placeholder="e.g. 1"
+                  placeholder={c.servingsPlaceholder}
                   value={servings}
                   disabled={busy}
                   onChange={(e) => setServings(e.target.value)}
@@ -380,12 +389,9 @@ export function SupplementSearch({
               </div>
             </div>
           ) : (
-            <p className="sc-help">{ingredient.label} is counted in CFU. Leave the dose empty; the analysis runs without a dose axis.</p>
+            <p className="sc-help">{c.cfuCounted(ingredient.label)}</p>
           )}
-          <p className="sc-help">
-            Enter the compound mass as printed. Units are mg, g and mcg only — IU is not accepted because its mass depends on the
-            substance.
-          </p>
+          <p className="sc-help">{c.doseHelp}</p>
         </fieldset>
       ) : null}
 
@@ -396,7 +402,7 @@ export function SupplementSearch({
       ) : null}
 
       <button type="submit" className="button button-dark sc-submit" disabled={busy || !ingredient || !chosenForm}>
-        {busy ? "Analysing…" : "Analyse this supplement"}
+        {busy ? c.analysing : c.analyse}
       </button>
     </form>
   );
