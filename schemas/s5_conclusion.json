@@ -59,14 +59,14 @@
     "properties": {
      "outcome_raw": {
       "type": "string",
-      "maxLength": 120
+      "maxLength": 200
      },
      "measure": {
       "type": [
        "string",
        "null"
       ],
-      "maxLength": 80
+      "maxLength": 120
      },
      "direction": {
       "type": "string",
@@ -344,7 +344,7 @@
      },
      "evidence_span": {
       "type": "string",
-      "maxLength": 200
+      "maxLength": 300
      },
      "ingredient_arm": {
       "type": [
@@ -394,14 +394,14 @@
        "string",
        "null"
       ],
-      "maxLength": 120
+      "maxLength": 200
      },
      "statistic_provenance": {
       "type": [
        "string",
        "null"
       ],
-      "maxLength": 200
+      "maxLength": 300
      },
      "p_operator": {
       "type": [

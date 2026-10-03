@@ -308,6 +308,15 @@ def _claude_bin() -> str:
 # the 32-study gate proved every remaining S3/S7 max_turns failure had emitted
 # {"StructuredOutput": "{...json...}"}; schema rejection then required a second
 # turn that purity correctly forbids.
+# 2026-10-03 -- NO bump, deliberately: schemas/s1, s3, s5, s6, s6b, s7 only RAISED
+# free-text maxLength limits (e.g. S1 rationale 300 -> 600, evidence spans 200 ->
+# 300). Captured failures showed the model returning a correct object with one
+# free-text field a few characters over its cap; the CLI then demands a second
+# turn and `--max-turns 1` fails the call (intermittently, so retries sometimes
+# passed). A looser maxLength cannot make any cached answer invalid or stale --
+# every answer valid under v1.28 is valid now -- so bumping would only discard
+# ~1000 cached extractions. The prompts still state the shorter targets.
+# tests/test_schema_headroom.py pins the headroom.
 PROMPT_VERSION = "v1.28"
 
 # Tier -> model. FULL IDs, NOT ALIASES.
@@ -1029,6 +1038,59 @@ def _recover_max_turns_wrapper(raw: str, schema_text: str):
     return checked, float(env.get("total_cost_usd") or 0.0)
 
 
+FAILURE_DIR = ROOT / "out" / "claude_failures"
+
+
+def _failure_shape(raw: str, schema_text: str | None) -> dict:
+    """What an UNRECOVERED failed call actually sent back -- diagnostics only.
+
+    Added 2026-10-03 (evidence method v2, Phase 2): run A of the stability test
+    lost S1 on 6/25 studies and S7 on 4/25 to `exit 1: max_turns`, and the meta
+    kept only that string, so the cause was unknowable after the fact. This never
+    repairs or accepts anything; it describes the shape so a fix can be targeted.
+    """
+    env = _result_envelope(raw)
+    tool_calls, texts = [], []
+    for event in _json_events(raw):
+        if event.get("type") != "assistant":
+            continue
+        for block in ((event.get("message") or {}).get("content") or []):
+            if block.get("type") == "tool_use":
+                tool_calls.append(block)
+            elif block.get("type") == "text" and str(block.get("text") or "").strip():
+                texts.append(str(block["text"]).strip()[:200])
+    shape = {"subtype": env.get("subtype"), "terminal_reason": env.get("terminal_reason"),
+             "num_turns": env.get("num_turns"), "tool_calls": len(tool_calls),
+             "tool_names": [c.get("name") for c in tool_calls][:5], "text_blocks": texts[:2]}
+    if tool_calls:
+        first = tool_calls[0].get("input")
+        if isinstance(first, dict):
+            shape["input_keys"] = {k: type(v).__name__ for k, v in list(first.items())[:12]}
+            if schema_text is not None:
+                try:
+                    from jsonschema import Draft7Validator
+                    errors = Draft7Validator(json.loads(schema_text)).iter_errors(first)
+                    shape["schema_errors"] = [
+                        f"{'/'.join(map(str, e.path)) or '<root>'}: {e.message[:160]}"
+                        for e in list(errors)[:4]]
+                except Exception as exc:
+                    shape["schema_errors"] = [f"validator unavailable: {exc}"]
+        else:
+            shape["input_type"] = type(first).__name__
+    return shape
+
+
+def _save_failure(agent: str, key: str, attempt: int, raw: str) -> str | None:
+    """Keep the raw stream of an unrecovered failure (out/ is gitignored)."""
+    try:
+        FAILURE_DIR.mkdir(parents=True, exist_ok=True)
+        path = FAILURE_DIR / f"{agent}_{key[:12]}_attempt{attempt}.jsonl"
+        path.write_text(raw or "", encoding="utf-8")
+        return str(path.relative_to(ROOT))
+    except OSError:
+        return None
+
+
 def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
     """
     Run one subagent. Returns (result_dict | None, meta).
@@ -1083,7 +1145,7 @@ def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
     if effort:
         cmd += ["--effort", effort]
 
-    last_err, timeouts = None, 0
+    last_err, timeouts, failure = None, 0, None
     for attempt in range(retries + 1):
         with _slots:
             started = USAGE.begin_attempt(
@@ -1154,6 +1216,9 @@ def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
             # The CLI reports the actual reason ("Not logged in", auth errors,
             # budget) in the JSON envelope on STDOUT and leaves stderr empty.
             last_err = f"exit {proc.returncode}: {detail[:300]}"
+            if not _is_fatal(detail):
+                failure = {**_failure_shape(proc.stdout, schema),
+                           "raw_saved": _save_failure(agent, k, attempt, proc.stdout)}
             USAGE.finish_attempt(
                 agent, started, cost=_envelope_cost(proc.stdout), failed=True,
                 tokens=_envelope_tokens(proc.stdout), model=model, tier=tier,
@@ -1166,6 +1231,8 @@ def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
         toks = _envelope_tokens(proc.stdout)
         if result is None:
             last_err = "schema violation / unparseable envelope"
+            failure = {**_failure_shape(proc.stdout, schema),
+                       "raw_saved": _save_failure(agent, k, attempt, proc.stdout)}
             USAGE.finish_attempt(
                 agent, started, cost=_envelope_cost(proc.stdout), failed=True,
                 tokens=toks,
@@ -1200,6 +1267,8 @@ def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
         "error": last_err, "provider": "anthropic", "model": model,
         "tier": tier, "effort": effort, "prompt_version": PROMPT_VERSION,
         "flagged": True,
+        # Shape of the LAST failed attempt (never used to accept an answer).
+        **({"failure_shape": failure} if failure else {}),
     }
 
 

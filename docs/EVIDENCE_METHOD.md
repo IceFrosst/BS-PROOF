@@ -82,7 +82,10 @@ answers *"is this worth taking for this outcome?"*
 | None | CI excludes harm and the point estimate is below M — "no meaningful effect" |
 | Harm | point estimate ≤ −M in the bad direction, CI excludes 0 |
 
-(A wide CI is not a category: it lowers **certainty** via imprecision.)
+(A wide CI also lowers **certainty** via imprecision. A CI too wide for ANY
+row — e.g. a large point estimate whose CI crosses 0 — is **inconclusive** and
+grades **I**: implemented in `pipeline/grade.py`, decided 2026-10-03 because the
+rules above do not cover that region.)
 
 **Grade table** (proposal — the founder signs off the exact cells):
 
@@ -177,8 +180,8 @@ readable and the change can be compared run for run.
 | Phase | Goal | Model calls | Exit criterion |
 |---|---|---|---|
 | **1. Measure** — 1a DONE, 1b harness ready (`docs/history/2026-10-03-phase1-measurements.md`) | (a) extraction stability: the same 20–30 cached creatine studies extracted twice, agreement measured; (b) poolability: share of creatine trials whose papers yield mean/SD/n, CI or exact p | (a) yes, solo; (b) none | Two numbers we can plan on |
-| **2. Shadow** — step 1 DONE: span check (`pipeline/span_check.py`), effect sizes (`pipeline/effect_size.py`), table route on by default, arm-level facts kept in run records | Extended extraction (arm-level numbers + span check), dual extraction, effect sizes, pooling — run **beside** v14 on creatine | Yes (re-extraction under a new `PROMPT_VERSION`) | Pooled creatine-strength estimate overlaps the 7 published CIs |
-| **3. Certainty & grades** | MCID table with sources; GRADE module; letter table; registry search for unpublished trials | Research only | Founder sign-off on MCIDs and the grade table |
+| **2. Shadow** — DONE: span check (`pipeline/span_check.py`), effect sizes (`pipeline/effect_size.py`), table route on by default, arm-level facts kept in run records, `max_turns` fix (schema headroom), shadow pooling (`pipeline/pool.py`). PENDING (quota): second reviewer, creatine re-extraction, benchmark | Extended extraction (arm-level numbers + span check), dual extraction, effect sizes, pooling — run **beside** v14 on creatine | Yes (re-extraction under a new `PROMPT_VERSION`) | Pooled creatine-strength estimate overlaps the 7 published CIs |
+| **3. Certainty & grades** — GRADE + letter table DONE in shadow (`pipeline/grade.py`); MCID values and registry search PENDING | MCID table with sources; GRADE module; letter table; registry search for unpublished trials | Research only | Founder sign-off on MCIDs and the grade table |
 | **4. Switch** | `/runs` and `/scan` show v2 grades; vitamin D and magnesium run; v14 archived; Evidence Ledger retired | Yes | Benchmark on ≥10 published meta-analyses passes |
 
 ## 9. Founder decisions (2026-10-03)

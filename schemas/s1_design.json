@@ -4,4 +4,4 @@
 "design_label":{"type":"string"},
 "design_kind":{"type":["string","null"],"enum":["parallel","crossover","cluster","other",null]},
 "confidence":{"type":"number","minimum":0,"maximum":1},
-"rationale":{"type":"string","maxLength":300}}}
+"rationale":{"type":"string","maxLength": 600}}}

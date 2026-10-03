@@ -83,3 +83,24 @@ run SOLO, with no other Claude session or extraction active):**
 .venv/bin/python scripts/experiments/extraction_stability.py run --label B
 .venv/bin/python scripts/experiments/extraction_stability.py compare A B --out out/stability/A_vs_B.json
 ```
+
+### 1b result so far (2026-10-03)
+
+Run A completed 25/25; run B hit the subscription session limit midway (91
+calls failed with "You've hit your session limit"), so the A-vs-B comparison
+(`out/stability/A_vs_B.json`, 5 clean study pairs) is NOT a valid measurement.
+Indicative only: comparator, n randomised, registration 100% agreement; claim
+direction 70%, favoured arm 60%, p 60%; 3 of 4 effect sizes present in both runs
+matched within 0.05. Rerun B after a limit reset, solo.
+
+**`max_turns` diagnosis (run A: S1 6/25, S7 4/25, S5 1/25).** Captured raw
+outputs showed correct objects with one free-text field a few characters over
+its schema `maxLength` (S1 `rationale` > 300; S7 arm `evidence_span` > 200);
+the CLI then requests a second turn that `--max-turns 1` forbids. Intermittent:
+re-running the same calls passed. Fix: free-text limits raised ~1.5–2x in
+S1/S3/S5/S6/S6B/S7 schemas (prompts keep the shorter targets); no
+`PROMPT_VERSION` bump because a looser limit cannot invalidate a cached answer
+(reasoning beside the constant). The adapter now records the shape of every
+unrecovered failure (`failure_shape` in the call meta; raw stream in
+`out/claude_failures/`). Pinned by `tests/test_schema_headroom.py`. Live
+confirmation: the run-B rerun.

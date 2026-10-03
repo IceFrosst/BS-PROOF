@@ -51,7 +51,7 @@
        "string",
        "null"
       ],
-      "maxLength": 120
+      "maxLength": 200
      },
      "compound_dose_mg": {
       "type": [
@@ -106,7 +106,7 @@
        "string",
        "null"
       ],
-      "maxLength": 200
+      "maxLength": 300
      }
     }
    }

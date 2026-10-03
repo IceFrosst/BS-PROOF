@@ -10,6 +10,40 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-03 — evidence method v2: GRADE certainty + letter grades (shadow)
+
+`pipeline/grade.py`: GRADE certainty per outcome (start High for RCTs, Low
+otherwise; downgrades for risk of bias, inconsistency, imprecision incl. the 400-
+participant information size, indirectness by product form, publication bias via
+Egger at ≥ 10 trials; each with its reason; domains it cannot assess are listed),
+§4 benefit categories plus "inconclusive" → I, the founder-approved letter table,
+re-grading at M/2 and 2M with a threshold-sensitivity flag, MCID read from
+`vocab/outcome.json` (`mcid`) else 0.2 SD flagged. `pipeline/pool.py` now carries
+n, risk of bias (`rob_status` from S4), the tested arm's form (`study_form` —
+S7's top-level form is usually null since v1.24, found on run A) and population
+tier per study. Run A: every outcome grades I (sparse, high-risk, imprecise) —
+the honest result for that sample. Thresholds listed for founder review in
+`docs/REVIEW_PENDING.md` #0. Tests: `tests/test_grade.py` (16), `tests/test_pool.py` (7).
+
+## 2026-10-03 — `max_turns` failures diagnosed and fixed; v2 shadow pooling
+
+- **Diagnosis:** unrecovered `max_turns` failures were free-text fields slightly
+  over their schema `maxLength` (captured on S1 `rationale`, S7 arm
+  `evidence_span`), not a transport wrapper. Fix: free-text limits raised ~1.5–2x
+  in six S-schemas, identifier fields unchanged, prompts unchanged, no
+  `PROMPT_VERSION` bump (looser limits cannot stale a cache; reasoning beside the
+  constant). Adapter records `failure_shape` + raw stream for every unrecovered
+  failure. Test: `tests/test_schema_headroom.py`.
+- **Shadow pooling** `pipeline/pool.py`: per outcome, v2 eligibility (scope
+  refusals minus the underpowered one), stored population policy, one effect per
+  study (primary first, then route rank), REML + Hartung–Knapp (k ≥ 3), single
+  study not pooled, natural-unit pool only for one shared unit, estimand mix and
+  leave-one-out reported, every refusal counted. Tests `tests/test_pool.py`;
+  report `scripts/experiments/pool_shadow.py`. On run A (25 studies): muscle power
+  k=2, g = +0.28 [−0.37, +0.94]; strength k=0 (4 off-target populations,
+  2 combinations, 3 unverified). Not a production score.
+- Stability run B hit the session limit; comparison invalid, rerun pending.
+
 ## 2026-10-03 — evidence method v2, Phase 2 step 1: span check + effect sizes
 
 Found first: the S5 schema already requires per-arm n / mean / SD / SE, CI

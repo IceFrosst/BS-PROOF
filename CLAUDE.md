@@ -184,6 +184,8 @@ pipeline/   deterministic, NO MODEL, unit-tested
   dose.py product_score.py         dose bands; product lookup behind the app
   span_check.py effect_size.py     v2: verify extracted numbers; numbers -> signed effect + variance
   meta_effects.py                  v2: Hedges' g, REML random-effects, Hartung-Knapp CIs
+  pool.py                          v2 SHADOW: per-outcome pooling of verified effects (not read by v14)
+  grade.py                         v2 SHADOW: GRADE certainty + the §4 letter table
   claim_arms.py eligibility.py     invariant-7 counterfactual firewall and scope refusals
   effect_s.py                      reported effect -> signed contribution s
   calibration.py                   anchor harness
@@ -292,8 +294,10 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
    carry poolable numbers (93% of PMC full texts) but current extractions make
    only 5–27% of trials poolable. Phase 1b: run the stability harness solo
    (`docs/history/2026-10-03-phase1-measurements.md`). Phase 2 step 1 done
-   (span check, effect sizes, table route on by default); next: the second
-   reviewer, re-extraction, then shadow pooling. Items 4–6 fold into its phases.
+   (span check, effect sizes, table route on by default), the `max_turns` fix
+   (free-text schema headroom), shadow pooling (`pipeline/pool.py`) and GRADE +
+   letter grades (`pipeline/grade.py`). Remaining: see `docs/EVIDENCE_METHOD.md`
+   §8; heavy jobs (rerun B, second reviewer, re-extraction) wait for quota.
 1. Verify on a real phone: live camera, a busy label read after the
    thinking-mode fix, PWA install.
 2. Check whether the text calls (`deepseek-chat`) also need thinking disabled

@@ -60,7 +60,7 @@
        "string",
        "null"
       ],
-      "maxLength": 200
+      "maxLength": 300
      },
      "is_control": {
       "type": [
@@ -87,7 +87,7 @@
       ],
       "items": {
        "type": "string",
-       "maxLength": 120
+       "maxLength": 200
       },
       "maxItems": 12
      },
@@ -96,7 +96,7 @@
        "string",
        "null"
       ],
-      "maxLength": 300
+      "maxLength": 500
      },
      "role": {
       "type": [
@@ -144,7 +144,7 @@
     "string",
     "null"
    ],
-   "maxLength": 300
+   "maxLength": 500
   },
   "deficiency_status": {
    "type": [
@@ -165,7 +165,7 @@
    "maxItems": 8,
    "items": {
     "type": "string",
-    "maxLength": 200
+    "maxLength": 300
    }
   },
   "population_axes": {

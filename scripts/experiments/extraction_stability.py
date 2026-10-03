@@ -29,6 +29,9 @@ import collections
 import json
 import os
 import sys
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -92,7 +95,7 @@ def _fake_call(agent, payload, **_kw):
     return None, {"error": "fake call (harness check): no model was called"}
 
 
-def run(label: str, n: int, fake: bool, resume: bool) -> int:
+def run(label: str, n: int, fake: bool, resume: bool, in_flight: int = 5) -> int:
     OUT.mkdir(parents=True, exist_ok=True)
     cache = OUT / f"cache_{label}.sqlite"
     dest = OUT / f"{label}.json"
@@ -111,21 +114,32 @@ def run(label: str, n: int, fake: bool, resume: bool) -> int:
     call = _fake_call if fake else ca.call
 
     done = json.loads(dest.read_text()) if dest.exists() else {}
-    for i, study in enumerate(select_studies(n), 1):
+    todo = [s for s in select_studies(n) if s["canonical_id"] not in done]
+    lock = threading.Lock()
+    started = time.monotonic()
+
+    def one(study: dict) -> None:
         cid = study["canonical_id"]
-        if cid in done:
-            continue
         rec = rebuild_record(study)
         if rec is None:
-            done[cid] = {"error": "record not found in Europe PMC"}
+            result = {"error": "record not found in Europe PMC"}
         else:
-            text = _best_text(rec)
-            ext = workers.extract_study(rec, text, call=call, outcome_allowlist=SHOWCASE,
+            ext = workers.extract_study(rec, _best_text(rec), call=call, outcome_allowlist=SHOWCASE,
                                         sections=_sections(rec))
-            done[cid] = {"record": rec, "extraction": ext}
-        dest.write_text(json.dumps(done, indent=1, default=str), encoding="utf-8")
-        failed = len((done[cid].get("extraction") or {}).get("_failed") or [])
-        print(f"[{label}] {i}/{n} {cid}  failed agents: {failed}")
+            result = {"record": rec, "extraction": ext}
+        with lock:  # save after every study, so an interrupted run resumes
+            done[cid] = result
+            dest.write_text(json.dumps(done, indent=1, default=str), encoding="utf-8")
+            failed = [f.get("agent") for f in (result.get("extraction") or {}).get("_failed") or []]
+            print(f"[{label}] {len(done)}/{n} {cid}  failed agents: {failed or 0}  "
+                  f"({time.monotonic() - started:.0f}s)", flush=True)
+
+    # Several studies in flight, like extract_corpus: one at a time took ~2.2 min
+    # per study (measured 2026-10-03). The adapter's own semaphore still caps the
+    # total number of simultaneous model calls (SP_MAX_CONCURRENCY).
+    with ThreadPoolExecutor(max_workers=max(1, in_flight)) as pool:
+        for fut in [pool.submit(one, s) for s in todo]:
+            fut.result()
     print(f"wrote {dest}")
     return 0
 
@@ -277,13 +291,14 @@ def main(argv: list[str]) -> int:
     r.add_argument("--n", type=int, default=25)
     r.add_argument("--fake", action="store_true", help="fake model: harness check only")
     r.add_argument("--resume", action="store_true")
+    r.add_argument("--in-flight", type=int, default=5, help="studies extracted in parallel")
     c = sub.add_parser("compare")
     c.add_argument("a")
     c.add_argument("b")
     c.add_argument("--out", type=Path)
     args = ap.parse_args(argv)
     if args.cmd == "run":
-        return run(args.label, args.n, args.fake, args.resume)
+        return run(args.label, args.n, args.fake, args.resume, args.in_flight)
     load = lambda label: json.loads((OUT / f"{label}.json").read_text(encoding="utf-8"))
     result = compare_runs(load(args.a), load(args.b))
     text = json.dumps(result, indent=1)

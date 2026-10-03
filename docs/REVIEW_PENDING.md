@@ -15,6 +15,21 @@ Last swept: **2026-08-08**.
 
 ## OPEN
 
+### 0. Evidence method v2 — GRADE rule thresholds (FOUNDER REVIEW, 2026-10-03)
+
+`pipeline/grade.py` `RULES` uses GRADE-handbook rules of thumb, shadow only
+(no production score reads them): default threshold 0.2 SD when no MCID is
+approved; risk of bias — no downgrade if ≥ 50% of the weight is low-risk, −2 if
+> 50% is high-risk, else −1; inconsistency −1 at I² > 50%, −2 at > 75% (not
+assessed below 3 trials); imprecision −1 if the CI crosses 0 or the threshold or
+total n < 400, −2 if it spans both ±threshold; indirectness −1 when > 50% of the
+weight is not the product's exact form; publication bias via Egger (α = 0.10) at
+≥ 10 trials. Two policy choices to confirm: (a) "adjacent" populations (one sex,
+unreported axes) are reported, not downgraded; (b) a CI too wide for any §4 row
+grades **I** ("inconclusive"). Also: risk of bias per trial = HIGH if
+randomisation, blinding or attrition is inadequate, LOW only if randomisation
+and blinding are adequate.
+
 ### 1. Predatory list flags nothing, and that is now deliberate
 
 **Fixed 2026-08-08, but read the second half.**
