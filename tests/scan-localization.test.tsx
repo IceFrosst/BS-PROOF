@@ -27,7 +27,7 @@ import { resetTranslationsForTests } from "@/lib/i18n/translate-client";
 
 import { USER_A, fakeAuth, installFakeGoogle, removeFakeGoogle, sessionFor } from "./helpers/fake-supabase-browser";
 import { installLocalStorage } from "./helpers/local-storage";
-import { Harness, buttonByText, click, jsonResponse, record, settle } from "./helpers/scan-ui";
+import { Harness, click, jsonResponse, record, settle } from "./helpers/scan-ui";
 
 vi.mock("@/lib/auth/supabase-browser", async () => (await import("./helpers/fake-supabase-browser")).fakeAuth.module());
 let pathname = "/scan";

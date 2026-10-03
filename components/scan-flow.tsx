@@ -15,8 +15,8 @@
  *   - landing: search pill, live viewfinder (<ScanCamera>, the page's H1 is
  *     its overlay), shutter, upload link.
  *   - staged: the photo and "Scan this label" / Retake / Choose another.
- *   - loading: a progress panel (dimmed thumbnail, stage list with the current
- *     step marked, indeterminate bar). Nothing is rendered disabled -- a greyed
+ *   - loading: a progress panel (dimmed thumbnail, a static "this check
+ *     covers" list, indeterminate bar). Nothing is rendered disabled -- a greyed
  *     "Scanning…" pill read as broken.
  *   - result / error: the capture chrome is GONE. A compact scanned-product
  *     header (thumbnail or a typed chip, name, "Scan another") sits at the
@@ -100,8 +100,11 @@ type NullableNumber = number | null;
 
 const MAX_BYTES = 12 * 1024 * 1024;
 
-/* The loading checklist for a run. Held as a KIND so a language switch while a
- * scan is running rewords it; the words live in lib/i18n/copy/flow.ts. */
+/* What the loading view lists for a run: a STATIC "this check covers" list
+ * (Ignas PR3 merge): /api/scan answers once at the end and streams no
+ * progress, so there is no timer, no "done" tick and no determinate bar.
+ * Held as a KIND so a language switch while a scan runs rewords it; the words
+ * live in lib/i18n/copy/flow.ts. */
 type StageKind = "photo" | "manual";
 
 /* Language + the two dictionaries + the model translator for the CURRENT render.
@@ -112,8 +115,6 @@ function useLocalized() {
   const tr = useTr();
   return { lang, toggleLang, f: FLOW_COPY[lang], r: RESULT_COPY[lang], tr };
 }
-
-const STAGE_STEP_MS = 2200;
 
 const ACCEPTED_TYPES = "image/png,image/jpeg,image/webp,image/gif";
 
@@ -589,7 +590,6 @@ function ScanFlowInner({ catalog, auth: sharedAuth, active = true, initialResult
   const { lang, toggleLang, f, r, tr } = useLocalized();
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
-  const [stage, setStage] = useState(0);
   const [stageKind, setStageKind] = useState<StageKind>("photo");
   const stages = stageKind === "photo" ? f.photoStages : f.manualStages;
   const [dragging, setDragging] = useState(false);
@@ -680,12 +680,6 @@ function ScanFlowInner({ catalog, auth: sharedAuth, active = true, initialResult
   // abort it. Its late answer is also discarded by the `isCurrent()` checks.
   useEffect(() => cancelRequest, [ownerKey, cancelRequest]);
 
-  useEffect(() => {
-    if (!busy) return;
-    const id = setInterval(() => setStage((s) => Math.min(s + 1, stages.length - 1)), STAGE_STEP_MS);
-    return () => clearInterval(id);
-  }, [busy, stages.length]);
-
   useEffect(() => () => {
     if (preview) URL.revokeObjectURL(preview);
   }, [preview]);
@@ -771,7 +765,6 @@ function ScanFlowInner({ catalog, auth: sharedAuth, active = true, initialResult
       setOutcome(null);
       setAuthNotice(null);
       setStageKind(kind);
-      setStage(0);
       setPending({ id, owner });
 
       const endSession = () => {
@@ -1049,12 +1042,13 @@ function ScanFlowInner({ catalog, auth: sharedAuth, active = true, initialResult
                   <p className="sc-progress-sub">{f.loadingSub}</p>
                 </div>
               </div>
-              <div className="sc-progress-bar is-steps" aria-hidden="true">
-                <span style={{ width: `${Math.round(((stage + 1) / (stages.length + 1)) * 100)}%` }} />
+              <div className="sc-progress-bar" aria-hidden="true">
+                <span />
               </div>
+              <p className="sc-progress-covers">{f.loadingCovers}</p>
               <ol className="sc-stages">
-                {stages.map((s, i) => (
-                  <li key={s} className={i < stage ? "is-done" : i === stage ? "is-current" : ""} aria-current={i === stage ? "step" : undefined}>
+                {stages.map((s) => (
+                  <li key={s}>
                     <span className="sc-stage-mark" aria-hidden="true" />
                     <span className="la-stage">{s}</span>
                   </li>

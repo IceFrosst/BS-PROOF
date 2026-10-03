@@ -128,23 +128,48 @@ const OPTIONAL_DEFAULTS: Record<string, unknown> = {
   unreadable_reason: null,
 };
 
+/*
+ * Clip over-long printed TEXT to schemas/label.json's OWN maxLength/maxItems
+ * (2026-10-02). One over-long printed string ("/other_actives/1 must NOT have
+ * more than 80 characters") used to reject the whole read; label-v1.3 only asked
+ * the model to stay inside the limits, and it does not always. What is cut is
+ * deliberately narrow, so a clip can never invent or hide a dosed active:
+ *
+ *  - Identifier fields (ingredient_vocab_id, form_vocab_id) are NEVER cut: a
+ *    shortened id is a different id. They still fail closed.
+ *  - A string is cut back to a whole word and never ends on a bare number, so
+ *    "Zinc 15 mg" cannot become "Zinc 1" or a unitless "Zinc 15". Dropped
+ *    trailing words are dropped, not rewritten.
+ *  - The dosed-active lists (`actives`, `other_actives`) are NEVER shortened:
+ *    silently losing the 31st active would hide it from the multi-active
+ *    compatibility check. Over the schema's item limit they still fail closed.
+ *    Only the supporting lists (evidence_spans, certifications, warnings,
+ *    claims) keep their first items in panel order, as the prompt asks.
+ *  - Types, enums, required fields and minimums are untouched and fail closed.
+ */
+const NEVER_CUT_KEYS = new Set(["ingredient_vocab_id", "form_vocab_id"]);
+const NEVER_SHORTEN_LISTS = new Set(["actives", "other_actives"]);
+
 type SchemaNode = { maxLength?: number; maxItems?: number; items?: SchemaNode; properties?: Record<string, SchemaNode> };
 let labelSchemaProps: Record<string, SchemaNode> | null = null;
 
-/*
- * Clip strings and lists to schemas/label.json's OWN maxLength/maxItems
- * (2026-10-02). One over-long printed string ("/other_actives/1 must NOT have
- * more than 80 characters") used to reject the whole read; label-v1.3 only asked
- * the model to stay inside the limits, and it does not always. Cutting keeps the
- * first part verbatim and the first items in panel order -- exactly what the
- * prompt asks for -- so no value is invented. Types, enums and required fields
- * are untouched and still fail closed.
- */
-function clip(value: unknown, node: SchemaNode | undefined): unknown {
+/** Cut to at most `max` characters on a word boundary, never ending on a bare number. */
+function clipText(text: string, max: number): string {
+  if (text.length <= max) return text;
+  let cut = text.slice(0, max);
+  if (!/\s/.test(text.charAt(max))) {
+    const space = cut.search(/\s\S*$/);
+    if (space > 0) cut = cut.slice(0, space);
+  }
+  cut = cut.replace(/(?:\s+[\d.,]+)+\s*$/, "").trimEnd();
+  return cut.length > 0 ? cut : text.slice(0, max);
+}
+
+function clip(value: unknown, node: SchemaNode | undefined, keepAllItems = false): unknown {
   if (!node) return value;
-  if (typeof value === "string" && typeof node.maxLength === "number") return value.slice(0, node.maxLength);
+  if (typeof value === "string" && typeof node.maxLength === "number") return clipText(value, node.maxLength);
   if (Array.isArray(value)) {
-    const kept = typeof node.maxItems === "number" ? value.slice(0, node.maxItems) : value;
+    const kept = !keepAllItems && typeof node.maxItems === "number" ? value.slice(0, node.maxItems) : value;
     return kept.map((item) => clip(item, node.items));
   }
   if (value && typeof value === "object" && node.properties) {
@@ -162,7 +187,7 @@ export function clipToLabelSchema(obj: Record<string, unknown>): void {
     labelSchemaProps = raw.properties;
   }
   for (const [key, node] of Object.entries(labelSchemaProps)) {
-    if (key in obj) obj[key] = clip(obj[key], node);
+    if (key in obj && !NEVER_CUT_KEYS.has(key)) obj[key] = clip(obj[key], node, NEVER_SHORTEN_LISTS.has(key));
   }
 }
 

@@ -65,6 +65,7 @@ export interface FlowCopy {
   // ---- loading -----------------------------------------------------------
   loadingTitle: string;
   loadingSub: string;
+  loadingCovers: string;
   photoStages: string[];
   manualStages: string[];
   // ---- sign-in -----------------------------------------------------------
@@ -172,6 +173,7 @@ export const FLOW_EN: FlowCopy = {
   chooseOther: "Choose a different image",
   loadingTitle: "Checking your supplement",
   loadingSub: "Usually about 10 seconds.",
+  loadingCovers: "This check covers",
   photoStages: ["Reading the label", "Checking your dose", "Comparing with clinical trials", "Checking safety records", "Looking up the brand"],
   manualStages: ["Checking your dose", "Comparing with clinical trials", "Looking up what is known"],
   signInScanTitle: "Sign in to scan this label",
@@ -265,14 +267,15 @@ export const FLOW_LT: FlowCopy = {
   takePhoto: "Fotografuoti",
   uploadPhoto: "Įkelti nuotrauką",
   fileHint: "PNG, JPEG arba WebP, iki 12 MB.",
-  signInHint: "Rezultatams reikia prisijungti su Google. Nuotrauką gali nufotografuoti ar įkelti jau dabar.",
+  signInHint: "Rezultatams reikia prisijungti su Google. Nuotrauką gali pasiimti ar įkelti ir anksčiau.",
   stagedAlt: "Etiketė, paruošta analizei",
   scanThis: "Skenuoti šią etiketę",
-  checkingSignIn: "Tikrinamas prisijungimas…",
+  checkingSignIn: "Tikrinama tavo prisijungimo būsena…",
   retake: "Fotografuoti iš naujo",
   chooseOther: "Pasirinkti kitą nuotrauką",
   loadingTitle: "Tikriname tavo papildą",
   loadingSub: "Paprastai apie 10 sekundžių.",
+  loadingCovers: "Šis patikrinimas apima",
   photoStages: ["Skaitome etiketę", "Tikriname dozę", "Lyginame su klinikiniais tyrimais", "Tikriname saugumo įrašus", "Ieškome gamintojo"],
   manualStages: ["Tikriname dozę", "Lyginame su klinikiniais tyrimais", "Ieškome, kas žinoma"],
   signInScanTitle: "Prisijunk, kad nuskenuotum šią etiketę",

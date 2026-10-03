@@ -44,19 +44,25 @@ export function readStoredLang(): Lang {
   }
 }
 
-// When storage is blocked the choice still has to switch for this visit.
+// Only when storage is BLOCKED (reading it throws) is the choice kept in
+// memory, so it still switches for this visit. Whenever storage works it is
+// the single source of truth -- a stale in-memory copy never overrides it.
 let memoryLang: Lang | null = null;
 
 function snapshot(): Lang {
-  if (memoryLang) return memoryLang;
-  return readStoredLang();
+  try {
+    return normalizeLang(window.localStorage.getItem(LANG_KEY));
+  } catch {
+    return memoryLang ?? "en";
+  }
 }
 
 export function writeLang(next: Lang): void {
-  memoryLang = next;
   try {
     window.localStorage.setItem(LANG_KEY, next);
+    memoryLang = null;
   } catch {
+    memoryLang = next;
     /* storage blocked: the in-memory choice still applies for this visit */
   }
   window.dispatchEvent(new Event(CHANGE_EVENT));
@@ -69,10 +75,7 @@ export function resetLangMemory(): void {
 
 function subscribe(listener: () => void): () => void {
   const onStorage = (event: StorageEvent) => {
-    if (event.key === LANG_KEY || event.key === null) {
-      memoryLang = null;
-      listener();
-    }
+    if (event.key === LANG_KEY || event.key === null) listener();
   };
   window.addEventListener(CHANGE_EVENT, listener);
   window.addEventListener("storage", onStorage);
