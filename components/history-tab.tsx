@@ -33,6 +33,9 @@ import { formatSavedAt, ScanFlow } from "@/components/scan-flow";
 import type { CatalogIngredient } from "@/lib/analyze/catalog";
 import type { ScanAnalysis } from "@/lib/analyze/scan";
 import type { AuthSession } from "@/lib/auth/use-supabase-session";
+import { FLOW_COPY } from "@/lib/i18n/copy/flow";
+import { HISTORY_COPY } from "@/lib/i18n/copy/history";
+import { useLang } from "@/lib/i18n/locale";
 
 export interface HistoryRun {
   id: string;
@@ -117,34 +120,37 @@ function words(value: string): string {
   return value.replace(/_/g, " ");
 }
 
-function runTitle(run: HistoryRun): string {
-  return run.product_name ?? (run.source === "manual" ? "Typed supplement" : "Unnamed label");
+/* `product_name` is what the label said (or what was typed): original text,
+ * never translated. Only the fallback wording around it follows the language. */
+function runTitle(run: HistoryRun, h: (typeof HISTORY_COPY)["en"]): string {
+  return run.product_name ?? (run.source === "manual" ? h.typedSupplement : h.unnamedLabel);
 }
 
-const LIST_MESSAGES: Record<Exclude<Failure, "auth">, string> = {
-  not_found: "Your history could not be found. Try again in a moment.",
-  unavailable: "Scan history is unavailable right now. Try again in a moment.",
-  failed: "Could not load your scans. Check your connection and try again.",
-};
+function listMessage(h: (typeof HISTORY_COPY)["en"], failure: Exclude<Failure, "auth">): string {
+  return failure === "not_found" ? h.listNotFound : failure === "unavailable" ? h.listUnavailable : h.listFailed;
+}
 
-const DETAIL_MESSAGES: Record<Exclude<Failure, "auth">, string> = {
-  not_found: "That saved scan was not found. It may no longer exist.",
-  unavailable: "Saved scans are unavailable right now. Try again in a moment.",
-  failed: "That saved scan could not be opened. Try again.",
-};
+function detailMessage(h: (typeof HISTORY_COPY)["en"], failure: Exclude<Failure, "auth">): string {
+  return failure === "not_found" ? h.detailNotFound : failure === "unavailable" ? h.detailUnavailable : h.detailFailed;
+}
 
 /* ------------------------------------------------------------------ shell -- */
 
 export function ScanHistory({ catalog, auth, refreshToken, onGoToScan }: ScanHistoryProps) {
-  const [notice, setNotice] = useState<string | null>(null);
+  const { lang } = useLang();
+  const h = HISTORY_COPY[lang];
+  const f = FLOW_COPY[lang];
+  // The notice is held as a flag, not as text, so switching language rewords it.
+  const [sessionEnded, setSessionEnded] = useState(false);
+  const notice = sessionEnded ? f.sessionEnded : null;
   const gate: "unconfigured" | "checking" | "signin" | "open" = !auth.configured ? "unconfigured" : auth.loading ? "checking" : auth.userId ? "open" : "signin";
-  const onSessionEnded = useCallback(() => setNotice(SESSION_ENDED_NOTICE), []);
+  const onSessionEnded = useCallback(() => setSessionEnded(true), []);
 
   // Signing in again retires the "session ended" explanation.
   const [lastGate, setLastGate] = useState(gate);
   if (lastGate !== gate) {
     setLastGate(gate);
-    if (gate === "open") setNotice(null);
+    if (gate === "open") setSessionEnded(false);
   }
 
   if (gate === "open" && auth.userId) {
@@ -164,18 +170,18 @@ export function ScanHistory({ catalog, auth, refreshToken, onGoToScan }: ScanHis
   }
   return (
     <div className="sw-history" data-testid="history-panel">
-      <h1 className="sw-title">Your scans</h1>
+      <h1 className="sw-title">{h.yourScans}</h1>
       {gate === "unconfigured" ? (
         <div className="sw-note" data-testid="history-unconfigured">
-          <strong>History is not available here.</strong>
-          <span>Saved scans need Google sign-in, which is not set up on this deployment. Scanning still works without it.</span>
+          <strong>{h.notAvailableTitle}</strong>
+          <span>{h.notAvailableBody}</span>
         </div>
       ) : gate === "checking" ? (
         <p className="sw-status" role="status">
-          Checking your sign-in…
+          {f.checkingSignIn}
         </p>
       ) : (
-        <SignInCard title="Sign in to see your history" body="Your saved scans belong to your Google account, so they only show once you are signed in." notice={notice} />
+        <SignInCard title={f.signInHistoryTitle} body={f.signInHistoryBody} notice={notice} />
       )}
     </div>
   );
@@ -201,6 +207,9 @@ function HistoryBody({
   onSessionEnded: () => void;
 }) {
   const { getAccessToken, signOut } = auth;
+  const { lang } = useLang();
+  const h = HISTORY_COPY[lang];
+  const f = FLOW_COPY[lang];
   const [attempt, setAttempt] = useState(0);
   const [list, setList] = useState<ListState | null>(null);
   const [selected, setSelected] = useState<HistoryRun | null>(null);
@@ -238,7 +247,7 @@ function HistoryBody({
   if (selected) {
     return (
       <>
-        <h1 className="sw-title sw-sr-only">Saved scan</h1>
+        <h1 className="sw-title sw-sr-only">{f.savedScanRegion}</h1>
         <SavedScan
           key={selected.id}
           catalog={catalog}
@@ -260,37 +269,37 @@ function HistoryBody({
 
   return (
     <>
-      <h1 className="sw-title">Your scans</h1>
+      <h1 className="sw-title">{h.yourScans}</h1>
       <p className="sw-account">
-        Signed in as <strong>{auth.email ?? "your Google account"}</strong>
+        {f.signedInAs} <strong>{auth.email ?? h.yourGoogleAccount}</strong>
         <button type="button" className="sc-signout" onClick={() => void signOut()}>
-          Sign out
+          {f.signOut}
         </button>
       </p>
       {ready ? (
         ready.runs.length === 0 ? (
           <div className="sw-note" data-testid="history-empty">
-            <strong>No saved scans yet.</strong>
-            <span>Scan a label or search a supplement while signed in and the result is saved here.</span>
+            <strong>{h.noSavedTitle}</strong>
+            <span>{h.noSavedBody}</span>
             <button type="button" className="button button-dark sw-go" onClick={onGoToScan}>
-              Go to Scan
+              {h.goToScan}
             </button>
           </div>
         ) : (
           <>
-            <p className="sw-lede">Your latest {ready.runs.length === 1 ? "scan" : `${ready.runs.length} scans`}. Opening one shows the saved result; nothing is re-run.</p>
+            <p className="sw-lede">{h.latest(ready.runs.length)}</p>
             <ul className="sw-runs" aria-busy={loading} data-testid="history-list">
               {ready.runs.map((run) => {
-                const savedAt = formatSavedAt(run.created_at);
+                const savedAt = formatSavedAt(run.created_at, lang);
                 return (
                   <li key={run.id}>
                     <button type="button" className="sw-run" data-run-id={run.id} onClick={() => setSelected(run)}>
-                      <span className="sw-run-name">{runTitle(run)}</span>
+                      <span className="sw-run-name">{runTitle(run, h)}</span>
                       <span className="sw-run-meta">
-                        <span>{run.source === "manual" ? "Typed search" : "Photo scan"}</span>
-                        {run.status !== "ok" ? <span className="sw-run-status">{words(run.status)}</span> : null}
+                        <span>{run.source === "manual" ? h.typedSearch : h.photoScan}</span>
+                        {run.status !== "ok" ? <span className="sw-run-status">{h.statusWords[run.status] ?? words(run.status)}</span> : null}
                         <span>
-                          Saved <time dateTime={run.created_at}>{savedAt ?? run.created_at}</time>
+                          {h.saved} <time dateTime={run.created_at}>{savedAt ?? run.created_at}</time>
                         </span>
                       </span>
                     </button>
@@ -302,7 +311,7 @@ function HistoryBody({
         )
       ) : loading ? (
         <div className="sw-loading" role="status" aria-live="polite" data-testid="history-loading">
-          <p>Loading your scans…</p>
+          <p>{h.loadingScans}</p>
           <ul aria-hidden="true">
             <li />
             <li />
@@ -311,10 +320,10 @@ function HistoryBody({
         </div>
       ) : list && list.status === "error" ? (
         <div className="sw-error" role="alert" data-testid="history-error">
-          <strong>Could not load your history.</strong>
-          <span>{LIST_MESSAGES[list.failure]}</span>
+          <strong>{h.couldNotLoadTitle}</strong>
+          <span>{listMessage(h, list.failure)}</span>
           <button type="button" className="button button-outline sw-retry" onClick={() => setAttempt((n) => n + 1)}>
-            Try again
+            {f.tryAgain}
           </button>
         </div>
       ) : null}
@@ -342,6 +351,9 @@ function SavedScan({
   onSessionEnded: () => void;
 }) {
   const { getAccessToken, signOut } = auth;
+  const { lang } = useLang();
+  const h = HISTORY_COPY[lang];
+  const f = FLOW_COPY[lang];
   const [attempt, setAttempt] = useState(0);
   const [detail, setDetail] = useState<DetailState | null>(null);
   const headingId = useId();
@@ -379,21 +391,21 @@ function SavedScan({
   return (
     <div className="sw-detail" aria-labelledby={headingId}>
       <button type="button" className="sw-back" onClick={onBack}>
-        Back to history
+        {f.backToHistory}
       </button>
       {failed ? (
         <div className="sw-error" role="alert" data-testid="history-detail-error">
-          <strong id={headingId}>Could not open that scan.</strong>
-          <span>{DETAIL_MESSAGES[failed.failure]}</span>
+          <strong id={headingId}>{h.couldNotOpen}</strong>
+          <span>{detailMessage(h, failed.failure)}</span>
           {failed.failure !== "not_found" ? (
             <button type="button" className="button button-outline sw-retry" onClick={() => setAttempt((n) => n + 1)}>
-              Try again
+              {f.tryAgain}
             </button>
           ) : null}
         </div>
       ) : (
         <p id={headingId} className="sw-status" role="status" data-testid="history-detail-loading">
-          Opening your saved scan…
+          {h.openingSaved}
         </p>
       )}
     </div>

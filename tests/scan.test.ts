@@ -32,7 +32,7 @@ import { readPriorDose, type PriorOutcome } from "@/lib/analyze/evidence-prior";
 import { ModelCallError, extractJson, validateAgainstSchema, type ChatJsonFn } from "@/lib/analyze/llm";
 import { analyzeScan, type ScanDeps } from "@/lib/analyze/scan";
 import { scoreProduct } from "@/lib/analyze/product-score";
-import { validateLabel, type LabelRead } from "@/lib/analyze/vision";
+import { LabelReadError, validateLabel, type LabelRead } from "@/lib/analyze/vision";
 
 type Json = Record<string, unknown>;
 
@@ -344,6 +344,102 @@ describe("model boundary helpers", () => {
     expect(read.actives).toEqual([{ name: "Creatine Monohydrate", compound_dose_mg: null, dose_unit_as_printed: null, form_text: null }]);
     expect(read.certifications).toEqual([]);
     expect(read.other_actives).toEqual([]);
+  });
+
+  it("an over-long printed NAME or supporting list is clipped, not a failed read (2026-10-02 live failure)", () => {
+    // The dropped tails carry no dose-like number: digits glued into names
+    // (K2, K1, -7) are not doses.
+    const long = "Vitamin K2 (as menaquinone-7 from chickpea, MenaQ7) and Vitamin K1 (as phytonadione) blend";
+    const read = validateLabel({
+      ingredient_vocab_id: null,
+      form_vocab_id: null,
+      compound_dose_mg: null,
+      is_multi_ingredient: true,
+      confidence: "high",
+      evidence_spans: Array.from({ length: 15 }, (_, i) => `line ${i}`),
+      other_actives: ["Vitamin D", long],
+      actives: [{ name: long + " " + long, compound_dose_mg: 0.1, dose_unit_as_printed: "mcg", form_text: null }],
+    });
+    expect(read.other_actives).toHaveLength(2);
+    expect(read.other_actives[1].length).toBeLessThanOrEqual(80);
+    expect(long.startsWith(read.other_actives[1])).toBe(true);
+    expect(read.actives[0].name.length).toBeLessThanOrEqual(120);
+    expect(read.actives[0].dose_unit_as_printed).toBe("mcg");
+    expect(read.evidence_spans).toHaveLength(12);
+    expect(read.evidence_spans[0]).toBe("line 0");
+    expect(read.is_multi_ingredient).toBe(true);
+  });
+
+  it("a clip that would drop a dose or strength number fails closed instead of changing its meaning", () => {
+    const base = { ingredient_vocab_id: null, form_vocab_id: null, compound_dose_mg: null, is_multi_ingredient: true, confidence: "high", evidence_spans: ["x"] };
+    // 15 mg falls in the dropped tail (cut at the 80-char limit): refuse, never "Zinc ... " without its dose.
+    const dosed = "Zinc bisglycinate chelate complex (TRAACS) with copper bisglycinate and more 15 mg per capsule x";
+    expect(dosed.length).toBeGreaterThan(80);
+    expect(() => validateLabel({ ...base, other_actives: [dosed] })).toThrow(LabelReadError);
+    // A number sitting exactly on the boundary is not left bare or unitless either.
+    for (const pad of [60, 62, 64, 66, 68, 70, 72, 74, 76]) {
+      const text = `${"a".repeat(pad)} 15 mg per capsule of the whole formula blend`;
+      let out: string | null = null;
+      try {
+        out = validateLabel({ ...base, other_actives: [text] }).other_actives[0];
+      } catch (err) {
+        expect(err).toBeInstanceOf(LabelReadError);
+      }
+      if (out !== null) {
+        expect(out).not.toMatch(/\d[\d.,]*\s*$/);
+        expect(text.slice(out.length)).not.toMatch(/\d/);
+      }
+    }
+    // A single over-long token has no word boundary: refuse rather than hard-cut mid-word/number.
+    expect(() => validateLabel({ ...base, other_actives: ["Z".repeat(81)] })).toThrow(LabelReadError);
+    expect(() => validateLabel({ ...base, other_actives: ["15" + "x".repeat(90)] })).toThrow(LabelReadError);
+  });
+
+  it("the printed strength (dose_unit_as_printed) is never clipped, at the top level or per active", () => {
+    const base = { ingredient_vocab_id: null, form_vocab_id: null, compound_dose_mg: null, is_multi_ingredient: true, confidence: "high", evidence_spans: ["x"] };
+    const strength = "1 scoop (about 5 g) mixed into 250 ml of cold water, taken twice daily with meals, 500 mg";
+    expect(strength.length).toBeGreaterThan(60);
+    expect(() => validateLabel({ ...base, dose_unit_as_printed: strength })).toThrow(LabelReadError);
+    expect(() => validateLabel({ ...base, actives: [{ name: "Creatine", compound_dose_mg: 5000, dose_unit_as_printed: strength, form_text: null }] })).toThrow(LabelReadError);
+    // Within the limit it passes through verbatim.
+    const ok = validateLabel({ ...base, dose_unit_as_printed: "5 g", actives: [{ name: "Creatine", compound_dose_mg: 5000, dose_unit_as_printed: "5 g (1 scoop)", form_text: null }] });
+    expect(ok.dose_unit_as_printed).toBe("5 g");
+    expect(ok.actives[0].dose_unit_as_printed).toBe("5 g (1 scoop)");
+  });
+
+  it("an over-long active name or form is never silently hard-sliced in the normaliser", () => {
+    const base = { ingredient_vocab_id: null, form_vocab_id: null, compound_dose_mg: null, is_multi_ingredient: true, confidence: "high", evidence_spans: ["x"] };
+    const named = `${"Alpha ".repeat(19)}Magnesium 400 mg`; // dose in the dropped tail
+    expect(named.length).toBeGreaterThan(120);
+    expect(() => validateLabel({ ...base, actives: [{ name: named, compound_dose_mg: 400, dose_unit_as_printed: "mg", form_text: null }] })).toThrow(LabelReadError);
+    expect(() => validateLabel({ ...base, actives: [{ name: "Magnesium", compound_dose_mg: 400, dose_unit_as_printed: "mg", form_text: `${"word ".repeat(24)}500 mg` }] })).toThrow(LabelReadError);
+  });
+
+  it("an other_actives entry that is not a string cannot be silently dropped", () => {
+    const base = { ingredient_vocab_id: null, form_vocab_id: null, compound_dose_mg: null, is_multi_ingredient: true, confidence: "high", evidence_spans: ["x"] };
+    expect(() => validateLabel({ ...base, other_actives: ["Vitamin D", { name: "Zinc", dose: "15 mg" }] })).toThrow(LabelReadError);
+    expect(() => validateLabel({ ...base, other_actives: [15] })).toThrow(LabelReadError);
+    expect(validateLabel({ ...base, other_actives: ["Vitamin D", "", null] }).other_actives).toEqual(["Vitamin D"]);
+  });
+
+  it("the dosed-active lists are never shortened: a 31st other active or 41st active still fails closed", () => {
+    const base = { ingredient_vocab_id: null, form_vocab_id: null, compound_dose_mg: null, is_multi_ingredient: true, confidence: "high", evidence_spans: ["x"] };
+    expect(() => validateLabel({ ...base, other_actives: Array.from({ length: 31 }, (_, i) => `Active ${i}`) })).toThrow(LabelReadError);
+    expect(() => validateLabel({ ...base, actives: Array.from({ length: 41 }, (_, i) => ({ name: `Active ${i}`, compound_dose_mg: 1, dose_unit_as_printed: null, form_text: null })) })).toThrow(LabelReadError);
+    const thirty = validateLabel({ ...base, other_actives: Array.from({ length: 30 }, (_, i) => `Active ${i}`) });
+    expect(thirty.other_actives).toHaveLength(30);
+  });
+
+  it("identifier fields, types and enums are not clipped or coerced and still fail closed", () => {
+    const base = { ingredient_vocab_id: null, form_vocab_id: null, compound_dose_mg: null, is_multi_ingredient: false, confidence: "high", evidence_spans: ["x"] };
+    expect(() => validateLabel({ ...base, ingredient_vocab_id: "a".repeat(41) })).toThrow(LabelReadError);
+    expect(() => validateLabel({ ...base, form_vocab_id: "a".repeat(61) })).toThrow(LabelReadError);
+    expect(() => validateLabel({ ...base, is_multi_ingredient: "true" })).toThrow(LabelReadError);
+    expect(() => validateLabel({ ...base, confidence: "certain" })).toThrow(LabelReadError);
+    expect(() => validateLabel({ ...base, compound_dose_mg: "5" })).toThrow(LabelReadError);
+    expect(() => validateLabel({ ...base, servings_per_day: -1 })).toThrow(LabelReadError);
+    const read = validateLabel(base);
+    expect(read.servings_per_day ?? null).toBeNull(); // never assumed to be 1
   });
 });
 

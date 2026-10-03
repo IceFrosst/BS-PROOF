@@ -32,6 +32,8 @@
 import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 
 import { getSupabaseBrowserClient, googleClientId } from "@/lib/auth/supabase-browser";
+import { FLOW_COPY } from "@/lib/i18n/copy/flow";
+import { useScanLang } from "@/lib/i18n/locale";
 
 interface GoogleCredentialResponse {
   credential?: string;
@@ -55,9 +57,9 @@ const GSI_SRC = "https://accounts.google.com/gsi/client";
 const GSI_TIMEOUT_MS = 12_000;
 const EXCHANGE_SLOW_MS = 20_000;
 
-export const GOOGLE_LOAD_FAILED = "Google sign-in did not load. Check your connection, turn off any blocker for accounts.google.com, then try again.";
-export const GOOGLE_EXCHANGE_FAILED = "Google accepted you, but sign-in did not finish. Use the Google button to try again.";
-export const GOOGLE_EXCHANGE_SLOW = "Sign-in is taking longer than expected. Wait a moment, or use the Google button to try again.";
+export const GOOGLE_LOAD_FAILED = FLOW_COPY.en.googleLoadFailed;
+export const GOOGLE_EXCHANGE_FAILED = FLOW_COPY.en.googleExchangeFailed;
+export const GOOGLE_EXCHANGE_SLOW = FLOW_COPY.en.googleExchangeSlow;
 
 /* ---------------------------------------------------------------- script -- */
 
@@ -103,7 +105,8 @@ function loadGoogleIdentityServices(): Promise<void> {
 
 interface ExchangeStatus {
   phase: "idle" | "exchanging" | "error";
-  message: string | null;
+  /** The failure kind, not its text: the words follow the page language at render. */
+  message: "failed" | "slow" | null;
 }
 
 const IDLE: ExchangeStatus = { phase: "idle", message: null };
@@ -127,20 +130,20 @@ async function handleCredential(response: GoogleCredentialResponse) {
   const token = response?.credential;
   const supabase = getSupabaseBrowserClient();
   if (!token || !supabase) {
-    publish({ phase: "error", message: GOOGLE_EXCHANGE_FAILED });
+    publish({ phase: "error", message: "failed" });
     return;
   }
   publish({ phase: "exchanging", message: null });
   // If Supabase is slow, say so -- but the real answer still wins when it lands.
-  const slow = setTimeout(() => publish({ phase: "error", message: GOOGLE_EXCHANGE_SLOW }), EXCHANGE_SLOW_MS);
+  const slow = setTimeout(() => publish({ phase: "error", message: "slow" }), EXCHANGE_SLOW_MS);
   try {
     const { data, error } = await supabase.auth.signInWithIdToken({ provider: "google", token });
     clearTimeout(slow);
-    if (error || !data?.session) publish({ phase: "error", message: GOOGLE_EXCHANGE_FAILED });
+    if (error || !data?.session) publish({ phase: "error", message: "failed" });
     else publish(IDLE);
   } catch {
     clearTimeout(slow);
-    publish({ phase: "error", message: GOOGLE_EXCHANGE_FAILED });
+    publish({ phase: "error", message: "failed" });
   }
 }
 
@@ -162,6 +165,7 @@ type LoadState = "loading" | "ready" | "error";
 export function GoogleSignInButton() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const id = useId();
+  const t = FLOW_COPY[useScanLang()];
   const [load, setLoad] = useState<LoadState>("loading");
   const [attempt, setAttempt] = useState(0);
   const exchange = useSyncExternalStore(
@@ -220,25 +224,25 @@ export function GoogleSignInButton() {
       />
       {load === "loading" ? (
         <p className="sc-google-status" role="status">
-          Loading Google sign-in…
+          {t.googleLoading}
         </p>
       ) : null}
       {exchange.phase === "exchanging" ? (
         <p className="sc-google-status" role="status">
-          Signing you in…
+          {t.googleSigningIn}
         </p>
       ) : null}
       {load === "error" ? (
         <div className="sc-google-error" role="alert" data-testid="google-signin-error">
-          <p>{GOOGLE_LOAD_FAILED}</p>
+          <p>{t.googleLoadFailed}</p>
           <button type="button" className="sc-google-retry" onClick={retry}>
-            Try again
+            {t.tryAgain}
           </button>
         </div>
       ) : null}
       {exchange.phase === "error" && exchange.message ? (
         <div className="sc-google-error" role="alert" data-testid="google-exchange-error">
-          <p>{exchange.message}</p>
+          <p>{exchange.message === "slow" ? t.googleExchangeSlow : t.googleExchangeFailed}</p>
         </div>
       ) : null}
     </div>

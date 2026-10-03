@@ -14,6 +14,16 @@
 .scan-workspace .sw-panel[hidden] { display: none !important; }
 
 /* ---- the two tabs: a quiet segmented control above the search pill ---- */
+.scan-page .sw-bar { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; }
+.scan-page .sw-bar .sw-tabs { flex: 1 1 auto; min-width: 0; margin: 0; }
+/* EN/LT switch: one persisted choice for the whole workspace (bsproof.lang). */
+.scan-page .sw-lang {
+  flex: 0 0 auto; min-width: 48px; min-height: 48px; padding: 0 12px; border: 1px solid var(--sp-line); border-radius: 999px;
+  background: var(--sp-white); color: var(--sp-ink); font: inherit; font-size: var(--fs-2); font-weight: 800; cursor: pointer;
+}
+.scan-page .sw-lang:hover { background: var(--sp-tint); }
+.scan-page .sw-lang:focus-visible { outline: 2px solid var(--sp-measured); outline-offset: 2px; }
+.scan-page .sc-translate-status { margin: 0 0 10px; color: var(--sp-mute); font-size: var(--fs-1); overflow-wrap: anywhere; }
 .scan-page .sw-tabs {
   display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 0 0 12px; padding: 4px;
   border: 1px solid var(--sp-line); border-radius: 999px; background: var(--sp-white);

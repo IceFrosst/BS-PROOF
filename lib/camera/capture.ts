@@ -56,7 +56,11 @@ export function cameraSupported(): boolean {
 export async function startCamera(constraints?: MediaStreamConstraints): Promise<MediaStream> {
   return navigator.mediaDevices.getUserMedia(
     constraints ?? {
-      video: { facingMode: { ideal: "environment" } },
+      // Ask for the sensor's real resolution (2026-10-03). With facingMode
+      // alone browsers hand back ~640x480, and desktop webcams also lack
+      // autofocus -- a small, soft frame of a dense Supplement Facts panel.
+      // `ideal` never rejects; a camera that cannot do 4K returns its best.
+      video: { facingMode: { ideal: "environment" }, width: { ideal: 3840 }, height: { ideal: 2160 } },
       audio: false,
     },
   );
@@ -154,4 +158,32 @@ export function blobToCaptureFile(blob: Blob, mimeType = DEFAULT_MIME): File {
   captureCounter += 1;
   const ext = mimeType === "image/jpeg" ? "jpg" : mimeType.split("/")[1] || "bin";
   return new File([blob], `scan-capture-${Date.now()}-${captureCounter}.${ext}`, { type: mimeType });
+}
+
+/** Uploads above this are re-encoded before POST /api/scan (2026-10-03).
+ * Vercel refuses request bodies over 4.5 MB before the route runs, so a
+ * typical 4-8 MB phone photo failed with an opaque error. */
+export const UPLOAD_REENCODE_BYTES = 3_500_000;
+
+/**
+ * A picked photo, downscaled to `maxLongEdge` and re-encoded as JPEG when it
+ * is too large to upload. Small files pass through untouched, and any decode
+ * failure returns the original file -- the server's own size check still
+ * answers for it, so this can only make an upload smaller, never break one.
+ */
+export async function shrinkForUpload(file: File, options: CaptureOptions = {}): Promise<File> {
+  if (file.size <= UPLOAD_REENCODE_BYTES || typeof createImageBitmap !== "function") return file;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const blob = await captureFrameToBlob(
+      { videoWidth: bitmap.width, videoHeight: bitmap.height },
+      () => document.createElement("canvas"),
+      (ctx, width, height) => ctx.drawImage(bitmap, 0, 0, width, height),
+      { maxLongEdge: 2560, ...options },
+    );
+    bitmap.close();
+    return blob ? blobToCaptureFile(blob, "image/jpeg") : file;
+  } catch {
+    return file;
+  }
 }

@@ -15,6 +15,8 @@
  * read by scoring code (pinned by tests/company-business-model.test.ts).
  */
 
+import type { DisclosureLocale } from "./literature-disclosures";
+
 export type BusinessModelStatus = "confirmed_mlm" | "suspected_mlm" | "no_evidence" | "unknown";
 
 export interface BusinessModel {
@@ -39,11 +41,25 @@ export interface BusinessModelDisclosure {
  * confirmed or suspected") -- a warning that appears on every company would
  * stop reading as a warning.
  */
-export function businessModelDisclosure(model: BusinessModel | null | undefined): BusinessModelDisclosure | null {
+export function businessModelDisclosure(model: BusinessModel | null | undefined, locale?: DisclosureLocale): BusinessModelDisclosure | null {
   const status = model?.status ?? "unknown";
   const basis = model?.basis?.trim();
   const confidence = model?.confidence ?? "low";
 
+  if ((status === "confirmed_mlm" || status === "suspected_mlm") && locale?.lang === "lt") {
+    const verb = status === "confirmed_mlm" ? "yra" : "gali būti";
+    const text = basis ? (locale.tr ?? ((value: string) => value))(basis) : "";
+    return {
+      tone: "warning",
+      title: "MLM / tiesioginių pardavimų verslo modelis",
+      body:
+        `Modelio žinios — nepatikrinta. Ši įmonė ${verb} organizuota kaip MLM — daugiapakopė rinkodara, dar vadinama ` +
+        "tiesioginiais pardavimais. Ji verbuoja platintojus, kurie gali užsidirbti ne tik iš savo pačių pardavimų, bet ir iš " +
+        `jų verbuojamų žmonių pardavimų. ${text ? `${text} ` : ""}(modelio pasitikėjimas: ${(locale.confidenceWord ?? ((value: string) => value))(confidence)}). ` +
+        "Tai pardavimo būdas, o ne teisinis vertinimas, ir jis nieko nesako apie tai, ar produktas veikia. " +
+        "Jis nekeičia įrodymų balo.",
+    };
+  }
   if (status === "confirmed_mlm" || status === "suspected_mlm") {
     const verb = status === "confirmed_mlm" ? "is" : "may be";
     return {

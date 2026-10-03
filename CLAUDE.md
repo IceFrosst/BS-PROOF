@@ -561,6 +561,116 @@ do not drop it.
 
 ## Current state
 
+**2026-10-03 — Shared persisted EN/LT localization of the whole `/scan` workspace, integrated with Ignas PR3 and the local UI
+merge `17359c5`: IMPLEMENTED on branch `fix/scan-localization-20261003`; the localization continuation below is an UNREVIEWED WIP checkpoint, pushed only to this branch, NOT merged to main and NOT deployed.**
+Merges on this branch: `origin/main` `3ef1218` (docs), `origin/ignas-pr3` `1f86403` (Ignas ancestry kept) and the local
+UI merge `17359c5` (`/tmp/bsproof-ui-en-lt`, branch `fix/scan-ignas-en-lt-20261003`, itself UNPUBLISHED and with an
+open independent verification -- the external reviewer's "NEEDS WORK" had no diff, so it means *unverified*, not a
+found defect). A separate fresh UI fixer/verifier owns that worktree; if it moves `17359c5`, re-merge it here (the
+only conflict surface is `components/scan-flow.tsx`). **Handoff:** actual-source review of this branch + the
+UI branch, a Lithuanian proofread of `lib/i18n/copy/*` and `prompts/translate.md`, then push; nothing is published.
+
+- **2026-10-03 localization WIP checkpoint (not a fix/review PASS).** Partial pre-existing uncommitted edits were preserved and checkpointed: translation route, server guard/client limits, AI translation disclosure, locale/UI wiring, vision limits, and scan/translation tests. A narrow translation test passed (71 tests), along with `pipeline.invariants`, `pipeline.selftest`, and `git diff --check`; these do not amount to full localization verification. Source review report `locale-source-review.md` (session output `e80b1614-372a-4941-9ea8-5c46fa6ab284`) previously found C1 (successful model translations lacked an always-visible unverified disclosure) and C2 (sign/comparator/unit safety guard incomplete), plus W1-W6: translator kill-switch, request byte cap, blocked-storage locale fallback, dose-string clip edge cases, oversized-client batch loop, and stale failure state after auth changes. Current partial edits exist in the C1/C2/route/client/locale/vision surfaces, but have NOT been independently reviewed against each issue; treat every cited finding as unverified until a fresh source review and focused tests confirm it. Lithuanian proofreading, broader changed-file tests/typecheck/lint, and end-to-end behavior remain undone. This is a private WIP branch save only; no production/release claim.
+- **Next for localization:** review all partial code against C1/C2 and W1-W6, specifically confirm successful translations visibly marked unverified, originals accessible, signs/comparators/units fail closed, route byte cap and kill-switch, client oversized-string termination and retry state; add/fix tests as needed. Then run focused localization tests, typecheck and changed-file lint; independent review and Lithuanian proofread required before any release/promotion.
+
+- **Integration decisions (PR3 + UI + localization).** `scan-flow.tsx` keeps the released auth/History/replay code and
+  the UI merge's behaviour: static "This check covers" list (no timer, no done ticks, no determinate bar -- `/api/scan`
+  streams no progress), `runKind`, one-shot `shrinkForUpload` before POST (reused across a 401 retry), top bar not drawn
+  for a replay, sign-in hint under the control row. Only the *words* moved: PR3's `COPY`/`useState` language is gone;
+  its landing/camera/loading strings live in `FLOW_COPY` and `useLang()` (same `bsproof.lang` key, English default,
+  stored choice carries over). **Exactly one language switch is visible:** the PR3 top bar's `.sc-lang` on the Scan
+  tab, the workspace's `.sw-lang` only while History shows (the Scan panel is merely `hidden`, so it is not counted).
+  `ScanCamera` takes PR3's `labels` (`CameraLabels`) plus `viewfinder` (the viewfinder's accessible name).
+- **One persisted choice.** `lib/i18n/locale.ts`: `useLang()` over `localStorage["bsproof.lang"]` with values
+  `"en" | "lt"` and **English default -- exactly PR3's key/values** (read from `origin/ignas-pr3`, whose state lived inside
+  `<ScanFlow>`). It is a tiny `useSyncExternalStore` (server snapshot `"en"`, so no hydration mismatch; blocked storage still
+  switches for the visit). `<ScanWorkspace>` owns the only toggle (`.sw-lang`, `data-testid="lang-toggle"`), sets
+  `<html lang>`, and provides `TranslationProvider`; the Scan tab, History list, a replayed scan, the sign-in card, the
+  Google button, the search sheet/forms, the camera labels, and the shared header/footer/skip link all read it.
+  `useScanLang()` keeps the shared chrome and the Google button English on every other route (`/`, `/methodology`,
+  `/tester`). Errors, auth notices and refusals are held as CODES, not text, so switching language rewords one already on
+  screen.
+- **Copy** lives in `lib/i18n/copy/{flow,result,history,search}.ts` (typed `Record<Lang, T>`; a missing LT key fails
+  `tsc` and `tests/localization-deterministic.test.ts`, which also fails if any LT string equals its EN twin). EN is the
+  wording the app always had (every existing test is unchanged and green); LT is informal "tu" like PR3's landing.
+- **What is deterministic (no model, no network).** Dose readings and the dose note are re-rendered in LT from the
+  STORED numbers (`lib/i18n/deterministic.ts`; its EN twin is pinned byte-for-byte to `dose-effectiveness.ts` by test).
+  Fixed server sentences (caveats, evidence-prior disclaimer, registry/seal notes, "no model provider configured"
+  reasons, manual-form validation messages, prior dose readings) have exact-match LT. Funding / publication-bias / MLM
+  disclosure templates and the retained-audit concern notices have LT templates (`literatureDisclosures(data, locale)`,
+  `businessModelDisclosure(model, locale)` take an optional locale; no argument = unchanged English). Ledger words
+  (effect / certainty / form / dose words, band labels, gates), badges, legend, enum display words
+  (confidence, direction, strength, checklist states...) are lookups applied at render to the stored value.
+- **What goes through the model boundary.** Model-authored and retained PROSE (company summary and notes, evidence-prior
+  text, compatibility notes, disclosure `basis`/`signals`, the retained audit's plain-language rewrite, outcome and population
+  names, `effective_daily_range`, `strongest_doubt`, validity notes, server `error` text) is translated at READ time by
+  `POST /api/scan/translate` -> `lib/analyze/translate.ts` -> `chatJson` in `lib/analyze/llm.ts` (the only model file).
+  New prompt `prompts/translate.md` + `schemas/translate.json`, **`TRANSLATE_PROMPT_VERSION = "translate-lt-v1.0"`**
+  (also the cache key; no other prompt or version changed). Same Google gate as `/api/scan` (SCAN_REQUIRE_AUTH ->
+  bearer, checked before the body is read), <= 24 strings / 4,000 chars each / 24,000 total, `no-store`, nothing
+  stored. **A translation is accepted only if every number token and every quoted span of the source survives byte-for-byte**
+  (`guardTranslation`); otherwise that string stays English. The client (`lib/i18n/translate-client.tsx`) queues only
+  the strings actually rendered, one batched POST per tick, and shows "Translating…" / a "some text is in English" note.
+- **Never translated, by design:** product, brand, firm, ingredient and form names; raw FDA recall records (product,
+  reason, firm, class, dates); label `evidence_spans` and the audit's "Exact wording from the audit" (original, with a
+  translated label); run ids, model names, prompt versions, DOIs/PMIDs/source titles; all numbers, units, scales
+  (-3..+3 effect, /4 axes, /100), ranges, closeness and counts. **No score constant, enum value, exact-match rule or
+  stored analysis changed**; `tests/localization-deterministic.test.ts` asserts the scoring/ledger/dose/catalog modules
+  import none of the i18n/translate code, and `tests/scan-localization.test.tsx` compares every number on an EN vs LT
+  card token-for-token. No servings/day and no audit score is ever invented.
+- **Known untranslated dynamic seams (NOT claimed complete):** (1) `/tester` (`label-analyzer.tsx`) is English-only; (2)
+  `/methodology` and the PWA manifest/`<title>` stay English; (3) names listed above, plus catalog/vocab labels
+  (`entry.form_label`, `words(form_vocab_id)`, interaction pair names, seal chips, `scored_forms`); (4) if the translator is
+  down, unavailable or rejected by the guard, the original English prose shows (with the note) -- there is no offline
+  corpus for model prose; English fallback text is not marked `lang="en"`; (5) unknown future server statuses/enums fall
+  back to their English `words()`; (6) the LT strings were written for review by a Lithuanian speaker -- not yet proofread.
+- **Checked after the integration (focused; no full suite, no Playwright matrix/e2e, zero live model calls):** `tsc --noEmit`;
+  eslint on every changed `.ts/.tsx`; `git diff --cached --check`; `python3 -m pipeline.invariants` / `pipeline.selftest`
+  ALL PASSED; ONE `npm run build` (incl. `/api/scan/translate`, `/scan`); vitest on the 34 scan / history / auth / google /
+  disclosure / label / plain-language / ledger / camera / localization / translate files = **461 passed**, including the
+  UI merge's `tests/scan-landing-lang.test.tsx` and the new "exactly one language switch" test. 390 px EN + LT of the
+  merged landing and the History tab, measured on `next start`: scrollWidth 390, one visible switch (`sc-lang` on Scan,
+  `sw-lang` on History). The earlier 14-capture result/History/replay overflow run predates the PR3 merge and was NOT
+  repeated (result/History/replay code did not change). Real phone and real Google sign-in: not tested. Known edge: a
+  browser whose `localStorage.setItem` throws but `getItem` works (old private Safari) will not switch language; blocked
+  reads fall back to an in-memory choice.
+
+
+**2026-10-03 — (UI worker, now merged into the localization branch) Ignas PR3 UI merged onto the released Google-required scan: BRANCH `fix/scan-ignas-en-lt-20261003`
+(base `2555166`), NOT pushed, NOT deployed.** `origin/ignas-pr3` (`53dc036` label clipping, `1f86403` /scan landing)
+was merged with `git merge --no-ff` so Ignas's commits keep their authorship; the one conflict was
+`components/scan-flow.tsx`, resolved against the released auth/private-History code. What is in: own top bar (scan
+mark, EN/LT switch persisted in `localStorage` key `bsproof.lang`, English default, account initial only when
+signed in; not drawn for a saved scan opened from History), headline above a framed camera, optional torch (only
+where the track reports it), camera asks for 3840x2160 and captures at 2560 px, uploads over 3.5 MB are re-encoded
+to a 2560 px JPEG before POST (Vercel refuses bodies over 4.5 MB), and one control row (Upload / shutter / Search).
+**Preserved from the release, re-verified:** the Google gate (no request and no anonymous request until a session
+exists; hint and "session ended / signed out" notices still shown under the control row), the live bearer token with
+the one-shot 401 refresh, sign-out/expiry/account-switch aborting the request and discarding the photo and result,
+the sign-out line on a result, the A/B result card, and private Scan/History replay. **Deliberate deviations from the
+PR, with reasons:** (1) the PR's timer-driven loading steps and determinate bar are gone -- `/api/scan` answers once
+and streams no progress, so ticking steps "done" on a 2.2 s timer claimed backend work had finished that nobody
+knew had; the loading view is now an indeterminate bar over a STATIC "this check covers" list (EN/LT), and
+real per-step progress still needs a streamed `/api/scan`; (2) the PR's `clipToLabelSchema` is narrowed in
+`lib/analyze/vision.ts`: it still shortens over-long printed text and the supporting lists (evidence spans,
+certifications, warnings, claims) to the schema's own limits, but it cuts strings back to a whole word and never
+leaves a bare trailing number (no invented dose), never touches `ingredient_vocab_id`/`form_vocab_id`, and NEVER
+shortens `actives`/`other_actives` -- silently dropping a 31st/41st dosed active would hide multi-active evidence
+from the compatibility check, so those still fail closed, as do wrong types, enums, required fields and
+negative numbers (`servings_per_day` is never assumed). No schema, prompt, version, scoring constant or
+`pipeline/` change. **Language scope, honestly: translation is the LANDING (headline, control row, camera
+hints, staged step, loading, sign-in hint) ONLY.** The result report, History, sign-in cards and session notices stay
+English until the separate expanded-results/History translation (worktree `/tmp/bsproof-localization`, not touched
+here) ships; do not describe the product as translated before that release. Tests:
+`tests/scan-landing-lang.test.tsx` (new), `tests/scan.test.ts`, `tests/camera-capture.test.ts`,
+`tests/scan-search.test.tsx`. Gates run: tsc, changed-file eslint, `git diff --check`, 14 focused vitest files plus
+the new one, one production build, `pipeline.invariants` and `pipeline.selftest`, and a 390 px Chromium smoke
+(EN/LT camera, staged, loading, signed-out gate, signed-in bearer) against that build with a fake camera and a mocked
+`/api/scan` -- NO model call and no real Google sign-in. Not run: full vitest, lint of the whole tree, Playwright
+e2e matrix (`tests/e2e/scan-workspace.spec.ts` pins "Search your supplement" and the Scan button by role name,
+both unchanged, but was not run on this layout). **Handoff:** push only after the founder/owner pass; then verify on
+a real phone that the 4K camera request, torch and the large-photo re-encode behave, and that a real
+signed-in scan still sends the token.
 **Latest team checkpoint — 2026-10-03 11:48:57 EEST (Europe/Vilnius), docs-only, verified against fetched `origin/main` at `3ef1218`.** The working branch publishes readable WIP receipts; it does not merge feature code. **Production (last deployed app code):** Google-required scan + private Scan/History from `2555166` is deployed and provisioned, but production scans/auth remain blocked: the Google sign-in attempt returned an origin refusal (`origin_mismatch`/origin-not-allowed). The public OAuth client was changed to `42984642369`, the accepted Supabase audience was updated while preserving the prior primary/secret, and the resulting production redeploy is READY; this has NOT resolved sign-in. Human owner action: add `https://bs-proof-dashboard.vercel.app` to the NEW client's Authorized JavaScript origins, then verify button, real Google consent/session, phone scan and History/replay. Do not expose client secrets or credential values here.
 
 **Separate WIP branches (published, not on main; no production claim):** [UI](https://github.com/IceFrosst/BS-PROOF/tree/fix/scan-ignas-en-lt-20261003) at `c898d03b9571533270d6bb95bf19dc7c21009fb3` is explicitly NEEDS WORK: malformed/non-array active inputs may be silently hidden by vision normalization; History/signout reachability evidence is outstanding. [EN–LT/localization safeguards](https://github.com/IceFrosst/BS-PROOF/tree/fix/scan-localization-20261003) at `e3a748bc04ff35c5c9194356e563150e08088097` is partial and review-pending, not a pass: verify visible unverified-AI-translation disclosure (C1), sign/unit-preserving guard gaps (C2), and all remaining source-review findings. Private research queue [branch](https://github.com/IceFrosst/BS-PROOF/tree/feat/scan-research-queue-20261003) `00b17d9e7034ff7087e5bc23f642d1290b63e5eb` and separate PC consumer [branch](https://github.com/IceFrosst/BS-PROOF/tree/feat/pc-research-worker-20261003) `a74160e54839e6e179f176969805021c48a7e8e5` are implementation checkpoints only; end-to-end contract/client/UI integration and security/owner review remain incomplete. No SQL was applied for research, token generated, mainPC worker installed, or feature activated; flag remains OFF and research is not part of user scans.
@@ -1778,6 +1888,9 @@ still the unmeasured SR-uplift experiment (Next item 3).
   optionally tightening the SQL guard's text match on `qual`/`with_check` (native-review W3). If sign-in returns 401
   for everyone, check the `SUPABASE_URL` / service-key pair first (a wrong pair looks like an expired session). The
   10 dev-only `npm audit` findings remain (see the pass-1 entry).
+- **After Google, in this order: PR3 / full EN–LT translation, then live PC research.** PR3 + the full EN–LT pass are
+  integrated on `fix/scan-localization-20261003` (see the top of `Current state`); a partial localization continuation is saved as an unreviewed branch WIP checkpoint, NOT main/deployed. Follow the localization Next checklist in `Current state`: fresh actual-source review, remaining gate checks and Lithuanian proofreading of `lib/i18n/copy/*` and `prompts/translate.md` are required before any promotion. Live PC research was not
+  started. Redo the original audit; the earlier categorical benchmark is not a valid exact-UI comparison.
 - **After Google, finish EN–LT and live PC research in their own branches.** Partial localization and research-queue/consumer work are now saved at the WIP refs recorded above, but are not integrated or accepted. Complete independent reviews and remaining checks before considering promotion. Benchmark reporting/captures are available; no model winner is validated. Redo/reconcile the original audit against exact UI evidence; earlier categorical benchmark is not a valid exact-UI comparison.
 - Complete live scan → research job → A/B result integration, real-phone checks, remaining presentation/disclosure work, user-owned Remotion demo and Claude Design deck, and owner decision on retention/deletion. Keep laptop development and planned mainPC worker runtime distinct.
 
