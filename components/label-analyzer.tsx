@@ -18,9 +18,33 @@
  * Every retained run is currently `public_claims_allowed: false`, so the
  * validity banner is not optional decoration -- omitting it would publish a
  * claim the run registry explicitly withheld.
+ *
+ * SIGN-IN (2026-10-03, owner finding). `POST /api/analyze-label` spends the same
+ * model call as `POST /api/scan`, so it takes the same server gate
+ * (`SCAN_REQUIRE_AUTH`, see that route's header) and this component takes the
+ * same client rules `components/scan-flow.tsx` does, from the same pieces
+ * (`useSupabaseSession`, the Google `SignInCard`):
+ *
+ *   - where sign-in is configured (all three NEXT_PUBLIC_* vars) NO request is
+ *     sent until a Supabase session exists -- but a photo can be picked or taken
+ *     first and stays staged, and a returning session being read is "checking",
+ *     neither signed out nor unlocked;
+ *   - every request carries `Bearer <the live access token>`, re-read at send
+ *     time; a 401 refreshes the token once and retries once (the server refuses
+ *     before any model work, so that costs nothing), a second 401 ends the
+ *     session on screen instead of looping;
+ *   - a result and a request belong to the person who started them: sign-out,
+ *     expiry or another Google account ABORTS the request in flight, discards a
+ *     late answer and removes the result, instead of blurring it;
+ *   - where sign-in is not configured (local, CI, previews) nothing changes:
+ *     no gate, no Authorization header.
+ * The UI gate is a convenience; the server is the protection.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+
+import { SignInCard } from "@/components/google-sign-in";
+import { useSupabaseSession } from "@/lib/auth/use-supabase-session";
 
 type NullableNumber = number | null;
 
@@ -96,6 +120,21 @@ interface AnalyzerResponse {
 }
 
 const MAX_BYTES = 12 * 1024 * 1024;
+
+/** The stand-in owner on a deployment with no sign-in configured. */
+const LOCAL_OWNER = "local";
+const SESSION_ENDED = "Your session ended. Sign in again to continue.";
+const SIGNED_OUT_CLEARED = "You signed out, so the last result was cleared from this screen.";
+const SIGNED_OUT_STOPPED = "You signed out, so the analysis in progress was stopped.";
+const NOT_SET_UP = "This page is not set up to sign in, but analyzing here needs a signed-in account. Try again later.";
+const AUTH_DOWN = "Sign-in is unavailable right now, so this label could not be analyzed. Try again in a few minutes.";
+
+/** What one request left behind, stamped with whose it is. */
+interface Outcome {
+  owner: string | null;
+  data: AnalyzerResponse | null;
+  error: string | null;
+}
 
 /* The read takes ~20-30 s (measured: 17.7 s model call plus conversion and
  * lookup). A spinner alone reads as "hung" at that length, so the stages are
@@ -217,11 +256,68 @@ export function LabelAnalyzer() {
   // moment the user expects the ~20s wait to start.
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState(0);
-  const [data, setData] = useState<AnalyzerResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [authNotice, setAuthNotice] = useState<string | null>(null);
+
+  const auth = useSupabaseSession();
+  const { getAccessToken, signOut } = auth;
+  const authConfigured = auth.configured;
+  // WHOSE SCREEN IS THIS. Everything a request returns is stamped with the owner
+  // it was made for, and only the CURRENT owner's outcome is ever drawn: `null`
+  // while a returning session is still being read and once nobody is signed in;
+  // one fixed owner on a deployment with no sign-in. Visibility derives from the
+  // stamp, so there is no render in which the previous person's result is on
+  // screen for the next one.
+  const ownerKey: string | null = !auth.configured ? LOCAL_OWNER : auth.loading ? null : auth.userId;
+  const gate: "open" | "checking" | "signin" = !auth.configured ? "open" : auth.loading ? "checking" : auth.userId ? "open" : "signin";
+  const [outcome, setOutcome] = useState<Outcome | null>(null);
+  const [pending, setPending] = useState<{ id: number; owner: string | null } | null>(null);
+  const requestRef = useRef<{ id: number; controller: AbortController } | null>(null);
+  const requestSeq = useRef(0);
+
+  // Sign-out or an account switch REVOKES what the previous person had here --
+  // their result, their request in flight, and the photo that was being analyzed
+  // -- rather than merely hiding it. A photo that was only staged (never sent)
+  // is kept: sign-in is exactly what unblocks it. (Adjusting state while
+  // rendering is React's supported way to reset state when an input changes.)
+  const leftOutcome = outcome !== null && outcome.owner !== ownerKey;
+  const leftRequest = pending !== null && pending.owner !== ownerKey;
+  if (leftOutcome || leftRequest) {
+    setOutcome(null);
+    setPending(null);
+    setFile(null);
+    setPreview((old) => {
+      if (old) URL.revokeObjectURL(old);
+      return null;
+    });
+    if (ownerKey === null && !auth.loading) {
+      const had = leftOutcome && (outcome?.data || outcome?.error) && outcome.owner !== LOCAL_OWNER;
+      if (had) setAuthNotice((n) => n ?? SIGNED_OUT_CLEARED);
+      else if (leftRequest) setAuthNotice((n) => n ?? SIGNED_OUT_STOPPED);
+    }
+  }
+  // A notice explains why the sign-in card is showing; a successful sign-in
+  // (the gate opening) retires it.
+  const [lastGate, setLastGate] = useState(gate);
+  if (lastGate !== gate) {
+    setLastGate(gate);
+    if (gate === "open") setAuthNotice(null);
+  }
+
+  const data = outcome && outcome.owner === ownerKey ? outcome.data : null;
+  const error = outcome && outcome.owner === ownerKey ? outcome.error : null;
+  const busy = pending !== null && pending.owner === ownerKey;
+
+  const cancelRequest = useCallback(() => {
+    const running = requestRef.current;
+    requestRef.current = null;
+    running?.controller.abort();
+  }, []);
+  // A request belongs to the person who started it: when the signed-in person
+  // changes or the page unmounts, abort it. Its late answer is also discarded
+  // by the `isCurrent()` checks in `submit`.
+  useEffect(() => cancelRequest, [ownerKey, cancelRequest]);
   // In-page camera (founder ask 2026-08-24: open the app, take a photo OR
   // upload). `stream` non-null means the viewfinder is showing. Capturing only
   // STAGES the frame — the two-step Analyze consent applies to camera shots
@@ -247,17 +343,16 @@ export function LabelAnalyzer() {
   /** Step 1: stage a file (picked, dropped, or captured). Sends nothing. */
   const stageFile = useCallback((picked: File) => {
     if (picked.size > MAX_BYTES) {
-      setError(`That image is ${(picked.size / 1e6).toFixed(1)} MB. The limit is 12 MB.`);
+      setOutcome({ owner: ownerKey, data: null, error: `That image is ${(picked.size / 1e6).toFixed(1)} MB. The limit is 12 MB.` });
       return;
     }
-    setError(null);
-    setData(null);
+    setOutcome(null);
     setFile(picked);
     setPreview((old) => {
       if (old) URL.revokeObjectURL(old);
       return URL.createObjectURL(picked);
     });
-  }, []);
+  }, [ownerKey]);
 
   const pick = useCallback((files: FileList | null) => {
     const picked = files?.[0];
@@ -289,7 +384,7 @@ export function LabelAnalyzer() {
         video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } },
         audio: false,
       });
-      setError(null);
+      setOutcome((o) => (o ? { ...o, error: null } : o));
       setStream(media);
     } catch {
       captureInputRef.current?.click();
@@ -323,43 +418,98 @@ export function LabelAnalyzer() {
     );
   }, [stageFile, closeCamera]);
 
-  /** Step 2: the Analyze button. This is the only place a request starts. */
+  /**
+   * Step 2: the Analyze button. This is the only place a request starts, and it
+   * never starts unless the gate is open. The request carries the live session's
+   * access token (re-read now, not a render-time snapshot, so an hourly refresh
+   * is picked up); whatever comes back is applied only if this is still the live
+   * request for the same owner.
+   */
   const submit = useCallback(async () => {
-    if (!file || busy) return;
-    setError(null);
-    setData(null);
+    if (!file || busy || gate !== "open" || ownerKey === null) return;
+    const owner = ownerKey;
+    const picked = file;
+    cancelRequest();
+    const id = ++requestSeq.current;
+    const controller = new AbortController();
+    requestRef.current = { id, controller };
+    const isCurrent = () => requestRef.current?.id === id;
+    setOutcome(null);
+    setAuthNotice(null);
     setStage(0);
-    setBusy(true);
-    try {
+    setPending({ id, owner });
+
+    const send = (headers: Record<string, string>) => {
       const body = new FormData();
-      body.append("image", file);
-      const res = await fetch("/api/analyze-label", { method: "POST", body });
+      body.append("image", picked);
+      return fetch("/api/analyze-label", { method: "POST", headers, body, signal: controller.signal });
+    };
+    const authorize = async (forceRefresh: boolean): Promise<Record<string, string> | null> => {
+      if (!authConfigured) return {};
+      const token = await getAccessToken({ userId: owner, forceRefresh });
+      return token ? { Authorization: `Bearer ${token}` } : null;
+    };
+    const endSession = () => {
+      // Stop "analyzing" first so the sign-out that follows reads as an expiry
+      // (the photo stays staged), not as a request abandoned mid-flight.
+      setPending(null);
+      setAuthNotice(SESSION_ENDED);
+      void signOut();
+    };
+
+    try {
+      const headers = await authorize(false);
+      if (!isCurrent()) return;
+      if (!headers) {
+        endSession();
+        return;
+      }
+      let res = await send(headers);
+      if (!isCurrent()) return;
+      if (res.status === 401 && authConfigured) {
+        // The server refuses before any model work, so one refreshed retry is free.
+        const retryHeaders = await authorize(true);
+        if (!isCurrent()) return;
+        if (!retryHeaders || retryHeaders.Authorization === headers.Authorization) {
+          endSession();
+          return;
+        }
+        res = await send(retryHeaders);
+        if (!isCurrent()) return;
+        if (res.status === 401) {
+          endSession();
+          return;
+        }
+      }
       const json = (await res.json()) as AnalyzerResponse;
-      // `analyzer_unavailable` is not a failure of the upload -- it means this
-      // host cannot read labels at all (no Python / no Claude CLI, e.g. the
-      // Vercel preview). It gets its own state so it never reads as "your photo
-      // was bad".
-      if (json.status === "analyzer_unavailable") {
-        setData(json);
+      if (!isCurrent()) return;
+      if (json.status === "unauthorized" || res.status === 401) {
+        setOutcome({ owner, data: null, error: NOT_SET_UP });
+      } else if (json.status === "auth_unavailable") {
+        setOutcome({ owner, data: null, error: AUTH_DOWN });
+      } else if (json.status === "analyzer_unavailable") {
+        // `analyzer_unavailable` is not a failure of the upload -- it means this
+        // host cannot read labels at all (no model key, or the kill switch). It
+        // gets its own state so it never reads as "your photo was bad".
+        setOutcome({ owner, data: json, error: null });
       } else if (!res.ok && !json.status) {
-        setError(json.error ?? `Request failed (${res.status}).`);
+        setOutcome({ owner, data: null, error: json.error ?? `Request failed (${res.status}).` });
       } else {
-        setData(json);
-        if (
+        const failed =
           json.status === "label_unreadable" ||
           json.status === "analyzer_failed" ||
           json.status === "timeout" ||
-          json.status === "bad_request"
-        ) {
-          setError(json.error ?? "The label could not be read.");
-        }
+          json.status === "bad_request";
+        setOutcome({ owner, data: json, error: failed ? (json.error ?? "The label could not be read.") : null });
       }
     } catch (err) {
-      setError(`Could not reach the analyzer: ${String(err)}`);
+      if (!isCurrent()) return;
+      setOutcome({ owner, data: null, error: `Could not reach the analyzer: ${String(err)}` });
     } finally {
-      setBusy(false);
+      if (requestRef.current?.id === id) requestRef.current = null;
+      setPending((p) => (p?.id === id ? null : p));
     }
-  }, [file, busy]);
+  }, [file, busy, gate, ownerKey, authConfigured, getAccessToken, signOut, cancelRequest]);
 
   const rows = data?.result?.rows ?? [];
   const validity = data?.result?.validity;
@@ -449,14 +599,28 @@ export function LabelAnalyzer() {
             <div className="la-drop-copy">
               {file ? (
                 <>
-                  <button
-                    type="button"
-                    className="button button-dark la-analyze"
-                    onClick={() => void submit()}
-                    disabled={busy}
-                  >
-                    {busy ? "Analyzing…" : "Analyze"}
-                  </button>
+                  {gate === "open" ? (
+                    <button
+                      type="button"
+                      className="button button-dark la-analyze"
+                      onClick={() => void submit()}
+                      disabled={busy}
+                    >
+                      {busy ? "Analyzing…" : "Analyze"}
+                    </button>
+                  ) : gate === "checking" ? (
+                    <p className="sc-check la-gate" role="status" data-testid="la-checking">
+                      Checking your sign-in…
+                    </p>
+                  ) : (
+                    <div className="la-gate">
+                      <SignInCard
+                        title="Sign in to analyze this label"
+                        body="Analyzing needs a Google sign-in. Your photo stays on this device until you press Analyze."
+                        notice={authNotice}
+                      />
+                    </div>
+                  )}
                   <div className="la-actions">
                     <button type="button" className="button button-outline" onClick={() => void openCamera()} disabled={busy}>
                       Retake photo
@@ -478,9 +642,19 @@ export function LabelAnalyzer() {
               )}
               <span>
                 {file
-                  ? `${file.name} · ${(file.size / 1e6).toFixed(1)} MB — nothing is sent until you press Analyze`
+                  ? `${file.name} · ${(file.size / 1e6).toFixed(1)} MB — nothing is sent until you ${gate === "open" ? "press Analyze" : "sign in and press Analyze"}`
                   : "or drag an image here · PNG, JPEG, WebP · up to 12 MB"}
               </span>
+              {!file && gate === "signin" ? (
+                <span className="la-gate-hint" data-testid="la-signin-hint">
+                  Analyzing needs a Google sign-in. You can pick or take a photo first.
+                </span>
+              ) : null}
+              {!file && gate === "signin" && authNotice ? (
+                <span className="la-gate-hint" role="status" data-testid="la-signin-notice">
+                  {authNotice}
+                </span>
+              ) : null}
             </div>
           </>
         )}
@@ -501,6 +675,14 @@ export function LabelAnalyzer() {
 
       {data && !error ? (
         <div className="la-result">
+          {authConfigured && auth.email ? (
+            <p className="sc-signed-in-line la-gate">
+              Signed in as <strong>{auth.email}</strong>
+              <button type="button" className="sc-signout" onClick={() => void signOut()}>
+                Sign out
+              </button>
+            </p>
+          ) : null}
           {/* What was actually read. Shown before any number, so a
               misread is visible rather than buried under a score. */}
           {label ? (

@@ -566,6 +566,14 @@ thead th { color: var(--ink-soft); font-size: 0.7rem; text-transform: uppercase;
 .la-drop-copy .button { min-height: 46px; }
 .la-stage { margin: 0; color: var(--teal-text); font-weight: 700; font-size: 0.9rem; }
 
+/* /tester sign-in (components/label-analyzer.tsx). The Google sign-in card, the
+   signed-in line and the "checking" note reuse /scan's .sc-* styles, which read
+   the /scan tokens (--sp-*, --fs-*) defined on .scan-page only; .la-gate hands
+   them the same values for just those elements and restyles nothing else. */
+.la-gate {
+  --sp-white: #ffffff; --sp-tint: #f3f5f4; --sp-line: #dde1df; --sp-mute: #5a6660; --sp-ink: #16231d;
+  --sp-danger: #a92f24; --sp-radius: 12px; --fs-1: 13px; --fs-2: 15px; --fs-3: 17px;
+}
 .la-alert { display: grid; gap: 4px; margin-top: 22px; padding: 16px 18px; border: 1px solid var(--line); border-left: 5px solid var(--line); background: var(--white); color: var(--ink); }
 .la-alert span { color: var(--ink-soft); font-size: 0.9rem; }
 .la-alert-warn { border-left-color: var(--gold); }

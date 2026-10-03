@@ -44,11 +44,33 @@
  * (local/test builds need no credentials). Set `SCAN_HISTORY_REQUIRED=1` to
  * make this fail closed instead: a run whose history could not be durably
  * stored is answered with `scan_history_required_failed` (500), never with an
- * unrecorded result. There is no read endpoint here and no signed image URL
- * is ever minted — see docs/scan-history.sql.
+ * unrecorded result. This route has no read endpoint and no signed image URL
+ * is ever minted — the owner-only read path is GET /api/scan/history[/id]
+ * (lib/scan-history/reader.ts); see docs/scan-history.sql.
+ *
+ * AUTHENTICATION AND OWNERSHIP (lib/auth/server-auth.ts). The caller's
+ * identity comes from ONE place: a bearer token that Supabase Auth verifies
+ * (`GET /auth/v1/user`). Never from a body field, form field or header the
+ * client could forge.
+ *   - `SCAN_REQUIRE_AUTH` on (any value but unset/0/false/no/off): a request
+ *     with no token, an invalid or expired token, or a user with no Google
+ *     identity is refused 401 `unauthorized`, and one that cannot be verified
+ *     (no Supabase configuration, or Supabase down) 503 `auth_unavailable` —
+ *     BEFORE the request body is read and before any model call, so an
+ *     unauthenticated caller can never spend the model budget or make the
+ *     server buffer an image.
+ *   - `SCAN_REQUIRE_AUTH` unset (local, CI, the demo's existing tests): an
+ *     anonymous request still works exactly as before and records no owner. A
+ *     bearer token that IS supplied is still verified and still binds
+ *     ownership; an invalid one is a 401, never a silent downgrade to
+ *     anonymous.
+ *   - The verified user's id/email are written into the SAME INSERT as the run
+ *     for photo, manual and terminal-failure records alike. A legacy or
+ *     anonymous row keeps a null owner; nothing here fabricates one.
  */
 import { NextResponse } from "next/server";
 
+import { authenticateRequest, scanAuthRequired } from "@/lib/auth/server-auth";
 import { ingredientCatalog } from "@/lib/analyze/catalog";
 import { MANUAL_DOSE_UNITS } from "@/lib/analyze/manual-dose";
 import { availableProducts } from "@/lib/analyze/product-score";
@@ -61,6 +83,7 @@ import {
   scanHistoryRequired,
   scanHistorySatisfies,
   type ScanHistorySource,
+  type ScanOwner,
 } from "@/lib/scan-history/store";
 import { analyzerEnabled, type LabelMediaType } from "@/lib/analyze/vision";
 
@@ -123,9 +146,11 @@ async function finishAndRecord(args: {
   analysis: ScanAnalysis;
   request: Record<string, unknown>;
   image?: { bytes: Buffer; mimeType: string } | null;
+  /** The Supabase-verified caller, or null for an anonymous (auth-not-required) run. */
+  owner: ScanOwner | null;
   responseInit?: { status?: number };
 }): Promise<NextResponse> {
-  const { runId, source, analysis, request, image, responseInit } = args;
+  const { runId, source, analysis, request, image, owner, responseInit } = args;
   const outcome = await recordScanRun({
     runId,
     source,
@@ -134,6 +159,7 @@ async function finishAndRecord(args: {
     request,
     analysis,
     image: image ?? null,
+    owner,
   });
   if (scanHistoryRequired() && !scanHistorySatisfies(outcome, source)) {
     return NextResponse.json(
@@ -150,7 +176,21 @@ async function finishAndRecord(args: {
   return NextResponse.json(withHistory, { status: responseInit?.status, headers: NO_STORE });
 }
 
-async function manualPost(request: Request): Promise<NextResponse> {
+/**
+ * The typed facts that are stored as the run's `request`: only the fields the
+ * manual contract defines. Anything else a client put in the body -- a
+ * `user_id`, an `email`, an `owner` -- is not stored and never consulted.
+ */
+function manualRequestFacts(body: object): Record<string, unknown> {
+  const typed = body as Record<string, unknown>;
+  const facts: Record<string, unknown> = {};
+  for (const key of ["source", "ingredient", "form", "dose", "servings_per_day"]) {
+    if (key in typed) facts[key] = typed[key];
+  }
+  return facts;
+}
+
+async function manualPost(request: Request, owner: ScanOwner | null): Promise<NextResponse> {
   const declared = Number(request.headers.get("content-length"));
   if (Number.isFinite(declared) && declared > MAX_JSON_BYTES) return tooLarge();
 
@@ -180,12 +220,13 @@ async function manualPost(request: Request): Promise<NextResponse> {
   // shape check above -- an outright malformed request was never "accepted"
   // and has nothing worth a history row.
   const runId = newRunId();
+  const requestFacts = manualRequestFacts(body);
   try {
     const analysis = await analyzeManual(body);
     if (analysis.status === "manual_input_invalid") {
       return NextResponse.json({ status: analysis.status, error: analysis.error, source: "manual" }, { status: 400, headers: NO_STORE });
     }
-    return await finishAndRecord({ runId, source: "manual", analysis, request: body as Record<string, unknown> });
+    return await finishAndRecord({ runId, source: "manual", analysis, request: requestFacts, owner });
   } catch (err) {
     const analysis: ScanAnalysis = {
       schema_version: "ScanAnalysisV1",
@@ -196,7 +237,7 @@ async function manualPost(request: Request): Promise<NextResponse> {
       basis_legend: BASIS_LEGEND,
       meta: { timing_s: 0, stages: {}, provider_configured: false, models: { vision: null, text: null }, prompt_versions: {} },
     };
-    return await finishAndRecord({ runId, source: "manual", analysis, request: body as Record<string, unknown>, responseInit: { status: 500 } });
+    return await finishAndRecord({ runId, source: "manual", analysis, request: requestFacts, owner, responseInit: { status: 500 } });
   }
 }
 
@@ -208,8 +249,15 @@ export async function POST(request: Request): Promise<NextResponse> {
     );
   }
 
+  // AUTH GATE. Before the body is read, before any model call, before any
+  // history work. See the AUTHENTICATION AND OWNERSHIP note in the file header.
+  const required = scanAuthRequired();
+  const auth = await authenticateRequest(request, { tokenRequired: required, requireGoogle: required });
+  if (auth.status === "denied") return NextResponse.json(auth.body, { status: auth.http, headers: NO_STORE });
+  const owner: ScanOwner | null = auth.status === "authenticated" ? { userId: auth.user.id, email: auth.user.email } : null;
+
   const contentType = request.headers.get("content-type") ?? "";
-  if (contentType.toLowerCase().includes("application/json")) return manualPost(request);
+  if (contentType.toLowerCase().includes("application/json")) return manualPost(request, owner);
 
   if (!analyzerEnabled()) {
     return NextResponse.json(
@@ -268,6 +316,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       analysis,
       request: requestFacts,
       image: { bytes: imageBuffer, mimeType: file.type },
+      owner,
     });
   } catch (err) {
     const analysis: ScanAnalysis = {
@@ -285,6 +334,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       analysis,
       request: requestFacts,
       image: { bytes: imageBuffer, mimeType: file.type },
+      owner,
       responseInit: { status: 500 },
     });
   }

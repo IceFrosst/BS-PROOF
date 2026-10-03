@@ -18,6 +18,11 @@
  *   - scanHistorySatisfies enforces the fail-closed bar per source
  *   - the service role key is never present in a returned outcome, and the
  *     module has no route into a client bundle
+ *   - OWNERSHIP: a verified `owner` is written into the very same INSERT; an
+ *     anonymous run omits the owner columns (no fabricated owner); the insert
+ *     is a plain create (no upsert/merge), a duplicate run id is a 409 that
+ *     overwrites nothing, an image is never overwritten, and provider error
+ *     bodies are not echoed into the outcome the caller receives
  */
 import { createHash } from "node:crypto";
 import fs from "node:fs";
@@ -25,6 +30,8 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+// The constants below deliberately equal the fake Supabase helper's, so the helper's URL check accepts them.
+import { FakeSupabase, PROVIDER_FRAGMENT, USER_A, USER_B } from "./helpers/fake-supabase";
 import {
   appVersionInfo,
   newRunId,
@@ -316,6 +323,14 @@ describe("no-secret, no-browser-leakage", () => {
     }
   });
 
+  it("no server-only auth/history module has a NEXT_PUBLIC_ service-role alias or a client directive", () => {
+    for (const rel of ["lib/auth/server-auth.ts", "lib/auth/claim.ts", "lib/scan-history/reader.ts", "lib/scan-history/store.ts"]) {
+      const text = fs.readFileSync(path.join(ROOT, rel), "utf8");
+      expect(text, rel).not.toMatch(/NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY/);
+      expect(text, rel).not.toMatch(/^["']use client["']/m);
+    }
+  });
+
   it("SUPABASE_SERVICE_ROLE_KEY has no NEXT_PUBLIC_ alias anywhere in the codebase", () => {
     // Grepping is cheaper and more honest than trusting a comment: a
     // NEXT_PUBLIC_ prefixed copy of the service role key is exactly what would
@@ -325,5 +340,123 @@ describe("no-secret, no-browser-leakage", () => {
       const text = fs.readFileSync(path.join(ROOT, rel), "utf8");
       expect(text, rel).not.toMatch(/NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY/);
     }
+  });
+});
+
+describe("recordScanRun: ownership is bound at INSERT", () => {
+  const owner = { userId: USER_A, email: "alice@example.com" };
+
+  it("writes the verified owner's id and email into the same INSERT row, for a manual and a photo run", async () => {
+    configureEnv();
+    const fake = new FakeSupabase();
+    const manualId = newRunId();
+    const photoId = newRunId();
+    const m = await recordScanRun({ runId: manualId, source: "manual", status: "scored", error: null, request: {}, analysis: { ok: true }, owner }, fake.fetch);
+    const p = await recordScanRun(
+      { runId: photoId, source: "photo", status: "scored", error: null, request: {}, analysis: { ok: true }, image: { bytes: Buffer.from("x"), mimeType: "image/png" }, owner },
+      fake.fetch,
+    );
+    expect([m.status, p.status]).toEqual(["stored", "stored"]);
+    expect(fake.runs.find((r) => r.id === manualId)).toMatchObject({ user_id: USER_A, user_email: "alice@example.com" });
+    expect(fake.runs.find((r) => r.id === photoId)).toMatchObject({ user_id: USER_A, user_email: "alice@example.com", image_status: "stored" });
+    expect(fake.calls.filter((c) => c.method === "POST" && c.url.includes("/rest/v1/scan_runs"))).toHaveLength(2); // one INSERT each; no follow-up UPDATE
+  });
+
+  it("records a terminal failure status with the owner too", async () => {
+    configureEnv();
+    const fake = new FakeSupabase();
+    const id = newRunId();
+    await recordScanRun({ runId: id, source: "manual", status: "analyzer_failed", error: "boom", request: {}, analysis: { status: "analyzer_failed" }, owner }, fake.fetch);
+    expect(fake.runs[0]).toMatchObject({ id, status: "analyzer_failed", error: "boom", user_id: USER_A });
+  });
+
+  it("an anonymous run (no owner) omits the owner columns entirely: nothing is fabricated or defaulted", async () => {
+    configureEnv();
+    const fake = new FakeSupabase();
+    for (const ownerArg of [undefined, null]) {
+      await recordScanRun({ runId: newRunId(), source: "manual", status: "scored", error: null, request: {}, analysis: { ok: true }, owner: ownerArg }, fake.fetch);
+    }
+    expect(fake.runs).toHaveLength(2);
+    for (const row of fake.runs) {
+      expect("user_id" in row).toBe(false);
+      expect("user_email" in row).toBe(false);
+    }
+  });
+
+  it("the insert is a plain create: no on_conflict, no merge-duplicates; a repeated run id is a 409 that changes nothing", async () => {
+    configureEnv();
+    const fake = new FakeSupabase();
+    const id = newRunId();
+    const first = await recordScanRun({ runId: id, source: "manual", status: "scored", error: null, request: {}, analysis: { who: "A" }, owner }, fake.fetch);
+    expect(first.status).toBe("stored");
+    const second = await recordScanRun(
+      { runId: id, source: "manual", status: "scored", error: null, request: {}, analysis: { who: "B" }, owner: { userId: USER_B, email: "bob@example.com" } },
+      fake.fetch,
+    );
+    expect(second.status).toBe("failed");
+    expect(second.detail).toMatch(/scan history store returned 409/);
+    expect(fake.runs).toHaveLength(1);
+    expect(fake.runs[0]).toMatchObject({ id, user_id: USER_A, analysis: { who: "A" } }); // not overwritten, not taken over
+    for (const c of fake.calls.filter((x) => x.url.includes("/rest/v1/scan_runs"))) {
+      expect(c.method).toBe("POST");
+      expect(c.url).not.toContain("on_conflict");
+      expect(c.headers.prefer ?? "").not.toContain("merge");
+    }
+  });
+
+  it("never overwrites a stored image: the upload sends x-upsert: false", async () => {
+    configureEnv();
+    const fake = new FakeSupabase();
+    await recordScanRun(
+      { runId: newRunId(), source: "photo", status: "scored", error: null, request: {}, analysis: {}, image: { bytes: Buffer.from("x"), mimeType: "image/png" }, owner },
+      fake.fetch,
+    );
+    const upload = fake.callsTo("/storage/v1/object/")[0];
+    expect(upload.headers["x-upsert"]).toBe("false");
+  });
+
+  it("two concurrent runs by different users each keep their own owner", async () => {
+    configureEnv();
+    const fake = new FakeSupabase();
+    const ids = Array.from({ length: 6 }, () => newRunId());
+    await Promise.all(
+      ids.map((id, i) =>
+        recordScanRun(
+          { runId: id, source: "manual", status: "scored", error: null, request: {}, analysis: {}, owner: i % 2 ? { userId: USER_B, email: "bob@example.com" } : owner },
+          fake.fetch,
+        ),
+      ),
+    );
+    ids.forEach((id, i) => expect(fake.runs.find((r) => r.id === id)?.user_id).toBe(i % 2 ? USER_B : USER_A));
+  });
+
+  it("store failure: the outcome carries the status line only -- no provider error body, no key, no row data", async () => {
+    configureEnv();
+    const fake = new FakeSupabase();
+    fake.insertStatus = 500;
+    const outcome = await recordScanRun(
+      { runId: newRunId(), source: "photo", status: "scored", error: null, request: {}, analysis: {}, image: { bytes: Buffer.from("x"), mimeType: "image/png" }, owner },
+      fake.fetch,
+    );
+    expect(outcome.status).toBe("failed");
+    expect(outcome.detail).toBe("scan history store returned 500");
+    const text = JSON.stringify(outcome);
+    for (const needle of [PROVIDER_FRAGMENT, FAKE_KEY, "alice@example.com", USER_A]) expect(text).not.toContain(needle);
+    expect(fake.storage.size).toBe(0); // the orphaned image was cleaned up
+  });
+
+  it("an unreachable store never throws and never leaks the exception text", async () => {
+    configureEnv();
+    const boom = (async () => {
+      throw new Error(`connect ECONNREFUSED ${PROVIDER_FRAGMENT} ${FAKE_KEY}`);
+    }) as typeof fetch;
+    const outcome = await recordScanRun(
+      { runId: newRunId(), source: "photo", status: "scored", error: null, request: {}, analysis: {}, image: { bytes: Buffer.from("x"), mimeType: "image/png" }, owner },
+      boom,
+    );
+    expect(outcome.status).toBe("failed");
+    const text = JSON.stringify(outcome);
+    expect(text).not.toContain(PROVIDER_FRAGMENT);
+    expect(text).not.toContain(FAKE_KEY);
   });
 });

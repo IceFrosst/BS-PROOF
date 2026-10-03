@@ -38,9 +38,30 @@
  *     vocab/*.json and prompts/label.md into this function's bundle
  * Without a key, POSTs return `analyzer_unavailable` and the static site is
  * unaffected.
+ *
+ * AUTHENTICATION (2026-10-03, owner finding): this is the SAME model-spending
+ * read as `POST /api/scan` -- same `readLabel`, same DeepSeek call, same
+ * evidence rows -- so it takes the SAME gate, from the same module
+ * (`lib/auth/server-auth`). With `SCAN_REQUIRE_AUTH` on (fail-closed parse),
+ * a caller must present a bearer token that Supabase Auth itself says belongs
+ * to a Google-signed-in user; no token is a 401, no Supabase configuration is
+ * a 503 (required but unverifiable is never a pass), and both are answered
+ * BEFORE the multipart body is read and before any model, census or queue
+ * work -- a stranger can neither make the server buffer a 12 MB image nor spend
+ * a model call. With the flag off (local builds, CI, previews) an anonymous
+ * request is still served exactly as before, but a bearer token that IS
+ * presented is verified and a bad one is a 401, never a silent anonymous run.
+ * `/tester` (components/label-analyzer.tsx) signs in with the same Google card
+ * and sends the session's bearer token.
+ *
+ * What this is, honestly: identity, not a budget. Any Google account can use
+ * it (no per-user quota or allow-list -- the operator wants commission via
+ * Google login to stay open). The `GET` below calls no model and stays public,
+ * as do the static retained-run pages.
  */
 import { NextResponse } from "next/server";
 
+import { authenticateRequest, scanAuthRequired } from "@/lib/auth/server-auth";
 import { census, enqueue } from "@/lib/analyze/census";
 import { scoreProduct, availableProducts } from "@/lib/analyze/product-score";
 import { readLabel, analyzerEnabled, LabelReadError, type LabelMediaType } from "@/lib/analyze/vision";
@@ -63,6 +84,8 @@ type Json = Record<string, unknown>;
 // The census and the demand queue are shared with /api/scan (lib/analyze/census).
 
 export async function POST(request: Request): Promise<NextResponse> {
+  // Operational 503s first (no key / kill switch): they cost nothing, read no
+  // body and reveal no more than the public GET below.
   if (!analyzerEnabled()) {
     return NextResponse.json(
       {
@@ -72,6 +95,14 @@ export async function POST(request: Request): Promise<NextResponse> {
       },
       { status: 503 },
     );
+  }
+
+  // AUTH GATE. Before the body is read, before any model call. See the
+  // AUTHENTICATION note in the file header; same rules as POST /api/scan.
+  const required = scanAuthRequired();
+  const auth = await authenticateRequest(request, { tokenRequired: required, requireGoogle: required });
+  if (auth.status === "denied") {
+    return NextResponse.json(auth.body, { status: auth.http, headers: { "Cache-Control": "no-store" } });
   }
 
   let form: FormData;

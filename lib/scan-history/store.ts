@@ -22,12 +22,19 @@
  * `app/api/scan/route.ts` refuses to serve a scan whose run could not be
  * durably recorded, rather than answering with an unrecorded result.
  *
- * There is no public read path here and no signed URL is ever minted for a
- * stored image -- reading this history back is a job for someone holding the
- * service role key directly (the SQL Editor, or a future owner-only tool), not
- * this app. See docs/scan-history.sql for the table, the bucket and the RLS
- * posture (enabled, no anon policies -- identical discipline to
- * docs/waitlist.sql).
+ * OWNERSHIP IS BOUND HERE, AT INSERT, AND NOWHERE ELSE. When the caller was
+ * authenticated, `owner` (the user id/email Supabase Auth reported for the
+ * bearer token -- never anything the client sent) is written into the very
+ * same INSERT as the run, for photo, manual and terminal-failure records
+ * alike. A run recorded without an owner (an anonymous local/test run) keeps a
+ * null `user_id` forever: no code path assigns an owner to an existing row, and
+ * the insert is a plain POST with no `on_conflict`, so a repeated run id is a
+ * 409 -- it can never merge into, or take over, another row.
+ *
+ * This module only WRITES. The owner-only read path is lib/scan-history/
+ * reader.ts (which never mints a signed image URL or exposes image paths).
+ * See docs/scan-history.sql for the table, the bucket and the RLS posture
+ * (enabled, no anon policies -- identical discipline to docs/waitlist.sql).
  */
 import { createHash, randomUUID } from "node:crypto";
 
@@ -130,6 +137,15 @@ function sha256Hex(bytes: Buffer): string {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
+/** Releases a response body without reading or forwarding it. Never throws. */
+async function discard(res: Response): Promise<void> {
+  try {
+    await res.body?.cancel();
+  } catch {
+    /* nothing more to do */
+  }
+}
+
 /** Uploads the original photo to the private bucket. Never throws. */
 async function uploadImage(
   cfg: Config,
@@ -157,10 +173,12 @@ async function uploadImage(
           apikey: cfg.key,
           Authorization: `Bearer ${cfg.key}`,
           "Content-Type": mimeType,
-          // Each run id is fresh (crypto.randomUUID), so a collision would be
-          // a re-processed request, not a different image -- upsert rather
-          // than fail on it.
-          "x-upsert": "true",
+          // Each run id is fresh (crypto.randomUUID) and server-generated, so
+          // an object already at this path is NOT ours to replace: never
+          // overwrite a stored image. (A collision fails the upload -- reported
+          // honestly on the row -- instead of silently swapping someone's
+          // photo.)
+          "x-upsert": "false",
         },
         // Buffer is a Uint8Array; the DOM fetch types in this project's lib
         // do not know that, so the shape is asserted rather than converted
@@ -170,17 +188,15 @@ async function uploadImage(
       },
     );
     if (!res.ok) {
-      let body = "";
-      try {
-        body = (await res.text()).slice(0, 300);
-      } catch {
-        /* status line is enough */
-      }
-      return { ...base, status: "failed", detail: `storage upload returned ${res.status}: ${body}` };
+      // The status line only. The provider's error body is deliberately NOT
+      // echoed: this detail rides the HTTP response to the caller, and a
+      // storage/Postgres error body can name buckets, paths and columns.
+      await discard(res);
+      return { ...base, status: "failed", detail: `storage upload returned ${res.status}` };
     }
     return { ...base, status: "stored", path };
-  } catch (err) {
-    return { ...base, status: "failed", detail: `could not reach storage: ${String(err)}` };
+  } catch {
+    return { ...base, status: "failed", detail: "could not reach storage" };
   }
 }
 
@@ -204,6 +220,11 @@ interface InsertResult {
   detail?: string;
 }
 
+/**
+ * A PLAIN insert, on purpose: no `on_conflict`, no `resolution=merge-duplicates`.
+ * A repeated run id is a 409, never a merge -- so one request can neither
+ * overwrite a stored run nor change who owns it.
+ */
 async function insertRun(cfg: Config, row: Record<string, unknown>, fetchFn: typeof fetch): Promise<InsertResult> {
   try {
     const res = await fetchFn(`${cfg.url}/rest/v1/${TABLE}`, {
@@ -218,16 +239,23 @@ async function insertRun(cfg: Config, row: Record<string, unknown>, fetchFn: typ
       signal: AbortSignal.timeout(10_000),
     });
     if (res.ok) return { ok: true };
-    let body = "";
-    try {
-      body = (await res.text()).slice(0, 400);
-    } catch {
-      /* status line is enough */
-    }
-    return { ok: false, detail: `scan history store returned ${res.status}: ${body}` };
-  } catch (err) {
-    return { ok: false, detail: `could not reach the scan history store: ${String(err)}` };
+    // Status line only -- never the provider's error body. A PostgREST/Postgres
+    // error can quote the whole failing row (analysis, owner email...), and this
+    // detail is returned to the caller on the HTTP response.
+    await discard(res);
+    return { ok: false, detail: `scan history store returned ${res.status}` };
+  } catch {
+    return { ok: false, detail: "could not reach the scan history store" };
   }
+}
+
+/**
+ * Who a run belongs to. ONLY ever built from a Supabase-verified user (see
+ * lib/auth/server-auth.ts) -- never from a request body, header or form field.
+ */
+export interface ScanOwner {
+  userId: string;
+  email: string | null;
 }
 
 export interface RecordScanRunInput {
@@ -242,6 +270,12 @@ export interface RecordScanRunInput {
   analysis: unknown;
   /** Present on the photo path only. */
   image?: { bytes: Buffer; mimeType: string } | null;
+  /**
+   * The verified owner, written at INSERT. Null/absent for an anonymous run
+   * (only possible while SCAN_REQUIRE_AUTH is off); the row then keeps a null
+   * `user_id`. Never fabricated and never defaulted.
+   */
+  owner?: ScanOwner | null;
 }
 
 /**
@@ -293,6 +327,9 @@ export async function recordScanRun(
     image_bytes: image.bytes,
     image_sha256: image.sha256,
     image_status: image.status,
+    // Only when authenticated: an unowned row simply omits the columns, so the
+    // insert also works against a project provisioned before the owner columns.
+    ...(input.owner ? { user_id: input.owner.userId, user_email: input.owner.email } : {}),
   };
 
   const insert = await insertRun(cfg, row, fetchFn);

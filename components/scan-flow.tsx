@@ -16,21 +16,41 @@
  *     its overlay), shutter, upload link.
  *   - staged: the photo and "Scan this label" / Retake / Choose another.
  *   - loading: a progress panel (dimmed thumbnail, stage list with the current
- *     step marked, indeterminate bar). The Google "Save your result" card is
- *     the ONE call to action in it when sign-in is configured. Nothing is
- *     rendered disabled -- a greyed "Scanning…" pill read as broken.
+ *     step marked, indeterminate bar). Nothing is rendered disabled -- a greyed
+ *     "Scanning…" pill read as broken.
  *   - result / error: the capture chrome is GONE. A compact scanned-product
  *     header (thumbnail or a typed chip, name, "Scan another") sits at the
  *     top, the report follows, and focus + scroll move to it (instant under
  *     prefers-reduced-motion). Previously the result rendered under the
  *     staged photo with no transition and people concluded nothing happened.
  *
- * Camera, search sheet and sign-in behaviour are unchanged from the 2026-09-16
- * camera-first redesign: <ScanCamera> runs whenever nothing is staged and no
- * result is shown; the `capture="environment"` and plain file inputs stay
- * mounted at all times as the fallback path; `useSupabaseSession` gates the
- * "Save your result" card and the blurred/inert result lock; `/api/scan/claim`
- * is called the moment both a session and a `run_id` exist.
+ * Camera and search sheet are unchanged from the 2026-09-16 camera-first
+ * redesign: <ScanCamera> runs whenever nothing is staged, no result is shown
+ * and the Scan tab is the visible one; the `capture="environment"` and plain
+ * file inputs stay mounted at all times as the fallback path.
+ *
+ * SIGN-IN IS THE GATE WHERE IT IS CONFIGURED (2026-09-23, founder: real results
+ * depend on a Google login; supersedes the 2026-09-16 "Save your result" nudge,
+ * the blurred result lock and the late `/api/scan/claim`, all removed). With
+ * NEXT_PUBLIC_SUPABASE_URL / _ANON_KEY / _GOOGLE_CLIENT_ID all set:
+ *   - nobody signed in: a photo can still be staged, but "Scan this label" and
+ *     the search form are replaced by a Google sign-in card and NO request is
+ *     sent; while a returning session is still being read a neutral "checking"
+ *     line shows -- never the card and never an unlocked screen;
+ *   - signed in: every `/api/scan` request carries `Authorization: Bearer
+ *     <current access token>`, the server binds the run to that user, and the
+ *     result says whether it was actually stored to History;
+ *   - sign-out / expiry / another Google account: the in-flight request is
+ *     aborted, a late answer is discarded, and the held result is removed --
+ *     the next person is never shown the previous person's scan.
+ * With any of the three missing the flow is exactly what it always was (no
+ * header, no gate) so local and CI runs need no Google project. The UI gate is
+ * a convenience; the server (SCAN_REQUIRE_AUTH=1) is what actually refuses an
+ * unauthenticated request.
+ *
+ * REPLAY. `initialResult` renders a scan from the History tab through this very
+ * component -- same Evidence Ledger card, same tabs -- with no request at all,
+ * dated "Saved scan from ..." so it is never mistaken for fresh research.
  *
  * Rules this component keeps, all from CLAUDE.md:
  *
@@ -49,14 +69,15 @@
  *    the `user_input` badge; it never shows a read confidence, quoted spans or a
  *    vision model, because none exist. The server says which path ran
  *    (`source`) and the UI keys off that, not off which button was pressed.
- * 6. Sign-in never gates the SCORE: the composite, arcs and dose bands are
- *    computed and held in state identically whether or not the result is
- *    currently visible.
+ * 6. Sign-in gates the REQUEST, never the arithmetic: no composite, arc or dose
+ *    band is ever computed, hidden or revealed client-side. Where sign-in is
+ *    required a result simply does not exist until the server produced it for
+ *    a signed-in owner.
  */
 
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 
-import { SaveResultCard } from "@/components/google-sign-in";
+import { SignInCard } from "@/components/google-sign-in";
 import { ScanCamera } from "@/components/scan-camera";
 import { SearchSheet } from "@/components/search-sheet";
 import { SupplementSearch } from "@/components/supplement-search";
@@ -66,7 +87,7 @@ import { literatureDisclosures } from "@/lib/analyze/literature-disclosures";
 import type { ManualScanInput, ScanAnalysis } from "@/lib/analyze/scan";
 import { auditPlainEntry, auditPlainText } from "@/lib/evidence-ledger/plain";
 import { ledgerFromAudit, score as ledgerScore, type AuditOutcome, type RetainedLedgerAudit } from "@/lib/evidence-ledger";
-import { useSupabaseSession } from "@/lib/auth/use-supabase-session";
+import { useSupabaseSession, type AuthSession } from "@/lib/auth/use-supabase-session";
 
 type Basis = keyof ScanAnalysis["basis_legend"];
 type NullableNumber = number | null;
@@ -127,6 +148,15 @@ function populationLine(pop: Record<string, string | null> | null | undefined): 
   return parts.length ? parts.join(", ") : pop.id ? words(pop.id) : null;
 }
 
+/*
+ * ID SCOPE. A saved scan opened from the History tab is rendered by this same
+ * component while the Scan tab's own (hidden) result is still mounted, so the
+ * element ids inside a result must be unique per <ScanFlow> instance or
+ * aria-controls / aria-labelledby would resolve to the other result's elements.
+ * Every id a result renders is prefixed with the instance's useId() value.
+ */
+const ScanIdScope = createContext("");
+
 /** One deterministic, shared ID format for every outcome tab and its panel label. */
 function tabId(key: string): string {
   const safe = key.replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").toLowerCase();
@@ -157,9 +187,10 @@ function Section({
   legend: ScanAnalysis["basis_legend"];
   children: React.ReactNode;
 }) {
+  const scope = useContext(ScanIdScope);
   return (
-    <details className="scan-section scan-lab-disclosure" id={`scan-${id}`}>
-      <summary className="scan-section-head" id={`scan-${id}-title`}>
+    <details className="scan-section scan-lab-disclosure" id={`${scope}scan-${id}`}>
+      <summary className="scan-section-head" id={`${scope}scan-${id}-title`}>
         <h3>{title}</h3>
         <div className="scan-badges" aria-label="Sources used in this section">
           {basis.map((b) => <BasisBadge key={b} kind={b} legend={legend} />)}
@@ -291,13 +322,14 @@ function AuditSourceList({ outcome }: { outcome: AuditOutcome }) {
  * field-notebook card in app/design-lab/ab. The scan only supplies real audit
  * values; it does not reuse the older report's .sc-* visual grammar. */
 function LabDimension({ id, label, value, word, fill, open, onToggle, children }: { id: string; label: string; value: string; word: string; fill: number | null; open: boolean; onToggle: () => void; children: ReactNode }) {
+  const scope = useContext(ScanIdScope);
   return <li className={open ? "open" : ""} data-row-id={id}>
-    <button type="button" aria-expanded={open} aria-controls={`ab-scan-${id}`} onClick={onToggle}>
+    <button type="button" aria-expanded={open} aria-controls={`${scope}ab-scan-${id}`} onClick={onToggle}>
       <span className="ab-bar-name">{label}</span><span className="ab-bar-word">{word}</span><span className="ab-bar-pts">{value}</span>
       <span className="ab-chev" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 6l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg></span>
       <span className={`ab-bar-track ${fill === null ? "hatch" : "fill"}`}>{fill !== null ? <i style={{ width: `${Math.max(0, Math.min(100, fill * 100))}%`, background: "var(--ab-accent)" }} /> : null}</span>
     </button>
-    {open ? <div id={`ab-scan-${id}`} className="ab-bar-detail">{children}</div> : null}
+    {open ? <div id={`${scope}ab-scan-${id}`} className="ab-bar-detail">{children}</div> : null}
   </li>;
 }
 
@@ -315,6 +347,7 @@ function LabTabs({ audit, unmatchedRows, population, emptyState, validity, warni
   const [active, setActive] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>(null);
   const refs = useRef<Array<HTMLButtonElement | null>>([]);
+  const scope = useContext(ScanIdScope);
   const matched = Boolean(audit);
   const outcomes = matched ? audit!.audit.outcomes.map((o) => ({ key: `${o.name}||${o.population ?? ""}`, name: o.name, population: o.population })) : (unmatchedRows ?? []).map((r) => ({ key: `unmatched:${r.outcome}||${r.outcome_label ?? words(r.outcome)}`, name: r.outcome_label ?? words(r.outcome), population: undefined }));
   const keys = ["__general", ...outcomes.map((o) => o.key)];
@@ -326,7 +359,7 @@ function LabTabs({ audit, unmatchedRows, population, emptyState, validity, warni
     const next = event.key === "Home" ? 0 : event.key === "End" ? keys.length - 1 : (index + (event.key === "ArrowRight" ? 1 : -1) + keys.length) % keys.length;
     select(keys[next]); refs.current[next]?.focus();
   };
-  const tabIdFor = (key: string) => `ab-scan-tab-${tabId(`${matched ? "matched" : "unmatched"}:${key}`)}`;
+  const tabIdFor = (key: string) => `${scope}ab-scan-tab-${tabId(`${matched ? "matched" : "unmatched"}:${key}`)}`;
   const scores = matched ? audit!.audit.outcomes.map((o) => ledgerScore(ledgerFromAudit(o))) : [];
   const numbers = scores.map((s) => s.headline).filter((n): n is number => n !== null);
   const general = numbers.length ? Math.round(numbers.reduce((a, b) => a + b, 0) / numbers.length) : null;
@@ -353,7 +386,7 @@ function LabTabs({ audit, unmatchedRows, population, emptyState, validity, warni
   };
   const renderUnmatched = (outcome: { key: string; name: string }) => <><div className="ab-headline muted"><div className="ab-number"><strong>—</strong></div><div><h2>{outcome.name}</h2><p>Not assessed</p>{population && <p className="ab-pop"><b>Population</b> {populationLine(population)}</p>}</div></div><LabWarnings count={warningCount}>{warnings}</LabWarnings><ul className="ab-bars">{(["effect", "evidence", "form", "dose"] as const).map((id) => <LabDimension key={id} id={id} label={id === "evidence" ? "Evidence" : id.charAt(0).toUpperCase() + id.slice(1)} value="—" word="Not assessed" fill={null} open={open === `${outcome.key}:${id}`} onToggle={() => setOpen(open === `${outcome.key}:${id}` ? null : `${outcome.key}:${id}`)}><p>No source-verified /4 audit matches this exact form and daily dose.</p><DetailLine term="Status">Not assessed. The old continuous result was not converted into quarters.</DetailLine></LabDimension>)}</ul></>;
   const panel = current ? (matched ? renderMatched(audit!.audit.outcomes.find((o) => `${o.name}||${o.population ?? ""}` === current.key)!) : renderUnmatched(current)) : <><LabWarnings count={warningCount}>{warnings}</LabWarnings><div className="ab-listhead"><div className="ab-general" style={{ "--ab-score-color": scoreSignalColor(general, generalSignal) } as CSSProperties}><strong className="ab-general-score">{general ?? "—"}</strong><span className="ab-general-name">General score<small>{matched ? `Average of ${numbers.length} outcome score${numbers.length === 1 ? "" : "s"}` : "Not assessed"}</small></span></div><h2>Outcomes</h2>{!matched && <p className="ab-stamp">{outcomes.length ? "No source-verified /4 audit matches this exact form and daily dose. The old continuous result was not converted into quarters." : emptyState?.title ?? "No retained audit outcomes are available."}</p>}{!matched && !outcomes.length && <p className="ab-pop">{emptyState?.description ?? "This is not a low score — it is no data."}</p>}</div><ul className="ab-bars outcomes">{outcomes.map((o, index) => { const score = scores[index]; const value = score?.headline ?? null; return <li key={o.key}><button type="button" onClick={() => select(o.key)}><span className="ab-bar-name">{o.name}{o.population && <small>{o.population}</small>}</span><span className="ab-bar-pts" style={value === null ? undefined : { color: scoreSignalColor(value, score!.certainty / 4, "text") }}>{value ?? "—"}</span><span className="ab-chev go" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 6l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.8" /></svg></span><span className={`ab-bar-track ${value === null ? "hatch" : "fill"}`}><i style={{ width: `${value ?? 0}%`, background: value === null ? undefined : scoreSignalColor(value, score!.certainty / 4) }} /></span></button></li>; })}</ul></>;
-  return <><div className="ab-tabs" role="tablist" aria-label="Outcome"><button id={tabIdFor("__general")} ref={(n) => { refs.current[0] = n; }} role="tab" aria-selected={active === null} aria-controls="ab-scan-tabpanel" tabIndex={active === null ? 0 : -1} onKeyDown={(e) => onKey(e, 0)} onClick={() => select("__general")}>Outcomes</button>{outcomes.map((o, i) => <button key={o.key} id={tabIdFor(o.key)} ref={(n) => { refs.current[i + 1] = n; }} role="tab" aria-selected={active === o.key} aria-controls="ab-scan-tabpanel" tabIndex={active === o.key ? 0 : -1} onKeyDown={(e) => onKey(e, i + 1)} onClick={() => select(o.key)}>{o.name}</button>)}</div><section className="ab-card scan-lab-card" aria-label="Outcome results"><LabValidity audit={audit} validity={validity} /><div id="ab-scan-tabpanel" role="tabpanel" tabIndex={-1} aria-labelledby={tabIdFor(active ?? "__general")}>{panel}</div></section></>;
+  return <><div className="ab-tabs" role="tablist" aria-label="Outcome"><button id={tabIdFor("__general")} ref={(n) => { refs.current[0] = n; }} role="tab" aria-selected={active === null} aria-controls={`${scope}ab-scan-tabpanel`} tabIndex={active === null ? 0 : -1} onKeyDown={(e) => onKey(e, 0)} onClick={() => select("__general")}>Outcomes</button>{outcomes.map((o, i) => <button key={o.key} id={tabIdFor(o.key)} ref={(n) => { refs.current[i + 1] = n; }} role="tab" aria-selected={active === o.key} aria-controls={`${scope}ab-scan-tabpanel`} tabIndex={active === o.key ? 0 : -1} onKeyDown={(e) => onKey(e, i + 1)} onClick={() => select(o.key)}>{o.name}</button>)}</div><section className="ab-card scan-lab-card" aria-label="Outcome results"><LabValidity audit={audit} validity={validity} /><div id={`${scope}ab-scan-tabpanel`} role="tabpanel" tabIndex={-1} aria-labelledby={tabIdFor(active ?? "__general")}>{panel}</div></section></>;
 }
 
 /* The legacy continuous renderer was intentionally removed from the public UI.
@@ -413,22 +446,169 @@ function Facts({ rows }: { rows: Array<[string, React.ReactNode]> }) {
   );
 }
 
-export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
+/** A scan that was saved to the signed-in person's history and is being shown again. */
+export interface SavedScanResult {
+  runId: string;
+  /** ISO time the run was saved (the history list's `created_at`), when known. */
+  savedAt: string | null;
+  analysis: ScanAnalysis;
+}
+
+export interface ScanFlowProps {
+  catalog: CatalogIngredient[];
+  /**
+   * The workspace's shared session. Omit it when <ScanFlow> is rendered on its
+   * own and it reads the session itself.
+   */
+  auth?: AuthSession;
+  /**
+   * False while the Scan tab is hidden behind History: the camera stops and a
+   * finished result does not pull focus. Default true.
+   */
+  active?: boolean;
+  /**
+   * A saved scan to show INSTEAD of the capture flow -- the History tab's replay.
+   * The same renderer draws it and NO request is made. Read once at mount; give
+   * <ScanFlow> a new `key` to show another. Must be mounted by someone who is
+   * signed in as the owner (it is hidden the moment the signed-in person changes).
+   */
+  initialResult?: SavedScanResult;
+  /** Replay only: what the back control does (it replaces "Scan another"). */
+  onLeave?: () => void;
+  /** A new scan finished AND the server reports it stored, so History is now out of date. */
+  onScanStored?: (info: { runId: string }) => void;
+}
+
+/** What one request left behind, stamped with whose it is. */
+interface Outcome {
+  owner: string | null;
+  data: ScanAnalysis | null;
+  error: string | null;
+}
+
+/** The stand-in owner on a deployment with no sign-in configured. */
+const LOCAL_OWNER = "local";
+const SESSION_ENDED = "Your session ended. Sign in again to continue.";
+const SIGNED_OUT_CLEARED = "You signed out, so the last result was cleared from this screen.";
+const SIGNED_OUT_STOPPED = "You signed out, so the scan in progress was stopped.";
+
+/**
+ * Responses from `POST /api/scan` that are refusals, not analyses, and the
+ * words a person sees for each. `scan_history_required_*` only exist when the
+ * deployment turns durable history on (SCAN_HISTORY_REQUIRED=1): the first means
+ * the scan ran but could not be recorded, the second that it was refused before
+ * any model call because history storage is not configured. Neither is the
+ * person's fault, and neither says which setting to fix. `payload_too_large`
+ * (HTTP 413) is the typed-entry size wall; its server text only describes a
+ * typed entry, which is wrong advice for a photo, so it is replaced too.
+ */
+const SERVER_REFUSALS: Record<string, (json: { error?: string }) => string> = {
+  scan_history_required_failed: () =>
+    "The scan finished, but this site could not save it, and it only shows results it can save. Nothing is wrong with your photo or your account. Please try again in a few minutes.",
+  scan_history_required_unavailable: () =>
+    "Scanning is paused because saving results is not working on this site right now. Nothing was scanned and nothing is wrong with your photo or your account. Please try again later.",
+  payload_too_large: () => "That request is too large for this site. Use a smaller photo, or a shorter typed entry, and try again.",
+};
+
+/** "3 Mar 2026, 14:05" in the person's own locale; null when the value is not a date. */
+export function formatSavedAt(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+}
+
+export function ScanFlow({ catalog, auth: sharedAuth, active = true, initialResult, onLeave, onScanStored }: ScanFlowProps) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState(0);
   const [stages, setStages] = useState<string[]>(PHOTO_STAGES);
-  const [data, setData] = useState<ScanAnalysis | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [cameraUnavailable, setCameraUnavailable] = useState(false);
+  const [authNotice, setAuthNotice] = useState<string | null>(null);
 
-  const auth = useSupabaseSession();
-  const claimedRuns = useRef<Set<string>>(new Set());
-  const resultTopRef = useRef<HTMLDivElement | null>(null);
+  const ownAuth = useSupabaseSession({ skip: Boolean(sharedAuth) });
+  const auth = sharedAuth ?? ownAuth;
+  const { getAccessToken, signOut } = auth;
+  const authConfigured = auth.configured;
+  const replay = initialResult !== undefined;
+  const idScope = `${useId()}-`;
+
+  // WHOSE SCREEN IS THIS. Everything a request returns is stamped with the
+  // owner it was made for, and only the CURRENT owner's outcome is ever drawn.
+  // `ownerKey` is null while a returning session is still being read and once
+  // nobody is signed in; on a deployment with no sign-in it is one fixed owner.
+  // Deriving visibility from the stamp (rather than clearing in an effect) means
+  // there is no render, however brief, in which the previous person's result is
+  // on screen for the next one.
+  const ownerKey: string | null = !auth.configured ? LOCAL_OWNER : auth.loading ? null : auth.userId;
+  const gate: "open" | "checking" | "signin" = !auth.configured ? "open" : auth.loading ? "checking" : auth.userId ? "open" : "signin";
+
+  const [outcome, setOutcome] = useState<Outcome | null>(() => (initialResult ? { owner: ownerKey, data: initialResult.analysis, error: null } : null));
+  const [pending, setPending] = useState<{ id: number; owner: string | null } | null>(null);
+  const requestRef = useRef<{ id: number; controller: AbortController } | null>(null);
+  const requestSeq = useRef(0);
+  const onScanStoredRef = useRef(onScanStored);
+  const activeRef = useRef(active);
+  const resultTopRef = useRef<HTMLElement | null>(null);
+  const setResultTop = useCallback((node: HTMLElement | null) => {
+    resultTopRef.current = node;
+  }, []);
   const [heroImage, setHeroImage] = useState<"idle" | "loaded" | "error">("idle");
+
+  // Sign-out or an account switch REVOKES what the previous person had here --
+  // their result, their request in flight, and the photo that was being scanned
+  // or shown -- rather than merely hiding it, and says why when they signed out.
+  // A photo that was only staged (never sent) is kept: it is still the visitor's
+  // own, and sign-in is exactly what unblocks it. (Adjusting state while
+  // rendering is React's supported way to reset state when an input changes.)
+  const leftOutcome = outcome !== null && outcome.owner !== ownerKey;
+  const leftRequest = pending !== null && pending.owner !== ownerKey;
+  if (leftOutcome || leftRequest) {
+    setOutcome(null);
+    setPending(null);
+    setFile(null);
+    setHeroImage("idle");
+    setPreview((old) => {
+      if (old) URL.revokeObjectURL(old);
+      return null;
+    });
+    if (ownerKey === null && !auth.loading) {
+      const had = leftOutcome && (outcome?.data || outcome?.error) && outcome.owner !== LOCAL_OWNER;
+      if (had) setAuthNotice((n) => n ?? SIGNED_OUT_CLEARED);
+      else if (leftRequest) setAuthNotice((n) => n ?? SIGNED_OUT_STOPPED);
+    }
+  }
+
+  // A notice explains why the sign-in card is showing; entering the open gate
+  // (a successful sign-in) retires it. Not "while open": the session-ended
+  // notice is set a beat BEFORE the gate closes.
+  const [lastGate, setLastGate] = useState(gate);
+  if (lastGate !== gate) {
+    setLastGate(gate);
+    if (gate === "open") setAuthNotice(null);
+  }
+
+  const data = outcome && outcome.owner === ownerKey ? outcome.data : null;
+  const error = outcome && outcome.owner === ownerKey ? outcome.error : null;
+  const busy = pending !== null && pending.owner === ownerKey;
+
+  useEffect(() => {
+    onScanStoredRef.current = onScanStored;
+    activeRef.current = active;
+  });
+
+  const cancelRequest = useCallback(() => {
+    const running = requestRef.current;
+    requestRef.current = null;
+    running?.controller.abort();
+  }, []);
+
+  // A request belongs to the person who started it: when the signed-in person
+  // changes (sign-out, expiry, another Google account) or the page unmounts,
+  // abort it. Its late answer is also discarded by the `isCurrent()` checks.
+  useEffect(() => cancelRequest, [ownerKey, cancelRequest]);
 
   useEffect(() => {
     if (!busy) return;
@@ -442,10 +622,11 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
 
   // The result is its own state: the instant an answer (or an error) lands,
   // scroll its header into view and move focus there, so the change of state
-  // is unmistakable on a phone. Reduced-motion users get an instant jump.
+  // is unmistakable on a phone. Reduced-motion users get an instant jump. A
+  // result that lands while the Scan tab is hidden does not pull focus.
   const finished = !busy && (data !== null || error !== null);
   useEffect(() => {
-    if (!finished) return;
+    if (!finished || !activeRef.current) return;
     const el = resultTopRef.current;
     if (!el || typeof window === "undefined") return;
     const reduce = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -453,39 +634,23 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
     el.focus({ preventScroll: true });
   }, [finished, data, error]);
 
-  // Claim the run for the signed-in user the instant BOTH a session and a
-  // run id exist, whichever arrives second: right after sign-in (if a result
-  // with a run_id already arrived) or right after a result arrives (if
-  // already signed in).
-  useEffect(() => {
-    if (!auth.configured || !auth.email || !auth.accessToken) return;
-    const runId = data?.run_id;
-    if (!runId || claimedRuns.current.has(runId)) return;
-    claimedRuns.current.add(runId);
-    void fetch("/api/scan/claim", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${auth.accessToken}` },
-      body: JSON.stringify({ run_id: runId }),
-    }).catch(() => {
-      // Best effort -- claiming never affects what the person already sees.
-    });
-  }, [auth.configured, auth.email, auth.accessToken, data?.run_id]);
-
-  const stageFile = useCallback((picked: File) => {
-    if (picked.size > MAX_BYTES) {
-      setError(`That image is ${(picked.size / 1e6).toFixed(1)} MB. The limit is 12 MB.`);
-      return;
-    }
-    setError(null);
-    setData(null);
-    setHeroImage("idle");
-    setFile(picked);
-    setSearchOpen(false);
-    setPreview((old) => {
-      if (old) URL.revokeObjectURL(old);
-      return URL.createObjectURL(picked);
-    });
-  }, []);
+  const stageFile = useCallback(
+    (picked: File) => {
+      if (picked.size > MAX_BYTES) {
+        setOutcome({ owner: ownerKey, data: null, error: `That image is ${(picked.size / 1e6).toFixed(1)} MB. The limit is 12 MB.` });
+        return;
+      }
+      setOutcome(null);
+      setHeroImage("idle");
+      setFile(picked);
+      setSearchOpen(false);
+      setPreview((old) => {
+        if (old) URL.revokeObjectURL(old);
+        return URL.createObjectURL(picked);
+      });
+    },
+    [ownerKey],
+  );
 
   const pick = useCallback(
     (files: FileList | null) => {
@@ -507,71 +672,140 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
   // "Scan another": back to the landing state. Clearing the staged file is
   // what restarts the viewfinder.
   const reset = useCallback(() => {
-    setData(null);
-    setError(null);
+    setOutcome(null);
     clearFile();
   }, [clearFile]);
 
-  const receive = useCallback(async (res: Response) => {
-    const json = (await res.json()) as ScanAnalysis & { error?: string };
-    if (!res.ok && !json.status) {
-      setError(json.error ?? `Request failed (${res.status}).`);
-      return;
-    }
-    setData(json);
-    if (
-      json.status === "label_unreadable" ||
-      json.status === "analyzer_failed" ||
-      json.status === "bad_request" ||
-      json.status === "manual_input_invalid"
-    ) {
-      setError(json.error ?? "The analysis could not run.");
-    }
-  }, []);
+  /*
+   * ONE scan request, for the photo and the typed path alike.
+   *
+   *  - It never starts unless the gate is open: where sign-in is configured a
+   *    live Supabase session must exist first, and the request carries that
+   *    session's CURRENT access token (re-read now, not the render-time
+   *    snapshot, so an hourly refresh is picked up).
+   *  - If the API answers 401 the token is refreshed once and the request is
+   *    retried once (the server rejects before any model work, so this costs
+   *    nothing); a second 401 ends the session on screen instead of looping.
+   *  - Whatever comes back is applied only if this is still the live request
+   *    for the same owner.
+   */
+  const runScan = useCallback(
+    async (stagesForRun: string[], send: (headers: Record<string, string>, signal: AbortSignal) => Promise<Response>) => {
+      if (replay || busy || gate !== "open" || ownerKey === null) return;
+      const owner = ownerKey;
+      cancelRequest();
+      const id = ++requestSeq.current;
+      const controller = new AbortController();
+      requestRef.current = { id, controller };
+      const isCurrent = () => requestRef.current?.id === id;
+      setOutcome(null);
+      setAuthNotice(null);
+      setStages(stagesForRun);
+      setStage(0);
+      setPending({ id, owner });
+
+      const endSession = () => {
+        // Stop "scanning" first so the sign-out that follows reads as an expiry
+        // (the photo stays staged), not as a request abandoned mid-flight.
+        setPending(null);
+        setAuthNotice(SESSION_ENDED);
+        void signOut();
+      };
+      const authorize = async (forceRefresh: boolean): Promise<Record<string, string> | null> => {
+        if (!authConfigured) return {};
+        const token = await getAccessToken({ userId: owner, forceRefresh });
+        return token ? { Authorization: `Bearer ${token}` } : null;
+      };
+
+      try {
+        const headers = await authorize(false);
+        if (!isCurrent()) return;
+        if (!headers) {
+          endSession();
+          return;
+        }
+        let res = await send(headers, controller.signal);
+        if (!isCurrent()) return;
+        if (res.status === 401 && authConfigured) {
+          const retryHeaders = await authorize(true);
+          if (!isCurrent()) return;
+          if (!retryHeaders || retryHeaders.Authorization === headers.Authorization) {
+            endSession();
+            return;
+          }
+          res = await send(retryHeaders, controller.signal);
+          if (!isCurrent()) return;
+          if (res.status === 401) {
+            endSession();
+            return;
+          }
+        }
+        const json = (await res.json()) as ScanAnalysis & { error?: string };
+        if (!isCurrent()) return;
+        if (json.status === "unauthorized" || res.status === 401) {
+          setOutcome({ owner, data: null, error: "This page is not set up to sign in, but scanning here needs a signed-in account. Try again later." });
+          return;
+        }
+        if (json.status === "auth_unavailable") {
+          setOutcome({ owner, data: null, error: "Sign-in is unavailable right now, so this scan could not run. Try again in a few minutes." });
+          return;
+        }
+        if (!res.ok && !json.status) {
+          setOutcome({ owner, data: null, error: json.error ?? `Request failed (${res.status}).` });
+          return;
+        }
+        // The server's own refusals that carry no analysis. Each one gets WORDS
+        // and an action (a blank "Result" card with a "!" is a bug); the
+        // history ones use fixed text because the server's detail names
+        // deployment settings a visitor can do nothing about.
+        const refusal = Object.prototype.hasOwnProperty.call(SERVER_REFUSALS, json.status) ? SERVER_REFUSALS[json.status] : undefined;
+        if (refusal) {
+          setOutcome({ owner, data: json, error: refusal(json) });
+          return;
+        }
+        const failed =
+          json.status === "label_unreadable" ||
+          json.status === "analyzer_failed" ||
+          json.status === "bad_request" ||
+          json.status === "manual_input_invalid";
+        setOutcome({ owner, data: json, error: failed ? (json.error ?? "The analysis could not run.") : null });
+        if (json.persistence?.status === "stored" && json.run_id) onScanStoredRef.current?.({ runId: json.run_id });
+      } catch (err) {
+        if (!isCurrent()) return;
+        setOutcome({ owner, data: null, error: `Could not reach the analyzer: ${String(err)}` });
+      } finally {
+        if (requestRef.current?.id === id) requestRef.current = null;
+        setPending((p) => (p?.id === id ? null : p));
+      }
+    },
+    [replay, busy, gate, ownerKey, authConfigured, getAccessToken, signOut, cancelRequest],
+  );
 
   const submitPhoto = useCallback(async () => {
-    if (!file || busy) return;
-    setError(null);
-    setData(null);
-    setStages(PHOTO_STAGES);
-    setStage(0);
-    setBusy(true);
-    try {
+    if (!file) return;
+    const picked = file;
+    await runScan(PHOTO_STAGES, (headers, signal) => {
       const body = new FormData();
-      body.append("image", file);
-      await receive(await fetch("/api/scan", { method: "POST", body }));
-    } catch (err) {
-      setError(`Could not reach the analyzer: ${String(err)}`);
-    } finally {
-      setBusy(false);
-    }
-  }, [file, busy, receive]);
+      body.append("image", picked);
+      return fetch("/api/scan", { method: "POST", headers, body, signal });
+    });
+  }, [file, runScan]);
 
   const submitManual = useCallback(
     async (input: ManualScanInput) => {
-      if (busy) return;
-      setError(null);
-      setData(null);
+      if (replay || busy || gate !== "open") return;
       clearFile();
       setSearchOpen(false);
-      setStages(MANUAL_STAGES);
-      setStage(0);
-      setBusy(true);
-      try {
-        await receive(
-          await fetch("/api/scan", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ source: "manual", ...input }),
-          }),
-        );
-      } catch (err) {
-        setError(`Could not reach the analyzer: ${String(err)}`);
-      } finally {
-        setBusy(false);
-      }
+      await runScan(MANUAL_STAGES, (headers, signal) =>
+        fetch("/api/scan", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...headers },
+          body: JSON.stringify({ source: "manual", ...input }),
+          signal,
+        }),
+      );
     },
-    [busy, receive, clearFile],
+    [replay, busy, gate, runScan, clearFile],
   );
 
   const legend = data?.basis_legend;
@@ -590,14 +824,21 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
   const company = data?.company;
   const factsBasis: Basis = typed ? "user_input" : "label";
 
-  // Sign-in gate. `locked` only ever becomes true once we know for sure
-  // sign-in is configured AND we have finished checking for an existing
-  // session AND there is none -- never during the brief `loading` window,
-  // so a returning signed-in visitor never sees a flash of the lock.
-  const locked = auth.configured && !auth.loading && !auth.email;
-  const showSaveCard = auth.configured && !auth.loading && !auth.email;
-
   const showingResult = finished;
+  const leave = replay ? (onLeave ?? (() => undefined)) : reset;
+  const leaveLabel = replay ? "Back to history" : "Scan another";
+  const savedAtLabel = replay ? formatSavedAt(initialResult?.savedAt ?? initialResult?.analysis.analyzed_at) : null;
+  // Say only what the server reported. A signed-in scan is "saved" only when
+  // the run row was actually stored; a failure is shown as one, not hidden.
+  const persistenceStatus = data?.persistence?.status;
+  const persistenceNote =
+    !authConfigured || !persistenceStatus
+      ? null
+      : persistenceStatus === "stored"
+        ? "Saved to your history."
+        : persistenceStatus === "unavailable"
+          ? "History is unavailable right now, so this result was not saved."
+          : "Saving this result to your history failed. It will not appear in History.";
   const staged = Boolean(file && preview);
   const labResult = Boolean(data && !error && legend);
 
@@ -647,8 +888,9 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
   const warningCount = (data?.caveats?.length ?? 0) + disclosures.length + (mlm ? 1 : 0) + auditWarnings.length;
 
   return (
-    <section className="la scan sc" aria-label="Scan a supplement">
-      {!busy && !showingResult ? (
+    <ScanIdScope.Provider value={idScope}>
+    <section className="la scan sc" aria-label={replay ? "Saved scan" : "Scan a supplement"}>
+      {!replay && !busy && !showingResult ? (
         <button type="button" className="sc-search-cta" onClick={() => setSearchOpen(true)}>
           Search your supplement
         </button>
@@ -658,10 +900,14 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
           camera. Kept mounted at all times -- this is the fallback path
           that must remain when getUserMedia is unavailable/denied/an
           insecure context, so nothing regresses. */}
-      <input type="file" accept="image/*" capture="environment" className="la-input" id="scan-capture" aria-label="Photograph the label with the camera" disabled={busy} onChange={(e) => pick(e.target.files)} />
-      <input type="file" accept={ACCEPTED_TYPES} className="la-input" id="scan-file" aria-label="Choose an image of the label" disabled={busy} onChange={(e) => pick(e.target.files)} />
+      {!replay ? (
+        <>
+          <input type="file" accept="image/*" capture="environment" className="la-input" id="scan-capture" aria-label="Photograph the label with the camera" disabled={busy} onChange={(e) => pick(e.target.files)} />
+          <input type="file" accept={ACCEPTED_TYPES} className="la-input" id="scan-file" aria-label="Choose an image of the label" disabled={busy} onChange={(e) => pick(e.target.files)} />
+        </>
+      ) : null}
 
-      {!showingResult ? (
+      {!replay && !showingResult ? (
         <div
           className={`sc-capture${dragging ? " is-dragging" : ""}`}
           onDragOver={(e) => {
@@ -703,16 +949,27 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
                   </li>
                 ))}
               </ol>
-              {showSaveCard ? <SaveResultCard /> : null}
             </div>
           ) : staged ? (
             /* ---------------- staged ---------------- */
             <div className="sc-staged">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img className="la-preview sc-preview" src={preview ?? undefined} alt="The label you staged for analysis" />
-              <button type="button" className="button button-dark sc-primary la-analyze" onClick={() => void submitPhoto()}>
-                Scan this label
-              </button>
+              {gate === "open" ? (
+                <button type="button" className="button button-dark sc-primary la-analyze" onClick={() => void submitPhoto()}>
+                  Scan this label
+                </button>
+              ) : gate === "checking" ? (
+                <p className="sc-check" role="status">
+                  Checking your sign-in…
+                </p>
+              ) : (
+                <SignInCard
+                  title="Sign in to scan this label"
+                  body="Results are saved to your Google account so you can find them again in History. Your photo stays on this device until you scan."
+                  notice={authNotice}
+                />
+              )}
               <div className="sc-secondary-row">
                 <button type="button" className="button button-outline sc-secondary" onClick={clearFile}>
                   Retake photo
@@ -736,23 +993,61 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
                   Upload a photo
                 </label>
                 <span className="sc-hint">PNG, JPEG or WebP, up to 12 MB.</span>
+                {gate === "signin" ? (
+                  <span className="sc-hint sc-signin-hint" data-testid="signin-hint">
+                    Results need a Google sign-in. You can take or upload a photo first.
+                  </span>
+                ) : null}
+                {gate === "signin" && authNotice ? (
+                  <p className="sc-signin-notice" role="status" data-testid="signin-notice">
+                    {authNotice}
+                  </p>
+                ) : null}
               </div>
             </>
           )}
         </div>
       ) : null}
 
-      <SearchSheet open={searchOpen} onClose={() => setSearchOpen(false)} titleId="scan-search-title" title="Search your supplement">
-        <p className="sc-search-lede">
-          Pick the ingredient and its exact form, add the dose if you know it — the result is marked as typed, not read from a
-          label.
-        </p>
-        <SupplementSearch catalog={catalog} busy={busy} onSubmit={(input) => void submitManual(input)} />
-      </SearchSheet>
+      {!replay ? (
+        <SearchSheet open={searchOpen} onClose={() => setSearchOpen(false)} titleId="scan-search-title" title="Search your supplement">
+          {gate === "open" ? (
+            <>
+              <p className="sc-search-lede">
+                Pick the ingredient and its exact form, add the dose if you know it — the result is marked as typed, not read from a
+                label.
+              </p>
+              <SupplementSearch catalog={catalog} busy={busy} onSubmit={(input) => void submitManual(input)} />
+            </>
+          ) : gate === "checking" ? (
+            <p className="sc-check" role="status">
+              Checking your sign-in…
+            </p>
+          ) : (
+            <SignInCard
+              title="Sign in to search"
+              body="Results are saved to your Google account so you can find them again in History."
+              notice={authNotice}
+            />
+          )}
+        </SearchSheet>
+      ) : null}
 
       {showingResult ? (
         <div className={`sc-result-wrap${labResult ? " scan-success" : ""}`}>
-          {!labResult ? <div className="sc-scanned" ref={resultTopRef} tabIndex={-1}><span className="sc-thumb sc-thumb-typed" aria-hidden="true">!</span><div className="sc-scanned-main"><p className="sc-scanned-kicker">{headerKicker}</p><h2 className="sc-scanned-name">{headerName}</h2></div><button type="button" className="sc-again" onClick={reset}>Scan another</button></div> : null}
+          {replay ? (
+            <p className="sc-replay-note" ref={setResultTop} tabIndex={-1} data-testid="replay-note">
+              {savedAtLabel ? (
+                <>
+                  Saved scan from <time dateTime={initialResult?.savedAt ?? undefined}>{savedAtLabel}</time>.
+                </>
+              ) : (
+                <>Saved scan.</>
+              )}{" "}
+              This is the result as it was stored. Nothing was re-run and no new research was done for this view.
+            </p>
+          ) : null}
+          {!labResult ? <div className="sc-scanned" ref={replay ? undefined : setResultTop} tabIndex={-1}><span className="sc-thumb sc-thumb-typed" aria-hidden="true">!</span><div className="sc-scanned-main"><p className="sc-scanned-kicker">{headerKicker}</p><h2 className="sc-scanned-name">{headerName}</h2></div><button type="button" className="sc-again" onClick={leave}>{leaveLabel}</button></div> : null}
           {error ? (
             <div className="la-alert la-alert-bad sc-error" role="alert">
               <strong>Could not scan that.</strong>
@@ -761,8 +1056,8 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
           ) : null}
           {/* Successful results switch to the field-notebook primitive. */}
           {labResult ? (<div className="scan-lab-result">
-            <header className="ab-top scan-lab-top sc-scanned" ref={resultTopRef} tabIndex={-1}>
-              <button type="button" className="ab-back" aria-label="Scan another" onClick={reset}>‹</button>
+            <header className="ab-top scan-lab-top sc-scanned" ref={replay ? undefined : setResultTop} tabIndex={-1}>
+              <button type="button" className="ab-back" aria-label={leaveLabel} onClick={leave}>‹</button>
               <div className="ab-title"><strong>{headerName}</strong><small>{typed ? "What you entered · source supplied by you" : `What the label says${label?.brand ? ` · ${label.brand}` : ""}`}</small></div>
             </header>
             <div className="ab-photo-hero scan-lab-hero">
@@ -774,20 +1069,23 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
               )}
             </div>
 
-          {locked ? <SaveResultCard /> : null}
-
           {data && !error && legend ? (
             <>
-              {/* The la-result content is ALWAYS computed and held in state; when
-                  sign-in is required and not yet present it is only blurred and
-                  made inert, never re-fetched once a session appears. */}
-              <div className={`la-result scan-result${locked ? " sc-locked" : ""}`} aria-hidden={locked} inert={locked}>
+              {/* A result is only ever drawn for the person it belongs to (see
+                  `ownerKey`): sign-out or an account switch removes it from
+                  state, so there is nothing to blur, lock or re-reveal. */}
+              <div className="la-result scan-result">
                 {auth.configured && auth.email ? (
                   <p className="sc-signed-in-line">
                     Signed in as <strong>{auth.email}</strong>
-                    <button type="button" className="sc-signout" onClick={() => void auth.signOut()}>
+                    <button type="button" className="sc-signout" onClick={() => void signOut()}>
                       Sign out
                     </button>
+                  </p>
+                ) : null}
+                {persistenceNote && !replay ? (
+                  <p className="sc-save-status" role="status" data-testid="save-status" data-persistence={data.persistence?.status}>
+                    {persistenceNote}
                   </p>
                 ) : null}
 
@@ -1170,7 +1468,7 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
 
                 {/* ---------------- legend + technical details ---------------- */}
                 <details className="sc-details scan-legend">
-                  <summary id="scan-legend-title">How to read the source badges</summary>
+                  <summary id={`${idScope}scan-legend-title`}>How to read the source badges</summary>
                   <ol>
                     {Object.entries(legend)
                       .sort(([, a], [, b]) => a.rank - b.rank)
@@ -1228,11 +1526,12 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
                 ) : null}
             </div>) : null}
 
-          <button type="button" className="button button-dark sc-primary sc-again-bottom" onClick={reset}>
-            Scan another
+          <button type="button" className="button button-dark sc-primary sc-again-bottom" onClick={leave}>
+            {leaveLabel}
           </button>
         </div>
       ) : null}
     </section>
+    </ScanIdScope.Provider>
   );
 }

@@ -222,7 +222,7 @@ from the reference:
   day by the design pass in §1e**, which also returned `app/manifest.ts`'s
   `background_color` to white to match the page (`theme_color` unchanged;
   `tests/pwa.test.ts` pins both).
-- **Sign-in while results load** -- see §7 below.
+- **Google sign-in is required for results where it is configured, and `/scan` is two tabs (Scan | History)** -- see §6 and §7 below. (2026-10-03: this replaces the 2026-09-16 "sign-in while results load" card.)
 
 ### 1e. The phone-first design system and the result STATE (2026-09-16, design pass)
 
@@ -252,9 +252,9 @@ focus + scroll move to it (`scrollIntoView`, instant under
 the very end of the report, so the primary action is thumb-reachable at both
 ends; nothing is sticky, so nothing covers content. The **loading** state is a
 progress panel (dimmed thumbnail, indeterminate bar, the stage list with the
-current step marked) — never a disabled "Scanning…" pill — and the Google
-"Save your result" card, when configured, is its one call to action (§7
-behaviour unchanged, restyled).
+current step marked) — never a disabled "Scanning…" pill. (The 2026-09-16
+Google "Save your result" card is gone: where sign-in is configured a scan is
+not sent until a person is signed in, so nothing asks for a login mid-load; §7.)
 
 **The report** is a lab-grade evidence read, left-aligned, sections separated by
 1px rules rather than boxed. In order: the one-line facts summary
@@ -383,6 +383,13 @@ POST /api/scan  (multipart, one image, ≤12 MB, 60 s)
 | multipart `image` | photo (stage 0) | yes — 503 `analyzer_unavailable` without one | kill switch, no key, bad file |
 | JSON `source:"manual"` | manual (stage 0′) | **no** — evidence score is deterministic; model sections degrade to `unavailable` | kill switch (503), invalid input (400 `manual_input_invalid`) |
 
+**Authentication gate (2026-10-03, §7).** With `SCAN_REQUIRE_AUTH` on, BOTH
+paths first require `Authorization: Bearer <Supabase access token>` of a
+Supabase-verified Google user: 401 `unauthorized` (missing / invalid / expired /
+non-Google token) or 503 `auth_unavailable` (no server Supabase config, or Auth
+cannot answer) — **before the body is read, before any model call, storage
+write or history insert**. The route never trusts a caller-supplied user id.
+
 `GET /api/scan` reports `analyzer_available`, `manual_available`, the scored
 products, the basis legend, the slim `catalog` (labels, aliases, `unspecified`,
 `dose_conversion` ∈ exact/bounded/refused, `scored`) and the manual body shape.
@@ -469,6 +476,9 @@ exactly which release of the app answered it.
   `{ content_type, size_bytes }` for a photo run; **never image bytes or
   base64**
 - the terminal `status` / `error`
+- the OWNER (2026-10-03): `user_id` / `user_email` of the Supabase-verified
+  caller, written in the SAME INSERT as the run (§7) — null only for a legacy or
+  anonymous run, never fabricated, never changed afterwards
 - the exact app release: `package.json` version plus, on Vercel,
   `VERCEL_GIT_COMMIT_SHA`/`_REF`, `VERCEL_DEPLOYMENT_ID`, `VERCEL_ENV` and
   `VERCEL_URL` — honestly `null` off Vercel, never guessed
@@ -501,21 +511,53 @@ before any model call runs — never an unrecorded result served as a normal
 answer. On a DB insert failure after a successful image upload, the now-
 orphaned image is best-effort deleted.
 
-**Deliberately not built.** No read endpoint and no signed image URL exist
-anywhere in the app — reading this history back is a job for the Supabase SQL
-editor (or a future owner-only tool) against the service-role key directly,
-never this app's own runtime. `docs/scan-history.sql` is idempotent: a private
-bucket, the `scan_runs` table, RLS enabled with **no anon policies** (identical
-discipline to `docs/waitlist.sql`), and the indexes the two read patterns
-(newest-first, filter by status) actually need.
+**Read path and what is still deliberately not built (reworked 2026-10-03).**
+Until 2026-10-02 nothing in the app could read this table back. Now exactly two
+routes can, both for the SIGNED-IN OWNER only (§7): `GET /api/scan/history`
+(their newest 20 runs, metadata only) and `GET /api/scan/history/[id]` (one
+saved analysis). They use the service role key, which BYPASSES row level
+security, so the access control is an application filter: `user_id =
+<the id Supabase Auth verified for the bearer token>` is in the database query
+itself AND is re-checked on every returned row (`lib/scan-history/reader.ts`);
+any future reader of this table must do the same. The anon and authenticated
+database roles still see nothing (RLS on, no policies). Still true: **no signed
+image URL is ever minted, no storage path, image hash, request body or email is
+ever returned, and nothing re-runs the model or the pipeline** — a saved result
+is read back exactly as it was stored.
 
-## 7. Sign-in and email capture (2026-09-16)
+`docs/scan-history.sql` is additive and re-runnable against ITS OWN objects (it
+creates, alters and revokes, never drops, creates no extension, no policy and
+no role, and is NEVER run by the app or CI): a private bucket, the `scan_runs`
+table, RLS enabled with **no anon policies** (identical discipline to
+`docs/waitlist.sql`) and `anon`/`authenticated` table privileges revoked as a
+second wall, the indexes the read patterns need — including the 2026-10-03
+partial owner index `scan_runs_user_created_idx (user_id, created_at desc, id
+desc) where user_id is not null` — and the `scan_users` table (unpopulated
+today, §7a). **The Supabase project is SHARED with other apps**, so the file
+opens with a PREFLIGHT (inspect `scan_*` tables, the `scan-images` bucket and
+every `storage.objects` policy first) and a read-only guard block that aborts
+before creating anything if it would adopt another app's table or bucket, flip
+nothing public, or sit beside a storage policy that names no bucket. It never
+creates, alters or drops a storage policy, so another app's policies are never
+touched. **Retention is indefinite** (§7e).
+Image uploads send `x-upsert: false`: a stored object is never overwritten, and
+a collision fails honestly on the run's `persistence.image`.
 
-Founder: "people log in once so we capture their email." While a scan or a
-search's loading-stage messages show, and again over the finished result until
-a session exists, `/scan` offers Google sign-in through Supabase Auth --
-in-page, no redirect, so the analysis already sitting in component state is
-never lost to a navigation.
+## 7. Sign-in, owner-bound runs and private history (2026-09-16; reworked 2026-10-03)
+
+**STATUS: implemented and tested; NOT enabled in production.** Nothing below
+runs on the live deployment until the provisioning checklist at the end of this
+section is done by the owner. Everything was verified against fakes (in-memory
+Supabase, mocked Google script, mocked browser network), never a real Google or
+Supabase project.
+
+
+Founder, 2026-09-16: "people log in once so we capture their email." Founder,
+2026-09-23: real results depend on a Google login, and a signed-in person can
+reopen their own past results. `/scan` therefore offers Google sign-in through
+Supabase Auth -- in-page, no redirect -- and, where it is configured, REQUIRES
+it before a scan is sent. A scan's result and its history are private to the
+signed-in person.
 
 **How it works.** The Google Identity Services script
 (`https://accounts.google.com/gsi/client`) loads LAZILY, only when sign-in is
@@ -536,9 +578,10 @@ browser session that must persist and auto-refresh does.
 unlike every other credential in `.env.example`): `NEXT_PUBLIC_SUPABASE_URL`,
 `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_GOOGLE_CLIENT_ID`. All three
 must be set for any of this to appear (`authFullyConfigured()`); missing any
-one is treated identically to "sign-in not offered" -- no card, no locked
-result, no third-party script load. Local/CI builds carry none of them, by
-design.
+one is treated identically to "sign-in not offered" -- no card, no third-party
+script load, scanning not gated, History says it is not available. Local/CI
+builds carry none of them, by design. They are inlined at BUILD time, so
+changing them needs a rebuild/redeploy.
 
 **Supabase dashboard steps** (same project as `docs/waitlist.sql` /
 `docs/scan-history.sql`):
@@ -553,39 +596,260 @@ design.
    project env vars, plus `NEXT_PUBLIC_SUPABASE_URL` and
    `NEXT_PUBLIC_SUPABASE_ANON_KEY` from Supabase's API settings page).
 
-**Behaviour while a result is loading or ready.** When sign-in is configured
-and nobody is signed in: a "Save your result" card (title, one line of copy,
-the Google button) renders in the loading area the instant a scan/search is
-submitted, and — if the analysis finishes before a session appears — again
-above a blurred, `inert` copy of the ALREADY-COMPUTED result (no re-fetch;
-signing in just removes the blur and the `inert` attribute). When sign-in is
-not configured, or somebody is already signed in, results render exactly as
-before, plus a small "Signed in as x@y · Sign out" line in the result meta
-once there is a session.
+### 7a. The server decides who is calling (`lib/auth/server-auth.ts`)
 
-**Server-side capture, `POST /api/scan/claim` (`lib/auth/claim.ts`).** The
-client calls this the moment both a Supabase session and a scan's `run_id`
-exist, whichever arrived second — right after sign-in if a result is already
-in state, or right after a result arrives if already signed in. The route
-verifies the caller's access token itself, the same "never trust the client"
-discipline as the rest of this app: a plain `fetch GET {SUPABASE_URL}
-/auth/v1/user` with `apikey: SUPABASE_SERVICE_ROLE_KEY` and the caller's token
-as the bearer. A verified token then (a) PATCHes `public.scan_runs` (service
-role, bypassing RLS) to set `user_id`/`user_email` on that run, and (b)
-upserts `public.scan_users` (`user_id` primary key, `email`, `first_seen_at`,
-`last_seen_at`, a best-effort `scans` counter), both in
-`docs/scan-history.sql`. The route never throws past a reported outcome: 401
-on a bad/expired/missing token, 404 when the run id matches no row, 503 when
-Supabase env vars are not configured, and the JSON response never carries a
-secret. Extending `docs/scan-history.sql` is idempotent (`add column if not
-exists`, `create table if not exists`), matching every other migration file
-in this repo.
+The browser gate below is a convenience; **`SCAN_REQUIRE_AUTH` is the
+protection.** Every server-side check asks Supabase Auth (`GET
+{SUPABASE_URL}/auth/v1/user`, `apikey` = the server-only service key, the
+caller's token as bearer) who a token belongs to. Rules, each pinned by a test:
 
-**Deliberately not built:** no password/email-link sign-in (Google only,
-matching the founder's ask), no account page, no way for a signed-in user to
-see their own scan history in the app (still an owner-only Supabase SQL Editor
-job, per §6), and no atomic increment for `scan_users.scans` (a best-effort
-read-then-write, documented as such in the SQL file).
+1. A token is **never decoded and trusted locally**; a forged but well-formed
+   JWT is a 401.
+2. The caller **never supplies** a user id or email — a body, form, query or
+   header field of that name is ignored (and no longer stored in the run's
+   `request`). Id and email come only from the trusted response.
+3. "Signed in with Google" is read from `identities[].provider` /
+   `app_metadata` — **never `user_metadata`**, which the user can edit.
+4. An invalid or expired token is a 401, **never a silent fall-back to
+   anonymous**.
+5. An Auth outage, timeout or garbage response, or a deployment with no
+   `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY`, is **503 `auth_unavailable`, not
+   401**, so a client does not discard a good session because Supabase blinked.
+6. Every failure is a fixed generic message: no provider text, key, URL or
+   exception ever reaches a caller. Bodies are size-capped (auth 64 KiB, list
+   256 KiB, detail 2 MiB), and every response is `Cache-Control: no-store`.
+
+**`POST /api/scan` and `POST /api/analyze-label`.** `SCAN_REQUIRE_AUTH` is
+fail-closed: unset / empty / `0` / `false` / `no` / `off` = off; ANY other value
+(`1`, `true`, a typo) = on. On, a missing / invalid / expired / non-Google token
+is 401 `unauthorized` and an unverifiable request 503 `auth_unavailable`,
+**before the body is read and before any model call** — an unauthenticated
+caller can neither spend a model call through these routes nor make the server
+buffer an image. The same `authenticateRequest` gate guards both model-spending
+POST routes: the legacy `POST /api/analyze-label` (what `/tester` calls; it
+runs the same DeepSeek label read and returns real evidence rows) was ungated
+until the 2026-10-03 owner finding and is now gated identically (its
+kill-switch / no-key 503 still answers first; its `GET` reports capabilities,
+calls no model and stays public, like the static retained-run pages). Off
+(local, CI): an anonymous request works exactly as before and records no owner,
+but a bearer that IS sent is still verified (an invalid one is a 401). On
+`/api/scan` the verified user is bound as owner; `/api/analyze-label` records
+nothing. A verified non-Google user is accepted only in this off mode and can
+never read history. The verified user's id/email are written **in the same
+INSERT as the run** — photo, manual and terminal-failure records alike; no code
+path assigns or changes an owner later.
+
+**This is identity, not a budget.** The gate asks "does Supabase say this is a
+Google-signed-in user of this project", not "is this person on a list". The
+operator wants Google login to stay open (commission sign-ups), so there is **no
+per-user quota, rate limit or allow-list**, and the shared project's Google
+sign-up settings are neither read nor changed by this app. Any Google account
+can still spend model calls; the gate narrows who and records who (`scan_runs.
+user_email`), it does not cap how much. If spend ever needs a cap, that is a
+separate change (a per-user count in `scan_runs` would be the place to start).
+
+**`GET /api/scan/history`** (their newest 20 runs: `{id, created_at, source,
+status, product_name}`; `next_cursor` is always null — "recent", not exhaustive)
+and **`GET /api/scan/history/[id]`** (`{status:"ok", run_id, analysis}`, the
+saved analysis verbatim). Both require a Google-backed bearer **regardless of
+`SCAN_REQUIRE_AUTH`** — history is personal data, so there is no anonymous mode.
+`id` must be a strict UUID (400 otherwise, before any query). A run that is
+someone else's, a legacy run with no owner, and a run that does not exist are
+**one indistinguishable 404** (same body), so the route is no existence oracle.
+The detail response carries a `run_id` rebuilt from the row and an `app_version`
+cut to its six known fields; it never carries `persistence`, storage paths,
+hashes, the request or an email.
+
+**`POST /api/scan/claim`** now only CONFIRMS: it verifies the token and that the
+run is already owned by that user, answers `200 {status:"claimed"}` (meaning
+"already yours") and refreshes the `scan_users` row (`scans` is the exact count
+of owned runs, idempotent; `first_seen_at` never rewritten). It can never assign
+or transfer ownership; an unowned, legacy, cross-owner or missing run is the
+same 404. **The UI no longer calls it**, so `scan_users` is NOT populated by the
+app and nothing reads it: a signed-in person's email is stored only in
+`scan_runs.user_email` (the SQL file carries a query for "who has scanned").
+
+### 7b. The browser (`components/scan-workspace.tsx`, `history-tab.tsx`, `scan-flow.tsx`)
+
+`/scan` is a thin shell around `<ScanWorkspace>`: two tabs, **Scan** (the
+existing `<ScanFlow>`, kept mounted while hidden so a held result survives a tab
+switch; the camera is switched off and focus is not stolen while it is hidden)
+and **History** (mounted only while open, and re-listed after a scan is stored). The workspace owns the ONLY `useSupabaseSession()`.
+
+- **Sign-in not configured** (any of the three vars missing): the previous
+  behaviour exactly; History says "History is not available here."
+- **Configured, session still loading:** a neutral "Checking your sign-in…" —
+  never the sign-in card, never an unlocked scan.
+- **Configured, signed out:** a photo can be staged but the "Scan this label"
+  button and the search form are replaced by the Google sign-in card; **no
+  request is sent.** History shows "Sign in to see your history".
+- **Signed in:** every `POST /api/scan` — photo FormData AND typed JSON —
+  carries `Authorization: Bearer <live access token>`, re-read from the SDK at
+  the moment of the request (`getAccessToken({ userId })`, which returns null if
+  the live session belongs to someone else). A 401 triggers ONE
+  `refreshSession()` and ONE retry, then the session is ended and the sign-in
+  card shown with "Your session ended". 503 `auth_unavailable` keeps the session
+  and shows the UI's own fixed message; for 401 / 503 the server's text is never
+  echoed (other, pre-existing failure statuses still show their `error`).
+- **Results are owner-stamped.** Request, pending state and held result carry
+  the user id they belong to. Sign-out, expiry or switching Google account
+  **aborts the in-flight request, discards a late reply and removes the held
+  result from the page** (not blurred, not `inert` — gone). The History panel
+  is keyed by user id, so another account never sees the previous list.
+- **Refusals with no analysis get words, not a blank card.** With
+  `SCAN_HISTORY_REQUIRED=1` the server can answer `scan_history_required_failed`
+  (500: the scan ran but could not be recorded), `scan_history_required_
+  unavailable` (503: refused up front, history storage is not configured) or
+  `payload_too_large` (413). `<ScanFlow>` shows each as an error alert with a
+  fixed plain-language sentence (what happened, that nothing is wrong with the
+  person's photo or account, and to try again) and never echoes the server's
+  detail, which names deployment settings. (Previously the header "Result" and a
+  "!" rendered with no message.)
+- **"Saved to your history."** appears only when the response says
+  `persistence.status === "stored"`; `unavailable` / `failed` get explicit
+  not-saved text; nothing is claimed when persistence is absent.
+- **History replay.** The list is `GET /api/scan/history` (bearer, `no-store`,
+  abortable). Opening a row `GET`s the detail and renders it with
+  `<ScanFlow initialResult>` — **the same result renderer (the four-axis lab
+  card) with the SAVED date shown, and no `POST /api/scan`, no model call and no
+  new row** (a "Back to history" button replaces "Scan another"). A detail is
+  rejected unless `status` is `ok`, its `run_id` equals the id asked for and its
+  `analysis.basis_legend` exists. 401 → one refresh, then session-ended; 404 /
+  503 / anything else → generic text.
+
+**`/tester` (`components/label-analyzer.tsx`) follows the same rules** with the
+same pieces — `useSupabaseSession`, the Google `SignInCard`, `getAccessToken({
+userId })`: where sign-in is configured a photo can be picked or taken and stays
+staged, but "Analyze" is replaced by the Google card and **no request, and no
+anonymous request, is made** until a session exists; a returning session being
+read is "Checking your sign-in…"; `POST /api/analyze-label` carries the live
+bearer token; a 401 refreshes once and retries once, a second 401 signs out on
+screen; sign-out / expiry / another Google account aborts the request in flight,
+discards a late reply and removes the result and the photo that was being
+analyzed. Where it is not configured (local, CI, previews) nothing changes. The
+retained runs lower on `/tester` stay public.
+
+### 7c. Verification status
+
+Pinned by tests: `tests/scan-auth.test.ts`, `tests/scan-auth-route.test.ts`,
+`tests/scan-history-reader.test.ts` (server, adversarial, fake Supabase that
+APPLIES the owner filters); `tests/scan-workspace.test.tsx`,
+`tests/scan-history-ui.test.tsx`, `tests/scan-signin.test.tsx`,
+`tests/google-sign-in.test.tsx`, `tests/use-supabase-session.test.tsx` (browser,
+fake session); **`tests/analyze-label-auth-route.test.ts`** (the legacy route's gate: 401 / 503,
+body never read, zero model calls, non-Google, spoofed `user_metadata`, outage,
+fail-closed flag, flag-off compatibility), **`tests/label-analyzer-auth.test.tsx`**
+(`/tester`'s browser half), **`tests/scan-flow-refusals.test.tsx`** (the three
+refusal statuses), **`tests/scan-history-sql.test.ts`** (static guards on the SQL
+file), and **`tests/scan-auth-history-integration.test.tsx`** (the seam: the
+REAL workspace's fetch wired to the REAL route handlers over the fake Supabase
+with `SCAN_REQUIRE_AUTH=1` + `SCAN_HISTORY_REQUIRED=1` — owner bound at INSERT,
+list/replay of exactly that user's run with no new row or model call, account
+switch, uniform 404, signed-out sends nothing); and
+`tests/e2e/scan-workspace.spec.ts` in a real browser, including a focused
+second BUILD with clearly fake public env (`NEXT_PUBLIC_SUPABASE_URL=
+https://e2e.supabase.invalid`, `…ANON_KEY=e2e-anon`, `…GOOGLE_CLIENT_ID=
+e2e.apps.googleusercontent.com`) and `E2E_AUTH_CONFIGURED=1`, mocking the Google
+script, the Supabase token endpoint and the scan/history APIs.
+
+**Verified for real at release (2026-10-03, §7d):** the preflight on the shared
+project (no `scan_*` relation, no `scan-images` bucket, two other-app storage
+policies that both name their bucket), the SQL applied through the Management
+API, and the resulting structure (RLS on, zero policies, no `anon` /
+`authenticated` privilege, private bucket, everything else unchanged).
+
+**Still NOT verified, because nothing real was available:** a real Google
+credential becoming a real Supabase session (`signInWithIdToken`); the PostgREST
+JSON-path `select` in the list query (`analysis->label->>product_name`, …)
+against the live project — it is emulated in tests only (the table now exists
+but holds 0 rows); a real phone camera. Before the release the SQL file had only
+been executed against an in-memory Postgres with stand-ins for the Supabase roles
+and `storage` schema. A probe that the canonical origin renders the
+Google button without an "origin not allowed" refusal shows only that the
+origin is accepted — it is **not** proof that a token exchange works.
+
+### 7d. Production provisioning — steps 1–3 DONE 2026-10-03, steps 4–5 open
+
+**Status at release (2026-10-03):** steps 1–3 below were executed on the shared
+project and the canonical Vercel project (production only) and checked; the exact
+results are in `CLAUDE.md` → `Current state` → "Release stage". Step 4 was
+**read only** (the provider was neither replaced nor changed; its client ID
+equals the one in `NEXT_PUBLIC_GOOGLE_CLIENT_ID`; `disable_signup` is `false`).
+Step 5 (the real phone sign-in → scan → History → replay) and the Google client's
+Authorized JavaScript origins are **not verified** and need a person at a
+phone. The runbook below stays as written for any re-provisioning.
+
+Do these IN ORDER. The Supabase project is shared with other apps; nothing here
+may replace, recreate or reconfigure anything that is not BS-PROOF's.
+
+1. **Preflight, then SQL — BEFORE any Vercel variable.** In a separate SQL Editor
+   query run the three read-only checks at the top of `docs/scan-history.sql`
+   (`to_regclass` for `scan_runs` / `scan_users`; the `scan-images` row in
+   `storage.buckets`; every `storage.objects` policy with its `qual` /
+   `with_check`) and keep the output with the release record. First provisioning
+   needs both `to_regclass` values NULL and no bucket row. If another app's
+   `scan_*` table or `scan-images` bucket exists, STOP: do not adopt it, rename
+   it or drop it — choose a different prefixed name (a code change + review).
+   Every policy on `storage.objects` must name its `bucket_id`; one that does
+   not applies to every bucket (including `scan-images`) and its owner must scope
+   it first. Never edit or drop another app's policy from this runbook. Then
+   review and apply `docs/scan-history.sql` once; its guard block re-checks all
+   of this and aborts, creating nothing, if it finds a problem. With the Vercel
+   variables set and the tables missing, every scan spends its model call and
+   then fails to record, which is why the SQL goes first.
+2. **Confirm the server pair before relying on it** (never print, paste or log
+   the key itself; run these in a shell where the values are already exported,
+   e.g. from a Vercel env pull you delete afterwards):
+   - `SUPABASE_URL` must equal `NEXT_PUBLIC_SUPABASE_URL` EXACTLY (same project,
+     same scheme and host, no trailing path):
+     `[ "${SUPABASE_URL%/}" = "${NEXT_PUBLIC_SUPABASE_URL%/}" ] && echo same || echo DIFFERENT`
+   - `SUPABASE_SERVICE_ROLE_KEY` must be THAT project's **service-role** key (not
+     the anon key, not another project's):
+     `curl -s -o /dev/null -w '%{http_code}\n' -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" "$SUPABASE_URL/rest/v1/scan_runs?select=id&limit=1"`
+     must print `200` (it proves the URL and key belong together, that the key
+     is privileged, and that step 1's tables exist). The same request with
+     `$NEXT_PUBLIC_SUPABASE_ANON_KEY` must NOT print `200` (it should be refused;
+     that is the revoke in step 1 working).
+   A wrong key or a mismatched URL is reported by the app as **401**, because
+   Supabase's rejection of the apikey is indistinguishable from a rejected user
+   token: everyone is bounced to "Your session ended" and signed out, which looks
+   like an expiry, not a misconfiguration. When that happens, check these two
+   values before anything else.
+3. **Vercel production env** (after step 1): `SCAN_REQUIRE_AUTH=1`,
+   `SCAN_HISTORY_REQUIRED=1` (exactly `1`; any other spelling silently leaves
+   durable history OFF, unlike the fail-closed `SCAN_REQUIRE_AUTH`),
+   `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and the three `NEXT_PUBLIC_`
+   sign-in vars. Then rebuild/redeploy (the public vars are inlined at build).
+4. Google provider on the shared project is already enabled — **do not replace
+   or recreate it, and do not change the project's sign-up settings**. The
+   Google client ID in `NEXT_PUBLIC_GOOGLE_CLIENT_ID` must be the same one the
+   Supabase provider accepts, or the exchange fails with "Unacceptable
+   audience"; its Authorized JavaScript origins must include the production
+   origin. (Whether the project accepts open Google sign-ups is a shared setting
+   that has not been verified; this app deliberately has no allow-list.)
+5. After deploying, do ONE real sign-in → scan → History → replay on a phone, one
+   signed-in `/tester` label analysis, and one signed-out `/tester` attempt (it
+   must show the Google card and send nothing), and confirm the list query
+   against live PostgREST.
+
+### 7e. Retention — stated plainly, nothing promised
+
+With `SCAN_HISTORY_REQUIRED=1`, every accepted scan is kept **indefinitely**: the
+full result, the signed-in person's Google email (`scan_runs.user_email`) and,
+for a photo scan, the original photo in the private `scan-images` bucket. There
+is **no expiry job, no deletion endpoint and no "delete my data" control**, and
+the app shows **no retention notice** yet. Removing a person's data today means
+the project owner deleting their `scan_runs` rows and `scan-images` objects by
+hand in the Supabase dashboard. Writing the notice and building a deletion path
+are open owner decisions; until both exist do not tell anyone their data can be
+deleted, and do not enable production history without the owner having accepted
+this.
+
+**Deliberately not built:** no password/email-link sign-in (Google only), no
+account page, no pagination or search beyond the latest 20, no way to view the
+photo again (no signed image URL, no stored path ever returned), no DB-level
+owner-immutability trigger (the app never UPDATEs `user_id`; kept off to keep the
+migration additive), and no result is ever re-scored on replay.
 
 ## 8. What is deliberately NOT done
 
@@ -603,10 +867,14 @@ read-then-write, documented as such in the SQL file).
   branded-product catalogue is deferred until the algorithmic score satisfies
   LithuaniaBio acceptance (criteria not yet documented — see CLAUDE.md Next).
 - **No IU, no CFU mass.** Unit handling on the manual path is exact mass only.
-- **No public read endpoint for scan-run history, and no signed image URL,
-  anywhere.** §6's `scan_runs` table and `scan-images` bucket are written by
-  the service role key only; reading them back is a Supabase SQL editor / a
-  future owner-only tool, never a route this app serves.
+- **No per-user quota, rate limit or allow-list on scans** (operator decision:
+  open Google login). The Google gate is identity, not a budget (§7a).
+- **No retention limit, deletion path or retention notice** (§7e).
+- **No public or anonymous read of scan-run history, and no signed image URL,
+  anywhere.** §6's `scan_runs` table and `scan-images` bucket are written and
+  read by the service role key from the server only; the one application read is
+  the owner-filtered, Google-authenticated `GET /api/scan/history[/id]` (§7a).
+  A saved result is replayed, never re-scored.
 
 ## 9. Files
 
@@ -624,28 +892,44 @@ lib/analyze/manual-dose.ts       mg / g / mcg → mg, exact factors, no IU (clie
 lib/analyze/business-model.ts    MLM / direct-selling disclosure: type + pure rendering decision (client-safe)
 lib/analyze/literature-warnings.ts     funding-independence / publication-bias disclosures (uses llm)
 lib/analyze/literature-disclosures.ts  same disclosures: type + pure rendering decision (client-safe)
-lib/scan-history/store.ts        durable scan-run history: Supabase Storage + Postgres, plain fetch, server-only
+lib/scan-history/store.ts        durable scan-run history WRITE: Supabase Storage + Postgres, plain fetch, server-only; binds the owner at INSERT
+lib/scan-history/reader.ts       owner-filtered READ (list + detail): user_id filter in the query AND rechecked per row; uniform not_found
 lib/camera/capture.ts            getUserMedia/canvas capture helpers, unit-testable without a real camera (client-safe)
 lib/auth/supabase-browser.ts     the ONE browser Supabase client singleton; @supabase/supabase-js lives here only
-lib/auth/use-supabase-session.ts hook: session state (email/access token) for <ScanFlow>
-lib/auth/claim.ts                server-side: verifies a Supabase access token, claims a scan_runs row, upserts scan_users
-app/api/scan/route.ts            multipart → analyzeScan; JSON → analyzeManual; GET catalog; wires scan-run history
-app/api/scan/claim/route.ts      POST { run_id } + Authorization: Bearer <token> → attaches the signed-in user to a run
-app/scan/page.tsx, components/scan-flow.tsx, components/supplement-search.tsx   the UI
+lib/auth/use-supabase-session.ts hook: session state + getAccessToken({userId, forceRefresh}) (live token, owner-checked)
+lib/auth/server-auth.ts          server-side identity: Supabase /auth/v1/user is the only authority; Google from identities/app_metadata; SCAN_REQUIRE_AUTH
+lib/auth/claim.ts                server-side: verifies a token AND that the run is already that user's; refreshes scan_users; never assigns an owner
+app/api/scan/route.ts            auth gate → multipart → analyzeScan; JSON → analyzeManual; GET catalog; wires scan-run history + owner
+app/api/analyze-label/route.ts   legacy label route behind /tester: the SAME auth gate as /api/scan, before the body and any model call
+app/api/scan/claim/route.ts      POST { run_id } + Bearer → 200 "claimed" (= already yours) or the uniform 404; the UI no longer calls it, so scan_users stays empty
+app/api/scan/history/route.ts    GET: the signed-in owner's newest 20 runs (Google bearer always required)
+app/api/scan/history/[id]/route.ts GET: one saved analysis, owner-filtered, uniform 404 (Google bearer always required)
+app/scan/page.tsx, components/scan-workspace.tsx   the page shell: Scan | History tabs, the one session; app/scan-workspace.css (route-scoped)
+components/scan-flow.tsx, components/supplement-search.tsx   the Scan tab (also replays a saved result via initialResult)
+components/history-tab.tsx       the History tab: list, detail fetch, replay through <ScanFlow initialResult>
 components/scan-camera.tsx       the live camera viewfinder block + shutter (2026-09-16)
 components/search-sheet.tsx      accessible dialog wrapping <SupplementSearch> (2026-09-16)
-components/google-sign-in.tsx    lazy-loaded Google button + the "Save your result" card (2026-09-16)
+components/google-sign-in.tsx    lazy-loaded Google button + the sign-in card shown in place of the scan button / history (2026-10-03)
+components/label-analyzer.tsx    /tester's analyzer: same session hook, Google card and bearer rules as <ScanFlow> (2026-10-03)
 public/scan-mark.svg             transparent scanner mark; derived by scripts/write_scan_mark.mjs
 prompts/label.md (v1.1), prompts/company.md (v1.1), prompts/compatibility.md,
 prompts/evidence_prior.md, prompts/literature_warnings.md
 schemas/label.json, schemas/company.json, schemas/compatibility.json,
 schemas/evidence_prior.json, schemas/literature_warnings.json
 vocab/compatibility.json         curated, cited interactions and form notes
-docs/scan-history.sql            idempotent migration: private bucket, scan_runs/scan_users tables, RLS, indexes
+docs/scan-history.sql            shared-project preflight + guard, then: private bucket, scan_runs/scan_users tables, RLS (no policies), anon/authenticated revoked, indexes
 tests/scan.test.ts               the whole flow against fakes, zero model calls
 tests/camera-capture.test.ts     lib/camera/capture.ts: support detection, mocked-canvas capture, blob->File
-tests/scan-signin.test.tsx       sign-in card gating, locked/unlocked result rendering, claim call wiring (mocked supabase-browser module)
-tests/scan-claim-route.test.ts   POST /api/scan/claim: 401 bad token, 404 unknown run, 200 happy path, no secret in the response
+tests/scan-signin.test.tsx       sign-in gating, Bearer on photo AND typed scans, owner-stamped results, abort on sign-out/switch (mocked supabase-browser)
+tests/scan-workspace.test.tsx, tests/scan-history-ui.test.tsx, tests/google-sign-in.test.tsx, tests/use-supabase-session.test.tsx   browser half
+tests/scan-auth.test.ts, tests/scan-auth-route.test.ts, tests/scan-history-reader.test.ts   server half, against tests/helpers/fake-supabase.ts (applies owner filters)
+tests/analyze-label-auth-route.test.ts, tests/label-analyzer-auth.test.tsx   the legacy /api/analyze-label gate and /tester's browser half (2026-10-03)
+tests/scan-flow-refusals.test.tsx, tests/scan-history-sql.test.ts   refusal statuses get words; static guards on the shared-project SQL
+tests/scan-auth-history-integration.test.tsx   THE SEAM: real workspace fetch -> real route handlers -> fake Supabase; owner at INSERT, replay with no new scan
+tests/e2e/scan-workspace.spec.ts tabs, a11y, History-not-configured; with a fake-public-env build + E2E_AUTH_CONFIGURED=1 the Google-required flow
+tests/e2e/tester-auth.spec.ts    /tester: ungated on a default build; with the same fake-env build, no request until Google sign-in, bearer on the request, sign-out removes the result (2026-10-03)
+tests/e2e/auth-mocks.ts          shared mocked Google script + Supabase token endpoint for both e2e specs
+tests/scan-claim-route.test.ts   POST /api/scan/claim: confirms an owned run, never assigns, uniform 404, no secret in the response
 tests/scan-manual.test.ts        catalog integrity, unit conversion, manual orchestration, route, source/basis honesty, mark drift
 tests/scan-search.test.tsx       keyboard-driven combobox, / vs /scan vs /tester separation
 tests/scan-history.test.ts       store: payload shape, image hashing/storage, app version, orphan cleanup, no-secret leakage

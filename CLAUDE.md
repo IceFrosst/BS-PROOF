@@ -561,16 +561,243 @@ do not drop it.
 
 ## Current state
 
+**2026-10-03 — Google-required scan + private Scan/History: IMPLEMENTED, on `main`, PROVISIONED (SQL applied,
+Vercel production env set); the real Google sign-in is NOT yet verified (see "Release stage").** Founder: real results depend on a Google login, and a signed-in person can
+reopen their own saved results. Two isolated worktree commits were cherry-picked `--no-commit` onto
+`main` `6a1734d` (component base `4a87e22`; no conflicts; committed together with the later fix passes in the release commit):
+backend `8da4137dd994bd1ef4274f6b82037701f3ef06d5` (server auth, owner binding, history API, SQL) and
+UI `61ca4bf92895608409970ed5dbbd5f99fff7ffc8` (Scan | History tabs, sign-in gate); plus the
+integration seam `tests/scan-auth-history-integration.test.tsx` and one selector fix in
+`tests/e2e/scan-workspace.spec.ts`. Design: `docs/SYSTEM_DESIGN.md` §6–§7.
+
+- **Release stage (2026-10-03, auth-release; durable logs `/tmp/bsproof-release/logs/`).** Landed on `main` as ONE
+  commit on top of `6a1734d` (the commit carrying this text; find it with `git log -1 -- docs/scan-history.sql`).
+  Before it: a fresh native review PASS; the full gate set re-run on the exact tree (`pre-owner/`: `git diff --check`,
+  `typecheck`, `lint` 0 errors / 6 pre-existing warnings, `test:unit` 53 files / 704 passed, ordinary `npm run build`,
+  `test:e2e` 838 passed / 10 skipped / 0 failed, `pipeline.invariants`, `pipeline.selftest` ALL PASSED,
+  `npm audit --omit=dev --audit-level=high` 0 vulnerabilities; the PGlite SQL harness regenerated against the final
+  file, 36/36); and a Claude Code OWNER verification of that tree: `claude-sonnet-5-5`, `--effort xhigh`, `--safe-mode
+  --strict-mcp-config --tools Read,Grep,Glob`, run in a credential-free snapshot (no `.env*` but `.env.example`, no
+  `.claude`), 76 turns, **VERDICT PASS, CRITICAL none** (private log `logs/owner/owner-verify-sonnet.{json,result.txt}`;
+  the FIRST owner pass was NEEDS WORK and the owner-fix pass below answered it). Native-review W3 (the SQL guard counts a
+  `storage.objects` policy as scoped if EITHER `qual` or `with_check` names `bucket_id`) was left as a documented limit:
+  the PREFLIGHT requires a human read of the policies, and that read was done at release (below).
+  **Provisioned on the SHARED Supabase project `icefrosst-apps` (ref `qcsyihymmaktkbqfxlkl`) BEFORE any Vercel
+  variable, through the Management API (token never logged):** a fresh preflight (no relation named `*scan*` in any
+  schema, only bucket `republic-selfies` and it is private, exactly two `storage.objects` policies and both name
+  `republic-selfies` -- one INSERT for anon/authenticated, one authenticated SELECT also gated on `republic.is_ministry()`)
+  -> applied `docs/scan-history.sql` (sha256 prefix `9a036eaa8f031938`) -> verified read-only: `public.scan_runs` and
+  `public.scan_users` exist with RLS on and ZERO policies; `anon` and `authenticated` hold NO privilege on either (the
+  project's default privileges would have granted them; `service_role` keeps all four); private bucket `scan-images`
+  (`public=false`) with still no policy for it; every other app's tables, all policies, extensions and default
+  privileges identical to the baseline (diffed); a second apply is a no-op with identical verification output; 0 rows.
+  Then **Vercel PRODUCTION only** on the canonical project `bs-proof-dashboard` (`prj_LVkNjXw2Sw96J18MUbGOx5AUkCMx`,
+  team `team_kIvQLqbrh2Qk9d9gYQcCDA98`; Preview untouched, no other project): `SCAN_REQUIRE_AUTH=1`,
+  `SCAN_HISTORY_REQUIRED=1`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (sensitive), `NEXT_PUBLIC_SUPABASE_URL`,
+  `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_GOOGLE_CLIENT_ID`. Checked without printing any value:
+  `SUPABASE_URL` equals `NEXT_PUBLIC_SUPABASE_URL`; the service key returns HTTP 200 and the anon key 401 on
+  `/rest/v1/scan_runs`; the anon key is that project's legacy anon key; the client id equals the existing Google
+  provider's client id (sha256-12 `f98873ac6ff8`). The Google provider, site URL, redirect allow-list and sign-up
+  settings were only READ, never changed; `disable_signup` is `false`, so open Google sign-up IS on in the shared
+  project (accepted by the operator; there is no allow-list or quota). Retention is indefinite with no notice or deletion
+  path (open owner decisions, `docs/SYSTEM_DESIGN.md` §7e).
+  **Still NOT done / not verified at this commit:** a real Google credential -> Supabase session; one phone sign-in ->
+  scan -> History -> replay; the live PostgREST list query; whether the Google client's Authorized JavaScript origins
+  include the production origin; the production deployment of this commit (its checks are recorded in a follow-up
+  entry only if they were actually run -- do not assume them).
+- **Server is the protection** (`lib/auth/server-auth.ts`). With `SCAN_REQUIRE_AUTH` on (fail-closed:
+  anything but unset/0/false/no/off), `POST /api/scan` **and the legacy `POST /api/analyze-label` (what
+  `/tester` calls; see the owner-fix entry below)** demand a Supabase-VERIFIED Google bearer token
+  (401 `unauthorized` / 503 `auth_unavailable`) **before the body is read and before any model call**.
+  Identity comes only from Supabase `GET /auth/v1/user`; never a decoded JWT, never a client
+  user id/email, Google is read from `identities`/`app_metadata` and never `user_metadata`; an invalid
+  bearer is a 401, never silently anonymous. The verified owner is written **in the same INSERT** as
+  the run (photo, manual, terminal failure) and is never reassigned.
+- **`/api/scan/claim` no longer transfers anything**: it only acknowledges a run already owned by the
+  caller (`claimed` = "already yours"); unowned/legacy/cross-owner/missing are one 404. The UI no
+  longer calls it. `GET /api/scan/history` (newest 20, metadata) and `GET /api/scan/history/[id]`
+  (saved analysis verbatim, strict UUID) always require a Google bearer, filter on `user_id` in the
+  query AND per row (the service role bypasses RLS, so that filter IS the access control), return the
+  same 404 for not-yours/legacy/missing, and never return photos, paths, hashes, request or email.
+- **Browser** (`components/scan-workspace.tsx`, `history-tab.tsx`, `scan-flow.tsx`): where all three
+  `NEXT_PUBLIC_*` sign-in vars are set, a signed-out person can stage a photo but no request is sent
+  (the Google card replaces the scan button); photo and typed scans carry `Authorization: Bearer`;
+  sign-out / expiry / account switch aborts the request, discards a late reply and REMOVES the held
+  result. History replays the saved analysis through the same four-axis result renderer with its saved
+  date — no new `POST /api/scan`, no model call, no new row. Unconfigured builds behave as before.
+  The old "Save your result" card, the blurred result lock and the late `/api/scan/claim` call are gone.
+- **Gates** (logs `/tmp/bsproof-integration-gates/`): `typecheck` pass; `lint` 0 errors / 6 pre-existing
+  warnings; `test:unit` 49 files / 648 passed; `npm run build` pass; `test:e2e` 836 passed / 6 skipped
+  on the ordinary build (the 6 are the 3 Google-required tests × 2 projects, which need a
+  sign-in-configured build); a focused second build with clearly fake public env
+  (`https://e2e.supabase.invalid`, `e2e-anon`, `e2e.apps.googleusercontent.com`) + `E2E_AUTH_CONFIGURED=1`
+  ran `scan-workspace.spec.ts` 14 passed / 2 skipped (the 2 are the not-configured-only tests); mobile
+  Scan/History mock screenshots (Pixel 7 + iPhone 13, 12 views) have 0 px horizontal overflow;
+  `pipeline.invariants` / `pipeline.selftest` pass; `git diff --check` clean. **`npm audit --omit=dev
+  --audit-level=high` FAILED at that point (exit 1: next 16.3.0 critical, fast-uri/sharp high,
+  ajv/sanitize-html moderate) and was PRE-EXISTING/environmental** (`package.json` / lockfile were
+  byte-identical to `HEAD`). [SUPERSEDED the same day by the dependency pass below: it now exits 0.]
+- **Dependency/security + review fix pass 1 (2026-10-03, landed in the release commit; gate logs
+  `/tmp/bsproof-security-pass1/logs/`).** Direct pins, exact like every other entry, no major/minor
+  churn: `next` 16.3.0 -> **16.3.8** (16.3.6 is the first fix for the `next/og` RCE and 16.3.3 for the other two
+  criticals; 16.3.8 is the newest 16.3.x and per its release notes also carries the 2026-09-30 SSRF-in-image-optimization
+  and cache advisories that `npm audit` does not index yet; 16.3.7 is a bug-fix backport only), `sanitize-html` 2.17.6 ->
+  **2.17.7** (first patched; the suggested 2.18.0 is a needless minor), `ajv` 8.17.1 -> **8.18.0** (first patched; the suggested
+  8.20.0 is not needed). Lockfile-only transitive moves: `sharp` 0.35.3 -> 0.35.5 (+ libvips 1.3.2 -> 1.3.4; fix is 0.35.4),
+  `fast-uri` 3.1.5 -> 3.1.8 (via `npm update fast-uri`, in range), `@swc/helpers` 0.5.15 -> 0.5.23 (next's own pin).
+  Nothing was force-updated; `npm audit fix --force` was never run. Relevance, honestly: this app configures no
+  `images`/`remotePatterns`, never imports `next/og`, uses no `use cache`, and `sanitize-html` is called with no SVG tags
+  allowed and `ajv` without `$data`, so these were mostly not reachable here -- they were patched because a clean
+  production audit is the gate and the patches are same-line. **Result: `npm audit --omit=dev --audit-level=high`
+  exit 0, "found 0 vulnerabilities".** The full `npm audit` (dev tools included) still exits 1 with 10 DEV-ONLY
+  findings (js-yaml, undici via jsdom, brace-expansion, and the `eslint-config-next` -> `@next/eslint-plugin-next` ->
+  fast-glob -> micromatch -> braces chain; vitest/@vitest/mocker moderate). None is in the production tree
+  (`npm ls --omit=dev` is empty for them); the `eslint-config-next` "fix" npm offers is a DOWNGRADE to 14.2.35 and
+  16.3.8's plugin still pins `fast-glob`, so it was NOT applied. Left as is; do not describe the full audit as clean.
+  **Review fixcard item 3 (P2) done:** `getScanRun` (`lib/scan-history/reader.ts`) now rebuilds a replayed analysis from an
+  explicit top-level allow-list, `lib/scan-history/analysis-keys.ts`, instead of spreading the stored payload and deleting
+  three keys. `persistence` (private photo bucket/path/sha), `run_id` and `app_version` are never copied from the stored JSON
+  (the last two are restated from the row); a field added to the stored payload later is NOT returned until listed. The file
+  has only an erased `import type { ScanAnalysis }` and a compile-time coverage check, so `npm run typecheck` and `next build`
+  fail if `ScanAnalysis` gains a key that is neither listed nor one of those three, or the list names a key that no longer exists
+  (both directions proved to bite by temporarily editing the list). `tests/scan-history-reader.test.ts` +2 tests (planted
+  `image_url`/`debug_trace`/`user_email`/`request`/`persistence` never leave; every listed key passes through verbatim; the file's
+  import surface is pinned) -- the first was shown to FAIL against the old deny-list. No route, response shape, UI, prompt, schema,
+  scorer, constant, threshold, transfer factor or OA penalty changed. **Gates on this tree** (ordinary build with the three
+  `NEXT_PUBLIC_*` vars unset): `typecheck` pass; `lint` 0 errors / the same 6 pre-existing warnings; `test:unit` 49 files /
+  **650** passed; `npm run build` pass (Next 16.3.8, BUILD_ID `QXEkDv191Exjc9bGUMsk-`, no inlined Supabase URL/key found in
+  `.next`); `test:e2e` **836 passed / 6 skipped** (the 6 = 3 Google-required tests x 2 projects, which need a configured
+  build); configured build with fake public env + `E2E_AUTH_CONFIGURED=1`, `scan-workspace.spec.ts` **14 passed / 2 skipped** (the 2
+  are the not-configured-only tests; all three Google-required tests passed on both projects, all against a mocked Supabase/Google,
+  never a real credential); `pipeline.invariants` / `pipeline.selftest` pass; `git diff --check` clean; `npm ci --dry-run` pass.
+  The ordinary `.next` was moved out of the repo during the fake-env build and put back; its build-output fingerprint is unchanged
+  (`94f0a198...`, BUILD_ID unchanged). The only difference from a naive whole-directory hash is `.next/server/route-cache/`
+  (1014 files `next start` writes at request time during the ordinary e2e run, i.e. AFTER the pre-e2e fingerprint was taken).
+  **Still NOT verified:** real Google credential -> real Supabase session, a real Supabase table/bucket, the PostgREST JSON-path `select`,
+  a real phone camera, and the production env (`SCAN_REQUIRE_AUTH=1`, `SCAN_HISTORY_REQUIRED=1`, Supabase vars -- review P2: with the
+  flag unset the server does not enforce Google at scan time). [At the time of pass 1 nothing was committed, pushed or
+  deployed; the release stage above supersedes that.]
+- **Owner-fix pass (2026-10-03, landed in the release commit; Claude Code owner verdict on the
+  prior diff was NEEDS WORK, log `/tmp/bsproof-owner-release/logs/owner-verify-sonnet.result.txt`; gate
+  logs `/tmp/bsproof-owner-fix/logs/`).** The one CRITICAL: `POST /api/analyze-label` ran the same
+  DeepSeek label read and returned evidence rows with NO auth, and `/tester` sent no bearer, so
+  `SCAN_REQUIRE_AUTH=1` protected `/api/scan` only and the docs' "strangers cannot spend the model
+  budget" was false. Fixed, not documented away (the operator requires Google for scans):
+  - **Server:** `app/api/analyze-label/route.ts` takes the same `authenticateRequest(request,
+    { tokenRequired: scanAuthRequired(), requireGoogle: scanAuthRequired() })` gate as `/api/scan`,
+    after the existing kill-switch/no-key 503 and BEFORE `formData()` and any model, census or queue
+    call (401/503 bodies `{status,error}` only, `no-store`; flag off keeps anonymous local/CI use,
+    and a bearer that IS sent is verified, a bad one is 401). Its `GET` (capabilities, no model) and
+    the static retained runs stay public. `tests/analyze-label-auth-route.test.ts` (17): no token /
+    malformed / invalid / forged / non-Google / spoofed `user_metadata` / no or half config / Auth
+    outage -> 401 or 503 with `bodyUsed === false`, zero model calls, zero storage/history I/O, no
+    key/provider/owner leak; a verified Google user is served; fail-closed flag spelling; flag-off
+    compatibility; kill switch and public GET. 10 of the 17 FAIL with the gate removed.
+  - **Browser:** `components/label-analyzer.tsx` (`/tester`) reuses `useSupabaseSession`, the Google
+    `SignInCard` and `getAccessToken({ userId })`: staged photo allowed, but no request and no anonymous
+    request until a session exists; "checking" while a returning session is read; live bearer at send
+    time; 401 -> refresh once -> retry once -> else sign out on screen; sign-out / expiry / account
+    switch aborts the request, discards a late reply and removes the result and the photo being
+    analyzed. Unconfigured builds are unchanged. `tests/label-analyzer-auth.test.tsx` (19).
+    `app/tester/page.tsx` imports `scan-workspace.css` (card states) and `.la-gate` in `globals.css`
+    hands the card its tokens; `tests/scan-client-boundary.test.ts` now also covers this entry.
+  - **Honest scope:** this is IDENTITY, NOT A BUDGET. Any Google account can still spend model
+    calls; there is deliberately no per-user quota, rate limit or allow-list (operator wants open
+    Google login), and the shared project's Google sign-up settings were neither read nor changed.
+    `.env.example`, `docs/SYSTEM_DESIGN.md` §7a/§8 say so.
+  - **Blank "Result" card fixed:** `scan_history_required_failed`, `scan_history_required_unavailable`
+    and `payload_too_large` now render an error alert with a fixed plain sentence (what happened, not
+    the user's fault, try again; never the server's env-var detail) on the photo and typed paths
+    (`SERVER_REFUSALS` in `components/scan-flow.tsx`; `tests/scan-flow-refusals.test.tsx`, 8).
+  - **`docs/scan-history.sql` on a shared project:** removed the unused `create extension pgcrypto`;
+    added a PREFLIGHT (inspect `scan_*` tables, the `scan-images` bucket, every `storage.objects`
+    policy) and a read-only guard block that aborts before creating anything if a same-named table
+    lacks a BS-PROOF comment (never adopt another app's `scan_*`), the bucket exists public or
+    without our tables, or a `storage.objects` policy for anon/authenticated/public names no
+    `bucket_id` (it never creates/alters/drops a storage policy, so other apps' policies are never
+    clobbered); added `revoke all ... from anon, authenticated` on both tables (additive, private,
+    still no policies). Stale text fixed: no UI calls `/api/scan/claim`, so `scan_users` is
+    UNPOPULATED and emails live in `scan_runs.user_email` (comments in the SQL, `claim/route.ts`,
+    `lib/auth/claim.ts`; the SQL now carries a "who has scanned" query on `scan_runs`).
+    Verified by executing the real file in an in-memory Postgres (PGlite, a throwaway harness
+    outside the repo: `/tmp/bsproof-owner-fix/logs/sqlcheck.mjs`, 36/36 checks, log
+    `sql-pglite-check.log`) with stand-ins for the Supabase roles/`storage` schema -- clean apply,
+    idempotent re-run, upgrade of the earlier revision's tables, anon/authenticated privileges gone and
+    service_role's kept, other apps' policies untouched, and each guard refusal (foreign table,
+    public bucket, unowned bucket, unscoped policy) leaving everything unchanged. Plus
+    `tests/scan-history-sql.test.ts` (8 static guards in CI). **At the time of this pass it had never run against the real
+    project** (the release stage above is what applied it).
+  - **Retention (stated plainly, nothing promised):** with `SCAN_HISTORY_REQUIRED=1` every scan
+    (result, Google email, photo) is kept INDEFINITELY; there is no expiry job, deletion endpoint,
+    "delete my data" control or in-app notice. Deciding the notice and building deletion are open
+    owner decisions (`docs/SYSTEM_DESIGN.md` §7e).
+  - **Runbook (`docs/SYSTEM_DESIGN.md` §7d, `.env.example`):** SQL (after the preflight) BEFORE the
+    Vercel variables; `SUPABASE_URL` must EXACTLY equal `NEXT_PUBLIC_SUPABASE_URL` and the service key
+    be that project's (a wrong pair is a 401 that looks like an expired session -- check these first;
+    two shell checks that print no secret are given); `SCAN_HISTORY_REQUIRED` only counts as exactly `1`.
+  - **Test-guard fix:** `tests/scan-client-boundary.test.ts`'s `node:fs|path` regex had doubled
+    backslashes (`\\s`), matched nothing and could never fire; replaced by a specifier-based check
+    (static, `export ... from`, side-effect, dynamic `import()`, `require`, type-only skipped) with a
+    self-test that feeds it real offenders and clean look-alikes.
+  - **Gates on this tree** (logs `/tmp/bsproof-owner-fix/logs/`; ordinary build with the three
+    `NEXT_PUBLIC_*` vars unset -- this shell exports two of them, so every build/test/e2e command used
+    `env -u`): `typecheck` pass; `lint` 0 errors / the same 6 pre-existing warnings; `test:unit` 53 files /
+    **704** passed (+54 over pass 1); `npm run build` pass (ordinary, no inlined fake or real Supabase value in
+    `.next/static` or `.next/server`); `test:e2e` **838 passed / 10 skipped / 0 failed** (the 10 = the
+    configured-only tests: 3 Google-required `/scan` + 2 `/tester`, x 2 projects); configured build with fake public env
+    (`https://e2e.supabase.invalid`, `e2e-anon`, `e2e.apps.googleusercontent.com`) + `E2E_AUTH_CONFIGURED=1`:
+    `scan-workspace.spec.ts` + new `tester-auth.spec.ts` **18 passed / 4 skipped** (the 4 = not-configured-only tests),
+    all against mocked Google/Supabase/`/api/analyze-label`, never a real credential or model; `pipeline.invariants` /
+    `pipeline.selftest` pass; `git diff --check` clean; `npm audit --omit=dev --audit-level=high` exit 0, "found 0
+    vulnerabilities". The ordinary `.next` was moved out during the fake-env build and restored; its fingerprint
+    (all files except `cache/`, `dev/`, `server/route-cache/`, `diagnostics/`, `trace*`) is `9f53760f83e66ddd`,
+    BUILD_ID `HajkfBvOw7D0ZKtL6cjeX`, identical before and after. The full `npm audit` still has the same 10 dev-only
+    findings (unchanged, see pass 1). **Skipped/absent, honestly:** nothing run against a real Supabase, Google, DeepSeek
+    or Vercel; the SQL was executed only on in-memory Postgres; no phone/camera test; the mutation checks (gate removed
+    -> 10/17 route tests fail; `SERVER_REFUSALS` disabled -> 8/8 fail; label-analyzer gate/abort removed -> 6-7/19 fail;
+    pgcrypto re-added / revoke removed -> SQL guard tests fail) were run once by hand and reverted.
+  - **No** constant, threshold, transfer factor, OA penalty, prompt, schema, scorer, model boundary
+    (`lib/analyze/llm.ts`), DeepSeek, retained-audit authorization, serving/day default or
+    elemental/compound handling was touched (`git diff HEAD` over `pipeline/ lib/analyze/ prompts/ schemas/
+    vocab/ sources/ .claude/` is empty).
+- **Pitfall found on this machine:** the shell exports `NEXT_PUBLIC_SUPABASE_URL` and
+  `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `next build` inlines them. Build the ORDINARY artifact with the
+  `NEXT_PUBLIC_*` sign-in vars unset (`env -u ...`), or it silently becomes a configured build.
+- **Not verified:** a real Google credential → real Supabase session; the PostgREST JSON-path `select` in the
+  history list against the live project (the structure it reads now exists, with 0 rows); a real phone camera;
+  whether the Google client's Authorized JavaScript origins include the production origin. (Superseded at release: the
+  preflight snapshot WAS re-taken on 2026-10-03 and is clean; the real tables/bucket/grants now exist and were checked
+  read-only; open Google sign-up is ON, `disable_signup=false`, read not changed -- all in "Release stage" above.) A parent probe that the canonical origin renders the Google button without an origin refusal
+  is NOT token-exchange proof. `outputFileTracingIncludes` was left unchanged (the new routes read no
+  files); note the History routes inherit the same ~32 MB `/api/scan/*` trace overlap the existing
+  `/api/scan/claim` route already has.
+
 **2026-10-03 — research comparison preview shared.**
 `docs/design/research-benchmark-preview/overview.png` shows the actual saved
 Sonnet 5.5 xhigh and Opus 5.5 high categorical outputs for all five benchmark
 cases; `magnesium.png` includes the first detailed side-by-side result.
 These are preliminary static previews, not live scan results, validated clinical
 scores or an end-to-end scan benchmark. Model timings exclude retrieval.
-Full per-case visual/source-context review remains in progress. **Handoff:**
-Google-required scan results and private Scan/History are being implemented in
-isolated worktrees and are not enabled on production yet. Multi-ingredient
-implementation remains paused; its fifth benchmark case is frozen test data.
+Full per-case visual/source-context review remains in progress. **Caveat
+(2026-10-03):** those earlier categorical benchmark outputs were not produced
+through the exact four-axis UI format, so they are NOT a valid exact-UI
+comparison, and a redo of the original audit has been requested — do not quote
+them as one. **Handoff:** Google-required scan results and private Scan/History
+are IMPLEMENTED, committed to `main` (release commit, `git log -1 -- docs/scan-history.sql`), and provisioned: the
+SQL is applied on the shared project and the production env is set on the canonical Vercel project (entry
+"Release stage", above). What remains is human/real-service verification: one phone Google sign-in -> scan ->
+History -> replay, a signed-in and a signed-out `/tester` attempt, and the live list query. **Handoff (2026-10-03,
+owner-fix):** the legacy `/api/analyze-label` + `/tester` gate, the blank-result fix, the shared-project SQL
+hardening and the runbook/retention docs ("Owner-fix pass", above) are in the same release commit; snapshot
+`/tmp/bsproof-auth-owner-needswork.patch` is the PRIOR (pre-fix) diff, retained only for audit.
+Multi-ingredient implementation remains paused; its fifth benchmark case is
+frozen test data. **Handoff (2026-10-03):** the dependency/security fix and the
+reader allow-list ("Dependency/security + review fix pass 1", above) are
+in the same release commit as the auth/history diff; the later benchmark phase (it must also reuse the reviewed
+`parallel-render` capture manifest once it exists, grade only case 5 row 0, never average a formula score, and quote
+the 311 / 116 non-access / 21 refusal / 174 upper-bound access caveat -- see `Next`; no model reruns or duplicate capture) must reuse the immutable
+`parallel-v2` captures/method review rather than re-running successful cases
+(see `Next`).
 
 
 **2026-10-02 — multi-ingredient visual options.**
@@ -645,7 +872,7 @@ constant**:
    viewport: on an answer the capture chrome unmounts, a compact scanned-product header (thumbnail or
    typed chip, name, brand, **Scan another**) takes the top, and focus + scroll move to it (instant
    under `prefers-reduced-motion`). Loading is a progress panel (dimmed thumbnail, indeterminate bar,
-   stage list with the current step marked; the Google "Save your result" card is its one CTA when
+   stage list with the current step marked; the Google "Save your result" card is its one CTA when [SUPERSEDED 2026-10-03: that card is gone; where sign-in is configured a scan is not sent until a person is signed in]
    configured) — never a greyed "Scanning…" pill. `Scan another` is repeated at the end of the report;
    nothing is sticky.
 2. **The report halved without losing a fact**: 9911 → 4919 px at 390 wide (10424 → 5137 at 360),
@@ -698,7 +925,7 @@ on the company profile.** Two changes, kept separate in scope, landed together:
    favour of `scan_history_required_failed` (500) when the durable write itself fails. A DB insert
    failure after a successful image upload best-effort deletes the orphaned image. No public read
    endpoint and no signed image URL exist anywhere — reading this data back is a Supabase SQL editor
-   job. Design: `docs/SYSTEM_DESIGN.md` §6. Tests: `tests/scan-history.test.ts`,
+   job [SUPERSEDED 2026-10-03: the owner-only `GET /api/scan/history[/id]` now reads it; still no image URL]. Design: `docs/SYSTEM_DESIGN.md` §6. Tests: `tests/scan-history.test.ts`,
    `tests/scan-history-route.test.ts` (payload shape, image hashing/storage, app version, orphan
    cleanup, fail-closed route behaviour, no-secret/browser leakage).
 2. **The company model profile gained a conservative MLM / direct-selling read**
@@ -1496,9 +1723,46 @@ still the unmeasured SR-uplift experiment (Next item 3).
 
 ## Next
 
+- **Google-required scan + private History: provisioned 2026-10-03; real-service verification still open (see
+  "Release stage" in `Current state`; runbook `docs/SYSTEM_DESIGN.md` §7d).** DONE at release: preflight, SQL applied
+  and verified on the shared project, URL/key pair checked, Vercel production env set, Google provider read only.
+  STILL OPEN (human, do not claim done): (a) one real phone Google sign-in -> scan -> History -> replay, one signed-in
+  `/tester` analysis and one signed-out `/tester` attempt (Google card, nothing sent) -- a Google/MFA consent step the
+  agent must not fake; confirm the Google client's Authorized JavaScript origins include the production origin
+  (otherwise the button reports an origin refusal); confirm the list query against live PostgREST; (b) owner decisions:
+  a retention notice and a deletion path (everything is kept indefinitely today; promise nothing), whether open Google
+  sign-up on the shared project (`disable_signup=false`) stays acceptable given there is no quota or allow-list, and
+  optionally tightening the SQL guard's text match on `qual`/`with_check` (native-review W3). If sign-in returns 401
+  for everyone, check the `SUPABASE_URL` / service-key pair first (a wrong pair looks like an expired session). The
+  10 dev-only `npm audit` findings remain (see the pass-1 entry).
+- **After Google, in this order: PR3 / full EN–LT translation, then live PC research.** Neither was
+  started. Redo the original audit; the earlier categorical benchmark is not a valid exact-UI comparison.
+
 - Finish review of the detailed benchmark visuals; preserve exact product/dose
   inputs, limitations and the distinction between quote matching and medical
   verification. Preliminary overview and magnesium previews are already shared.
+- **Benchmark reuse rule (2026-10-03, parent orchestrator):** an independent Claude comparison is running as a separate
+  scratch workflow (`ab139b58-2b68-4f09-b8b8-a1ca8df9ce09`) in `/tmp/bsproof-valid-benchmark/parallel-v2`, with no writes to
+  this repo. The later benchmark phase MUST reuse those immutable captures and the method review when they are available
+  instead of re-running cases that already succeeded, and nothing may write to `parallel-v2` while that workflow is live.
+  Until it has finished and been reviewed, treat its outputs as unverified and quote none of them.
+  Recorded 2026-10-03 (read-only look, nothing written there): its driver log showed cases 1 and 2 complete for both
+  lanes (`opus-high` and `sonnet-xhigh`) and case 3 running. A later benchmark step must read those immutable captures
+  (`checkpoints/`, `<lane>/case<N>/{audit,report}.json`, `manifest.json`) instead of repeating the model calls, re-run
+  only what is missing or failed, and not touch the directory while the workflow is live.
+  **Update (2026-10-03, parent orchestrator; recorded here as reported, NOT independently re-checked by the auth release):**
+  the `parallel-v2` reporting addendum (`/tmp/bsproof-valid-benchmark/parallel-v2/access-addendum.json`, with its
+  review `verified-addendum-review.md` under the `comparison-reporting` subagent output) was independently reviewed PASS,
+  read-only, no model call and no research rerun. An actual COMPONENT screenshot capture and fidelity check was started
+  in an isolated old-clean visual worktree (reported only as "worktree75") and `/tmp/bsproof-valid-benchmark/parallel-render` (workflow
+  `1974d801-906d-4ff8-8900-3a139d105f8b`), with NO root-checkout writes and NO publication; at the last look here that
+  directory did not exist yet. **The later benchmark phase MUST reuse BOTH the completed `parallel-v2` research AND the
+  reviewed `parallel-render` capture manifest** -- no model reruns and no duplicate capture work -- and treat
+  `parallel-render` as unusable until its review has passed. **Case 5 (whole-formula): ONLY row 0 may be graded; the
+  context rows are DO NOT GRADE, and there is NO averaged formula score.** **Required caveat on any reporting of the
+  source-access numbers:** 311 WebFetch calls, of which 116 were non-access (tool error, HTTP 403/other 4xx, unfollowed
+  redirect, captcha/cookie wall) and 21 were Haiku refusals; the remaining 174 are only an UPPER BOUND on content actually
+  read, because WebFetch returns a Haiku summary, not the original paper.
 
 
 - Choose the multi-ingredient layout from the shared visual options before
@@ -1515,6 +1779,8 @@ still the unmeasured SR-uplift experiment (Next item 3).
 
 **Handoff (2026-09-17): retained Evidence Ledger production wiring is implemented on the preview branch, not deployed.** Person fit is dropped from the shared rubric and both result surfaces; it is not a scored or displayed dimension. Verify `npm run typecheck`, `npm run lint`, `npx vitest run`, both Python gates, and `npm run build`; inspect the 390/360 matched and unmatched result screenshots twice before any deploy. No live research audit was run: the three retained files remain audit-v0.2 model artifacts, not reverified, and the deployed model transport cannot open web sources. The Ledger is heuristic/unvalidated. Confirm the exact matcher rejects dose/form/multi-ingredient/missing-servings cases and that only one matched audit crosses the API boundary. Legacy v14 remains the API/display backup; do not alter its constants or paths. Future arbitrary-product audit expansion requires a source-retrieval service.
 
+**[Items 2–4 below are partly SUPERSEDED by the 2026-10-03 entry: sign-in now gates the scan, the result
+lock and the late claim are removed, `claim` only acknowledges, and `scans` is an exact idempotent count.]**
 **Handoff (2026-09-16): the dark camera-first /scan redesign and Google sign-in / email capture are
 implemented and gate-clean, but UNVERIFIED on a real phone, a real camera and a real Supabase/Google
 project.** Before relying on this in production:

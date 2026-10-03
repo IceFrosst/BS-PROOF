@@ -20,8 +20,16 @@
  * carry a `NEXT_PUBLIC_` prefix and must never be imported here). Returning
  * `null` when the three sign-in env vars are not all set — never throwing —
  * is what keeps every local/CI/preview build usable with no Google/Supabase
- * project configured at all: the sign-in card simply never renders (see
- * `authFullyConfigured`).
+ * project configured at all (see `authFullyConfigured`).
+ *
+ * SIGN-IN IS MANDATORY ONLY WHERE IT IS CONFIGURED (founder, 2026-09-23: real
+ * results depend on a Google login). When all three vars are set, the scan
+ * workspace will not send a scan until a Supabase session exists and sends that
+ * session's access token with every `/api/scan` and `/api/scan/history*`
+ * request. When they are not, the workspace behaves as it always did so local
+ * and CI runs need no Google project. The UI gate is a convenience, not the
+ * protection: the server (SCAN_REQUIRE_AUTH=1) is what refuses an unauthenticated
+ * request.
  */
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
@@ -43,8 +51,8 @@ export function googleClientId(): string | null {
 }
 
 /** All three sign-in env vars present. The single gate the UI uses to decide
- * whether the "Save your result" card, the sign-in-gated result lock and the
- * Google button can ever appear. */
+ * whether signing in is required to scan and whether the Google button, the
+ * session and the History tab's data can ever appear. */
 export function authFullyConfigured(): boolean {
   return supabaseUrl() !== null && supabaseAnonKey() !== null && googleClientId() !== null;
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import "../scan-workspace.css";
 import { LabelAnalyzer } from "@/components/label-analyzer";
 import { RunGroups } from "@/components/run-groups";
 import { loadRetainedRuns } from "@/lib/dashboard/catalog";
@@ -18,13 +19,19 @@ import { loadRetainedRuns } from "@/lib/dashboard/catalog";
  * someone sets it to debug, a deploy carries it, and the front door quietly
  * changes for everyone. A route cannot be switched on by accident.
  *
- * WHAT THIS IS NOT: protected. It is unlisted (no link from the public page or
- * the nav, and the site is `robots: index false`), which keeps it out of
- * search and out of a casual visitor's way. It does NOT stop anyone who knows
- * or guesses the URL. Nothing here is a secret — the same analyzer over the
- * same artifacts — but if the requirement ever becomes "only these people",
- * that needs real auth, and this comment is here so nobody mistakes obscurity
- * for it later.
+ * WHAT THE PAGE ITSELF IS NOT: protected. It is unlisted (no link from the
+ * public page or the nav, and the site is `robots: index false`), which keeps
+ * it out of search and out of a casual visitor's way. It does NOT stop anyone
+ * who knows or guesses the URL, and the retained runs below stay open: nothing
+ * here is a secret — the same artifacts the public methodology reads.
+ *
+ * THE SCANNER ON IT IS GATED (2026-10-03, owner finding). Reading a label spends
+ * a model call, so `POST /api/analyze-label` takes the same Google-required gate
+ * as `POST /api/scan` (server: `SCAN_REQUIRE_AUTH`; browser: the same Google
+ * sign-in card and bearer token, see components/label-analyzer.tsx). That is
+ * identity, not a budget: any Google account can use it, there is no per-user
+ * quota or allow-list. Do not mistake the page being unlisted for either.
+ * (`scan-workspace.css` is imported only for the sign-in card's states.)
  */
 
 export const metadata: Metadata = {
