@@ -44,6 +44,16 @@ describe("retained Evidence Ledger audit selector", () => {
     expect(retainedAuditForProduct({ ...exact, isMultiIngredient: false, actives: [{ name: "Creatine", compoundDoseMg: null }, { name: "Vitamin D3", compoundDoseMg: 0.05 }] })).toBeNull();
   });
 
+  it("never matches an elemental-only magnesium amount to the compound-dose retained audit", () => {
+    const elementalOnly = {
+      ingredient: "magnesium", form: "magnesium_glycinate", compoundDoseMg: null,
+      printedElementalDoseMg: 300, servingsPerDay: 1, isMultiIngredient: false,
+      actives: [{ name: "Magnesium glycinate", compoundDoseMg: 300 }], otherActives: [],
+    };
+    expect(retainedAuditForProduct(elementalOnly)).toBeNull();
+    expect(retainedAuditForProduct({ ...elementalOnly, compoundDoseMg: 300, printedElementalDoseMg: null })).not.toBeNull();
+  });
+
   it("uses one score implementation and does not let disclosure fields change certainty", () => {
     const audit = retainedAuditForProduct(facts("creatine", "creatine_monohydrate", 4000))!;
     const outcome = audit.audit.outcomes[0];

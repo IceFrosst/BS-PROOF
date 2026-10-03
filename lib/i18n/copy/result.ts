@@ -45,6 +45,7 @@ export interface ResultCopy {
   noDoseEntered: string;
   compoundSuffix: string; // "compound" in "4 mg compound"
   compoundPerServing: (mg: string) => string;
+  elementalPerServing: (mg: string) => string;
   moietyActive: (mg: string) => string;
   moietyNotConvertibleShort: string;
   notConvertible: (basis: string) => string;
@@ -247,6 +248,7 @@ const EN: ResultCopy = {
   noDoseEntered: "no dose entered",
   compoundSuffix: "compound",
   compoundPerServing: (m) => `${m} compound per serving`,
+  elementalPerServing: (m) => `${m} elemental per serving`,
   moietyActive: (m) => `${m} active`,
   moietyNotConvertibleShort: "active moiety not convertible",
   notConvertible: (b) => `not convertible (${b})`,
@@ -452,6 +454,7 @@ const LT: ResultCopy = {
   noDoseEntered: "dozė neįvesta",
   compoundSuffix: "junginio",
   compoundPerServing: (m) => `${m} junginio porcijoje`,
+  elementalPerServing: (m) => `${m} elementinio kiekio porcijoje`,
   moietyActive: (m) => `${m} veikliosios dalies`,
   moietyNotConvertibleShort: "veikliosios dalies perskaičiuoti nepavyko",
   notConvertible: (b) => `neperskaičiuojama (${b})`,

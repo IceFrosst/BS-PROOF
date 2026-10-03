@@ -190,6 +190,7 @@ def analyze(image: Path, *, do_census: bool = True,
     ingredient = label.get("ingredient_vocab_id")
     form = label.get("form_vocab_id")
     printed = label.get("compound_dose_mg")
+    printed_elemental = label.get("printed_elemental_dose_mg")
 
     if not ingredient:
         # Readable label, ingredient outside the vocabulary. Name it back rather
@@ -206,11 +207,14 @@ def analyze(image: Path, *, do_census: bool = True,
 
     # Compound -> elemental, deterministically. `form` may be None (label stated
     # no form); the conversion then refuses, which is the correct answer.
-    elemental = vocab.elemental_dose_range_mg(ingredient, form, printed)
+    elemental = ({"low": printed_elemental, "high": printed_elemental, "basis": "elemental_stated"}
+                 if printed_elemental is not None else
+                 vocab.elemental_dose_range_mg(ingredient, form, printed))
     out["product"] = {
         "ingredient": ingredient,
         "form": form,
         "compound_dose_mg": printed,
+        "printed_elemental_dose_mg": printed_elemental,
         "elemental_dose_mg": elemental,
         "is_multi_ingredient": bool(label.get("is_multi_ingredient")),
         "other_actives": label.get("other_actives") or [],
@@ -219,8 +223,9 @@ def analyze(image: Path, *, do_census: bool = True,
     # Keep the score boundary on the compound axis. score_product performs the
     # conversion itself and refuses bounded intervals; passing the low endpoint
     # as elemental would silently turn an interval into a false exact dose.
-    result = product_score.score_product(ingredient, form or "", printed,
-                                         dose_basis="compound")
+    result = product_score.score_product(
+        ingredient, form or "", printed_elemental if printed_elemental is not None else printed,
+        dose_basis="elemental_stated" if printed_elemental is not None else "compound")
     out["result"] = result
     out["status"] = result.get("status")
 
@@ -283,8 +288,9 @@ def main(argv: list[str] | None = None) -> int:
     lab = out.get("label") or {}
     if lab:
         print(f"label:  {lab.get('ingredient_label_text')} / "
-              f"{lab.get('form_vocab_id')} / {lab.get('compound_dose_mg')} mg "
-              f"compound  (confidence {lab.get('confidence')})")
+              f"{lab.get('form_vocab_id')} / "
+              f"{lab.get('printed_elemental_dose_mg') if lab.get('printed_elemental_dose_mg') is not None else lab.get('compound_dose_mg')} mg "
+              f"{'elemental (as printed)' if lab.get('printed_elemental_dose_mg') is not None else 'compound'}  (confidence {lab.get('confidence')})")
     prod = out.get("product") or {}
     if prod:
         el = prod.get("elemental_dose_mg") or {}

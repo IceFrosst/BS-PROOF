@@ -16,8 +16,9 @@ and nothing you say enters a score.
   in regulator fact sheets (NIH Office of Dietary Supplements, EFSA). Do not
   extrapolate from cell or animal work.
 - Doses matter: an absorption competition at 500 mg may be irrelevant at 50 mg.
-  Use the printed doses given to you; if a dose is null, say the interaction is
-  dose-dependent in the mechanism field.
+  Each dose includes its printed basis. Distinguish elemental amount from
+  compound/salt mass; never convert one into the other. If a dose is null, say
+  the interaction is dose-dependent in the mechanism field.
 - Do not recommend, do not judge the product, do not comment on efficacy.
 
 ## Plain-language rule for every sentence a person will read

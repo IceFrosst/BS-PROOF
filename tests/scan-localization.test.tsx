@@ -428,6 +428,42 @@ describe("sign-in and History (Google configured)", () => {
     expect(text(el.querySelector(".sc-secondary-row"))).toContain("Fotografuoti iš naujo");
   });
 
+  it.each([
+    ["en", "200 mg compound per serving"],
+    ["lt", "200 mg junginio porcijoje"],
+  ] as const)("replayed legacy active renders its compound dose in %s", async (lang, compoundCopy) => {
+    writeLang(lang);
+    fakeAuth.configured = false;
+    const legacy = structuredClone(rich);
+    legacy.compatibility.actives = [{
+      printed: "Magnesium glycinate",
+      canonical: "magnesium",
+      compound_dose_mg: 200,
+      form_text: "glycinate",
+    }];
+    delete legacy.compatibility.actives[0].printed_elemental_dose_mg;
+    stubApi({ scan: legacy });
+
+    const el = await harness.mount(createElement(ScanFlow, {
+      catalog,
+      initialResult: { analysis: legacy as never },
+    }));
+    await settle(6);
+    const replayNote = el.querySelector('[data-testid="replay-note"]');
+    expect(replayNote).not.toBeNull();
+
+    const compatibility = el.querySelector<HTMLElement>('.scan-section[id$="scan-form"]')!;
+    if (!compatibility.open) await click(compatibility.querySelector("summary")!);
+    const chip = el.querySelector(".scan-actives .scan-chip");
+    expect(chip).not.toBeNull();
+    expect(text(chip)).toContain("200 mg");
+    expect(text(chip)).toContain(compoundCopy);
+    expect(text(chip)).not.toMatch(/elemental|elementinio|—|–/i);
+
+    const calls = (globalThis.fetch as unknown as { mock: { calls: Array<[unknown, RequestInit | undefined]> } }).mock.calls;
+    expect(calls.some(([url, init]) => String(url) === "/api/scan" && init?.method === "POST")).toBe(false);
+  });
+
   it("History: signed out -> Lithuanian card; signed in -> list, empty state and a replayed scan, dated in Lithuanian, no re-run", async () => {
     writeLang("lt");
     // signed out

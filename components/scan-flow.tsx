@@ -942,7 +942,7 @@ function ScanFlowInner({ catalog, auth: sharedAuth, active = true, initialResult
     : label
       ? [
           label.form_vocab_id ? words(label.form_vocab_id) : r.formNotStated,
-          r.compoundPerServing(mg(label.compound_dose_mg)),
+          label.printed_elemental_dose_mg != null ? r.elementalPerServing(mg(label.printed_elemental_dose_mg)) : r.compoundPerServing(mg(label.compound_dose_mg)),
           ...(activeMoiety ? [activeMoiety] : []),
           ...(label.servings_per_day !== null ? [f.servingsPerDay(label.servings_per_day)] : []),
         ]
@@ -1275,7 +1275,7 @@ function ScanFlowInner({ catalog, auth: sharedAuth, active = true, initialResult
                   <details className="scan-lab-disclosure">
                     <summary><h3>{r.labelDetails}</h3><BasisBadge kind="label" legend={legend} /></summary>
                     <p className="la-dim"><b>{label.ingredient_label_text ?? label.ingredient_vocab_id ?? "—"}</b>, {label.form_vocab_id ? words(label.form_vocab_id) : r.formNotStated}. {summaryParts.join(", ")}.</p>
-                    <Facts rows={[[r.ingredient, label.ingredient_label_text ?? label.ingredient_vocab_id ?? "—"], [r.form, label.form_vocab_id ? words(label.form_vocab_id) : r.notStated], [r.dosePerServing, `${mg(label.compound_dose_mg)} ${r.compoundSuffix}`], ...(product ? [[r.activeMoiety, product.elemental_dose_mg.low === null ? r.notConvertible(product.elemental_dose_mg.basis) : mg(product.elemental_dose_mg.low)]] as Array<[string, React.ReactNode]> : []), ...(label.servings_per_day !== null ? [[r.servingsPerDayLabel, String(label.servings_per_day)]] as Array<[string, React.ReactNode]> : []), [r.readConfidence, enumWord(lang, label.confidence)], [r.sourceLabel, <BasisBadge key="label-source" kind="label" legend={legend} />]]} />
+                    <Facts rows={[[r.ingredient, label.ingredient_label_text ?? label.ingredient_vocab_id ?? "—"], [r.form, label.form_vocab_id ? words(label.form_vocab_id) : r.notStated], [r.dosePerServing, label.printed_elemental_dose_mg != null ? r.elementalPerServing(mg(label.printed_elemental_dose_mg)) : r.compoundPerServing(mg(label.compound_dose_mg))], ...(product ? [[r.activeMoiety, product.elemental_dose_mg.low === null ? r.notConvertible(product.elemental_dose_mg.basis) : mg(product.elemental_dose_mg.low)]] as Array<[string, React.ReactNode]> : []), ...(label.servings_per_day !== null ? [[r.servingsPerDayLabel, String(label.servings_per_day)]] as Array<[string, React.ReactNode]> : []), [r.readConfidence, enumWord(lang, label.confidence)], [r.sourceLabel, <BasisBadge key="label-source" kind="label" legend={legend} />]]} />
                     {label.evidence_spans?.length ? <p className="la-spans">{r.readFrom} {label.evidence_spans.map((s) => `“${s}”`).join(", ")}</p> : null}
                   </details>
                 ) : null}
@@ -1420,7 +1420,7 @@ function ScanFlowInner({ catalog, auth: sharedAuth, active = true, initialResult
                         {compat.actives.map((a) => (
                           <span key={a.printed} className="scan-chip">
                             {a.printed}
-                            {a.compound_dose_mg !== null ? <span className="scan-chip-dose">{mg(a.compound_dose_mg)}</span> : null}
+                            {a.printed_elemental_dose_mg != null ? <span className="scan-chip-dose">{r.elementalPerServing(mg(a.printed_elemental_dose_mg))}</span> : a.compound_dose_mg !== null ? <span className="scan-chip-dose">{r.compoundPerServing(mg(a.compound_dose_mg))}</span> : null}
                           </span>
                         ))}
                       </div>

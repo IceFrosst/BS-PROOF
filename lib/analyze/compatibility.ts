@@ -30,7 +30,7 @@ const ROOT = process.cwd();
  * are written in short plain words with each dose and unit kept exactly.
  * WORDING ONLY -- the pair enums, severities and the curated/model split are
  * unchanged. */
-export const COMPAT_PROMPT_VERSION = "compat-v1.1";
+export const COMPAT_PROMPT_VERSION = "compat-v1.2";
 
 /*
  * `user_input` (2026-09-15): facts a person TYPED on the manual search path of
@@ -115,20 +115,21 @@ export interface ResolvedActive {
   printed: string;
   canonical: string | null;
   compound_dose_mg: number | null;
+  printed_elemental_dose_mg: number | null;
   form_text: string | null;
 }
 
 export function resolveActives(ingredient: string, actives: LabelActive[], otherActives: string[]): ResolvedActive[] {
   const seen = new Set<string>();
   const out: ResolvedActive[] = [];
-  const push = (printed: string, dose: number | null, form: string | null) => {
+  const push = (printed: string, dose: number | null, elemental: number | null, form: string | null) => {
     const key = normalise(printed);
     if (!printed.trim() || seen.has(key)) return;
     seen.add(key);
-    out.push({ printed, canonical: normaliseActive(printed), compound_dose_mg: dose, form_text: form });
+    out.push({ printed, canonical: normaliseActive(printed), compound_dose_mg: dose, printed_elemental_dose_mg: elemental, form_text: form });
   };
-  for (const a of actives) push(a.name, a.compound_dose_mg, a.form_text);
-  for (const name of otherActives) push(name, null, null);
+  for (const a of actives) push(a.name, a.compound_dose_mg, a.printed_elemental_dose_mg ?? null, a.form_text);
+  for (const name of otherActives) push(name, null, null, null);
   if (!out.some((a) => a.canonical === ingredient)) {
     // The main active always takes part, even when the model's actives list
     // omitted it -- the label read already named it. `ingredient` may be a
@@ -137,7 +138,7 @@ export function resolveActives(ingredient: string, actives: LabelActive[], other
     // printed name rather than trusting it to be a canonical id.
     const printed = ingredient.replace(/_/g, " ");
     const canonical = loadCompatVocab().aliases[ingredient] ? ingredient : normaliseActive(printed);
-    out.unshift({ printed, canonical, compound_dose_mg: null, form_text: null });
+    out.unshift({ printed, canonical, compound_dose_mg: null, printed_elemental_dose_mg: null, form_text: null });
   }
   return out;
 }
@@ -237,7 +238,7 @@ interface ModelCompat {
 function compatPrompt(actives: ResolvedActive[], pairs: Array<[ResolvedActive, ResolvedActive]>): string {
   const raw = fs.readFileSync(path.join(ROOT, "prompts", "compatibility.md"), "utf8");
   const activesText = actives
-    .map((a) => `- ${a.printed}; dose: ${a.compound_dose_mg === null ? "not printed" : `${a.compound_dose_mg} mg`}; form: ${a.form_text ?? "not printed"}`)
+    .map((a) => `- ${a.printed}; dose: ${a.printed_elemental_dose_mg !== null ? `${a.printed_elemental_dose_mg} mg elemental (as printed)` : a.compound_dose_mg === null ? "not printed or unclear" : `${a.compound_dose_mg} mg compound (as printed)`}; form: ${a.form_text ?? "not printed"}`)
     .join("\n");
   const pairsText = pairs.map(([a, b], i) => `${i + 1}. ${a.printed} + ${b.printed}`).join("\n");
   return raw.replace("{ACTIVES}", activesText || "- (none)").replace("{PAIRS}", pairsText || "(none)");

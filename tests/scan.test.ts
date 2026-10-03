@@ -341,7 +341,7 @@ describe("model boundary helpers", () => {
       actives: ["Creatine Monohydrate"],
       certifications: null,
     });
-    expect(read.actives).toEqual([{ name: "Creatine Monohydrate", compound_dose_mg: null, dose_unit_as_printed: null, form_text: null }]);
+    expect(read.actives).toEqual([{ name: "Creatine Monohydrate", compound_dose_mg: null, printed_elemental_dose_mg: null, dose_unit_as_printed: null, form_text: null }]);
     expect(read.certifications).toEqual([]);
     expect(read.other_actives).toEqual([]);
   });
@@ -492,6 +492,31 @@ describe("analyzeScan end to end (fakes only)", () => {
     expect(broken.product).toEqual(ok.product);
     expect(broken.evidence).toEqual(ok.evidence);
     expect(broken.dose_effectiveness).toEqual(ok.dose_effectiveness);
+  });
+
+  it("continues converting a printed magnesium glycinate salt mass", async () => {
+    const out = await analyzeScan("aW1n", "image/png", deps({
+      readLabel: async () => label({
+        ingredient_vocab_id: "magnesium", form_vocab_id: "magnesium_glycinate",
+        compound_dose_mg: 200, printed_elemental_dose_mg: null, servings_per_day: null,
+        actives: [{ name: "Magnesium glycinate", compound_dose_mg: 200, dose_unit_as_printed: "200 mg", form_text: "bisglycinate" }],
+      }),
+    }));
+    expect(out.product?.elemental_dose_mg).toEqual({ low: 28.192, high: 28.192, basis: "converted" });
+  });
+
+  it("uses declared elemental dose once without compound conversion", async () => {
+    const out = await analyzeScan("aW1n", "image/png", deps({
+      readLabel: async () => label({
+        ingredient_vocab_id: "magnesium", ingredient_label_text: "Magnesium (as bisglycinate)",
+        form_vocab_id: "magnesium_glycinate", compound_dose_mg: null,
+        printed_elemental_dose_mg: 200, servings_per_day: null,
+        actives: [{ name: "Magnesium (as bisglycinate)", compound_dose_mg: null, dose_unit_as_printed: "200 mg", form_text: "bisglycinate" }],
+      }),
+    }));
+    expect(out.product?.elemental_dose_mg).toEqual({ low: 200, high: 200, basis: "elemental_stated" });
+    expect(out.product?.scored_dose_mg).toBe(200);
+    expect(out.ledger_audit).toBeUndefined();
   });
 
   it("skips the text model calls when the label read consumed the time budget", async () => {

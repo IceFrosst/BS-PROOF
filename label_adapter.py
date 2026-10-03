@@ -46,6 +46,7 @@ project's own criticism of itself.
 from __future__ import annotations
 
 import json
+import math
 import os
 import re
 import shutil
@@ -58,10 +59,9 @@ SCHEMA = ROOT / "schemas" / "label.json"
 
 # Bump when prompts/label.md or schemas/label.json changes. Scoped to the label
 # read only -- see the module docstring on why this is not PROMPT_VERSION.
-LABEL_PROMPT_VERSION = "label-v1.3"   # v1.3 (2026-09-22): schema size limits stated;
-                                      # v1.2 (2026-09-21): typed JSON template;
-                                      # v1.1 added whole-panel fields. Mirrored
-                                      # in lib/analyze/vision.ts.
+LABEL_PROMPT_VERSION = "label-v1.5"   # Per-active printed dose basis,
+                                      # backward-compatible with older payloads;
+                                      # mirrored in lib/analyze/vision.ts.
 
 # Tier A. Label reading is OCR plus a vocabulary mapping -- the same shape as S1
 # and S8, which are tier A for the same reason. Measured 2026-08-21: haiku read
@@ -180,6 +180,7 @@ def _extract_json(text: str) -> dict:
 # are different facts and only one of them is safe to show a user as "dose not
 # assessable".
 _OPTIONAL_DEFAULTS = {
+    "printed_elemental_dose_mg": None,
     "ingredient_label_text": None,
     "dose_unit_as_printed": None,
     "servings_per_day": None,
@@ -202,6 +203,25 @@ def _validate(obj: dict) -> dict:
     for key, default in _OPTIONAL_DEFAULTS.items():
         if obj.get(key) is None:
             obj[key] = default
+    compound = obj.get("compound_dose_mg")
+    elemental = obj.get("printed_elemental_dose_mg")
+    if compound is not None and elemental is not None:
+        raise LabelReadError("compound_dose_mg and printed_elemental_dose_mg are contradictory; refusing label")
+    for field, value in (("compound_dose_mg", compound), ("printed_elemental_dose_mg", elemental)):
+        if value is not None and (isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0):
+            raise LabelReadError(f"{field} must be a non-negative number or null")
+
+    actives = obj.get("actives", [])
+    if isinstance(actives, list):
+        for index, active in enumerate(actives):
+            if isinstance(active, dict):
+                row_compound = active.get("compound_dose_mg")
+                row_elemental = active.get("printed_elemental_dose_mg")
+                if row_compound is not None and row_elemental is not None:
+                    raise LabelReadError(f"actives[{index}] declares contradictory compound and elemental doses")
+                for field, value in (("compound_dose_mg", row_compound), ("printed_elemental_dose_mg", row_elemental)):
+                    if value is not None and (isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0):
+                        raise LabelReadError(f"actives[{index}].{field} must be a non-negative number or null")
 
     try:
         import jsonschema
@@ -239,8 +259,9 @@ def read_label(image_path: str | Path) -> dict:
     One image -> one validated label read. Raises LabelReadError on failure.
 
     Returns the schema object plus `_meta` (model, prompt version, elapsed).
-    The caller converts `compound_dose_mg` to elemental; this function
-    deliberately does not, so the arithmetic stays in one auditable place.
+    The caller converts `compound_dose_mg` to elemental, unless the label
+    explicitly declares `printed_elemental_dose_mg`; this function never
+    performs or guesses a dose conversion.
     """
     import time
     path = _check_image(Path(image_path))

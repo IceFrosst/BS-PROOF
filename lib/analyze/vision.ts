@@ -39,12 +39,12 @@ import { vocabBlock } from "./vocab";
 const ROOT = process.cwd();
 
 /** Bump together with prompts/label.md and label_adapter.LABEL_PROMPT_VERSION. */
-/* label-v1.3 (2026-09-22): the prompt now states every list/length limit in
+/* label-v1.5 (2026-10-03): per-active elemental/compound basis; v1.4 (2026-10-03): explicit elemental mineral basis; v1.3 (2026-09-22): the prompt states every list/length limit in
  * schemas/label.json. A real busy-panel scan returned 13+ evidence_spans and the
  * whole read failed "must NOT have more than 12 items" because the prompt never
  * mentioned the cap. Wording only: the schema, the fail-closed validation and
  * every field's meaning are unchanged. */
-export const LABEL_PROMPT_VERSION = "label-v1.3";
+export const LABEL_PROMPT_VERSION = "label-v1.5";
 
 /** One read's wall clock. The route's maxDuration is 60s; leave headroom. */
 const TIMEOUT_MS = 50_000;
@@ -56,6 +56,7 @@ export type LabelMediaType = "image/png" | "image/jpeg" | "image/webp" | "image/
 export interface LabelActive {
   name: string;
   compound_dose_mg: number | null;
+  printed_elemental_dose_mg: number | null;
   dose_unit_as_printed: string | null;
   form_text: string | null;
 }
@@ -65,6 +66,7 @@ export interface LabelRead {
   ingredient_label_text: string | null;
   form_vocab_id: string | null;
   compound_dose_mg: number | null;
+  printed_elemental_dose_mg?: number | null;
   dose_unit_as_printed: string | null;
   servings_per_day: number | null;
   is_multi_ingredient: boolean;
@@ -112,6 +114,7 @@ function labelPrompt(): string {
 }
 
 const OPTIONAL_DEFAULTS: Record<string, unknown> = {
+  printed_elemental_dose_mg: null,
   ingredient_label_text: null,
   dose_unit_as_printed: null,
   servings_per_day: null,
@@ -223,7 +226,7 @@ export function validateLabel(obj: Record<string, unknown>): LabelRead {
     obj.actives = obj.actives
       .map((a) => {
         if (typeof a === "string") {
-          return { name: a, compound_dose_mg: null, dose_unit_as_printed: null, form_text: null };
+          return { name: a, compound_dose_mg: null, printed_elemental_dose_mg: null, dose_unit_as_printed: null, form_text: null };
         }
         if (a && typeof a === "object" && !Array.isArray(a)) {
           const row = a as Record<string, unknown>;
@@ -235,11 +238,14 @@ export function validateLabel(obj: Record<string, unknown>): LabelRead {
           if (row.compound_dose_mg != null && typeof row.compound_dose_mg !== "number") {
             throw new LabelReadError(`actives compound_dose_mg must be a number or null, got ${JSON.stringify(row.compound_dose_mg)}`);
           }
+          if (row.printed_elemental_dose_mg != null && typeof row.printed_elemental_dose_mg !== "number") throw new LabelReadError("actives printed_elemental_dose_mg must be a number or null");
+          if (row.compound_dose_mg != null && row.printed_elemental_dose_mg != null) throw new LabelReadError("active row cannot declare both compound and elemental doses");
           return {
             // No silent .slice() here: an over-long name/unit/form goes on to
             // clipToLabelSchema (word-safe, dose-safe) or fails the schema check.
             name: String(row.name ?? ""),
             compound_dose_mg: typeof row.compound_dose_mg === "number" ? row.compound_dose_mg : null,
+            printed_elemental_dose_mg: typeof row.printed_elemental_dose_mg === "number" ? row.printed_elemental_dose_mg : null,
             dose_unit_as_printed: row.dose_unit_as_printed == null ? null : String(row.dose_unit_as_printed),
             form_text: row.form_text == null ? null : String(row.form_text),
           };
@@ -279,6 +285,13 @@ export function validateLabel(obj: Record<string, unknown>): LabelRead {
   const dose = obj.compound_dose_mg;
   if (dose !== null && (typeof dose !== "number" || !Number.isFinite(dose) || dose < 0)) {
     throw new LabelReadError(`compound_dose_mg must be a non-negative number or null, got ${String(dose)}`);
+  }
+  const elementalDose = obj.printed_elemental_dose_mg;
+  if (elementalDose !== null && (typeof elementalDose !== "number" || !Number.isFinite(elementalDose) || elementalDose < 0)) {
+    throw new LabelReadError(`printed_elemental_dose_mg must be a non-negative number or null, got ${String(elementalDose)}`);
+  }
+  if (dose !== null && elementalDose !== null) {
+    throw new LabelReadError("compound_dose_mg and printed_elemental_dose_mg are contradictory; refusing label");
   }
   clipToLabelSchema(obj);
   let clean: Record<string, unknown>;

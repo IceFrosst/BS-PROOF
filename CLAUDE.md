@@ -561,6 +561,8 @@ do not drop it.
 
 ## Current state
 
+**2026-10-03 — Magnesium elemental label-dose correction (local uncommitted).** Preserved prior `printed_elemental_dose_mg` edits. This continuation fixes replay's optional-field null check, aligns `/api/analyze-label` basis to `elemental_stated`, and updates the label prompt size-limit header to v1.5. Added route parity, retained-audit refusal/control, TS/Python contradictory active-row validation, compatibility prompt basis, and stubbed Python `analyze()` tests. Added an actual ScanFlow saved-result replay regression for EN and LT: a legacy active missing `printed_elemental_dose_mg` renders `200 mg compound per serving` / `200 mg junginio porcijoje` in the rendered chip, not elemental/dash copy, and makes no scan POST. The Python elemental fixture now nulls compound dose for its printed-elemental case so the real validation contract accepts it. Focused gates (localization Vitest 20 tests, typecheck, localization ESLint, Python unittest 4 tests, and diff check) pass. No scoring constants, retained fixtures, or exact-match rules changed. **Handoff:** independent review required; do not promote until accepted.
+
 **2026-10-03 — Shared persisted EN/LT localization of the whole `/scan` workspace, integrated with Ignas PR3 and the local UI
 merge `17359c5`: IMPLEMENTED on branch `fix/scan-localization-20261003`; the localization continuation below is an UNREVIEWED WIP checkpoint, pushed only to this branch, NOT merged to main and NOT deployed.**
 Merges on this branch: `origin/main` `3ef1218` (docs), `origin/ignas-pr3` `1f86403` (Ignas ancestry kept) and the local
@@ -1872,6 +1874,7 @@ still the unmeasured SR-uplift experiment (Next item 3).
 
 ## Next
 
+- **Magnesium dose correction (local uncommitted work):** EN/LT legacy replay rendered-chip assertions and realistic Python elemental fixture are implemented; focused Vitest (20 tests), typecheck, ESLint, Python unittest (4 tests), and diff check pass. Independent review required before promotion. No constants/exact-match changes.
 - **Immediate blocker (owner action):** add `https://bs-proof-dashboard.vercel.app` to the NEW Google OAuth client's Authorized JavaScript origins, then verify Google button + real consent/session, phone scan, History/replay, and live owner query. Current production sign-in is still blocked despite the READY redeploy; do not claim auth works until observed end-to-end.
 - **Resume published WIP without merging blindly:** UI branch `fix/scan-ignas-en-lt-20261003` (`c898d03`) needs malformed/non-array active handling and History/signout reachability proof; localization branch `fix/scan-localization-20261003` (`e3a748b`) needs independent C1/C2 and all-source-findings review, focused remaining checks and Lithuanian proofread. Research queue (`00b17d9`) and consumer (`a74160e`) still require contract/client, UI/presence/waiting states, source provenance and final security/owner review; do not provision SQL/token/worker or activate flag.
 - **Google-required scan + private History: provisioned 2026-10-03; real-service verification still open (see

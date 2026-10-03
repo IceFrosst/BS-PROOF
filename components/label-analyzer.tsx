@@ -81,6 +81,7 @@ interface AnalyzerResponse {
     ingredient_label_text: string | null;
     form_vocab_id: string | null;
     compound_dose_mg: NullableNumber;
+    printed_elemental_dose_mg?: NullableNumber;
     confidence: string;
     is_multi_ingredient: boolean;
     other_actives: string[];
@@ -699,7 +700,7 @@ export function LabelAnalyzer() {
                 </div>
                 <div>
                   <dt>Printed dose</dt>
-                  <dd>{mg(label.compound_dose_mg)} compound</dd>
+                  <dd>{label.printed_elemental_dose_mg != null ? `${mg(label.printed_elemental_dose_mg)} elemental` : `${mg(label.compound_dose_mg)} compound`}</dd>
                 </div>
                 <div>
                   <dt>Active moiety</dt>

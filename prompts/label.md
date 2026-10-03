@@ -33,7 +33,15 @@ copy. When the label names the ingredient with no form, use the ingredient's
 `*_unspecified` id. When you cannot tell, null.
 
 `compound_dose_mg` — milligrams of the COMPOUND per serving, as printed. This is
-the number on the Supplement Facts line for that ingredient.
+the salt/compound mass, e.g. `Magnesium bisglycinate 200 mg`.
+
+`printed_elemental_dose_mg` — an explicitly declared elemental mineral amount,
+per serving, only when the label says the mineral amount (e.g. `Magnesium (as
+bisglycinate) 200 mg`). In that wording report 200 here, NOT as compound mass.
+These two numeric fields are mutually exclusive. When the label only prints a
+salt mass, put the mass in `compound_dose_mg` and null here. If wording/basis is
+ambiguous or unreadable, set both null; never infer elemental amount from salt
+mass or assume servings per day.
 
 - Convert units only: `5 g` → 5000, `4400 mg` → 4400, `1.5 g` → 1500.
 - Do NOT convert a salt to its active moiety. Print-mass only; that arithmetic
@@ -71,11 +79,14 @@ copy what is printed, never what is typical. Empty list and null are correct
 answers.
 
 `actives` — EVERY dosed active on the Supplement Facts panel, one entry each,
-including the main active. `name` as printed; `compound_dose_mg` the per-serving
-mass converted to mg (unit conversion only, never salt-to-moiety); `form_text`
+including the main active. `name` as printed; report the per-serving mg in exactly
+one dose field: `compound_dose_mg` for compound/salt mass, or
+`printed_elemental_dose_mg` only when elemental amount is explicitly declared.
+Never populate both or convert one basis to the other; use null for both when
+unclear. `form_text`
 the form or salt as printed ("as magnesium bisglycinate", "as ferrous sulfate")
 or null. An active inside a proprietary blend with no mass of its own has
-`compound_dose_mg: null`. Do not list excipients, flavours or "other
+both dose fields null. Do not list excipients, flavours or "other
 ingredients".
 
 `certifications` — third-party seals and testing statements AS PRINTED: "NSF
@@ -92,7 +103,7 @@ pregnant", "Not for children"). `claims_printed` — short verbatim marketing or
 structure/function claims ("Supports muscle strength", "Clinically studied").
 Keep each under 160 characters; at most ten of each.
 
-## Size limits (label-v1.3)
+## Size limits (label-v1.5)
 
 The object is checked against a schema, and ONE list that is too long rejects
 the whole read — the user then gets no answer at all. Stay inside these limits:
@@ -130,6 +141,7 @@ or numbers are `null`; lists are JSON arrays. Do not omit a key.
   "ingredient_label_text": null,
   "form_vocab_id": null,
   "compound_dose_mg": null,
+  "printed_elemental_dose_mg": null,
   "dose_unit_as_printed": null,
   "servings_per_day": null,
   "is_multi_ingredient": false,

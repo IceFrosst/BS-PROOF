@@ -38,6 +38,7 @@ export interface ProductMatchFacts {
   ingredient: string | null;
   form: string | null;
   compoundDoseMg: number | null;
+  printedElementalDoseMg?: number | null;
   servingsPerDay: number | null;
   isMultiIngredient: boolean;
   /** Every dosed/declared active found in the label's panel. */
@@ -50,6 +51,9 @@ export interface ProductMatchFacts {
 export function retainedAuditForProduct(facts: ProductMatchFacts): RetainedLedgerAudit | null {
   const actives = facts.actives;
   const otherActives = facts.otherActives;
+  // Retained targets are audited against printed COMPOUND mass only. An
+  // elemental declaration must never impersonate an exact compound-dose target.
+  if (facts.printedElementalDoseMg != null) return null;
   // Do not let a contradictory model label turn a blend into a single-active
   // retained audit. `actives` is the complete dosed/declared list; other_actives
   // is kept separate because it has no dose and is itself sufficient to refuse.

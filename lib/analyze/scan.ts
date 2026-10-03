@@ -155,6 +155,7 @@ export interface ProductFacts {
   ingredient_label_text: string | null;
   form_vocab_id: string | null;
   compound_dose_mg: number | null;
+  printed_elemental_dose_mg?: number | null;
   servings_per_day: number | null;
   is_multi_ingredient: boolean;
   other_actives: string[];
@@ -509,7 +510,10 @@ export async function analyzeFromLabel(label: ProductFacts, run: ScanRun): Promi
     return run.finish("ingredient_not_supported");
   }
 
-  const elemental = elementalDoseRangeMg(ingredient, formId, label.compound_dose_mg);
+  const declaredElemental = label.printed_elemental_dose_mg ?? null;
+  const elemental = declaredElemental === null
+    ? elementalDoseRangeMg(ingredient, formId, label.compound_dose_mg)
+    : { low: declaredElemental, high: declaredElemental, basis: "elemental_stated" };
   const scored = scoredDose(elemental.low, label.servings_per_day);
   out.product = {
     ingredient,
@@ -529,6 +533,7 @@ export async function analyzeFromLabel(label: ProductFacts, run: ScanRun): Promi
     ingredient,
     form: formId,
     compoundDoseMg: label.compound_dose_mg,
+    printedElementalDoseMg: label.printed_elemental_dose_mg ?? null,
     servingsPerDay: label.servings_per_day,
     isMultiIngredient: Boolean(label.is_multi_ingredient),
     actives: (label.actives ?? []).map((active) => ({ name: active.name, compoundDoseMg: active.compound_dose_mg })),

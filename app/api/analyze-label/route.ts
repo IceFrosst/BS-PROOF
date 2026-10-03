@@ -190,6 +190,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     : null;
   const formId = resolved.form;
   const printed = label.compound_dose_mg;
+  const elementalPrinted = label.printed_elemental_dose_mg ?? null;
 
   if (!ingredient) {
     out.status = "ingredient_not_supported";
@@ -202,11 +203,14 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   // Compound -> elemental, deterministically. A form of null (label stated no
   // form) refuses, which is the correct answer.
-  const elemental = elementalDoseRangeMg(ingredient, formId, printed);
+  const elemental = elementalPrinted !== null
+    ? { low: elementalPrinted, high: elementalPrinted, basis: "elemental_stated" as const }
+    : elementalDoseRangeMg(ingredient, formId, printed);
   out.product = {
     ingredient,
     form: formId,
     compound_dose_mg: printed,
+    printed_elemental_dose_mg: elementalPrinted,
     elemental_dose_mg: elemental,
     is_multi_ingredient: Boolean(label.is_multi_ingredient),
     other_actives: label.other_actives ?? [],
