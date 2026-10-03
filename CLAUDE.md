@@ -561,6 +561,42 @@ do not drop it.
 
 ## Current state
 
+**2026-10-03 — Ignas PR3 UI merged onto the released Google-required scan: BRANCH `fix/scan-ignas-en-lt-20261003`
+(base `2555166`), NOT pushed, NOT deployed.** `origin/ignas-pr3` (`53dc036` label clipping, `1f86403` /scan landing)
+was merged with `git merge --no-ff` so Ignas's commits keep their authorship; the one conflict was
+`components/scan-flow.tsx`, resolved against the released auth/private-History code. What is in: own top bar (scan
+mark, EN/LT switch persisted in `localStorage` key `bsproof.lang`, English default, account initial only when
+signed in; not drawn for a saved scan opened from History), headline above a framed camera, optional torch (only
+where the track reports it), camera asks for 3840x2160 and captures at 2560 px, uploads over 3.5 MB are re-encoded
+to a 2560 px JPEG before POST (Vercel refuses bodies over 4.5 MB), and one control row (Upload / shutter / Search).
+**Preserved from the release, re-verified:** the Google gate (no request and no anonymous request until a session
+exists; hint and "session ended / signed out" notices still shown under the control row), the live bearer token with
+the one-shot 401 refresh, sign-out/expiry/account-switch aborting the request and discarding the photo and result,
+the sign-out line on a result, the A/B result card, and private Scan/History replay. **Deliberate deviations from the
+PR, with reasons:** (1) the PR's timer-driven loading steps and determinate bar are gone -- `/api/scan` answers once
+and streams no progress, so ticking steps "done" on a 2.2 s timer claimed backend work had finished that nobody
+knew had; the loading view is now an indeterminate bar over a STATIC "this check covers" list (EN/LT), and
+real per-step progress still needs a streamed `/api/scan`; (2) the PR's `clipToLabelSchema` is narrowed in
+`lib/analyze/vision.ts`: it still shortens over-long printed text and the supporting lists (evidence spans,
+certifications, warnings, claims) to the schema's own limits, but it cuts strings back to a whole word and never
+leaves a bare trailing number (no invented dose), never touches `ingredient_vocab_id`/`form_vocab_id`, and NEVER
+shortens `actives`/`other_actives` -- silently dropping a 31st/41st dosed active would hide multi-active evidence
+from the compatibility check, so those still fail closed, as do wrong types, enums, required fields and
+negative numbers (`servings_per_day` is never assumed). No schema, prompt, version, scoring constant or
+`pipeline/` change. **Language scope, honestly: translation is the LANDING (headline, control row, camera
+hints, staged step, loading, sign-in hint) ONLY.** The result report, History, sign-in cards and session notices stay
+English until the separate expanded-results/History translation (worktree `/tmp/bsproof-localization`, not touched
+here) ships; do not describe the product as translated before that release. Tests:
+`tests/scan-landing-lang.test.tsx` (new), `tests/scan.test.ts`, `tests/camera-capture.test.ts`,
+`tests/scan-search.test.tsx`. Gates run: tsc, changed-file eslint, `git diff --check`, 14 focused vitest files plus
+the new one, one production build, `pipeline.invariants` and `pipeline.selftest`, and a 390 px Chromium smoke
+(EN/LT camera, staged, loading, signed-out gate, signed-in bearer) against that build with a fake camera and a mocked
+`/api/scan` -- NO model call and no real Google sign-in. Not run: full vitest, lint of the whole tree, Playwright
+e2e matrix (`tests/e2e/scan-workspace.spec.ts` pins "Search your supplement" and the Scan button by role name,
+both unchanged, but was not run on this layout). **Handoff:** push only after the founder/owner pass; then verify on
+a real phone that the 4K camera request, torch and the large-photo re-encode behave, and that a real
+signed-in scan still sends the token.
+
 **2026-10-03 — Google-required scan + private Scan/History: IMPLEMENTED, on `main`, PROVISIONED (SQL applied,
 Vercel production env set); the real Google sign-in is NOT yet verified (see "Release stage").** Founder: real results depend on a Google login, and a signed-in person can
 reopen their own saved results. Two isolated worktree commits were cherry-picked `--no-commit` onto
@@ -1735,8 +1771,10 @@ still the unmeasured SR-uplift experiment (Next item 3).
   optionally tightening the SQL guard's text match on `qual`/`with_check` (native-review W3). If sign-in returns 401
   for everyone, check the `SUPABASE_URL` / service-key pair first (a wrong pair looks like an expired session). The
   10 dev-only `npm audit` findings remain (see the pass-1 entry).
-- **After Google, in this order: PR3 / full EN–LT translation, then live PC research.** Neither was
-  started. Redo the original audit; the earlier categorical benchmark is not a valid exact-UI comparison.
+- **After Google, in this order: PR3 / full EN–LT translation, then live PC research.** PR3's UI +
+  landing-only EN/LT is merged on branch `fix/scan-ignas-en-lt-20261003` (unpushed; see the top of `Current state`);
+  the report/History translation is a separate pass and is NOT done -- the product is landing-translated only until
+  that ships. Live PC research was not started. Redo the original audit; the earlier categorical benchmark is not a valid exact-UI comparison.
 
 - Finish review of the detailed benchmark visuals; preserve exact product/dose
   inputs, limitations and the distinction between quote matching and medical

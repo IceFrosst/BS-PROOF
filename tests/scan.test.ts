@@ -32,7 +32,7 @@ import { readPriorDose, type PriorOutcome } from "@/lib/analyze/evidence-prior";
 import { ModelCallError, extractJson, validateAgainstSchema, type ChatJsonFn } from "@/lib/analyze/llm";
 import { analyzeScan, type ScanDeps } from "@/lib/analyze/scan";
 import { scoreProduct } from "@/lib/analyze/product-score";
-import { validateLabel, type LabelRead } from "@/lib/analyze/vision";
+import { LabelReadError, validateLabel, type LabelRead } from "@/lib/analyze/vision";
 
 type Json = Record<string, unknown>;
 
@@ -344,6 +344,60 @@ describe("model boundary helpers", () => {
     expect(read.actives).toEqual([{ name: "Creatine Monohydrate", compound_dose_mg: null, dose_unit_as_printed: null, form_text: null }]);
     expect(read.certifications).toEqual([]);
     expect(read.other_actives).toEqual([]);
+  });
+
+  it("an over-long printed string or supporting list is clipped, not a failed read (2026-10-02 live failure)", () => {
+    const long = "Vitamin K2 (as menaquinone-7 from chickpea, MenaQ7) and Vitamin K1 (as phytonadione) blend";
+    const read = validateLabel({
+      ingredient_vocab_id: null,
+      form_vocab_id: null,
+      compound_dose_mg: null,
+      is_multi_ingredient: true,
+      confidence: "high",
+      evidence_spans: Array.from({ length: 15 }, (_, i) => `line ${i}`),
+      other_actives: ["Vitamin D", long],
+      actives: [{ name: long + " " + long, compound_dose_mg: 0.1, dose_unit_as_printed: "mcg", form_text: null }],
+    });
+    expect(read.other_actives[1].length).toBeLessThanOrEqual(80);
+    expect(long.startsWith(read.other_actives[1])).toBe(true);
+    expect(read.actives[0].name.length).toBeLessThanOrEqual(120);
+    expect(read.evidence_spans).toHaveLength(12);
+    expect(read.evidence_spans[0]).toBe("line 0");
+    expect(read.is_multi_ingredient).toBe(true);
+  });
+
+  it("a clip never cuts through a number or leaves a bare one, so no dose is invented", () => {
+    const read = validateLabel({
+      ingredient_vocab_id: null,
+      form_vocab_id: null,
+      compound_dose_mg: null,
+      is_multi_ingredient: true,
+      confidence: "high",
+      evidence_spans: ["x"],
+      other_actives: ["Zinc bisglycinate chelate complex (TRAACS) with copper bisglycinate and more 15 mg per capsule x"],
+    });
+    expect(read.other_actives[0]).not.toMatch(/\d$/);
+    expect(read.other_actives[0]).not.toMatch(/\s(1|15)$/);
+  });
+
+  it("the dosed-active lists are never shortened: a 31st other active or 41st active still fails closed", () => {
+    const base = { ingredient_vocab_id: null, form_vocab_id: null, compound_dose_mg: null, is_multi_ingredient: true, confidence: "high", evidence_spans: ["x"] };
+    expect(() => validateLabel({ ...base, other_actives: Array.from({ length: 31 }, (_, i) => `Active ${i}`) })).toThrow(LabelReadError);
+    expect(() => validateLabel({ ...base, actives: Array.from({ length: 41 }, (_, i) => ({ name: `Active ${i}`, compound_dose_mg: 1, dose_unit_as_printed: null, form_text: null })) })).toThrow(LabelReadError);
+    const thirty = validateLabel({ ...base, other_actives: Array.from({ length: 30 }, (_, i) => `Active ${i}`) });
+    expect(thirty.other_actives).toHaveLength(30);
+  });
+
+  it("identifier fields, types and enums are not clipped or coerced and still fail closed", () => {
+    const base = { ingredient_vocab_id: null, form_vocab_id: null, compound_dose_mg: null, is_multi_ingredient: false, confidence: "high", evidence_spans: ["x"] };
+    expect(() => validateLabel({ ...base, ingredient_vocab_id: "a".repeat(41) })).toThrow(LabelReadError);
+    expect(() => validateLabel({ ...base, form_vocab_id: "a".repeat(61) })).toThrow(LabelReadError);
+    expect(() => validateLabel({ ...base, is_multi_ingredient: "true" })).toThrow(LabelReadError);
+    expect(() => validateLabel({ ...base, confidence: "certain" })).toThrow(LabelReadError);
+    expect(() => validateLabel({ ...base, compound_dose_mg: "5" })).toThrow(LabelReadError);
+    expect(() => validateLabel({ ...base, servings_per_day: -1 })).toThrow(LabelReadError);
+    const read = validateLabel(base);
+    expect(read.servings_per_day ?? null).toBeNull(); // never assumed to be 1
   });
 });
 
