@@ -1,102 +1,303 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { ledgerFromAudit, score as scoreLedger, type AuditOutcome } from "@/lib/evidence-ledger";
-import { ledgerWord } from "@/lib/i18n/copy/result";
-import { RESEARCH_COPY, type ResearchLanguage } from "@/lib/i18n/copy/research";
-import { RESEARCH_POLL_MS, researchWithCurrentToken, waitForResearch, type LiveResearchJob, type ResearchResultV2 } from "@/lib/scan-research/client";
+/*
+ * Owner-private LIVE RESEARCH panel under a saved scan result.
+ *
+ * Contract: lib/scan-research/contract.ts (POST /api/scan/research, GET
+ * /api/scan/research/[id]); client rules: lib/scan-research/client.ts; copy:
+ * lib/i18n/copy/research.ts. What this panel promises, and how:
+ *
+ *  - ONLY A SAVED, OWNED RUN. Research is asked for with a stored run id (a UUID)
+ *    and the signed-in owner's Google bearer token, nothing else. No id, no
+ *    sign-in, or a deployment without sign-in: no request at all.
+ *  - A REPLAY ASKS NOTHING BY ITSELF. A saved scan opened from History is shown
+ *    "as it was, nothing re-run". It looks the research up (GET) only when this
+ *    page already knows the job, and otherwise waits for the person to press the
+ *    button. Nothing here ever re-requests research for a scan that has a job.
+ *  - NO STALE OWNER. Everything shown is keyed to (owner, scan). A different
+ *    owner, a sign-out or an unmount aborts the request in flight, and a late
+ *    answer is dropped; the previous owner's job is never drawn, not even for a
+ *    frame.
+ *  - REAL STATE ONLY. queued / running / succeeded / failed are the job's own
+ *    status; times are the server's timestamps; "no update from the worker" is
+ *    derived from the last worker signal and the lease. There is no percentage,
+ *    no estimate and no fabricated progress.
+ *  - EXPERIMENTAL AND UNGRADED. A research audit is drawn WITHOUT a score, bar,
+ *    arc or verdict: it is not run through the retained rubric and does not touch
+ *    the saved audits. It never averages anything or speaks for a blend.
+ *  - SOURCE ACCESS IS NOT PAPERS. Counters come from the server's
+ *    SourceAccessSummaryV2: snippets and page summaries (written by Claude Haiku)
+ *    are "returned content"; errors (HTTP 403, redirects), walls and refusals are
+ *    "no content". Nothing is presented as a paper read or as a quotation.
+ *  - MODEL TEXT IS NEVER TRANSLATED. It is shown verbatim and, in Lithuanian,
+ *    tagged lang="en" under a note. Every control is Lithuanian.
+ *  - NOTHING RAW. A failing server's text, stack or secret never reaches the
+ *    screen: only a short allow-listed failure code does.
+ */
+import { useEffect, useId, useMemo, useRef, useState } from "react";
+
+import { RESEARCH_COPY, type ResearchCopy, type ResearchLanguage } from "@/lib/i18n/copy/research";
+import {
+  forgetResearchJob,
+  formatUtc,
+  isResearchId,
+  isStalled,
+  knownResearchJob,
+  missingFacts,
+  noteResearchOwner,
+  parseResearchJob,
+  parseResearchResult,
+  rememberResearchJob,
+  researchWithCurrentToken,
+  waitForResearch,
+  RESEARCH_POLL_MS,
+  type LiveResearchJob,
+  type ResearchFacts,
+  type ResearchReply,
+  type ResearchResultV2,
+} from "@/lib/scan-research/client";
 
 type TokenOptions = { userId?: string; forceRefresh?: boolean };
-type Audit = { meta: { model: string; prompt: string }; product: string; ingredient: string; form: string; daily_dose: string; outcomes: AuditOutcome[]; could_not_access: string[] };
-const object = (x: unknown): x is Record<string, unknown> => typeof x === "object" && x !== null && !Array.isArray(x);
-function validAudit(x: unknown): x is Audit {
-  if (!object(x) || !object(x.meta) || typeof x.meta.model !== "string" || typeof x.meta.prompt !== "string" || typeof x.product !== "string" || typeof x.ingredient !== "string" || typeof x.form !== "string" || typeof x.daily_dose !== "string" || !Array.isArray(x.outcomes) || !Array.isArray(x.could_not_access) || !x.could_not_access.every((v) => typeof v === "string")) return false;
-  return x.outcomes.every((raw) => {
-    if (!object(raw) || typeof raw.name !== "string" || typeof raw.sentence !== "string" || typeof raw.strongest_study !== "string" || typeof raw.strongest_doubt !== "string" || !object(raw.ledger)) return false;
-    const l = raw.ledger;
-    if (typeof l.effectPoints !== "string" || typeof l.bodyIsRct !== "boolean" || !object(l.checklist) || !object(l.gates) || typeof l.formFit !== "string" || typeof l.doseFit !== "string" || typeof l.effective_daily_range !== "string" || !Array.isArray(raw.inventory)) return false;
-    const checklist = l.checklist, gates = l.gates;
-    return ["risk_of_bias", "consistency", "precision", "directness", "publication_bias"].every((k) => ["supported", "concern", "unknown"].includes(String(checklist[k])))
-      && ["rctCount", "largestRctN", "longestRctWeeks"].every((k) => typeof gates[k] === "number" && Number.isFinite(gates[k]))
-      && ["chronicOutcome", "surrogate", "allPositiveIndustryOrOneLab"].every((k) => typeof gates[k] === "boolean")
-      && raw.inventory.every((item) => object(item) && typeof item.id === "string" && item.access === "snippet");
-  });
-}
-const SUMMARY_KEYS = ["requests", "errors", "walls", "refusals", "search_snippets", "fetch_summaries", "original_documents"] as const;
-function validResult(x: unknown): x is ResearchResultV2 {
-  if (!object(x) || !validAudit(x.audit) || !object(x.provenance) || !object(x.source_access)) return false;
-  const p = x.provenance, a = x.source_access;
-  if (typeof p.evidence_status !== "string" || typeof p.affects_score !== "boolean" || typeof p.clinically_approved !== "boolean" || typeof p.human_verified !== "boolean" || typeof p.runner !== "string" || typeof p.billing !== "string" || typeof p.model !== "string" || typeof p.prompt_version !== "string" || typeof p.cli_version !== "string" || typeof p.adapter_version !== "string" || typeof p.classifier_version !== "string" || p.source_access_version !== "SourceAccessV2") return false;
-  if (a.version !== "SourceAccessSummaryV2" || !object(a.summary) || !Array.isArray(a.inventory) || !Array.isArray(a.limitations)) return false;
-  const s = a.summary;
-  return SUMMARY_KEYS.every((key) => typeof s[key] === "number" && Number.isInteger(s[key]) && s[key] >= 0) && s.original_documents === 0
-    && a.inventory.every((item) => object(item) && typeof item.id === "string" && item.evidence_class === "derived_snippet") && a.limitations.every((v) => typeof v === "string");
+type PanelState = "idle" | "starting" | "queued" | "running" | "succeeded" | "failed" | "disabled" | "unavailable" | "error" | "no-id" | "auth" | "busy" | "not-researchable" | "not-found";
+type View = { key: string; state: PanelState; job: LiveResearchJob | null; stalled: boolean };
+
+/** The state a (owner, scan) starts in, before any request. "starting" is the only state that sends one. */
+function startState(enabled: boolean, ownerId: string | null, scanId: string | null, mayStart: boolean): PanelState {
+  if (!enabled) return "disabled";
+  if (!ownerId) return "auth";
+  if (!scanId || !isResearchId(scanId)) return "no-id";
+  return mayStart ? "starting" : "idle";
 }
 
-export function ScanResearchPanel({ scanId, ownerId, lang, getAccessToken, enabled = true }: { scanId: string | null; ownerId: string | null; lang: ResearchLanguage; getAccessToken: (options?: TokenOptions) => Promise<string | null>; enabled?: boolean }) {
+/** One API answer -> the panel state that must replace the job, or null when it carries a usable job. */
+function failureOf({ response, json }: { response: Response; json: ResearchReply }): PanelState | null {
+  if (response.status === 401 || json.status === "unauthorized") return "auth";
+  if (response.status === 404 || json.status === "not_found") return "not-found";
+  if (json.status === "research_disabled") return "disabled";
+  if (json.status === "research_unavailable" || json.status === "auth_unavailable") return "unavailable";
+  if (response.status === 429 || json.status === "research_busy") return "busy";
+  if (response.status === 422 || json.status === "scan_not_researchable") return "not-researchable";
+  if (!response.ok || json.status !== "ok" || !json.job) return "error";
+  return null;
+}
+
+/** The states that still draw the job (its stages and facts); every other state discards it. */
+const SHOWS_JOB: ReadonlySet<PanelState> = new Set(["queued", "running", "succeeded", "failed", "error", "unavailable", "busy"]);
+
+export function ScanResearchPanel({ scanId, ownerId, lang, getAccessToken, enabled = true, replay = false, clock = Date.now }: {
+  scanId: string | null;
+  ownerId: string | null;
+  lang: ResearchLanguage;
+  getAccessToken: (options?: TokenOptions) => Promise<string | null>;
+  enabled?: boolean;
+  /** A saved scan opened from History: never asks for research on its own. */
+  replay?: boolean;
+  /** Milliseconds since the epoch. Injected so no test (and no render) depends on the wall clock. */
+  clock?: () => number;
+}) {
   const c = RESEARCH_COPY[lang];
-  const [job, setJob] = useState<LiveResearchJob | null>(null);
-  const [state, setState] = useState<"starting" | "queued" | "running" | "succeeded" | "failed" | "disabled" | "unavailable" | "error" | "no-id" | "auth" | "busy" | "not-researchable">("starting");
-  const [attempt, setAttempt] = useState(0);
-  const run = useCallback(async (signal: AbortSignal) => {
-    void attempt;
-    setJob(null);
-    if (!enabled) { setState("disabled"); return; }
-    if (!ownerId) { setState("auth"); return; }
-    if (!scanId) { setState("no-id"); return; }
-    try {
-      const started = await researchWithCurrentToken("/api/scan/research", getAccessToken, signal, ownerId, { scan_id: scanId });
+  const headingId = useId();
+  const statusRef = useRef<HTMLParagraphElement | null>(null);
+  const key = [enabled ? "on" : "off", ownerId ?? "", scanId ?? "", replay ? "replay" : "fresh"].join("|");
+
+  // Explicit presses (look up / check again), counted PER (owner, scan) so a press never leaks across them.
+  const [action, setAction] = useState({ key, n: 0 });
+  const presses = action.key === key ? action.n : 0;
+  const mayStart = !replay || presses > 0 || (ownerId !== null && scanId !== null && knownResearchJob(ownerId, scanId) !== null);
+  const base = startState(enabled, ownerId, scanId, mayStart);
+
+  const [view, setView] = useState<View>({ key, state: base, job: null, stalled: false });
+  // Only the CURRENT (owner, scan)'s view is ever drawn: a view stamped with another key is simply not this panel's.
+  const live: View = view.key === key ? view : { key, state: base, job: null, stalled: false };
+
+  // The latest callbacks, so a parent that re-creates them cannot restart (re-request) a running flow.
+  const latest = useRef({ getAccessToken, clock });
+  useEffect(() => { latest.current = { getAccessToken, clock }; });
+
+  useEffect(() => {
+    noteResearchOwner(ownerId);
+    if (!ownerId || !scanId || startState(enabled, ownerId, scanId, mayStart) !== "starting") return;
+    const controller = new AbortController();
+    const { signal } = controller;
+    const owner = ownerId;
+    const scan = scanId;
+    const publish = (state: PanelState, job: LiveResearchJob | null = null) => {
       if (signal.aborted) return;
-      if (started.response.status === 401 || started.json.status === "unauthorized") { setState("auth"); return; }
-      if (started.json.status === "research_disabled") { setState("disabled"); return; }
-      if (started.json.status === "research_unavailable" || started.json.status === "auth_unavailable") { setState("unavailable"); return; }
-      if (started.response.status === 429 || started.json.status === "research_busy") { setState("busy"); return; }
-      if (started.response.status === 422 || started.json.status === "scan_not_researchable") { setState("not-researchable"); return; }
-      if (!started.response.ok || !started.json.job) { setState("error"); return; }
-      let current = started.json.job;
-      setJob(current); setState(current.status);
-      while (current.status === "queued" || current.status === "running") {
-        await waitForResearch(RESEARCH_POLL_MS, signal);
-        const polled = await researchWithCurrentToken(`/api/scan/research/${encodeURIComponent(current.id)}`, getAccessToken, signal, ownerId);
+      const shown = job && SHOWS_JOB.has(state) ? job : null;
+      setView({ key, state, job: shown, stalled: shown ? isStalled(shown, latest.current.clock()) : false });
+    };
+    const send = (path: string, body?: unknown) => researchWithCurrentToken(path, latest.current.getAccessToken, signal, owner, body);
+    const run = async () => {
+      let job: LiveResearchJob | null = null;
+      try {
+        const knownId = knownResearchJob(owner, scan);
+        // A job this page already knows is LOOKED UP; research is requested (POST) only when there is none.
+        const first = knownId ? await send(`/api/scan/research/${encodeURIComponent(knownId)}`) : await send("/api/scan/research", { scan_id: scan });
         if (signal.aborted) return;
-        if (!polled.response.ok || !polled.json.job) {
-          if (polled.response.status === 401 || polled.json.status === "unauthorized") setState("auth");
-          else if (polled.response.status === 429 || polled.json.status === "research_busy") setState("busy");
-          else if (polled.response.status === 422 || polled.json.status === "scan_not_researchable") setState("not-researchable");
-          else setState(polled.json.status === "research_unavailable" ? "unavailable" : "error");
+        const failed = failureOf(first);
+        if (failed) {
+          if (failed === "not-found") forgetResearchJob(owner, scan);
+          publish(failed);
           return;
         }
-        current = polled.json.job; setJob(current); setState(current.status);
+        job = parseResearchJob(first.json.job);
+        if (!job || job.scan_id !== scan || (knownId !== null && job.id !== knownId)) { publish("error"); return; }
+        rememberResearchJob(owner, scan, job.id);
+        publish(job.status, job);
+        while (job.status === "queued" || job.status === "running") {
+          await waitForResearch(RESEARCH_POLL_MS, signal);
+          const polled = await send(`/api/scan/research/${encodeURIComponent(job.id)}`);
+          if (signal.aborted) return;
+          const bad = failureOf(polled);
+          if (bad) {
+            if (bad === "not-found") forgetResearchJob(owner, scan);
+            publish(bad, job);
+            return;
+          }
+          const next = parseResearchJob(polled.json.job);
+          // A poll must answer for the same job of the same scan; anything else is dropped, not drawn.
+          if (!next || next.id !== job.id || next.scan_id !== scan) { publish("error", job); return; }
+          job = next;
+          publish(job.status, job);
+        }
+      } catch (error) {
+        if (!signal.aborted) publish(error instanceof Error && error.message === "auth" ? "auth" : "error", job);
       }
-    } catch (error) {
-      if (!signal.aborted) setState(error instanceof Error && error.message === "auth" ? "auth" : "error");
-    }
-  }, [enabled, ownerId, scanId, getAccessToken, attempt]);
-  useEffect(() => { const controller = new AbortController(); queueMicrotask(() => { if (!controller.signal.aborted) void run(controller.signal); }); return () => controller.abort(); }, [run]);
-  const result = job?.status === "succeeded" && validResult(job.result) ? job.result : null;
-  const text = state === "queued" ? c.queued : state === "running" || state === "starting" ? c.running : state === "succeeded" ? (result ? c.succeeded : c.error) : state === "failed" ? c.failed : state === "disabled" ? c.disabled : state === "unavailable" ? c.unavailable : state === "no-id" ? c.noId : state === "auth" ? c.auth : state === "busy" ? c.busy : state === "not-researchable" ? c.notResearchable : state === "error" ? c.error : c.startFailed;
-  const audit = result ? result.audit as Audit : null;
-  const showRetry = (state === "error" || state === "unavailable" || state === "busy") && scanId && ownerId;
-  return <section className="sc-research" aria-label={c.title} data-research-state={state}>
-    <h2>{c.title}</h2><p role="status">{text}</p>
-    {state === "failed" && job?.failure_code ? <p>{c.failureCode}: {/^[a-z0-9_]{1,80}$/i.test(job.failure_code) ? job.failure_code : "unavailable"}</p> : null}
-    {showRetry ? <button type="button" onClick={() => { setState("starting"); setAttempt((n) => n + 1); }}>{c.retry}</button> : null}
-    {result && audit ? <div className="sc-research-audit" data-testid="research-audit">
-      <p>{audit.product} · {audit.ingredient} · {audit.form} · {audit.daily_dose}</p>
-      <p>{c.model}: {audit.meta.model} · {c.prompt}: {audit.meta.prompt}</p>
-      <p>{c.provenance}: {c.evidenceStatus}: {result.provenance.evidence_status} · {c.runner}: {result.provenance.runner} · {c.affectsScore}: {result.provenance.affects_score ? c.yes : c.no}</p>
-      {result.provenance.affects_score === false ? <p>{c.succeeded} — {c.notAffectScore}</p> : null}
-      <p>{c.access}: {SUMMARY_KEYS.map((key) => `${c.summaryLabels[key]}: ${result.source_access.summary[key]}`).join(" · ")}</p>
-      <p>{c.inventory}: {result.source_access.inventory.map((item) => `${item.id}: ${item.evidence_class}`).join(" · ") || "—"}</p>
-      {result.source_access.limitations.length ? <p>{c.sourceLimitations}: {result.source_access.limitations.join("; ")}</p> : null}
-      {audit.could_not_access.length ? <p>{c.couldNotAccess}: {audit.could_not_access.join("; ")}</p> : null}
-      {lang === "lt" ? <p role="note">{c.modelTextNote}</p> : null}
-      {audit.outcomes.map((outcome, i) => {
-        try {
-          const scored = scoreLedger(ledgerFromAudit(outcome));
-          return <article key={`${outcome.name}-${i}`}><h3>{outcome.name}</h3>{outcome.population ? <p>{outcome.population}</p> : null}<p>{outcome.sentence}</p><p>{c.outcome}: {ledgerWord(lang, scored.effectWord)} · {ledgerWord(lang, scored.certaintyWord)} · {scored.headline ?? c.notScored}/100 ({ledgerWord(lang, scored.label)})</p><p>{c.basis}: {outcome.strongest_study}</p><p>{outcome.strongest_doubt}</p><p>{outcome.ledger.effective_daily_range}</p>{outcome.inventory.map((item, j) => <p key={`${item.id}-${j}`}>{c.inventory}: {item.id} · {item.access}</p>)}</article>;
-        } catch { return <article key={`${outcome.name}-${i}`}><h3>{outcome.name}</h3><p>{c.error}</p></article>; }
-      })}
-    </div> : null}
+    };
+    queueMicrotask(() => { if (!signal.aborted) void run(); });
+    return () => controller.abort();
+  }, [key, enabled, ownerId, scanId, mayStart, presses]);
+
+  const press = () => {
+    statusRef.current?.focus(); // the pressed button is about to disappear: keep focus on the status line
+    setView({ ...live, state: "starting" });
+    setAction({ key, n: presses + 1 });
+  };
+
+  // Retrying never asks again for research the server already holds: a known job id is looked up (GET).
+  const { job, stalled, state } = live;
+  const result = useMemo(() => (job?.status === "succeeded" ? parseResearchResult(job.result) : null), [job]);
+  const when = (iso: string | null) => formatUtc(iso);
+  const statusText =
+    state === "succeeded" ? (result ? c.succeeded : c.error)
+    : state === "running" && stalled && job ? c.stalled(when(job.updated_at) ?? "—")
+    : state === "queued" ? c.queued
+    : state === "running" ? c.running
+    : state === "starting" ? c.starting
+    : state === "idle" ? c.idle
+    : state === "failed" ? c.failed
+    : state === "disabled" ? c.disabled
+    : state === "unavailable" ? c.unavailable
+    : state === "no-id" ? c.noId
+    : state === "auth" ? c.auth
+    : state === "busy" ? c.busy
+    : state === "not-researchable" ? c.notResearchable
+    : state === "not-found" ? c.notFound
+    : c.error;
+  const canAsk = Boolean(enabled && ownerId && scanId && isResearchId(scanId));
+  const showRetry = canAsk && (state === "error" || state === "unavailable" || state === "busy");
+  const showLoad = canAsk && state === "idle";
+  const open = job && (job.status === "queued" || job.status === "running");
+
+  return <section className="sc-research" aria-labelledby={headingId} data-research-state={state}>
+    <h2 id={headingId}>{c.title}</h2>
+    <p className="sc-research-tags"><span className="sc-research-tag">{c.tagExperimental}</span><span className="sc-research-tag">{c.tagUngraded}</span></p>
+    <p ref={statusRef} className="sc-research-status" role="status" tabIndex={-1}>{statusText}</p>
+    {showLoad ? <p className="sc-research-dim" id={`${headingId}-hint`}>{c.loadHint}</p> : null}
+    {showLoad ? <button type="button" className="sc-research-btn" aria-describedby={`${headingId}-hint`} onClick={press}>{c.load}</button> : null}
+    {showRetry ? <button type="button" className="sc-research-btn" onClick={press}>{c.retry}</button> : null}
+    {job ? <Progress c={c} job={job} /> : null}
+    {open ? <p className="sc-research-dim">{c.noEstimate}</p> : null}
+    {state === "failed" && job ? <p className="sc-research-failure">{c.failureCode}: {job.failure_code ?? c.failureUnknown}</p> : null}
+    {job?.facts ? <Facts c={c} facts={job.facts} /> : null}
+    {result && state === "succeeded" ? <Audit c={c} lang={lang} result={result} /> : null}
   </section>;
+}
+
+/** The job's real stages, from its real status. No bar, no percentage. */
+function Progress({ c, job }: { c: ResearchCopy; job: LiveResearchJob }) {
+  const index = job.status === "queued" ? 0 : job.status === "running" ? 1 : 2;
+  const last = job.status === "succeeded" ? c.stages.completed : job.status === "failed" ? c.stages.failed : c.stages.finished;
+  const labels = [c.stages.queued, c.stages.running, last];
+  const created = formatUtc(job.created_at);
+  const updated = formatUtc(job.updated_at);
+  const completed = formatUtc(job.completed_at);
+  return <>
+    <ol className="sc-research-steps" aria-label={c.stepsLabel}>
+      {labels.map((label, i) => <li key={i} aria-current={i === index ? "step" : undefined} data-done={i < index ? "true" : "false"} data-failed={i === 2 && job.status === "failed" ? "true" : "false"}>{label}</li>)}
+    </ol>
+    <p className="sc-research-dim sc-research-times">
+      {[created ? c.queuedAt(created) : null, job.status === "running" && updated ? c.lastSignal(updated) : null, (job.status === "succeeded" || job.status === "failed") && completed ? c.finishedAt(completed) : null].filter(Boolean).join(" · ")}
+    </p>
+  </>;
+}
+
+/** What the research was given, and what it was NOT: a missing fact is listed as missing, never filled in. */
+function Facts({ c, facts }: { c: ResearchCopy; facts: ResearchFacts }) {
+  const rows: Array<[string, string]> = [];
+  if (facts.basis) rows.push([c.factLabels.basis, c.factBasis[facts.basis]]);
+  if (facts.product) rows.push([c.factLabels.product, facts.product]);
+  if (facts.ingredient) rows.push([c.factLabels.ingredient, facts.ingredient]);
+  if (facts.form) rows.push([c.factLabels.form, facts.form]);
+  if (facts.compoundPerServingMg !== null) rows.push([c.factLabels.compoundPerServing, `${facts.compoundPerServingMg} mg`]);
+  if (facts.printedElementalPerServingMg !== null) rows.push([c.factLabels.printedElementalPerServing, `${facts.printedElementalPerServingMg} mg`]);
+  if (facts.unitAsPrinted) rows.push([c.factLabels.unit, facts.unitAsPrinted]);
+  if (facts.servingsPerDay !== null) rows.push([c.factLabels.servingsPerDay, String(facts.servingsPerDay)]);
+  if (facts.multiIngredient !== null) rows.push([c.factLabels.multiIngredient, facts.multiIngredient ? c.yes : c.no]);
+  const missing = missingFacts(facts);
+  return <div className="sc-research-facts" data-testid="research-facts">
+    {missing.length ? <>
+      <p className="sc-research-missing" data-testid="research-missing">{c.missingLead} {missing.map((m) => c.missing[m]).join("; ")}.</p>
+      <p className="sc-research-dim">{c.missingHow}</p>
+    </> : null}
+    {rows.length ? <details className="sc-research-details">
+      <summary>{c.factsTitle}</summary>
+      <p className="sc-research-dim">{c.factsRecorded}</p>
+      <dl className="sc-research-dl">{rows.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
+    </details> : null}
+  </div>;
+}
+
+const COUNTED = ["requests", "search_snippets", "fetch_summaries", "original_documents"] as const;
+const UNCOUNTED = ["errors", "walls", "refusals"] as const;
+
+function Audit({ c, lang, result }: { c: ResearchCopy; lang: ResearchLanguage; result: ResearchResultV2 }) {
+  const { audit, provenance, source_access: access } = result;
+  // Model-written text is rendered verbatim -- never through a translator -- and tagged English in the LT view.
+  const en = lang === "lt" ? "en" : undefined;
+  const status = c.evidenceStatusValues[provenance.evidence_status] ?? provenance.evidence_status;
+  const limit = (text: string) => c.knownLimitations[text] ?? text;
+  return <div className="sc-research-audit" data-testid="research-audit">
+    <p className="sc-research-note">{c.ungradedNote}</p>
+    <p lang={en}>{audit.product} · {audit.ingredient} · {audit.form} · {audit.daily_dose}</p>
+    {audit.dose_note ? <p lang={en}>{audit.dose_note}</p> : null}
+    <p>{c.model}: {audit.model} · {c.prompt}: {audit.prompt}</p>
+    <p>{c.provenance}: {c.evidenceStatus}: {status} · {c.runner}: {provenance.runner} · {c.affectsScore}: {provenance.affects_score ? c.yes : c.no}</p>
+    <p>{c.notAffectScore}</p>
+
+    <h3>{c.access}</h3>
+    <p className="sc-research-group">{c.accessContent}</p>
+    <ul className="sc-research-counts">{COUNTED.map((k) => <li key={k}>{c.summaryLabels[k]}: {access.summary[k]}</li>)}</ul>
+    <p className="sc-research-dim">{c.haikuNote}</p>
+    <p className="sc-research-group">{c.accessNone}</p>
+    <ul className="sc-research-counts">{UNCOUNTED.map((k) => <li key={k}>{c.summaryLabels[k]}: {access.summary[k]}</li>)}</ul>
+    <p className="sc-research-dim">{c.notAccessedNote}</p>
+    <p>{c.inventory}: {access.inventory.map((item) => item.id).join(" · ") || c.none} — {c.inventoryItem}</p>
+    <p className="sc-research-dim">{c.inventoryNote}</p>
+    {access.limitations.length ? <p>{c.sourceLimitations}: {access.limitations.map(limit).join("; ")}</p> : null}
+    {audit.could_not_access.length ? <p lang={en}><span lang={lang}>{c.couldNotAccess}: </span>{audit.could_not_access.join("; ")}</p> : null}
+
+    {lang === "lt" ? <p className="sc-research-note" role="note">{c.narrativeNote}</p> : null}
+    <p className="sc-research-dim">{c.ownWordsNote}</p>
+    {audit.outcomes.map((o, i) => <article key={`${o.name}-${i}`} className="sc-research-outcome">
+      <h3 lang={en}>{o.name}</h3>
+      {o.population ? <p lang={en}><span lang={lang}>{c.population}: </span>{o.population}</p> : null}
+      <p lang={en}><span lang={lang}>{c.statement}: </span>{o.sentence}</p>
+      <p lang={en}><span lang={lang}>{c.basis}: </span>{o.strongest_study}</p>
+      <p lang={en}><span lang={lang}>{c.doubt}: </span>{o.strongest_doubt}</p>
+      {o.study_that_would_move_this ? <p lang={en}><span lang={lang}>{c.wouldMove}: </span>{o.study_that_would_move_this}</p> : null}
+      {o.effective_daily_range ? <p lang={en}><span lang={lang}>{c.dailyRange}: </span>{o.effective_daily_range}</p> : null}
+      <p>{c.outcomeIds}: {o.inventory.map((item) => item.id).join(" · ") || c.none}</p>
+    </article>)}
+  </div>;
 }
