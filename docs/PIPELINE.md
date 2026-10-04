@@ -149,6 +149,22 @@ Needs a signed-in Claude Code CLI (`claude auth status`).
 same subscription while it runs — a truncated extraction hides nulls and biases
 scores upward.
 
+**Interrupted runs resume by re-running the same command.** Every successful
+model call is committed to the adapter cache as it returns, and every fetched
+paper to `out/http_cache/`, so a re-run replays finished work for free.
+
+- *Usage limit mid-run:* the run pauses and probes every 15 min
+  (`SP_QUOTA_WAIT_S`), requeueing the hit studies, for up to 8 h in total
+  (`SP_QUOTA_MAX_WAIT_S`). If studies still carry a limit failure after that,
+  the run **stops before scoring and writes no report** (exit code 3, an
+  INCOMPLETE banner). `SP_ALLOW_INCOMPLETE=1` overrides it deliberately.
+- *Killed (closed terminal, out of memory, reboot):* re-run the same command.
+- *Progress record:* `out/checkpoints/<ingredient>_<form>.json`, rewritten after
+  every finished study (`ok` / `skipped` / `failed:<agents>` / `quota`); a new
+  start prints what the previous attempt finished.
+- Long runs: start them from your own terminal (`... 2>&1 | tee out/run.log`),
+  not a tool's background shell, which may be stopped under memory pressure.
+
 ### Step 4 — Grok (optional, separate)
 
 ```bash
@@ -210,5 +226,5 @@ Scoring is deterministic, so a scoring fix does not need a new extraction:
 | auth / not logged in | `grok login` (Grok) · `claude auth status` then `/login` (Claude) |
 | smoke returns unparseable JSON | Check stdout; adapter flags may need a tweak |
 | selftest red | Fix the pipeline before any extraction |
-| rate / session limit | Lower `--limit` or wait; retrying a limit error does not help |
+| rate / session limit | The run pauses and resumes itself; if it exits 3 (INCOMPLETE), re-run the same command after the reset |
 | `ModuleNotFoundError: httpx` | You used bare `python3`; use `.venv/bin/python` |

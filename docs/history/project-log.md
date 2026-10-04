@@ -18,6 +18,13 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
   disagreements excluded.
 - `pipeline/benchmark.verdicts` + `RULES`, verdict block in
   `scripts/benchmark_v2.py compare`; 5 new tests (175 Python tests).
+- First full-run attempt stopped by Claude Code under memory pressure (PDF
+  stage, no model calls, nothing written). Added: incomplete-run guard (a run
+  still carrying usage-limit failures after the 8 h pause budget stops before
+  scoring, exit 3, no report) and `out/checkpoints/<ingredient>_<form>.json`
+  (per-study progress, rewritten after each study). Resume = same command
+  (cache). `docs/PIPELINE.md` Step 3; `tests/test_run_checkpoint.py`
+  (179 Python tests).
 
 ## 2026-10-03 — S7 max_turns fixed; v2 benchmark (step 3); effect_unit (v1.35)
 

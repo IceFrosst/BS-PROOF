@@ -11,6 +11,8 @@ import json
 import os
 from collections import Counter as _Counter
 
+from pathlib import Path
+
 from pipeline import vocab
 
 from bsproof.run.corpus import _best_text, _sections, stratify_targets
@@ -21,6 +23,17 @@ GROK_STUDIES_IN_FLIGHT = int(os.environ.get("SP_GROK_STUDIES_IN_FLIGHT", "32"))
 # A CEILING, not a budget: extraction stops itself when reviews stop naming
 # trials we have not seen (synthesis_bridge marginal-yield stopping).
 MAX_SRS = int(os.environ.get("SP_MAX_SRS", "60"))
+CHECKPOINTS = Path(__file__).resolve().parents[2] / "out" / "checkpoints"
+# Exit code of a run that stopped on the subscription limit before writing any
+# report: re-run the same command to resume.
+EXIT_INCOMPLETE = 3
+
+
+def _incomplete_quota(raw: list[dict]) -> list[str]:
+    """Studies whose extraction still carries a subscription-limit failure
+    after the corpus loop's own pause budget (SP_QUOTA_MAX_WAIT_S) ran out."""
+    from bsproof.worker_quota import _hit_quota
+    return [str(r["record"].get("canonical_id")) for r in raw if _hit_quota(r["extraction"])]
 
 def synthetic_extraction(record: dict, axes: dict) -> dict:
     return {
@@ -337,6 +350,15 @@ def extract_stage(store, opts, primaries, pv, outcome_allowlist, run_context):
         run_context["studies_targeted"] = len(targets)
         print(f"extracting {len(targets)} studies "
               f"(from {len(primaries)} relevance-filtered RCTs)...")
+        checkpoint = CHECKPOINTS / f"{ingredient}_{opts.form}.json"
+        if checkpoint.exists():
+            try:
+                prev = json.loads(checkpoint.read_text(encoding="utf-8"))
+                print(f"  previous attempt ({prev.get('updated')}): "
+                      f"{prev.get('studies_finished')}/{prev.get('studies_total')} studies finished "
+                      f"{prev.get('by_status')} -- their model calls replay from cache")
+            except (OSError, ValueError):
+                pass
         raw = workers.extract_corpus(
             [{**p, "_canonical": p["canonical_id"], "ingredient": ingredient}
              for p in targets],
@@ -347,8 +369,19 @@ def extract_stage(store, opts, primaries, pv, outcome_allowlist, run_context):
             call=call_fn,
             max_studies_in_flight=in_flight,
             outcome_allowlist=outcome_allowlist,
+            checkpoint=checkpoint,
         )
         _report_failures(raw)
+        cut = _incomplete_quota(raw)
+        if cut and os.environ.get("SP_ALLOW_INCOMPLETE") != "1":
+            # A run truncated by the limit must never reach reports/: S5
+            # failures hide nulls and bias scores up (CLAUDE.md "Extraction
+            # backends"). Nothing is lost -- finished calls are cached.
+            print("\n" + "=" * 74 + f"\nINCOMPLETE: {len(cut)} studies still hit the usage limit "
+                  "after the pause budget.\nNo report was written. Re-run the SAME command after "
+                  "the limit resets to resume\n(finished calls replay from cache). "
+                  f"Progress: {checkpoint}\n" + "=" * 74)
+            return EXIT_INCOMPLETE
         run_context["studies_skipped"] = sum(
             1 for r in raw if r["extraction"].get("_skipped"))
         run_context["studies_failed_partial"] = sum(

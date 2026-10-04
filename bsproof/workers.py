@@ -630,12 +630,33 @@ def extract_study(record: dict, text: str, registry: dict | None = None, *,
     return out
 
 
+def _write_checkpoint(path, *, n: int, status: dict, requeued: int, quota_waited: float) -> None:
+    """Human-readable progress of a corpus run, rewritten after every study
+    (atomically, so a killed run never leaves a torn file). It is a RECORD, not
+    the resume mechanism: resuming is re-running the same command -- every
+    finished model call replays from the adapter cache, every fetched paper
+    from out/http_cache."""
+    from collections import Counter
+    from pathlib import Path
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".tmp")
+    kinds = Counter(v.split(":")[0] for v in status.values())
+    tmp.write_text(json.dumps({
+        "updated": time.strftime("%Y-%m-%d %H:%M:%S"), "studies_total": n,
+        "studies_finished": len(status), "by_status": dict(kinds),
+        "quota_requeues": requeued, "quota_waited_s": round(quota_waited),
+        "studies": status}, indent=1), encoding="utf-8")
+    tmp.replace(path)
+
+
 def extract_corpus(records: list[dict], text_for, registry_for=None, *,
                    call=None, max_studies_in_flight: int = 4,
                    outcome_allowlist: list[str] | None = None,
-                   sections_for=None) -> list[dict]:
+                   sections_for=None, checkpoint=None) -> list[dict]:
     """
     Fan out across studies. Prints live progress so you can judge concurrency.
+    `checkpoint`: a path rewritten after every finished study (_write_checkpoint).
     """
     n = len(records)
     results_by_id: dict[int, dict] = {}
@@ -659,6 +680,7 @@ def extract_corpus(records: list[dict], text_for, registry_for=None, *,
     # of burning the rest of the corpus against a closed door (2026-08-10:
     # 364 of 906 calls lost exactly that way).
     pending: deque[int] = deque(range(n))
+    status: dict[str, str] = {}
     quota_waited = 0.0
     resume_at = 0.0
     requeued = 0
@@ -714,6 +736,14 @@ def extract_corpus(records: list[dict], text_for, registry_for=None, *,
                               f"(requeues so far: {requeued})")
                     continue
                 results_by_id[i] = {"record": r, "extraction": extraction}
+                if checkpoint:
+                    status[str(r.get("canonical_id") or r.get("_canonical") or i)] = (
+                        "quota" if _hit_quota(extraction)
+                        else "skipped" if extraction.get("_skipped")
+                        else "failed:" + ",".join(sorted({str(f.get("agent")) for f in extraction["_failed"]}))
+                        if extraction.get("_failed") else "ok")
+                    _write_checkpoint(checkpoint, n=n, status=status, requeued=requeued,
+                                      quota_waited=quota_waited)
                 done += 1
                 if extraction.get("_skipped"):
                     skipped += 1
