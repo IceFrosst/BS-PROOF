@@ -1,30 +1,64 @@
 # Main-PC research worker — contract, install, health, rollback
 
-Status (2026-10-04): **coded and locally tested (executed-SQL, worker, route, UI and cross-module wire tests); runtime release staged (older commit), DB provisioned and re-verified read-only, worker config created, not active.**
-Release `bsproof-research-worker-f8e8df82117e` is installed (unprivileged, isolated venv)
-under `~/.local/share/bsproof-research-worker/` on the main PC; it predates the worker fixes in
-this branch and must be rebuilt and reinstalled from the promoted commit. The reviewed
-`docs/research-jobs.sql` (sha256 `48783cd3...`) is applied to the shared project (re-verified
-read-only on 2026-10-04: RLS on, no policies, no table privileges, six service-role-only
-functions, no jobs) and a dedicated `~/.config/bsproof-research-worker/worker.env` (0600)
-exists; `check` passes. No unit (user or system), service or job is installed and no model has been called.
-The service-role key now lives only in Vercel Production (sensitive), so the private smoke runs
-through the gated production API (see "Staged rollout"), never with a key on a PC. Research
-routes require a genuine Google identity. Keep runtime OFF until review and the owner step.
+Status (2026-10-04, times UTC): **RELEASED_RESTRICTED.** The reviewed code is on `main`
+(`9e9c0d30becd1cc70fff2f115205dfbdeb8d7514`, the privacy-clean commit that the Claude Code
+owner's second read-only verification passed) and live on production in the private `owners`
+mode; the worker runtime was reinstalled from that commit; ONE real owned job ran end to end;
+the persistent service is NOT active (it needs the owner's sudo, see "Owner-only install path");
+research for everyone is NOT enabled.
 
-Current status (2026-10-04, privacy-clean re-issue): nothing is pushed, merged, deployed or
-installed and no job has run. The two component branches (backend `62714cf`, UI `de169b8`) were
-already pushed to `origin` as separate component branches before the owner review; this
-integration is a LOCAL branch only and `main` is unchanged. A genuine Google sign-in of the
-designated test account succeeded on production (2026-10-04T21:10:51Z, through the fixed Google
-button, with no password / MFA / challenge asked). Its Supabase user id is kept only in a private
-0600 file outside the repository, and no account handle, e-mail or id value is written anywhere
-in this repository. On the main PC the user systemd manager was found working on 2026-10-04
-(`Linger=yes`), so the worker installs as a USER unit and sudo is not needed, provided the
-manager's private socket is intact: a `systemd-analyze --user verify` run against the real runtime
-dir orphans it (see the CAUTION in "Owner-only install path"), so re-check `systemctl --user
-is-system-running` before installing. Deploying with the flag unset does NOT hide the panel (see
-"Staged rollout" step 2).
+Facts, none of them secret:
+
+- **Remote and production.** `origin/main` = `9e9c0d3...` (fast-forward from `224715a`; the
+  older private candidate `8eccc35` was never pushed and is not an ancestor). The canonical alias
+  `bs-proof-dashboard.vercel.app` was READY on that exact SHA twice: first from the git push with
+  every research setting UNSET (`POST /api/scan/research/` answered 503 `research_disabled`
+  before authentication, owner `GET` 401, worker door 503), then after the owner step below.
+  Production variables added (values never printed): `BS_PROOF_RESEARCH_WORKER_TOKEN` (Sensitive,
+  the existing main-PC token, passed by stdin and not regenerated), `SCAN_LIVE_RESEARCH_OWNER_IDS`
+  (Sensitive, the designated test account's `auth.users.id`) and `SCAN_LIVE_RESEARCH_ENABLED=owners`.
+  The service-role key stays a Sensitive Production variable only; no PC holds it. After the
+  redeploy anonymous or bogus-bearer `POST`/`GET` answer 401 `no-store`, and the worker door
+  answers 401 for a missing or wrong token (the right token claimed the job below).
+- **Runtime.** `bsproof-research-worker-9e9c0d30becd` (tarball sha256 `7986b36ef2b0...`) is
+  installed; every runtime file equals the promoted commit's blob; `jsonschema` 4.26.0
+  (Draft 2020-12); `check` is ok under the unit's scrubbed environment (note: `check` and `run`
+  take the pinned CLI path from the PROCESS environment, which the unit supplies; run by hand
+  with `env -i ... BS_PROOF_CLAUDE_BIN=...`). The older `f8e8df821` release is kept as `previous`.
+- **The one job.** The designated test account, signed in with Google on production, entered
+  through the app's "Search your supplement": creatine, "form not stated" (typed as is, no form
+  guessed), 4000 mg per serving, servings per day LEFT BLANK. The panel queued the job with one
+  `POST` (201). The target sent to the model had `servings_per_day: null` and
+  `daily_elemental_mg: null`; unknown servings were never treated as 1.
+  - Attempt 1 (376 s): the model returned an audit, but the worker's own grounding guard
+    refused to deliver it because one cited DOI was not in any tool output. It reported
+    `worker_internal_error` (retryable); the server requeued the job (attempt 1 of 3).
+    This is the fail-closed design working, not data loss.
+  - Attempt 2 (397 s, 22:24:48 to 22:31:55): delivered; the server answered `completed`; the
+    strict canonical result is stored.
+- **Actual model and access (from the worker's diagnostics of attempt 2).** Primary producer
+  `claude-sonnet-5-5` (53,350 output tokens), effort `xhigh`, CLI 2.1.287, `apiKeySource: none`
+  (subscription login), tools WebSearch and WebFetch only, 47 turns; the CLI's own fetch
+  summariser `claude-haiku-4-5` also ran (15,825 output tokens, 24 searches), as documented.
+  No budget, turn, deadline or fallback flag was passed. Real access: 24 search snippets and
+  11 fetch summaries (35 requests), 5 walls or cookie checks, 5 errors, 0 original documents,
+  14 source IDs, all `derived_snippet`; 7 outcomes. The audit is a model's reading of snippets
+  and summaries, not of the papers. The CLI's notional list-price figure (about 1.7 USD per
+  attempt) was not billed: the run is on the subscription.
+- **Provenance stored with the result.** `affects_score: false`, `human_verified: false`,
+  `clinically_approved: false`, `evidence_status: experimental_unvalidated`,
+  `source_access_version: SourceAccessV2`, `billing: subscription_no_api_spend`.
+- **What the owner sees.** The owner `GET` answers 200 `no-store`; the live panel moved from
+  Queued to Completed with no percentage, estimate or progress bar and listed the facts the scan
+  did not record; History replay opened the saved scan with ZERO `POST`s and showed the same
+  audit, tagged EXPERIMENTAL and UNGRADED with the Haiku-summary note.
+- **What this does NOT prove.** Pipeline mechanics, ownership, provenance and the strict
+  contract only. Nobody checked the audit's studies, numbers or conclusions; it is not a clinical
+  assessment and is not scored. A live cross-owner 404 was NOT tested (no second genuine
+  identity exists; it stays offline-tested), and no phone check was done.
+- **Tradeoff the owner accepted.** The CLI run has no budget, turn or time cap. The app-side
+  queue caps (3 open jobs per user, no global cap) are separate and are the only brake; this is
+  why opening research to everyone is a separate explicit founder decision (step 7).
 
 Files: `scripts/pc_research_worker.py` (loop, HTTP, leases, validation),
 `pipeline/claude_research_adapter.py` (only model boundary),
@@ -151,13 +185,33 @@ Per-job worker diagnostics stay under a private unique directory at the configur
 data path. The lease token is not written there. They may include raw stream and
 operational details, so keep that directory private and out of owner-facing APIs.
 
-## Owner-only install path on the mainPC (prepared, NOT executed)
+## Owner-only install path on the mainPC (service NOT installed: owner sudo needed)
 
-Status: prepared and reviewed as text only. Nothing below has been run by this commit.
-As of 2026-10-04 the OLDER runtime release is staged, the 0600 env file exists and the
-SQL is applied, but no unit is installed. The run order (each step is an owner decision)
-is: provision scoped SQL/token (parent), install the runtime, create the 0600 env file,
-`check`, install the unit, one model smoke.
+Status (2026-10-04 evening): the runtime from the promoted commit is installed and `check` is
+ok, but NO unit is installed and no persistent worker runs; the one real job above was run by
+hand with `run --once` in the unit's scrubbed environment. Persistence is BLOCKED on a human
+decision for one reason: `systemctl --user` currently fails ("Failed to connect to bus", no
+user D-Bus: `dbus-user-session` is not installed) because `systemd-analyze --user verify` was
+run against the REAL runtime dir (twice by the fix worker and, earlier, once by the release
+operator), which orphaned the live user manager's private socket (the manager, pid 306, is alive
+and still bound to the unlinked inode). No non-root, non-restart way exists to rebind it, and
+agents must not restart `user@1000`, dbus or WSL. Nothing was restarted. Two owner choices:
+
+```bash
+# A (recommended: touches neither user@1000, dbus nor WSL; asks for the owner's sudo password).
+# The repo's system unit is byte-identical to the privately staged copy used here.
+sudo install -m 0644 /home/icefrost/.cache/bsproof-research-setup-20261003/bsproof-research-worker.system.service.example /etc/systemd/system/bsproof-research-worker.service
+sudo systemd-analyze verify /etc/systemd/system/bsproof-research-worker.service
+sudo systemctl daemon-reload && sudo systemctl enable --now bsproof-research-worker.service
+systemctl status bsproof-research-worker.service --no-pager      # then: journalctl -u bsproof-research-worker.service -n 50 --no-pager
+
+# B (the user unit; only after the owner deliberately recovers the user manager, e.g. a decided
+# `sudo systemctl restart user@1000.service`, which ends that user's systemd-managed services):
+systemctl --user is-system-running     # must say running; then install deploy/bsproof-research-worker.service.example
+```
+
+Until one of them is done the queue still works: a job simply waits, and the owner can run
+`env -i HOME=$HOME PATH=... BS_PROOF_CLAUDE_BIN=$HOME/.local/bin/claude .../current/venv/bin/python .../current/scripts/pc_research_worker.py run --once`.
 
 ### Current path: the USER unit (no sudo)
 
@@ -463,15 +517,19 @@ model behavior, account state, provisioning, or clinical validity.
 
 ## Handoff
 
-Runtime remains OFF pending a fresh Claude Code owner verification of the privacy-clean
-branch (OWNER_PASS required), then the staged sequence above. Nothing is pushed,
-deployed, installed or queued yet. Do not provision accounts, tokens, services, or
-database objects from this documentation without the separate human authorization step.
-The older private candidate branch `component/final-release-live-research-20261004` must
-never be pushed: its tip carries a real account handle in `CLAUDE.md`.
+State (2026-10-04, UTC): `main` = `9e9c0d30becd1cc70fff2f115205dfbdeb8d7514`, production READY on it in
+the private `owners` mode, runtime reinstalled from it, one owned job passed end to end
+(experimental, ungraded, not scored). Open items, in order: (1) the owner installs the
+persistent service (commands in "Owner-only install path"); (2) optional: a phone check and a
+live cross-owner 404 with a genuine second Google identity (both untested live); (3) a SEPARATE
+explicit founder decision before research is opened to everyone (step 7; not implied by this smoke);
+(4) hygiene: delete the unused `~/.config/bsproof-research-worker/smoke.env`; the release
+script's header still calls the system unit "preferred". Kill switch: set the flag to the
+literal `off` and redeploy. The older private candidate `component/final-release-live-research-20261004`
+must never be pushed: its tip carries a real account handle in `CLAUDE.md`.
 ---
-Previous local status note: the initial V1 worker had been exercised during an
-earlier benchmark; that historical benchmark is not proof of this V2 integration.
-No V2 live research run has been performed.
+Previous local status note: the initial V1 worker had been exercised during an earlier
+benchmark; that historical benchmark is not proof of this V2 integration. The ONE V2 run is the
+owned smoke recorded in the Status above (one job, two attempts).
 
 Output remains experimental and unvalidated.
