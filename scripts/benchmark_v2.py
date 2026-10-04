@@ -91,6 +91,12 @@ def compare(block: dict | None, ingredient: str) -> int:
     print()
     for oid, s in benchmark.summary(results).items():
         print(f"{oid:16} {s['overlap']}/{s['comparable']} comparable rows overlap ({s['rows']} rows)")
+    print("\nVERDICT (pipeline/benchmark.RULES: coverage, precision, agreement)")
+    for v in benchmark.verdicts(block, results):
+        cov = "-" if v["coverage"] is None else f"{v['coverage']:.0%}"
+        print(f"{v['outcome']:16} {v['scale']:3}  {v['status'].upper():12} coverage {cov:>4}  "
+              f"width x{v['width_ratio']:.1f}  overlap {v['overlap'][0]}/{v['overlap'][1]}"
+              + (f"  ({'; '.join(v['reasons'])})" if v["reasons"] else ""))
     return 0
 
 

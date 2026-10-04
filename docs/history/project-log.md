@@ -10,6 +10,15 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-04 — benchmark pass rule; creatine v2 re-extraction started
+
+- Founder decisions recorded in `docs/REVIEW_PENDING.md` #0: branch only,
+  benchmark pass rule (coverage ≥ 50 %, CI width ≤ 2× median published, overlap
+  > half; else not testable), same scope as 20260904_185830, reviewer
+  disagreements excluded.
+- `pipeline/benchmark.verdicts` + `RULES`, verdict block in
+  `scripts/benchmark_v2.py compare`; 5 new tests (175 Python tests).
+
 ## 2026-10-03 — S7 max_turns fixed; v2 benchmark (step 3); effect_unit (v1.35)
 
 - S7 `max_turns`: optional arm `confidence` / `salt_family`; S5 `effect_unit`

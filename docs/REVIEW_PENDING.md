@@ -79,6 +79,21 @@ and blinding are adequate.
   printed SD. **Printed-table consistency guard:** a change mean that does not
   equal post − pre (or an endpoint mean that is not the post value) at printed
   precision refuses the claim. Both built 2026-10-03 at the founder's request.
+- **DECIDED 2026-10-04 (founder) — before the creatine v2 re-extraction:**
+  (1) the run stays on the `Jans_attempt` branch; merging it (which changes the
+  live v14 creatine score, `product-score.ts` takes the newest run) is decided
+  later. (2) **Benchmark pass rule** (`pipeline/benchmark.RULES`), per
+  (outcome, scale), all three: coverage = pooled / eligible trials ≥ 50 %
+  (scope refusals are not eligible); our CI width ≤ 2× the median width of the
+  like-for-like published intervals; our CI overlaps > 50 % of them. Failing
+  coverage or precision = "not testable", never pass or fail. Ingredient- and
+  count-free so every future benchmark uses it. Open point seen on RSMOKE7:
+  natural-unit (MD) rows are matched by scale + unit, not by exercise, so a
+  chest-press pool meets squat benchmarks; the SMD rows are the primary test.
+  (3) Same retrieval scope as run 20260904_185830 (`--with-sr
+  --full-text-only --supplement-scope`, top-5 outcomes); intervention-scope
+  retrieval is a later, separate run. (4) Claims the two reviewers disagree on
+  are excluded (refused), not adjudicated, for now.
 - **Crossover trials**: arm statistics are pooled as if parallel (Cochrane
   Handbook §23.2.6, conservative); a paired mean difference with CI is kept;
   a crossover SMD is refused (may be d_z).

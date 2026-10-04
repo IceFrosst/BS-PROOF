@@ -23,11 +23,28 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import statistics
+
 from pipeline import vocab
 from pipeline.span_check import find_number
 
 PATH = Path(__file__).resolve().parents[1] / "vocab" / "benchmarks.json"
 SCALES = ("smd", "md")
+
+# THE PASS RULE (founder-approved 2026-10-04; constants, invariant 4 --
+# docs/REVIEW_PENDING.md #0). Per (outcome, scale), ALL THREE must hold:
+#   coverage   pooled trials / eligible trials >= min_coverage. Eligible =
+#              pooled + refused for a reason other than scope ("study: ..." --
+#              off-target population, combination arm, ...: not this question).
+#              Guards against a lucky, poolable subset.
+#   precision  our CI width <= max_width_ratio x the MEDIAN width of the
+#              like-for-like published intervals. Replaces a fixed minimum k:
+#              4 large trials can be precise and 10 tiny ones not; this asks
+#              whether our interval is narrow enough to disagree with theirs.
+#   agreement  our CI overlaps MORE than min_overlap_share of those rows.
+# Failing coverage or precision is "not_testable" -- never a pass, never a fail.
+# Ingredient- and count-free on purpose, so every future benchmark uses it.
+RULES = {"min_coverage": 0.50, "max_width_ratio": 2.0, "min_overlap_share": 0.50}
 
 
 def load(ingredient: str | None = None, path: Path = PATH) -> list[dict]:
@@ -90,6 +107,45 @@ def compare(block: dict | None, rows: list[dict]) -> list[dict]:
                        overlap=lo <= r["ci_high"] and r["ci_low"] <= hi,
                        same_direction=_sign(est) == _sign(r["estimate"]))
         out.append(res)
+    return out
+
+
+def coverage(outcome: dict) -> float | None:
+    """Pooled / eligible trials for one evidence_v2 outcome (see RULES)."""
+    k = outcome.get("k") or 0
+    unpooled = sum(n for why, n in (outcome.get("refused") or {}).items()
+                   if not str(why).startswith("study:"))
+    return k / (k + unpooled) if k + unpooled else None
+
+
+def verdicts(block: dict | None, results: list[dict]) -> list[dict]:
+    """The pass rule (RULES) per (outcome, scale) with comparable rows:
+    {"outcome", "scale", "status": pass | fail | not_testable, "coverage",
+     "width_ratio", "overlap": (n, of), "reasons"}."""
+    outcomes = {o["outcome"]: o for o in (block or {}).get("outcomes") or []}
+    groups: dict[tuple, list[dict]] = {}
+    for r in results:
+        if r["comparable"]:
+            groups.setdefault((r["outcome"], r["scale"]), []).append(r)
+    out = []
+    for (oid, scale), rows in sorted(groups.items()):
+        cov = coverage(outcomes.get(oid) or {})
+        ours = rows[0]["ours"][2] - rows[0]["ours"][1]
+        ratio = ours / statistics.median(r["theirs"][2] - r["theirs"][1] for r in rows)
+        hits = sum(bool(r["overlap"]) for r in rows)
+        reasons = []
+        if cov is None or cov < RULES["min_coverage"]:
+            reasons.append(f"coverage {cov if cov is None else round(cov, 2)} < {RULES['min_coverage']}")
+        if ratio > RULES["max_width_ratio"]:
+            reasons.append(f"our CI is {ratio:.1f}x the median published width (> {RULES['max_width_ratio']})")
+        if reasons:
+            status = "not_testable"
+        elif hits / len(rows) > RULES["min_overlap_share"]:
+            status = "pass"
+        else:
+            status, reasons = "fail", [f"overlaps {hits} of {len(rows)} published intervals"]
+        out.append({"outcome": oid, "scale": scale, "status": status, "coverage": cov,
+                    "width_ratio": ratio, "overlap": (hits, len(rows)), "reasons": reasons})
     return out
 
 

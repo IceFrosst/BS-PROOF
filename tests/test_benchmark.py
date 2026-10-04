@@ -77,5 +77,39 @@ class Compare(unittest.TestCase):
         self.assertEqual(benchmark.summary(res)["muscle_strength"], {"rows": 2, "comparable": 2, "overlap": 1})
 
 
+class PassRule(unittest.TestCase):
+    """Coverage >= 50 %, CI width <= 2x the median published width, overlap > half."""
+    ROWS = [{**ROW, "id": f"r{i}", "estimate": e, "ci_low": lo, "ci_high": hi,
+             "quote": f"{e} ({lo}, {hi})"} for i, (e, lo, hi) in
+            enumerate([(0.43, 0.25, 0.61), (0.46, 0.29, 0.63), (0.28, 0.09, 0.47)])]
+
+    def verdict(self, smd, k=8, refused=None):
+        b = {"outcomes": [{"outcome": "muscle_strength", "k": k, "smd": smd, "md": None,
+                           "refused": refused or {}}]}
+        return benchmark.verdicts(b, benchmark.compare(b, self.ROWS))[0]
+
+    def test_pass(self):
+        v = self.verdict({"estimate": 0.35, "ci": [0.15, 0.55]})
+        self.assertEqual((v["status"], v["overlap"]), ("pass", (3, 3)))
+
+    def test_a_precise_disagreement_fails(self):
+        v = self.verdict({"estimate": -0.3, "ci": [-0.5, -0.1]})
+        self.assertEqual(v["status"], "fail")
+
+    def test_a_wide_interval_is_not_testable_even_when_it_overlaps(self):
+        v = self.verdict({"estimate": -0.40, "ci": [-1.24, 0.44]})       # the k = 1 smoke pool
+        self.assertEqual(v["status"], "not_testable")
+        self.assertIn("median published width", v["reasons"][0])
+
+    def test_low_coverage_is_not_testable(self):
+        v = self.verdict({"estimate": 0.35, "ci": [0.15, 0.55]}, k=3,
+                         refused={"no verified effect estimate": 5, "study: off-target population": 20})
+        self.assertEqual((v["status"], round(v["coverage"], 3)), ("not_testable", 0.375))
+
+    def test_scope_refusals_are_not_eligible_trials(self):
+        b = {"k": 4, "refused": {"study: off-target population": 30, "printed numbers inconsistent": 2}}
+        self.assertAlmostEqual(benchmark.coverage(b), 4 / 6)
+
+
 if __name__ == "__main__":
     unittest.main()
