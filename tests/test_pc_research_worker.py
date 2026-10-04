@@ -16,14 +16,23 @@ What is pinned, and why each one matters:
   * a schema-invalid or contract-violating audit is rejected, never patched
   * a lost lease kills the run and nothing stale is sent; delivery retries are not
     capped by count but stop on lease loss / rejection
-  * unknown dose stays unknown; a blend's whole-formula row comes first
+  * unknown dose stays unknown; a blend's whole-formula row comes first -- on the REAL
+    ResearchJobV1 target shape (tests/fixtures/research-target-v1.json), not a made-up one
+  * a shutdown never finishes a job: SIGTERM leaves the lease to expire and posts nothing,
+    even when the same signal killed the CLI before the worker's own cancel propagated
+
+No test depends on the machine clock: the run date is injected (`FIXED_NOW`), cooldowns are
+compared on the fake API's own monotonic receipt times, and "mid-run" is an event the fake
+CLI reports, not a sleep. Waits exist only as hang guards that fail loudly.
 """
 from __future__ import annotations
 
 import copy
+import datetime
 import http.server
 import json
 import os
+import signal
 import stat
 import sys
 import tempfile
@@ -31,24 +40,29 @@ import textwrap
 import threading
 import time
 import unittest
+import unittest.mock
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts"))
 
-try:
-    import jsonschema  # noqa: F401
-    HAVE_JSONSCHEMA = True
-except ImportError:
-    HAVE_JSONSCHEMA = False
+# REQUIRED, never skipped: the worker itself refuses to validate without jsonschema (see
+# test_a_worker_without_jsonschema_fails_closed), so a missing module must fail these tests.
+import jsonschema  # noqa: F401,E402
 
 from pipeline import claude_research_adapter as ad  # noqa: E402
 import pc_research_worker as w  # noqa: E402
 
 TOKEN = "test-worker-token-0123456789abcdef"
 FIXTURE_AUDIT = ROOT / "app" / "design-lab" / "ab" / "audits" / "magnesium.json"
-TODAY = time.strftime("%Y-%m-%d", time.gmtime())
+FIXTURE_TARGETS = json.loads((ROOT / "tests" / "fixtures" / "research-target-v1.json").read_text())["cases"]
+FIXED_NOW = datetime.datetime(2026, 10, 4, 12, 30, 0, tzinfo=datetime.timezone.utc)
+TODAY = FIXED_NOW.date().isoformat()
+
+
+def fixed_clock():
+    return FIXED_NOW
 
 
 def good_audit(target_dose="200 mg elemental magnesium/day; servings per day unknown", **over):
@@ -132,12 +146,17 @@ import sys, json, time, os
 SC = json.load(open({sc!r}))
 if '--version' in sys.argv:
     print('2.1.287 (Claude Code)'); sys.exit(0)
-json.dump({{'argv': sys.argv[1:], 'env': sorted(os.environ), 'cwd': os.getcwd()}}, open(SC['record'], 'w'))
+json.dump({{'argv': sys.argv[1:], 'env': sorted(os.environ), 'cwd': os.getcwd(), 'pid': os.getpid()}}, open(SC['record'], 'w'))
 open(SC['record'] + '.stdin', 'w').write(sys.stdin.read())
 for ev in SC['events']:
-    if ev == 'SLEEP':
-        time.sleep(SC.get('sleep', 1)); continue
+    if ev == 'WAIT_HEARTBEAT':
+        # Mid-run until the fake API has actually received a heartbeat (hang guard: 120 s).
+        guard = time.monotonic() + 120
+        while not os.path.exists(SC['hb_flag']) and time.monotonic() < guard:
+            time.sleep(0.01)
+        continue
     if ev == 'HANG':
+        open(SC['record'] + '.ready', 'w').write('1')   # tell the test the CLI is mid-run
         time.sleep(600)
     print(json.dumps(ev), flush=True)
 sys.stderr.write(SC.get('stderr', ''))
@@ -154,6 +173,8 @@ class Api:
         self.heartbeat = lambda n: (200, {"ok": True})
         self.terminal = lambda n, action: (200, {"ok": True})
         self.paths: list[str] = []
+        self.times: list[float] = []
+        self.hb_flag: Path | None = None
         self.redirect = False
         outer = self
 
@@ -165,6 +186,7 @@ class Api:
                 n = int(self.headers.get("content-length", "0"))
                 body = json.loads(self.rfile.read(n))
                 outer.paths.append(self.path)
+                outer.times.append(time.monotonic())
                 outer.requests.append({"auth": self.headers.get("authorization"), "body": body})
                 if outer.redirect:
                     self.send_response(302)
@@ -176,6 +198,8 @@ class Api:
                 if act == "claim":
                     status, out = 200, (outer.claims.pop(0) if outer.claims else {"job": None})
                 elif act == "heartbeat":
+                    if outer.hb_flag is not None:
+                        outer.hb_flag.write_text("1")
                     status, out = outer.heartbeat(cnt)
                 else:
                     status, out = outer.terminal(cnt, act)
@@ -201,6 +225,25 @@ class Api:
     def of(self, action):
         return [r["body"] for r in self.requests if r["body"].get("action") == action]
 
+    def times_of(self, action):
+        """Monotonic receipt times (seconds) of the requests of one action, in arrival order."""
+        return [t for t, r in zip(self.times, self.requests) if r["body"].get("action") == action]
+
+
+class LateStop(threading.Event):
+    """A stop flag whose `wait()` never wakes early. `is_set()` is true once the worker's signal handler has run,
+    but the worker's own cancel propagation (which rides on `wait`) has NOT happened: exactly the window in which
+    systemd's cgroup-wide SIGTERM has already killed the CLI."""
+
+    def wait(self, timeout=None):
+        time.sleep(0.01)
+        return False
+
+
+def fixture_job(name, jid="job-1"):
+    case = next(c for c in FIXTURE_TARGETS if c["name"] == name)
+    return job(copy.deepcopy(case["target"]), jid=jid)
+
 
 def job(target=None, jid="job-1", lease="lease-secret-abc", pv=ad.LIVE_PROMPT_VERSION):
     target = target if target is not None else {
@@ -216,6 +259,10 @@ class Base(unittest.TestCase):
         self.tmp_path = Path(self.tmp.name)
         self.api = Api()
         self.addCleanup(self.api.close)
+        self.rec = self.tmp_path / "record.json"
+        self.ready = Path(str(self.rec) + ".ready")
+        self.hb_flag = self.tmp_path / "heartbeat.flag"
+        self.api.hb_flag = self.hb_flag
         self.cfg = w.Config(api_base=self.api.base, token=TOKEN, data_dir=self.tmp_path / "data",
                             poll_seconds=0.05, heartbeat_seconds=0.15, http_timeout_seconds=10,
                             backoff_max_seconds=0.2, quota_cooldown_seconds=0.01, retry_base_seconds=0.02,
@@ -227,19 +274,46 @@ class Base(unittest.TestCase):
                         "CLAUDE_CODE_OAUTH_TOKEN": "oauth-should-not-leak"}
 
     def cli(self, events, **sc):
-        rec = self.tmp_path / "record.json"
         scen = self.tmp_path / "scenario.json"
-        scen.write_text(json.dumps({"events": events, "record": str(rec), **sc}))
+        scen.write_text(json.dumps({"events": events, "record": str(self.rec), "hb_flag": str(self.hb_flag), **sc}))
         path = self.tmp_path / "fake-claude"
         path.write_text(FAKE_CLI.format(py=sys.executable, sc=str(scen)))
         path.chmod(0o755)
-        self.rec = rec
         return str(path)
 
-    def run_job(self, events, jobspec=None, **sc):
+    def run_job(self, events, jobspec=None, stop=None, **sc):
         binary = self.cli(events, **sc)
         j = (jobspec or job())["job"]
-        return w.handle_job(j, self.client, self.cfg, self.stop, environ=self.environ, binary=binary)
+        return w.handle_job(j, self.client, self.cfg, stop or self.stop, environ=self.environ, binary=binary,
+                            clock=fixed_clock)
+
+    def when_cli_ready(self, action):
+        """Run `action` on a helper thread once the fake CLI reports it is mid-run: an ordering, not a delay.
+        The 120 s bound is a hang guard so a broken test fails instead of blocking."""
+        def watch():
+            guard = time.monotonic() + 120
+            while not self.ready.exists():
+                if time.monotonic() > guard:
+                    return
+                time.sleep(0.01)
+            action()
+        t = threading.Thread(target=watch, daemon=True)
+        t.start()
+        return t
+
+    def cli_pid(self):
+        return json.loads(self.rec.read_text())["pid"]
+
+    def assertCliGone(self):
+        """The fake CLI (which would sleep for 600 s) was killed, not waited out."""
+        with self.assertRaises(ProcessLookupError):
+            os.kill(self.cli_pid(), 0)
+
+    def wait_for(self, predicate, what):
+        guard = time.monotonic() + 120
+        while not predicate():
+            self.assertLess(time.monotonic(), guard, f"hang guard: {what}")
+            time.sleep(0.01)
 
     def run_dirs(self):
         return sorted((self.cfg.data_dir / "runs").glob("*")) if (self.cfg.data_dir / "runs").exists() else []
@@ -373,6 +447,20 @@ class ConfigAndHttp(Base):
         with self.assertRaises(w.ConfigError):
             w.build_config({"BS_PROOF_RESEARCH_API_BASE": "https://example.com"})  # no token
 
+    def test_data_dir_must_be_absolute_because_nothing_expands_home_or_specifiers(self):
+        base = {"BS_PROOF_RESEARCH_WORKER_TOKEN": TOKEN, "BS_PROOF_RESEARCH_API_BASE": "https://example.com"}
+        for bad in ("%h/.local/share/bsproof-research-worker/data", "~/data", "data"):
+            with self.assertRaises(w.ConfigError, msg=bad):
+                w.build_config({**base, "BS_PROOF_RESEARCH_DATA_DIR": bad})
+        cfg = w.build_config({**base, "BS_PROOF_RESEARCH_DATA_DIR": str(self.tmp_path / "d")})
+        self.assertEqual(cfg.data_dir, self.tmp_path / "d")
+        self.assertTrue(w.DEFAULT_DATA_DIR.is_absolute())
+        # the shipped template must itself be loadable: an uncommented example line may not break the worker
+        for line in (ROOT / "deploy" / "worker.env.example").read_text().splitlines():
+            if line.startswith("# BS_PROOF_RESEARCH_DATA_DIR="):
+                value = line[2:].split("#")[0].split("=", 1)[1].strip()
+                w.build_config({**base, "BS_PROOF_RESEARCH_DATA_DIR": value})
+
     def test_claim_request_shape_auth_and_idle(self):
         r = self.client.post({"action": "claim"})
         self.assertEqual(r.kind, "ok")
@@ -408,11 +496,10 @@ class ConfigAndHttp(Base):
 # jobs through the fake CLI
 
 
-@unittest.skipUnless(HAVE_JSONSCHEMA, "jsonschema>=4 required")
 class Jobs(Base):
     def test_success_complete_payload_provenance_heartbeat_and_isolation(self):
-        events = web_events() + ["SLEEP", ev_result(good_audit())]
-        out = self.run_job(events, sleep=0.6)
+        events = web_events() + ["WAIT_HEARTBEAT", ev_result(good_audit())]  # the CLI stays mid-run until a heartbeat has landed
+        out = self.run_job(events)
         self.assertEqual(out.kind, "completed")
         done = self.api.of("complete")
         self.assertEqual(len(done), 1)
@@ -443,7 +530,7 @@ class Jobs(Base):
         for f in rd.iterdir():
             if f.name != "result.json":
                 self.assertNotIn(b"lease-secret-abc", f.read_bytes(), f.name)
-        # heartbeats ran during the 0.6s CLI run, with exactly job_id+lease_token
+        # a heartbeat landed while the CLI was running, with exactly job_id+lease_token
         hbs = self.api.of("heartbeat")
         self.assertGreaterEqual(len(hbs), 1)
         self.assertEqual(hbs[0], {"action": "heartbeat", "job_id": "job-1", "lease_token": "lease-secret-abc"})
@@ -521,10 +608,9 @@ class Jobs(Base):
         self.assertEqual(self.run_job(events).kind, "completed")
 
     def test_disallowed_tool_kills_the_run(self):
-        t0 = time.time()
         out = self.run_job([ev_init(), ev_use(9, "Bash", command="cat ~/.ssh/id"), "HANG"])
         self.assertEqual(out.code, "disallowed_tool_used")
-        self.assertLess(time.time() - t0, 30)  # the 600 s hang was killed, not waited out
+        self.assertCliGone()  # the 600 s hang was killed, not waited out
         self.assertEqual(self.api.of("complete"), [])
 
     def test_api_key_billing_guard(self):
@@ -604,10 +690,12 @@ class Jobs(Base):
 
     def test_unsupported_prompt_version_and_invalid_target_run_nothing(self):
         j = job(pv="audit-v0.4")["job"]
-        out = w.handle_job(j, self.client, self.cfg, self.stop, environ=self.environ, binary="/nonexistent")
+        out = w.handle_job(j, self.client, self.cfg, self.stop, environ=self.environ, binary="/nonexistent",
+                           clock=fixed_clock)
         self.assertEqual(out.code, "unsupported_prompt_version")
         j = job(target={"a": {1, 2}})["job"]
-        out = w.handle_job(j, self.client, self.cfg, self.stop, environ=self.environ, binary="/nonexistent")
+        out = w.handle_job(j, self.client, self.cfg, self.stop, environ=self.environ, binary="/nonexistent",
+                           clock=fixed_clock)
         self.assertEqual(out.code, "invalid_target")
         self.assertEqual(self.run_dirs(), [])
         self.assertEqual(len(self.api.of("fail")), 2)
@@ -616,10 +704,9 @@ class Jobs(Base):
 
     def test_lost_lease_kills_the_run_and_sends_nothing_stale(self):
         self.api.heartbeat = lambda n: (409, {"error": "lease_lost"})
-        t0 = time.time()
         out = self.run_job(web_events() + ["HANG"])
         self.assertEqual(out.kind, "lease_lost")
-        self.assertLess(time.time() - t0, 30)
+        self.assertCliGone()  # the lost lease killed the 600 s run
         self.assertEqual(self.api.of("complete") + self.api.of("fail"), [])
 
     def test_lease_lost_during_delivery_stops_retrying(self):
@@ -646,10 +733,56 @@ class Jobs(Base):
         self.assertEqual(len(self.api.of("complete")), 1)
 
     def test_stop_signal_cancels_the_run_and_leaves_the_lease_to_expire(self):
-        threading.Timer(0.7, self.stop.set).start()
+        self.when_cli_ready(self.stop.set)  # SIGTERM arrives while the CLI is mid-run
         out = self.run_job(web_events() + ["HANG"])
         self.assertEqual(out.kind, "cancelled")
+        self.assertCliGone()
         self.assertEqual(self.api.of("complete") + self.api.of("fail"), [])
+
+    def test_cli_killed_by_the_shutdown_signal_before_cancel_propagation_is_not_reported_as_a_failure(self):
+        # systemd signals the whole cgroup: the CLI dies of SIGTERM at the same moment this process's handler
+        # runs, before the cancel flag propagates. That abnormal exit is a shutdown, not a failed audit: a posted
+        # retryable `fail` would burn an attempt and, on the third, finish the job as failed for good.
+        stop = LateStop()
+
+        def shutdown_reaches_both():
+            stop.set()                                  # the worker's handler has run ...
+            os.kill(self.cli_pid(), signal.SIGTERM)     # ... and the cgroup-wide SIGTERM killed the CLI
+
+        self.when_cli_ready(shutdown_reaches_both)
+        out = self.run_job(web_events() + ["HANG"], stop=stop)
+        self.assertEqual(out.kind, "cancelled")
+        self.assertCliGone()
+        self.assertEqual(self.api.of("complete") + self.api.of("fail"), [])
+
+    def test_the_same_cli_death_without_a_shutdown_is_still_reported(self):
+        self.when_cli_ready(lambda: os.kill(self.cli_pid(), signal.SIGTERM))
+        out = self.run_job(web_events() + ["HANG"])
+        self.assertEqual(out.code, "claude_cli_error")
+        (sent,) = self.api.of("fail")
+        self.assertEqual((sent["code"], sent["retryable"]), ("claude_cli_error", True))
+
+    def test_a_finished_valid_result_is_still_delivered_when_shutdown_began_after_the_cli_ended(self):
+        stop = LateStop()
+        stop.set()
+        out = self.run_job(web_events() + [ev_result(good_audit())], stop=stop)
+        self.assertEqual(out.kind, "completed")
+        self.assertEqual(len(self.api.of("complete")), 1)
+
+    def test_a_failure_that_says_something_real_is_still_reported_during_shutdown(self):
+        stop = LateStop()
+        stop.set()
+        out = self.run_job([ev_init(), ev_result(None, is_error=True, result="usage limit reached")], stop=stop, exit=1)
+        self.assertEqual(out.code, "claude_quota_or_rate_limit")
+        self.assertEqual([f["code"] for f in self.api.of("fail")], ["claude_quota_or_rate_limit"])
+
+    def test_a_worker_without_jsonschema_fails_closed(self):
+        with unittest.mock.patch.dict(sys.modules, {"jsonschema": None}):  # `import jsonschema` now raises ImportError
+            out = self.run_job(web_events() + [ev_result(good_audit())])
+        self.assertEqual(out.code, "worker_internal_error")
+        self.assertEqual(self.api.of("complete"), [])  # an audit is never "validated" by skipping validation
+        (sent,) = self.api.of("fail")
+        self.assertIn("jsonschema", sent["message"])
 
     # ---- loop ----
 
@@ -665,9 +798,9 @@ class Jobs(Base):
 
         self.api.terminal = term
         th = threading.Thread(target=lambda: w.run_loop(self.cfg, self.stop, environ=self.environ,
-                                                        binary=binary, client=self.client))
+                                                        binary=binary, client=self.client, clock=fixed_clock))
         th.start()
-        self.assertTrue(done.wait(60))
+        self.assertTrue(done.wait(120))  # hang guard
         self.stop.set()
         th.join(30)
         claims = self.api.of("claim")
@@ -680,21 +813,70 @@ class Jobs(Base):
         binary = self.cli([ev_init(), ev_result(None, is_error=True, result="usage limit reached")], exit=1)
         self.cfg.quota_cooldown_seconds = 0.5
         self.api.claims = [job(), job(jid="job-2")]
-        seen = []
         th = threading.Thread(target=lambda: w.run_loop(self.cfg, self.stop, environ=self.environ,
-                                                        binary=binary, client=self.client))
+                                                        binary=binary, client=self.client, clock=fixed_clock))
         th.start()
-        deadline = time.time() + 30
-        while len(self.api.of("fail")) < 1 and time.time() < deadline:
-            time.sleep(0.02)
-        t_fail = time.time()
-        while len(self.api.of("fail")) < 2 and time.time() < deadline:
-            time.sleep(0.02)
-        gap = time.time() - t_fail
+        self.wait_for(lambda: len(self.api.of("fail")) >= 2, "two quota failures")
         self.stop.set()
-        th.join(30)
-        self.assertGreaterEqual(gap, 0.4)
+        th.join(120)
+        self.assertFalse(th.is_alive())
+        t1, t2 = self.api.times_of("fail")[:2]
+        # Both are the fake API's own monotonic receipt times, so this is exact: the worker waited out the
+        # cooldown (which starts after the first fail was answered) before it claimed and failed again.
+        self.assertGreaterEqual(t2 - t1, 0.5)
         self.assertEqual(len(self.api.of("fail")), 2)
+
+
+class RealTargetContract(Base):
+    """The contract checks, run on the targets lib/scan-research/target.ts really produces (shared fixture,
+    asserted equal to buildResearchTarget's output by tests/scan-research-target-sql.test.ts)."""
+
+    def code_and_message(self, name, audit, jid="job-1"):
+        out = self.run_job(web_events() + [ev_result(audit)], jobspec=fixture_job(name, jid))
+        fails = self.api.of("fail")
+        return out, (fails[-1]["code"], fails[-1]["message"]) if fails else (None, "")
+
+    def test_the_worker_reads_the_fixture_targets_the_way_the_scan_recorded_them(self):
+        self.assertGreaterEqual(len(FIXTURE_TARGETS), 7)
+        for c in FIXTURE_TARGETS:
+            t = c["target"]
+            self.assertEqual(ad.sanitize_target(t), t, c["name"])  # plain JSON: nothing is dropped or altered
+            self.assertEqual(w.target_daily_dose(t) is not None, c["daily_known"], c["name"])
+            self.assertEqual(w.is_blend(t), c["blend"], c["name"])
+
+    def test_an_unknown_daily_dose_must_be_reported_unknown_never_assumed(self):
+        for i, c in enumerate(x for x in FIXTURE_TARGETS if not x["daily_known"]):
+            with self.subTest(c["name"]):
+                # no servings_per_day and no daily regimen: no "one serving a day", no guessed multiplier
+                out, (code, message) = self.code_and_message(c["name"], good_audit("400 mg elemental magnesium/day"), f"bad-{i}")
+                self.assertEqual(code, "audit_contract_violation")
+                self.assertIn("'unknown'", message)
+                self.assertEqual(self.run_job(web_events() + [ev_result(good_audit("unknown"))],
+                                              jobspec=fixture_job(c["name"], f"ok-{i}")).kind, "completed")
+
+    def test_an_explicit_daily_amount_is_not_echo_checked_but_unknown_stays_allowed(self):
+        for i, c in enumerate(x for x in FIXTURE_TARGETS if x["daily_known"]):
+            with self.subTest(c["name"]):
+                for j, text in enumerate(("56 mg elemental per day (2 servings x 28 mg)", "unknown")):
+                    out = self.run_job(web_events() + [ev_result(good_audit(text))], jobspec=fixture_job(c["name"], f"k-{i}-{j}"))
+                    self.assertEqual(out.kind, "completed", text)
+
+    def test_a_blend_must_lead_with_the_whole_formula_row_and_unknown_is_never_defaulted_to_a_blend(self):
+        def context_first():
+            a = good_audit("unknown")
+            a["outcomes"][0]["population"] = "CONTEXT ONLY: single ingredient, not this product."
+            return a
+
+        for i, c in enumerate(FIXTURE_TARGETS):
+            with self.subTest(c["name"]):
+                audit = context_first()
+                audit["daily_dose"] = "unknown" if not c["daily_known"] else "56 mg elemental per day"
+                out, (code, message) = self.code_and_message(c["name"], audit, f"b-{i}")
+                if c["blend"]:
+                    self.assertEqual(code, "audit_contract_violation")
+                    self.assertIn("blend target", message)
+                else:
+                    self.assertEqual(out.kind, "completed")  # a null multi-ingredient flag is not a blend
 
 
 class Locking(unittest.TestCase):

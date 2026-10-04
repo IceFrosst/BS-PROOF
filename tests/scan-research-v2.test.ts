@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-import { checkLiveResearchResultV2 } from "@/lib/scan-research/source-access-v2";
+import { JSON_SCHEMA_2020_12, checkLiveResearchResultV2, compileStrict2020 } from "@/lib/scan-research/source-access-v2";
 
 type Fixture = { audit: Record<string, any>; source_access_v2: Record<string, any> };
 const original = JSON.parse(readFileSync("tests/fixtures/source-access-v2.json", "utf8")) as Fixture;
@@ -74,5 +74,36 @@ describe("SourceAccessV2 validation and owner projection", () => {
     f = copy(); f.audit.confidence_note = "x".repeat(800_000);
     expect(check(f).ok).toBe(false);
     expect(check(copy(), "live-research-v0.1").ok).toBe(false);
+  });
+});
+
+describe("JSON Schema 2020-12 is enforced fail-closed", () => {
+  const audit = JSON.parse(readFileSync("schemas/research_audit.json", "utf8")) as Record<string, any>;
+  const receipt = JSON.parse(readFileSync("schemas/source_access_v2.json", "utf8")) as Record<string, any>;
+
+  it("both canonical schemas declare Draft 2020-12 and compile in strict mode", () => {
+    expect(audit.$schema).toBe(JSON_SCHEMA_2020_12);
+    expect(receipt.$schema).toBe(JSON_SCHEMA_2020_12);
+    expect(() => compileStrict2020(audit)).not.toThrow();
+    expect(() => compileStrict2020(receipt)).not.toThrow();
+  });
+
+  it("a schema that is not 2020-12, declares no draft, or uses an unknown keyword/format does not compile (never validates)", () => {
+    expect(() => compileStrict2020({ ...receipt, $schema: "http://json-schema.org/draft-07/schema#" })).toThrow(/Draft 2020-12/);
+    const { $schema, ...undeclared } = receipt;
+    void $schema;
+    expect(() => compileStrict2020(undeclared)).toThrow(/Draft 2020-12/);
+    expect(() => compileStrict2020(null)).toThrow(/Draft 2020-12/);
+    expect(() => compileStrict2020({ ...receipt, minimumLenght: 3 })).toThrow(/unknown keyword/i);
+    expect(() => compileStrict2020({ $schema: JSON_SCHEMA_2020_12, type: "string", format: "no-such-format" })).toThrow(/format/i);
+  });
+
+  it("the audit schema is the strict contract: an unknown top-level key, a wrong type and a non-finite number are rejected", () => {
+    const f = copy(); f.audit.extra_field = 1;
+    expect(check(f).ok).toBe(false);
+    const g = copy(); g.audit.outcomes = "not-a-list";
+    expect(check(g).ok).toBe(false);
+    const h = copy(); h.source_access_v2.summary.requests = Number.POSITIVE_INFINITY;
+    expect(check(h).ok).toBe(false);
   });
 });

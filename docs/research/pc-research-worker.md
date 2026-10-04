@@ -70,6 +70,21 @@ on current unexpired lease remains authoritative. Heartbeats continue while a
 job runs and while delivery retries. There is no retry-count cap; lease loss
 stops the worker's stale delivery.
 
+Shutdown never finishes a job. On SIGTERM/SIGINT the worker cancels the CLI and
+posts nothing: the lease is left to expire and the job is re-claimed (the SQL allows
+three attempts). This also holds when the same signal killed the CLI first (systemd
+signals the whole cgroup, so the CLI can die before the worker's own cancel
+propagates): while the worker is stopping, an abnormal CLI exit
+(`claude_cli_error`, `claude_no_result_event`, `claude_no_structured_output`) is not
+posted as a retryable `fail`, because that would burn an attempt and, on the third,
+fail the job for good. A finished valid result is still delivered, and real
+findings (quota, authentication, billing guard, contract violations) are still reported.
+
+An audit is never "validated" by skipping validation: without `jsonschema` (Draft
+2020-12) the worker fails the job as `worker_internal_error`, and the server's
+Ajv validators run in strict mode and refuse any schema that does not itself
+declare Draft 2020-12 (`compileStrict2020`).
+
 ## Target and grounding
 
 The server builds `ResearchJobV1` from the owner's saved scan. The worker accepts
@@ -77,7 +92,18 @@ only JSON data and preserves explicit numbers unchanged. `printed_elemental_per_
 may be null or explicitly recorded at the top dose or active row; no unit
 conversion or serving inference is performed. Unknown daily dose stays unknown,
 blend component evidence is not blend efficacy, and prompt/scoring rules remain
-unchanged. Prompt wording explicitly says that only snippets/model summaries are
+unchanged.
+
+The worker's contract checks read the REAL `ResearchJobV1` shape (`version`,
+`servings_per_day`, `dose.daily_elemental_mg`, `is_multi_ingredient`, `actives`,
+`other_actives`), pinned by the shared fixture `tests/fixtures/research-target-v1.json`:
+a daily amount exists only when the scan recorded a numeric `servings_per_day` or
+`dose.daily_elemental_mg`. With neither, the audit's `daily_dose` must be exactly
+`unknown` (no "one serving a day" default, no guessed multiplier). A target is a
+blend only when the scan says so (`is_multi_ingredient` true, several `actives`, or
+any `other_actives`); a `null` flag is unknown and is never defaulted to a blend. A
+blend's `outcomes[0]` must be the whole-formula row, never a `CONTEXT ONLY` row.
+Violations are failed as `audit_contract_violation`; nothing is patched. Prompt wording explicitly says that only snippets/model summaries are
 available; it must not imply full-paper access or guessed study details.
 
 ## Local health check and operations
@@ -197,6 +223,31 @@ rather than exit, and a bad config exits and, under `Restart=on-failure` with
 `RestartSec=30` (which never hits the default start limit), restarts every 30 s and
 fills the journal with config errors. The token is created by the
 parent only after the reviewed scoped provision, never by this doc or the unit.
+
+## Verification (offline; no network, no model, no live database)
+
+`docs/research-jobs.sql` is proven by EXECUTING it, not by reading its text:
+`tests/research-jobs-sql-exec.test.ts` applies the committed file verbatim to an
+in-memory PostgreSQL 17 (PGlite) behind stand-ins for the `anon`, `authenticated` and
+`service_role` roles (with Supabase's default privileges), and checks the queue
+semantics (idempotent enqueue, owner cap, owner-filtered reads, hashed leases,
+heartbeat, expiry and re-claim, three attempts, completion compare-and-set and replay,
+conflict, stale-lease failure, immutability) and the privilege model (RLS, no direct
+table access for any role, six service-role-only functions, pinned `search_path`),
+the shared-project guard (refuses to run next to a foreign table/function/index/trigger
+and leaves everything intact), and idempotent re-application. A 20-mutant suite removes
+one guarantee at a time and requires a scenario to catch each.
+`tests/scan-research-queue-parity.test.ts` runs one scripted history through the
+in-memory queue the route tests use and through the real SQL and requires identical
+answers. Limits: PGlite is one connection, so concurrent `for update skip locked`
+claims cannot be raced, and it is PostgreSQL 17.5 rather than the project's 17.6.
+Python: `python3 -m unittest tests.test_source_access_v2 tests.test_pc_research_worker`
+(needs `jsonschema`; a missing module fails, it does not skip). No test depends on the
+machine clock.
+
+An installed runtime is a COPY (`deploy/pc_research_worker_release.sh build`): changes
+to the worker, adapter, prompt or schemas reach the mainPC only through a new release
+that the owner installs.
 
 ## Residual limits
 

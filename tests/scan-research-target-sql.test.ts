@@ -1,17 +1,17 @@
 // @vitest-environment node
 /*
- * ResearchJobV1 target derivation, and the static safety properties of
+ * ResearchJobV1 target derivation, and the static (text-level) safety properties of
  * docs/research-jobs.sql (applied BY HAND, ONCE, to a Supabase project shared
- * with other apps; no test here can run it -- it was executed separately
- * against PGlite, see CLAUDE.md). Also pins that no model client is reachable
- * from the queue code.
+ * with other apps). The text checks here are only a tripwire: the file's BEHAVIOUR
+ * is proven by executing it in tests/research-jobs-sql-exec.test.ts (PGlite, with a
+ * mutation suite). Also pins that no model client is reachable from the queue code.
  */
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { buildResearchTarget } from "@/lib/scan-research/target";
+import { buildResearchTarget, type ResearchTargetV1 } from "@/lib/scan-research/target";
 import { liveResearchEnabled } from "@/lib/scan-research/contract";
 import { plainJsonProblem } from "@/lib/scan-research/result";
 
@@ -172,6 +172,26 @@ describe("buildResearchTarget", () => {
       { status: "scored", source: "other", label: { ingredient_vocab_id: "x" } },
     ]) {
       expect(buildResearchTarget(analysis).ok, JSON.stringify(analysis)).toBe(false);
+    }
+  });
+});
+
+describe("shared TS/Python target fixture", () => {
+  const fixture = JSON.parse(readFileSync(join(process.cwd(), "tests", "fixtures", "research-target-v1.json"), "utf8")) as {
+    cases: Array<{ name: string; analysis: unknown; target: unknown; daily_known: boolean; blend: boolean }>;
+  };
+
+  it("every fixture target is exactly what buildResearchTarget derives from its saved scan (the Python worker contract tests run on these)", () => {
+    expect(fixture.cases.length).toBeGreaterThanOrEqual(7);
+    for (const c of fixture.cases) expect(buildResearchTarget(c.analysis), c.name).toEqual({ ok: true, target: c.target });
+  });
+
+  it("the fixture's daily_known / blend flags follow only what the scan itself recorded (nothing is defaulted)", () => {
+    for (const c of fixture.cases) {
+      const t = (buildResearchTarget(c.analysis) as { ok: true; target: ResearchTargetV1 }).target;
+      const daily = typeof t.servings_per_day === "number" || typeof t.dose.daily_elemental_mg === "number";
+      const blend = t.is_multi_ingredient === true || (t.actives?.length ?? 0) > 1 || (t.other_actives?.length ?? 0) > 0;
+      expect({ name: c.name, daily, blend }).toEqual({ name: c.name, daily: c.daily_known, blend: c.blend });
     }
   });
 });
