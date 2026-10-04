@@ -15,6 +15,7 @@ import { createElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ingredientCatalog } from "@/lib/analyze/catalog";
+import { forgetResearchJobs, noteResearchOwner } from "@/lib/scan-research/client";
 
 import { USER_A, USER_B, fakeAuth, installFakeGoogle, removeFakeGoogle, sessionFor } from "./helpers/fake-supabase-browser";
 import { Harness, STORED, analysis, buttonByText, click, jsonResponse, record, settle, stageAndScan, type RecordedCall } from "./helpers/scan-ui";
@@ -32,10 +33,14 @@ const RUN_1 = "11111111-1111-4111-8111-111111111111";
 const RUN_2 = "22222222-2222-4222-8222-222222222222";
 const run1 = { id: RUN_1, created_at: "2026-09-20T10:30:00Z", source: "photo", status: "ok", product_name: "Creatine Pro 5000" };
 const run2 = { id: RUN_2, created_at: "2026-09-19T08:00:00Z", source: "manual", status: "ingredient_not_supported", product_name: null };
+const RESEARCH_JOB = "7d1f2a9e-3b4c-4d5e-8f60-123456789abc";
+const researchJob = (status: "queued" | "running") => ({ id: RESEARCH_JOB, scan_id: RUN_1, status, prompt_version: "live-research-v0.2", target: null, created_at: "2026-09-20T10:31:00+00:00", updated_at: "2026-09-20T10:31:00+00:00", completed_at: null, failure_code: null, result: null });
 const listOf = (...runs: unknown[]) => jsonResponse({ status: "ok", runs, next_cursor: null });
 const detailOf = (id: string, body: unknown = rich) => jsonResponse({ status: "ok", run_id: id, analysis: body });
 
 beforeEach(() => {
+  forgetResearchJobs(); // what the page remembers about research jobs is page-lifetime state: start each test as a fresh page
+  noteResearchOwner(null);
   fakeAuth.reset();
   fakeAuth.configured = true;
   fakeAuth.session = sessionFor(USER_A, "tok-a");
@@ -54,7 +59,7 @@ afterEach(async () => {
 type Answer = Response | Promise<Response> | undefined;
 
 /** Route fetch by URL; every call is recorded. Unmatched calls fail loudly. */
-function stubApi(routes: { list?: (call: RecordedCall) => Answer; detail?: (call: RecordedCall, id: string) => Answer; scan?: (call: RecordedCall) => Answer }) {
+function stubApi(routes: { list?: (call: RecordedCall) => Answer; detail?: (call: RecordedCall, id: string) => Answer; scan?: (call: RecordedCall) => Answer; research?: (call: RecordedCall) => Answer }) {
   const calls: RecordedCall[] = [];
   vi.stubGlobal(
     "fetch",
@@ -66,7 +71,7 @@ function stubApi(routes: { list?: (call: RecordedCall) => Answer; detail?: (call
       if (path === "/api/scan/history") answer = routes.list?.(call);
       else if (path.startsWith("/api/scan/history/")) answer = routes.detail?.(call, decodeURIComponent(path.slice("/api/scan/history/".length)));
       else if (path === "/api/scan") answer = routes.scan?.(call);
-      else if (path === "/api/scan/research") answer = jsonResponse({ status: "research_disabled" }, 503);
+      else if (path === "/api/scan/research" || path.startsWith("/api/scan/research/")) answer = routes.research?.(call) ?? jsonResponse({ status: "research_disabled" }, 503);
       if (!answer) throw new Error(`unexpected request ${call.method} ${path}`);
       return answer;
     }),
@@ -206,10 +211,10 @@ describe("opening a saved scan", () => {
     await click(rows(el)[0]);
     await settle();
 
-    expect(calls.map((c) => `${c.method} ${c.url}`)).toEqual(["GET /api/scan/history", `GET /api/scan/history/${RUN_1}`, "POST /api/scan/research"]);
+    // Opening a saved scan asks for NOTHING but that run: no scan, no model call, and no research request either.
+    expect(calls.map((c) => `${c.method} ${c.url}`)).toEqual(["GET /api/scan/history", `GET /api/scan/history/${RUN_1}`]);
     expect(calls[1].headers.Authorization).toBe("Bearer tok-a");
-    expect(calls[2].headers.Authorization).toBe("Bearer tok-a");
-    expect(JSON.parse(String(calls[2].body))).toEqual({ scan_id: RUN_1 });
+    expect(calls.some((c) => c.method === "POST")).toBe(false);
     expect(calls.some((c) => c.url === "/api/scan")).toBe(false);
 
     const panel = historyPanel(el);
@@ -231,6 +236,65 @@ describe("opening a saved scan", () => {
     expect(panel.querySelector('[data-testid="save-status"]')).toBeNull();
     // Focus lands on the dated note so a screen reader hears what this is.
     expect(document.activeElement).toBe(note);
+  });
+
+  it("its live research is requested only when the person presses the button (their token, that run's id); opening the same scan again looks the job up instead of asking again", async () => {
+    const calls = stubApi({
+      list: () => listOf(run1),
+      detail: (_c, id) => detailOf(id),
+      research: (c) => jsonResponse({ status: "ok", job: researchJob("queued") }, c.method === "POST" ? 201 : 200),
+    });
+    const el = await mountWorkspace();
+    await openHistory(el);
+    await click(rows(el)[0]);
+    await settle();
+    const panel = () => historyPanel(el).querySelector<HTMLElement>(".sc-research");
+    expect(panel()?.getAttribute("data-research-state")).toBe("idle");
+    expect(panel()?.textContent).toMatch(/nothing was re-run/i);
+    expect(calls.some((c) => c.url.startsWith("/api/scan/research"))).toBe(false);
+
+    await click(buttonByText(historyPanel(el), /look up live research/i));
+    await settle();
+    const posts = calls.filter((c) => c.method === "POST");
+    expect(posts).toHaveLength(1);
+    expect(posts[0]).toMatchObject({ url: "/api/scan/research" });
+    expect(posts[0].headers.Authorization).toBe("Bearer tok-a");
+    expect(JSON.parse(String(posts[0].body))).toEqual({ scan_id: RUN_1 });
+    expect(panel()?.getAttribute("data-research-state")).toBe("queued");
+    expect(panel()?.textContent).toContain("Queued for the private research worker.");
+
+    // Back and open the same saved scan again: the job is LOOKED UP (GET), research is not asked for a second time.
+    await click(historyPanel(el).querySelector('[aria-label="Back to history"]'));
+    await settle();
+    await click(rows(el)[0]);
+    await settle();
+    expect(calls.filter((c) => c.method === "POST")).toHaveLength(1);
+    expect(calls.filter((c) => c.url === `/api/scan/research/${RESEARCH_JOB}`).length).toBeGreaterThanOrEqual(1);
+    expect(panel()?.getAttribute("data-research-state")).toBe("queued");
+  });
+
+  it("signing out while its research is queued aborts the poll and removes the panel with the rest of the account's data", async () => {
+    const calls = stubApi({
+      list: () => listOf(run1),
+      detail: (_c, id) => detailOf(id),
+      research: () => jsonResponse({ status: "ok", job: researchJob("running") }),
+    });
+    const el = await mountWorkspace();
+    await openHistory(el);
+    await click(rows(el)[0]);
+    await settle();
+    await click(buttonByText(historyPanel(el), /look up live research/i));
+    await settle();
+    const research = calls.find((c) => c.url === "/api/scan/research")!;
+    expect(historyPanel(el).querySelector(".sc-research")?.getAttribute("data-research-state")).toBe("running");
+    expect(research.signal?.aborted).toBe(false);
+
+    fakeAuth.setSession(null);
+    await settle();
+    expect(research.signal?.aborted).toBe(true);
+    expect(historyPanel(el).querySelector(".sc-research")).toBeNull();
+    expect(historyPanel(el).querySelector('[data-testid="signin-card"]')).not.toBeNull();
+    expect(historyPanel(el).textContent).not.toMatch(/Magnesium|research is running/i);
   });
 
   it("Back returns to the list and puts focus on the row that was opened", async () => {
@@ -316,6 +380,35 @@ describe("opening a saved scan", () => {
     await settle();
     expect(historyPanel(el).querySelector('[data-testid="history-detail-error"]')).not.toBeNull();
     expect(historyPanel(el).querySelector(".scan-lab-result")).toBeNull();
+  });
+
+  it("a FRESH scan that was really stored asks for its research once, with the owner's token and the stored run id; an unsaved one asks for nothing", async () => {
+    const stored = { ...structuredClone(rich), run_id: RUN_1, persistence: { ...STORED, run_id: RUN_1 } };
+    const calls = stubApi({
+      scan: () => jsonResponse(stored),
+      research: () => jsonResponse({ status: "ok", job: researchJob("queued") }, 201),
+    });
+    const el = await mountWorkspace();
+    await settle();
+    await stageAndScan(el);
+    await settle();
+    const asked = calls.filter((c) => c.url.startsWith("/api/scan/research"));
+    expect(asked).toHaveLength(1);
+    expect(asked[0]).toMatchObject({ method: "POST", url: "/api/scan/research" });
+    expect(asked[0].headers.Authorization).toBe("Bearer tok-a");
+    expect(JSON.parse(String(asked[0].body))).toEqual({ scan_id: RUN_1 });
+    expect(el.querySelector(".sc-research")?.getAttribute("data-research-state")).toBe("queued");
+  });
+
+  it("a fresh scan the server did not store has no run id to research: no research request is made and the panel says so", async () => {
+    const unsaved = { ...structuredClone(rich), run_id: RUN_1, persistence: { status: "failed" } };
+    const calls = stubApi({ scan: () => jsonResponse(unsaved) });
+    const el = await mountWorkspace();
+    await settle();
+    await stageAndScan(el);
+    await settle();
+    expect(calls.some((c) => c.url.startsWith("/api/scan/research"))).toBe(false);
+    expect(el.querySelector(".sc-research")?.getAttribute("data-research-state")).toBe("no-id");
   });
 
   it("a saved run never duplicates element ids with the live Scan tab's own result", async () => {
