@@ -13,7 +13,8 @@
  * Because it runs on a subscription there is deliberately NO auth budget
  * attached to a job: the cost control is the per-owner open-job cap in SQL
  * (MAX 3 queued/running per owner), one job per scan, and the off-by-default
- * SCAN_LIVE_RESEARCH_ENABLED flag.
+ * SCAN_LIVE_RESEARCH_ENABLED flag (and, for the private owner-smoke before general
+ * use, the SCAN_LIVE_RESEARCH_OWNER_IDS list; see `liveResearchMode`).
  *
  * API (all JSON, all `Cache-Control: no-store`)
  *
@@ -81,6 +82,7 @@
  * env and the PC's env, and is never returned, stored, logged or put in history.
  * Lease tokens are stored only as SHA-256 hashes.
  */
+import { isUuid } from "@/lib/auth/server-auth";
 
 /** The stable job-target version. A breaking change is a new version, never an edit. */
 export const RESEARCH_JOB_VERSION = "ResearchJobV1" as const;
@@ -105,12 +107,52 @@ export const RESEARCH_PROVENANCE = {
 export const LEASE_TOKEN_RE = /^[A-Za-z0-9_-]{32,128}$/;
 
 /**
- * `SCAN_LIVE_RESEARCH_ENABLED`. OFF unless explicitly turned on (the opposite
- * parsing to SCAN_REQUIRE_AUTH on purpose: a typo must leave a spending feature
- * OFF). Turn it on only after docs/research-jobs.sql is applied and the PC worker
- * and BS_PROOF_RESEARCH_WORKER_TOKEN are provisioned.
+ * Who may QUEUE research (`POST /api/scan/research/`), from `SCAN_LIVE_RESEARCH_ENABLED`:
+ *
+ *   "off"      (default; unset, empty and every typo) nobody. The route answers 503
+ *              research_disabled before it authenticates or reads anything.
+ *   "everyone" (`1`, `true`, `on`, `yes`) every Supabase-verified Google user.
+ *   "owners"   (exactly the word `owners`) only the Supabase-verified user ids in
+ *              `SCAN_LIVE_RESEARCH_OWNER_IDS`: the PRIVATE OWNER-SMOKE mode, used to
+ *              prove one real job end to end before general use, with a genuine
+ *              Google account and no test identity.
+ *
+ * FAIL CLOSED (the opposite parsing to SCAN_REQUIRE_AUTH on purpose: a typo must
+ * leave a spending feature OFF). `owners` with an unset, empty or malformed id
+ * list admits NOBODY, and the id list never opens anything on its own (it is read
+ * only in `owners` mode), so a mis-set list can only narrow access. Turn either
+ * mode on only after docs/research-jobs.sql is applied and the PC worker and
+ * BS_PROOF_RESEARCH_WORKER_TOKEN are provisioned.
  */
-export function liveResearchEnabled(env: Record<string, string | undefined> = process.env): boolean {
+export type LiveResearchMode = "off" | "owners" | "everyone";
+
+export function liveResearchMode(env: Record<string, string | undefined> = process.env): LiveResearchMode {
   const raw = (env.SCAN_LIVE_RESEARCH_ENABLED ?? "").trim().toLowerCase();
-  return raw === "1" || raw === "true" || raw === "on" || raw === "yes";
+  if (raw === "1" || raw === "true" || raw === "on" || raw === "yes") return "everyone";
+  if (raw === "owners") return "owners";
+  return "off";
+}
+
+/** True only when research is open to EVERY verified Google user (not the owner-smoke mode). */
+export function liveResearchEnabled(env: Record<string, string | undefined> = process.env): boolean {
+  return liveResearchMode(env) === "everyone";
+}
+
+/** A pasted directory is not an allowlist: at most this many ids are read. */
+export const MAX_RESEARCH_OWNER_IDS = 20;
+
+/**
+ * `SCAN_LIVE_RESEARCH_OWNER_IDS`: Supabase `auth.users.id` UUIDs separated by
+ * commas, semicolons or whitespace. Only well-formed UUIDs are kept (an e-mail,
+ * a wildcard or a typo matches nothing); ids are compared lower-cased against the
+ * id Supabase Auth itself reported for the bearer token, never against anything
+ * the caller sent. Not a secret, but not logged or returned either.
+ */
+export function researchOwnerIds(env: Record<string, string | undefined> = process.env): ReadonlySet<string> {
+  const ids = new Set<string>();
+  for (const part of (env.SCAN_LIVE_RESEARCH_OWNER_IDS ?? "").split(/[\s,;]+/)) {
+    if (ids.size >= MAX_RESEARCH_OWNER_IDS) break;
+    if (isUuid(part)) ids.add(part.toLowerCase());
+  }
+  return ids;
 }

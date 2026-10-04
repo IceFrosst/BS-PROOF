@@ -1,12 +1,30 @@
 # Main-PC research worker — contract, install, health, rollback
 
-Status (2026-10-03): **coded and locally tested; runtime release staged, DB provisioned, worker config created, not active.**
+Status (2026-10-04): **coded and locally tested (executed-SQL, worker, route, UI and cross-module wire tests); runtime release staged (older commit), DB provisioned and re-verified read-only, worker config created, not active.**
 Release `bsproof-research-worker-f8e8df82117e` is installed (unprivileged, isolated venv)
-under `~/.local/share/bsproof-research-worker/` on the main PC. The reviewed `docs/research-jobs.sql`
-is applied to the shared project and a dedicated `~/.config/bsproof-research-worker/worker.env`
-(0600) exists; `check` passes. No system unit, service or job exists, no model has been called
-and the private live smoke is blocked (service-role credential unavailable to the agent; research
-routes require a genuine Google identity). Keep runtime OFF until a human provisions it.
+under `~/.local/share/bsproof-research-worker/` on the main PC; it predates the worker fixes in
+this branch and must be rebuilt and reinstalled from the promoted commit. The reviewed
+`docs/research-jobs.sql` (sha256 `48783cd3...`) is applied to the shared project (re-verified
+read-only on 2026-10-04: RLS on, no policies, no table privileges, six service-role-only
+functions, no jobs) and a dedicated `~/.config/bsproof-research-worker/worker.env` (0600)
+exists; `check` passes. No unit (user or system), service or job is installed and no model has been called.
+The service-role key now lives only in Vercel Production (sensitive), so the private smoke runs
+through the gated production API (see "Staged rollout"), never with a key on a PC. Research
+routes require a genuine Google identity. Keep runtime OFF until review and the owner step.
+
+Current status (2026-10-04, privacy-clean re-issue): nothing is pushed, merged, deployed or
+installed and no job has run. The two component branches (backend `62714cf`, UI `de169b8`) were
+already pushed to `origin` as separate component branches before the owner review; this
+integration is a LOCAL branch only and `main` is unchanged. A genuine Google sign-in of the
+designated test account succeeded on production (2026-10-04T21:10:51Z, through the fixed Google
+button, with no password / MFA / challenge asked). Its Supabase user id is kept only in a private
+0600 file outside the repository, and no account handle, e-mail or id value is written anywhere
+in this repository. On the main PC the user systemd manager was found working on 2026-10-04
+(`Linger=yes`), so the worker installs as a USER unit and sudo is not needed, provided the
+manager's private socket is intact: a `systemd-analyze --user verify` run against the real runtime
+dir orphans it (see the CAUTION in "Owner-only install path"), so re-check `systemctl --user
+is-system-running` before installing. Deploying with the flag unset does NOT hide the panel (see
+"Staged rollout" step 2).
 
 Files: `scripts/pc_research_worker.py` (loop, HTTP, leases, validation),
 `pipeline/claude_research_adapter.py` (only model boundary),
@@ -70,7 +88,8 @@ on current unexpired lease remains authoritative. Heartbeats continue while a
 job runs and while delivery retries. There is no retry-count cap; lease loss
 stops the worker's stale delivery.
 
-Shutdown never finishes a job. On SIGTERM/SIGINT the worker cancels the CLI and
+Shutdown never finishes a job (the WORKER posts nothing; see the final-attempt caveat
+below). On SIGTERM/SIGINT the worker cancels the CLI and
 posts nothing: the lease is left to expire and the job is re-claimed (the SQL allows
 three attempts). This also holds when the same signal killed the CLI first (systemd
 signals the whole cgroup, so the CLI can die before the worker's own cancel
@@ -79,6 +98,12 @@ propagates): while the worker is stopping, an abnormal CLI exit
 posted as a retryable `fail`, because that would burn an attempt and, on the third,
 fail the job for good. A finished valid result is still delivered, and real
 findings (quota, authentication, billing guard, contract violations) are still reported.
+
+Final-attempt caveat: "never finishes a job" means only that the worker sends no result.
+The current lease is left to expire and the job is retried while attempts remain. If the
+stop falls on the THIRD (final) attempt there is no retry left: the next claim's sweep of
+expired leases in `docs/research-jobs.sql` (`attempts >= 3`) ends the job as `failed` with
+`lease_expired`. A shutdown during the final attempt therefore loses that job, by design.
 
 An audit is never "validated" by skipping validation: without `jsonschema` (Draft
 2020-12) the worker fails the job as `worker_internal_error`, and the server's
@@ -115,8 +140,9 @@ CLI 2.1.287 and runtime dependencies. It does not claim a job or call a model.
 
 `deploy/worker.env.example` is an example only. The dedicated worker token is the
 only worker secret; never commit its real value. `deploy/bsproof-research-worker.service.example`
-(user unit) and `deploy/bsproof-research-worker.system.service.example` (system unit,
-preferred on the mainPC; see the owner install section) are not installed or enabled. `deploy/pc_research_worker_release.sh` can package
+(user unit; the preferred install path on the mainPC since 2026-10-04) and
+`deploy/bsproof-research-worker.system.service.example` (system unit; fallback only, needs
+sudo; see the owner install section) are not installed or enabled. `deploy/pc_research_worker_release.sh` can package
 an isolated versioned runtime; build/install/start/provisioning are human-owned
 operations and are not part of local validation. No account, network, service,
 secret, or SQL provisioning was done in this phase.
@@ -127,14 +153,70 @@ operational details, so keep that directory private and out of owner-facing APIs
 
 ## Owner-only install path on the mainPC (prepared, NOT executed)
 
-Status: prepared and reviewed as text only. Nothing below has been run; the mainPC
-runtime is untouched, no env file, token, service, or SQL exists. The run order
-(each step is an owner decision) is: provision scoped SQL/token (parent), install the
-runtime, create the 0600 env file, `check`, install the unit, one model smoke.
+Status: prepared and reviewed as text only. Nothing below has been run by this commit.
+As of 2026-10-04 the OLDER runtime release is staged, the 0600 env file exists and the
+SQL is applied, but no unit is installed. The run order (each step is an owner decision)
+is: provision scoped SQL/token (parent), install the runtime, create the 0600 env file,
+`check`, install the unit, one model smoke.
 
-Why a system unit: on the mainPC (WSL2, systemd 249) the user manager's private socket
-is orphaned and there is no user D-Bus, so `systemctl --user` cannot work. A system
-unit running as `User=icefrost` avoids the user manager entirely.
+### Current path: the USER unit (no sudo)
+
+On 2026-10-04 the user systemd manager on the mainPC was found working
+(`systemctl --user is-system-running` = `running`, `loginctl` `Linger=yes`, so a user unit
+survives logout). That makes the earlier "user manager unreachable" note obsolete and sudo
+unnecessary, as long as the manager's private socket is intact (see the CAUTION below).
+The unit is `deploy/bsproof-research-worker.service.example`. Compared with
+the earlier user template it now also carries `WorkingDirectory=` on the current runtime
+and the same credential scrub the reviewed system unit already had:
+`UnsetEnvironment=ANTHROPIC_API_KEY ANTHROPIC_AUTH_TOKEN CLAUDE_CODE_OAUTH_TOKEN ANTHROPIC_BASE_URL`
+(subscription login only; no API credential can reach the CLI). Everything else is
+unchanged: the absolute-`%h` `EnvironmentFile`, `NoNewPrivileges=yes`, `UMask=0077`,
+`KillMode=control-group`, `TimeoutStopSec=60`, `Restart=on-failure`, `RestartSec=30`. That
+is a CONFIGURATION change, not documentation: it was checked with
+`systemd-analyze --user verify` but NOT installed, and the owner must review the unit
+file (and re-run that verify on the mainPC) BEFORE installing it.
+
+```bash
+# 0. confirm the user manager (no sudo)
+systemctl --user is-system-running                        # expect: running
+loginctl show-user "$USER" -p Linger                       # expect: Linger=yes
+# 1. runtime, env file and `check`: steps 1-3 of the system-unit block below (no sudo needed)
+# 2. verify the template off-box (copy to a .service name; installs nothing). Use a THROWAWAY
+#    runtime dir: see the CAUTION below, never the real $XDG_RUNTIME_DIR
+cp deploy/bsproof-research-worker.service.example /tmp/bsproof-research-worker.service
+XDG_RUNTIME_DIR=$(mktemp -d) systemd-analyze --user verify /tmp/bsproof-research-worker.service
+# 3. the owner reviews the unit text, then installs ONLY this unit (user scope, no sudo)
+install -D -m 0644 deploy/bsproof-research-worker.service.example ~/.config/systemd/user/bsproof-research-worker.service
+systemctl --user daemon-reload
+# 4. enable and start only when the single smoke is authorized
+systemctl --user enable --now bsproof-research-worker.service
+# 5. status / logs; stop (SIGTERM; a running lease is left to expire)
+systemctl --user status bsproof-research-worker.service --no-pager
+journalctl --user -u bsproof-research-worker.service -n 100 --no-pager
+systemctl --user disable --now bsproof-research-worker.service
+```
+
+CAUTION (measured in an isolated test on 2026-10-04): `systemd-analyze --user verify`
+starts a throw-away manager that RE-BINDS `$XDG_RUNTIME_DIR/systemd/private`. Run against
+the real runtime dir (`/run/user/1000`) it replaces the live user manager's private socket
+file, the live manager keeps running but becomes unreachable, and `systemctl --user` then
+fails with "Failed to connect to bus: No such file or directory" (there is no user D-Bus to
+fall back to). This is the most likely cause of the "orphaned private socket" seen on
+2026-10-03. Always verify with a throwaway runtime dir as above (a verify run that way
+leaves the live socket untouched). If `systemctl --user` already fails that way, do not
+retry in a loop and do not restart anything automatically: the manager needs a deliberate
+restart decided by the human owner, or use the system-unit fallback below.
+
+Never restart `user@1000`, dbus, WSL or any session for this, and do not change linger,
+sudoers or permissions. Runtime rollback is the same `deploy/pc_research_worker_release.sh
+rollback` as below (stop the user unit first; start it again only if desired).
+
+### Fallback only: the system unit (needs the owner's sudo)
+
+Why a system unit was the plan on 2026-10-03: the user manager's private socket was
+orphaned and there was no user D-Bus, so `systemctl --user` could not work. A system
+unit running as `User=icefrost` avoids the user manager entirely. It is kept only as a
+fallback in case the user manager breaks again.
 `deploy/bsproof-research-worker.system.service.example` is that unit: `User=icefrost`,
 `Group=icefrost`, `HOME=/home/icefrost`, absolute paths (`%h` would be `/root` in a
 system unit), `EnvironmentFile=/home/icefrost/.config/bsproof-research-worker/worker.env`,
@@ -145,7 +227,8 @@ including `/home/icefrost/.nvm/versions/node/v22.23.2/bin`. The Claude CLI is a
 native ELF binary that does not need node; the node dir is kept on PATH only in case a
 CLI subprocess needs it. ProtectHome is deliberately NOT set: the CLI needs its
 own `~/.claude`. API-credential variables are explicitly unset in the unit. The user unit
-example got the same PATH fix and is only for a host where `systemctl --user` works.
+example got the same PATH fix and, since 2026-10-04, the same credential scrub; it is the
+current path (above).
 
 Rules: never restart `user@1000`, dbus, WSL, or any session for this. Do not change
 sudoers, permissions, auth, or provider configuration. Never paste the sudo password
@@ -215,14 +298,117 @@ sudo rm /etc/systemd/system/bsproof-research-worker.service
 sudo systemctl daemon-reload
 ```
 
-Revoking the dedicated worker token (parent/owner, server side) is the actual kill
+Revoking the dedicated worker token (parent/owner, server side: on Vercel, and it takes
+effect only after a redeploy) is the actual kill
 switch; stopping the unit does not by itself invalidate it. After revoking the token,
-ALSO run `sudo systemctl disable --now bsproof-research-worker.service`: a revoked
+ALSO run `systemctl --user disable --now bsproof-research-worker.service` (user unit; the
+system-unit fallback uses `sudo systemctl disable --now bsproof-research-worker.service`): a revoked
 token makes the worker log auth errors and keep polling with backoff (up to 300 s)
 rather than exit, and a bad config exits and, under `Restart=on-failure` with
 `RestartSec=30` (which never hits the default start limit), restarts every 30 s and
 fills the journal with config errors. The token is created by the
 parent only after the reviewed scoped provision, never by this doc or the unit.
+
+## Staged rollout: controls, secrets and the private owner-smoke
+
+Research is released in two steps so that nobody but the genuine Google owner running
+the smoke can queue work (and spend the founder's subscription) before ONE real job has
+been proven end to end. All three settings are SERVER-side (no `NEXT_PUBLIC_`), set on
+the Vercel Production project only, and take effect on the next deployment.
+
+| setting | where | meaning |
+|---|---|---|
+| `SCAN_LIVE_RESEARCH_ENABLED` | Vercel Production (non-secret) | unset / empty / any typo = **off** (503 `research_disabled` before auth). Exactly `owners` = **private owner-smoke**: only the user ids in the next row may queue. `1`, `true`, `on`, `yes` = every signed-in Google user (general use). |
+| `SCAN_LIVE_RESEARCH_OWNER_IDS` | Vercel Production (non-secret) | Supabase `auth.users.id` UUIDs, comma / semicolon / whitespace separated, at most 20, read ONLY in `owners` mode. An e-mail, wildcard or typo matches nothing; `owners` with an unset or empty list admits nobody. A listed id never opens anything by itself. |
+| `BS_PROOF_RESEARCH_WORKER_TOKEN` | Vercel Production (**sensitive**) and `~/.config/bsproof-research-worker/worker.env` (0600) | The worker's only credential. The two values must be identical; at least 32 characters, otherwise the server treats it as not configured (503 `worker_unavailable`). Never the service-role key, never a Google token. |
+
+Behaviour of `owners` mode (`app/api/scan/research/route.ts`, tests in
+`tests/scan-research-owner-smoke.test.ts`): authentication first (Supabase-verified
+Google bearer, 401 otherwise), then the listed-id check, then the body, the owner's scan
+read and the queue. A verified user who is not listed gets the byte-identical
+`research_disabled` answer that OFF gives, so the list cannot be probed. The id compared
+is the one Supabase Auth returned for the bearer token, never a header, body field,
+e-mail or `user_metadata` value. The owner-only job read (`GET /api/scan/research/<id>/`)
+and the worker door are not affected by the mode (the read spends nothing; the worker
+follows only its token).
+
+Getting the owner id without a service key (step 3 of the sequence below): the genuine
+owner signs in with Google once (the first sign-in creates the `auth.users` row), then the
+id is read with a SELECT-only query through the Management API's read-only endpoint
+(`POST /v1/projects/<ref>/database/query/read-only`, token from the main-PC environment,
+never printed), selecting the one row for the designated test account. Do not list or paste
+other users' ids or e-mails. The id is kept only in a private 0600 file outside the
+repository (for the designated test account: `/tmp/bsproof-release-private/designated-owner-uid.txt`);
+no account handle, e-mail or id value belongs in the repository, a commit message or a log.
+
+Checking that the server and worker tokens match without printing either: the worker's
+first `claim` is the probe. 200 `{"job":null}` = match and empty queue (no model is called
+when nothing is queued); 401 = mismatch; 503 `worker_unavailable` = the server has no
+(or a too-short) token. Put the token on Vercel through stdin so it is never an
+argument or an echo, e.g. `grep '^BS_PROOF_RESEARCH_WORKER_TOKEN=' worker.env | cut -d= -f2- | tr -d '\n' | vercel env add BS_PROOF_RESEARCH_WORKER_TOKEN production --sensitive --project <id> --scope <team>`,
+and preserve the token already in `worker.env` rather than generating a new one.
+
+Sequence (each step needs the previous one green; none of it is run by this commit):
+
+1. Independent review and the Claude Code owner's read-only verification of this
+   (privacy-clean) branch. It must say OWNER_PASS, including the user-unit CONFIG change in
+   `deploy/bsproof-research-worker.service.example` (configuration, not documentation: it
+   needs `systemd-analyze --user verify` and an owner review before any install).
+2. Merge the verified branch to `main` and let the production deployment finish with the
+   research settings still UNSET (research off). Check the deployment is READY at the
+   intended commit, `POST /api/scan/research/` answers 503 `research_disabled`, the owner
+   GET answers 401 without a bearer, and the worker door answers 503 or 401 as expected.
+   Do not mistake the following for a bug: with the flag unset the deployment still
+   mounts the Experimental / Ungraded "Live research" panel on a signed-in user's stored
+   fresh scan (`components/scan-flow.tsx` mounts it with `enabled=auth.configured`). The
+   panel sends ONE POST per stored fresh scan, receives the 503 and shows that live
+   research is off; History replay shows a "Look up live research" button
+   (`lib/i18n/copy/research.ts`). No job is queued and nothing is spent.
+3. Genuine Google sign-in and the verified user id. The designated test account signs in
+   with Google on the production site at least once (the first sign-in creates its
+   `auth.users` row; use the fixed Google button, any MFA / human challenge is handed to the
+   human and never bypassed), and its `auth.users.id` is read with the read-only query above
+   and saved only in the private 0600 file. This step comes BEFORE step 4: `owners` with a
+   missing or wrong id admits nobody. DONE for the designated test account on 2026-10-04
+   (genuine production sign-in succeeded at 2026-10-04T21:10:51Z with no password / MFA /
+   challenge; one Google identity row exists; id file as above). No value is in this repo.
+4. Add the worker token, `SCAN_LIVE_RESEARCH_ENABLED=owners` and the owner id; redeploy (an
+   environment change takes effect only on the next deployment).
+5. On the main PC build and install the runtime from the PROMOTED commit with
+   `deploy/pc_research_worker_release.sh` (the staged `bsproof-research-worker-f8e8df82117e`
+   predates the shutdown / target-contract fixes), run `check`, then install the USER unit
+   after `systemd-analyze --user verify` and the owner's review of the unit file (see "Owner-only
+   install path"; no sudo).
+6. The designated Google account (already signed in on production, step 3) saves ONE real
+   manual scan (creatine, 4000 mg, servings recorded by the person, never assumed; unknown
+   servings are never treated as 1), and the panel queues research. The worker runs the real
+   `claude-sonnet-5-5` job; the owner reads it live and by History replay. Anonymous and
+   non-listed calls are checked to fail before any body is read; a cross-owner 404 is claimed
+   only with a genuine second identity (none exists yet: report it as untested live).
+7. Everyone. Only after that job passes, and ONLY as a separate, explicit founder decision
+   that is never part of the same deploy as `owners` and is not implied by the smoke
+   passing. It is NOT activated by this documentation or by any earlier step: the panel
+   POSTs on its own for every stored fresh scan of every signed-in Google user, each job
+   spends the founder's subscription, the only cap is 3 open jobs per user and there is NO
+   global cap. If the founder decides to widen it: set `SCAN_LIVE_RESEARCH_ENABLED=on`
+   (`1`, `true` and `yes` do the same), remove or leave the id list (it is ignored outside
+   `owners` mode), redeploy, and start the persistent service.
+
+Kill switches, fastest first: set `SCAN_LIVE_RESEARCH_ENABLED` to the literal `off` (or
+remove it) and redeploy (no new work can be queued; running jobs finish). Do not rely on
+"anything but `owners` / `on`": `1`, `true` and `yes` also open research to every signed-in
+user. Then revoke the worker token on Vercel and redeploy (the worker gets 401 and backs
+off). A flag change and a token revoke BOTH take effect only after a redeploy. Finally stop
+the worker: `systemctl --user disable --now bsproof-research-worker.service` (the
+system-unit fallback uses `sudo systemctl disable --now bsproof-research-worker.service`).
+Experimental, ungraded audits are never a score input in any of these modes.
+
+Stale header text in `docs/research-jobs.sql` (the file is hash-locked, so the correction
+lives here and not in the SQL): its header still says "NOT RUN YET" and tells the reader to
+"set SCAN_LIVE_RESEARCH_ENABLED=1". Both are out of date. The file HAS been applied to the
+shared project (re-verified read-only on 2026-10-04), and `1` is the wrong first switch: use
+`owners` as above; `1` / `true` / `on` / `yes` is the separate general-use decision of step 7.
+Its sha256 stays `48783cd3a6d9535b0a8ca8a792c0f73b3d32a98d3b0550c730731b5d9cd9a4fb`.
 
 ## Verification (offline; no network, no model, no live database)
 
@@ -259,22 +445,30 @@ Review, provisioning and clinical validation remain separate human gates.
 
 ## Fixed validation gates (offline, no model)
 
-- `npx vitest run tests/scan-research.test.ts tests/scan-research-v2.test.ts tests/scan-research-target-sql.test.ts tests/research-audit-schema.test.ts`
-- `python3 -m unittest tests.test_pc_research_worker tests.test_source_access_v2`
+- `npx vitest run tests/scan-research.test.ts tests/scan-research-v2.test.ts tests/scan-research-target-sql.test.ts tests/research-audit-schema.test.ts tests/research-jobs-sql-exec.test.ts tests/scan-research-queue-parity.test.ts tests/scan-research-owner-smoke.test.ts tests/scan-research-wire.test.ts tests/scan-research-client.test.ts tests/scan-research-panel.test.tsx`
+- `.venv/bin/python -m unittest tests.test_pc_research_worker tests.test_source_access_v2 tests.test_label_elemental_dose`
+  (the repo `.venv` has jsonschema 4.x; a system Python with jsonschema 3.x cannot validate Draft 2020-12, so
+  the worker tests FAIL there by design instead of skipping)
 - `npm run typecheck`
-- `npx eslint <changed TypeScript files>`
+- `npm run lint`
 - `python3 -m pipeline.invariants`
 - `python3 -m pipeline.selftest`
 - `git diff --check`
+- `cp deploy/bsproof-research-worker.service.example /tmp/bsproof-research-worker.service && XDG_RUNTIME_DIR=$(mktemp -d) systemd-analyze --user verify /tmp/bsproof-research-worker.service`
+  (the user unit is configuration; ALWAYS with a throwaway `XDG_RUNTIME_DIR`, never the real one, see the CAUTION in the install section; on a host without the mainPC paths, "executable not found" is expected and is not a PASS for the real paths)
+- `sha256sum docs/research-jobs.sql` must stay `48783cd3a6d9535b0a8ca8a792c0f73b3d32a98d3b0550c730731b5d9cd9a4fb`
 
 These tests use fake streams and fake HTTP queue clients only. They do not prove
 model behavior, account state, provisioning, or clinical validity.
 
 ## Handoff
 
-Runtime remains OFF pending the required independent security review and parent
-approval. Do not provision accounts, tokens, services, or database objects from
-this documentation without the separate human authorization step.
+Runtime remains OFF pending a fresh Claude Code owner verification of the privacy-clean
+branch (OWNER_PASS required), then the staged sequence above. Nothing is pushed,
+deployed, installed or queued yet. Do not provision accounts, tokens, services, or
+database objects from this documentation without the separate human authorization step.
+The older private candidate branch `component/final-release-live-research-20261004` must
+never be pushed: its tip carries a real account handle in `CLAUDE.md`.
 ---
 Previous local status note: the initial V1 worker had been exercised during an
 earlier benchmark; that historical benchmark is not proof of this V2 integration.

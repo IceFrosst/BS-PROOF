@@ -9,9 +9,14 @@
  *  - A scan that is not yours, has no owner, or does not exist: the same 404.
  *  - One job per scan: a repeat returns the existing job (200, created:false).
  *  - Off until SCAN_LIVE_RESEARCH_ENABLED is on: 503 research_disabled.
+ *  - SCAN_LIVE_RESEARCH_ENABLED=owners is the private owner-smoke mode: only the
+ *    Supabase-verified user ids in SCAN_LIVE_RESEARCH_OWNER_IDS may queue; anyone
+ *    else gets the identical 503 research_disabled (so the list cannot be probed).
+ *    The list is checked after authentication and before the body, the scan read
+ *    or any queue call. Fail closed: lib/scan-research/contract.ts `liveResearchMode`.
  */
 import { authenticateRequest, isUuid } from "@/lib/auth/server-auth";
-import { RESEARCH_PROMPT_VERSION, liveResearchEnabled } from "@/lib/scan-research/contract";
+import { RESEARCH_PROMPT_VERSION, liveResearchMode, researchOwnerIds } from "@/lib/scan-research/contract";
 import { json, readJsonObject } from "@/lib/scan-research/http";
 import { enqueueJob, publicJob } from "@/lib/scan-research/store";
 import { buildResearchTarget } from "@/lib/scan-research/target";
@@ -22,16 +27,19 @@ export const dynamic = "force-dynamic";
 
 const MAX_BODY_BYTES = 4 * 1024;
 
+const disabled = () => json({ status: "research_disabled", error: "Live research is not available on this deployment yet." }, 503);
+
 export async function POST(request: Request) {
-  if (!liveResearchEnabled()) {
-    return json({ status: "research_disabled", error: "Live research is not available on this deployment yet." }, 503);
-  }
+  const mode = liveResearchMode();
+  if (mode === "off") return disabled();
 
   const auth = await authenticateRequest(request, { tokenRequired: true, requireGoogle: true });
   if (auth.status !== "authenticated") {
     if (auth.status === "denied") return json(auth.body, auth.http);
     return json({ status: "unauthorized", error: "Sign in with Google to continue." }, 401);
   }
+  // Owner-smoke: the verified id (from Supabase's own answer) must be listed. Same body as OFF.
+  if (mode === "owners" && !researchOwnerIds().has(auth.user.id)) return disabled();
 
   const body = await readJsonObject(request, MAX_BODY_BYTES);
   if (!body.ok) return body.res;
