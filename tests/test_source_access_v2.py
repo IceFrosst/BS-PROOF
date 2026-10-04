@@ -13,15 +13,25 @@ from pipeline import claude_research_adapter as ad  # noqa: E402
 FIXTURE = json.loads((ROOT / "tests/fixtures/source-access-v2.json").read_text())
 
 
-try:
-    import jsonschema  # noqa: F401
-    HAS_JSONSCHEMA = True
-except ImportError:
-    HAS_JSONSCHEMA = False
+# REQUIRED, never skipped: the worker refuses to validate an audit without jsonschema, so these tests fail
+# (they do not silently skip) in an environment that lacks it.
+import jsonschema  # noqa: E402
+from jsonschema import Draft202012Validator  # noqa: E402
+
+DRAFT_2020_12 = "https://json-schema.org/draft/2020-12/schema"
 
 
-@unittest.skipUnless(HAS_JSONSCHEMA, "jsonschema is required for SourceAccessV2 schema validation")
 class SourceAccessV2Tests(unittest.TestCase):
+    def test_canonical_schemas_declare_draft_2020_12_and_are_themselves_valid(self):
+        for name in (ad.AUDIT_SCHEMA_FILE, "schemas/source_access_v2.json"):
+            schema = json.loads((ROOT / name).read_text())
+            self.assertEqual(schema.get("$schema"), DRAFT_2020_12, name)
+            Draft202012Validator.check_schema(schema)  # raises on an invalid or non-2020-12 schema
+
+    def test_a_schema_that_is_not_valid_2020_12_is_refused_not_ignored(self):
+        with self.assertRaises(jsonschema.SchemaError):
+            Draft202012Validator.check_schema({"$schema": DRAFT_2020_12, "type": "no-such-type"})
+
     def test_shared_phase1_fixture_passes_python_validation(self):
         ad.validate_live_receipts_and_inventory(FIXTURE["audit"], FIXTURE["source_access_v2"])
 

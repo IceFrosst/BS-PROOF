@@ -9,13 +9,26 @@ import { plainJsonProblem } from "./result";
 const PROMPT = "live-research-v0.2";
 const MAX_BYTES = 768 * 1024;
 const MAX_ERRORS = 10;
+export const JSON_SCHEMA_2020_12 = "https://json-schema.org/draft/2020-12/schema";
 let validateAudit: ValidateFunction;
 let validateReceipt: ValidateFunction;
+
+/**
+ * Compile a schema FAIL-CLOSED. It must declare Draft 2020-12 itself (Ajv would otherwise assume a draft for a
+ * schema with no `$schema`), and Ajv runs in strict mode, so a keyword or format it does not know is an error
+ * instead of a constraint that is silently not enforced. A schema that cannot compile throws; it never validates.
+ */
+export function compileStrict2020(schema: unknown): ValidateFunction {
+  if (typeof schema !== "object" || schema === null || (schema as { $schema?: unknown }).$schema !== JSON_SCHEMA_2020_12) {
+    throw new Error("schema must declare JSON Schema Draft 2020-12");
+  }
+  return new Ajv2020({ allErrors: true, strict: true }).compile(schema);
+}
+
 function getValidators() {
   if (!validateAudit || !validateReceipt) {
-    const ajv = new Ajv2020({ allErrors: true, strict: false });
-    validateAudit = ajv.compile(auditSchema as object);
-    validateReceipt = ajv.compile(receiptSchema as object);
+    validateAudit = compileStrict2020(auditSchema);
+    validateReceipt = compileStrict2020(receiptSchema);
   }
   return { validateAudit, validateReceipt };
 }

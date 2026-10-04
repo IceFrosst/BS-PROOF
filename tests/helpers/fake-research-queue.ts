@@ -3,9 +3,10 @@
  * docs/research-jobs.sql, layered over FakeSupabase (Supabase Auth + scan_runs).
  * It mirrors the SQL state machine line for line (owner filter, one job per
  * scan, open-job cap, lease token + expiry, compare-and-set complete/fail,
- * attempts) so route tests exercise the real status mapping. The SQL itself was
- * executed separately against PGlite (see CLAUDE.md "Current state"); this file
- * proves the ROUTES, not the SQL.
+ * attempts) so route tests exercise the real status mapping. This file proves the
+ * ROUTES, not the SQL: the SQL is executed by tests/research-jobs-sql-exec.test.ts
+ * (PGlite), and tests/scan-research-queue-parity.test.ts runs one scripted history
+ * through both this fake and the real file and requires identical answers.
  */
 import { createHash, randomUUID } from "node:crypto";
 
@@ -31,7 +32,8 @@ const sha = (s: string) => createHash("sha256").update(s).digest("hex");
 
 export class FakeResearchQueue {
   jobs: Job[] = [];
-  now = Date.now();
+  /** A fixed instant, advanced only by tests: leases never depend on the machine clock. */
+  now = Date.UTC(2026, 9, 4, 12, 0, 0);
   rpcCalls: Array<{ fn: string; params: Record<string, unknown> }> = [];
   /** When set, every rpc answers 404 (migration not applied). */
   missing = false;

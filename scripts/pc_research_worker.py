@@ -188,9 +188,14 @@ def build_config(environ=None, env_file: Path | None = None) -> Config:
     else:
         raise ConfigError("BS_PROOF_RESEARCH_API_BASE must be https (plain http only to localhost with "
                           "BS_PROOF_RESEARCH_ALLOW_INSECURE_LOCALHOST=1, for tests)")
+    data_dir = Path(env.get(ENV_PREFIX + "DATA_DIR") or DEFAULT_DATA_DIR)
+    if not data_dir.is_absolute():
+        # Neither systemd's EnvironmentFile nor this loader expands `~` or `%h`: a relative value would silently
+        # create a directory of that literal name under whatever the working directory is.
+        raise ConfigError(f"{ENV_PREFIX}DATA_DIR must be an absolute path (no ~ or %h expansion is done)")
     return Config(
         api_base=f"{u.scheme}://{u.netloc}", token=token,
-        data_dir=Path(env.get(ENV_PREFIX + "DATA_DIR") or DEFAULT_DATA_DIR),
+        data_dir=data_dir,
         poll_seconds=_num(env, "POLL_SECONDS", 20.0),
         heartbeat_seconds=_num(env, "HEARTBEAT_SECONDS", 30.0),
         http_timeout_seconds=_num(env, "HTTP_TIMEOUT_SECONDS", 60.0),
@@ -338,9 +343,33 @@ def _norm(s) -> str:
     return " ".join(str(s or "").split()).lower()
 
 
+JOB_TARGET_VERSION = "ResearchJobV1"  # lib/scan-research/contract.ts RESEARCH_JOB_VERSION
+
+
+def _is_job_target(target: dict) -> bool:
+    return target.get("version") == JOB_TARGET_VERSION
+
+
+def _explicit_number(v) -> bool:
+    """A number the scan itself recorded (the server's `num()`: finite, >= 0). Never a default."""
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and v == v and abs(v) != float("inf") and v >= 0
+
+
 def target_daily_dose(target: dict):
     """None = the target gives no daily dose (unknown stays unknown); "" = present but not
-    text (a number/object: not echo-checked); otherwise the dose text to echo verbatim."""
+    text (a number/object: not echo-checked); otherwise the dose text to echo verbatim.
+
+    A real ResearchJobV1 target (lib/scan-research/target.ts) never carries daily-dose TEXT.
+    It has a daily amount only when the scan recorded an explicit regimen: a numeric
+    `servings_per_day` or `dose.daily_elemental_mg`. With neither, the daily dose is unknown
+    and the audit must say exactly `unknown` -- no "one serving a day" default, no guessed
+    multiplier (prompt L3). With one of them the audit states the arithmetic itself, which
+    is not echo-checked here."""
+    if _is_job_target(target):
+        dose = target.get("dose") if isinstance(target.get("dose"), dict) else {}
+        if _explicit_number(target.get("servings_per_day")) or _explicit_number(dose.get("daily_elemental_mg")):
+            return ""
+        return None
     for k in ("daily_dose", "dose"):
         if k in target:
             v = target[k]
@@ -359,6 +388,14 @@ def target_components(target: dict) -> list:
 
 
 def is_blend(target: dict) -> bool:
+    """More than one active. For a ResearchJobV1 target that is the scan's own statement
+    (`is_multi_ingredient` true, several `actives`, or any `other_actives`); `null` / unknown is
+    NOT a blend and is never defaulted to one."""
+    if _is_job_target(target):
+        acts, others = target.get("actives"), target.get("other_actives")
+        return (target.get("is_multi_ingredient") is True
+                or (isinstance(acts, list) and len(acts) > 1)
+                or (isinstance(others, list) and len(others) > 0))
     return len(target_components(target)) > 1
 
 
@@ -503,9 +540,23 @@ def fail_payload(job_id, lease_token, code, message, retryable) -> dict:
 
 QUOTA_CODES = ("claude_quota_or_rate_limit",)
 
+# What a CLI killed by a SHUTDOWN looks like when the run is classified: an abnormal exit (e.g. exit
+# -15 from systemd's cgroup-wide SIGTERM, which reaches the CLI as well as this process), no
+# result event, or no structured output. All three are retryable and none says anything about the
+# audit, so while the worker is stopping they must not be posted as a `fail`: a posted retryable
+# fail burns an attempt and, on the final attempt, finishes the job as `failed` for good.
+SHUTDOWN_AMBIGUOUS_CODES = ("claude_cli_error", "claude_no_result_event", "claude_no_structured_output")
+
+
+def utc_now() -> datetime.datetime:
+    return datetime.datetime.now(datetime.timezone.utc)
+
 
 def handle_job(job: dict, client: ApiClient, cfg: Config, stop: threading.Event,
-               environ=None, binary: str | None = None) -> JobOutcome:
+               environ=None, binary: str | None = None, clock=None) -> JobOutcome:
+    """`clock` is a zero-argument callable returning an aware UTC datetime. It exists so tests can
+    pin the run date; it is never set in production."""
+    clock = clock or utc_now
     job_id, lease_token = job["id"], job["lease_token"]
     cancel = threading.Event()
     hb = Heartbeat(client, job_id, lease_token, cfg.heartbeat_seconds, cancel, stop).start()
@@ -538,10 +589,10 @@ def handle_job(job: dict, client: ApiClient, cfg: Config, stop: threading.Event,
         _write_json(run_dir / "job.json", {
             "job_id": job_id, "prompt_version": job["prompt_version"], "target": target,
             "worker_version": WORKER_VERSION,
-            "claimed_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "claimed_utc": clock().isoformat(),
             "note": "lease token deliberately not stored"})
         log("job claimed; research starting", job=job_id, run_dir=run_dir.name)
-        now = datetime.datetime.now(datetime.timezone.utc)
+        now = clock()
 
         try:
             rr = adapter.run_research(target, run_dir, environ=environ, binary=binary, cancel=cancel, now=now,
@@ -577,6 +628,12 @@ def handle_job(job: dict, client: ApiClient, cfg: Config, stop: threading.Event,
                               code, cooldown)
 
         f = adapter.classify_run_failure(rr, an)
+        if f and stop.is_set() and f["code"] in SHUTDOWN_AMBIGUOUS_CODES:
+            # The stop signal can reach the CLI before this process has propagated its own cancel
+            # (systemd signals the whole cgroup), so `rr.cancelled` is not reliable here.
+            log("worker stopping; the CLI run ended abnormally, not reported as a failure; lease left to expire",
+                job=job_id, code=f["code"])
+            return JobOutcome("cancelled")
         if f:
             return fail(f["code"], f["message"], f["retryable"],
                         cfg.quota_cooldown_seconds if f["code"] in QUOTA_CODES else 0.0)
@@ -681,7 +738,7 @@ def acquire_lock(data_dir: Path):
 
 
 def run_loop(cfg: Config, stop: threading.Event, once: bool = False, environ=None,
-             binary: str | None = None, client: ApiClient | None = None) -> int:
+             binary: str | None = None, client: ApiClient | None = None, clock=None) -> int:
     client = client or ApiClient(cfg)
     delays = backoff_delays(cfg.poll_seconds, cfg.backoff_max_seconds)
     last: dict = {}
@@ -714,7 +771,7 @@ def run_loop(cfg: Config, stop: threading.Event, once: bool = False, environ=Non
             continue
         job = parsed[1]
         write_status(cfg, "running", job_id=str(job["id"]), last_job=last)
-        out = handle_job(job, client, cfg, stop, environ=environ, binary=binary)
+        out = handle_job(job, client, cfg, stop, environ=environ, binary=binary, clock=clock)
         last = {"job_id": str(job["id"]), "outcome": out.kind, "code": out.code,
                 "finished_utc": datetime.datetime.now(datetime.timezone.utc).isoformat()}
         write_status(cfg, "polling", last_job=last)
