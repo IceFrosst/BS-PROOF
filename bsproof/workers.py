@@ -115,7 +115,15 @@ def _extract_numbers(out: dict, record: dict, text: str, sections: dict | None,
         for e in (result.get("numbers") or []):
             if isinstance(e, dict) and e.get("index") in chunk:
                 entries.setdefault(e["index"], e)
-    out.setdefault("_meta", {})["S5N"] = metas
+    # ONE dict per agent, like every other agent's _meta (bsproof/run/extract.
+    # _agent_stats reads .get on it; a list crashed the first full v2 run after
+    # all 99 studies had extracted, 2026-10-05). Chunks are kept underneath.
+    errors = [m.get("error") for m in metas if isinstance(m, dict) and m.get("error")]
+    out.setdefault("_meta", {})["S5N"] = {
+        **(metas[0] if isinstance(metas[0], dict) else {}),
+        "error": errors[0] if errors else None,
+        "cached": all(isinstance(m, dict) and m.get("cached") for m in metas),
+        "calls": len(metas), "chunks": metas}
     merged = {i: numbers_claim(outcomes[i]["claim"], e) for i, e in entries.items()}
     checked = _verify_numbers(out, record, [merged[i] for i in sorted(merged)])
     for i, nums in zip(sorted(merged), checked):

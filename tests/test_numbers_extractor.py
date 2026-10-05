@@ -94,6 +94,19 @@ class Wiring(unittest.TestCase):
         self.assertEqual(set(claim), {"index", "outcome_raw", "measure", "timepoint",
                                       "ingredient_arm", "control_arm"})
 
+    def test_s5n_meta_is_one_dict_like_every_agent(self):
+        from bsproof import workers
+        from bsproof.run.extract import _agent_stats
+        with mock.patch.object(workers, "S5N_CHUNK", 3):
+            out, _ = self.run_study(n_claims=7)
+        meta = out["_meta"]["S5N"]
+        self.assertIsInstance(meta, dict)
+        self.assertEqual((meta["calls"], len(meta["chunks"]), meta["error"]), (3, 3, None))
+        stats = _agent_stats([{"record": REC, "extraction": out}])      # crashed on a list
+        self.assertEqual(stats["S5N"]["ok"], 1)
+        failed, _ = self.run_study(s5n_fails=True)
+        self.assertEqual(failed["_meta"]["S5N"]["error"], "boom")
+
     def test_every_mapped_claim_is_read_in_chunks(self):
         from bsproof import workers
         with mock.patch.object(workers, "S5N_CHUNK", 3):
