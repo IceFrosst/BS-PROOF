@@ -5,7 +5,8 @@ Status (2026-10-04, times UTC): **RELEASED_RESTRICTED.** The reviewed code is on
 owner's second read-only verification passed) and live on production in the private `owners`
 mode; the worker runtime was reinstalled from that commit; ONE real owned job ran end to end;
 the persistent service is NOT active (it needs the owner's sudo, see "Owner-only install path");
-research for everyone is NOT enabled.
+research for everyone is NOT enabled by this document. A TEMPORARY detached supervisor for the same installed runtime
+(code + runbook; see "Temporary main-PC background worker (until the VPS)") is the founder-authorised bridge to the VPS.
 
 Facts, none of them secret:
 
@@ -363,6 +364,99 @@ rather than exit, and a bad config exits and, under `Restart=on-failure` with
 fills the journal with config errors. The token is created by the
 parent only after the reviewed scoped provision, never by this doc or the unit.
 
+## Temporary main-PC background worker (until the VPS)
+
+Founder decision (2026-10-05): research is to be opened to EVERY signed-in Google user while the
+VPS is still a later step. The persistent service is still blocked (`sudo -n` needs a password, the user
+manager's private socket is orphaned), so a TEMPORARY, supervised, detached process runs the SAME
+installed and reviewed runtime. This is NOT a managed service and it is NOT boot-persistent: after a PC, WSL
+or Windows restart (or while the PC sleeps, loses the network or WSL is shut down) nothing is running until
+someone runs `start` again. Persistent host startup stays UNAVAILABLE until the VPS or an owner-installed unit.
+`deploy/pc_research_supervisor.py` (Python stdlib, one file, no new runtime, never root, no listening
+socket) is the launcher + supervisor; it changes no app, scorer, model, prompt, schema, SQL, auth or provider code.
+
+What it does (every item is a test in `tests/test_pc_research_supervisor.py`, 54 tests, 26 mutants caught):
+
+- **The command is the reviewed one, not invented.** It parses the owner-reviewed user-unit template
+  (`deploy/bsproof-research-worker.service.example`, sha256 printed by `describe`) as DATA and refuses any
+  directive, environment name, `ExecStart` or specifier outside that template. `describe` prints the resolved command.
+  It runs `setpriv --no-new-privs --pdeathsig TERM -- <release>/venv/bin/python <release>/scripts/pc_research_worker.py run`
+  with an absolute working directory, `umask 0077`, never as root, in its own session (`setsid -f`, orphaned to init,
+  no controlling terminal), so it outlives the terminal and the Pi session.
+- **Pinned runtime.** `--expect-commit` must equal the full commit in `RELEASE.json`; `current` must resolve to
+  `bsproof-research-worker-<12 hex>` of it (the promoted `9e9c0d30becd`, never the stale `f8e8df821`), and the six
+  runtime files must match `SHA256SUMS` before EVERY (re)start. A rollback or tampering blocks restarts.
+- **Scrubbed environment, built from nothing.** The worker sees only `HOME USER LOGNAME PATH BS_PROOF_CLAUDE_BIN
+  PYTHONUNBUFFERED PYTHONDONTWRITEBYTECODE`: no `ANTHROPIC_*`, `CLAUDE_CODE_*` (OAuth / cloud flags), OpenAI, DeepSeek,
+  Google credential, Supabase service key, Vercel / GitHub / SSH variable, no `XDG_RUNTIME_DIR` or D-Bus. Subscription
+  login only. The worker adapter then applies its own allowlist for the CLI child, as before.
+- **No secret in argv or environment.** `worker.env` is parsed as data (no shell, eval or `source`); only the three
+  non-secret names `BS_PROOF_CLAUDE_BIN`, `BS_PROOF_RESEARCH_DATA_DIR`, `BS_PROOF_RESEARCH_API_BASE` are taken, every
+  other line (the token included) is skipped. The worker reads its own token from the 0600 file. The supervisor never
+  reads another process's argv or environment (`/proc/<pid>/stat`, `/proc/locks` only).
+- **Never the model.** The supervisor never runs `claude`; a guard refuses to spawn any program named `claude*`.
+  The worker and `pipeline/claude_research_adapter.py` stay the ONLY business model boundary. There is no turn,
+  token, budget, deadline or fallback flag and no research cap: the only timings are the RESTART cadence and the stop timeout.
+- **Locks and no duplicates.** `supervisor/supervisor.lock` (flock) + `supervisor.pid` (pid + start time + boot id) in a
+  0700 directory (files 0600) next to the worker's own data-dir `worker.lock`. A worker the supervisor did not start (a
+  manual `run`) blocks `start`; `status` names its pid (from `/proc/locks`) without reading its argv. The server lease
+  (300 s) still decides job ownership.
+- **Restart only after an unexpected exit, with back-off.** `RestartSec` from the unit (30 s) doubling to a 600 s cap with
+  jitter, reset after a 300 s stable run; exits 78 (config) and 75 (lock) wait at least 120 s. Stderr EOF is not an exit
+  and never restarts or spins. A crash sweeps any CLI the dead worker left (it runs in its own session, so no group signal
+  reaches it): subreaper + `/proc` parent chain, SIGTERM then SIGKILL.
+- **Stop.** SIGTERM to the worker's group (the worker cancels its CLI and leaves the lease to expire; nothing is posted),
+  `TimeoutStopSec` (60 s) then SIGKILL, then every leftover descendant is swept; never a restart while stopping. A supervisor
+  that dies by SIGKILL takes the worker with it (`--pdeathsig`). `stop` REFUSES while a job runs unless `--now` (the lease then
+  expires within 300 s and the queue re-offers it, one of its 3 attempts is used); `stop --drain` waits with no deadline until
+  the worker is idle, then stops.
+- **Logs.** `supervisor/supervisor.log` (0600, rotated 3 x 1 MiB, bounded line reads): fixed supervisor events plus the worker's
+  own log lines with tokens, bearer values, JWTs, e-mails, UUIDs (user / job / lease ids) and any 32+ character opaque string
+  masked; anything that is not a worker log line (a traceback, any stray text) is counted and only its exception TYPE recorded.
+  Model text never reaches this log (the worker never prints it); per-job diagnostics stay in the worker's private run directories.
+- **Readiness is observable, with no model.** `status` exits 0 only when: supervisor identity verified (pid file + start time +
+  lock), worker alive and holding `worker.lock`, `status.json` is THIS worker's, state is `polling` (fresh) or `running`, and
+  at least two poll writes were seen (a claim was answered; an idle queue answers `{"job": null}`, which calls no model).
+  A leftover `status.json` of a dead pid is reported as stale, never as a heartbeat; `backoff` / `cooldown` are NOT ready.
+
+Install (owner-reviewed first; the file is copied once, read-only, from the reviewed commit):
+
+```bash
+R=$HOME/.local/share/bsproof-research-worker; S=$R/supervisor; C=<full 40-hex commit that contains this file>
+install -d -m 0700 "$S"
+git -C <checkout> show "$C:deploy/pc_research_supervisor.py"                > "$S/pc_research_supervisor.py"
+git -C <checkout> show "$C:deploy/bsproof-research-worker.service.example"  > "$S/reviewed-unit.service"
+chmod 0500 "$S/pc_research_supervisor.py"; chmod 0400 "$S/reviewed-unit.service"
+sha256sum "$S/pc_research_supervisor.py" "$S/reviewed-unit.service"        # compare with the reviewed values
+```
+
+`start` and `serve` REFUSE without `--expect-unit-sha256` (the reviewed unit file's sha256), so an edited template cannot be launched.
+
+Run (RT = the promoted runtime commit, `9e9c0d30becd1cc70fff2f115205dfbdeb8d7514` at the time of writing):
+
+```bash
+SUP="/usr/bin/python3 $HOME/.local/share/bsproof-research-worker/supervisor/pc_research_supervisor.py"
+$SUP describe --expect-commit $RT      # prints the exact resolved command; starts nothing
+$SUP check    --expect-commit $RT      # + preflight + the worker's own `check` (no model, no claim)
+U=<sha256 of reviewed-unit.service, as reviewed>
+$SUP start    --expect-commit $RT --expect-unit-sha256 $U --wait-ready 90   # detached; idempotent; exit 0 only when READY
+$SUP status [--json]                   # read-only; exit 0 only when READY
+$SUP stop --drain [--wait N]           # let a running job finish, then stop
+$SUP stop                              # refuses while a job runs; add --now to cut it
+```
+
+Opening research to everyone (the founder's decision of 2026-10-05) must happen in this order, and a failed step at any
+point fails CLOSED (leave or restore `SCAN_LIVE_RESEARCH_ENABLED=owners`, or set it to `off`): (1) `check`, (2) `start --wait-ready`
+and `status` READY, (3) only then set Production `SCAN_LIVE_RESEARCH_ENABLED=on` (the literal `1`, `true`, `yes` do the same),
+redeploy, verify the deployment is READY at the intended commit. Kill switches, fastest first: flag `off` + redeploy (no new work
+can be queued; running jobs finish); `stop --drain` or `stop --now`; revoke the worker token on Vercel + redeploy.
+Rollback of the runtime: `stop --drain`, `deploy/pc_research_worker_release.sh rollback`, then `start` with the OTHER release's commit.
+
+Honest limits: not boot-persistent; needs the PC awake, online, WSL running and the Claude login valid; one worker, one job
+at a time, no global queue cap (3 open jobs per user is the only brake); a quota / rate-limit makes the worker cool down
+(900 s) and `status` says NOT READY; the supervisor itself is NOT yet a reviewed artefact until an independent review
+passes; the reviewed unit's own `Restart=` / `systemd` semantics are re-implemented here, not delegated to systemd.
+
 ## Staged rollout: controls, secrets and the private owner-smoke
 
 Research is released in two steps so that nobody but the genuine Google owner running
@@ -500,6 +594,8 @@ Review, provisioning and clinical validation remain separate human gates.
 ## Fixed validation gates (offline, no model)
 
 - `npx vitest run tests/scan-research.test.ts tests/scan-research-v2.test.ts tests/scan-research-target-sql.test.ts tests/research-audit-schema.test.ts tests/research-jobs-sql-exec.test.ts tests/scan-research-queue-parity.test.ts tests/scan-research-owner-smoke.test.ts tests/scan-research-wire.test.ts tests/scan-research-client.test.ts tests/scan-research-panel.test.tsx`
+- `.venv/bin/python -m unittest tests.test_pc_research_supervisor` (54 tests: fake and REAL worker under the supervisor; needs
+  jsonschema>=4 for the real-worker class; no model, no network beyond loopback, no root)
 - `.venv/bin/python -m unittest tests.test_pc_research_worker tests.test_source_access_v2 tests.test_label_elemental_dose`
   (the repo `.venv` has jsonschema 4.x; a system Python with jsonschema 3.x cannot validate Draft 2020-12, so
   the worker tests FAIL there by design instead of skipping)
