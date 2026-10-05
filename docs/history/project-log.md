@@ -10,6 +10,16 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-05 — first full v2 creatine run (20261005_080012)
+
+- 98/99 studies extracted, 0 partial failures, ~18 h (usage-limit pauses);
+  crash in `_agent_stats` on S5N's list `_meta` fixed (4d81a7d), re-run from
+  cache. Auto-report pushed to `origin/Jans_attempt` only.
+- v2: strength k=5 g=+0.17 [-0.43, 0.77], lean k=5 +0.04, power k=5 -0.04,
+  endurance k=2 -0.14; every letter I. 17/17 pooled trials reviewer-agreed.
+  Benchmark: lean SMD pass; strength not testable (coverage 38 %, width 3.1x).
+  Details: measurements note, "First full v2 creatine run".
+
 ## 2026-10-04 — benchmark pass rule; creatine v2 re-extraction started
 
 - Founder decisions recorded in `docs/REVIEW_PENDING.md` #0: branch only,

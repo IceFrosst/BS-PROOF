@@ -269,8 +269,10 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
   model for now (a different-vendor reviewer is future work); vitamin C is the
   next ingredient. Implementation is at **Phase 1**; production still scores v14.
 
-- **Evidence:** exactly one retained run — creatine monohydrate
-  (`20260904_185830`, v14 re-composition of `20260825_175339`, which is now only in git history). Every run is
+- **Evidence:** two retained creatine monohydrate runs — `20260904_185830`
+  (v14 re-composition of `20260825_175339`) and `20261005_080012`, the first
+  with an `evidence_v2` block (branch `Jans_attempt` only; it would change the
+  live v14 score if merged). Every run is
   `public_claims_allowed: false`; anchors are not calibrated. Run-to-run
   extraction variance (not the formula) is the binding precision problem.
 - **App:** `/scan` is the product surface. Photo (live camera via
@@ -310,8 +312,9 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
    flag (downgrades via RoB) -- RSMOKE6 confirmed both live. Benchmark built:
    `vocab/benchmarks.json` (19 rows, 10 creatine meta-analyses, quotes
    verified by `scripts/benchmark_v2.py verify`), `pipeline/benchmark.py`.
-   Next: the creatine re-extraction (S7 `max_turns` root cause fixed), then
-   `scripts/benchmark_v2.py compare` on its artifact.
+   First full v2 run `20261005_080012`: every letter I (k <= 5 per outcome);
+   benchmark: lean SMD pass, strength not testable (coverage 38 %). Next:
+   raise poolability ("no verified effect estimate" is the largest loss).
 1. Verify on a real phone: live camera, a busy label read after the
    thinking-mode fix, PWA install.
 2. Check whether the text calls (`deepseek-chat`) also need thinking disabled

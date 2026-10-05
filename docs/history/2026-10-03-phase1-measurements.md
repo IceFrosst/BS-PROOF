@@ -285,3 +285,34 @@ only `post_*`, leaving `mean_*` null, so it lost its effect.
 benchmark is now comparable (still k = 1, so overlap is uninformative). That
 claim shows review "single" because review routing ran under the old code; a
 new run sends it.
+
+## First full v2 creatine run — 20261005_080012 (v1.35, 2026-10-05)
+
+Same scope as 20260904_185830 (`--with-sr --full-text-only --supplement-scope`,
+top-5 outcomes), `SP_SECOND_REVIEWER=1`. 99 studies targeted, 98 extracted, 1
+skipped (no text), **0 partial failures**. Extraction took ~18 h, almost all
+of it usage-limit pauses (324 study requeues, 3.75 h of the 8 h pause budget);
+the run then crashed in `_agent_stats` on S5N's list-shaped `_meta`, was fixed
+(4d81a7d) and re-run from cache (82 s for all 99 studies).
+
+| outcome | k pooled | SMD [95% CI] | letter | coverage | benchmark |
+|---|---|---|---|---|---|
+| muscle_strength | 5 | +0.17 [-0.43, +0.77] | I | 38 % | not testable (coverage, width 3.1x) |
+| lean_body_mass | 5 | +0.04 [-0.41, +0.50] | I | 56 % | SMD **pass** (width 1.9x, 2/2); MD not testable (6.6x) |
+| muscle_power | 5 | -0.04 [-0.57, +0.49] | I | -- | no like-for-like rows (cm / W units differ) |
+| exercise_endurance | 2 | -0.14 [-0.77, +0.49] | I | -- | no benchmark rows |
+| energy_levels | 0 | -- | I | -- | -- |
+
+- Every pooled trial reviewer-agreed (17/17); 0 disagreements, 0 consistency
+  -guard refusals in the pools. 1 SD derived from a per-arm CI.
+- `baseline_imbalance` flagged on 6 of 17 pooled trials (all endpoint values).
+- Largest losses before pooling: "no verified effect estimate" (power 10,
+  strength 5, endurance 4) and scope refusals (combination arms, off-target
+  populations) -- the latter are not eligible trials.
+- Pooled direction for strength agrees with the published +0.20..+0.46 SMDs,
+  but with k = 5 of 13 eligible the CI is 3x too wide to test them.
+- v14 on the same extraction: strength n 12 -> 3, endurance 60 -> 45 /100,
+  power 54 -> 53, lean mass 51 -> 51. Merging this run to `main` would change
+  the live v14 creatine score (founder: merge decided later).
+- `scripts/auto_report_push.py` committed and pushed the report to
+  `origin/Jans_attempt` (not main; `SP_AUTO_PUSH=0` turns it off).
