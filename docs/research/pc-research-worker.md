@@ -968,7 +968,58 @@ and a NEW explicit owner approval for ONE validation run ("Validation plan for v
 Questions the owner raised, answered by the task owner's scope clarifications (see "Second amendment"), not by a number: a blend's single ingredients are CONTEXT only and stay optional (L4 is unchanged); no
 minimum amount of research is set -- the rule is "every relevant lead the searches already surfaced"; a complete-but-empty audit is acceptable only after every relevant lead was followed and the access record is honest.
 
-## Validation plan for v0.4 (NOT approved, NOT run)
+## Validation run 2 (2026-10-05 UTC, `live-research-v0.4`, head `ca6c440c70b71d488f9de2ca629e5c98b2f4b655`): FAILED -- complete but empty again
+
+**This is the second private validation run, on a DISTINCT candidate (v0.3 -> v0.4); it is not a retry of one job or of one candidate. It failed the owner's usability criterion, so v0.4 is NOT releasable and is NOT shown to work.**
+
+What was run (the Claude Code owner, read-only, approved exactly ONE invocation bound to `ca6c440` after a delta-only review of v0.3 -> v0.4): the same harness design as run 1 with a NEW directory and a NEW
+marker; it refuses any head except `ca6c440` (so the failed `17e3231` can never be re-run) and pins the v0.3 run directory (mode 0400, result sha256) next to the three original captures. The candidate's
+real `scripts/pc_research_worker.py` `handle_job` against an in-process FAKE queue client (no network, no database, no token, no new user / scan / job / row, no label re-scan), the real
+`claude -p --model claude-sonnet-5-5 --effort medium` with the v0.4 prompt on the owner subscription, the ORIGINAL sanitized Vitamin D3 4000 IU + K2 target. The public worker was drained first
+(`stop --drain`; queue 0 queued / 0 running, no job cut) and restored afterwards to the SAME reviewed runtime (public worker gap 1 min 33 s; READY). The three original captures and the v0.3 run
+directory were hash-checked before and after (unchanged).
+
+What happened: `completed` in 21.3 s, 5 turns: ONE WebSearch and TWO WebFetch, both on ONE record (the pubs.rsc.org page, in an English-locale and a Spanish-locale address), both "HTTP 403 Forbidden" (counted as
+errors, not requests). One outcome with an EMPTY inventory, `effectPoints: "unclear"`, `could_not_access` = the two 403 addresses plus "Other search leads (pubmed 11180916, examine.com, ...) were not opened in this run."
+Models: `claude-sonnet-5-5` (8 in / 2100 out tokens) and Haiku 4.5 (9954 in / 490 out) only; `original_documents` 0; the only returned text is a Haiku-written search summary. Effort is REQUESTED only.
+The worker's guard and the server's own check (`checkLiveResearchResultV2` with the v0.4 parameter, applied to the byte-identical payload; the parameter is verified to matter: v0.1 is refused) accepted it by design
+(nothing to ground). That is NOT evidence of anything. Payload 7720 bytes, 3 events.
+
+Owner verdict (read-only validation review): `VALIDATION: FAILED`. Criterion 6 (usable) FAIL: "complete but empty; usability not shown". Criterion 7 FAIL on its last bullet (a `could_not_access` line saying leads
+"were not opened"). Criteria 4 and 5 vacuous (0 ids). The per-id table and pairing were not exercised.
+
+Why (the owner's reading of the prompt and of the model's own output, NOT a controlled result; the model's thinking text is blank): L8 was followed in part (it fetched and asked for the identifier) and not in its main demand.
+(1) `live-research-v0.4` L8 says an empty inventory is right if every relevant lead "was opened or was recorded in `could_not_access`", and writing "were not opened in this run" is a recording, so it met the letter of that
+sentence although the neighbouring sentence forbids "I did not open it" as a reason. (2) "Relevant" is keyed to titles, but the Links titles were site names ("Issue 4, 2020", "pubmed.ncbi.nlm.nih.gov", "examine.com"):
+only the snippet names a study, and it is not tied to an address; the model counted ONE lead. (3) After an HTTP error the prompt only says to record it, and the tool's own 403 text suggests an authenticated tool the model does not have.
+(4) The last instruction ("If the research did not work, return the honest low-confidence audit") does not mention L8. (5) L2 accepts "nothing relevant" as a reason; L7 prices a wrong id as a total loss and an empty audit at nothing;
+L8 starts at line 341 of 371. STEP 1 and the schema description still permit emptiness. Two fetches here are one lead, so a "minimum fetches" gate would have passed this run.
+Correction to an operator brief: the Frontiers systematic review was a lead of the v0.3 run's search result, NOT of this run's (the nine links here were pubs.rsc.org x3, pubmed 11180916, examine.com, sciencebasedmedicine, drmirkin, lenz.io x2, wbldb.lievers.net).
+
+What n = 2 can and cannot show: the empty-after-one-or-two-calls path occurs at REQUESTED medium under two different prompt texts (1 WebSearch + 0 / 2 WebFetch, against 34-44 calls at xhigh in the three originals); effort and prompt are
+perfectly confounded (xhigh went with v0.2, medium with v0.3 and v0.4; there is no medium + v0.2 run and no xhigh + v0.4 run); the v0.4 run cannot show whether L8 changed anything (WebFetch 0 -> 2 across two single draws with
+different search results). It does NOT show that wording alone can or cannot fix this, a rate, or that the 403 is the cause.
+
+Consequence: `ca6c440` is NOT releasable; no partial release (one-attempt + medium + parser alone were already judged a cap-only release; both observed medium runs end `succeeded` but empty, which under one attempt is the user's final
+result). Production is unchanged (3 attempts, `xhigh`, v0.2); migrations 001 and 002 NOT applied; nothing pushed; no runtime built or installed. The approval is USED UP (marker and approval file stay).
+
+Next (owner's recommended order; a FRESH worker implements it, the operator does not): (1) NO code and NO run: put to the founder (D) whether MEDIUM must stay, given two distinct candidates at medium that stopped after at most two calls
+against three at xhigh with 34-44; the carried question whether a complete-but-empty audit is acceptable to show a user under one attempt; and the flag that option (B) changes the audit schema. (2) In parallel, a fresh worker builds
+(A) prompt-only `live-research-v0.5` with (E) test-only lead accounting, and the owner reviews it read-only: delete the "or recorded" exit in L8; make every Links address a lead and open PubMed / PMC / Europe PMC / ClinicalTrials.gov /
+DOI / publisher addresses; after an error go to the next lead AND search again for the study by title (another locale of the same page is the same lead); no `could_not_access` line may say a lead was "not opened"; add the L8
+condition to ROLE, L2 and HOW TO RETURN; no digit in L8; STEP 1 and the schema description stay byte-equal. (3) Only if the founder confirms MEDIUM stays: ONE private validation of v0.5 (a NEW owner approval bound to the new head, directory `validation-v05`,
+new marker, v0.4 run directory pinned); the owner pre-states that a criterion-6 failure on this third distinct candidate closes prompt-only at medium, after which (B) (a required schema-visible `leads[]` disposition per lead; needs
+founder approval, touches the schema, the worker guard, fixtures and any TS/UI mirror) or a changed effort goes to the founder with no v0.6 wording loop. (C) (the worker refuses an audit whose `could_not_access` says "not opened") is NOT recommended: it turns a
+thin audit into a lost job under one attempt and punishes honesty. Open owner warnings still to carry into the release commit: W1 (server-check parameter is v0.4 in the harness), W2 (`research-jobs.sql` defines 8 functions and 3 bodies change: claim, fail, complete),
+W3 (the first full vitest run on `ca6c440` failed 2 tests in an untouched file, `tests/scan-auth-history-integration.test.tsx`, then passed 72 files / 1193 tests twice: unexplained, not proven pre-existing, not claimed fixed), W6 (a test docstring says "wherever").
+
+May be said: two private validation runs on two distinct candidates at requested medium on the same sanitized target, each `completed` with an empty inventory; v0.3 = 1 WebSearch + 0 WebFetch, v0.4 = 1 WebSearch + 2 WebFetch (both HTTP 403 on one record);
+the guard and server accepted both by design; criterion 6 not met in either; neither is releasable; production unchanged; n = 2 distinct candidates, one draw each; the wording defects above are readings of the text, not tested causes.
+Must not be said: fixed / validated / verified / proven / works / passed / approved; that L7, L8 or medium caused the result, or that L8 "partly worked" or "made it open pages"; that medium is faster, cheaper or better (21 s against
+409-468 s compares different amounts of research); that effort was observed; that the worker rejects thin audits (it accepted both); that acceptance means grounded or good; that Frontiers was left unopened in v0.4; any rate or percentage; that
+the Haiku figures are findings; that wording alone can or cannot fix this; anything about the product's efficacy.
+
+## Validation plan for v0.4 (it WAS approved once on head `ca6c440`, run once and FAILED -- see "Validation run 2" above; this plan is USED UP)
 
 One private invocation, later, only on a NEW owner approval bound to the exact head after a read-only review and the gates. The previous marker and `OWNER_APPROVED.json` (bound to `17e3231`) are used up and stay; the
 new run uses a NEW harness directory, a NEW `O_EXCL` marker and a harness that asserts `HEAD == the approved commit`. The harness is not told the marker in advance and no public or original job is re-run. Preconditions
@@ -1069,11 +1120,10 @@ approval after review and gates; nothing here grants it.
 State (2026-10-06, UTC) — **READ THIS FIRST. The objective is NOT "cap the retries"; it is "make one research invocation produce a usable audit, and
 stop paying for the same failure three times".** A candidate on a local branch (NOT on `main`, NOT pushed) holds: id-recognition change (worker + server, shared
 fixture; replay-verified), prompt `live-research-v0.4` (v0.3 + rule L8 "open before you conclude" + three sentences limited to "only after L8"), medium effort (requested), one attempt per job,
-migrations 001 and 002. Nothing is applied, installed or deployed. **The one private validation run (of the v0.3 predecessor) FAILED: complete but empty** ("Validation run 1"); v0.4 has had no model run and is
-not shown to work. Root cause of the original failures (replayed from the three immutable captures): of 33 cited ids, 14 were retrieved and printed in a form
+migrations 001 and 002. Nothing is applied, installed or deployed. **Two private validation runs on two DISTINCT candidates both FAILED: complete but empty** ("Validation run 1" = v0.3, "Validation run 2" = v0.4); neither candidate is shown to work and neither is releasable. Root cause of the original failures (replayed from the three immutable captures): of 33 cited ids, 14 were retrieved and printed in a form
 the extraction did not recognise (parser; changed), 4 were asserted by the model without any returned result printing them (model process; the guard must
 refuse them; rules L7 and L8 are the attempted remedy and are UNPROVEN). A release that ships only the cap/effort/parser would still lose jobs or return placeholders; do not release those alone.
-Next: independent review -> the owner's read-only review -> gates -> a NEW explicit owner approval for ONE validation run bound to the head ("Validation plan for v0.4"; criterion 6 failing again = FAILED again) ->
+Next: the founder's answers (does MEDIUM stay; is a complete-but-empty audit acceptable under one attempt) and a fresh worker's v0.5 per "Validation run 2" -> independent review -> the owner's read-only review -> gates -> a NEW explicit owner approval for ONE validation run bound to the new head (criterion 6 failing again = FAILED again) ->
 only after a PASS, owner-run, in THIS order (a wrong order loses jobs; see the table in "One attempt per job and medium effort"): `stop --drain` and leave the worker stopped -> read-only queue check (no `running`,
 no `queued` with `attempts >= 1`) -> migrations 001 and 002 in ONE transaction, both VERIFY queries before the push -> push `main` and confirm the Vercel deploy -> build + install the runtime -> `start` -> `status`.
 The state below (2026-10-05) is the PRODUCTION state until then.
