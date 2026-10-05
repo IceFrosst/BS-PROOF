@@ -1085,18 +1085,45 @@ class FollowThroughIncompleteError(ResearchAdapterError):
         self.report = report
 
 
+# The model's OWN request (a search query, a WebFetch prompt) is read with a deliberately LOOSE extractor, because what it typed
+# may come back from a summariser unlabelled, relabelled or rephrased ("is study 31234567 on this page?" -> "the page does not
+# mention PMID 31234567"). Loose = every bare 5-9 digit run is a PMID candidate, PMC / NCT / DOI shapes are matched inside any
+# surrounding text, and a DOI is also taken without the sentence punctuation stuck to its end. Used ONLY to EXCLUDE ids from the
+# same call's result; `extract_ids` (what a returned text may GROUND) is unchanged. lib/scan-research/source-access-v3.ts
+# `ownRequestIds` MUST stay identical; tests/fixtures/lead-accounting-cases.json `grounding_cases` pins both.
+OWN_BARE_RUN_RE = re.compile(r"(?<![0-9])[0-9]{5,9}(?![0-9])")
+OWN_PMC_RE = re.compile(r"PMC([0-9]{5,9})(?![0-9])", re.I)
+OWN_NCT_RE = re.compile(r"NCT([0-9]{8})(?![0-9])", re.I)
+OWN_DOI_TRAILING_PUNCTUATION = ".?!:*_~`/-"
+
+
+def own_request_ids(text: str) -> set[str]:
+    """Every identifier the model could have meant by its own request text, in the SAME normalised form `extract_ids` uses."""
+    text = text if isinstance(text, str) else ""
+    ids = extract_ids(text)
+    ids.update("pmid:" + m for m in OWN_BARE_RUN_RE.findall(text))
+    ids.update("PMC" + m for m in OWN_PMC_RE.findall(text))
+    ids.update("NCT" + m for m in OWN_NCT_RE.findall(text))
+    for m in DOI_RE.findall(text):
+        trimmed = m.rstrip(OWN_DOI_TRAILING_PUNCTUATION)
+        if trimmed:
+            ids.update(extract_ids(trimmed))
+    return ids
+
+
 def grounded_ids_v3(events: list) -> set:
     """Identifiers printed in returned CONTENT, minus everything the model itself typed into the SAME call.
 
     Per content-bearing event: the request echo is removed from the returned text first (the search query; the WebFetch
-    address and prompt), and then every identifier found in that event's OWN query / prompt is excluded as well, which
-    also covers a summariser that paraphrases the question ("the page does not mention PMID 123"). The same identifier
-    printed by a DIFFERENT, independent successful result (e.g. the search that listed it) still grounds it. Error, wall
-    and refusal results never ground anything."""
+    address and prompt), and then every identifier the model's OWN query / prompt could mean (`own_request_ids`: loose, so a
+    bare number it typed is covered whatever label the tool prints next to it) is excluded as well, which also covers a
+    summariser that paraphrases the question ("the page does not mention PMID 123"). The same identifier printed by a
+    DIFFERENT, independent successful result (e.g. the search that listed it) still grounds it. Error, wall and refusal
+    results never ground anything."""
     ids: set = set()
     for e in events:
         if e.get("kind") == "request" and e.get("returned_text"):
-            ids.update(extract_ids(research_leads.grounding_text(e)) - extract_ids(research_leads.own_request_text(e)))
+            ids.update(extract_ids(research_leads.grounding_text(e)) - own_request_ids(research_leads.own_request_text(e)))
     return ids
 
 

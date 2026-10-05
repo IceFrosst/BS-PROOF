@@ -245,9 +245,62 @@ class Grounding(unittest.TestCase):
 
     def test_the_shared_grounding_cases_hold_in_python(self):
         cases = json.loads((ROOT / "tests/fixtures/lead-accounting-cases.json").read_text())["grounding_cases"]
-        self.assertGreaterEqual(len(cases), 8)
+        self.assertGreaterEqual(len(cases), 16)
         for c in cases:
             self.assertEqual(sorted(ad.grounded_ids_v3(c["events"])), sorted(c["expect_grounded"]), c["name"])
+
+    def test_the_shared_own_request_cases_hold_in_python(self):
+        cases = json.loads((ROOT / "tests/fixtures/lead-accounting-cases.json").read_text())["own_request_cases"]
+        self.assertGreaterEqual(len(cases), 6)
+        for c in cases:
+            self.assertEqual(sorted(ad.own_request_ids(c["text"])), sorted(c["expect"]), c["text"])
+
+    def test_the_own_request_read_is_loose_but_the_grounding_extractor_stays_strict(self):
+        """`extract_ids` (grounding) stays strict: a bare number or a glued label in RETURNED text is not an identifier."""
+        for text in ("Is study 31234567 on this page?", "list 31234567, 27654321", "trialNCT01234567 thisPMC7654321", "page 10.1056/NEJMoa2034577?"):
+            self.assertLessEqual(ad.extract_ids(text), ad.own_request_ids(text), text)
+        self.assertEqual(ad.extract_ids("Is study 31234567 on this page?"), set())
+        self.assertEqual(ad.extract_ids("trialNCT01234567 thisPMC7654321"), set())
+
+    def test_an_unlabelled_number_typed_into_the_prompt_cannot_be_grounded_by_a_summary_that_adds_the_label(self):
+        """The review's probe: the label is added by the summariser, not typed by the model."""
+        for prompt, answer in (("Is study 31234567 on this page?", "The page does not mention PMID 31234567."),
+                               ("Is study31234567?", "The page does not mention PMID31234567."),
+                               ("Is study 31234567 on this page?", "PMID: 31234567 is not shown. Title as printed.")):
+            audit, access = fresh()
+            cite(audit, "PMID 31234567")
+            access["events"][1]["request"]["prompt"] = prompt
+            set_text(access, 1, answer)
+            self.refused(audit, access)
+
+    def test_an_unlabelled_number_typed_into_the_query_cannot_be_grounded_by_a_snippet_that_labels_it(self):
+        for q in ("vitamin d 31234567", "vitamin d31234567"):
+            audit, access = fresh()
+            cite(audit, "PMID 31234567")
+            access["events"][0]["request"]["query"] = q
+            set_text(access, 0, search(q, [PUB, WALLED, BLOG], "PMID 31234567 reports fracture outcomes."))
+            self.refused(audit, access)
+
+    def test_the_same_pmid_printed_by_an_earlier_search_whose_query_did_not_contain_it_is_grounded(self):
+        audit, access = fresh()
+        cite(audit, "PMID 31234567")
+        access["events"][0]["request"]["query"] = "vitamin d fracture trial"
+        set_text(access, 0, search("vitamin d fracture trial", [PUB, WALLED, BLOG], "A randomized trial is listed. PMID: 31234567 reports fracture outcomes."))
+        access["events"][1]["request"]["prompt"] = "Is study 31234567 on this page?"       # typed later, into ANOTHER call
+        set_text(access, 1, "The page does not mention PMID 31234567.")
+        ad.validate_live_receipts_and_inventory_v3(audit, access)
+
+    def test_a_doi_pmc_or_nct_typed_into_the_prompt_in_any_shape_cannot_ground_itself(self):
+        for cited, prompt, answer in (("10.1056/NEJMoa2034577", "Does the page cite 10.1056/NEJMoa2034577?", "It does not cite 10.1056/NEJMoa2034577. PMID: 12345678."),
+                                      ("PMC7654321", "Is thisPMC7654321 the paper?", "No mention of PMC7654321 here. PMID: 12345678."),
+                                      ("NCT01234567", "Is trialNCT01234567 registered?", "It does not list NCT01234567. PMID: 12345678.")):
+            audit, access = fresh()
+            cite(audit, cited)
+            access["events"][1]["request"]["prompt"] = prompt
+            set_text(access, 1, answer)
+            self.refused(audit, access)
+            cite(audit, "PMID 12345678")                                  # what the page itself prints is still grounded
+            ad.validate_live_receipts_and_inventory_v3(audit, access)
 
     def test_a_fetched_address_echoed_back_cannot_ground_the_pmid_in_it(self):
         audit, access = fresh()

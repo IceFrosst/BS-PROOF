@@ -19,7 +19,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import { checkLiveResearchResultV2, idsIn } from "@/lib/scan-research/source-access-v2";
-import { checkLiveResearchResultV3 } from "@/lib/scan-research/source-access-v3";
+import { checkLiveResearchResultV3, ownRequestIds } from "@/lib/scan-research/source-access-v3";
 
 type Fixture = { audit: Record<string, any>; source_access_v3: Record<string, any> };
 const original = JSON.parse(readFileSync("tests/fixtures/source-access-v3.json", "utf8")) as Fixture;
@@ -145,6 +145,66 @@ describe("grounding: only what a tool PRINTED, never the model's own request", (
       setText(f, 1, answer);
       expect(errorsOf(f).join("\n"), answer).toMatch(/inventory\/0\/id not grounded/);
     }
+  });
+
+  it("an UNLABELLED number typed into the WebFetch prompt cannot be grounded by a summary that adds the label", () => {
+    for (const [prompt, answer] of [
+      ["Is study 31234567 on this page?", "The page does not mention PMID 31234567."],
+      ["Is study31234567?", "The page does not mention PMID31234567."],
+      ["Is study 31234567 on this page?", "PMID: 31234567 is not shown. Title as printed."],
+    ]) {
+      const f = copy();
+      cite(f, "PMID 31234567");
+      f.source_access_v3.events[1].request.prompt = prompt;
+      setText(f, 1, answer);
+      expect(errorsOf(f).join("\n"), answer).toMatch(/inventory\/0\/id not grounded/);
+    }
+  });
+
+  it("an UNLABELLED number typed into the search query cannot be grounded by a snippet that labels it", () => {
+    for (const q of ["vitamin d 31234567", "vitamin d31234567"]) {
+      const f = copy();
+      cite(f, "PMID 31234567");
+      f.source_access_v3.events[0].request.query = q;
+      setText(f, 0, search(q, [PUB, WALLED, BLOG], "PMID 31234567 reports fracture outcomes."));
+      expect(errorsOf(f).join("\n"), q).toMatch(/inventory\/0\/id not grounded/);
+    }
+  });
+
+  it("the same PMID printed by an earlier search whose query did not contain it is grounded", () => {
+    const f = copy();
+    cite(f, "PMID 31234567");
+    f.source_access_v3.events[0].request.query = "vitamin d fracture trial";
+    setText(f, 0, search("vitamin d fracture trial", [PUB, WALLED, BLOG], "A randomized trial is listed. PMID: 31234567 reports fracture outcomes."));
+    f.source_access_v3.events[1].request.prompt = "Is study 31234567 on this page?";    // typed later, into ANOTHER call
+    setText(f, 1, "The page does not mention PMID 31234567.");
+    expect(check(f).ok).toBe(true);
+  });
+
+  it("a DOI, PMC or NCT number typed into the prompt in any shape cannot ground itself, and the page's own PMID is kept", () => {
+    for (const [cited, prompt, answer] of [
+      ["10.1056/NEJMoa2034577", "Does the page cite 10.1056/NEJMoa2034577?", "It does not cite 10.1056/NEJMoa2034577. PMID: 12345678."],
+      ["PMC7654321", "Is thisPMC7654321 the paper?", "No mention of PMC7654321 here. PMID: 12345678."],
+      ["NCT01234567", "Is trialNCT01234567 registered?", "It does not list NCT01234567. PMID: 12345678."],
+    ]) {
+      const f = copy();
+      cite(f, cited);
+      f.source_access_v3.events[1].request.prompt = prompt;
+      setText(f, 1, answer);
+      expect(errorsOf(f).join("\n"), cited).toMatch(/inventory\/0\/id not grounded/);
+      cite(f, "PMID 12345678");
+      expect(check(f).ok, cited).toBe(true);
+    }
+  });
+
+  it("the own-request read is loose, but what a returned text may ground (idsIn) stays strict", () => {
+    for (const text of ["Is study 31234567 on this page?", "list 31234567, 27654321", "trialNCT01234567 thisPMC7654321", "page 10.1056/NEJMoa2034577?"]) {
+      const strict = idsIn(text);
+      const loose = ownRequestIds(text);
+      for (const id of strict) expect(loose.has(id), `${text} ${id}`).toBe(true);
+    }
+    expect([...idsIn("Is study 31234567 on this page?")]).toEqual([]);
+    expect([...idsIn("trialNCT01234567 thisPMC7654321")]).toEqual([]);
   });
 
   it("a DOI typed into the prompt is excluded, but a PMID the page itself prints is kept", () => {

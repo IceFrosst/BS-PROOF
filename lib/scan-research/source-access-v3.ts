@@ -47,17 +47,37 @@ function schemaErrors(validate: ValidateFunction, prefix: string): string[] {
 }
 
 /**
+ * Every identifier the model could have meant by its OWN request text (a search query, a WebFetch prompt), in the SAME normalised
+ * form `idsIn` uses. Deliberately LOOSE, because what the model typed may come back from a summariser unlabelled, relabelled or
+ * rephrased ("is study 31234567 on this page?" -> "the page does not mention PMID 31234567"): every bare 5-9 digit run is a PMID
+ * candidate, PMC / NCT / DOI shapes are matched inside any surrounding text, and a DOI is also taken without the sentence
+ * punctuation stuck to its end. Used ONLY to EXCLUDE ids from the same call's result; `idsIn` (what a returned text may GROUND)
+ * is unchanged. Mirrors claude_research_adapter.own_request_ids; `grounding_cases` in tests/fixtures/lead-accounting-cases.json pins both.
+ */
+export function ownRequestIds(text: string): Set<string> {
+  const out = idsIn(text);
+  for (const m of text.matchAll(/(?<![0-9])[0-9]{5,9}(?![0-9])/g)) out.add(`pmid:${m[0]}`);
+  for (const m of text.matchAll(/PMC([0-9]{5,9})(?![0-9])/gi)) out.add(`PMC${m[1]}`);
+  for (const m of text.matchAll(/NCT([0-9]{8})(?![0-9])/gi)) out.add(`NCT${m[1]}`);
+  for (const m of text.matchAll(/10\.\d{4,9}\/[^\s"'<>)\]},;]+/gi)) {
+    const trimmed = m[0].replace(/[.?!:*_~`/-]+$/, "");
+    if (trimmed) for (const id of idsIn(trimmed)) out.add(id);
+  }
+  return out;
+}
+
+/**
  * Identifiers a run's CONTENT-bearing results may ground: per event, what the tool printed with the model's own request echo
- * removed, MINUS every identifier found in that same event's own query / WebFetch prompt (which also covers a summariser that
- * paraphrases the question: "the page does not mention PMID 123"). The same identifier printed by a DIFFERENT successful
- * result still grounds it; error / wall / refusal results ground nothing. Mirrors claude_research_adapter.grounded_ids_v3;
+ * removed, MINUS every identifier the model's own query / WebFetch prompt could mean (`ownRequestIds`, loose; this also covers a
+ * summariser that paraphrases the question: "the page does not mention PMID 123"). The same identifier printed by a DIFFERENT
+ * successful result still grounds it; error / wall / refusal results ground nothing. Mirrors claude_research_adapter.grounded_ids_v3;
  * tests/fixtures/lead-accounting-cases.json `grounding_cases` pins both.
  */
 export function groundedIdsV3(events: LeadEvent[]): Set<string> {
   const grounded = new Set<string>();
   for (const e of events) {
     if (e.kind !== "request" || !e.returned_text) continue;
-    const own = idsIn(ownRequestText(e));
+    const own = ownRequestIds(ownRequestText(e));
     for (const id of idsIn(groundingText(e))) if (!own.has(id)) grounded.add(id);
   }
   return grounded;

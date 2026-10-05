@@ -1,5 +1,5 @@
 {
- "about": "Shared cases for pipeline/research_leads.py and lib/scan-research/lead-accounting.ts (parity). `real_*` cases embed the search result text of the immutable 2026-10-05 v0.4 validation capture byte for byte. Expectations are hand-written, not generated from either implementation. `grounding_cases` (added with the WebFetch-prompt capture): which identifiers one run's CONTENT-bearing results may ground, expectations hand-written; the identifiers the model typed into the SAME call (search query / WebFetch prompt) never ground themselves, even when a tool paraphrases them back.",
+ "about": "Shared cases for pipeline/research_leads.py and lib/scan-research/lead-accounting.ts (parity). `real_*` cases embed the search result text of the immutable 2026-10-05 v0.4 validation capture byte for byte. Expectations are hand-written, not generated from either implementation. `grounding_cases` (added with the WebFetch-prompt capture): which identifiers one run's CONTENT-bearing results may ground, expectations hand-written; the identifiers the model typed into the SAME call (search query / WebFetch prompt) never ground themselves, even when a tool paraphrases them back. `own_request_cases` (added with the loose own-request exclusion): what the model's OWN query / WebFetch prompt could mean, read deliberately loosely (every bare 5-9 digit run is a PMID candidate; PMC / NCT / DOI shapes inside any text; a DOI also without sentence punctuation stuck to it), expectations hand-written; it only ever EXCLUDES ids from the same call's result and never grounds one.",
  "cases": [
   {
    "name": "real_v04_one_search_two_403_empty_audit_no_ledger",
@@ -1447,6 +1447,192 @@
     }
    ],
    "expect_grounded": []
+  },
+  {
+   "name": "an_unlabelled_number_in_the_prompt_cannot_be_grounded_by_a_summary_that_adds_the_label",
+   "why": "The model typed a bare number ('Is study 31234567 on this page?'); the summariser answers with the PMID label the model never typed. The own-request read is loose (every bare 5-9 digit run), so the label does not matter.",
+   "events": [
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://journal.example.org/articles/vitd-trial",
+      "prompt": "Is study 31234567 on this page?"
+     },
+     "returned_text": "The page does not mention PMID 31234567."
+    }
+   ],
+   "expect_grounded": []
+  },
+  {
+   "name": "an_unlabelled_number_in_the_search_query_cannot_be_grounded_by_a_snippet_that_labels_it",
+   "why": "A search for 'vitamin d 31234567' whose snippet prints 'PMID 31234567' back: the number is the model's own request, not a printed source.",
+   "events": [
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "vitamin d 31234567"
+     },
+     "returned_text": "Web search results for query: \"vitamin d 31234567\"\n\nLinks: [{\"title\":\"t\",\"url\":\"https://example.org/a-page\"}]\n\nPMID 31234567 reports fracture outcomes.\n"
+    }
+   ],
+   "expect_grounded": []
+  },
+  {
+   "name": "a_number_glued_to_a_word_in_the_prompt_is_still_the_models_own",
+   "why": "No space between the word and the number ('Is study31234567?'), and the answer prints it with no space after the label ('PMID31234567'). A digit run is a digit run.",
+   "events": [
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://journal.example.org/articles/vitd-trial",
+      "prompt": "Is study31234567?"
+     },
+     "returned_text": "The page does not mention PMID31234567."
+    }
+   ],
+   "expect_grounded": []
+  },
+  {
+   "name": "an_unlabelled_number_in_a_later_prompt_does_not_stop_an_earlier_independent_snippet_grounding_it",
+   "why": "The earlier search never contained the number in its query and printed 'PMID: 31234567' itself; the later fetch only asks about it. Exclusion is per call.",
+   "events": [
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "vitamin d fracture trial"
+     },
+     "returned_text": "Web search results for query: \"vitamin d fracture trial\"\n\nLinks: [{\"title\":\"t\",\"url\":\"https://example.org/a-page\"}]\n\nA randomized trial is listed. PMID: 31234567 reports fracture outcomes.\n"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://journal.example.org/articles/vitd-trial",
+      "prompt": "Is study 31234567 on this page?"
+     },
+     "returned_text": "The page does not mention PMID 31234567."
+    }
+   ],
+   "expect_grounded": [
+    "pmid:31234567"
+   ]
+  },
+  {
+   "name": "an_unlabelled_number_in_the_query_excludes_only_itself_from_that_call",
+   "why": "Another identifier the same result prints stays grounded; only what the model typed is excluded.",
+   "events": [
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "vitamin d 31234567"
+     },
+     "returned_text": "Web search results for query: \"vitamin d 31234567\"\n\nLinks: [{\"title\":\"t\",\"url\":\"https://example.org/a-page\"}]\n\nPMID 31234567 is listed. PMID: 12345678 reports fracture outcomes.\n"
+    }
+   ],
+   "expect_grounded": [
+    "pmid:12345678"
+   ]
+  },
+  {
+   "name": "a_year_in_the_query_excludes_nothing",
+   "why": "The loose read is 5-9 digit runs, not every number: a 4-digit year is not an identifier candidate.",
+   "events": [
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "vitamin d fracture trial 2019"
+     },
+     "returned_text": "Web search results for query: \"vitamin d fracture trial 2019\"\n\nLinks: [{\"title\":\"t\",\"url\":\"https://example.org/a-page\"}]\n\nA randomized trial is listed. PMID: 31234567 reports fracture outcomes.\n"
+    }
+   ],
+   "expect_grounded": [
+    "pmid:31234567"
+   ]
+  },
+  {
+   "name": "a_registry_or_pmc_number_glued_to_a_word_in_the_prompt_is_excluded_and_the_page_pmid_is_kept",
+   "why": "The normal extractor needs a word boundary before NCT / PMC and would not read 'trialNCT01234567' or 'thisPMC7654321' out of the prompt; the loose read does.",
+   "events": [
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://journal.example.org/articles/vitd-trial",
+      "prompt": "Is trialNCT01234567 or thisPMC7654321 listed?"
+     },
+     "returned_text": "Neither NCT01234567 nor PMC7654321 is listed. PMID: 27654321."
+    }
+   ],
+   "expect_grounded": [
+    "pmid:27654321"
+   ]
+  },
+  {
+   "name": "a_doi_followed_by_a_question_mark_in_the_prompt_is_excluded_and_the_page_pmid_is_kept",
+   "why": "The question mark sticks to the DOI in the prompt ('...2034577?') but not in the answer ('...2034577.'); the loose read also takes the DOI without its trailing punctuation.",
+   "events": [
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://journal.example.org/articles/vitd-trial",
+      "prompt": "Does the page cite 10.1056/NEJMoa2034577?"
+     },
+     "returned_text": "It does not cite 10.1056/NEJMoa2034577. PMID: 27654321."
+    }
+   ],
+   "expect_grounded": [
+    "pmid:27654321"
+   ]
+  }
+ ],
+ "own_request_cases": [
+  {
+   "text": "Is study 31234567 on this page?",
+   "expect": [
+    "pmid:31234567"
+   ]
+  },
+  {
+   "text": "Is study31234567 on this page?",
+   "expect": [
+    "pmid:31234567"
+   ]
+  },
+  {
+   "text": "vitamin d fracture trial 2019",
+   "expect": []
+  },
+  {
+   "text": "Is trialNCT01234567 or thisPMC7654321 listed?",
+   "expect": [
+    "NCT01234567",
+    "PMC7654321",
+    "pmid:01234567",
+    "pmid:7654321"
+   ]
+  },
+  {
+   "text": "Does the page cite 10.1056/NEJMoa2034577?",
+   "expect": [
+    "doi:10.1056/nejmoa2034577",
+    "doi:10.1056/nejmoa2034577?",
+    "pmid:2034577"
+   ]
+  },
+  {
+   "text": "see https://www.frontiersin.org/articles/10.3389/fnut.2020.00001/full.",
+   "expect": [
+    "doi:10.3389/fnut.2020.00001",
+    "doi:10.3389/fnut.2020.00001/full",
+    "pmid:00001"
+   ]
   }
  ]
 }

@@ -360,10 +360,11 @@ class FullCaptureReplay(unittest.TestCase):
             self.assertEqual(str(ctx.exception), f"inventory ID is not grounded in returned tool text: {first_unprinted!r}", name)
 
     def test_the_v3_rule_with_the_webfetch_prompt_captured_refuses_nothing_the_echo_only_rule_did_not_on_the_originals(self):
-        """The v0.5 V3 grounding (request echo stripped; and now every id the model typed into the SAME call excluded) replayed on the
-        untouched originals, whose receipts now carry the WebFetch prompt. V3 refuses the V2-refused rows PLUS one the V2 rule only
-        accepted through the search tool's echo of the model's own query (run 3, the NEJM DOI it typed into a search). Adding the
-        prompt / query exclusion on top of the echo strip refuses nothing more on any original."""
+        """The v0.5 V3 grounding (request echo stripped; and every id the model's own query / prompt could mean excluded from the SAME
+        call, read LOOSELY: bare 5-9 digit runs, PMC / NCT / DOI shapes) replayed on the untouched originals, whose receipts now
+        carry the WebFetch prompt. V3 refuses the V2-refused rows PLUS one the V2 rule only accepted through the search tool's echo
+        of the model's own query (run 3, the NEJM DOI it typed into a search). Adding the loose prompt / query exclusion on top of the
+        echo strip refuses nothing more on any original: the exact refused sets are pinned below."""
         expected_v3 = {"vitd-run-1": {"36853379"}, "vitd-run-2": {"PMID:35939577"},
                        "vitd-run-3": {"31454046", "10.1039/C9FO03063H", "10.1056/NEJMoa2202106"}}
         for name in CAPTURE_DIRS:
