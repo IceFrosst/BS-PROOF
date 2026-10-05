@@ -10,6 +10,15 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-06 — intervention-scope creatine run (20261005_224647)
+
+- 139 studies (40 new); resumed once after a memory-pressure stop. Strength
+  k=7 +0.27 [-0.13, 0.67] (I), lean k=8 +0.17 (D+), power k=8 +0.05 (I).
+  Benchmark: lean SMD pass; strength not testable (coverage 33 %, 2.1x).
+- 40 new studies -> 15 effect claims -> ~1 pooled trial per outcome: most new
+  claims are other endpoints or off-target populations. The limit is now the
+  readable open-access literature (295/386 RCTs abstract-only).
+
 ## 2026-10-05 — poolability: where the trials went; two fixes
 
 - Offline analysis of 20261005_080012 (extractions replayed from the LLM cache

@@ -380,3 +380,26 @@ copy). The 26 current RCTs it misses are mostly multi-ingredient or
 other-ingredient trials (refused as combinations anyway); 8 have full text.
 The store keeps every scope's records, so an `--intervention-scope` run scores
 the UNION: ~190 readable RCTs against 99 today.
+
+## Intervention-scope run — 20261005_224647 (v1.35, 2026-10-05/06)
+
+`--with-sr --full-text-only --intervention-scope`, `SP_SECOND_REVIEWER=1`.
+139 studies (99 cached + 40 new), 137 extracted, 1 skipped, 1 partial (S7).
+Stopped once by Claude Code under memory pressure at 124/139 and resumed from
+cache. Poolability fixes (arm n from S3, add-on claims) active.
+
+| outcome | k | SMD [95% CI] | letter | benchmark |
+|---|---|---|---|---|
+| muscle_strength | 7 | +0.27 [-0.13, +0.67] | I | not testable (coverage 33 %, width 2.1x) |
+| lean_body_mass | 8 | +0.17 [-0.08, +0.42] | **D+** (none, low) | SMD pass (coverage 57 %, width 1.0x) |
+| muscle_power | 8 | +0.05 [-0.32, +0.42] | I | no like-for-like rows |
+| exercise_endurance | 2 | -0.14 [-0.77, +0.49] | I | -- |
+
+**40 new studies added ~1 pooled trial per outcome.** Their 135 claims: 94 not
+mapped to the 5 showcase outcomes (other endpoints), 41 mapped, 15 with an
+effect (strength 4, lean 4, power 5, endurance 2); the rest were lost to
+off-target populations (strength's off-target refusals 4 -> 9), combination
+arms and one-claim-per-trial. Retrieval is no longer the binding limit for
+healthy-adult strength: the readable open-access literature is. 295 of 386
+intervention-scope RCTs are abstract-only, and abstracts rarely print arm
+statistics.

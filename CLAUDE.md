@@ -312,9 +312,11 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
    flag (downgrades via RoB) -- RSMOKE6 confirmed both live. Benchmark built:
    `vocab/benchmarks.json` (19 rows, 10 creatine meta-analyses, quotes
    verified by `scripts/benchmark_v2.py verify`), `pipeline/benchmark.py`.
-   First full v2 run `20261005_080012`: every letter I (k <= 5 per outcome);
-   benchmark: lean SMD pass, strength not testable (coverage 38 %). Next:
-   raise poolability ("no verified effect estimate" is the largest loss).
+   Runs `20261005_080012` (supplement scope) and `20261005_224647`
+   (intervention scope, 139 studies, arm-n + add-on fixes): strength k=7
+   +0.27 (I), lean k=8 (D+), power k=8 (I); benchmark: lean SMD pass,
+   strength not testable (coverage 33 %). The binding limit is now readable
+   open-access full text (295/386 creatine RCTs are abstract-only).
 1. Verify on a real phone: live camera, a busy label read after the
    thinking-mode fix, PWA install.
 2. Check whether the text calls (`deepseek-chat`) also need thinking disabled
