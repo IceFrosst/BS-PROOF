@@ -401,10 +401,13 @@ What it does (every item is a test in `tests/test_pc_research_supervisor.py`, 54
   0700 directory (files 0600) next to the worker's own data-dir `worker.lock`. A worker the supervisor did not start (a
   manual `run`) blocks `start`; `status` names its pid (from `/proc/locks`) without reading its argv. The server lease
   (300 s) still decides job ownership.
-- **Restart only after an unexpected exit, with back-off.** `RestartSec` from the unit (30 s) doubling to a 600 s cap with
-  jitter, reset after a 300 s stable run; exits 78 (config) and 75 (lock) wait at least 120 s. Stderr EOF is not an exit
+- **Restart after ANY worker exit, with back-off (corrected 2026-10-05).** While the supervisor runs, the worker is restarted
+  after every exit, exit code 0 included (the worker answers a direct `kill <worker pid>` with a clean exit 0 and is restarted
+  anyway): `stop` is the ONLY way to stop it, never kill the worker. Back-off: `RestartSec` from the unit (30 s) doubling to a 600 s
+  cap with jitter, reset after a 300 s stable run; exits 78 (config) and 75 (lock) wait at least 120 s. Stderr EOF is not an exit
   and never restarts or spins. A crash sweeps any CLI the dead worker left (it runs in its own session, so no group signal
-  reaches it): subreaper + `/proc` parent chain, SIGTERM then SIGKILL.
+  reaches it): subreaper + `/proc` parent chain, SIGTERM then SIGKILL. (The launcher's `describe` line still says "on unexpected
+  exit only": that wording understates the code, which is frozen at the reviewed commit; this paragraph is the correct statement.)
 - **Stop.** SIGTERM to the worker's group (the worker cancels its CLI and leaves the lease to expire; nothing is posted),
   `TimeoutStopSec` (60 s) then SIGKILL, then every leftover descendant is swept; never a restart while stopping. A supervisor
   that dies by SIGKILL takes the worker with it (`--pdeathsig`). `stop` REFUSES while a job runs unless `--now` (the lease then
@@ -418,6 +421,10 @@ What it does (every item is a test in `tests/test_pc_research_supervisor.py`, 54
   lock), worker alive and holding `worker.lock`, `status.json` is THIS worker's, state is `polling` (fresh) or `running`, and
   at least two poll writes were seen (a claim was answered; an idle queue answers `{"job": null}`, which calls no model).
   A leftover `status.json` of a dead pid is reported as stale, never as a heartbeat; `backoff` / `cooldown` are NOT ready.
+  Limits of READY: `running` counts as READY with no heartbeat-age check (the worker writes `status.json` once when a job starts, so
+  `worker.age_s` is then the job's elapsed time, not a heartbeat); watch a long job in `supervisor.log` and the queue, and use `stop --now`
+  only on a real stall. Run `start` once, sequentially, never in parallel (a second concurrent `start` can lose the lock race and
+  report a collision); do not retry blindly after a collision, read `status` first.
 
 Install (owner-reviewed first; the file is copied once, read-only, from the reviewed commit):
 
@@ -447,15 +454,46 @@ $SUP stop                              # refuses while a job runs; add --now to 
 
 Opening research to everyone (the founder's decision of 2026-10-05) must happen in this order, and a failed step at any
 point fails CLOSED (leave or restore `SCAN_LIVE_RESEARCH_ENABLED=owners`, or set it to `off`): (1) `check`, (2) `start --wait-ready`
-and `status` READY, (3) only then set Production `SCAN_LIVE_RESEARCH_ENABLED=on` (the literal `1`, `true`, `yes` do the same),
+and `status` READY, (2b) the WSL-survival gate G4 below passes, (3) only then set Production `SCAN_LIVE_RESEARCH_ENABLED=on` (the literal `1`, `true`, `yes` do the same),
 redeploy, verify the deployment is READY at the intended commit. Kill switches, fastest first: flag `off` + redeploy (no new work
 can be queued; running jobs finish); `stop --drain` or `stop --now`; revoke the worker token on Vercel + redeploy.
 Rollback of the runtime: `stop --drain`, `deploy/pc_research_worker_release.sh rollback`, then `start` with the OTHER release's commit.
 
+### WSL-survival gate G4 (hard gate before the public flag)
+
+Why: WSL2 ties a distro's life to the Windows `wsl.exe` sessions attached to it. Read-only on 2026-10-05: `Ubuntu-22.04` is held by ONE
+terminal (a `wsl.exe ~ -d Ubuntu-22.04` pair, the window that hosts the Pi session); Docker Desktop keeps ITS OWN distros alive with a
+dedicated `wsl.exe -d docker-desktop-data -e /wsl-keepalive` (consistent with, not proof of, a distro being torn down when its last session closes); `/etc/wsl.conf` is
+only `[boot] systemd=true` and no `.wslconfig` exists, so `vmIdleTimeout` is the default and unknown. If the last Ubuntu session closes and the
+distro is torn down, the supervisor and worker die and every public job would sit `queued` with no ETA. That is INFERRED from WSL's documented
+behaviour, NOT measured here; uptime with a session attached proves nothing about it.
+
+An agent must not run this test: the only session that reaches this distro is the agent's own, and closing it ends the agent (agents
+also never run `wsl --shutdown` / `wsl -t`, never touch `.wslconfig`, Windows startup/scheduler/power settings, systemd, `user@1000` or dbus).
+It is a human, attended, read-only measurement; the script only observes and changes nothing:
+
+```bash
+G=$HOME/.local/share/bsproof-wsl-gate
+python3 $G/gate.py baseline     # while `status` is READY (already recorded on 2026-10-05 10:05Z; refuses to overwrite: move an old baseline.json aside to redo)
+# HUMAN: close EVERY Ubuntu-22.04 terminal / wsl.exe / SSH / editor session (the Pi session ends), leave the PC awake and online,
+#        wait at least 6 minutes, open ONE new terminal, then:
+python3 $G/gate.py verify       # exit 0 = PASS
+```
+
+`verify` passes only if ALL hold: `status` READY now; same `boot_id`; same PID 1 start time (the distro was not torn down and restarted);
+same `supervisor.pid` (pid, start ticks, boot id); same worker pid; no worker restart; the poll counter grew; journald/logind shows a window of
+at least 360 s with NO session attached (measured, not asserted); and the Vercel production request log (read-only, an independent
+observer) shows the worker polling `/api/scan/research/worker/` through that window with no gap above 120 s. Any FAIL = NO-GO: the flag
+stays `owners`. `gate.py` lives on the PC only (`~/.local/share/bsproof-wsl-gate/`, not in this repository, not an independently reviewed artefact); its
+parsing and window logic were unit-tested on synthetic input and it correctly FAILS while a session is attached.
+If G4 fails, the smallest honest options are: (a) keep one `Ubuntu-22.04` window open and run research only while it is, never described as
+"always on"; or (b) an owner-reviewed host keepalive (for example Docker's `wsl.exe -d <distro> -e sleep infinity` approach, which touches the
+Windows side) as its own plan. Neither is done by default; the VPS removes the problem.
+
 Honest limits: not boot-persistent; needs the PC awake, online, WSL running and the Claude login valid; one worker, one job
 at a time, no global queue cap (3 open jobs per user is the only brake); a quota / rate-limit makes the worker cool down
-(900 s) and `status` says NOT READY; the supervisor itself is NOT yet a reviewed artefact until an independent review
-passes; the reviewed unit's own `Restart=` / `systemd` semantics are re-implemented here, not delegated to systemd.
+(900 s) and `status` says NOT READY; the supervisor passed an independent review and the Claude Code owner's read-only
+verification (2026-10-05, `claude-sonnet-5-5` xhigh, verdict PASS for the push and for starting it in `owners` mode only); the reviewed unit's own `Restart=` / `systemd` semantics are re-implemented here, not delegated to systemd.
 
 ## Staged rollout: controls, secrets and the private owner-smoke
 
