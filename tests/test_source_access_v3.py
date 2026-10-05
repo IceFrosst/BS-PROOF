@@ -245,7 +245,7 @@ class Grounding(unittest.TestCase):
 
     def test_the_shared_grounding_cases_hold_in_python(self):
         cases = json.loads((ROOT / "tests/fixtures/lead-accounting-cases.json").read_text())["grounding_cases"]
-        self.assertGreaterEqual(len(cases), 25)
+        self.assertGreaterEqual(len(cases), 36)
         for c in cases:
             self.assertEqual(sorted(ad.grounded_ids_v3(c["events"])), sorted(c["expect_grounded"]), c["name"])
 

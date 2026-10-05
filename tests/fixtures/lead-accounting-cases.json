@@ -1,5 +1,5 @@
 {
- "about": "Shared cases for pipeline/research_leads.py and lib/scan-research/lead-accounting.ts (parity). `real_*` cases embed the search result text of the immutable 2026-10-05 v0.4 validation capture byte for byte. Expectations are hand-written, not generated from either implementation. `grounding_cases` (added with the WebFetch-prompt capture): which identifiers one run's CONTENT-bearing results may ground, expectations hand-written; the identifiers the model typed into the SAME call (search query / WebFetch prompt) never ground themselves, even when a tool paraphrases them back. `own_request_cases` (added with the loose own-request exclusion): what the model's OWN query / WebFetch prompt could mean, read deliberately loosely (every bare 5-9 digit run is a PMID candidate; PMC / NCT / DOI shapes inside any text; a DOI also without sentence punctuation stuck to it), expectations hand-written; it only ever EXCLUDES ids from the same call's result and never grounds one. W1/W2 (2026-10-06): `w1_*` cases pin that ANY inventory needs at least one content-bearing WebFetch (kind request, non-empty returned text; one is enough, no quota); `w2_*` grounding cases pin that the address the model typed into a WebFetch joins its prompt in the same-call exclusion (loose extractor on the request metadata only; the returned text is read with the normal extractor; a later independent successful result still grounds the id); `own_request_text_cases` pin the exact request text both languages build, including the ASCII-only percent-decoding (at most 3 passes, malformed / non-ASCII escapes left as written, no throw), expectations hand-written.",
+ "about": "Shared cases for pipeline/research_leads.py and lib/scan-research/lead-accounting.ts (parity). `real_*` cases embed the search result text of the immutable 2026-10-05 v0.4 validation capture byte for byte. Expectations are hand-written, not generated from either implementation. `grounding_cases` (added with the WebFetch-prompt capture): which identifiers one run's CONTENT-bearing results may ground, expectations hand-written; the identifiers the model typed into the SAME call (search query / WebFetch prompt) never ground themselves, even when a tool paraphrases them back. `own_request_cases` (added with the loose own-request exclusion): what the model's OWN query / WebFetch prompt could mean, read deliberately loosely (every bare 5-9 digit run is a PMID candidate; PMC / NCT / DOI shapes inside any text; a DOI also without sentence punctuation stuck to it), expectations hand-written; it only ever EXCLUDES ids from the same call's result and never grounds one. W1/W2 (2026-10-06): `w1_*` cases pin that ANY inventory needs at least one content-bearing WebFetch (kind request, non-empty returned text; one is enough, no quota); `w2_*` grounding cases pin that the address the model typed into a WebFetch joins its prompt in the same-call exclusion (loose extractor on the request metadata only; the returned text is read with the normal extractor; a later independent successful result still grounds the id); `own_request_text_cases` pin the exact request text both languages build, including the ASCII-only percent-decoding (at most 3 passes, malformed / non-ASCII escapes left as written, no throw), expectations hand-written. W2 DOI suffix (2026-10-06): `w2_doi_*` grounding cases pin that a bare DOI the page prints is excluded from the SAME call when it sits inside a DOI-shaped token of the model's own request (query, prompt, or the typed address as written and percent-decoded), so a publisher suffix behind the typed DOI (`.pdf`, `/suppl_file`, a trailing article number, any extension or path) cannot let a page ground it; the same DOI printed by an independent result still grounds it, a different DOI is not excluded, and a shorter DOI that is only the start of the typed one is over-excluded on purpose (fail-closed). Expectations hand-written.",
  "cases": [
   {
    "name": "real_v04_one_search_two_403_empty_audit_no_ledger",
@@ -2096,6 +2096,220 @@
     }
    ],
    "expect_grounded": []
+  },
+  {
+   "name": "w2_doi_a_springer_pdf_address_cannot_ground_its_own_bare_doi",
+   "why": "W2 DOI suffix. The model typed a Springer PDF address; the DOI in it is followed by `.pdf`, so the whole token is `10.1007/s00198-020-05555-1.pdf`. The page prints the bare DOI. The bare DOI is the one the model typed, so it grounds nothing.",
+   "events": [
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://link.springer.com/content/pdf/10.1007/s00198-020-05555-1.pdf",
+      "prompt": "Summarise the trial."
+     },
+     "returned_text": "DOI 10.1007/s00198-020-05555-1"
+    }
+   ],
+   "expect_grounded": []
+  },
+  {
+   "name": "w2_doi_an_oup_address_with_a_trailing_article_number_cannot_ground_its_own_bare_doi",
+   "why": "W2 DOI suffix. The typed Oxford address carries the DOI and then a numeric path segment (`/6300000`); the page prints the bare DOI.",
+   "events": [
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://academic.oup.com/x/article/doi/10.1093/ajcn/nqab123/6300000",
+      "prompt": "Summarise the trial."
+     },
+     "returned_text": "DOI 10.1093/ajcn/nqab123"
+    }
+   ],
+   "expect_grounded": []
+  },
+  {
+   "name": "w2_doi_an_nejm_supplement_address_cannot_ground_its_own_bare_doi",
+   "why": "W2 DOI suffix. The typed NEJM address carries the DOI and then `/suppl_file`; the page prints the bare DOI with a label.",
+   "events": [
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://www.nejm.org/doi/full/10.1056/NEJMoa2034577/suppl_file",
+      "prompt": "Summarise the trial."
+     },
+     "returned_text": "DOI: 10.1056/NEJMoa2034577"
+    }
+   ],
+   "expect_grounded": []
+  },
+  {
+   "name": "w2_doi_any_file_extension_and_any_path_suffix_is_covered_without_a_list",
+   "why": "W2 DOI suffix. Nothing here is a known publisher shape: an invented extension (`.qq9`, behind a query string) and an arbitrary multi-segment path with a fragment still leave the typed DOI as a leading part of the address token, so the bare DOI the page prints grounds nothing.",
+   "events": [
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://books.example.org/reader/10.5555/book.2020.7.qq9?download=1",
+      "prompt": "state the title"
+     },
+     "returned_text": "10.5555/book.2020.7"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://pub.example.org/a/10.5556/trial.2020.77/anything/else-here/v2#top",
+      "prompt": "state the title"
+     },
+     "returned_text": "Cited as 10.5556/trial.2020.77."
+    }
+   ],
+   "expect_grounded": []
+  },
+  {
+   "name": "w2_doi_a_percent_encoded_address_with_a_suffix_is_read_decoded_and_case_blind",
+   "why": "W2 DOI suffix. The address is typed percent-encoded (`%2F` for the slash, `%3F` for the question mark) with a suffix behind the DOI; the decoded form of the address is read too, and the DOI the page prints in upper case is the same DOI.",
+   "events": [
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://www.nejm.org/doi/pdf/10.1056%2FNEJMoa2034577%2Fsuppl_file%3Fdl%3D1",
+      "prompt": "Summarise the trial."
+     },
+     "returned_text": "DOI 10.1056/NEJMOA2034577"
+    }
+   ],
+   "expect_grounded": []
+  },
+  {
+   "name": "w2_doi_a_typed_doi_with_a_suffix_leaves_the_pmid_and_the_other_doi_the_page_prints",
+   "why": "W2 DOI suffix. The exclusion is for the typed DOI only: the labelled PMID and a DIFFERENT DOI (same registrant, different suffix, not a leading part of the typed one) printed by the same page still ground.",
+   "events": [
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://link.springer.com/content/pdf/10.1007/s00198-020-05555-1.pdf",
+      "prompt": "Summarise the trial."
+     },
+     "returned_text": "DOI 10.1007/s00198-020-05555-1. PMID: 12345678. Related: 10.1007/s00198-021-06000-2"
+    }
+   ],
+   "expect_grounded": [
+    "pmid:12345678",
+    "doi:10.1007/s00198-021-06000-2"
+   ]
+  },
+  {
+   "name": "w2_doi_the_same_doi_listed_by_an_independent_earlier_search_still_grounds",
+   "why": "W2 DOI suffix, positive. The exclusion is for the SAME call only: a search whose query did not carry the DOI listed it, so it is grounded even though a later fetch of its typed address cannot ground it.",
+   "events": [
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "vitamin d fracture meta-analysis"
+     },
+     "returned_text": "Springer: Vitamin D and fracture. DOI 10.1007/s00198-020-05555-1"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://link.springer.com/content/pdf/10.1007/s00198-020-05555-1.pdf",
+      "prompt": "Summarise the trial."
+     },
+     "returned_text": "DOI 10.1007/s00198-020-05555-1"
+    }
+   ],
+   "expect_grounded": [
+    "doi:10.1007/s00198-020-05555-1"
+   ]
+  },
+  {
+   "name": "w2_doi_the_same_doi_printed_by_another_fetch_whose_address_does_not_carry_it_still_grounds",
+   "why": "W2 DOI suffix, positive. A different WebFetch, whose address does not carry the DOI, printed it: that independent result grounds it.",
+   "events": [
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://link.springer.com/content/pdf/10.1007/s00198-020-05555-1.pdf",
+      "prompt": "Summarise the trial."
+     },
+     "returned_text": "DOI 10.1007/s00198-020-05555-1"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://journal.example.org/articles/vitd-trial",
+      "prompt": "state the DOI"
+     },
+     "returned_text": "The DOI is 10.1007/s00198-020-05555-1."
+    }
+   ],
+   "expect_grounded": [
+    "doi:10.1007/s00198-020-05555-1"
+   ]
+  },
+  {
+   "name": "w2_doi_a_shorter_doi_that_is_only_the_start_of_the_typed_one_is_over_excluded_on_purpose",
+   "why": "W2 DOI suffix, documented over-exclusion. The test is a blunt substring one and fails closed: a DOI that is only a leading part of the longer DOI typed into the same call is excluded from that call too. A rare cost, paid in the safe direction; the id can still ground through another result.",
+   "events": [
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://link.springer.com/content/pdf/10.1007/s00198-020-05555-1.pdf",
+      "prompt": "Summarise the trial."
+     },
+     "returned_text": "See 10.1007/s00198 for the journal series."
+    }
+   ],
+   "expect_grounded": []
+  },
+  {
+   "name": "w2_doi_a_longer_doi_the_page_prints_for_itself_excludes_nothing",
+   "why": "W2 DOI suffix. Only the model's own request is read: with no DOI in the address or prompt, a page that prints both the bare DOI and a longer string that contains it grounds both, the same as before.",
+   "events": [
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://journal.example.org/articles/vitd-trial",
+      "prompt": "state the DOI"
+     },
+     "returned_text": "DOI 10.1007/s00198-020-05555-1.pdf and DOI 10.1007/s00198-020-05555-1"
+    }
+   ],
+   "expect_grounded": [
+    "doi:10.1007/s00198-020-05555-1",
+    "doi:10.1007/s00198-020-05555-1.pdf"
+   ]
+  },
+  {
+   "name": "w2_doi_an_address_fragment_without_the_registrant_is_not_a_doi_shaped_token",
+   "why": "W2 DOI suffix, documented boundary (not an endorsement). Only DOI-shaped tokens of the own request are read, so a typed address that carries a publisher's article code but no `10.<registrant>/` prefix does not exclude a DOI the page prints.",
+   "events": [
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://link.example.org/article/s00198-020-05555-1",
+      "prompt": "Summarise the trial."
+     },
+     "returned_text": "DOI 10.1007/s00198-020-05555-1"
+    }
+   ],
+   "expect_grounded": [
+    "doi:10.1007/s00198-020-05555-1"
+   ]
   }
  ],
  "own_request_cases": [

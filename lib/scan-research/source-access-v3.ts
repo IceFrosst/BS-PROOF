@@ -67,18 +67,46 @@ export function ownRequestIds(text: string): Set<string> {
 }
 
 /**
+ * Every DOI-shaped token (the same pattern `idsIn` reads, lower-cased) in the model's own request text: the whole run from
+ * `10.<registrant>/` to the next whitespace / quote / bracket / comma / semicolon, so a typed address keeps whatever the publisher
+ * glued behind the DOI (`.../10.1007/s00198-020-05555-1.pdf`, `.../10.1093/ajcn/nqab123/6300000`, `.../10.1056/NEJMoa2034577/suppl_file`).
+ * Only DOI-shaped input is read, and only the model's own request (`ownRequestText`, which already holds the address as written AND
+ * percent-decoded); never what a tool returned. Mirrors claude_research_adapter.own_request_doi_tokens.
+ */
+export function ownRequestDoiTokens(text: string): string[] {
+  return [...text.matchAll(/10\.\d{4,9}\/[^\s"'<>)\]},;]+/gi)].map((m) => m[0].toLowerCase());
+}
+
+/**
+ * True when `candidateId` is a DOI (`doi:<bare>`) whose bare string occurs inside a DOI-shaped token of the model's own request: the
+ * page printed the DOI the model typed into the same call, with or without what the address carried behind it. A substring test,
+ * deliberately blunt and fail-closed: a SHORTER DOI that is only a leading part of a longer typed one is excluded too (a rare
+ * over-exclusion, from this call only). It names no publisher, host or suffix, and never touches the returned text, so a DOI the page
+ * prints inside a longer string of its own excludes nothing. Mirrors claude_research_adapter.doi_inside_own_request.
+ */
+export function doiInsideOwnRequest(candidateId: string, ownDoiTokens: string[]): boolean {
+  if (!candidateId.startsWith("doi:")) return false;
+  const bare = candidateId.slice(4).toLowerCase();
+  return bare.length > 0 && ownDoiTokens.some((token) => token.includes(bare));
+}
+
+/**
  * Identifiers a run's CONTENT-bearing results may ground: per event, what the tool printed with the model's own request echo
- * removed, MINUS every identifier the model's own query / WebFetch prompt could mean (`ownRequestIds`, loose; this also covers a
- * summariser that paraphrases the question: "the page does not mention PMID 123"). The same identifier printed by a DIFFERENT
- * successful result still grounds it; error / wall / refusal results ground nothing. Mirrors claude_research_adapter.grounded_ids_v3;
+ * removed, MINUS every identifier the model's own query / WebFetch prompt / address could mean (`ownRequestIds`, loose; this also
+ * covers a summariser that paraphrases the question: "the page does not mention PMID 123"), and MINUS a bare DOI that sits inside a
+ * DOI-shaped token of that same own request (`doiInsideOwnRequest`: an address that carries a publisher suffix such as `.pdf`,
+ * `/suppl_file` or a trailing article number cannot ground its own DOI). The same identifier printed by a DIFFERENT successful result
+ * still grounds it; error / wall / refusal results ground nothing. Mirrors claude_research_adapter.grounded_ids_v3;
  * tests/fixtures/lead-accounting-cases.json `grounding_cases` pins both.
  */
 export function groundedIdsV3(events: LeadEvent[]): Set<string> {
   const grounded = new Set<string>();
   for (const e of events) {
     if (e.kind !== "request" || !e.returned_text) continue;
-    const own = ownRequestIds(ownRequestText(e));
-    for (const id of idsIn(groundingText(e))) if (!own.has(id)) grounded.add(id);
+    const ownText = ownRequestText(e);
+    const own = ownRequestIds(ownText);
+    const tokens = ownRequestDoiTokens(ownText);
+    for (const id of idsIn(groundingText(e))) if (!own.has(id) && !doiInsideOwnRequest(id, tokens)) grounded.add(id);
   }
   return grounded;
 }

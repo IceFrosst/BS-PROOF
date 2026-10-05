@@ -1090,7 +1090,8 @@ class FollowThroughIncompleteError(ResearchAdapterError):
 # mention PMID 31234567"). Loose = every bare 5-9 digit run is a PMID candidate, PMC / NCT / DOI shapes are matched inside any
 # surrounding text, and a DOI is also taken without the sentence punctuation stuck to its end. Used ONLY to EXCLUDE ids from the
 # same call's result; `extract_ids` (what a returned text may GROUND) is unchanged. lib/scan-research/source-access-v3.ts
-# `ownRequestIds` MUST stay identical; tests/fixtures/lead-accounting-cases.json `grounding_cases` pins both.
+# `ownRequestIds` (and `ownRequestDoiTokens` / `doiInsideOwnRequest`, below) MUST stay identical;
+# tests/fixtures/lead-accounting-cases.json `grounding_cases` pins both.
 OWN_BARE_RUN_RE = re.compile(r"(?<![0-9])[0-9]{5,9}(?![0-9])")
 OWN_PMC_RE = re.compile(r"PMC([0-9]{5,9})(?![0-9])", re.I)
 OWN_NCT_RE = re.compile(r"NCT([0-9]{8})(?![0-9])", re.I)
@@ -1111,19 +1112,44 @@ def own_request_ids(text: str) -> set[str]:
     return ids
 
 
+def own_request_doi_tokens(text: str) -> list[str]:
+    """Every DOI-shaped token (`DOI_RE`, lower-cased) in the model's own request text: the whole run from `10.<registrant>/` to
+    the next whitespace / quote / bracket / comma / semicolon, so a typed address keeps whatever the publisher glued behind the
+    DOI (`.../10.1007/s00198-020-05555-1.pdf`, `.../10.1093/ajcn/nqab123/6300000`, `.../10.1056/NEJMoa2034577/suppl_file`).
+    Only DOI-shaped input is read, and only the model's own request (`research_leads.own_request_text`, which already holds the
+    address as written AND percent-decoded); never what a tool returned."""
+    return [m.lower() for m in DOI_RE.findall(text if isinstance(text, str) else "")]
+
+
+def doi_inside_own_request(candidate_id: str, own_doi_tokens: list[str]) -> bool:
+    """True when `candidate_id` is a DOI (`doi:<bare>`) whose bare string occurs inside a DOI-shaped token of the model's own
+    request: the page printed the DOI the model typed into the same call, with or without what the address carried behind it.
+    A substring test, deliberately blunt and fail-closed: a SHORTER DOI that is only a leading part of a longer typed one is
+    excluded too (a rare over-exclusion, from this call only). It names no publisher, host or suffix, and never touches the
+    returned text, so a DOI the page prints inside a longer string of its own excludes nothing."""
+    if not candidate_id.startswith("doi:"):
+        return False
+    bare = candidate_id[4:].lower()
+    return bool(bare) and any(bare in token for token in own_doi_tokens)
+
+
 def grounded_ids_v3(events: list) -> set:
     """Identifiers printed in returned CONTENT, minus everything the model itself typed into the SAME call.
 
     Per content-bearing event: the request echo is removed from the returned text first (the search query; the WebFetch
-    address and prompt), and then every identifier the model's OWN query / prompt could mean (`own_request_ids`: loose, so a
-    bare number it typed is covered whatever label the tool prints next to it) is excluded as well, which also covers a
-    summariser that paraphrases the question ("the page does not mention PMID 123"). The same identifier printed by a
-    DIFFERENT, independent successful result (e.g. the search that listed it) still grounds it. Error, wall and refusal
-    results never ground anything."""
+    address and prompt), and then every identifier the model's OWN query / prompt / address could mean (`own_request_ids`: loose,
+    so a bare number it typed is covered whatever label the tool prints next to it) is excluded as well, which also covers a
+    summariser that paraphrases the question ("the page does not mention PMID 123"). A DOI the page prints bare is excluded
+    too when it sits inside a DOI-shaped token of that same own request (`doi_inside_own_request`), so an address that carries
+    a publisher suffix (`.pdf`, `/suppl_file`, a trailing article number) cannot ground its own DOI either. The same identifier
+    printed by a DIFFERENT, independent successful result (e.g. the search that listed it) still grounds it. Error, wall and
+    refusal results never ground anything."""
     ids: set = set()
     for e in events:
         if e.get("kind") == "request" and e.get("returned_text"):
-            ids.update(extract_ids(research_leads.grounding_text(e)) - own_request_ids(research_leads.own_request_text(e)))
+            own_text = research_leads.own_request_text(e)
+            own, tokens = own_request_ids(own_text), own_request_doi_tokens(own_text)
+            ids.update(i for i in extract_ids(research_leads.grounding_text(e)) - own if not doi_inside_own_request(i, tokens))
     return ids
 
 

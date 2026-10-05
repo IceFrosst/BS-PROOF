@@ -369,7 +369,9 @@ class FullCaptureReplay(unittest.TestCase):
                                                               -> run 1 refuses ALL TEN rows (nine were grounded only by a WebFetch whose
                                                                  typed NCBI efetch address carried those very ids, repeated by the
                                                                  summariser with a label), run 2 and run 3 unchanged.
-        Each tier contains the one before it (nothing is loosened)."""
+        Each tier contains the one before it (nothing is loosened). `ad.grounded_ids_v3` below also carries the 2026-10-06 DOI rule
+        (a bare DOI printed by a call whose own request holds it inside a longer DOI-shaped token, e.g. `...<doi>.pdf`, is excluded
+        too); on these originals it changes nothing, so the last tier stays exactly as pinned."""
         v2_expected = {"vitd-run-1": {"36853379"}, "vitd-run-2": {"PMID:35939577"}, "vitd-run-3": {"31454046", "10.1039/C9FO03063H"}}
         before_w2_expected = {"vitd-run-1": {"36853379"}, "vitd-run-2": {"PMID:35939577"},
                               "vitd-run-3": {"31454046", "10.1039/C9FO03063H", "10.1056/NEJMoa2202106"}}
