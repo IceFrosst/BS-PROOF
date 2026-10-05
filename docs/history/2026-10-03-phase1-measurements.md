@@ -361,3 +361,22 @@ Benchmark: lean SMD pass (coverage 78 %, width 1.1x); strength still not
 testable (coverage 46 %, width 2.4x). The add-on fix recovers nothing in this
 run: isrctn68542582's only claim compares GAA + CrM with PLACEBO (a real
 combination contrast), not with GAA.
+
+## Retrieval funnel (creatine, measured 2026-10-05; network only, no model)
+
+| stage | creatine RCTs |
+|---|---|
+| Europe PMC, broad scope | 6,624 (mostly creatine kinase / creatinine noise) |
+| Europe PMC, supplement scope (run 20261005_080012) | 1,234 |
+| Europe PMC, intervention scope | 397 |
+| store after the supplement-scope run (600-primary cap) | 546 RCT-rank |
+| ... passing the relevance gate | 147 (27 %) |
+| ... readable (`--full-text-only`) | 99 extracted |
+
+Intervention scope is **97 % precise** (386 of 397 pass the relevance gate).
+Matched on DOI / PMID: it finds 121 of the current 147 relevant RCTs plus
+**265 new**, of which ~91 are readable (32 PMC full text + 59 with a green-OA
+copy). The 26 current RCTs it misses are mostly multi-ingredient or
+other-ingredient trials (refused as combinations anyway); 8 have full text.
+The store keeps every scope's records, so an `--intervention-scope` run scores
+the UNION: ~190 readable RCTs against 99 today.
