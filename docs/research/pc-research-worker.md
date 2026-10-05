@@ -1,11 +1,24 @@
 # Main-PC research worker — contract, install, health, rollback
 
-Status (2026-10-04, times UTC): **RELEASED_RESTRICTED.** The reviewed code is on `main`
+Status (2026-10-05, times UTC): **RELEASED_EVERYONE under a USER-ACCEPTED HELD-OPEN hosting condition (not a fully hosted service).**
+Production `SCAN_LIVE_RESEARCH_ENABLED` is `on` (it was `owners`): live research is open to every signed-in Google user; an
+anonymous or unauthenticated caller gets 401. The user explicitly decided to finish research for everyone now and move to the
+VPS later, and accepted the hosting condition: keep one Ubuntu/WSL terminal open, the PC awake and online ("Held-open hosting
+mode" below). That condition REPLACES the WSL-survival gate G4 for this temporary period. **G4 was NOT performed and is NOT
+claimed**: nothing here says the worker survives with every terminal closed, a PC sleep, a reboot, a Windows restart or an
+autostart (there is none). The app code on production is unchanged (`273c2d5`, the same app tree as `9e9c0d3`); the only
+production change is the one Production variable `SCAN_LIVE_RESEARCH_ENABLED`; the Sensitive `SCAN_LIVE_RESEARCH_OWNER_IDS`
+and `BS_PROOF_RESEARCH_WORKER_TOKEN` were not touched (the owner-id variable is the one-step rollback to `owners`). The
+worker is the TEMPORARY supervised process on the founder's main PC ("Temporary main-PC background worker (until the VPS)").
+What was verified is in "Verified when the flag went `on`" below. Wherever this file says research for everyone is "NOT
+enabled" or G4 is a "hard gate", that is the history before this decision.
+
+Earlier status (2026-10-04, times UTC; superseded by the status above): **RELEASED_RESTRICTED.** The reviewed code is on `main`
 (`9e9c0d30becd1cc70fff2f115205dfbdeb8d7514`, the privacy-clean commit that the Claude Code
 owner's second read-only verification passed) and live on production in the private `owners`
 mode; the worker runtime was reinstalled from that commit; ONE real owned job ran end to end;
 the persistent service is NOT active (it needs the owner's sudo, see "Owner-only install path");
-research for everyone is NOT enabled by this document. A TEMPORARY detached supervisor for the same installed runtime
+research for everyone was NOT enabled in that earlier state. A TEMPORARY detached supervisor for the same installed runtime
 (code + runbook; see "Temporary main-PC background worker (until the VPS)") is the founder-authorised bridge to the VPS.
 
 Facts, none of them secret:
@@ -419,7 +432,8 @@ What it does (every item is a test in `tests/test_pc_research_supervisor.py`, 54
   Model text never reaches this log (the worker never prints it); per-job diagnostics stay in the worker's private run directories.
 - **Readiness is observable, with no model.** `status` exits 0 only when: supervisor identity verified (pid file + start time +
   lock), worker alive and holding `worker.lock`, `status.json` is THIS worker's, state is `polling` (fresh) or `running`, and
-  at least two poll writes were seen (a claim was answered; an idle queue answers `{"job": null}`, which calls no model).
+  at least two poll writes were seen (the worker's own status file: it proves the worker is polling, NOT by itself that the
+  server answered; the server's `200` answers were seen separately in the production request logs; an idle queue answers `{"job": null}`, which calls no model).
   A leftover `status.json` of a dead pid is reported as stale, never as a heartbeat; `backoff` / `cooldown` are NOT ready.
   Limits of READY: `running` counts as READY with no heartbeat-age check (the worker writes `status.json` once when a job starts, so
   `worker.age_s` is then the job's elapsed time, not a heartbeat); watch a long job in `supervisor.log` and the queue, and use `stop --now`
@@ -454,12 +468,60 @@ $SUP stop                              # refuses while a job runs; add --now to 
 
 Opening research to everyone (the founder's decision of 2026-10-05) must happen in this order, and a failed step at any
 point fails CLOSED (leave or restore `SCAN_LIVE_RESEARCH_ENABLED=owners`, or set it to `off`): (1) `check`, (2) `start --wait-ready`
-and `status` READY, (2b) the WSL-survival gate G4 below passes, (3) only then set Production `SCAN_LIVE_RESEARCH_ENABLED=on` (the literal `1`, `true`, `yes` do the same),
+and `status` READY, (2b) the user's explicit held-open hosting condition (below) is accepted and the worker is READY (this REPLACES the WSL-survival
+gate G4, which was NOT performed; DONE 2026-10-05), (3) then set Production `SCAN_LIVE_RESEARCH_ENABLED=on` (the literal `1`, `true`, `yes` do the same),
 redeploy, verify the deployment is READY at the intended commit. Kill switches, fastest first: flag `off` + redeploy (no new work
 can be queued; running jobs finish); `stop --drain` or `stop --now`; revoke the worker token on Vercel + redeploy.
 Rollback of the runtime: `stop --drain`, `deploy/pc_research_worker_release.sh rollback`, then `start` with the OTHER release's commit.
 
-### WSL-survival gate G4 (hard gate before the public flag)
+### Held-open hosting mode (the user-accepted condition under which the public flag is `on`)
+
+Decision (the user, 2026-10-05, explicit): research for every signed-in Google user now, VPS later, with the PC kept awake and
+online and ONE Ubuntu/WSL terminal kept open (two tabs were confirmed open; a read-only check saw three interactive shells on
+pts/0-2 and the supervisor READY with the same pids, zero restarts, a growing poll counter and no duplicate process). This is a
+hosting CONDITION, not a pass of gate G4. What it means, stated plainly:
+
+- **G4 was NOT performed and is not claimed.** The closed-terminal test does not apply to the mode the user chose. Never write
+  that the worker survives with every terminal closed, a PC sleep, a reboot, a Windows restart or an autostart.
+- **When the condition ends** (the last terminal closes, the PC sleeps or reboots, WSL stops) the worker stops, no job is claimed
+  and every job stays `queued` until someone runs `start` by hand. The supervisor is temporary: no systemd, no autostart, no service.
+  Nothing is lost or mis-scored by this (a queued job spends nothing); users only wait with no ETA.
+- **The panel queues automatically**: it POSTs once per stored fresh scan of every signed-in user (not opt-in), so the queue fills
+  while the worker is down. A user whose 3 open jobs are all waiting sees the "research running" 429, which is misleading while the PC is down.
+- **The flag stops QUEUEING only.** The worker door ignores the flag: jobs already queued are still claimed and run (one at a
+  time, about 400 s each on the founder's subscription, no global cap, no budget/turn/deadline cap, no fallback model) while the
+  worker is up, even after `owners` or `off`. To stop spend on a backlog, `stop` the worker (queued jobs stay queued); after an
+  outage the worker works through the whole backlog sequentially.
+- **Before ending the held-open period for long** (shutdown, travel), set `SCAN_LIVE_RESEARCH_ENABLED` to `owners` or `off` and
+  redeploy FIRST, otherwise users keep queuing jobs nobody runs. Never `kill` the worker; `stop` is the only stop.
+- **Who can use it:** every Supabase-verified GOOGLE user (no session or a bogus token is 401 and never queues, shown live; an anonymous Supabase session has no Google identity and is refused by the same gate, read from the code and not exercised live);
+  a user reads and queues only their own saved scans. The output is experimental, ungraded and not approved: its sources are
+  search snippets and page summaries written by a small model (Claude Haiku), not the papers, and it never changes a score.
+
+Verified when the flag went `on` (2026-10-05, nothing secret printed, no new model job):
+
+- The actual Claude Code owner, read-only (`claude-sonnet-5-5`, `--effort xhigh`, tools Read/Grep/Glob only, subscription login
+  `apiKeySource: none`, no turn/budget/deadline cap, no fallback), read the mode parser, the POST/GET/worker routes, the Google gate,
+  this amendment and its earlier supervisor PASS, and returned `VERDICT: PASS` with no Critical. Its conditions are the text above:
+  say the panel queues automatically, say the flag stops queueing only, the operator rules, and rewrite every "G4 hard gate" statement.
+- The focused existing tests `tests/scan-research-owner-smoke.test.ts` and `tests/scan-research.test.ts` pass (50 tests; `on`/`1`/`true`/`yes`
+  in any case or padding parse to everyone, only the word `owners` to owners, everything else to off).
+- Metadata first (`GET /v10/projects/{id}/env`, no decrypt; only the research keys were printed), then ONE single-entry `PATCH` of
+  `SCAN_LIVE_RESEARCH_ENABLED` (Production only) from `owners` to `on`, value passed as plain input; read back with the single-entry
+  `GET /v1/projects/{id}/env/{envId}` (NOT the deprecated bulk decrypt): value `on`, target production only, type unchanged. The two
+  Sensitive research variables kept their `updatedAt` (untouched; their values were never read).
+- The unchanged production deployment of `273c2d5` was redeployed (`dpl_2TGnxu8kASXBaEVjjLVTrgDXi4TV`): READY, the canonical
+  alias points at it. Unauthenticated and bogus-bearer `POST /api/scan/research/` and `GET /api/scan/research/<id>/` answer 401
+  `no-store`; the worker door answers 401 for no token and for a wrong token.
+- Prior real job: through the designated test account's existing genuine Google session, History replay of the earlier scan
+  and "Look up live research" sent ONE `POST` that answered 200 `created:false` with the job `succeeded` (the per-scan key makes
+  a repeat idempotent: no new job, no model call), and the panel showed the same EXPERIMENTAL / UNGRADED audit (24 snippets, 11 Haiku
+  page summaries, 0 original documents).
+- NOT proved: gate G4 (not performed); a live check with a non-allow-listed Google identity (none exists; `on` is proved by the
+  parser tests and the read-back, not by a second account); the phone; that the audit's studies or conclusions are right.
+- Rollback: set Production `SCAN_LIVE_RESEARCH_ENABLED` back to `owners` (or `off`) and redeploy; the owner-id variable is intact.
+
+### WSL-survival gate G4 (NOT performed; replaced by the held-open mode above; kept as the procedure for an attended measurement)
 
 Why: WSL2 ties a distro's life to the Windows `wsl.exe` sessions attached to it. Read-only on 2026-10-05: `Ubuntu-22.04` is held by ONE
 terminal (a `wsl.exe ~ -d Ubuntu-22.04` pair, the window that hosts the Pi session); Docker Desktop keeps ITS OWN distros alive with a
@@ -483,17 +545,18 @@ python3 $G/gate.py verify       # exit 0 = PASS
 `verify` passes only if ALL hold: `status` READY now; same `boot_id`; same PID 1 start time (the distro was not torn down and restarted);
 same `supervisor.pid` (pid, start ticks, boot id); same worker pid; no worker restart; the poll counter grew; journald/logind shows a window of
 at least 360 s with NO session attached (measured, not asserted); and the Vercel production request log (read-only, an independent
-observer) shows the worker polling `/api/scan/research/worker/` through that window with no gap above 120 s. Any FAIL = NO-GO: the flag
-stays `owners`. `gate.py` lives on the PC only (`~/.local/share/bsproof-wsl-gate/`, not in this repository, not an independently reviewed artefact); its
+observer) shows the worker polling `/api/scan/research/worker/` through that window with no gap above 120 s. Any FAIL means survival is not shown (it was the old NO-GO for the
+flag; the flag decision now rests on the held-open mode above). `gate.py` lives on the PC only (`~/.local/share/bsproof-wsl-gate/`, not in this repository, not an independently reviewed artefact); its
 parsing and window logic were unit-tested on synthetic input and it correctly FAILS while a session is attached.
-If G4 fails, the smallest honest options are: (a) keep one `Ubuntu-22.04` window open and run research only while it is, never described as
+G4 was not performed; the smallest honest options were: (a) keep one `Ubuntu-22.04` window open and run research only while it is, never described as
 "always on"; or (b) an owner-reviewed host keepalive (for example Docker's `wsl.exe -d <distro> -e sleep infinity` approach, which touches the
-Windows side) as its own plan. Neither is done by default; the VPS removes the problem.
+Windows side) as its own plan. Neither is done by default; the VPS removes the problem. Option (a) is the user-accepted mode now in force (above).
 
 Honest limits: not boot-persistent; needs the PC awake, online, WSL running and the Claude login valid; one worker, one job
 at a time, no global queue cap (3 open jobs per user is the only brake); a quota / rate-limit makes the worker cool down
 (900 s) and `status` says NOT READY; the supervisor passed an independent review and the Claude Code owner's read-only
-verification (2026-10-05, `claude-sonnet-5-5` xhigh, verdict PASS for the push and for starting it in `owners` mode only); the reviewed unit's own `Restart=` / `systemd` semantics are re-implemented here, not delegated to systemd.
+verification (2026-10-05, `claude-sonnet-5-5` xhigh, verdict PASS for the push and for starting it in `owners` mode only; a second, narrow owner pass the same day covers the held-open
+amendment and the flag `on`, see the Status); the reviewed unit's own `Restart=` / `systemd` semantics are re-implemented here, not delegated to systemd.
 
 ## Staged rollout: controls, secrets and the private owner-smoke
 
@@ -578,7 +641,8 @@ Sequence (each step needs the previous one green; none of it is run by this comm
    spends the founder's subscription, the only cap is 3 open jobs per user and there is NO
    global cap. If the founder decides to widen it: set `SCAN_LIVE_RESEARCH_ENABLED=on`
    (`1`, `true` and `yes` do the same), remove or leave the id list (it is ignored outside
-   `owners` mode), redeploy, and start the persistent service.
+   `owners` mode), redeploy, and start the persistent service (here: the temporary supervisor, held open). DONE 2026-10-05 by the
+   founder's separate decision; see the Status at the top and "Held-open hosting mode".
 
 Kill switches, fastest first: set `SCAN_LIVE_RESEARCH_ENABLED` to the literal `off` (or
 remove it) and redeploy (no new work can be queued; running jobs finish). Do not rely on
@@ -651,7 +715,15 @@ model behavior, account state, provisioning, or clinical validity.
 
 ## Handoff
 
-State (2026-10-04, UTC): `main` = `9e9c0d30becd1cc70fff2f115205dfbdeb8d7514`, production READY on it in
+State (2026-10-05, UTC): RELEASED_EVERYONE under the held-open hosting condition. Production runs `273c2d5` with
+`SCAN_LIVE_RESEARCH_ENABLED=on` (every signed-in Google user; the Git deploy of this documentation commit is checked after its push
+and reported in the release report, not in this file). The temporary supervisor/worker run on the main PC and only while the user keeps
+a terminal open with the PC awake and online; G4 was NOT performed. Open items: keep the terminal open; if that ends for long, set
+`owners`/`off` and redeploy first and `stop` the worker if the backlog must stop; after any PC/WSL/Windows restart run `start` again; a
+non-allow-listed identity check and the phone check are untested; watch a long `running` job (no heartbeat check); the VPS is next and
+needs its own permission. Kill switches: flag `owners`/`off` + redeploy (queueing only), `stop --drain`/`stop --now`, token revoke + redeploy.
+
+Earlier state (2026-10-04, UTC; superseded): `main` = `9e9c0d30becd1cc70fff2f115205dfbdeb8d7514`, production READY on it in
 the private `owners` mode, runtime reinstalled from it, one owned job passed end to end
 (experimental, ungraded, not scored). Open items, in order: (1) the owner installs the
 persistent service (commands in "Owner-only install path"); (2) optional: a phone check and a
