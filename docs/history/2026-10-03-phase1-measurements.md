@@ -316,3 +316,40 @@ the run then crashed in `_agent_stats` on S5N's list-shaped `_meta`, was fixed
   the live v14 creatine score (founder: merge decided later).
 - `scripts/auto_report_push.py` committed and pushed the report to
   `origin/Jans_attempt` (not main; `SP_AUTO_PUSH=0` turns it off).
+
+### Where the trials went (20261005_080012, analysed offline 2026-10-05)
+
+Extractions replayed from the LLM cache with every model call blocked (98/99
+exact; doi:10.1139/apnm-2019-0066 missed the cache on S3/S5/S7). The replay
+reproduces the run's pools exactly (k = 5 / 5 / 5 / 2).
+
+**134 mapped claims -> 57 make an effect -> 33 (study, outcome) pairs -> 17 pooled.**
+
+The 46 claims with no verified effect:
+
+| cause | claims |
+|---|---|
+| no numbers printed (text-only results, figures) | 22 |
+| arm n missing from the quote / rejected by the span check | 13 |
+| only % changes, interaction statistics, or one arm | 10 |
+| means + n but no spread | 1 |
+
+The 16 effect-bearing pairs not pooled are scope refusals: 13 combination arms,
+3 off-target populations (arthritis, haemodialysis). The combination rule is
+right for 12 of the 13 (creatine + HMB, multi-ingredient products,
+creatine-electrolyte, creatine + bicarbonate, creatine nitrate with 1 g/d
+nitrate, magnesium creatine chelate + fruit juice). One is a gap:
+isrctn68542582 (PLA / GAA / GAA + CrM) is an add-on design, but
+`_matched_factorial_background` requires exactly one target and one control
+arm, so a 3-arm trial is refused whole even though GAA + CrM vs GAA isolates
+creatine.
+
+What-if (offline, no code change): an arm's n taken from S3's per-arm n when the
+claim's own n is missing adds 5 trials -- lean mass k 5 -> 7, SMD +0.19
+[-0.08, 0.46]; power 5 -> 7, -0.00 [-0.41, 0.40]; strength 5 -> 6, +0.25
+[-0.22, 0.71]. Caveat: S3's n is per arm for the trial, not necessarily the n
+analysed for that outcome (affects the variance only, never the sign).
+
+**Ceiling:** even with every fix, this corpus yields about 6-10 trials per
+outcome, against 14-61 in the published meta-analyses. The binding limit is
+corpus size (99 full-text studies, supplement scope), not extraction quality.
