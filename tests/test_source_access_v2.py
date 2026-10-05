@@ -108,5 +108,21 @@ class SourceAccessV2Tests(unittest.TestCase):
             ad.claude_bin(env)
 
 
+ID_CASES = json.loads((ROOT / "tests/fixtures/id-extraction-cases.json").read_text())
+
+
+class IdExtractionParity(unittest.TestCase):
+    """The same fixture is run by tests/scan-research-id-parity.test.ts against the server's `idsIn`: the worker
+    grounds with extract_ids before it posts and the server recomputes the grounding, so they must never disagree."""
+
+    def test_extract_ids_matches_every_shared_case(self):
+        for case in ID_CASES["cases"]:
+            self.assertEqual(sorted(ad.extract_ids(case["text"])), case["ids"], case["name"])
+
+    def test_normalise_audit_id_matches_every_shared_case(self):
+        for case in ID_CASES["audit_ids"]:
+            self.assertEqual(ad.normalise_audit_id(case["raw"]), case["normalised"], repr(case["raw"]))
+
+
 if __name__ == "__main__":
     unittest.main()

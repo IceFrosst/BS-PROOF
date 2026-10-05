@@ -32,7 +32,7 @@
     "meta": {
       "run_at": "2026-09-10",
       "model": "claude-sonnet-5-5",
-      "prompt": "live-research-v0.2",
+      "prompt": "live-research-v0.3",
       "note": "FRESH live run. Every source below was retrieved during this session via Europe PMC REST (search + fullTextXML), NCBI efetch (db=pmc) and direct HTTP; no prior audit JSON was read and no third-party model output was used. Access level is stated per source. The elemental-vs-compound question is resolved explicitly in dose_note and every dose verdict names the interpretation it assumes. This audit has not been verified by a human; it is model output computed into a score by code."
     },
     "product": "Magnesium bisglycinate 300 mg/day",
@@ -163,7 +163,7 @@
     "version": "SourceAccessV2",
     "runner": {
       "model": "claude-sonnet-5-5",
-      "prompt_version": "live-research-v0.2",
+      "prompt_version": "live-research-v0.3",
       "cli_version": "2.1.287",
       "adapter_version": "claude-research-adapter-v0.1",
       "classifier_version": "fetch-access-v2",

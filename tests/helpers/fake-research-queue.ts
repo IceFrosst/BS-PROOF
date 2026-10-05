@@ -135,7 +135,7 @@ export class FakeResearchQueue {
   bsproof_research_complete(p: Record<string, unknown>) {
     const j = this.current(p);
     if (!j) return { status: "lease_invalid" };
-    if (j.prompt_version !== "live-research-v0.2") return { status: "unsupported_prompt_version" };
+    if (j.prompt_version !== "live-research-v0.2" && j.prompt_version !== "live-research-v0.3") return { status: "unsupported_prompt_version" };
     if (j.status === "succeeded") return { status: JSON.stringify(j.result) === JSON.stringify(p.p_result) ? "already_completed" : "conflict" };
     if (j.status !== "running" || (j.lease_expires_at ?? 0) <= this.now) return { status: "lease_invalid" };
     j.status = "succeeded";

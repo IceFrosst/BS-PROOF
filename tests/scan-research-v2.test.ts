@@ -9,7 +9,7 @@ type Fixture = { audit: Record<string, any>; source_access_v2: Record<string, an
 const original = JSON.parse(readFileSync("tests/fixtures/source-access-v2.json", "utf8")) as Fixture;
 const copy = (): Fixture => JSON.parse(JSON.stringify(original)) as Fixture;
 const hash = (text: string) => createHash("sha256").update(text, "utf8").digest("hex");
-const check = (f: Fixture = copy(), prompt = "live-research-v0.2") => checkLiveResearchResultV2(f.audit, f.source_access_v2, prompt);
+const check = (f: Fixture = copy(), prompt = "live-research-v0.3") => checkLiveResearchResultV2(f.audit, f.source_access_v2, prompt);
 
 describe("SourceAccessV2 validation and owner projection", () => {
   it("validates shared fixture and returns only owner-safe projection", () => {
@@ -22,7 +22,7 @@ describe("SourceAccessV2 validation and owner projection", () => {
       inventory: [{ id: "pmid:12345678", evidence_class: "derived_snippet" }],
       limitations: ["WebSearch snippets and WebFetch model summaries are not original papers.", "ID matching does not verify study numbers or clinical validity."],
     });
-    expect(result.result.provenance).toMatchObject({ model: "claude-sonnet-5-5", prompt_version: "live-research-v0.2", cli_version: "2.1.287", source_access_version: "SourceAccessV2", clinically_approved: false, affects_score: false });
+    expect(result.result.provenance).toMatchObject({ model: "claude-sonnet-5-5", prompt_version: "live-research-v0.3", cli_version: "2.1.287", source_access_version: "SourceAccessV2", clinically_approved: false, affects_score: false });
     expect(JSON.stringify(result.result)).not.toContain("PubMed PMID");
     expect(JSON.stringify(result.result)).not.toContain("tool-search-1");
     expect(result.result.audit).toEqual(original.audit);
@@ -74,6 +74,27 @@ describe("SourceAccessV2 validation and owner projection", () => {
     f = copy(); f.audit.confidence_note = "x".repeat(800_000);
     expect(check(f).ok).toBe(false);
     expect(check(copy(), "live-research-v0.1").ok).toBe(false);
+  });
+
+  it("prompt versions: v0.3 is current, v0.2 (a not-yet-upgraded worker) is still accepted and stamped as what ran, anything else is refused", () => {
+    const asVersion = (v: string, runner = v) => {
+      const f = copy();
+      f.audit.meta.prompt = v;
+      f.source_access_v2.runner.prompt_version = runner;
+      return f;
+    };
+    const v2 = check(asVersion("live-research-v0.2"), "live-research-v0.2");
+    expect(v2.ok).toBe(true);
+    if (v2.ok) expect(v2.result.provenance.prompt_version).toBe("live-research-v0.2"); // what actually ran, not what the site now stamps
+    const v3 = check(asVersion("live-research-v0.3"));
+    expect(v3.ok).toBe(true);
+    if (v3.ok) expect(v3.result.provenance.prompt_version).toBe("live-research-v0.3");
+    // the audit and the receipt must name the same prompt, and it must be one of the two
+    expect(check(asVersion("live-research-v0.3", "live-research-v0.2")).ok).toBe(false);
+    expect(check(asVersion("live-research-v0.2", "live-research-v0.3")).ok).toBe(false);
+    expect(check(asVersion("live-research-v0.1")).ok).toBe(false);
+    expect(check(asVersion("live-research-v0.4")).ok).toBe(false);
+    expect(check(asVersion("live-research-v0.3"), "live-research-v0.1").ok).toBe(false);
   });
 });
 

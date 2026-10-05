@@ -314,6 +314,39 @@ describe("worker route: claim, lease, completion", () => {
     expect(await claimed()).toBeNull(); // and it is never offered again
   });
 
+  it("prompt versions: new jobs are stamped v0.3; a job queued under v0.2 still completes (with a v0.3 audit, or from a not-yet-upgraded worker's v0.2 audit)", async () => {
+    await queued();
+    const c = await claimed();
+    expect(c.prompt_version).toBe("live-research-v0.3");
+    queue.jobs[0].prompt_version = "live-research-v0.2"; // queued before the upgrade
+    expect((await complete(c)).status).toBe(200);
+    const stored = (await body(await get(c.id, bearer("tok-a")))).job;
+    expect(stored.result.provenance.prompt_version).toBe("live-research-v0.3"); // what actually ran, not the job's old stamp
+
+    await queued(SCAN_A2);
+    const c2 = await claimed();
+    const audit = validAudit();
+    audit.meta.prompt = "live-research-v0.2";
+    const access = accessFor(audit);
+    access.runner.prompt_version = "live-research-v0.2";
+    expect((await complete(c2, audit, access)).status).toBe(200);
+    expect((await body(await get(c2.id, bearer("tok-a")))).job.result.provenance.prompt_version).toBe("live-research-v0.2");
+  });
+
+  it("an audit whose meta.prompt and receipt runner disagree, or name an unknown prompt, is refused 422 and nothing is stored", async () => {
+    await queued();
+    const c = await claimed();
+    for (const [metaPrompt, runnerPrompt] of [["live-research-v0.3", "live-research-v0.2"], ["live-research-v0.9", "live-research-v0.9"]]) {
+      const audit = validAudit();
+      audit.meta.prompt = metaPrompt;
+      const access = accessFor(audit);
+      access.runner.prompt_version = runnerPrompt;
+      const res = await complete(c, audit, access);
+      expect(res.status, `${metaPrompt}/${runnerPrompt}`).toBe(422);
+    }
+    expect(queue.jobs[0]).toMatchObject({ status: "running", result: null });
+  });
+
   it("a job stored with an older prompt version is refused at the SQL compare-and-set with an explicit 409", async () => {
     await queued();
     const c = await claimed();

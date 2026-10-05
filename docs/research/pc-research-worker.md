@@ -1,18 +1,23 @@
 # Main-PC research worker — contract, install, health, rollback
 
-Status (2026-10-06, UTC) — **CANDIDATE ONLY: ONE ATTEMPT PER JOB and MEDIUM effort. NOT applied, NOT installed, NOT deployed.**
-The user (explicitly) asked for live research on `claude-sonnet-5-5` at effort **medium** and for **one** attempt per job: no
-automatic second or third model run. Why: the earlier Vitamin D job ran three times. Every run was refused by the worker's own
-grounding guard ("inventory ID is not grounded in returned tool text"), which was reported as `worker_internal_error` with
-`retryable: true`, so the server's `bsproof_research_fail` requeued it while `attempts < 3`. In the repository this commit
-changes: the adapter effort `xhigh` -> `medium` (the model id is unchanged); the SQL attempt cap 3 -> 1 in `docs/research-jobs.sql`
-and, for the project that is already provisioned, a narrow versioned migration
-`docs/research-jobs-migration-001-one-attempt.sql`; the classification of that one grounding refusal
-(`audit_contract_violation`, not retryable); one stale line of UI copy and two operator messages. **Nothing here is live until the
-owner applies the migration and installs the new runtime** (section "One attempt per job and medium effort: what changed,
-install order, drain" below). The grounding guard itself is unchanged and strict; nothing is repaired, dropped or forced through.
-Everything below this paragraph that says "three attempts", "requeued" or "re-claimed" describes the 2026-10-04/05 production
-state until the migration is applied.
+Status (2026-10-06, UTC) — **CANDIDATE ONLY: fixes the CAUSE of the Vitamin D failures, plus ONE attempt per job and MEDIUM effort. NOT applied, NOT installed, NOT deployed, NO model run to test it.**
+The user asked for live research on `claude-sonnet-5-5` at effort **medium** with **one** attempt per job (no automatic second or
+third model run), and then said the real question is *why an attempt fails*, so a cap alone is not the fix. **Why it failed** (replayed
+from the three original captures, section "Why the Vitamin D job failed three times"): the worker's inventory-grounding guard refused
+each audit because cited ids were not "printed in returned tool text". That was TRUE for 4 of the 33 cited ids over the three runs
+(the model asserted an id no returned result printed) and FALSE for 14 of them: those papers WERE retrieved, and the ids WERE in
+returned text, but in a form the extraction did not recognise (a Markdown-bold `**PMID:** 123` label the small summariser model
+wrote; a DOI inside a URL ending `/full`). The other 15 were accepted. The guard is unchanged and strict: it was the id *recognition*
+that was too narrow, plus a model that did not know the check exists. In the repository this candidate changes: (1) the id
+extraction, in lockstep in the worker and the server, for exactly those two measured forms; (2) the live prompt `live-research-v0.2`
+-> `live-research-v0.3` = v0.2 plus ONE rule block (L7, the citation check; proven by test to be the only difference), with every
+tier accepting both versions so no queued job and no old runtime is stranded; (3) effort `xhigh` -> `medium`, model unchanged;
+(4) one attempt per job in the SQL (`docs/research-jobs.sql`, migration 001), and `bsproof_research_complete` accepting the v0.3
+job version (migration 002); (5) the grounding refusal is classified `audit_contract_violation`, not a retryable worker fault.
+**Nothing here is live until the owner follows "One attempt per job and medium effort: what changed, install order, drain" (the order
+matters). Even then a research run can still fail**: the replay shows 4 residual unprinted ids that no parser change may accept; L7
+is the fix for those and it is UNPROVEN until a model runs it (none has). Medium does not guarantee success. Everything below that
+says "three attempts", "requeued" or "re-claimed" describes the 2026-10-04/05 production state until the migrations are applied.
 
 Status (2026-10-05, times UTC): **RELEASED_EVERYONE under a USER-ACCEPTED HELD-OPEN hosting condition (not a fully hosted service).**
 Production `SCAN_LIVE_RESEARCH_ENABLED` is `on` (it was `owners`): live research is open to every signed-in Google user; an
@@ -684,65 +689,126 @@ shared project (re-verified read-only on 2026-10-04), and `1` is the wrong first
 `owners` as above; `1` / `true` / `on` / `yes` is the separate general-use decision of step 7.
 (Until 2026-10-06 its sha256 stayed `48783cd3a6d9535b0a8ca8a792c0f73b3d32a98d3b0550c730731b5d9cd9a4fb`; that file is the one
 that was APPLIED and is kept byte-for-byte as `tests/fixtures/research-jobs-baseline-48783cd3.sql`. The current file is the
-one-attempt revision, sha256 `d598f19a9afcb46e0fda0fc69cbe80674b067e8c84f10f2afd8b3e94d1f16a83`; the migration is `9d147ecf30bd5ba4c47c33e50dd18fc11bbca10e5371354240eb919aff33fb41`.)
+one-attempt + v0.3 revision, sha256 `7fb43b838f6191072ffe268704ea7a30ce13fcfe7aefd5ff48751080e078e9ec`; the migrations are 001 `9d147ecf30bd5ba4c47c33e50dd18fc11bbca10e5371354240eb919aff33fb41` and 002 `1f2368e155e5c36cf79b27eba8d05e7b7aac4d62b9cd084e1e88a5ec392c46fb`.)
+
+## Why the Vitamin D job failed three times
+
+**Evidence.** The three original raw streams (`runs/20261005T111436Z-…`, `…112130Z-…`, `…112912Z-…`; 0400, untouched; sha256
+pinned in `tests/fixtures/grounding-replay-vitd-20261005.json`) were replayed through the REAL guard with `tests/test_grounding_replay.py`.
+A fresh session each, `claude-sonnet-5-5` at `xhigh`, 409 s / 457 s / 468 s, 12+29 / 10+24 / 21+23 WebSearch+WebFetch calls. Each run
+returned a schema-valid audit and was refused only by `validate_live_receipts_and_inventory`. The worker's message names only the FIRST
+refused id; the real extent was 10 of 10 cited rows (run 1), 5 of 13 (run 2), 3 of 10 (run 3).
+
+| stage | what the capture shows | rows | verdict |
+|---|---|---|---|
+| **A. Extraction missed a printed PMID** (`extract_ids`, and its twin `idsIn` on the server) | A content-bearing WebFetch summary printed `**PMID:** 35939577` with the title, journal, year. The pattern `PMID[:\s#]*digits` does not allow the `**` the summariser put after the colon. Run 1's summariser used that form throughout: the OLD pattern recognised **0** labelled PMIDs in run 1's returned text (18 now), 33 of 43 in run 2. | 13 | **parser fault. The model had retrieved the paper.** |
+| **B. Extraction mangled a printed DOI** | A search result printed `https://frontiersin.org/articles/10.3389/fpubh.2022.979649/full`. The DOI regex captures `…979649/full`, which is not the cited `…979649`. (`/pdf` did the same in run 1.) | 1 | **parser fault.** |
+| **C. The id is not printed by any returned result** | (1) a bare number in a "The PMID list … is:" line, then an efetch whose question did not ask for the PMID; (2) an id typed into the model's own Europe PMC request, whose summary returned the title but not the id; (3) a number inside the address of a third-party "full citation" link in a search result that was never opened; (4) a DOI assembled from the tails of two `pubs.rsc.org` link addresses. | 4 | **model citation process. The guard is right to refuse; it must stay.** |
+| accepted as printed | | 15 | — |
+
+So the answer to "did it hallucinate the papers": **not in these runs**. Every id in stage A/B had a retrieved page that printed its title and year
+(where the same PMID occurs in more than one run it carries the same title); in stage C the papers in (1) and (2) were retrieved in that same run,
+but the model's question asked for title, authors, journal and year and NOT for the identifier (the grounded records were fetched with "give PMID, title …"), so the
+model asserted an identifier the tool never printed, which is exactly what the guard exists to refuse. Not established: that any number
+the audit reports from those pages is right (nobody checked). With stages A and B fixed each of the three runs still ends with 1, 1 and 2
+refused rows, so the extraction fix ALONE rescues none of them: stage C is why rule L7 exists.
+
+**What the fix does and does not do.**
+- A + B (`PMID_RE`, `DOI_WEB_VIEW_SUFFIXES`; `idsIn` on the server; one shared fixture `tests/fixtures/id-extraction-cases.json` run by Python and
+  TypeScript): a PMID is recognised when the returned text labels it `PMID` with only whitespace, `:`, `#` or `*` before the digits; a DOI
+  read out of a URL ending exactly `/full` or `/pdf` also yields the bare DOI (the full capture is kept too). Still NOT recognised, by test:
+  a bare number, "PMID list … 123", "PMIDs: 123", a table cell, a number in a link address, an id that appears only in the model's own
+  request, `__PMID:__`, any other URL tail, a different DOI behind `/full`. A receipt that is missing, failed (error/wall/refusal), for a
+  different paper, or an invented id cannot ground a row (`test_negative_*`).
+- The server recomputes this grounding in `complete` and answers 422 `invalid_result`, which the worker never retries; so the two sides MUST
+  agree (a worker-only fix would turn an accepted audit into a lost job). Deploy order below.
+- C (`prompts/research_audit_live.md` rule L7, `live-research-v0.3`): tells the model the check exists and how it works (exact text match on
+  returned results; one unprinted id loses the whole run; there is no second run), to ask WebFetch to print the PMID/DOI/NCT exactly as printed
+  when it opens a record, to check every inventory row against a returned result before answering, to delete a row it cannot find (and the
+  claims that rested on it, and list it in `could_not_access`), and that a shorter audit with an empty inventory and `unclear` is a complete,
+  accepted answer. No unit, number, constant, gate or schema field changed; `tests/test_pc_research_worker.py` proves v0.3 = the v0.2 text
+  (kept verbatim in `tests/fixtures/research_audit_live_v0.2.md`) + L7 + the version strings.
+- Nothing is whitelisted, repaired, stripped or re-run. No id is accepted because the model asserted it or because a URL was requested.
+  Haiku summaries stay summaries (`access` must be `snippet`, `original_documents` 0).
+
+**Limits, plainly.** One invocation can still fail (the model may ignore L7 or the summariser may not print the id), and with one attempt
+that job then ends `failed`. L7 has been tested against nothing but its own text; the replay proves the extraction fix, not the prompt. A
+scoped validation run (one job, on the owner's decision) is the only way to learn whether L7 works. This is also why a third path was NOT
+taken: accepting "the model requested this PMID and a page came back" would let a redirect or a wrong page ground an invented id.
 
 ## One attempt per job and medium effort: what changed, install order, drain
 
-**Status: a CANDIDATE in the repository. The migration has NOT been applied, the new runtime has NOT been built or installed, and no
-real job was run to test it.** Research stays EXPERIMENTAL and UNGRADED; the ENLT-error / progress copy is unchanged apart from the
-one stalled-notice line below.
+**Status: a CANDIDATE in the repository. Migrations 001 and 002 have NOT been applied, the new runtime has NOT been built or installed, the
+website has NOT been deployed with it, and no real job was run to test any of it.** Research stays EXPERIMENTAL and UNGRADED; the
+ENLT-error / progress copy is unchanged apart from the one stalled-notice line below.
 
 What changed (and what did not):
 
 | | before | after (candidate) |
 |---|---|---|
 | model / effort | `claude-sonnet-5-5` / `xhigh` | `claude-sonnet-5-5` / **`medium`** (live research only; the S1-S8 and label adapters are untouched) |
+| live prompt | `live-research-v0.2` | **`live-research-v0.3`** = v0.2 + rule L7 (citation check), nothing else (proved by test) |
+| id recognition (worker `extract_ids`, server `idsIn`) | `PMID: 123`, `PMID 123`, pubmed URL, DOI, PMC, NCT | the same + Markdown-bold `**PMID:** 123` + the bare DOI behind a `/full` or `/pdf` URL tail; nothing else |
 | claims per job | up to 3 (`attempts < 3`) | **1** (`attempts < 1`) |
 | posted `fail` with `retryable: true` | requeued while `attempts < 3` | **final** (`failed`, the posted code); `retryable` is ignored for requeueing |
 | expired lease | re-claimed; third expiry -> `failed(lease_expired)` | **final**: the next claim ends it as `failed(lease_expired)` |
-| inventory ID not in any tool text | `worker_internal_error`, retryable | `audit_contract_violation`, not retryable; guard unchanged |
-| unchanged | lease 300 s (30-900 s clamp), heartbeat, completion CAS and replay, owner filter, 3 open jobs per owner, no global cap, RLS, grants, tokens, `SCAN_LIVE_RESEARCH_ENABLED` (public flag stays on), Google-only ownership, no turn/token/budget/runtime cap, delivery/heartbeat/poll retries (network, not model runs) | |
+| inventory id not printed by any returned result | `worker_internal_error`, retryable | `audit_contract_violation`, not retryable; guard unchanged |
+| job prompt versions | `complete` accepts v0.2 only | `complete` (migration 002) and the server accept v0.2 AND v0.3; the worker serves both; the website stamps v0.3 on new jobs |
+| unchanged | lease 300 s (30-900 s clamp), heartbeat, completion CAS and replay, owner filter, 3 open jobs per owner, no global cap, RLS, grants, tokens, `SCAN_LIVE_RESEARCH_ENABLED` (public flag stays on), Google-only ownership, no turn/token/budget/runtime cap, delivery/heartbeat/poll retries (network, not model runs), the `schemas/research_audit.json` audit schema, every unit and constant | |
 
 What the one-attempt rule costs, said plainly: a transient local fault (quota or rate limit, an expired login, a missing CLI path,
 a PC that sleeps or is stopped mid-job) now ends THAT job as `failed` instead of retrying it, and the owner sees the failure code. There
 is no "research again" path (an owner's repeat request returns the same failed job: the per-scan key is unchanged). That is the
-user's decision, not an oversight.
+user's decision, not an oversight. It is also why the CAUSE of grounding failures had to be fixed: with one attempt, a refused audit is a
+lost job.
 
-Legacy jobs: nothing is cancelled, requeued, deleted or edited. A job `running` with a live lease keeps it (heartbeat and
+Legacy jobs: nothing is cancelled, requeued, deleted or edited by either migration. A job `running` with a live lease keeps it (heartbeat and
 completion unchanged, whatever its `attempts` value: 2 or 3 from the old policy still finishes on its current token). A
 finished job (`succeeded` / `failed`) stays final. An ALREADY-expired legacy running job, and any later expiry, ends as
 `lease_expired` at the next claim instead of being re-offered. A `queued` job with `attempts >= 1` (requeued by the old policy) would
-never be claimed again, so the migration REFUSES to apply while one exists (nothing changed); finish it under the old policy first.
+never be claimed again, so migration 001 REFUSES to apply while one exists (nothing changed); finish it under the old policy first. A job
+queued under `live-research-v0.2` before the website upgrade is still served and completed (the worker runs the v0.3 prompt for it; the
+audit's `meta.prompt` and the stored provenance say v0.3, the job row keeps its old stamp).
 
-Install order (owner-run, in this order; nothing here was run). Mixed states: new SQL + old runtime = one attempt at `xhigh`
-(harmless, the old worker still sends `retryable`); old SQL + new runtime = up to 3 runs at `medium` (the thing to avoid). So SQL
-first, or both inside one stopped window:
+**Which tier must be upgraded before which.** Four tiers carry the rules (website, database, worker runtime, prompt) and a wrong order
+loses jobs, because a refused completion or a refused claim is final under one attempt:
 
-1. Review and merge to `main` (separate step; a push to `main` deploys the app, whose only change is one line of UI copy and a
-   comment). No Vercel setting changes; the public flag stays `on`; no token is touched.
-2. **Drain** (to avoid cutting a job and to leave no job the migration would refuse): `$SUP stop --drain` (waits, no deadline, for the
-   running job to finish and then stops the worker; the queue keeps accepting new jobs, which simply stay `queued`). Do NOT use `stop --now`
-   unless the owner accepts losing the running job.
-3. Read-only checks (separate SQL query, service-role/Management API read endpoint):
-   `select status, attempts, count(*) from public.bsproof_research_jobs group by 1, 2 order by 1, 2;` Expect: no `running` row and no
-   `queued` row with `attempts >= 1`. If a `queued` row with `attempts >= 1` exists (the last job failed with `retryable: true` and was
-   requeued by the old policy): `start` the CURRENT (old) runtime again, let it finish that job, `stop --drain`, re-check. A `running`
-   row with an expired lease is accepted by the migration but will end as `lease_expired`; prefer to wait for it.
-4. Apply `docs/research-jobs-migration-001-one-attempt.sql` ONCE (sha256 `9d147ecf30bd5ba4c47c33e50dd18fc11bbca10e5371354240eb919aff33fb41` verified first) through the same path that applied
-   `docs/research-jobs.sql`. It is one transaction: either the guard passes and the two functions are replaced, or nothing changes.
-   Then run its VERIFY query (both columns `true`). No other object is touched; grants, owners, RLS and comments are preserved.
-5. Build the new runtime from the merged commit (`deploy/pc_research_worker_release.sh build`; it refuses uncommitted runtime files),
-   `install <tgz> <sha256>` on the main PC, `check` (no model, no claim), then `$SUP start --expect-commit <new> --expect-unit-sha256 <U>
-   --wait-ready 90` and `status` READY. `deploy/pc_research_supervisor.py` is not part of the runtime tarball (it is copied separately, see "Install" above): the installed copy keeps the OLD `stop` message ("re-offers it, using one of its 3 attempts"), which is merely wrong, not unsafe, until the owner re-copies it; the behaviour (`stop` refuses while a job runs unless `--now`) is unchanged.
-6. Verify without a model call: `status` READY, the VERIFY query, the owner `GET` of an existing failed job unchanged. Do not queue a test
-   job unless the owner asks for one (it would spend the subscription once, at medium).
+| website | SQL | worker | outcome |
+|---|---|---|---|
+| old | old | old | production today |
+| old | 001+002 | old | fine (the SQL is a superset), one attempt per job |
+| **new** | 001+002 | **old, RUNNING** | **bad:** the old worker claims a v0.3 job and refuses it (`unsupported_prompt_version`, final). Never leave the old worker running once the website is deployed |
+| new | **old** | any | **bad:** a v0.3 job cannot complete (`unsupported_prompt_version` 409) |
+| **old** | any | **new** | **bad:** the old website rejects the v0.3 audit (422) and the lease then expires |
+| new | 001+002 | new | the target; also fine with a v0.2 job or a v0.2 result |
 
-Rollback (owner decision only): runtime `rollback` + `start` with the other commit; SQL: re-apply the two function bodies of the
-2026-10-04 file (`git show f7664b2:docs/research-jobs.sql`; idempotent, keeps every job). A job already ended as `lease_expired`
-or `failed` under the new policy is final and is not undone.
+Hence the order: **stop the worker first, SQL second, website third, worker last.** (Pushing `main` IS the website deploy.)
 
-Not proved here: any live behaviour (no model call, no SQL on the real database, no runtime install), that `medium` gives audits
-that ground better or worse than `xhigh` (nobody measured), or that a medium run is faster. The result is still an unvalidated model audit.
+Install order (owner-run, in this order; nothing here was run):
+
+1. **Stop the worker (drain).** `$SUP stop --drain` waits, with no deadline, for the running job to finish and then stops the worker; do not
+   use `stop --now` (a cut job is lost). Leave it stopped until step 5. New jobs simply stay `queued`.
+2. **Read-only queue check**, then the SQL: `select status, attempts, count(*) from public.bsproof_research_jobs group by 1, 2 order by 1, 2;`
+   Expect no `running` row and no `queued` row with `attempts >= 1`. If a `queued` row with `attempts >= 1` exists, start the CURRENT (old) runtime, let
+   it finish that job, drain again, re-check. Then apply, each once and verifying its sha256 first, through the path that applied the first file:
+   `docs/research-jobs-migration-001-one-attempt.sql` (sha256 `9d147ecf30bd5ba4c47c33e50dd18fc11bbca10e5371354240eb919aff33fb41`) and `docs/research-jobs-migration-002-prompt-v0.3.sql` (sha256 `1f2368e155e5c36cf79b27eba8d05e7b7aac4d62b9cd084e1e88a5ec392c46fb`).
+   Each is one transaction behind a read-only guard (nothing changes unless it is safe), idempotent, in either order, and each prints a VERIFY query
+   in its header (read-only; expect `true`). Neither touches a table, grant, owner, RLS or any job.
+3. **Push `main`** (review first). The website now stamps v0.3, accepts the two id forms and both prompt versions. Check the Vercel deployment is READY on that
+   commit. No Vercel setting, token or flag changes; the public flag stays `on`. (While the worker is stopped nothing claims the new jobs.)
+4. **Build and install the new runtime** from that commit: `deploy/pc_research_worker_release.sh build` (refuses uncommitted runtime files), `install <tgz> <sha256>`,
+   `check` (no model, no claim). `deploy/pc_research_supervisor.py` is not part of the runtime tarball (it is copied separately, see "Install" above): the
+   installed copy keeps the OLD `stop` message ("re-offers it, using one of its 3 attempts"), which is merely wrong, not unsafe, until the owner re-copies it.
+5. **Start**: `$SUP start --expect-commit <new> --expect-unit-sha256 <U> --wait-ready 90`, then `status` READY.
+6. Verify without a model call: `status` READY, both VERIFY queries `true`, the owner `GET` of an existing failed job unchanged. Do not queue a test job unless the
+   owner decides to: one job is the only way to learn whether rule L7 works, it spends the subscription once at medium, and its result is still an unvalidated model audit.
+
+Rollback (owner decision only): the order reverses: `stop --drain`, `rollback` the runtime, promote the previous website deployment, THEN (optionally) re-apply the
+2026-10-04 function bodies (`git show f7664b2:docs/research-jobs.sql`; idempotent, keeps every job; migration 002 is a superset and can stay). A job already ended
+as `lease_expired` or `failed` under the new policy is final and is not undone. Do not roll back the runtime alone while the new website is deployed (table above).
+
+Not proved here: any live behaviour (no model call, no SQL on the real database, no runtime install, no deploy), that rule L7 changes what the model does,
+that `medium` grounds better or worse than `xhigh`, or that a medium run is faster. The result is still an unvalidated model audit.
 
 ## Verification (offline; no network, no model, no live database)
 
@@ -762,14 +828,20 @@ caught). The same file also executes migration 001 on top of the byte-for-byte 2
 (`tests/fixtures/research-jobs-baseline-48783cd3.sql`, the file that was applied): the migrated project equals a fresh
 provisioning from the current file (catalog, owners, ACLs, comments, search_path, RLS, policies), changes no row, keeps a
 running attempt-2 job on its current lease, leaves finished jobs final, refuses (changing nothing) to run while a
-`queued` job with `attempts >= 1` exists, is idempotent, and has its own mutant suite.
+`queued` job with `attempts >= 1` exists, is idempotent, and has its own mutant suite. Migration 002 (`bsproof_research_complete` accepts the v0.2 and
+v0.3 job versions) is executed the same way: exactly one function body changes (owner, ACL, comment, `search_path`, security definer unchanged), 001 then 002 equals 002
+then 001 equals a fresh provisioning, a v0.3 job and a queued v0.2 job complete while v0.1 is refused, no row changes, and its guard and mutants are caught.
 `tests/scan-research-queue-parity.test.ts` runs one scripted history through the
 in-memory queue the route tests use and through the real SQL and requires identical
 answers. Limits: PGlite is one connection, so concurrent `for update skip locked`
 claims cannot be raced, and it is PostgreSQL 17.5 rather than the project's 17.6.
-Python: `python3 -m unittest tests.test_source_access_v2 tests.test_pc_research_worker`
-(needs `jsonschema`; a missing module fails, it does not skip). No test depends on the
-machine clock.
+Python: `python3 -m unittest tests.test_source_access_v2 tests.test_pc_research_worker tests.test_grounding_replay`
+(needs `jsonschema`; a missing module fails, it does not skip). `tests.test_grounding_replay` replays verbatim excerpts of the three original Vitamin D raw
+streams through the real guard (old extraction patched back in reproduces the three recorded failures exactly; the fixed one grounds exactly the printed ids and refuses the
+four assertions; receipt missing / failed / for another paper / invented id cannot ground a row) and, where the private captures exist, replays the untouched originals
+(hash-pinned, opened read-only; a different file fails, a missing directory skips only that class). `tests/fixtures/id-extraction-cases.json` is run by Python
+(`tests.test_source_access_v2`) and TypeScript (`tests/scan-research-id-parity.test.ts`) so the worker's and the server's id recognition cannot drift. No test depends on the
+machine clock, calls a model or touches the network.
 
 An installed runtime is a COPY (`deploy/pc_research_worker_release.sh build`): changes
 to the worker, adapter, prompt or schemas reach the mainPC only through a new release
@@ -780,15 +852,16 @@ that the owner installs.
 The stream's returned text is transient evidence only; grounding uses identifier
 string matches and does not independently verify scientific claims. Research is
 experimental/unvalidated and does not change score, clinical approval, or user
-risk classification. There has been no actual model call or runtime deployment.
-Review, provisioning and clinical validation remain separate human gates.
+risk classification. There has been no model call, migration or runtime deployment of the 2026-10-06 candidate.
+Review, provisioning and clinical validation remain separate human gates. An id the tool printed grounds a row; that proves the paper was
+retrieved, not that the audit's numbers or conclusions are right.
 
 ## Fixed validation gates (offline, no model)
 
-- `npx vitest run tests/scan-research.test.ts tests/scan-research-v2.test.ts tests/scan-research-target-sql.test.ts tests/research-audit-schema.test.ts tests/research-jobs-sql-exec.test.ts tests/scan-research-queue-parity.test.ts tests/scan-research-owner-smoke.test.ts tests/scan-research-wire.test.ts tests/scan-research-client.test.ts tests/scan-research-panel.test.tsx`
+- `npx vitest run tests/scan-research.test.ts tests/scan-research-v2.test.ts tests/scan-research-target-sql.test.ts tests/research-audit-schema.test.ts tests/research-jobs-sql-exec.test.ts tests/scan-research-queue-parity.test.ts tests/scan-research-id-parity.test.ts tests/scan-research-owner-smoke.test.ts tests/scan-research-wire.test.ts tests/scan-research-client.test.ts tests/scan-research-panel.test.tsx`
 - `.venv/bin/python -m unittest tests.test_pc_research_supervisor` (54 tests: fake and REAL worker under the supervisor; needs
   jsonschema>=4 for the real-worker class; no model, no network beyond loopback, no root)
-- `.venv/bin/python -m unittest tests.test_pc_research_worker tests.test_source_access_v2 tests.test_label_elemental_dose`
+- `.venv/bin/python -m unittest tests.test_pc_research_worker tests.test_source_access_v2 tests.test_grounding_replay tests.test_label_elemental_dose`
   (the repo `.venv` has jsonschema 4.x; a system Python with jsonschema 3.x cannot validate Draft 2020-12, so
   the worker tests FAIL there by design instead of skipping)
 - `npm run typecheck`
@@ -799,18 +872,23 @@ Review, provisioning and clinical validation remain separate human gates.
 - `cp deploy/bsproof-research-worker.service.example /tmp/bsproof-research-worker.service && XDG_RUNTIME_DIR=$(mktemp -d) systemd-analyze --user verify /tmp/bsproof-research-worker.service`
   (the user unit is configuration; ALWAYS with a throwaway `XDG_RUNTIME_DIR`, never the real one, see the CAUTION in the install section; on a host without the mainPC paths, "executable not found" is expected and is not a PASS for the real paths)
 - `sha256sum tests/fixtures/research-jobs-baseline-48783cd3.sql` must stay `48783cd3a6d9535b0a8ca8a792c0f73b3d32a98d3b0550c730731b5d9cd9a4fb`
-  (the file that was applied to production); `sha256sum docs/research-jobs.sql docs/research-jobs-migration-001-one-attempt.sql` must equal
-  `d598f19a9afcb46e0fda0fc69cbe80674b067e8c84f10f2afd8b3e94d1f16a83` and `9d147ecf30bd5ba4c47c33e50dd18fc11bbca10e5371354240eb919aff33fb41` (the candidate, NOT applied)
+  (the file that was applied to production); `sha256sum docs/research-jobs.sql docs/research-jobs-migration-001-one-attempt.sql docs/research-jobs-migration-002-prompt-v0.3.sql`
+  must equal `7fb43b838f6191072ffe268704ea7a30ce13fcfe7aefd5ff48751080e078e9ec`, `9d147ecf30bd5ba4c47c33e50dd18fc11bbca10e5371354240eb919aff33fb41` and `1f2368e155e5c36cf79b27eba8d05e7b7aac4d62b9cd084e1e88a5ec392c46fb` (the candidate, NOT applied)
 
 These tests use fake streams and fake HTTP queue clients only. They do not prove
 model behavior, account state, provisioning, or clinical validity.
 
 ## Handoff
 
-State (2026-10-06, UTC): a candidate commit on a local branch (NOT on `main`, NOT pushed) holds ONE attempt per job + `medium` effort +
-the migration; nothing is applied or installed. Next, owner-run and in this order: review, push `main`, drain (`stop --drain`), read-only
-queue checks, apply migration 001, build + install the new runtime, `start`, `status`. Details and rollback in "One attempt per job
-and medium effort". The state below (2026-10-05) is the PRODUCTION state until then.
+State (2026-10-06, UTC) — **READ THIS FIRST. The objective is NOT "cap the retries"; it is "make one research invocation produce a usable audit, and
+stop paying for the same failure three times".** A candidate on a local branch (NOT on `main`, NOT pushed) holds: id-recognition fix (worker + server, shared
+fixture), prompt `live-research-v0.3` (v0.2 + rule L7 only), medium effort, one attempt per job, migrations 001 and 002. Nothing is applied, installed or
+deployed, and no model has run any of it. Root cause (replayed from the three immutable captures): of 33 cited ids, 14 were retrieved and printed in a form
+the extraction did not recognise (parser fault, fixed), 4 were asserted by the model without any returned result printing them (model process; the guard must
+refuse them; rule L7 is the attempted fix and is UNPROVEN), 15 were fine. A release that ships only the cap/effort would still lose jobs to this. Next, owner-run,
+in THIS order (a wrong order loses jobs; see the table in "One attempt per job and medium effort"): `stop --drain` and leave the worker stopped -> read-only queue
+check -> apply migrations 001 and 002 -> push `main` and confirm the Vercel deploy -> build + install the runtime -> `start` -> `status`. The state below
+(2026-10-05) is the PRODUCTION state until then.
 
 State (2026-10-05, UTC): RELEASED_EVERYONE under the held-open hosting condition. Production runs `273c2d5` with
 `SCAN_LIVE_RESEARCH_ENABLED=on` (every signed-in Google user; the Git deploy of this documentation commit is checked after its push

@@ -1,0 +1,192 @@
+{
+ "about": "Shared by tests/test_source_access_v2.py (pipeline.claude_research_adapter.extract_ids / normalise_audit_id) and tests/scan-research-id-parity.test.ts (lib/scan-research/source-access-v2.ts idsIn / normalizeId). The two implementations must agree on every case. Positive shapes are verbatim from the 2026-10-05 Vitamin D captures; NEG cases are the ways a wrong id could be grounded and must stay ungrounded.",
+ "cases": [
+  {
+   "name": "bold label, two trailing spaces (run 1, WebFetch summary)",
+   "text": "# Summary of Research Records\n\n## Record 1\n**PMID:** 35939577  \n**Title:** \"Supplemental Vitamin D and Incident Fractures in Midlife and Older Adults\"  \n**Journal:** New England Journal of Medicine  \n**Year:** 2022",
+   "ids": [
+    "pmid:35939577"
+   ]
+  },
+  {
+   "name": "bold label inside a list item next to a DOI (run 2)",
+   "text": "7. **Title:** \"Effect of vitamin K on bone mineral density\"\n    - **Journal:** Osteoporos Int\n    - **Year:** 2019\n    - **PMID:** 31076817\n    - **DOI:** 10.1007/s00198-019-04949-0\n",
+   "ids": [
+    "doi:10.1007/s00198-019-04949-0",
+    "pmid:31076817"
+   ]
+  },
+  {
+   "name": "bold label with the colon outside the bold",
+   "text": "**PMID**: 12345678",
+   "ids": [
+    "pmid:12345678"
+   ]
+  },
+  {
+   "name": "NEG underscore emphasis was not seen in the captures and is not recognised",
+   "text": "__PMID:__ 12345678",
+   "ids": []
+  },
+  {
+   "name": "plain label forms that always worked",
+   "text": "PMID: 11111111; PMID 22222222; PMID:33333333; PMID #44444444",
+   "ids": [
+    "pmid:11111111",
+    "pmid:22222222",
+    "pmid:33333333",
+    "pmid:44444444"
+   ]
+  },
+  {
+   "name": "pubmed URL",
+   "text": "see https://pubmed.ncbi.nlm.nih.gov/55555555/ for the record",
+   "ids": [
+    "pmid:55555555"
+   ]
+  },
+  {
+   "name": "DOI in a URL that ends in /full (run 3, WebSearch result)",
+   "text": "{\"title\":\"SYSTEMATIC REVIEW article\",\"url\":\"https://frontiersin.org/articles/10.3389/fpubh.2022.979649/full\"},{\"title\":\"x\"}",
+   "ids": [
+    "doi:10.3389/fpubh.2022.979649",
+    "doi:10.3389/fpubh.2022.979649/full"
+   ]
+  },
+  {
+   "name": "DOI in a URL that ends in /pdf (run 1)",
+   "text": "https://www.frontiersin.org/articles/10.3389/fpubh.2022.979649/pdf is the PDF",
+   "ids": [
+    "doi:10.3389/fpubh.2022.979649",
+    "doi:10.3389/fpubh.2022.979649/pdf"
+   ]
+  },
+  {
+   "name": "bare DOI, trailing full stop dropped",
+   "text": "DOI: 10.1056/NEJMoa2202106.",
+   "ids": [
+    "doi:10.1056/nejmoa2202106"
+   ]
+  },
+  {
+   "name": "registry and PMC ids",
+   "text": "NCT05500443 and PMC6714464",
+   "ids": [
+    "NCT05500443",
+    "PMC6714464"
+   ]
+  },
+  {
+   "name": "NEG a PMID list with no label next to the number (run 1)",
+   "text": "The PMID list from the search results is:\n\n**36853379**",
+   "ids": []
+  },
+  {
+   "name": "NEG a bare list of numbers (run 1)",
+   "text": "The PMID list from the search results:\n\n41603552\n40091712\n38488491\n38265769\n35939577",
+   "ids": []
+  },
+  {
+   "name": "NEG plural label",
+   "text": "PMIDs: 35939577, 40949733",
+   "ids": []
+  },
+  {
+   "name": "NEG label followed by words, not digits",
+   "text": "PMID: not available 35939577",
+   "ids": []
+  },
+  {
+   "name": "NEG too short, too long",
+   "text": "PMID 1234 and PMID: 1234567890",
+   "ids": []
+  },
+  {
+   "name": "NEG a number only in a third-party URL slug (run 3)",
+   "text": "{\"title\":\"full citation\",\"url\":\"https://www.unboundmedicine.com/medline/citation/31454046/full_citation\"}",
+   "ids": []
+  },
+  {
+   "name": "NEG the number appears only inside an echoed request URL",
+   "text": "fetched https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=35939577&retmode=text",
+   "ids": []
+  },
+  {
+   "name": "NEG a table cell is not a label",
+   "text": "| PMID | 35939577 |",
+   "ids": []
+  },
+  {
+   "name": "NEG a DOI whose own suffix is the word full is not unwrapped to a bare registrant",
+   "text": "10.1000/full",
+   "ids": [
+    "doi:10.1000/full"
+   ]
+  },
+  {
+   "name": "NEG a longer tail is not unwrapped",
+   "text": "https://example.org/10.3389/fpubh.2022.979649/fullxyz and /full/abstract: 10.3389/fpubh.2022.111111/full/abstract",
+   "ids": [
+    "doi:10.3389/fpubh.2022.111111/full/abstract",
+    "doi:10.3389/fpubh.2022.979649/fullxyz"
+   ]
+  },
+  {
+   "name": "NEG a DOI with a real slash in its suffix is untouched",
+   "text": "10.1016/S0140-6736(20)30183-5",
+   "ids": [
+    "doi:10.1016/s0140-6736(20"
+   ]
+  },
+  {
+   "name": "NEG a different DOI behind /full is a different DOI",
+   "text": "https://frontiersin.org/articles/10.3389/fpubh.2022.979650/full",
+   "ids": [
+    "doi:10.3389/fpubh.2022.979650",
+    "doi:10.3389/fpubh.2022.979650/full"
+   ]
+  }
+ ],
+ "audit_ids": [
+  {
+   "raw": "PMID:35939577",
+   "normalised": "pmid:35939577"
+  },
+  {
+   "raw": "35939577",
+   "normalised": "pmid:35939577"
+  },
+  {
+   "raw": "PMID: 35939577",
+   "normalised": "pmid:35939577"
+  },
+  {
+   "raw": "10.3389/fpubh.2022.979649",
+   "normalised": "doi:10.3389/fpubh.2022.979649"
+  },
+  {
+   "raw": "10.3389/fpubh.2022.979649/full",
+   "normalised": "doi:10.3389/fpubh.2022.979649"
+  },
+  {
+   "raw": "10.1039/C9FO03063H",
+   "normalised": "doi:10.1039/c9fo03063h"
+  },
+  {
+   "raw": "NCT05500443",
+   "normalised": "NCT05500443"
+  },
+  {
+   "raw": "Smith 2020",
+   "normalised": null
+  },
+  {
+   "raw": "PMID: 1234",
+   "normalised": null
+  },
+  {
+   "raw": "",
+   "normalised": null
+  }
+ ]
+}

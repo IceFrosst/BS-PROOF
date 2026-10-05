@@ -24,8 +24,10 @@ import {
   BASELINE_SHA256,
   BASELINE_SQL,
   HELPER_FUNCTIONS,
+  MIGRATION2_SQL,
   MIGRATION_SQL,
   PROMPT,
+  PROMPT_V3,
   Queue,
   RESEARCH_SQL,
   TARGET,
@@ -34,6 +36,7 @@ import {
   catalogSnapshot,
   closeProjects,
   emptyProject,
+  fullyMigratedProject,
   migratedProject,
   neighbourSnapshot,
   resultFor,
@@ -239,6 +242,26 @@ const completionIsACompareAndSetAndReplaySafe: Scenario = async (q) => {
   expect(await q.row(id)).toMatchObject({ status: "succeeded", failure_code: null });
   expect(await q.complete(id, "f".repeat(64), r1)).toEqual({ status: "lease_invalid" }); // a token that was never issued
   expect(await q.fail(id, "f".repeat(64), "x", null, false)).toEqual({ status: "lease_invalid" });
+};
+
+/**
+ * Prompt version v0.3 (2026-10-06): a job stamped v0.3 completes, and a job queued BEFORE the upgrade (v0.2) still does.
+ * With one attempt per job a refused completion is a lost job, so neither may be refused; anything else still is.
+ */
+const completeAcceptsTheCurrentAndThePreviousPromptVersionOnly: Scenario = async (q) => {
+  const v2 = (await q.enqueue(O1, S(1), TARGET, PROMPT)).job.id;
+  const v3 = (await q.enqueue(O1, S(2), TARGET, PROMPT_V3)).job.id;
+  const v1 = (await q.enqueue(O1, S(3), TARGET, "live-research-v0.1")).job.id;
+  const claims = new Map<string, string>();
+  for (let n = 0; n < 3; n++) {
+    const c = (await q.claim()).job;
+    claims.set(c.id, c.lease_token);
+  }
+  expect(await q.complete(v3, claims.get(v3)!, resultFor("current"))).toEqual({ status: "completed" });
+  expect(await q.complete(v2, claims.get(v2)!, resultFor("queued before the upgrade"))).toEqual({ status: "completed" });
+  expect(await q.complete(v1, claims.get(v1)!, resultFor("obsolete"))).toEqual({ status: "unsupported_prompt_version" });
+  expect((await q.row(v1)).status).toBe("running");
+  expect((await q.row(v3)).prompt_version).toBe(PROMPT_V3);
 };
 
 const aJobOnAnotherPromptVersionCannotBeCompleted: Scenario = async (q) => {
@@ -490,6 +513,7 @@ const QUEUE_SCENARIOS: Record<string, Scenario> = {
   aJobGetsOneAttemptAndItsExpiredLeaseFailsForGood,
   completionIsACompareAndSetAndReplaySafe,
   aJobOnAnotherPromptVersionCannotBeCompleted,
+  completeAcceptsTheCurrentAndThePreviousPromptVersionOnly,
   completeRefusesAnythingButTheExactSummaryShape,
   failureIsSanitisedBoundedAndReplaySafe,
   aQueuedJobWhoseAttemptIsAlreadySpentIsNeverClaimed,
@@ -586,8 +610,8 @@ const MUTANTS: Mutant[] = [
   { name: "heartbeat revives an expired lease", find: "    and lease_expires_at > now()\n  returning lease_expires_at into expires;", replace: "  returning lease_expires_at into expires;", killedBy: { queue: "heartbeatExtendsOnlyTheCurrentValidLease" } },
   {
     name: "complete accepts any token while the job is running",
-    find: "  if not found or j.lease_token_hash is distinct from h then\n    return jsonb_build_object('status', 'lease_invalid');\n  end if;\n\n  if j.prompt_version",
-    replace: "  if not found then\n    return jsonb_build_object('status', 'lease_invalid');\n  end if;\n\n  if j.prompt_version",
+    find: "  if not found or j.lease_token_hash is distinct from h then\n    return jsonb_build_object('status', 'lease_invalid');\n  end if;\n\n  -- v0.3 is stamped on new jobs",
+    replace: "  if not found then\n    return jsonb_build_object('status', 'lease_invalid');\n  end if;\n\n  -- v0.3 is stamped on new jobs",
     killedBy: { queue: "aRunningJobRejectsEveryTokenButItsOwn" },
   },
   {
@@ -606,6 +630,9 @@ const MUTANTS: Mutant[] = [
   { name: "a retryable fail requeues the job (fail cap back at 3)", find: "if coalesce(p_retryable, false) and j.attempts < 1 then", replace: "if coalesce(p_retryable, false) and j.attempts < 3 then", killedBy: { queue: "aRetryableFailureIsFinalAndTheJobIsNeverClaimedAgain" } },
   { name: "a retryable fail always requeues", find: "if coalesce(p_retryable, false) and j.attempts < 1 then", replace: "if coalesce(p_retryable, false) then", killedBy: { queue: "aRetryableFailureIsFinalAndTheJobIsNeverClaimedAgain" } },
   { name: "a legacy running job loses its lease (claim fails every running job)", find: "where status = 'running' and lease_expires_at <= now() and attempts >= 1;", replace: "where status = 'running' and attempts >= 1;", killedBy: { queue: "aLegacyRunningJobWithSeveralAttemptsCanFinishItsCurrentLease" } },
+  { name: "complete accepts only the new prompt version (a job queued before the upgrade is lost)", find: "if j.prompt_version not in ('live-research-v0.2', 'live-research-v0.3') then", replace: "if j.prompt_version <> 'live-research-v0.3' then", killedBy: { queue: "completeAcceptsTheCurrentAndThePreviousPromptVersionOnly" } },
+  { name: "complete accepts only the old prompt version (a v0.3 job can never finish)", find: "if j.prompt_version not in ('live-research-v0.2', 'live-research-v0.3') then", replace: "if j.prompt_version <> 'live-research-v0.2' then", killedBy: { queue: "completeAcceptsTheCurrentAndThePreviousPromptVersionOnly" } },
+  { name: "complete accepts any prompt version", find: "if j.prompt_version not in ('live-research-v0.2', 'live-research-v0.3') then", replace: "if false then", killedBy: { queue: "completeAcceptsTheCurrentAndThePreviousPromptVersionOnly" } },
   { name: "the lease token is stored in the clear", find: "lease_token_hash = encode(sha256(convert_to(token, 'UTF8')), 'hex'),", replace: "lease_token_hash = token,", killedBy: { queue: "claimIsOldestFirstAndStoresOnlyTheLeaseHash" } },
   { name: "claim hands out the newest job first", find: "order by created_at, id\n  limit 1\n  for update skip locked;", replace: "order by created_at desc, id\n  limit 1\n  for update skip locked;", killedBy: { queue: "claimIsOldestFirstAndStoresOnlyTheLeaseHash" } },
   { name: "an identical replayed completion is a conflict", find: "if j.result = p_result then", replace: "if false then", killedBy: { queue: "completionIsACompareAndSetAndReplaySafe" } },
@@ -681,7 +708,7 @@ const fnBlock = (sql: string, name: string): string => {
 
 /** Run `scenario` on the PRODUCTION shape (baseline + `migration`), the way the operator would. */
 async function withMigrated(scenario: Scenario, migration: string = MIGRATION_SQL): Promise<void> {
-  const db = migration === MIGRATION_SQL ? await migratedProject() : await baselineProject();
+  const db = migration === MIGRATION_SQL ? await fullyMigratedProject() : await baselineProject();
   try {
     if (migration !== MIGRATION_SQL) await db.exec(migration);
     await scenario(new Queue(db));
@@ -806,14 +833,29 @@ describe("migration 001 (one attempt per job) applied on top of the 2026-10-04 b
     }
   });
 
-  it("leaves a project that is indistinguishable from a fresh provisioning with the current docs/research-jobs.sql", async () => {
-    const migrated = await migratedProject();
+  it("001 + 002 leave a project that is indistinguishable from a fresh provisioning with the current docs/research-jobs.sql", async () => {
+    const migrated = await fullyMigratedProject();
     const fresh = await appliedProject();
     try {
       expect(await catalogSnapshot(migrated)).toEqual(await catalogSnapshot(fresh));
       expect(await neighbourSnapshot(migrated)).toEqual(await neighbourSnapshot(fresh));
     } finally {
       await migrated.close();
+      await fresh.close();
+    }
+  });
+
+  it("001 ALONE differs from a fresh provisioning in exactly one function, bsproof_research_complete (the prompt-version check of migration 002)", async () => {
+    const only001 = await migratedProject();
+    const fresh = await appliedProject();
+    try {
+      const a = await catalogSnapshot(only001);
+      const b = await catalogSnapshot(fresh);
+      const changed = a.functions.filter((f, i) => f.def !== b.functions[i].def).map((f) => String(f.sig).split("(")[0]);
+      expect(changed).toEqual(["bsproof_research_complete"]);
+      expect({ ...a, functions: null }).toEqual({ ...b, functions: null });
+    } finally {
+      await only001.close();
       await fresh.close();
     }
   });
@@ -825,7 +867,7 @@ describe("migration 001 (one attempt per job) applied on top of the 2026-10-04 b
   }
 
   it("keeps every table/function privilege closed on the migrated production shape", async () => {
-    const db = await migratedProject();
+    const db = await fullyMigratedProject();
     try {
       await privilegesAreClosedToEveryRoleButTheSixFunctions(db);
     } finally {
@@ -1022,5 +1064,177 @@ describe("migration 001 mutation suite: every removed guarantee in the migration
     for (const scenario of [aQueuedJobWhoseAttemptIsAlreadySpentIsNeverClaimed, anExpiredLeaseIsFinalAndTheOldTokenIsDead, aRetryableFailureIsFinalAndTheJobIsNeverClaimedAgain, aLegacyRunningJobWithSeveralAttemptsCanFinishItsCurrentLease, claimIsOldestFirstAndStoresOnlyTheLeaseHash]) await withMigrated(scenario);
     await strandedGuardRefuses(MIGRATION_SQL);
     await privileges(MIGRATION_SQL);
+  });
+});
+
+
+// ----------------------------------------------------------------------------------------------------------------
+// migration 002: accept prompt version live-research-v0.3 (one function, independent of 001)
+
+describe("migration 002 (prompt version v0.3) applied on top of the 2026-10-04 baseline", { timeout: 120_000 }, () => {
+  async function onBaseline002<T>(run: (db: PGlite, q: Queue) => Promise<T>, sql: string = MIGRATION2_SQL): Promise<T> {
+    const db = await baselineProject();
+    try {
+      await db.exec(sql);
+      return await run(db, new Queue(db));
+    } finally {
+      await db.close();
+    }
+  }
+
+  it("control: the applied baseline refuses a v0.3 job (this is what migration 002 exists to fix)", async () => {
+    const db = await baselineProject();
+    try {
+      const q = new Queue(db);
+      const id = (await q.enqueue(O1, S(1), TARGET, PROMPT_V3)).job.id;
+      const c = (await q.claim()).job;
+      expect(await q.complete(id, c.lease_token, resultFor("v3"))).toEqual({ status: "unsupported_prompt_version" });
+    } finally {
+      await db.close();
+    }
+  });
+
+  it("replaces exactly one function, with the current file's body byte for byte, and nothing else", () => {
+    expect(fnBlock(MIGRATION2_SQL, "bsproof_research_complete")).toBe(fnBlock(RESEARCH_SQL, "bsproof_research_complete"));
+    expect(fnBlock(MIGRATION2_SQL, "bsproof_research_complete")).not.toBe(fnBlock(BASELINE_SQL, "bsproof_research_complete"));
+    expect([...MIGRATION2_SQL.matchAll(/create or replace function public\.(\w+)/g)].map((m) => m[1])).toEqual(["bsproof_research_complete"]);
+    const code = MIGRATION2_SQL.split("\n").filter((l) => !l.trim().startsWith("--")).join("\n");
+    const noBodies = code.replace(/\$(fn|guard)\$[\s\S]*?\$\1\$/g, "$$$1$$ $$$1$$");
+    for (const forbidden of [/\bdrop\b/i, /\balter\b/i, /\btruncate\b/i, /\bdelete\b/i, /\binsert\b/i, /\bgrant\b/i, /\brevoke\b/i, /\bcreate\s+(table|index|trigger|policy|role|extension|schema)\b/i, /\bcomment\s+on\b/i, /\bset\s+role\b/i]) {
+      expect(noBodies, String(forbidden)).not.toMatch(forbidden);
+    }
+    const guard = /\$guard\$([\s\S]*?)\$guard\$/.exec(MIGRATION2_SQL)?.[1] ?? "";
+    expect(guard).toContain("raise exception");
+    expect(guard.replace(/'(?:[^']|'')*'/g, "''")).not.toMatch(/\b(update|insert|delete|drop|alter|truncate|create|grant|revoke|comment|perform|execute)\b/i);
+  });
+
+  it("changes only the definition of bsproof_research_complete: owner, ACL, comment, search_path, security definer, table, RLS, policies, indexes, trigger", async () => {
+    const before = await baselineProject();
+    const after = await onBaseline002(async (db) => catalogSnapshot(db));
+    try {
+      const b = await catalogSnapshot(before);
+      expect(after.functions.map((f) => f.sig)).toEqual(b.functions.map((f) => f.sig));
+      expect(after.functions.filter((f, i) => f.def !== b.functions[i].def).map((f) => String(f.sig).split("(")[0])).toEqual(["bsproof_research_complete"]);
+      const strip = (fs: Array<Record<string, unknown>>) => fs.map(({ def, ...rest }) => (void def, rest));
+      expect(strip(after.functions)).toEqual(strip(b.functions));
+      expect({ ...after, functions: null }).toEqual({ ...b, functions: null });
+    } finally {
+      await before.close();
+    }
+  });
+
+  it("the VERIFY query in its header reads false on the baseline and true after the migration", async () => {
+    const header = /-- VERIFY AFTER \(read-only\):\n([\s\S]*?);\n--\n/.exec(MIGRATION2_SQL)?.[1] ?? "";
+    const verify = header.split("\n").map((l) => l.replace(/^--\s?/, "")).join("\n");
+    expect(verify).toContain("pg_get_functiondef");
+    const before = await baselineProject();
+    try {
+      expect((await before.query(verify)).rows[0]).toEqual({ complete_accepts_v03: false });
+    } finally {
+      await before.close();
+    }
+    expect(await onBaseline002(async (db) => (await db.query(verify)).rows[0])).toEqual({ complete_accepts_v03: true });
+  });
+
+  it("a v0.3 job completes, a job queued under v0.2 still completes, anything else is refused (migration 002 alone, without 001)", async () => {
+    await onBaseline002(async (_db, q) => {
+      const a = (await q.enqueue(O1, S(1), TARGET, PROMPT_V3)).job.id;
+      const b = (await q.enqueue(O1, S(2), TARGET, PROMPT)).job.id;
+      const c = (await q.enqueue(O1, S(3), TARGET, "live-research-v0.1")).job.id;
+      const t = new Map<string, string>();
+      for (let n = 0; n < 3; n++) { const j = (await q.claim()).job; t.set(j.id, j.lease_token); }
+      expect(await q.complete(a, t.get(a)!, resultFor("v3"))).toEqual({ status: "completed" });
+      expect(await q.complete(b, t.get(b)!, resultFor("v2"))).toEqual({ status: "completed" });
+      expect(await q.complete(c, t.get(c)!, resultFor("v1"))).toEqual({ status: "unsupported_prompt_version" });
+    });
+  });
+
+  it("changes no row and does not touch a running job's lease; a legacy attempt-2 job still finishes on its current token", async () => {
+    const db = await baselineProject();
+    try {
+      const q = new Queue(db);
+      const id = (await q.enqueue(O1, S(1), TARGET, PROMPT)).job.id;
+      const first = (await q.claim()).job;
+      expect(await q.fail(id, first.lease_token, "worker_internal_error", "x", true)).toEqual({ status: "requeued" });
+      const c = (await q.claim()).job; // attempts 2 under the old policy
+      const other = (await q.enqueue(O1, S(2), TARGET, PROMPT)).job.id;
+      const rows = async () => (await db.query("select * from public.bsproof_research_jobs order by id")).rows;
+      const before = await rows();
+      await db.exec(MIGRATION2_SQL);
+      expect(await rows()).toEqual(before);
+      expect((await q.heartbeat(id, c.lease_token)).status).toBe("ok");
+      expect(await q.complete(id, c.lease_token, resultFor("legacy"))).toEqual({ status: "completed" });
+      expect((await q.row(other)).status).toBe("queued");
+      await db.exec(MIGRATION2_SQL); // idempotent
+      expect((await q.row(id)).status).toBe("succeeded");
+    } finally {
+      await db.close();
+    }
+  });
+
+  it("is order-independent with migration 001: 002 then 001 gives the same catalog as 001 then 002", async () => {
+    const a = await fullyMigratedProject();
+    const b = await baselineProject();
+    try {
+      await b.exec(MIGRATION2_SQL);
+      await b.exec(MIGRATION_SQL);
+      expect(await catalogSnapshot(b)).toEqual(await catalogSnapshot(a));
+    } finally {
+      await a.close();
+      await b.close();
+    }
+  });
+
+  it("the guard refuses, changing nothing, on an empty project and next to a function BS-PROOF did not create", async () => {
+    const empty = await emptyProject();
+    try {
+      await expect(empty.exec(MIGRATION2_SQL)).rejects.toThrow(/bsproof_research_jobs is missing or BS-PROOF did not create it/);
+      expect((await empty.query<{ n: number }>("select count(*)::int as n from pg_proc where proname like 'bsproof\\_research\\_%'")).rows[0].n).toBe(0);
+    } finally {
+      await empty.close();
+    }
+    const db = await baselineProject();
+    try {
+      await db.exec("comment on function public.bsproof_research_complete(uuid, text, jsonb) is 'someone else''s function'");
+      const before = await catalogSnapshot(db);
+      await expect(db.exec(MIGRATION2_SQL)).rejects.toThrow(/function public\.bsproof_research_complete\(uuid, text, jsonb\) is missing or BS-PROOF did not create it/);
+      expect(await catalogSnapshot(db)).toEqual(before);
+    } finally {
+      await db.close();
+    }
+  });
+
+  describe("mutants of migration 002", () => {
+    const completeDef = "create or replace function public.bsproof_research_complete(p_id uuid, p_lease_token text, p_result jsonb)\nreturns jsonb\nlanguage plpgsql\nsecurity definer\nset search_path = pg_catalog, pg_temp\n";
+    const MUTANTS2: Array<{ name: string; find: string; replace: string; kill: (m: string) => Promise<void> }> = [
+      { name: "accepts only v0.3 (a queued v0.2 job is lost)", find: "if j.prompt_version not in ('live-research-v0.2', 'live-research-v0.3') then", replace: "if j.prompt_version <> 'live-research-v0.3' then", kill: (m) => withMigrated(completeAcceptsTheCurrentAndThePreviousPromptVersionOnly, m) },
+      { name: "accepts only v0.2 (the migration changes nothing)", find: "if j.prompt_version not in ('live-research-v0.2', 'live-research-v0.3') then", replace: "if j.prompt_version <> 'live-research-v0.2' then", kill: (m) => withMigrated(completeAcceptsTheCurrentAndThePreviousPromptVersionOnly, m) },
+      { name: "accepts any version", find: "if j.prompt_version not in ('live-research-v0.2', 'live-research-v0.3') then", replace: "if false then", kill: (m) => withMigrated(completeAcceptsTheCurrentAndThePreviousPromptVersionOnly, m) },
+      { name: "complete loses SECURITY DEFINER", find: completeDef, replace: completeDef.replace("security definer\n", ""), kill: (m) => withMigrated(completeAcceptsTheCurrentAndThePreviousPromptVersionOnly, m) },
+      { name: "complete loses its pinned search_path", find: completeDef, replace: completeDef.replace("set search_path = pg_catalog, pg_temp\n", ""), kill: async (m) => {
+        const db = await baselineProject();
+        try { await db.exec(m); await privilegesAreClosedToEveryRoleButTheSixFunctions(db); } finally { await db.close(); }
+      } },
+      { name: "complete no longer compares the lease token", find: "if not found or j.lease_token_hash is distinct from h then", replace: "if not found then", kill: (m) => withMigrated(aRunningJobRejectsEveryTokenButItsOwn, m) },
+      { name: "the guard is disabled", find: "if to_regprocedure(fn) is null\n     or coalesce(obj_description(to_regprocedure(fn), 'pg_proc'), '') !~ '^BS-PROOF research jobs:' then", replace: "if false then", kill: async (m) => {
+        const db = await baselineProject();
+        try {
+          await db.exec("comment on function public.bsproof_research_complete(uuid, text, jsonb) is 'someone else''s function'");
+          await expect(db.exec(m)).rejects.toThrow(/did not create it/);
+        } finally { await db.close(); }
+      } },
+    ];
+    for (const m of MUTANTS2) {
+      it(`kills: ${m.name}`, async () => {
+        expect(MIGRATION2_SQL.split(m.find).length - 1, "the mutation target must occur exactly once in migration 002").toBe(1);
+        const mutated = MIGRATION2_SQL.replace(m.find, () => m.replace);
+        expect(mutated).not.toBe(MIGRATION2_SQL);
+        await expect(m.kill(mutated)).rejects.toThrow();
+      });
+    }
+    it("the same scenarios pass on the unmutated migration", async () => {
+      await withMigrated(completeAcceptsTheCurrentAndThePreviousPromptVersionOnly);
+      await withMigrated(aRunningJobRejectsEveryTokenButItsOwn);
+    });
   });
 });

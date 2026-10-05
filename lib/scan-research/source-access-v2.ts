@@ -3,10 +3,11 @@ import { createHash } from "node:crypto";
 import Ajv2020, { type ValidateFunction } from "ajv/dist/2020";
 import auditSchema from "@/schemas/research_audit.json";
 import receiptSchema from "@/schemas/source_access_v2.json";
-import { RESEARCH_PROVENANCE } from "./contract";
+import { ACCEPTED_RESEARCH_PROMPT_VERSIONS, RESEARCH_PROMPT_VERSION, RESEARCH_PROVENANCE, type ResearchPromptVersion } from "./contract";
 import { plainJsonProblem } from "./result";
 
-const PROMPT = "live-research-v0.2";
+const PROMPT = RESEARCH_PROMPT_VERSION;
+const isAcceptedPrompt = (v: unknown): v is ResearchPromptVersion => (ACCEPTED_RESEARCH_PROMPT_VERSIONS as readonly unknown[]).includes(v);
 const MAX_BYTES = 768 * 1024;
 const MAX_ERRORS = 10;
 export const JSON_SCHEMA_2020_12 = "https://json-schema.org/draft/2020-12/schema";
@@ -35,16 +36,31 @@ function getValidators() {
 function schemaErrors(validate: ValidateFunction, prefix: string): string[] {
   return (validate.errors ?? []).slice(0, MAX_ERRORS).map((e) => `${prefix}${e.instancePath || "/"} ${e.message ?? "invalid"}`.slice(0, 200));
 }
-function idsIn(text: string): Set<string> {
+/**
+ * MUST stay identical to pipeline/claude_research_adapter.py `extract_ids` (the worker grounds with it before it
+ * posts; this recomputes the same grounding from the receipts). tests/fixtures/id-extraction-cases.json pins both.
+ * Two measured widenings (2026-10-06, from the 2026-10-05 Vitamin D captures): a PMID the text labels with
+ * Markdown bold ("**PMID:** 123"), and a DOI read out of a URL that ends in a page-view path (".../<doi>/full",
+ * ".../<doi>/pdf"), where both the full capture and the bare DOI are kept. Nothing else is recognised: not a bare
+ * number, not "PMID list ... 123", not an identifier that only appears in what the model asked for.
+ */
+const DOI_WEB_VIEW_SUFFIXES = ["/full", "/pdf"] as const;
+export function idsIn(text: string): Set<string> {
   const out = new Set<string>();
-  for (const m of text.matchAll(/10\.\d{4,9}\/[^\s"'<>)\]},;]+/gi)) out.add(`doi:${m[0].replace(/[.]+$/, "").toLowerCase()}`);
+  for (const m of text.matchAll(/10\.\d{4,9}\/[^\s"'<>)\]},;]+/gi)) {
+    const doi = m[0].replace(/[.]+$/, "").toLowerCase();
+    out.add(`doi:${doi}`);
+    for (const suffix of DOI_WEB_VIEW_SUFFIXES) {
+      if (doi.endsWith(suffix) && doi.length > suffix.length && doi.slice(0, -suffix.length).includes("/")) out.add(`doi:${doi.slice(0, -suffix.length)}`);
+    }
+  }
   for (const m of text.matchAll(/pubmed\.ncbi\.nlm\.nih\.gov\/(\d{5,9})/gi)) out.add(`pmid:${m[1]}`);
-  for (const m of text.matchAll(/\bPMID[:\s#]*(\d{5,9})\b/gi)) out.add(`pmid:${m[1]}`);
+  for (const m of text.matchAll(/\bPMID[\s:#*]*(\d{5,9})\b/gi)) out.add(`pmid:${m[1]}`);
   for (const m of text.matchAll(/\bPMC\d{5,9}\b/gi)) out.add(m[0].toUpperCase());
   for (const m of text.matchAll(/\bNCT\d{8}\b/gi)) out.add(m[0].toUpperCase());
   return out;
 }
-function normalizeId(raw: unknown): string | null {
+export function normalizeId(raw: unknown): string | null {
   const s = String(raw ?? "").trim();
   const ids = idsIn(s);
   if (ids.size) return [...ids].sort()[0];
@@ -55,7 +71,7 @@ function normalizeId(raw: unknown): string | null {
 export type LiveResearchResultV2 = {
   audit: Record<string, unknown>;
   source_access: { version: "SourceAccessSummaryV2"; summary: Record<string, number>; inventory: { id: string; evidence_class: "derived_snippet" }[]; limitations: string[] };
-  provenance: typeof RESEARCH_PROVENANCE & { model: "claude-sonnet-5-5"; prompt_version: typeof PROMPT; cli_version: "2.1.287"; adapter_version: string; classifier_version: string; source_access_version: "SourceAccessV2" };
+  provenance: typeof RESEARCH_PROVENANCE & { model: "claude-sonnet-5-5"; prompt_version: ResearchPromptVersion; cli_version: "2.1.287"; adapter_version: string; classifier_version: string; source_access_version: "SourceAccessV2" };
 };
 export type LiveResearchCheckV2 = { ok: true; result: LiveResearchResultV2 } | { ok: false; errors: string[] };
 
@@ -69,7 +85,7 @@ export function checkLiveResearchResultV2(audit: unknown, sourceAccess: unknown,
   if (errors.length) return { ok: false, errors };
   const json = JSON.stringify({ audit, source_access_v2: sourceAccess });
   if (Buffer.byteLength(json, "utf8") > MAX_BYTES) return { ok: false, errors: ["/request exceeds 768 KiB"] };
-  if (promptVersion !== PROMPT) errors.push("/prompt_version unsupported");
+  if (!isAcceptedPrompt(promptVersion)) errors.push("/prompt_version unsupported");
   const validators = getValidators();
   if (!validators.validateAudit(audit)) errors.push(...schemaErrors(validators.validateAudit, "/audit"));
   if (!validators.validateReceipt(sourceAccess)) errors.push(...schemaErrors(validators.validateReceipt, "/source_access_v2"));
@@ -78,7 +94,8 @@ export function checkLiveResearchResultV2(audit: unknown, sourceAccess: unknown,
   const a = audit as Record<string, any>;
   const receipt = sourceAccess as Record<string, any>;
   const runner = receipt.runner;
-  if (a.meta.model !== "claude-sonnet-5-5" || a.meta.prompt !== PROMPT) errors.push("/audit/meta model or prompt mismatch");
+  // The prompt that ran: the audit says so and the receipt's runner must say the same (both are pinned to an accepted version).
+  if (a.meta.model !== "claude-sonnet-5-5" || !isAcceptedPrompt(a.meta.prompt) || runner.prompt_version !== a.meta.prompt) errors.push("/audit/meta model or prompt mismatch");
   const seen = new Set<string>();
   const grounded = new Set<string>();
   const summary = { requests: 0, errors: 0, walls: 0, refusals: 0, search_snippets: 0, fetch_summaries: 0, original_documents: 0 };
@@ -117,7 +134,7 @@ export function checkLiveResearchResultV2(audit: unknown, sourceAccess: unknown,
   return { ok: true, result: {
     audit: a,
     source_access: { version: "SourceAccessSummaryV2", summary, inventory: inv, limitations: ["WebSearch snippets and WebFetch model summaries are not original papers.", "ID matching does not verify study numbers or clinical validity."] },
-    provenance: { ...RESEARCH_PROVENANCE, model: "claude-sonnet-5-5", prompt_version: PROMPT, cli_version: "2.1.287", adapter_version: runner.adapter_version, classifier_version: runner.classifier_version, source_access_version: "SourceAccessV2" },
+    provenance: { ...RESEARCH_PROVENANCE, model: "claude-sonnet-5-5", prompt_version: a.meta.prompt as ResearchPromptVersion, cli_version: "2.1.287", adapter_version: runner.adapter_version, classifier_version: runner.classifier_version, source_access_version: "SourceAccessV2" },
   } };
 }
 export const SOURCE_ACCESS_V2_PROMPT_VERSION = PROMPT;

@@ -1,0 +1,425 @@
+{
+ "about": "Verbatim excerpts of the ORIGINAL raw streams of the three Vitamin D research attempts of 2026-10-05 (the three captures stay immutable on the PC; raw_stream_sha256 pins each). Only the tool results that contain the digits of a cited inventory id are kept, byte for byte; nothing is edited. recorded_failure is the message the worker posted for that attempt. No user id, e-mail, job id or lease token is in this file (the one UUID-shaped string is a third-party article URL inside a public search result; the 64-hex strings are the three capture pins and a third-party page title). Used by tests/test_grounding_replay.py; the expected per-id outcome is asserted THERE, not stored here.",
+ "runs": {
+  "vitd-run-1": {
+   "raw_stream_sha256": "eae1727acc29327e6bff21b94592770509ea1296f9097cdf4119872d43d8ef49",
+   "recorded_failure": "inventory ID is not grounded in returned tool text: '35939577'",
+   "receipts_total": 41,
+   "receipts": [
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "returned_kind": "fetch_model_summary",
+     "returned_text": "The PMID list is:\n\n36853379"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "returned_kind": "fetch_model_summary",
+     "returned_text": "The PMID list from the search results is:\n\n40949733\n32219282\n27820225\n16127768"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "returned_kind": "fetch_model_summary",
+     "returned_text": "The PMID list from the search results:\n\n41603552\n40091712\n38488491\n38265769\n35939577"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "returned_kind": "fetch_model_summary",
+     "returned_text": "# Summary of Research Records\n\n## Record 1\n**PMID:** 35939577  \n**Title:** \"Supplemental Vitamin D and Incident Fractures in Midlife and Older Adults\"  \n**Journal:** New England Journal of Medicine  \n**Year:** 2022  \n**Design:** Randomized controlled trial (two-by-two factorial design)  \n**Participants:** 25,871 (50.6% women; 20.2% Black)  \n**Main Results:** Vitamin D3 (2000 IU/day) vs. placebo showed no significant difference in total fractures (HR 0.98, 95% CI 0.89-1.08), nonvertebral fractures (HR 0.97, 95% CI 0.87-1.07), or hip fractures (HR 1.01, 95% CI 0.70-1.47).  \n**Funding:** National Institute of Arthritis and Musculoskeletal and Skin Diseases\n\n---\n\n## Record 2\n**PMID:** 40949733  \n**Title:** \"Effects of dietary supplements on bone turnover markers in women after menopause: a network meta-analysis\"  \n**Journal:** PeerJ  \n**Year:** 2025  \n**Design:** Network meta-analysis of randomized controlled trials  \n**Studies/Participants:** 43 RCTs; 5,184 postmenopausal women  \n**Main Results:** Vitamin E most reduced CTX (SUCRA: 82.37%); combined vitamin D+K elevated P1NP (SUCRA: 100%) and osteocalcin (SUCRA: 97.05%).  \n**Funding:** Not stated\n\n---\n\n## Record 3\n**PMID:** 32219282  \n**Title:** \"The combination effect of vitamin K and vitamin D on human bone quality: a meta-analysis\"  \n**Journal:** Food & Function  \n**Year:** 2020  \n**Design:** Meta-analysis of randomized controlled trials  \n**Studies/Participants:** 8 RCTs; 971 subjects  \n**Main Results:** Vitamin K+D significantly increased total BMD (0.316, 95% CI 0.031-0.601); decreased undercarboxylated osteocalcin (-0.945, 95% CI -1.113 to -0.778).  \n**Funding:** Not stated\n\n---\n\n## Record 4\n**PMID:** 27820225  \n**Title:** \"A systematic review of the effectiveness of lifestyle interventions for improving bone health in women at high risk\"  \n**Journal:** JBI Library of Systematic Reviews  \n**Year:** 2012  \n**Design:** Systematic review of randomized controlled trials  \n**Studies:** 25 RCTs included  \n**Participants:** Not specified numerically  \n**Main Results:** \"Strength exercises had a positive effect on fracture\"; calcium and vitamin D combination improved lumbar BMD and balance.  \n**Funding:** Not stated\n\n---\n\n## Record 5\n**PMID:** 16127768  \n**Title:** \"Prevention and treatment of corticosteroid-induced osteoporosis\"  \n**Journal:** Yonsei Medical Journal  \n**Year:** 2005  \n**Design:** Review article (discusses meta-analyses and RCTs)  \n**Studies/Participants:** Not original research; reviews existing evidence  \n**Main Results:** Bisphosphonates most effective for lumbar spine BMD; efficacy enhanced with vitamin D.  \n**Funding:** Not stated"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "returned_kind": "fetch_model_summary",
+     "returned_text": "The PMID list from the search results is:\n\n**19937427**"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "returned_kind": "fetch_model_summary",
+     "returned_text": "# Study Summary\n\n## Record 1\n**PMID:** 19937427\n\n**Title:** \"Vitamin K2 supplementation does not influence bone loss in early menopausal women\"\n\n**Journal:** Osteoporosis International\n\n**Year:** 2010\n\n**Design:** Randomized double-blind placebo-controlled trial\n\n**N:** 334 healthy women aged 50-60 years, 1-5 years postmenopausal\n\n**Dose:** 360 micrograms MK-7 (menaquinone-7) as Natto capsules daily\n\n**Main Results:** No statistical differences in bone loss rates between treatment and placebo groups at total hip or other sites after 12 months. Carboxylated osteocalcin increased and under-carboxylated osteocalcin decreased in treatment versus placebo (p < 0.001).\n\n**Funding:** Not explicitly stated in provided excerpt\n\n---\n\n## Record 2\n**PMID:** 26377861\n\n**Title:** \"Controversy and consensus regarding vitamin D: Recent methodological changes and the risks and benefits of vitamin D supplementation\"\n\n**Journal:** Critical Reviews in Clinical Laboratory Sciences\n\n**Year:** 2016\n\n**Design:** Review article (not a primary study)\n\n**N:** Not applicable\n\n**Dose:** Not applicable\n\n**Main Results:** Not applicable—this is a narrative review summarizing data on vitamin D measurement methods and skeletal/extraskeletal effects\n\n**Funding:** Not explicitly stated in provided excerpt"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "returned_kind": "fetch_model_summary",
+     "returned_text": "The PMID list from the search result is:\n\n**33030563**"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "returned_kind": "fetch_model_summary",
+     "returned_text": "# Summary of Records\n\n## Record 1\n**PMID:** 33030563  \n**Title:** \"The effect of vitamin MK-7 on bone mineral density and microarchitecture in postmenopausal women with osteopenia, a 3-year randomized, placebo-controlled clinical trial\"  \n**Journal:** Osteoporos Int  \n**Year:** 2021  \n**Design:** Randomized, placebo-controlled, double-blinded trial  \n**N:** 142 postmenopausal women with osteopenia  \n**K2 Dose:** 375 μg MK-7 daily  \n**Co-interventions:** Vitamin D3 (38 μg/day) + calcium (800 mg/day)  \n**Duration:** 3 years  \n**Main Results:** Undercarboxylated osteocalcin decreased 65.2% in MK-7 group vs. −0.03% in placebo (p<0.01) after 1 year. After 3 years, areal BMD declined at all sites without significant between-group differences (p>0.09). Changes in bone turnover markers and microstructure were similar between groups.  \n**Funding:** Not shown\n\n---\n\n## Record 2\n**PMID:** 23525894  \n**Title:** \"Three-year low-dose menaquinone-7 supplementation helps decrease bone loss in healthy postmenopausal women\"  \n**Journal:** Osteoporos Int  \n**Year:** 2013  \n**Design:** Randomized, placebo-controlled trial  \n**N:** 244 healthy postmenopausal women  \n**K2 Dose:** 180 μg MK-7 daily  \n**Co-interventions:** None mentioned  \n**Duration:** 3 years  \n**Main Results:** MK-7 significantly improved vitamin K status and reduced \"age-related decline in BMC and BMD at the lumbar spine and femoral neck, but not at the total hip.\" Bone strength favorably affected; MK-7 decreased vertebral height loss in lower thoracic region.  \n**Funding:** Not shown\n\n---\n\n## Record 3\n**PMID:** 29276005  \n**Title:** \"Histone Lysine Methylases and Demethylases in the Landscape of Human Developmental Disorders\"  \n**Journal:** Am J Hum Genet  \n**Year:** 2018  \n**Status:** **Off-topic** — concerns histone methylation and developmental disorders, not vitamin K or bone health."
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "returned_kind": "fetch_model_summary",
+     "returned_text": "# PMID List\n\n37011645"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "returned_kind": "fetch_model_summary",
+     "returned_text": "The PMID list from the search results is:\n\n**30293909**"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "returned_kind": "fetch_model_summary",
+     "returned_text": "# Study Summary\n\n## Record 1\n**PMID:** 37011645  \n**Title:** \"The effect of monthly vitamin D supplementation on fractures: a tertiary outcome from the population-based, double-blind, randomised, placebo-controlled D-Health trial\"  \n**Journal:** Lancet Diabetes Endocrinol  \n**Year:** 2023  \n**Design:** Population-based, double-blind, randomized, placebo-controlled trial  \n**N:** 20,326 participants (10,154 vitamin D; 10,172 placebo)  \n**Vitamin D Dose:** 60,000 IU per month  \n**Duration:** Up to 5 years (median follow-up 5.1 years)  \n**Main Results:** Total fractures HR 0.94 (95% CI 0.84–1.06); non-vertebral HR 0.96 (0.85–1.08); hip fractures HR 1.11 (0.86–1.45)  \n**Funding:** Australian National Health and Medical Research Council\n\n---\n\n## Record 2\n**PMID:** 30293909  \n**Title:** \"Effects of vitamin D supplementation on musculoskeletal health: a systematic review, meta-analysis, and trial sequential analysis\"  \n**Journal:** Lancet Diabetes Endocrinol  \n**Year:** 2018  \n**Design:** Systematic review, meta-analysis, and trial sequential analysis of 81 RCTs  \n**N:** 53,537 participants across included trials  \n**Vitamin D Dose:** Varied across trials; doses >800 IU/day examined  \n**Duration:** 1–5 years  \n**Main Results:** Total fracture RR 1.00 (0.93–1.07); hip fracture RR 1.11 (0.97–1.26); falls RR 0.97 (0.93–1.02)  \n**Funding:** Health Research Council of New Zealand"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "returned_kind": "fetch_model_summary",
+     "returned_text": "The PMID list from the search results is:\n\n**25694037**"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "returned_kind": "fetch_model_summary",
+     "returned_text": "The PMID list from the search results:\n\n34785587, 37356648, 25694037, 37252246, 36061545, 39243235, 33871429, 40356295"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "returned_kind": "fetch_model_summary",
+     "returned_text": "# Summary of Records\n\n## Record 1\n**PMID:** 25694037  \n**Title:** Menaquinone-7 supplementation improves arterial stiffness in healthy postmenopausal women  \n**Journal:** Thromb Haemost  \n**Year:** 2015  \n**Design:** Double-blind, placebo-controlled randomized clinical trial  \n**Participants:** 244 (placebo n=124; MK-7 n=120)  \n**K Dose/Form:** 180 µg MenaQ7/day (MK-7)  \n**Duration:** 3 years  \n**Vitamin D Co-intervention:** Not mentioned  \n**Main Results:** \"cfPWV and the Stiffness Index β significantly decreased in the total group\"; MK-7 reduced dp-ucMGP by 50% versus placebo; improvements in distension, compliance, and distensibility observed in women with baseline Stiffness Index β above median  \n**Funding:** Not shown\n\n---\n\n## Record 2\n**PMID:** 34785587  \n**Title:** Vitamin K(2)—a neglected player in cardiovascular health: a narrative review  \n**Journal:** Open Heart  \n**Year:** 2021  \n**Design:** Narrative review (off-topic—not an RCT)  \n**Participants:** N/A  \n**K Dose/Form:** N/A  \n**Duration:** N/A  \n**Vitamin D Co-intervention:** N/A  \n**Main Results:** N/A  \n**Funding:** One author received institutional grant from NattoPharma\n\n---\n\n## Record 3\n**PMID:** 37356648  \n**Title:** Vitamin D Therapy in Adults With CKD: A Systematic Review and Meta-analysis  \n**Journal:** Am J Kidney Dis  \n**Year:** 2023  \n**Design:** Systematic review and meta-analysis of RCTs  \n**Trials/Participants:** 128 studies; 11,270 participants  \n**K Dose/Form:** Not applicable (vitamin D, not K)  \n**Duration:** ≥3 months follow-up  \n**Vitamin D Co-intervention:** Study subject (not co-intervention)  \n**Main Results:** Vitamin D therapy \"probably had no effect on all-cause death\" [RR 1.04; 95% CI 0.84-1.24]; uncertain effects on fracture [RR 0.68; 95% CI 0.37-1.23]  \n**Funding:** Not shown\n\n---\n\n## Record 4\n**PMID:** 37252246  \n**Title:** Vitamin K supplementation and vascular calcification: a systematic review and meta-analysis  \n**Journal:** Front Nutr  \n**Year:** 2023  \n**Design:** Systematic review and meta-analysis of RCTs  \n**Trials/Participants:** 14 RCTs; 1,533 patients  \n**K Dose/Form:** Not specified individually  \n**Duration:** Not specified  \n**Vitamin D Co-intervention:** Not mentioned  \n**Main Results:** VK supplementation slowed coronary artery calcification progression [MD -17.37; 95% CI (-34.18, -0.56)]; lowered dp-ucMGP [MD -243.31; 95% CI (-366.08, -120.53)]; no significant adverse events [RR 0.92; 95% CI (-0.79, 1.07)]  \n**Funding:** Not shown\n\n---\n\n## Record 5\n**PMID:** 36061545  \n**Title:** Vitamin K antagonists and cardiovascular calcification: A systematic review and meta-analysis  \n**Journal:** Front Cardiovasc Med  \n**Year:** 2022  \n**Design:** Systematic review and meta-analysis (off-topic—examines VKA harm, not VK supplementation benefits)  \n**Participants:** 45,757 patients; 6,251 VKA users  \n**K Dose/Form:** N/A  \n**Duration:** Median 2.3 years  \n**Vitamin D Co-intervention:** Not mentioned  \n**Main Results:** VKA use associated with increased coronary artery calcification [OR 1.21; 95% CI (1.08, 1.36)]  \n**Funding:** Not shown"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "returned_kind": "fetch_model_summary",
+     "returned_text": "The PMID list from the search results is:\n\n36033779, 30734066, 23346882, 19818211"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "returned_kind": "fetch_model_summary",
+     "returned_text": "# Study Summary\n\n**PMID:** 36033779\n\n**Title:** \"Efficacy of vitamin K2 in the prevention and treatment of postmenopausal osteoporosis: A systematic review and meta-analysis of randomized controlled trials\"\n\n**Journal:** Frontiers in Public Health\n\n**Year:** 2022\n\n**RCTs & Participants:** 16 RCTs with 6,425 total subjects\n\n**K2 Dose Range:** Not specified in the document\n\n**Lumbar Spine BMD Results:** 10 studies showed significant improvement (P = 0.006); combination therapy showed significant maintenance/improvement (P = 0.03). No confidence intervals provided.\n\n**Fracture Results:** Initial analysis of 6 RCTs showed no significant difference (RR=0.96, P=0.65). After excluding one heterogeneous study, significant reduction found (RR = 0.43, P = 0.01). No confidence intervals provided for fracture results.\n\n**I² Values:** Not reported in document\n\n**Funding:** Not stated in document"
+    }
+   ],
+   "rows": [
+    {
+     "outcome": 1,
+     "id": "35939577",
+     "access": "snippet"
+    },
+    {
+     "outcome": 1,
+     "id": "37011645",
+     "access": "snippet"
+    },
+    {
+     "outcome": 1,
+     "id": "30293909",
+     "access": "snippet"
+    },
+    {
+     "outcome": 2,
+     "id": "36853379",
+     "access": "snippet"
+    },
+    {
+     "outcome": 3,
+     "id": "23525894",
+     "access": "snippet"
+    },
+    {
+     "outcome": 3,
+     "id": "19937427",
+     "access": "snippet"
+    },
+    {
+     "outcome": 3,
+     "id": "33030563",
+     "access": "snippet"
+    },
+    {
+     "outcome": 3,
+     "id": "36033779",
+     "access": "snippet"
+    },
+    {
+     "outcome": 4,
+     "id": "32219282",
+     "access": "snippet"
+    },
+    {
+     "outcome": 5,
+     "id": "25694037",
+     "access": "snippet"
+    }
+   ]
+  },
+  "vitd-run-2": {
+   "raw_stream_sha256": "fcdd62b85afe5d3be8febf2fe1ca6c2aee1d64eb9298180d7d09690144fd993e",
+   "recorded_failure": "inventory ID is not grounded in returned tool text: 'PMID:32219282'",
+   "receipts_total": 34,
+   "receipts": [
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "returned_kind": "search_snippet",
+     "returned_text": "Web search results for query: \"vitamin D3 and vitamin K2 combined supplementation randomized controlled trial bone mineral density\"\n\nLinks: [{\"title\":\"pubmed.ncbi.nlm.nih.gov\",\"url\":\"https://pubmed.ncbi.nlm.nih.gov/11180916/\"},{\"title\":\"Issue 4, 2020\",\"url\":\"https://pubs.rsc.org/en/content/articlepdf/2013/mw/c9fo03063h\"},{\"title\":\"Issue 4, 2020\",\"url\":\"https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h\"},{\"title\":\"pubmed.ncbi.nlm.nih.gov\",\"url\":\"https://pubmed.ncbi.nlm.nih.gov/21860562\"},{\"title\":\"wpr 100570\",\"url\":\"https://pesquisa.bvsalud.org/gim/resource/ru/wpr-100570\"},{\"title\":\"drmirkin.com\",\"url\":\"https://drmirkin.com/?p=9078\"},{\"title\":\"naturalhealthresearch.org\",\"url\":\"https://www.naturalhealthresearch.org/?p=18049\"},{\"title\":\"Articles Vol. 66 No. 2 04/03/2025\",\"url\":\"https://tapchiyhcd.vn/index.php/yhcd/en/article/view/2036\"},{\"title\":\"wbldb.lievers.net\",\"url\":\"https://wbldb.lievers.net/10214559.html\"},{\"title\":\"Claim analyzed\",\"url\":\"https://lenz.io/c/vitamin-k-vitamin-d-absorption-bone-health-81497963\"}]\n\nI found relevant research on vitamin D3 and vitamin K2 combined supplementation and bone mineral density. Here are the key findings:\n\n## Key Studies\n\n**Early Randomized Controlled Trial (2000):**\nA study examined the effect of combined vitamin D3 and vitamin K2 on bone mineral density in postmenopausal women with osteoporosis, randomly dividing 92 osteoporotic women into four groups receiving vitamin D3 alone, vitamin K2 alone, both vitamins combined, or calcium. Results showed a significant increase in BMD in the combined vitamin D3 and K2 group compared with calcium alone, vitamin D3 alone, and vitamin K2 alone groups. The findings indicate that combined administration of vitamin D3 and vitamin K2 appears useful in increasing BMD of the lumbar spine in postmenopausal women with osteoporosis.\n\n**Meta-Analysis of RCTs (2020):**\nA meta-analysis of eight randomized controlled trials including 971 subjects found that vitamin K combined with vitamin D significantly increased total bone mineral density with a pooled effect size of 0.316. A significant decrease in undercarboxylated osteocalcin was observed with the combination, and a more favorable effect is expected when vitamin K2 is used.\n\n**Recent Studies:**\nA randomized controlled trial in postmenopausal Korean women found that addition of vitamin K to vitamin D and calcium supplements increased L3 BMD and reduced undercarboxylated osteocalcin concentration.\n\nOverall, the evidence from randomized controlled trials suggests that combined supplementation of vitamin D3 and K2 is more effective for improving bone mineral density than either vitamin alone.\n\n\nREMINDER: You MUST include the sources above in your response to the user using markdown hyperlinks."
+    },
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "returned_kind": "search_snippet",
+     "returned_text": "Web search results for query: \"vitamin K2 menaquinone-7 vitamin D3 co-supplementation meta-analysis\"\n\nLinks: [{\"title\":\"pubmed.ncbi.nlm.nih.gov\",\"url\":\"https://pubmed.ncbi.nlm.nih.gov/32060566/\"},{\"title\":\"D3 K2\",\"url\":\"https://cdn.shopify.com/s/files/1/0600/8766/4825/files/D3_K2.pdf\"},{\"title\":\"Vitamin D Plus K\",\"url\":\"https://shop.bermansexualhealth.com/products/vitamin-d-plus-k-60c\"},{\"title\":\"Rationale for a Vitamin K2 and Vitamin D3 Intervention Trial in Children and Adolescents with Low-Energy Bone Fractures\",\"url\":\"https://bohrium.dp.tech/paper/arxiv/28686548\"},{\"title\":\"Issue 4, 2020\",\"url\":\"https://pubs.rsc.org/en/content/articlepdf/2013/mw/c9fo03063h\"},{\"title\":\"vitamine d3 k2\",\"url\":\"https://www.compagnie-des-sens.fr/vitamine-d3-k2/\"},{\"title\":\"Issue 4, 2020\",\"url\":\"https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h\"},{\"title\":\"www.emersonecologics.com\",\"url\":\"https://www.emersonecologics.com/products/detail/vitamin-k/vitamin-k2-with-d3/16202/R01254\"},{\"title\":\"D3 5000 K2\",\"url\":\"https://cdn.shopify.com/s/files/1/0047/2059/0937/files/D3_5000_K2.pdf\"}]\n\nI've completed the web search for your query on vitamin K2 menaquinone-7, vitamin D3 co-supplementation, and meta-analysis. Here are the key findings:\n\n## Meta-Analysis Evidence\n\nThe combination of vitamin K and D can significantly increase the total bone mineral density (BMD) and significantly decrease undercarboxylated osteocalcin, with a more favorable effect expected when vitamin K2 is used. Subgroup analysis showed that when K2 supplementation was less than 500 μg/day combined with vitamin D, it significantly increased total BMD compared with control groups.\n\n## Research on Co-supplementation\n\nPrevious studies indicated a positive effect of vitamin K2 supplementation on bone turnover biomarkers and bone mineral density, with the aim to explore whether co-supplementation of VK2, calcium and vitamin D3 would bring greater effects.\n\nEpidemiological and clinical research provides a nutritional paradigm for efficient and safe delivery of calcium that requires co-supplementation with the fat-soluble vitamins D and K.\n\n## MK-7 Specific Properties\n\nMenaquinone-7 (MK-7), with its longer side chain, is very hydrophobic, and its physiochemical properties make it highly transportable by plasma lipoproteins, increase its extrahepatic availability to bones and arteries, and produce its long half-life.\n\nThe search results include a 2020 meta-analysis published in Food Functionality that examined the combined effects of vitamin K and vitamin D on bone health in randomized controlled trials.\n\n\nREMINDER: You MUST include the sources above in your response to the user using markdown hyperlinks."
+    },
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "returned_kind": "search_snippet",
+     "returned_text": "Web search results for query: \"vitamin D supplementation fractures meta-analysis healthy adults VITAL D-Health\"\n\nLinks: [{\"title\":\"The Effects of Vitamin D Supplementation on Musculoskeletal Health: The VITAL and DO-Health Trials\",\"url\":\"https://pubmed.ncbi.nlm.nih.gov/37325962/\"},{\"title\":\"pmc.ncbi.nlm.nih.gov\",\"url\":\"https://pmc.ncbi.nlm.nih.gov/articles/PMC10272981\"},{\"title\":\"Vitamin D supplements fail to lower risk of fractures in healthy adults, study says\",\"url\":\"https://www.upi.com/Health_News/2022/07/27/vitamin-D-fractures-study/1971658922394/\"},{\"title\":\"supplemental vitamin d did not lower risk of fractures in healthy us adults\",\"url\":\"https://www.newswise.com/articles/supplemental-vitamin-d-did-not-lower-risk-of-fractures-in-healthy-us-adults\"},{\"title\":\"Vitamin D supplementation and fracture risk in healthy adults\",\"url\":\"https://gpnotebook.com/pages/musculoskeletal-medicine/vitamin-d-supplementation-and-fracture-risk-in-healthy-adults\"},{\"title\":\"Vitamin D does not lower fracture risk in adults, study finds\",\"url\":\"https://www.nutraingredients.com/Article/2022/08/02/Vitamin-D-does-not-lower-fracture-risk-in-adults-study-finds/\"},{\"title\":\"Vitamin D did not lower fracture risk in generally healthy patients, study finds\",\"url\":\"https://www.acpinternist.org/weekly/archives/2022/08/02/1.htm\"},{\"title\":\"Vitamin D does not lower fracture risk in adults, study finds\",\"url\":\"https://WWW.NUTRAINGREDIENTS.COM/Article/2022/07/29/Vitamin-D-does-not-lower-fracture-risk-in-adults-study-finds\"},{\"title\":\"immattersacp.org\",\"url\":\"https://immattersacp.org/weekly/archives/2022/08/02/1.htm\"},{\"title\":\"In Healthy Adults, Supplemental Vitamin D Did Not Lower Fracture Risk, Study Finds\",\"url\":\"https://foreonline.org/?p=16098\"}]\n\nBased on the search results, here's what the research shows about vitamin D supplementation and fractures in healthy adults:\n\n## Key Findings from VITAL and DO-Health Trials\n\nThe VITAL trial examined the effects of 2,000 IU daily vitamin D supplementation on musculoskeletal outcomes in generally healthy adults, including men (≥50 years) and women (≥55 years) over 5.3 years (n = 25,871), while the DO-HEALTH trial studied women and men (≥70 years) over 3 years (n = 2,157).\n\nThese studies found no benefit of 2,000 IU/day of supplemental vitamin D on nonvertebral fractures, falls, functional decline, or frailty. More specifically, in VITAL, supplementation with 2,000 IU/day of vitamin D did not reduce the risk of total or hip fractures.\n\nA total of 1,991 incident fractures in 1,551 participants were confirmed over a median follow-up of 5.3 years. Compared to placebo, supplemental vitamin D3 (2000 IU/day) did not reduce total, non-vertebral, or hip fractures, and the analyses also showed no effects on major osteoporotic fractures, wrist fractures, or pelvic fractures.\n\n## Important Limitations\n\nIt's crucial to note that in generally healthy and vitamin D-replete older adults not preselected for vitamin D deficiency or low bone mass or osteoporosis, 2,000 IU/day of vitamin D had no musculoskeletal health benefits. These findings do not apply to adults with vitamin D deficiency or low bone mass or osteoporosis.\n\n\nREMINDER: You MUST include the sources above in your response to the user using markdown hyperlinks."
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "returned_kind": "fetch_model_summary",
+     "returned_text": "# Search Result\n\n**Title:** \"The combination effect of vitamin K and vitamin D on human bone quality: a meta-analysis of randomized controlled trials.\"\n\n**Authors:** Kuang X, Liu C, Guo X, Li K, Deng Q, Li D.\n\n**Journal:** Food Funct\n\n**Year:** 2020\n\n**PMID:** 32219282\n\n**DOI:** 10.1039/c9fo03063h"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "returned_kind": "fetch_model_summary",
+     "returned_text": "# Search Results: Vitamin D, K2/Menaquinone, and Randomized Controlled Trials\n\n1. **Ding Y, Du H.** \"Efficacy of combined supplementation of vitamins A/D/K1/K2 on the growth and development of preterm infants: A randomized controlled trial.\" *Nutr Clin Pract* 2026;41(5):1491-1502. PMID: 42125969. DOI: 10.1002/ncp.70132\n\n2. **Lithgow H, et al.** \"The Effects of Vitamin K2 on Recovery from Muscle-Damaging Resistance Exercise in Young and Older Adults: The TAKEOVER Randomized Controlled Trial.\" *Med Sci Sports Exerc* 2026;58(4):683-694. PMID: 41843412. DOI: 10.1249/mss.0000000000003901\n\n3. **Atieh O, et al.** \"Vitamins K2 and D3 Improve Long COVID, Fungal Translocation, and Inflammation: Randomized Controlled Trial.\" *Nutrients* 2025;17(2):304. PMID: 39861434. DOI: 10.3390/nu17020304\n\n4. **de Vries F, et al.** \"Effects of One-Year Menaquinone-7 Supplementation on Vascular Stiffness and Blood Pressure in Post-Menopausal Women.\" *Nutrients* 2025;17(5):815. PMID: 40077685. DOI: 10.3390/nu17050815\n\n5. **Naiyarakseree N, et al.** \"Effect of Menaquinone-7 Supplementation on Arterial Stiffness in Chronic Hemodialysis Patients: A Multicenter Randomized Controlled Trial.\" *Nutrients* 2023;15(11):2422. PMID: 37299386. DOI: 10.3390/nu15112422\n\n6. **Rønn SH, et al.** \"Vitamin K2 (menaquinone-7) increases plasma adiponectin but does not affect insulin sensitivity in postmenopausal women: a randomized controlled trial.\" *Eur J Clin Nutr* 2021;75(11):1661-1667. PMID: 33664429. DOI: 10.1038/s41430-021-00884-8\n\n7. **Diederichsen ACP, et al.** \"Vitamin K2 and D in Patients With Aortic Valve Calcification: A Randomized Double-Blinded Clinical Trial.\" *Circulation* 2022;145(18):1387-1397. PMID: 35465686. DOI: 10.1161/circulationaha.121.057008\n\n8. **Tarkesh F, et al.** \"Effect of vitamin K2 administration on depression status in patients with polycystic ovary syndrome: a randomized clinical trial.\" *BMC Womens Health* 2022;22(1):315. PMID: 35883082. DOI: 10.1186/s12905-022-01825-8\n\n9. **El Borolossy R, El-Farsy MS.** \"The impact of vitamin K2 and native vitamin D supplementation on vascular calcification in pediatric patients on regular hemodialysis. A randomized controlled trial.\" *Eur J Clin Nutr* 2022;76(6):848-854. PMID: 34845313. DOI: 10.1038/s41430-021-01050-w\n\n10. **Rønn SH, et al.** \"Vitamin K2 (menaquinone-7) prevents age-related deterioration of trabecular bone microarchitecture at the tibia in postmenopausal women.\" *Eur J Endocrinol* 2016;175(6):541-549. PMID: 27625301. DOI: 10.1530/eje-16-0498\n\n11. **Zhang Y, et al.** \"Effect of Low-Dose Vitamin K2 Supplementation on Bone Mineral Density in Middle-Aged and Elderly Chinese: A Randomized Controlled Study.\" *Calcif Tissue Int* 2020;106(5):476-485. PMID: 32060566. DOI: 10.1007/s00223-020-00669-4\n\n12. **Witham MD, et al.** \"Effect of Vitamin K2 on Postural Sway in Older People Who Fall: A Randomized Controlled Trial.\" *J Am Geriatr Soc* 2019;67(10):2102-2107. PMID: 31211416. DOI: 10.1111/jgs.16024\n\n13. **Zwakenberg SR, et al.** \"The effect of menaquinone-7 supplementation on vascular calcification in patients with diabetes: a randomized, double-blind, placebo-controlled trial.\" *Am J Clin Nutr* 2019;110(4):883-890. PMID: 31387121. DOI: 10.1093/ajcn/nqz147\n\n14. **Knapen MH, et al.** \"Steady-state vitamin K2 (menaquinone-7) plasma concentrations after intake of dairy products and soft gel capsules.\" *Eur J Clin Nutr* 2016;70(7):831-836. PMID: 26908424. DOI: 10.1038/ejcn.2016.3\n\n15. **De Vriese AS, et al.** \"Multicenter Randomized Controlled Trial of Vitamin K Antagonist Replacement by Rivaroxaban with or without Vitamin K2 in Hemodialysis Patients with Atrial Fibrillation: the Valkyrie Study.\" *J Am Soc Nephrol* 2020;31(1):186-196. PMID: 31704740. DOI: 10.1681/asn.2019060579\n\n16. **Tanaka S, et al.** \"Design of a randomized clinical trial of concurrent treatment with vitamin K2 and risedronate compared to risedronate alone in osteoporotic patients: Japanese Osteoporosis Intervention Trial-03 (JOINT-03).\" *J Bone Miner Metab* 2014;32(3):298-304. PMID: 23828145. DOI: 10.1007/s00774-013-0491-4\n\n17. **Forli L, et al.** \"Dietary vitamin K2 supplement improves bone status after lung and heart transplantation.\" *Transplantation* 2010;89(4):458-464. PMID: 20177349. DOI: 10.1097/tp.0b013e3181c46b69\n\n18. **Koitaya N, et al.** \"Effect of low dose vitamin K2 (MK-4) supplementation on bio-indices in postmenopausal Japanese women.\" *J Nutr Sci Vitaminol (Tokyo)* 2009;55(1):15-21. PMID: 19352059. DOI: 10.3177/jnsv.55.15\n\n19. **Knapen MH, Schurgers LJ, Vermeer C.** \"Vitamin K2 supplementation improves hip bone geometry and bone strength indices in postmenopausal women.\" *Osteoporos Int* 2007;18(7):963-972. PMID: 17287908. DOI: 10.1007/s00198-007-0337-9"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "returned_kind": "fetch_model_summary",
+     "returned_text": "# Study Overview: Vitamins K2/D3 for Long COVID\n\n**Abstract Summary:**\n\nThe research examined whether vitamins K2 and D3 could alleviate long COVID symptoms through anti-inflammatory mechanisms. Researchers enrolled 151 participants (98 treatment, 53 control) with at least two moderate symptoms persisting 3+ months post-infection.\n\n**Treatment Protocol:**\nParticipants received either daily supplementation of \"240 µg K2 (pure MK-7 form) and 2000 UI vitamin D3\" or standard care for 24 weeks.\n\n**Key Findings:**\nThe treatment group showed a 7.1% decrease in those meeting high symptom burden criteria, while controls increased 7.2% (p=0.01). Symptom counts remained stable in the intervention arm but worsened in controls (p=0.03). Biomarker improvements included reductions in oxidized LDL, inflammatory markers sTNF-RI and sCD163, plus fungal translocation marker (1,3)-β-D-glucan (p<0.01).\n\n**Funding:**\nSupport came from CanPrev Natural Health Products, NCATS NIH (UM1 TR004528), the Kimble Foundation, and the Clinical and Translational Science Collaborative of Northern Ohio.\n\n**Publication:** Nutrients, January 2025, PMID 39861434"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "returned_kind": "fetch_model_summary",
+     "returned_text": "# Research Result\n\n**Title:** \"Three-year low-dose menaquinone-7 supplementation helps decrease bone loss in healthy postmenopausal women.\"\n\n**Authors:** Knapen MH, Drummen NE, Smit E, Vermeer C, Theuwissen E\n\n**Journal:** Osteoporosis International\n\n**Year:** 2013\n\n**PMID:** 23525894\n\n**Abstract Summary:**\n\nThis randomized controlled trial enrolled 244 healthy postmenopausal women who received either placebo or \"MK-7 (180 μg MK-7/day)\" for three years. Researchers measured bone mineral density at multiple skeletal sites using DXA scans and assessed vertebral fractures.\n\nKey findings: MK-7 supplementation \"significantly improved vitamin K status and decreased the age-related decline in BMC and BMD at the lumbar spine and femoral neck.\" The intervention also \"favorably affected\" bone strength and \"significantly decreased the loss in vertebral height\" in the lower thoracic region.\n\nThe authors concluded that \"MK-7 supplements may help postmenopausal women to prevent bone loss.\"\n\n**Funding:** The publication lists \"Research Support, Non-U.S. Gov't\" but specific funding sources are not detailed in the provided metadata."
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "returned_kind": "fetch_model_summary",
+     "returned_text": "# Search Results: Vitamin K, Bone Health, and Fracture Risk Meta-Analyses (2018-2026)\n\n1. **Title:** \"Dietary Vitamin K Intake and Fracture Risk: A Systematic Review and Dose-Response Meta-Analysis on the Interplay with Vitamin D\"\n   - **Authors:** Haghighat MML, Haghpanah B, Milajerdi A\n   - **Journal:** Curr Rheumatol Rev\n   - **Year:** 2026\n   - **PMID:** 40947710\n   - **DOI:** 10.2174/0115733971393704250828112958\n\n2. **Title:** \"Effects of vitamin K supplementation on bone mineral density at different sites and bone metabolism in the middle-aged and elderly population\"\n   - **Authors:** Xie C, Gong J, Zheng C, Zhang J, Gao J, Tian C, Guo X, Dai S, Gao T\n   - **Journal:** Bone Joint Res\n   - **Year:** 2024\n   - **PMID:** 39657786\n   - **DOI:** 10.1302/2046-3758.1312.bjr-2024-0053.r1\n\n3. **Title:** \"Effect of Vitamin K on Bone Mineral Density and Fracture Risk in Adults: Systematic Review and Meta-Analysis\"\n   - **Authors:** Salma, Ahmad SS, Karim S, Ibrahim IM, Alkreathy HM, Alsieni M, Khan MA\n   - **Journal:** Biomedicines\n   - **Year:** 2022\n   - **PMID:** 35625785\n   - **DOI:** 10.3390/biomedicines10051048\n\n4. **Title:** \"The combined effect of vitamin K and calcium on bone mineral density in humans: a meta-analysis of randomized controlled trials\"\n   - **Authors:** Hu L, Ji J, Li D, Meng J, Yu B\n   - **Journal:** J Orthop Surg Res\n   - **Year:** 2021\n   - **PMID:** 34649591\n   - **DOI:** 10.1186/s13018-021-02728-4\n\n5. **Title:** \"Effect of preinjury use of direct oral anticoagulants vs. Vitamin K antagonists on outcomes of hip fracture: a systematic review and meta-analysis\"\n   - **Authors:** Gong LN, Li JY, Li XF, Chu J\n   - **Journal:** Eur Rev Med Pharmacol Sci\n   - **Year:** 2021\n   - **PMID:** 34730205\n   - **DOI:** 10.26355/eurrev_202110_26995\n\n6. **Title:** \"A Network Meta-Analysis Comparing Osteoporotic Fracture among Different Direct Oral Anticoagulants and Vitamin K Antagonists in Patients with Atrial Fibrillation\"\n   - **Authors:** Khanra D, Mukherjee A, Deshpande S, Khan H, Kathuria S, Kella D, Padmanabhan D\n   - **Journal:** J Bone Metab\n   - **Year:** 2021\n   - **PMID:** 34130366\n   - **DOI:** 10.11005/jbm.2021.28.2.139\n\n7. **Title:** \"The combination effect of vitamin K and vitamin D on human bone quality: a meta-analysis of randomized controlled trials\"\n   - **Authors:** Kuang X, Liu C, Guo X, Li K, Deng Q, Li D\n   - **Journal:** Food Funct\n   - **Year:** 2020\n   - **PMID:** 32219282\n   - **DOI:** 10.1039/c9fo03063h\n\n8. **Title:** \"A Systematic Review and Meta-analysis of the Association Between Vitamin K Antagonist Use and Fracture\"\n   - **Authors:** Fiordellisi W, White K, Schweizer M\n   - **Journal:** J Gen Intern Med\n   - **Year:** 2019\n   - **PMID:** 30511289\n   - **DOI:** 10.1007/s11606-018-4758-2\n\n9. **Title:** \"Correction to Effect of vitamin K on bone mineral density and fractures in adults: an updated systematic review and meta-analysis of randomised controlled trials\"\n   - **Authors:** Mott A, Bradley T, Wright K, Cockayne ES, Shearer MJ, Adamson J, Lanham-New SA, Torgerson DJ\n   - **Journal:** Osteoporos Int\n   - **Year:** 2020\n   - **PMID:** 32965511\n   - **DOI:** 10.1007/s00198-020-05586-8\n\n10. **Title:** \"Effect of vitamin K on bone mineral density and fractures in adults: an updated systematic review and meta-analysis of randomised controlled trials\"\n    - **Authors:** Mott A, Bradley T, Wright K, Cockayne ES, Shearer MJ, Adamson J, Lanham-New SA, Torgerson DJ\n    - **Journal:** Osteoporos Int\n    - **Year:** 2019\n    - **PMID:** 31076817\n    - **DOI:** 10.1007/s00198-019-04949-0"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "returned_kind": "fetch_model_summary",
+     "returned_text": "# Vitamin D-Vitamin K Research Results\n\n**1. O'Connor et al. (2010)**\n- Title: \"Vitamin D-vitamin K interaction: effect of vitamin D supplementation on serum percentage undercarboxylated osteocalcin...\"\n- Authors: O'Connor E, Mølgaard C, Michaelsen KF, Jakobsen J, Cashman KD\n- Journal: British Journal of Nutrition\n- Year: 2010\n- PMID: 20487587\n- DOI: 10.1017/s0007114510001935\n\n**2. Je et al. (2011)**\n- Title: \"Vitamin K supplement along with vitamin D and calcium reduced serum concentration of undercarboxylated osteocalcin...\"\n- Authors: Je SH, Joo NS, Choi BH, Kim KM, Kim BT, Park SB, Cho DY, Kim KN, Lee DJ\n- Journal: Journal of Korean Medical Science\n- Year: 2011\n- PMID: 21860562\n- DOI: 10.3346/jkms.2011.26.8.1093\n\n**3. Lamb et al. (2011)**\n- Title: \"Nutritional supplementation of hop rho iso-alpha acids, berberine, vitamin D₃, and vitamin K₁...\"\n- Authors: Lamb JJ, Holick MF, Lerman RH, et al.\n- Journal: Nutrition Research\n- Year: 2011\n- PMID: 21636012\n- DOI: 10.1016/j.nutres.2011.03.016\n\n**4. Ushiroyama et al. (2002)**\n- Title: \"Effect of continuous combined therapy with vitamin K(2) and vitamin D(3) on bone mineral density...\"\n- Authors: Ushiroyama T, Ikeda A, Ueki M\n- Journal: Maturitas\n- Year: 2002\n- PMID: 11886767\n- DOI: 10.1016/s0378-5122(01)00275-4\n\n**5. Koonsvitsky et al. (1997)**\n- Title: \"Olestra affects serum concentrations of alpha-tocopherol and carotenoids but not vitamin D or vitamin K status...\"\n- Authors: Koonsvitsky BP, Berry DA, Jones MB, Lin PY, Cooper DA, Jones DY, Jackson JE\n- Journal: Journal of Nutrition\n- Year: 1997\n- PMID: 9237960\n\n**6. Schaafsma et al. (2000)**\n- Title: \"Vitamin D(3) and vitamin K(1) supplementation of Dutch postmenopausal women...\"\n- Authors: Schaafsma A, Muskiet FA, Storm H, Hofstede GJ, Pakan I, Van der Veer E\n- Journal: European Journal of Clinical Nutrition\n- Year: 2000\n- PMID: 10951511\n- DOI: 10.1038/sj.ejcn.1601065"
+    }
+   ],
+   "rows": [
+    {
+     "outcome": 1,
+     "id": "PMID:32219282",
+     "access": "snippet"
+    },
+    {
+     "outcome": 1,
+     "id": "PMID:11180916",
+     "access": "snippet"
+    },
+    {
+     "outcome": 1,
+     "id": "PMID:11886767",
+     "access": "snippet"
+    },
+    {
+     "outcome": 1,
+     "id": "PMID:21860562",
+     "access": "snippet"
+    },
+    {
+     "outcome": 1,
+     "id": "PMID:32060566",
+     "access": "snippet"
+    },
+    {
+     "outcome": 2,
+     "id": "PMID:35465686",
+     "access": "snippet"
+    },
+    {
+     "outcome": 3,
+     "id": "PMID:39861434",
+     "access": "snippet"
+    },
+    {
+     "outcome": 4,
+     "id": "PMID:35939577",
+     "access": "snippet"
+    },
+    {
+     "outcome": 4,
+     "id": "PMID:37325962",
+     "access": "snippet"
+    },
+    {
+     "outcome": 5,
+     "id": "PMID:31076817",
+     "access": "snippet"
+    },
+    {
+     "outcome": 5,
+     "id": "PMID:39657786",
+     "access": "snippet"
+    },
+    {
+     "outcome": 5,
+     "id": "PMID:23525894",
+     "access": "snippet"
+    },
+    {
+     "outcome": 5,
+     "id": "PMID:27625301",
+     "access": "snippet"
+    }
+   ]
+  },
+  "vitd-run-3": {
+   "raw_stream_sha256": "0e62ba71bcd72a5bdeed04032400ee0d3e0eebfbf27069c55b1bc064446cb666",
+   "recorded_failure": "inventory ID is not grounded in returned tool text: '31454046'",
+   "receipts_total": 44,
+   "receipts": [
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "returned_kind": "search_snippet",
+     "returned_text": "Web search results for query: \"vitamin D3 and vitamin K2 combination randomized controlled trial bone mineral density meta-analysis\"\n\nLinks: [{\"title\":\"Issue 4, 2020\",\"url\":\"https://pubs.rsc.org/en/content/articlepdf/2013/mw/c9fo03063h\"},{\"title\":\"Issue 4, 2020\",\"url\":\"https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h\"},{\"title\":\"examine.com\",\"url\":\"https://examine.com/summaries/study/g983b0/\"},{\"title\":\"pubmed.ncbi.nlm.nih.gov\",\"url\":\"https://pubmed.ncbi.nlm.nih.gov/11180916/\"},{\"title\":\"SYSTEMATIC REVIEW article\",\"url\":\"https://frontiersin.org/articles/10.3389/fpubh.2022.979649/full\"},{\"title\":\"naturalhealthresearch.org\",\"url\":\"https://www.naturalhealthresearch.org/?p=18049\"},{\"title\":\"wbldb.lievers.net\",\"url\":\"https://wbldb.lievers.net/10258814.html\"},{\"title\":\"Claim analyzed\",\"url\":\"https://lenz.io/c/vitamin-k-vitamin-d-absorption-bone-health-81497963\"},{\"title\":\"Claim analyzed\",\"url\":\"https://lenz.io/c/81497963\"}]\n\nBased on the search results, I found several relevant studies on the combination of vitamin D3 and vitamin K2 and their effects on bone mineral density:\n\n## Key Meta-Analysis Findings\n\nA 2020 meta-analysis of eight randomized controlled trials (RCTs) including 971 subjects found that vitamin K combined with vitamin D significantly increased total bone mineral density, with a pooled effect size of 0.316 [95% CI, 0.031 to 0.601].\n\nSubgroup analysis showed that K2 or vitamin K supplements of less than 500 μg/day, when combined with vitamin D, significantly increased total BMD compared with control groups receiving a normal diet or no treatment.\n\nThe meta-analysis concluded that the combination of vitamin K and D can significantly increase total BMD and significantly decrease undercarboxylated osteocalcin, with more favorable effects expected when vitamin K2 is used.\n\n## Individual RCT Evidence\n\nA randomized controlled trial of 92 postmenopausal women with osteoporosis found that combined administration of vitamin D3 and vitamin K2 significantly increased bone mineral density of the lumbar spine compared with calcium administration, vitamin D3 alone, or vitamin K2 alone.\n\n## Quality of Evidence\n\nOverall, moderate-quality evidence indicated that a combination of vitamin D and vitamin K can improve bone mineral density, with a secondary analysis suggesting that K2 may be better than K1 for that purpose.\n\n\nREMINDER: You MUST include the sources above in your response to the user using markdown hyperlinks."
+    },
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "returned_kind": "search_snippet",
+     "returned_text": "Web search results for query: \"VITAL trial vitamin D 2000 IU cancer cardiovascular NEJM 2019 results\"\n\nLinks: [{\"title\":\"solaci.org\",\"url\":\"https://solaci.org/?p=55390\"},{\"title\":\"pmc.ncbi.nlm.nih.gov\",\"url\":\"https://pmc.ncbi.nlm.nih.gov/articles/PMC7089819/\"},{\"title\":\"Vitamin D Supplements for the Prevention of Cancer and Cardiovascular Disease\",\"url\":\"https://solaci.org/en/2020/01/17/vitamin-d-supplements-for-the-prevention-of-cancer-and-cardiovascular-disease/\"},{\"title\":\"VITAL (Vitamin D arm)\",\"url\":\"https://www.wikijournalclub.org/wiki/VITAL\"},{\"title\":\"vitamin d supplements and prevention cancer and cardiovascular disease\",\"url\":\"https://airways.arizona.edu/publication/vitamin-d-supplements-and-prevention-cancer-and-cardiovascular-disease\"},{\"title\":\"vitamin d supplements and prevention of cancer and cardiovascular disease\",\"url\":\"https://www.iscpcardio.org/clinical-trials/vitamin-d-supplements-and-prevention-of-cancer-and-cardiovascular-disease\"},{\"title\":\"thelimbic.com\",\"url\":\"https://thelimbic.com/?p=31497\"},{\"title\":\"Vitamin D and Omega-3 Trial - VITAL\",\"url\":\"https://www.acc.org/latest-in-cardiology/clinical-trials/2018/11/08/22/42/vital\"},{\"title\":\"Principal results of the VITamin D and OmegA-3 TriaL (VITAL) and updated meta-analyses of relevant vitamin D trials\",\"url\":\"https://pubmed.ncbi.nlm.nih.gov/31733345/\"}]\n\nBased on the search results, here are the key findings from the VITAL trial:\n\n## Trial Design\n\nThe VITamin D and OmegA-3 TriaL (VITAL) was a nationwide, randomized, placebo-controlled, 2x2 factorial trial of daily vitamin D3 (2000 IU) and marine omega-3 fatty acids (1 g) in the primary prevention of cancer and CVD among 25,871 U.S. men aged ≥50 and women aged ≥55, including 5,106 African Americans.\n\n## Primary Results\n\nSupplementation with vitamin D was not associated with a lower risk of either of the primary end points. Specifically:\n\n- **Cancer:** During a median follow-up of 5.3 years, cancer was diagnosed in 1617 participants (793 in the vitamin D group and 824 in the placebo group; hazard ratio, 0.96; 95% confidence interval [CI], 0.88 to 1.06; P=0.47).\n\n- **Cardiovascular Disease:** A major cardiovascular event occurred in 805 participants (396 in the vitamin D group and 409 in the placebo group; hazard ratio, 0.97; 95% CI, 0.85 to 1.12; P=0.69).\n\n## Secondary Findings\n\nVitamin D did not significantly reduce the primary endpoint of total invasive cancer incidence but showed a promising signal for reduction in total cancer mortality (HR = 0.83 [0.67-1.02]), especially in analyses that accounted for latency by excluding the first year or first 2 years of follow-up.\n\n\nREMINDER: You MUST include the sources above in your response to the user using markdown hyperlinks."
+    },
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "returned_kind": "search_snippet",
+     "returned_text": "Web search results for query: \"Diederichsen vitamin K2 and D in patients with aortic valve calcification randomized double-blinded Circulation 2022 AVADEC\"\n\nLinks: [{\"title\":\"The Aortic Valve DECalcification (AVADEC) Trial\",\"url\":\"https://clinicaltrials.gov/study/NCT03243890\"},{\"title\":\"The DANish COronary DEcalcification (DANCODE) Trial\",\"url\":\"https://clinicaltrials.gov/study/NCT05500443\"},{\"title\":\"Vitamin K2 and D in Patients With Aortic Valve Calcification\",\"url\":\"https://www.practiceupdate.com/content/vitamin-k2-and-d-in-patients-with-aortic-valve-calcification/135343/7/2/1\"},{\"title\":\"Despite hopes, vitamin K2 supplements fail to slow calcium buildup in heart valve\",\"url\":\"https://heart.org/en/news/2022/04/25/despite-hopes-vitamin-k2-supplements-fail-to-slow-calcium-buildup-in-heart-valve\"},{\"title\":\"Despite hopes, vitamin K2 supplements fail to slow calcium buildup in heart valve\",\"url\":\"https://www.heart.org/en/news/2022/04/25/despite-hopes-vitamin-k2-supplements-fail-to-slow-calcium-buildup-in-heart-valve,\"},{\"title\":\"Cardiovascular researchers reveal vitamin K2 MK-7 and D supplementation reduces heart attack risk\",\"url\":\"https://www.nutritioninsight.com/news/cardiovascular-researchers-reveal-vitamin-k2-mk-7-and-d-supplementation-reduces-heart-attack-risk.html\"},{\"title\":\"vitamin k2 and d supplementation reduces risk of coronary artery calcification says recent study\",\"url\":\"https://www.nutritionaloutlook.com/view/vitamin-k2-and-d-supplementation-reduces-risk-of-coronary-artery-calcification-says-recent-study\"},{\"title\":\"Research links vitamin K2 and D to predictor of cardiovascular disease\",\"url\":\"https://www.nutraingredients.com/Article/2024/01/18/study-links-vitamin-k2-and-d-to-cardiovascular-disease\"},{\"title\":\"tkd.org.tr\",\"url\":\"https://tkd.org.tr/koroyucuKardiyoloji/DownloadArticle.aspx?ID=16\"},{\"title\":\"Research links vitamin K2 and D to predictor of cardiovascular disease\",\"url\":\"https://www.nutraingredients.com/News/Research/Study-links-Vitamin-K2-and-D-to-cardiovascular-disease\"}]\n\nI found information about the AVADEC study you're looking for. Here are the key details:\n\n## Study Overview\nThe study by Diederichsen and colleagues, titled \"Vitamin K2 and D in Patients With Aortic Valve Calcification: A Randomized Double-Blinded Clinical Trial,\" was published in Circulation in May 2022.\n\n## Study Design and Participants\nThe study involved 389 male patients (mean age 71 years) from four Danish hospitals who were randomized to supplement with vitamin K2 (720 μg/day) and D (25 μg/day) versus placebo in a multi-center, double-blinded controlled trial.\n\n## Main Results\nResearchers found no significant differences in valve calcification progression between the two groups, leading them to conclude the supplements were ineffective in slowing disease progression. However, there was some suggestion the group taking them experienced slower progression of calcification in their coronary arteries.\n\n## Secondary Findings\nA subgroup analysis of the study observed that vitamin K2 MK-7 (720 µg/day) and D (25 µg/day) supplementation for two years helped slow the progression of coronary plaque development in individuals at high risk of developing coronary artery calcification with no prior identified ischemic heart disease. Researchers also observed that the number of cardiovascular events such as acute myocardial infarction, coronary revascularization, and all-cause death, while limited in number, was lower in the group receiving vitamin K2 MK-7 and D, compared to placebo.\n\n\nREMINDER: You MUST include the sources above in your response to the user using markdown hyperlinks."
+    },
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "returned_kind": "search_snippet",
+     "returned_text": "Web search results for query: \"Kuang 2020 vitamin K2 vitamin D3 postmenopausal osteoporosis 92 women lumbar spine BMD randomized\"\n\nLinks: [{\"title\":\"Efficacy of vitamin K2 in the prevention and treatment of postmenopausal osteoporosis: A systematic review and meta-analysis of randomized controlled trials\",\"url\":\"https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9403798/\"},{\"title\":\"pubmed.ncbi.nlm.nih.gov\",\"url\":\"https://pubmed.ncbi.nlm.nih.gov/11180916/\"},{\"title\":\"pubmed.ncbi.nlm.nih.gov\",\"url\":\"https://pubmed.ncbi.nlm.nih.gov/17012108\"},{\"title\":\"Issue 4, 2020\",\"url\":\"https://pubs.rsc.org/en/content/articlepdf/2013/mw/c9fo03063h\"},{\"title\":\"pmc.ncbi.nlm.nih.gov\",\"url\":\"https://pmc.ncbi.nlm.nih.gov/articles/PMC3154347\"},{\"title\":\"pubmed.ncbi.nlm.nih.gov\",\"url\":\"https://pubmed.ncbi.nlm.nih.gov/10227010/\"},{\"title\":\"pubmed.ncbi.nlm.nih.gov\",\"url\":\"https://pubmed.ncbi.nlm.nih.gov/32060566/\"},{\"title\":\"wbldb.lievers.net\",\"url\":\"https://wbldb.lievers.net/10228046.html\"},{\"title\":\"drmirkin.com\",\"url\":\"https://drmirkin.com/?p=9078\"}]\n\nBased on the search results, I found the study you're looking for. This is a randomized study examining the effect of combined administration of vitamin D3 and vitamin K2 on bone mineral density of the lumbar spine in postmenopausal women with osteoporosis, involving 92 osteoporotic women aged 55-81 years who were randomly divided into four groups receiving vitamin D3 alone, vitamin K2 alone, vitamin D3 plus vitamin K2, or calcium.\n\nBMD of the lumbar spine (L2-L4) was measured by dual energy X-ray absorptiometry at 0, 1, and 2 years after treatment started. The results showed a significant increase in BMD in the combined vitamin D3 and K2 group compared with the calcium, vitamin D3 alone, and vitamin K2 alone groups, indicating that combined administration of vitamin D3 and vitamin K2 appears to be useful in increasing lumbar spine BMD in postmenopausal women with osteoporosis.\n\n\nREMINDER: You MUST include the sources above in your response to the user using markdown hyperlinks."
+    },
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "returned_kind": "search_snippet",
+     "returned_text": "Web search results for query: \"Rønn MK-7 3-year randomized placebo-controlled osteopenia postmenopausal women bone mineral density microarchitecture\"\n\nLinks: [{\"title\":\"Investigations of the Effect of MK-7 on Bone and Glucose Metabolism and Arterial Calcification\",\"url\":\"https://clinicaltrials.gov/study/NCT01922804\"},{\"title\":\"the effect of vitamin mk 7 on bone mineral density and microarchi\",\"url\":\"https://pure.eur.nl/en/publications/the-effect-of-vitamin-mk-7-on-bone-mineral-density-and-microarchi/\"},{\"title\":\"s00198 020 05638 z\",\"url\":\"https://dx.doi.org/10.1007/s00198-020-05638-z\"},{\"title\":\"2021 Forskning Sofie Hertz Roenn Afslutning paa K2 studie\",\"url\":\"https://osteoporose.dk/app/uploads/2021/09/2021_Forskning_Sofie-Hertz-Roenn_Afslutning-paa-K2-studie.pdf\"},{\"title\":\"wbldb.lievers.net\",\"url\":\"https://wbldb.lievers.net/10228046.html\"},{\"title\":\"pmc.ncbi.nlm.nih.gov\",\"url\":\"https://pmc.ncbi.nlm.nih.gov/articles/PMC9859868/table/Tab3\"},{\"title\":\"Searchable abstracts of presentations at key conferences on calcified tissues\",\"url\":\"https://www.bone-abstracts.org/ba/0005/ba0005oc1.3\"},{\"title\":\"Searchable abstracts of presentations at key conferences on calcified tissues\",\"url\":\"https://www.bone-abstracts.org/ba/0005/abstracts/oral-communications/clinical-trials-and-osteoporosis-treatment/ba0005oc13/\"},{\"title\":\"• Expertise\",\"url\":\"https://www.plthealth.com/resources/Three-year low-dose menaquinone-7 supplementation helps decrease bone loss in healthy postmenopausal women\"},{\"title\":\"• Expertise\",\"url\":\"https://www.plthealth.com/resources/three-year-low-dose-menaquinone-7-supplementation-helps-decrease-bone-loss-in-healthy-postmenopausal-women\"}]\n\nI've found relevant results for your search. Here's what the research shows:\n\nThis was a randomized placebo-controlled double-blinded clinical trial including 142 postmenopausal women with osteopenia who received vitamin K2 (375 μg MK-7) or placebo daily for 3 years, with both groups also receiving vitamin D3 (38 μg/day) and calcium (800 mg/day).\n\n**Key Findings:**\n\nUndercarboxylated osteocalcin decreased significantly in the MK-7 group compared with the placebo group after 1 year.\n\nHowever, the long-term results were less favorable for MK-7. After 3 years, bone mineral density (aBMD) decreased at all sites without differences between the MK-7 and placebo-treated women, with aBMD decreasing at the total hip by 1.5% in MK-7 and 2.4% in placebo groups, at the femoral neck by 1.5% and 1.0% respectively, and at the lumbar spine by 1.8% and 1.1% respectively.\n\nWhile improved microarchitecture with MK-7 was previously reported after 1 year, changes in microstructure over 3 years were similar between the two groups.\n\nThe study was led by Sofie Rønn and colleagues at Aarhus University Hospital in Denmark, with results published in Osteoporosis International in 2021.\n\n\nREMINDER: You MUST include the sources above in your response to the user using markdown hyperlinks."
+    },
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "returned_kind": "search_snippet",
+     "returned_text": "Web search results for query: \"D2d trial vitamin D 4000 IU type 2 diabetes prevention Pittas NEJM 2019 hazard ratio\"\n\nLinks: [{\"title\":\"By Gene Emery\",\"url\":\"https://www.physiciansweekly.com/?p=108561\"},{\"title\":\"vitamin d reduce diabetes risk\",\"url\":\"https://www.hcplive.com/view/vitamin-d-reduce-diabetes-risk\"},{\"title\":\"vitamin d supplementation can it prevent diabetes\",\"url\":\"https://www.consultant360.com/endocrinology/diabetes/vitamin-d-supplementation-can-it-prevent-diabetes\"},{\"title\":\"vitamin d supplementation can it prevent diabetes\",\"url\":\"https://www.consultant360.com/consultant360/diabetes/vitamin-d-supplementation-can-it-prevent-diabetes\"},{\"title\":\"Vitamin D Supplementation and Prevention of Type 2 Diabetes\",\"url\":\"https://avesis.hacettepe.edu.tr/yayin/e2df6dae-104f-4027-8e75-012e0e371fb9/vitamin-d-supplementation-and-prevention-of-type-2-diabetes\"},{\"title\":\"does vitamin d supplementation lower diabetes risk\",\"url\":\"https://hmpgloballearningnetwork.com/site/pln/content/does-vitamin-d-supplementation-lower-diabetes-risk\"},{\"title\":\"vitamin d reduce diabetes risk\",\"url\":\"https://www.consultantlive.com/view/vitamin-d-reduce-diabetes-risk\"},{\"title\":\"2019 Pittas NEJM Vitamin D supplementation and prevention of type 2 diabetes\",\"url\":\"https://d2dstudy.org/wp-content/uploads/2024/02/2019-Pittas-NEJM-Vitamin-D-supplementation-and-prevention-of-type-2-diabetes.pdf\"},{\"title\":\"DN 4-5 - 2026\",\"url\":\"https://dagensdiabetes.se/?p=2996\"}]\n\nBased on the search results, here are the key findings from the D2d trial study:\n\n**Study Details:**\nThe trial was conducted by investigators led by Anastassios G. Pittas, MD, assessing the time-to-event association between daily 4000 IU vitamin D3 and new-onset diabetes in a randomized, placebo-controlled design. A total of 2423 participants underwent randomization (1211 to the vitamin D group and 1212 to the placebo group).\n\n**Primary Outcome and Hazard Ratio:**\nAfter a median follow-up of 2.5 years, diabetes was observed in 293 participants in the vitamin D group and 323 in the placebo group. The hazard ratio for diabetes in the supplementation group was 0.88 (0.95% confidence interval, 0.75 to 1.04; P=0.12).\n\n**Conclusion:**\nAmong persons at high risk for type 2 diabetes not selected for vitamin D insufficiency, vitamin D3 supplementation at a dose of 4000 IU per day did not result in a significantly lower risk of diabetes than placebo.\n\nThe study by Pittas AG, Dawson-Hughes B, Sheehan P, et al. was published online June 7, 2019 in NEJM (DOI: 10.1056/NEJMoa1900906).\n\n\nREMINDER: You MUST include the sources above in your response to the user using markdown hyperlinks."
+    },
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "returned_kind": "search_snippet",
+     "returned_text": "Web search results for query: \"DANCODE trial results vitamin K2 vitamin D coronary artery calcification progression 2 years CAC score randomized\"\n\nLinks: [{\"title\":\"The DANish COronary DEcalcification (DANCODE) Trial\",\"url\":\"https://clinicaltrials.gov/study/NCT05500443\"},{\"title\":\"Balchem’s K2Vital Delta slows coronary calcification by 21% in clinical trial\",\"url\":\"https://www.nutritioninsight.com/news/k2vital-delta-heart-health-study.html\"},{\"title\":\"Balchem’s K2VITAL DELTA linked to benefits for long-term heart health\",\"url\":\"https://www.nutraingredients.com/Article/2026/09/25/balchems-vitamin-k2-linked-to-21-slower-cac-progression/\"},{\"title\":\"tilskud med vitamin k og d kan bremse udviklingen af aareforkalkning\",\"url\":\"https://www.sdu.dk/en/om-sdu/fakulteterne/sundhedsvidenskab/nyheder-2026/tilskud-med-vitamin-k-og-d-kan-bremse-udviklingen-af-aareforkalkning\"},{\"title\":\"pmc.ncbi.nlm.nih.gov\",\"url\":\"https://pmc.ncbi.nlm.nih.gov/articles/PMC10351276/\"},{\"title\":\"tilskud med vitamin k og d kan bremse udviklingen af aareforkalkning\",\"url\":\"https://www.sdu.dk/en/om-sdu/institutter-centre/klinisk-institut/nyheder-2026/tilskud-med-vitamin-k-og-d-kan-bremse-udviklingen-af-aareforkalkning\"},{\"title\":\"Life Extension Newsletter\",\"url\":\"https://www.lifeextension.com/newsletter/2026/10/vitamins-k2-and-d3-for-reduced-heart-disease-risk\"},{\"title\":\"Vitamin K2 and D3 Slow Coronary Artery Calcification Progression in DANCODE Trial\",\"url\":\"https://pharmacally.com/?p=24674\"},{\"title\":\"bmj.com\",\"url\":\"https://bmjopen.bmj.com/content/bmjopen/13/7/e073233.full.pdf\"},{\"title\":\"Article Text\",\"url\":\"https://bmjopen.bmj.com/content/13/7/e073233\"}]\n\nBased on the search results, here are the key findings from the DANCODE trial:\n\n## Study Design\n\nThe DANCODE study is a randomized clinical trial involving 398 patients, of which 200 received vitamin K2 and D3 supplements, while 198 received a placebo. The amount of calcium in the coronary arteries was measured before, during and after the 24-month study period.\n\n## Primary Results\n\nBalchem's K2 MK-7 (menaquinone-7) and vitamin D ingredient, K2Vital Delta, has been shown to slow down the progression of coronary artery calcification (CAC) by 21% in the multicenter Danish Coronary Decalcification (DANCODE) trial.\n\nAt 24 months, mean CAC increased by 196 AU with vitamin K2 plus D3 versus 248 AU with placebo, with a between-group difference of −52 AU.\n\n## Mechanism\n\nVitamin K2 MK-7 in its all-trans form activates matrix Gla protein, which helps direct calcium to where it is needed in the body, and the reduction in calcification progression was accompanied by a marked fall in the inactive form of matrix Gla protein.\n\n## Important Caveats\n\nWhile vitamin K2 plus vitamin D3 reduced 24-month progression of coronary artery calcification by 21%, the findings do not yet establish a cardiovascular outcome benefit or support routine supplementation.\n\n\nREMINDER: You MUST include the sources above in your response to the user using markdown hyperlinks."
+    },
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "returned_kind": "search_snippet",
+     "returned_text": "Web search results for query: \"vitamin K2 MK-7 vitamin D3 supplement healthy adults randomized trial placebo 2023 2024 2025 bone turnover or cardiovascular\"\n\nLinks: [{\"title\":\"K2 D3 Plus\",\"url\":\"https://cdn.shopify.com/s/files/1/0315/9933/files/K2_D3_Plus.pdf\"},{\"title\":\"Tundra Space\",\"url\":\"https://tundraspace.com/directory/studies/nct05500443\"},{\"title\":\"Research links vitamin K2 and D to predictor of cardiovascular disease\",\"url\":\"https://www.nutraingredients.com/Article/2024/01/18/study-links-vitamin-k2-and-d-to-cardiovascular-disease\"},{\"title\":\"Vitamin K for the primary prevention of cardiovascular disease\",\"url\":\"https://cochranelibrary.com/cdsr/doi/10.1002/14651858.CD011148.pub2/references\"},{\"title\":\"D3 K2\",\"url\":\"https://cdn.shopify.com/s/files/1/0600/8766/4825/files/D3_K2.pdf\"},{\"title\":\"FETCH LOGICAL b609t afea3e88cae10b660b31eb1a8380fa915a359a1e2690745516f2a8ab8abf6353\",\"url\":\"https://opact.sdu.edu.tr/vufind/SummonRecord/FETCH-LOGICAL-b609t-afea3e88cae10b660b31eb1a8380fa915a359a1e2690745516f2a8ab8abf6353\"},{\"title\":\"10 Eyl 2026\",\"url\":\"https://turkchem.net/en/advertorial/vitamin-k2\"},{\"title\":\"classic.clinicaltrials.gov\",\"url\":\"https://classic.clinicaltrials.gov/ct2/show/NCT05259046\"},{\"title\":\"bmj.com\",\"url\":\"https://bmjopen.bmj.com/content/bmjopen/13/7/e073233.full.pdf\"}]\n\nBased on the search results, here are some relevant recent randomized controlled trials examining vitamin K2 MK-7 and vitamin D3 supplementation in relation to bone and cardiovascular health:\n\n## Recent Study on Coronary Artery Calcification (2024)\n\nA double-blinded, placebo-controlled clinical trial published in JACC Advances tested supplementation with vitamin K2 MK-7 alongside vitamin D3, concluding that the supplements may help to slow the progression of coronary artery calcification in those with high baseline scores and those on statins.\n\n## InterVitaminK Trial (Ongoing)\n\nThe InterVitaminK trial is investigating the effects of vitamin K (menaquinone-7, MK-7) supplementation on cardiovascular, metabolic, and bone health, with the primary hypothesis that vitamin K supplementation will reduce the progression of coronary artery calcification (CAC) by 15% compared with placebo. The trial started in June 2022 with an estimated primary completion date of October 1, 2026.\n\n## Earlier Studies on Bone Health and Cardiovascular Function\n\nIn a randomized, double-blind, placebo-controlled trial in healthy postmenopausal women (N = 244), participants receiving 180 mcg of MK-7 daily for 3 years showed that MK-7 supplementation significantly improved vitamin K status, and a decrease was seen in measurements of age-related bone loss.\n\nIn a separate 3-year double-blind, placebo-controlled trial with 244 healthy postmenopausal women given 180 mcg/day of MK-7, the Stiffness Index ß in the MK-7 group had decreased significantly compared with a slight increase in the placebo group.\n\n\nREMINDER: You MUST include the sources above in your response to the user using markdown hyperlinks."
+    },
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "returned_kind": "search_snippet",
+     "returned_text": "Web search results for query: \"AVADEC aortic valve calcification vitamin K2 720 µg D 25 µg 24 months change in AVC score placebo difference results Circulation 2022 Diederichsen\"\n\nLinks: [{\"title\":\"Vitamin K2 and D in Patients With Aortic Valve Calcification: A Randomized Double-Blinded Clinical Trial\",\"url\":\"https://www.ahajournals.org/doi/10.1161/CIRCULATIONAHA.121.057008\"},{\"title\":\"Study Details\",\"url\":\"https://clinicaltrials.gov/study/NCT03305536\"},{\"title\":\"(PDF) Effects of menaquinone-7 supplementation in patients with aortic valve calcification: Study protocol for a randomised controlled trial\",\"url\":\"https://www.researchgate.net/publication/327180580_Effects_of_menaquinone-7_supplementation_in_patients_with_aortic_valve_calcification_Study_protocol_for_a_randomised_controlled_trial\"},{\"title\":\"Bicuspid Aortic Valve Stenosis and the Effect of Vitamin K2 on Calcification Using 18F-Sodium Fluoride Positron Emission Tomography/Magnetic Resonance: The BASIK2 Rationale and Trial Design\",\"url\":\"https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5946171/\"},{\"title\":\"Effects of vitamin K2 and D3 supplementation on epicardial adipose tissue and systemic inflammation: A substudy of the AVADEC trial - Atherosclerosis\",\"url\":\"https://www.atherosclerosis-journal.com/article/S0021-9150(25)01438-8/fulltext\"},{\"title\":\"(PDF) Vitamin K2 and D in Patients With Aortic Valve Calcification: A Randomized Double-Blinded Clinical Trial\",\"url\":\"https://www.researchgate.net/publication/360178673_Vitamin_K2_and_D_in_Patients_With_Aortic_Valve_Calcification_A_Randomized_Double-Blinded_Clinical_Trial\"},{\"title\":\"The DANish COronary DEcalcification (DANCODE) Trial\",\"url\":\"https://clinicaltrials.gov/study/NCT05500443\"},{\"title\":\"The Aortic Valve DECalcification (AVADEC) Trial\",\"url\":\"https://cdn.clinicaltrials.gov/large-docs/90/NCT03243890/SAP_000.pdf\"},{\"title\":\"Effects of Vitamin K2 and D Supplementation on Coronary Artery Disease in Men: A RCT - ScienceDirect\",\"url\":\"https://www.sciencedirect.com/science/article/pii/S2772963X23006208\"}]\n\nBased on the search results, I found information about the AVADEC trial published in Circulation 2022 by Diederichsen and colleagues:\n\n## Study Design\n\nThe study was a randomized, double-blind, multicenter trial in which men from the community with an aortic valve calcification (AVC) score >300 arbitrary units on cardiac noncontrast computer tomography were randomized to daily treatment with 720 µg menaquinone-7 (MK-7, vitamin K2) plus 25 µg vitamin D or matching placebo for 24 months.\n\n## Key Results\n\nMenaquinone-7 had no major effect on the progression of aortic valve calcification as assessed by computed tomography or echocardiography. High-dose menaquinone-7 was safe and well tolerated.\n\nThe trial was designed to test whether this combination of high-dose vitamin K2 and vitamin D could slow the progression of aortic valve calcification in patients with aortic stenosis, but the results showed that the treatment was not effective for this purpose, despite being well tolerated.\n\n\nREMINDER: You MUST include the sources above in your response to the user using markdown hyperlinks."
+    },
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "returned_kind": "search_snippet",
+     "returned_text": "Web search results for query: \"Burt Calgary Vitamin D Study 311 adults JAMA 2019 total vBMD radius tibia hypercalcemia 4000 IU results\"\n\nLinks: [{\"title\":\"Food and Behaviour Research\",\"url\":\"https://library.fabresearch.org/viewItem.php?id=12973\"},{\"title\":\"High Doses of Vitamin D May Result in a Decrease in Bone Density\",\"url\":\"https://contemporaryclinic.com/view/high-doses-of-vitamin-d-may-result-in-a-decrease-in-bone-density\"},{\"title\":\"full citation\",\"url\":\"https://www.unboundmedicine.com/medline/citation/31454046/full_citation\"},{\"title\":\"Article Type\",\"url\":\"https://community.the-hospitalist.org/index.php/content/high-dose-vitamin-d-bone-health-may-do-more-harm-good\"},{\"title\":\"pmc.ncbi.nlm.nih.gov\",\"url\":\"https://pmc.ncbi.nlm.nih.gov/articles/PMC6714464/\"},{\"title\":\"High-dose vitamin D for bone health may do more harm than good\",\"url\":\"https://community.the-hospitalist.org/topics/womens-health?page=177\"},{\"title\":\"effect high dose vitamin supplementation volumetric bone density bone strength 88103\",\"url\":\"https://www.mcmasteroptimalaging.org/full-article/plus/effect-high-dose-vitamin-supplementation-volumetric-bone-density-bone-strength-88103\"},{\"title\":\"Article Type\",\"url\":\"https://community.the-hospitalist.org/content/high-dose-vitamin-d-bone-health-may-do-more-harm-good\"},{\"title\":\"www.mdedge.com\",\"url\":\"https://www.mdedge.com/jcomjournal/article/228524/endocrinology/mega-vitamin-d-harms-bone-women-not-men-without/page/0/1\"},{\"title\":\"high dose vitamin d bone health may do more harm good\",\"url\":\"https://mdedge.com/content/high-dose-vitamin-d-bone-health-may-do-more-harm-good\"}]\n\nI found information about the Burt Calgary Vitamin D Study. Here are the key details:\n\n**Study Overview:**\nThe study was a three-year, double-blind, randomized clinical trial conducted in a single center in Calgary, Canada, from August 2013 to December 2017, including 311 community-dwelling healthy adults without osteoporosis, aged 55 to 70 years, with baseline levels of 25-hydroxyvitamin D (25[OH]D) of 30 to 125 nmol/L.\n\n**Study Design:**\nParticipants received daily doses of vitamin D3 for 3 years at 400 IU (n = 109), 4000 IU (n = 100), or 10,000 IU (n = 102), with calcium supplementation provided to participants with dietary intake of less than 1200 mg per day.\n\n**Primary Outcomes:**\nThe co-primary outcomes were total volumetric BMD at radius and tibia, assessed with high resolution peripheral quantitative computed tomography, and bone strength (failure load) at radius and tibia estimated by finite element analysis.\n\n**Key Results:**\nOf 311 participants who were randomized (53% men; mean age, 62.2 years), 287 (92%) completed the study. Based on the significantly lower radial BMD seen with both 4,000 and 10,000 IU, compared with 400 IU; the lower tibial BMD with 10,000 IU, compared with 400 IU; and the lack of a difference in bone strength at the radius and tibia, the findings do not support a benefit of high-dose vitamin D supplementation for bone health.\n\nThe study was published in JAMA in 2019, August;322(8): 736-745.\n\n\nREMINDER: You MUST include the sources above in your response to the user using markdown hyperlinks."
+    },
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "returned_kind": "search_snippet",
+     "returned_text": "Web search results for query: \"\"10.1056/NEJMoa2202106\" Supplemental Vitamin D and Incident Fractures in Midlife and Older Adults\"\n\nLinks: [{\"title\":\"pmc.ncbi.nlm.nih.gov\",\"url\":\"https://pmc.ncbi.nlm.nih.gov/articles/PMC9716639/\"},{\"title\":\"Vitamin D does not lower fracture risk in adults, study finds\",\"url\":\"https://www.nutraingredients.com/Article/2022/08/02/Vitamin-D-does-not-lower-fracture-risk-in-adults-study-finds/\"},{\"title\":\"Clinician Article\",\"url\":\"https://www.mcmasteroptimalaging.org/full-article/PLUS/supplemental-vitamin-incident-fractures-midlife-older-adults-105839\"},{\"title\":\"supplemental vitamin incident fractures midlife older adults 105839\",\"url\":\"https://www.mcmasteroptimalaging.org/full-article/plus/supplemental-vitamin-incident-fractures-midlife-older-adults-105839\"},{\"title\":\"Vitamin D supplementation and fracture risk in healthy adults\",\"url\":\"https://gpnotebook.com/en-IE/pages/musculoskeletal-medicine/vitamin-d-supplementation-and-fracture-risk-in-healthy-adults\"},{\"title\":\"Publications of the Week: Vitamin D and fractures\",\"url\":\"https://empendium.com/mcmtextbook/potw/304102,publications-of-the-week-august17-2022\"},{\"title\":\"This site is intended for healthcare professionals\",\"url\":\"https://gpnotebook.com/en-GB/pages/musculoskeletal-medicine/vitamin-d-supplementation-and-fracture-risk-in-healthy-adults\"},{\"title\":\"Vitamin D and fractures\",\"url\":\"https://ebm.one/en/node/10248\"},{\"title\":\"In Healthy Adults, Supplemental Vitamin D Did Not Lower Fracture Risk, Study Finds\",\"url\":\"https://foreonline.org/?p=16098\"},{\"title\":\"This site is intended for healthcare professionals\",\"url\":\"https://primarycarenotebook.com/en-AU/pages/musculoskeletal-medicine/vitamin-d-supplementation-and-fracture-risk-in-healthy-adults\"}]\n\nBased on the search results, here's information about this study:\n\n## Study Overview\n\nThis study, published in the New England Journal of Medicine on July 28, 2022, investigated whether supplemental vitamin D affects incident fractures in midlife and older adults. The research was an ancillary study of the Vitamin D and Omega-3 Trial (VITAL).\n\n## Study Design\n\nVITAL was a two-by-two factorial, randomized, controlled trial that investigated whether supplemental vitamin D3 (2000 IU per day), n-3 fatty acids (1 g per day), or both would prevent cancer and cardiovascular disease in men 50 years of age or older and women 55 years of age or older in the United States. Participants were not recruited on the basis of vitamin D deficiency, low bone mass, or osteoporosis.\n\n## Key Findings\n\nAmong 25,871 participants (50.6% women and 20.2% Black), 1,991 incident fractures were confirmed in 1,551 participants over a median follow-up of 5.3 years. \n\nSupplemental vitamin D3, as compared with placebo, did not have a significant effect on total fractures, nonvertebral fractures, or hip fractures. There was no modification of the treatment effect according to baseline characteristics, including age, sex, race or ethnic group, body-mass index, or serum 25-hydroxyvitamin D levels.\n\n\nREMINDER: You MUST include the sources above in your response to the user using markdown hyperlinks."
+    },
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "returned_kind": "search_snippet",
+     "returned_text": "Web search results for query: \"PMID 11180916 Effect of combined administration of vitamin D3 and vitamin K2 on bone mineral density of the lumbar spine in postmenopausal women with osteoporosis\"\n\nLinks: [{\"title\":\"pubmed.ncbi.nlm.nih.gov\",\"url\":\"https://pubmed.ncbi.nlm.nih.gov/11180916/\"},{\"title\":\"Protective effect of vitamins K2 and D3 on prednisolone-induced loss of bone mineral density in the lumbar spine\",\"url\":\"https://pubmed.ncbi.nlm.nih.gov/14712427/\"},{\"title\":\"repository.unair.ac.id\",\"url\":\"https://repository.unair.ac.id/120179/1/The%20Benefits.PDF\"},{\"title\":\"Issue 4, 2020\",\"url\":\"https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h\"},{\"title\":\"[Efficacy of combined administration of vitamin D3 and vitamin K2 for primary osteoporosis]\",\"url\":\"https://pubmed.ncbi.nlm.nih.gov/15775388/\"},{\"title\":\"Issue 4, 2020\",\"url\":\"https://pubs.rsc.org/en/content/articlepdf/2013/mw/c9fo03063h\"},{\"title\":\"bone health after menopause\",\"url\":\"https://naturalhealthresearch.org/bone-health-after-menopause/\"},{\"title\":\"naturalhealthresearch.org\",\"url\":\"https://www.naturalhealthresearch.org/?p=18049\"},{\"title\":\"Claim analyzed\",\"url\":\"https://lenz.io/c/81497963\"}]\n\nI found the PubMed article you're looking for! Here's the information about PMID 11180916:\n\nThe study titled \"Effect of combined administration of vitamin D3 and vitamin K2 on bone mineral density of the lumbar spine in postmenopausal women with osteoporosis\" was published in the Journal of Orthopedic Science in 2000.\n\n**Study Design:**\nNinety-two osteoporotic women who were more than 5 years after menopause, aged 55-81 years, were randomly divided into four groups: vitamin D3 (1alpha hydroxyvitamin D3, 0.75 microg/day), vitamin K2 (menatetrenone, 45 mg/day), vitamin D3 plus vitamin K2, and calcium (calcium lactate, 2 g/day).\n\nBone mineral density of the lumbar spine (L2-L4) was measured by dual energy X-ray absorptiometry at 0, 1, and 2 years after treatment started.\n\nThe full article is available on PubMed at: https://pubmed.ncbi.nlm.nih.gov/11180916/\n\n\nREMINDER: You MUST include the sources above in your response to the user using markdown hyperlinks."
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "returned_kind": "fetch_model_summary",
+     "returned_text": "# Publication Details\n\n**Title:** The effect of vitamin MK-7 on bone mineral density and microarchitecture in postmenopausal women with osteopenia, a 3-year randomized, placebo-controlled clinical trial\n\n**Journal:** Osteoporosis International\n\n**Year:** 2021\n\n**DOI:** 10.1007/s00198-020-05638-z\n\n## Abstract Summary\n\n**Study Design:** A double-blinded, randomized controlled trial spanning three years\n\n**Participants:** 142 postmenopausal women diagnosed with osteopenia\n\n**Intervention:** Participants received either vitamin K2 (375 μg MK-7 daily) or placebo, with both groups also receiving vitamin D3 (38 μg/day) and calcium (800 mg/day)\n\n**Key Results:** \n- Undercarboxylated osteocalcin showed significant reduction in the MK-7 group after one year\n- After three years, bone mineral density \"decreased at all sites without differences between the MK-7 and placebo-treated women\"\n- Changes in bone turnover markers and microstructure were comparable between groups\n- The researchers concluded that while MK-7 enhanced osteocalcin carboxylation, it \"did not affect biochemical markers of bone turnover, bone mineral density, or bone microarchitecture\" over the full study period"
+    }
+   ],
+   "rows": [
+    {
+     "outcome": 1,
+     "id": "10.1056/NEJMoa2202106",
+     "access": "snippet"
+    },
+    {
+     "outcome": 1,
+     "id": "31454046",
+     "access": "snippet"
+    },
+    {
+     "outcome": 2,
+     "id": "31733345",
+     "access": "snippet"
+    },
+    {
+     "outcome": 3,
+     "id": "10.1056/NEJMoa1900906",
+     "access": "snippet"
+    },
+    {
+     "outcome": 4,
+     "id": "10.3389/fpubh.2022.979649",
+     "access": "snippet"
+    },
+    {
+     "outcome": 4,
+     "id": "10.1007/s00198-020-05638-z",
+     "access": "snippet"
+    },
+    {
+     "outcome": 5,
+     "id": "10.1039/C9FO03063H",
+     "access": "snippet"
+    },
+    {
+     "outcome": 5,
+     "id": "11180916",
+     "access": "snippet"
+    },
+    {
+     "outcome": 6,
+     "id": "NCT05500443",
+     "access": "snippet"
+    },
+    {
+     "outcome": 6,
+     "id": "10.1161/CIRCULATIONAHA.121.057008",
+     "access": "snippet"
+    }
+   ]
+  }
+ }
+}

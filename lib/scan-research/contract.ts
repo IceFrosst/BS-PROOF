@@ -70,7 +70,7 @@
  *
  * WHAT COMES BACK. The audit must validate against schemas/research_audit.json
  * (strict, additionalProperties:false, finite numbers) and carry
- * `meta.prompt === prompt_version`. `source_access_v2` (SourceAccessV2) is
+ * `meta.prompt` (one of ACCEPTED_RESEARCH_PROMPT_VERSIONS, equal to the receipt's runner prompt). `source_access_v2` (SourceAccessV2) is
  * transient validation input containing exact returned snippet/model-summary
  * text and hashes. The server recomputes bytes, hashes, counters and ID grounding,
  * rejects abstract/full_text claims, then stores only an owner-safe
@@ -92,7 +92,14 @@ import { isUuid } from "@/lib/auth/server-auth";
 export const RESEARCH_JOB_VERSION = "ResearchJobV1" as const;
 
 /** The live prompt the PC worker must run (prompts/research_audit_live.md). */
-export const RESEARCH_PROMPT_VERSION = "live-research-v0.2" as const;
+export const RESEARCH_PROMPT_VERSION = "live-research-v0.3" as const;
+/**
+ * Prompt versions a worker result may carry. v0.3 is stamped on every NEW job; v0.2 stays accepted so a job queued
+ * before the upgrade, or a result from a not-yet-upgraded worker, is not lost (one attempt per job means a refused
+ * result is a lost job). docs/research-jobs.sql `bsproof_research_complete` accepts the same two job versions.
+ */
+export const ACCEPTED_RESEARCH_PROMPT_VERSIONS = ["live-research-v0.3", "live-research-v0.2"] as const;
+export type ResearchPromptVersion = (typeof ACCEPTED_RESEARCH_PROMPT_VERSIONS)[number];
 
 /** Lease length in seconds (must equal the SQL default). */
 export const LEASE_SECONDS = 300;

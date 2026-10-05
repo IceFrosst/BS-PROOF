@@ -31,8 +31,12 @@ export const BASELINE_SHA256 = "48783cd3a6d9535b0a8ca8a792c0f73b3d32a98d3b0550c7
 /** Migration 001 (one attempt per job): the narrow, incremental step from the baseline to the current file. */
 export const MIGRATION_SQL_PATH = join(process.cwd(), "docs", "research-jobs-migration-001-one-attempt.sql");
 export const MIGRATION_SQL = readFileSync(MIGRATION_SQL_PATH, "utf8");
+/** Migration 002 (prompt version v0.3): `bsproof_research_complete` accepts v0.2 and v0.3. Independent of 001. */
+export const MIGRATION2_SQL_PATH = join(process.cwd(), "docs", "research-jobs-migration-002-prompt-v0.3.sql");
+export const MIGRATION2_SQL = readFileSync(MIGRATION2_SQL_PATH, "utf8");
 
 export const PROMPT = "live-research-v0.2";
+export const PROMPT_V3 = "live-research-v0.3";
 export const API_FUNCTIONS = [
   "bsproof_research_enqueue(uuid, uuid, jsonb, text)",
   "bsproof_research_get(uuid, uuid)",
@@ -73,6 +77,7 @@ let template: Promise<PGlite> | null = null;
 let appliedTemplate: Promise<PGlite> | null = null;
 let baselineTemplate: Promise<PGlite> | null = null;
 let migratedTemplate: Promise<PGlite> | null = null;
+let fullyMigratedTemplate: Promise<PGlite> | null = null;
 
 /** A project with the stand-ins and NO research objects. Cloned per call: tests never share state. */
 export async function emptyProject(): Promise<PGlite> {
@@ -119,13 +124,24 @@ export async function migratedProject(): Promise<PGlite> {
   return (await migratedTemplate).clone();
 }
 
+/** PRODUCTION after the whole release: the baseline with migration 001 and then migration 002 applied. */
+export async function fullyMigratedProject(): Promise<PGlite> {
+  fullyMigratedTemplate ??= (async () => {
+    const db = await migratedProject();
+    await db.exec(MIGRATION2_SQL);
+    return db;
+  })();
+  return (await fullyMigratedTemplate).clone();
+}
+
 /** Close the shared template databases (clones are closed by their tests). */
 export async function closeProjects(): Promise<void> {
-  for (const t of [template, appliedTemplate, baselineTemplate, migratedTemplate]) if (t) await (await t).close();
+  for (const t of [template, appliedTemplate, baselineTemplate, migratedTemplate, fullyMigratedTemplate]) if (t) await (await t).close();
   template = null;
   appliedTemplate = null;
   baselineTemplate = null;
   migratedTemplate = null;
+  fullyMigratedTemplate = null;
 }
 
 export const sha256hex = (s: string) => createHash("sha256").update(s, "utf8").digest("hex");

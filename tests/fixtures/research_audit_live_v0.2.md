@@ -1,6 +1,6 @@
 # Evidence audit (live research) — one product, live web sources, population-aware
 
-**Version `live-research-v0.3`. Output must validate against `schemas/research_audit.json`.**
+**Version `live-research-v0.2`. Output must validate against `schemas/research_audit.json`.**
 
 This is the prompt for the subscription-backed PC research worker
 (`scripts/pc_research_worker.py` through `pipeline/claude_research_adapter.py`).
@@ -11,14 +11,12 @@ rule and STEPS 0-7 of `audit-v0.4` word for word, and differs in three ways only
 (1) the product arrives as DATA in the request, not as `{{...}}` placeholders;
 (2) it adds the LIVE RESEARCH RULES below, written for a model that really has
 WebSearch and WebFetch and nothing else; (3) it records which version it is.
-`live-research-v0.3` (2026-10-06) adds ONE rule block, L7, and nothing else.
 No rule about what counts as evidence, no gate, no threshold and no schema field
 changed. Self-contained: do NOT read repository files; there are none to read.
 
-Cache/versioning (invariant 3): the worker records `live-research-v0.3` in the job
+Cache/versioning (invariant 3): the worker records `live-research-v0.2` in the job
 claim, in `meta.prompt` and in the provenance. Bump it here and in
-`pipeline/claude_research_adapter.LIVE_PROMPT_VERSION` together. A job queued under
-`live-research-v0.2` is still served, with this prompt.
+`pipeline/claude_research_adapter.LIVE_PROMPT_VERSION` together.
 
 ---
 
@@ -221,7 +219,7 @@ Product level: `dose_note` (flag elemental-vs-compound and regimen ambiguity),
 
 ---
 
-## LIVE RESEARCH RULES (added in `live-research-v0.2`; L7 added in `live-research-v0.3`)
+## LIVE RESEARCH RULES (added in `live-research-v0.2`)
 
 These rules only add constraints. Where they meet a rule above, the stricter one wins.
 
@@ -303,38 +301,8 @@ that it is an experimental, unvalidated, unreviewed model audit.
 
 The request gives you three values. Copy them exactly:
 - `meta.model`: the model id in the request.
-- `meta.prompt`: `live-research-v0.3`.
+- `meta.prompt`: `live-research-v0.2`.
 - `meta.run_at`: the run date in the request (the date part, YYYY-MM-DD).
-
-### L7. Cite only identifiers a tool result printed (the citation check)
-
-When you finish, the worker checks every `inventory[].id` against the text that WebSearch and
-WebFetch returned in THIS run, by exact text match. An id that no returned result prints is
-refused, and the whole audit is thrown away with it, so one unprinted id costs the entire run.
-Nothing is repaired afterwards and there is no second run. Therefore:
-
-- **An id counts only if a tool result printed it.** The PMID digits, the DOI or the NCT number
-  must appear in the text a result returned to you, in the same result as that study's title.
-  Not counted: an id you typed into a URL, a search query or a WebFetch question; an id you
-  remember; a number or a DOI tail you read out of the address of a link in a search result you
-  did not open; a PMID you turned into a DOI or the other way round.
-- **Ask for the identifier when you open a record.** When you use WebFetch on a database record or
-  an article page to cite it, put into the question: "state the PMID (or DOI, or NCT number)
-  exactly as printed on the page, with the title, year, design and number of participants."
-  The summary then carries the id. If it comes back without the id, ask once more for the id
-  alone, or do not list that study.
-- **Check before you answer.** Go through `inventory` row by row. For each id, find where a
-  returned result printed it. If you cannot, delete the row and add a line to `could_not_access`
-  saying the study was not confirmed in a returned result. Do not keep a row because you are
-  sure the study exists: sure is not printed.
-- **A deleted study is no longer evidence.** Take it out of that outcome's sentence, `effectPoints`,
-  doubt and `strongest_study` as well. Do not leave an outcome claiming what no listed source supports.
-- **Fewer is fine.** If this leaves an outcome with no verified study, keep the outcome with an
-  empty inventory and `effectPoints: "unclear"`, and say plainly in `confidence_note` how little
-  could be confirmed. A short audit that cites only what was printed is a complete, accepted
-  answer; a fuller audit with one unprinted id is not.
-- Copy each id exactly as printed. Do not "tidy" it, and do not add an id you saw only in a
-  list of numbers with no label that says what it is.
 
 ---
 

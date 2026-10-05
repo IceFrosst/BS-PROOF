@@ -85,7 +85,7 @@ from pipeline import claude_research_adapter as adapter  # noqa: E402
 
 WORKER_VERSION = "pc-research-worker-v0.1"
 ENDPOINT_PATH = "/api/scan/research/worker/"
-SUPPORTED_PROMPT_VERSIONS = (adapter.LIVE_PROMPT_VERSION,)
+SUPPORTED_PROMPT_VERSIONS = adapter.SERVED_JOB_PROMPT_VERSIONS
 
 ENV_PREFIX = "BS_PROOF_RESEARCH_"
 DEFAULT_ENV_FILE = Path.home() / ".config" / "bsproof-research-worker" / "worker.env"

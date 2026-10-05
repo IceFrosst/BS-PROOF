@@ -401,7 +401,9 @@ class AdapterContract(unittest.TestCase):
     def test_live_prompt_is_distinct_versioned_and_leaves_the_retained_prompt_alone(self):
         live = (ROOT / "prompts" / "research_audit_live.md").read_text()
         old = (ROOT / "prompts" / "research_audit.md").read_text()
-        self.assertIn("`live-research-v0.2`", live.split("---", 1)[0])
+        self.assertEqual(ad.LIVE_PROMPT_VERSION, "live-research-v0.3")
+        self.assertIn("**Version `live-research-v0.3`.", live.split("---", 1)[0])
+        self.assertIn("- `meta.prompt`: `live-research-v0.3`.", live)
         self.assertIn("`audit-v0.4`", old.split("---", 1)[0])
         self.assertNotIn("{{INGREDIENT}}", live)
         for needle in ("WebSearch", "a summary, not the paper", "CONTEXT ONLY", "unknown", "experimental"):
@@ -409,6 +411,33 @@ class AdapterContract(unittest.TestCase):
         # the shared evidence rules are carried over word for word
         step = "## STEP 1 — SPLIT BY POPULATION"
         self.assertEqual(live.split(step)[1].split("## STEP 2")[0], old.split(step)[1].split("## STEP 2")[0])
+
+    def test_v0_3_is_v0_2_plus_the_citation_rule_and_nothing_else(self):
+        """Invariant 3 / "keep every unit and constant": the ONLY difference between the prompt that produced the 2026-10-05
+        jobs (verbatim in tests/fixtures) and the current one is rule L7 and the version strings."""
+        v02 = (ROOT / "tests" / "fixtures" / "research_audit_live_v0.2.md").read_text()
+        v03 = (ROOT / "prompts" / "research_audit_live.md").read_text()
+        start, end = v03.index("### L7. Cite only identifiers a tool result printed"), v03.index("---\n\n## HOW TO RETURN")
+        l7 = v03[start:end]
+        rest = v03[:start] + v03[end:]
+        for new, old in (
+            ("**Version `live-research-v0.3`.", "**Version `live-research-v0.2`."),
+            ("`live-research-v0.3` (2026-10-06) adds ONE rule block, L7, and nothing else.\nNo rule", "No rule"),
+            ("the worker records `live-research-v0.3` in the job\nclaim,", "the worker records `live-research-v0.2` in the job\nclaim,"),
+            (" together. A job queued under\n`live-research-v0.2` is still served, with this prompt.\n", " together.\n"),
+            ("## LIVE RESEARCH RULES (added in `live-research-v0.2`; L7 added in `live-research-v0.3`)", "## LIVE RESEARCH RULES (added in `live-research-v0.2`)"),
+            ("- `meta.prompt`: `live-research-v0.3`.", "- `meta.prompt`: `live-research-v0.2`."),
+        ):
+            self.assertEqual(rest.count(new), 1, new)
+            rest = rest.replace(new, old)
+        self.assertEqual(rest, v02)
+        # the new rule says what the worker enforces, in plain words, and asks for the identifier at fetch time
+        for needle in ("exact text match", "An id counts only if a tool result printed it", "state the PMID (or DOI, or NCT number)",
+                       "delete the row", "A deleted study is no longer evidence", "Fewer is fine", "there is no second run",
+                       "address of a link in a search result you\n  did not open"):
+            self.assertIn(needle, l7.replace("  \n", "\n") if needle.startswith("address") else l7, needle)
+        # it asks for nothing the schema or the scoring does not already have: no new field, no number, no constant
+        self.assertNotRegex(l7, r"\d+(\.\d+)?\s*(mg|mcg|IU|%)")
 
     def test_run_dirs_are_unique_private_and_not_named_from_input(self):
         with tempfile.TemporaryDirectory() as t:
@@ -712,6 +741,21 @@ class Jobs(Base):
         bad = good_audit("unknown")
         bad["outcomes"][0]["population"] = "CONTEXT ONLY: single ingredient, not this product."
         out = self.run_job(web_events() + [ev_result(bad)], jobspec=job(target, jid="job-2"))
+        self.assertEqual(out.code, "audit_contract_violation")
+
+    def test_a_job_queued_under_the_previous_prompt_version_is_served_not_lost(self):
+        # One attempt per job: refusing it would end it for good. It is run with the CURRENT prompt, and the audit says so.
+        self.assertEqual(w.SUPPORTED_PROMPT_VERSIONS, ("live-research-v0.3", "live-research-v0.2"))
+        out = self.run_job(web_events() + [ev_result(good_audit())], jobspec=job(pv="live-research-v0.2"))
+        self.assertEqual(out.kind, "completed")
+        (sent,) = self.api.of("complete")
+        self.assertEqual(sent["audit"]["meta"]["prompt"], "live-research-v0.3")
+        self.assertEqual(sent["source_access_v2"]["runner"]["prompt_version"], "live-research-v0.3")
+        self.assertIn("meta.prompt = live-research-v0.3", Path(str(self.rec) + ".stdin").read_text())
+        # ... while an audit that claims the OLD prompt (a model that ignored the request) is not delivered
+        bad = good_audit()
+        bad["meta"]["prompt"] = "live-research-v0.2"
+        out = self.run_job(web_events() + [ev_result(bad)], jobspec=job(pv="live-research-v0.2", jid="job-2"))
         self.assertEqual(out.code, "audit_contract_violation")
 
     def test_unsupported_prompt_version_and_invalid_target_run_nothing(self):

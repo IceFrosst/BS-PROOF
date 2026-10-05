@@ -65,7 +65,14 @@ ADAPTER_VERSION = "claude-research-adapter-v0.1"
 # this prompt and is not served here. Bump the version in the prompt file's header
 # and here together (invariant 3). The research jobs have no cache, so unlike the
 # S1-S8 and label domains nothing is invalidated by a bump.
-LIVE_PROMPT_VERSION = "live-research-v0.2"
+LIVE_PROMPT_VERSION = "live-research-v0.3"
+# Job prompt versions this worker will run. A job queued before the website was upgraded still carries the previous
+# version; with ONE attempt per job, refusing it would lose it for good, so it is served with the current prompt
+# (the audit's `meta.prompt` and the stored provenance say what actually ran). Anything else is refused untouched.
+# v0.3 (2026-10-06) = v0.2 + rule L7, the citation check (docs/research/pc-research-worker.md "Why the Vitamin D job
+# failed three times").
+PREVIOUS_PROMPT_VERSION = "live-research-v0.2"
+SERVED_JOB_PROMPT_VERSIONS = (LIVE_PROMPT_VERSION, PREVIOUS_PROMPT_VERSION)
 LIVE_PROMPT_FILE = "prompts/research_audit_live.md"
 AUDIT_SCHEMA_FILE = "schemas/research_audit.json"
 
@@ -560,15 +567,31 @@ def classify_fetch_v2(is_error, code, text, has_result=True):
 
 DOI_RE = re.compile(r"10\.\d{4,9}/[^\s\"'<>)\]},;]+", re.I)
 PMID_URL_RE = re.compile(r"pubmed\.ncbi\.nlm\.nih\.gov/(\d{5,9})", re.I)
-PMID_RE = re.compile(r"\bPMID[:\s#]*(\d{5,9})\b", re.I)
+# A PMID the tool text LABELS as one: "PMID: 123", "PMID 123", "PMID:123" and, since 2026-10-06, the Markdown
+# bold a small summariser model writes around the label ("**PMID:** 123"). Only whitespace, ':', '#' and '*'
+# may sit between the label and the digits (other emphasis forms were not seen and are not recognised), so "PMID list ... 123", "PMIDs: 123" and a bare number do NOT
+# match. MEASURED on the 2026-10-05 Vitamin D captures (returned tool text only): the old pattern ("[:\s#]*")
+# recognised 0 labelled PMIDs in the first run, where the summariser wrote the bold form throughout (18 now),
+# and 33 of 43 in the second -- see docs/research/pc-research-worker.md "Why the Vitamin D job failed three
+# times". lib/scan-research/source-access-v2.ts `idsIn` MUST stay identical (the server recomputes this
+# grounding); tests/fixtures/id-extraction-cases.json pins both.
+PMID_RE = re.compile(r"\bPMID[\s:#*]*(\d{5,9})\b", re.I)
 PMC_RE = re.compile(r"\bPMC\d{5,9}\b", re.I)
 NCT_RE = re.compile(r"\bNCT\d{8}\b", re.I)
+# A DOI read out of a URL carries the page-view path after it ("https://www.frontiersin.org/articles/<doi>/full").
+# Only the two forms MEASURED in the captures are unwrapped; the full DOI is always kept as well. A real DOI
+# never ends in these words, and anything else (a different tail, a different DOI) is not touched.
+DOI_WEB_VIEW_SUFFIXES = ("/full", "/pdf")
 
 
 def extract_ids(text: str) -> set[str]:
     ids = set()
     for m in DOI_RE.findall(text):
-        ids.add("doi:" + m.rstrip(".").lower())
+        doi = m.rstrip(".").lower()
+        ids.add("doi:" + doi)
+        for suffix in DOI_WEB_VIEW_SUFFIXES:
+            if doi.endswith(suffix) and len(doi) > len(suffix) and "/" in doi[: -len(suffix)]:
+                ids.add("doi:" + doi[: -len(suffix)])
     for m in PMID_URL_RE.findall(text) + PMID_RE.findall(text):
         ids.add("pmid:" + m)
     for m in PMC_RE.findall(text):

@@ -6,21 +6,21 @@
  * completion replay, conflict, a retryable fail that is still final, jobs a legacy 3-attempt policy left behind
  * (running with attempts 2, queued with attempts already spent) -- against the fake AND against the real
  * docs/research-jobs.sql (PGlite), and requires the two to answer identically at every step. A second test runs
- * the same history against the PRODUCTION shape (the 2026-10-04 baseline + migration 001). If they differ, the
+ * the same history against the PRODUCTION shape (the 2026-10-04 baseline + migrations 001 and 002). If they differ, the
  * fake is wrong.
  */
 import { afterAll, describe, expect, it } from "vitest";
 
 import { FakeResearchQueue } from "./helpers/fake-research-queue";
 import { FakeSupabase } from "./helpers/fake-supabase";
-import { Queue, appliedProject, closeProjects, migratedProject, resultFor, uuid } from "./helpers/research-sql";
+import { Queue, appliedProject, closeProjects, fullyMigratedProject, resultFor, uuid } from "./helpers/research-sql";
 
 afterAll(closeProjects);
 
 type Json = any; // eslint-disable-line @typescript-eslint/no-explicit-any -- jsonb answers are compared, not typed
 
 interface Backend {
-  enqueue(owner: string, scan: string): Promise<Json>;
+  enqueue(owner: string, scan: string, promptVersion?: string): Promise<Json>;
   get(owner: string, id: string): Promise<Json>;
   claim(): Promise<Json>;
   heartbeat(id: string, token: string): Promise<Json>;
@@ -34,7 +34,7 @@ interface Backend {
 }
 
 const sqlBackend = (q: Queue): Backend => ({
-  enqueue: (o, s) => q.enqueue(o, s),
+  enqueue: (o, s, v) => q.enqueue(o, s, undefined, v),
   get: (o, id) => q.get(o, id),
   claim: () => q.claim(),
   heartbeat: (id, t) => q.heartbeat(id, t),
@@ -48,7 +48,7 @@ const sqlBackend = (q: Queue): Backend => ({
 });
 
 const fakeBackend = (f: FakeResearchQueue): Backend => ({
-  enqueue: async (o, s) => f.bsproof_research_enqueue({ p_owner: o, p_scan: s, p_target: { version: "ResearchJobV1", ingredient: { vocab_id: "magnesium", label: "Magnesium" } }, p_prompt_version: "live-research-v0.2" }),
+  enqueue: async (o, s, v) => f.bsproof_research_enqueue({ p_owner: o, p_scan: s, p_target: { version: "ResearchJobV1", ingredient: { vocab_id: "magnesium", label: "Magnesium" } }, p_prompt_version: v ?? "live-research-v0.2" }),
   get: async (o, id) => f.bsproof_research_get({ p_owner: o, p_id: id }),
   claim: async () => f.bsproof_research_claim(),
   heartbeat: async (id, t) => f.bsproof_research_heartbeat({ p_id: id, p_lease_token: t }),
@@ -89,8 +89,8 @@ async function history(b: Backend): Promise<Array<[string, unknown]>> {
   const O1 = uuid(101);
   const O2 = uuid(102);
   let age = 0;
-  const queue = async (label: string, owner: string, scan: number) => {
-    const out = await step(label, b.enqueue(owner, uuid(200 + scan)));
+  const queue = async (label: string, owner: string, scan: number, promptVersion?: string) => {
+    const out = await step(label, b.enqueue(owner, uuid(200 + scan), promptVersion));
     if (out.status === "created") await b.age(out.job.id, ++age);
     return out;
   };
@@ -165,6 +165,18 @@ async function history(b: Backend): Promise<Array<[string, unknown]>> {
   await b.setAttempts(F, 1);
   await step("claim, F is skipped", b.claim());
   await step("get F stays queued", b.get(O2, F));
+
+  // Prompt versions: a job stamped v0.3 completes, a job queued under v0.2 still completes, an unknown one is refused.
+  const H = (await queue("enqueue H (prompt v0.3)", O2, 8, "live-research-v0.3")).job.id;
+  const I = (await queue("enqueue I (prompt v0.2)", O2, 9, "live-research-v0.2")).job.id;
+  const J = (await queue("enqueue J (prompt v0.1)", O1, 10, "live-research-v0.1")).job.id;
+  const h1 = (await step("claim -> H", b.claim())).job;
+  const i1 = (await step("claim -> I", b.claim())).job;
+  const j1 = (await step("claim -> J", b.claim())).job;
+  await step("complete H (v0.3)", b.complete(H, h1.lease_token, resultFor("h")));
+  await step("complete I (v0.2)", b.complete(I, i1.lease_token, resultFor("i")));
+  await step("complete J (v0.1) is refused", b.complete(J, j1.lease_token, resultFor("j")));
+  await step("get H", b.get(O2, H));
   return log;
 }
 
@@ -182,9 +194,9 @@ describe("the in-memory queue used by the route tests behaves exactly like docs/
     }
   });
 
-  it("... and identically against the PRODUCTION shape: the applied 2026-10-04 file plus migration 001", async () => {
+  it("... and identically against the PRODUCTION shape: the applied 2026-10-04 file plus migrations 001 and 002", async () => {
     const fake = await history(fakeBackend(new FakeResearchQueue(new FakeSupabase())));
-    const db = await migratedProject();
+    const db = await fullyMigratedProject();
     try {
       const real = await history(sqlBackend(new Queue(db)));
       expect(fake.map(([label]) => label)).toEqual(real.map(([label]) => label));
