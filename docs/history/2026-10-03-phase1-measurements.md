@@ -353,3 +353,11 @@ analysed for that outcome (affects the variance only, never the sign).
 **Ceiling:** even with every fix, this corpus yields about 6-10 trials per
 outcome, against 14-61 in the published meta-analyses. The binding limit is
 corpus size (99 full-text studies, supplement scope), not extraction quality.
+
+**Both fixes built (2026-10-05).** Re-pooling the replay with the real code:
+lean mass k 5 -> 7, SMD +0.19 [-0.08, +0.46], first non-I letter (D); power
+5 -> 7, -0.00 [-0.41, +0.40]; strength 5 -> 6, +0.25 [-0.22, +0.71].
+Benchmark: lean SMD pass (coverage 78 %, width 1.1x); strength still not
+testable (coverage 46 %, width 2.4x). The add-on fix recovers nothing in this
+run: isrctn68542582's only claim compares GAA + CrM with PLACEBO (a real
+combination contrast), not with GAA.

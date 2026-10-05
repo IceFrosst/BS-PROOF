@@ -171,6 +171,33 @@ def _matched_factorial_background(s3: dict | None, ingredient: str) -> bool:
     return target_co is not None and control_co is not None and target_co == control_co
 
 
+def matched_addon_claim(claim: dict, s3: dict | None) -> bool:
+    """True when THIS claim's two arms are an explicitly matched add-on pair:
+    the claim's ingredient arm and control arm each resolve (exact label,
+    unique) to an administered S3 arm, the first with the ingredient and the
+    second without, and both list the SAME co-interventions. Then the contrast
+    isolates the ingredient even when the trial has other arms (A / B / A+X):
+    `_matched_factorial_background` asks the same question of a whole two-arm
+    trial. Unknown co-interventions (None) never match. Evidence method v2 only
+    (pipeline/pool.py); founder 2026-10-05, measured on isrctn68542582 (PLA /
+    GAA / GAA + CrM, refused whole although GAA + CrM vs GAA isolates creatine)."""
+    from pipeline.claim_arms import _arm_norm
+    arms = [a for a in (s3 or {}).get("arms") or [] if isinstance(a, dict)
+            and a.get("role", "administered") == "administered"]
+
+    def one(label):
+        hits = [a for a in arms if _arm_norm(a.get("label")) == _arm_norm(label)]
+        return hits[0] if _arm_norm(label) and len(hits) == 1 else None
+    target, control = one(claim.get("ingredient_arm")), one(claim.get("control_arm"))
+    if not target or not control or target is control:
+        return False
+    if target.get("target_ingredient_presence") != "yes" or control.get("target_ingredient_presence") != "no":
+        return False
+    t_co = _normalise_cointerventions(target.get("active_cointerventions"))
+    c_co = _normalise_cointerventions(control.get("active_cointerventions"))
+    return t_co is not None and c_co is not None and t_co == c_co
+
+
 def _ineligible(ext: dict) -> str | None:
     """
     Why this trial cannot vote on whether the ingredient works. None = it can.

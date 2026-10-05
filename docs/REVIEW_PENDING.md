@@ -94,6 +94,13 @@ and blinding are adequate.
   --full-text-only --supplement-scope`, top-5 outcomes); intervention-scope
   retrieval is a later, separate run. (4) Claims the two reviewers disagree on
   are excluded (refused), not adjudicated, for now.
+- **DECIDED 2026-10-05 (founder) — two poolability fixes (v2 only):**
+  (1) an arm's n missing from the claim's verified numbers is taken from S3's
+  per-arm n for the same label (`span_check.fill_arm_n`, flagged
+  `n_from_s3:<arm>`; variance only, never the sign); (2) a claim whose own
+  arms are an explicitly matched add-on pair (same co-interventions, ingredient
+  in one arm only) is kept in a trial otherwise refused as a combination
+  (`eligibility.matched_addon_claim`). v14 eligibility is unchanged.
 - **Crossover trials**: arm statistics are pooled as if parallel (Cochrane
   Handbook §23.2.6, conservative); a paired mean difference with CI is kept;
   a crossover SMD is refused (may be d_z).

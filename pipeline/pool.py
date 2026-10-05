@@ -36,6 +36,7 @@ verified at extraction time (`numbers_v2` on each mapped outcome).
 from __future__ import annotations
 
 import collections
+import dataclasses
 import re
 from dataclasses import dataclass, field
 
@@ -44,7 +45,8 @@ from pipeline import vocab
 from pipeline.assemble import _s7_for_claim, study_dose
 from pipeline.dose import dose_match_for
 from pipeline.effect_size import Effect, effect_from_claim
-from pipeline.eligibility import _ineligible
+from pipeline.eligibility import _ineligible, matched_addon_claim
+from pipeline.span_check import fill_arm_n
 
 ROUTE_RANK = {"arm_stats": 0, "arm_stats_derived": 1, "reported_smd_ci": 2, "reported_smd_p": 3,
               "reported_smd_n": 4, "reported_md_ci": 5}
@@ -187,26 +189,28 @@ def _study_effects(item: dict, product: dict, polarity: dict,
         oid = o.get("outcome_vocab_id")
         if not oid or o.get("discarded"):
             continue
-        if scope:
+        nums = o.get("numbers_v2") or {}
+        # S5N's claim when it read the numbers (pipeline/review.numbers_claim).
+        claim = nums.get("claim") or o.get("claim") or {}
+        if scope and not (scope == "no_isolated_ingredient_arm" and matched_addon_claim(claim, s3)):
             refusals[oid] = f"study: {scope}"
             continue
         if pop == "different":
             refusals[oid] = "study: off-target population"
             continue
-        nums = o.get("numbers_v2") or {}
-        # S5N's claim when it read the numbers (pipeline/review.numbers_claim).
-        claim = nums.get("claim") or o.get("claim") or {}
         review = nums.get("review") or {"status": "single", "verified": nums.get("verified") or {}}
         if review["status"] == "disagreed":
             refusals.setdefault(oid, "reviewers disagree (human adjudication)")
             continue
-        eff, why = effect_from_claim(claim, review["verified"], polarity=polarity.get(oid),
+        verified, n_flags = fill_arm_n(claim, review["verified"], s3.get("arms"))
+        eff, why = effect_from_claim(claim, verified, polarity=polarity.get(oid),
                                      abs_only=nums.get("abs_only") or (),
                                      checks=nums.get("verified") or {})
         if eff is None:
             refusals.setdefault(oid, why)
             continue
-        verified = review["verified"]
+        if n_flags:
+            eff = dataclasses.replace(eff, flags=eff.flags + n_flags)
         arm_n = (verified.get("n_ingredient"), verified.get("n_control"))
         if not all(isinstance(x, int) for x in arm_n):
             n = s3.get("n_analysed") or s3.get("n_randomised")

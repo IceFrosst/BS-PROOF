@@ -144,9 +144,13 @@ def _second_review(out: dict, record: dict, text: str, sections: dict | None,
     polarity = {o["id"]: o.get("polarity") for o in vocab.load("outcome")["outcomes"]}
     # Only claims whose verified numbers make an effect: a claim the pool would
     # refuse anyway has nothing worth a second reading (and costs a call).
+    from pipeline.span_check import fill_arm_n
+    s3_arms = (s3_facts or {}).get("arms") if isinstance(s3_facts, dict) else None
     sent = {i for i, o in enumerate(outcomes)
             if not o.get("discarded") and effect_route(
-                _claim_for_numbers(o), (o.get("numbers_v2") or {}).get("verified") or {},
+                _claim_for_numbers(o),
+                fill_arm_n(_claim_for_numbers(o), (o.get("numbers_v2") or {}).get("verified") or {},
+                           s3_arms)[0],
                 polarity.get(o.get("outcome_vocab_id")))}
     reviews = None
     if sent:
@@ -172,7 +176,7 @@ def _second_review(out: dict, record: dict, text: str, sections: dict | None,
             sent = set()
         reviews = (result or {}).get("reviews")
     out["review_v2"] = {"sent": len(sent),
-                        "adjudication": reconcile_study(outcomes, reviews, sent, polarity)}
+                        "adjudication": reconcile_study(outcomes, reviews, sent, polarity, s3_arms)}
 
 
 def _verify_numbers(out: dict, record: dict, claims: list[dict] | None = None) -> list[dict]:

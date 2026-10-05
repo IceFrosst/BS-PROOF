@@ -128,14 +128,17 @@ def effect_route(claim: dict, verified: dict, polarity: str | None) -> str | Non
 
 
 def reconcile(claim: dict, numbers: dict | None, review: dict | None,
-              polarity: str | None = None) -> dict:
+              polarity: str | None = None, s3_arms: list[dict] | None = None) -> dict:
     """The review record for one claim: {"status", "route", "verified",
     "dropped", "conflicts"}. `numbers` is the claim's numbers_v2 (span-check
     output); `review` is reviewer 2's entry for this claim, or None. Only the
     fields of the effect route reviewer 1's numbers take are compared, and only
     those reach the pool."""
     verified = dict((numbers or {}).get("verified") or {})
-    route = effect_route(claim, verified, polarity)
+    # The route counts arm sizes S3 supplies (span_check.fill_arm_n); those are
+    # S3's facts, so they are never compared here -- the pool re-fills them.
+    from pipeline.span_check import fill_arm_n
+    route = effect_route(claim, fill_arm_n(claim, verified, s3_arms)[0], polarity)
     if review is None or route is None:
         return {"status": "single", "route": route, "verified": verified, "dropped": [], "conflicts": []}
     if not review.get("found"):
@@ -170,7 +173,8 @@ def reconcile(claim: dict, numbers: dict | None, review: dict | None,
 
 
 def reconcile_study(outcomes: list[dict], reviews: list[dict] | None,
-                    sent: set[int], polarity: dict | None = None) -> list[dict]:
+                    sent: set[int], polarity: dict | None = None,
+                    s3_arms: list[dict] | None = None) -> list[dict]:
     """Attach a review record to each outcome's numbers_v2, IN PLACE, matching
     reviewer 2's entries by claim index (never by position). Outcomes that were
     sent but got no entry back are "single", like outcomes never sent; the
@@ -183,7 +187,7 @@ def reconcile_study(outcomes: list[dict], reviews: list[dict] | None,
             continue
         rec = reconcile(nums.get("claim") or o.get("claim") or {}, nums,
                         by_index.get(i) if i in sent else None,
-                        (polarity or {}).get(o.get("outcome_vocab_id")))
+                        (polarity or {}).get(o.get("outcome_vocab_id")), s3_arms)
         nums["review"] = rec
         if rec["status"] == "disagreed":
             queue.append({"claim_index": i, "outcome": o.get("outcome_vocab_id"),

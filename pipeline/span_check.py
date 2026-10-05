@@ -154,6 +154,25 @@ def _s3_arm_n(claim: dict, field: str, s3_arms: list[dict] | None) -> int | None
     return n if isinstance(n, int) and not isinstance(n, bool) and n > 0 else None
 
 
+def fill_arm_n(claim: dict, verified: dict, s3_arms: list[dict] | None) -> tuple[dict, tuple[str, ...]]:
+    """An arm's n missing from the claim's verified numbers, taken from S3's
+    per-arm n for the SAME label (S3 carries its own quote; label matched
+    exactly, unique). Never replaces a verified n. Returns (numbers, flags);
+    each filled arm is flagged `n_from_s3:<arm>` -- S3's n is the arm's size
+    in the trial, not necessarily the n analysed for this outcome, which moves
+    the variance only, never the sign. (Founder 2026-10-05; measured on
+    20261005_080012: 13 of 46 effect-less claims lacked only an arm n.)"""
+    out, flags = dict(verified), []
+    for field in ("n_ingredient", "n_control"):
+        if field in out:
+            continue
+        n = _s3_arm_n(claim, field, s3_arms)
+        if n is not None:
+            out[field] = n
+            flags.append(f"n_from_s3:{field.split('_')[1]}")
+    return out, tuple(flags)
+
+
 def verify_claim_numbers(claim: dict, *, tables: list[dict] | None = None,
                          s3_arms: list[dict] | None = None) -> dict:
     """Verify every numeric field present on one S5 claim.

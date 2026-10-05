@@ -10,6 +10,17 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-05 — poolability: where the trials went; two fixes
+
+- Offline analysis of 20261005_080012 (extractions replayed from the LLM cache
+  with model calls blocked): 134 mapped claims -> 57 effects -> 33 trial-outcome
+  pairs -> 17 pooled. Losses: 22 claims with no printed numbers, 13 missing an
+  arm n, 13 pairs correctly refused as combinations, 3 off-target populations.
+  The corpus (99 studies) is the binding limit, not extraction.
+- Founder-approved fixes: arm n from S3 (`span_check.fill_arm_n`) and claim-level
+  matched add-on contrasts (`eligibility.matched_addon_claim`); v2 only.
+  Strength k 6, lean k 7 (letter D), power k 7. 187 Python tests.
+
 ## 2026-10-05 — first full v2 creatine run (20261005_080012)
 
 - 98/99 studies extracted, 0 partial failures, ~18 h (usage-limit pauses);
