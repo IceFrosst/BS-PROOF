@@ -394,7 +394,7 @@ test.describe("live research screen with mocked Google sign-in (build with sign-
     await expect(panel.getByRole("progressbar", { name: "Tiesioginio tyrimo eiga (neapibrėžta)" })).toBeVisible();
     await expect(panel.getByRole("status")).toHaveText("Tyrimas vykdomas.");
     await expect(panel).toContainText("porcijos per dieną; forma");
-    await expect(page.locator('[data-testid="read-facts"]')).toContainText("porcijų per dieną nenurodyta (nepripažįstama)");
+    await expect(page.locator('[data-testid="read-facts"]')).toContainText("porcijų per dieną nenurodyta (prielaida nedaroma)");
     await expect(page.locator(".scan-lab-result")).not.toContainText(/įrodymų paleidimo nėra|Bendras balas|Finansavimas ir nepriklausomumas/);
     await noHorizontalScroll(page);
     await shot(page, `configured-lt-loading-${test.info().project.name}`, page.locator(".scan-lab-result"));

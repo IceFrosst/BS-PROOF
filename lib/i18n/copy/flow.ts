@@ -343,8 +343,8 @@ export const FLOW_LT: FlowCopy = {
   heroFormLabel: "FORMA",
   labelAlt: "Etiketė, kurią nuskenavai",
   servingsPerDay: (n) => `${n} ${ltPlural(n, "porcija", "porcijos", "porcijų")} per dieną`,
-  servingsNotStated: "porcijų per dieną nenurodyta (nepripažįstama)",
-  servingsValueNotStated: "nenurodyta (nepripažįstama)",
+  servingsNotStated: "porcijų per dieną nenurodyta (prielaida nedaroma)",
+  servingsValueNotStated: "nenurodyta (prielaida nedaroma)",
 };
 
 export const FLOW_COPY: Record<Lang, FlowCopy> = { en: FLOW_EN, lt: FLOW_LT };

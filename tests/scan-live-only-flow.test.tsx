@@ -557,7 +557,7 @@ describe("Lithuanian: every control, caveat and state is Lithuanian; the researc
     expect(text(loading)).toContain("Juosta tyčia neapibrėžta");
     expect(text(loading)).toContain("Galite palikti šį ekraną");
     expect(text(loading.querySelector('[data-testid="research-missing"]'))).toContain("porcijos per dieną; forma");
-    expect(text(scanPanel(el).querySelector('[data-testid="read-facts"]'))).toContain("porcijų per dieną nenurodyta (nepripažįstama)");
+    expect(text(scanPanel(el).querySelector('[data-testid="read-facts"]'))).toContain("porcijų per dieną nenurodyta (prielaida nedaroma)");
     expect(text(loading.querySelector(".sc-research-tags"))).toBe("EksperimentinisBe įvertinimo");
     expect(text(scanPanel(el))).not.toMatch(LEGACY_LT);
 

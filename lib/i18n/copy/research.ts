@@ -248,7 +248,7 @@ export const RESEARCH_COPY: Record<ResearchLanguage, ResearchCopy> = {
     no: "ne",
     missingLead: "Šiame skenavime nenurodyta, todėl tyrimas jų neatspėliojo:",
     missing: { servings_per_day: "porcijos per dieną", dose_per_serving: "dozė porcijoje", form: "forma", other_ingredients: "ar yra kitų veikliųjų medžiagų" },
-    missingHow: "Tyrimas užsakomas tik pagal jūsų išsaugotą skenavimą, todėl šiame ekrane jų pridėti negalima. Norėdami tirti su jais, nuskenuokite dar kartą arba įveskite papildą su dienos porcijomis; kol kas nieko nepripažįstama.",
+    missingHow: "Tyrimas užsakomas tik pagal jūsų išsaugotą skenavimą, todėl šiame ekrane jų pridėti negalima. Norėdami tirti su jais, nuskenuokite dar kartą arba įveskite papildą su dienos porcijomis; kol kas jokių prielaidų nedaroma.",
     model: "Modelis",
     prompt: "Užklausos versija",
     provenance: "Serverio kilmės duomenys",
