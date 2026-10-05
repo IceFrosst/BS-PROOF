@@ -792,14 +792,17 @@ Install order (owner-run, in this order; nothing here was run):
    Expect no `running` row and no `queued` row with `attempts >= 1`. If a `queued` row with `attempts >= 1` exists, start the CURRENT (old) runtime, let
    it finish that job, drain again, re-check. Then apply, each once and verifying its sha256 first, through the path that applied the first file:
    `docs/research-jobs-migration-001-one-attempt.sql` (sha256 `9d147ecf30bd5ba4c47c33e50dd18fc11bbca10e5371354240eb919aff33fb41`) and `docs/research-jobs-migration-002-prompt-v0.3.sql` (sha256 `1f2368e155e5c36cf79b27eba8d05e7b7aac4d62b9cd084e1e88a5ec392c46fb`).
-   Each is one transaction behind a read-only guard (nothing changes unless it is safe), idempotent, in either order, and each prints a VERIFY query
-   in its header (read-only; expect `true`). Neither touches a table, grant, owner, RLS or any job.
+   Each sits behind a read-only guard (nothing changes unless it is safe), is idempotent, works in either order, and prints a VERIFY query in its header
+   (read-only; expect `true`). Neither touches a table, grant, owner, RLS or any job. The files hold NO `begin;`/`commit;` of their own: submit BOTH
+   inside ONE explicit `begin; ...001...002... commit;` submission, and only with the worker stopped (see "Scope amendment and rollout hazards" below:
+   the guard and the replacement are separate statements, and the wrapper is untested on the real submission path).
 3. **Push `main`** (review first). The website now stamps v0.3, accepts the two id forms and both prompt versions. Check the Vercel deployment is READY on that
    commit. No Vercel setting, token or flag changes; the public flag stays `on`. (While the worker is stopped nothing claims the new jobs.)
 4. **Build and install the new runtime** from that commit: `deploy/pc_research_worker_release.sh build` (refuses uncommitted runtime files), `install <tgz> <sha256>`,
    `check` (no model, no claim). `deploy/pc_research_supervisor.py` is not part of the runtime tarball (it is copied separately, see "Install" above): the
    installed copy keeps the OLD `stop` message ("re-offers it, using one of its 3 attempts"), which is merely wrong, not unsafe, until the owner re-copies it.
-5. **Start**: `$SUP start --expect-commit <new> --expect-unit-sha256 <U> --wait-ready 90`, then `status` READY.
+5. **Start exactly ONE reviewed supervisor**: `$SUP start --expect-commit <new> --expect-unit-sha256 <U> --wait-ready 90`, then `status` READY. `start` is
+   idempotent: if it prints `already running`, it started nothing and an OLD runtime is still serving; stop that one and start again (never run two).
 6. Verify without a model call: `status` READY, both VERIFY queries `true`, the owner `GET` of an existing failed job unchanged. Do not queue a test job unless the
    owner decides to: one job is the only way to learn whether rule L7 works, it spends the subscription once at medium, and its result is still an unvalidated model audit.
 
@@ -809,6 +812,72 @@ as `lease_expired` or `failed` under the new policy is final and is not undone. 
 
 Not proved here: any live behaviour (no model call, no SQL on the real database, no runtime install, no deploy), that rule L7 changes what the model does,
 that `medium` grounds better or worse than `xhigh`, or that a medium run is faster. The result is still an unvalidated model audit.
+
+## Scope amendment (durable) and rollout hazards — 2026-10-06
+
+**What the user asked, in order.** (1) "switch to sonnet 5.5 medium ... make it go from one": `claude-sonnet-5-5` at `medium`, ONE attempt per job.
+(2) Then, explicitly: "no why would an attempt fail I want you to taclkle that issue" [sic]. Latest acceptance: tackle the actual Vitamin D
+grounding failures so that a SINGLE `medium` invocation can produce usable evidence; a cap-only release is NOT acceptable; strict validation never
+accepts an ungrounded source id.
+
+**Authorised by that amendment, and nothing wider:**
+- a minimal source-id recognition fix in the Python worker (`PMID_RE`, `DOI_WEB_VIEW_SUFFIXES`) AND the server TypeScript (`idsIn`); the two MUST agree
+  (one shared fixture runs on both);
+- an explicit source-only citation rule in the live prompt (rule L7);
+- the matching prompt version (`live-research-v0.3`), the `schemas/source_access_v2.json` `runner.prompt_version` enum, and complete-RPC compatibility
+  (`bsproof_research_complete` accepts v0.2 and v0.3);
+- versioned, narrow, NON-destructive SQL migrations (001 claim/fail, 002 complete): `create or replace` of the named functions, no table, grant, owner,
+  RLS or job touched;
+- regression tests for all of it.
+
+**Not authorised, and not done:** any other scientific schema, rubric or model-boundary change; a source-id whitelist; any repair, stripping or invention
+of evidence; any other constant (thresholds, caps, weights, units, turn/token/budget/deadline, provider fallback). The only operational values moved are
+the two the user named (effort `xhigh` -> `medium`, attempts 3 -> 1) plus the prompt-version strings above. The guard is unchanged: an inventory id that
+no returned tool result prints is still refused.
+
+**Review disposition.** The independent review of `f7664b2..f2bfec3` returned NEEDS_WORK for ONE reason: its task card carried the earlier, frozen
+cap-only scope and omitted the amended root-cause objective (the implementation report had recorded it). Its four "critical" items (prompt, schema
+enum, complete RPC / migration 002, id recognition) are exactly the authorised items above, not scope creep. Its Fix Card option 1 (narrow back to
+`777a7b0`, drop `f2bfec3`) is NOT taken: that is the cap-only release the user rejected. `f2bfec3` is preserved as it is (no reset, rebase or drop). Its
+warnings stand and are the hazards below. NOT claimed: that `f2bfec3` has been reviewed against the amended scope; that review and a re-run of the
+gates on the final tree are still required before anything is applied. This docs commit changes no source file, so the earlier gate results apply
+to unchanged source.
+
+**What the replay proves and does not prove.** Recognising ids in the text the tools returned rescues 14 of the 18 refused inventory ids (13 bold
+`**PMID:**` + 1 DOI behind `/full`). The other 4 are the model's own unprinted assertions and stay correctly refused. Each of the three original attempts
+STILL FAILS when replayed through the fixed guard (`test_the_fixed_extraction_moves_each_failure_to_the_models_unprinted_id`: 1, 1 and 2 rows refused).
+No claim is made that the original job, or any attempt of it, would now succeed. The original job is NOT repaired, re-queued or re-run by this work. How
+the new prompt behaves is UNPROVEN: no model has run it.
+
+**Validation of the new prompt is the owner's decision.** The only way to learn whether L7 helps is ONE private Vitamin D `medium` validation invocation.
+It needs the owner's explicit approval, after the code review and the gates, and after the install order above. This document grants no such approval.
+There is no hidden second model run (a failed invocation is final), no repair or re-queue of the original job, and no new budget, deadline or provider
+fallback.
+
+**Rollout order (restated).** Stop or drain the OLD worker and leave it stopped -> read-only queue check -> the reviewed migrations 001 and 002 in one
+transaction -> deploy v0.3 (push `main`, confirm the Vercel deploy) -> build and install the exact reviewed runtime -> start ONE reviewed supervisor.
+The tier table above says what each wrong order costs.
+
+**Hazards, plainly.**
+- Production today is the OLD state: 3 attempts, `xhigh`, prompt v0.2. Nothing in this candidate is applied, installed, deployed or pushed.
+- A wrong order loses jobs, because one attempt makes a refused claim or completion final: the new website before migration 002 (a v0.3 job cannot
+  complete, 409); a v0.2-only worker that claims a v0.3 job (final `unsupported_prompt_version`); the old website with the new worker (422, then the lease
+  expires). Nothing in code enforces the order.
+- The medium worker on the OLD 3-attempt SQL can still give one job up to 3 model runs (a retryable `fail` is requeued, an expired lease is re-claimed):
+  migration 001 must come first.
+- Migration atomicity: the guard (a `do` block) and the `create or replace` statements are separate statements. If an old worker posted a retryable
+  `fail` between them, a job requeued with `attempts >= 1` would sit `queued` forever. Hence the worker is stopped first AND both files go in one explicit
+  transaction. The offline SQL tests run each file as one multi-statement `exec` on PGlite (atomic there); the explicit wrapper and the real submission
+  path (SQL editor or Management API) have NOT been exercised. If the path rejects the wrapper, stop and ask; do not apply the files piecemeal while any
+  worker can run.
+- A worker stop or lease loss is now terminal: SIGTERM, a crash, a host suspend, `stop --now`, a reboot, an OOM kill or a heartbeat outage longer than
+  the lease ends the job as `lease_expired`, with no second try. Use only `stop --drain`.
+- The effort is requested, never observed: it is proved at the argv level (`--effort medium`, recorded as `effort_requested`), not from the CLI stream.
+- A job queued under v0.2 before the upgrade is served with the v0.3 prompt; its row keeps the old stamp and its provenance says v0.3.
+- The server recomputes grounding on `complete` (422 on disagreement, never retried): a worker-only or website-only deploy of the id fix turns an
+  accepted audit into a lost job. Both sides ship together.
+- Test limits: PGlite is one connection, so `for update skip locked` concurrency is not exercised; it runs PostgreSQL 17.5, production 17.6.
+- One invocation can still fail, and that job then ends `failed`. Research stays EXPERIMENTAL and UNGRADED, never scored.
 
 ## Verification (offline; no network, no model, no live database)
 
@@ -879,6 +948,10 @@ These tests use fake streams and fake HTTP queue clients only. They do not prove
 model behavior, account state, provisioning, or clinical validity.
 
 ## Handoff
+
+Scope (2026-10-06, durable): the user amended the task from cap-only to root-cause; what that authorises and what it does not, the review disposition and
+the rollout hazards are in "Scope amendment (durable) and rollout hazards". One private Vitamin D `medium` validation invocation needs the owner's explicit
+approval after review and gates; nothing here grants it.
 
 State (2026-10-06, UTC) — **READ THIS FIRST. The objective is NOT "cap the retries"; it is "make one research invocation produce a usable audit, and
 stop paying for the same failure three times".** A candidate on a local branch (NOT on `main`, NOT pushed) holds: id-recognition fix (worker + server, shared
