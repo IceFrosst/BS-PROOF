@@ -29,9 +29,11 @@ from __future__ import annotations
 
 import copy
 import datetime
+import hashlib
 import http.server
 import json
 import os
+import re
 import signal
 import stat
 import sys
@@ -401,9 +403,9 @@ class AdapterContract(unittest.TestCase):
     def test_live_prompt_is_distinct_versioned_and_leaves_the_retained_prompt_alone(self):
         live = (ROOT / "prompts" / "research_audit_live.md").read_text()
         old = (ROOT / "prompts" / "research_audit.md").read_text()
-        self.assertEqual(ad.LIVE_PROMPT_VERSION, "live-research-v0.3")
-        self.assertIn("**Version `live-research-v0.3`.", live.split("---", 1)[0])
-        self.assertIn("- `meta.prompt`: `live-research-v0.3`.", live)
+        self.assertEqual(ad.LIVE_PROMPT_VERSION, "live-research-v0.4")
+        self.assertIn("**Version `live-research-v0.4`.", live.split("---", 1)[0])
+        self.assertIn("- `meta.prompt`: `live-research-v0.4`.", live)
         self.assertIn("`audit-v0.4`", old.split("---", 1)[0])
         self.assertNotIn("{{INGREDIENT}}", live)
         for needle in ("WebSearch", "a summary, not the paper", "CONTEXT ONLY", "unknown", "experimental"):
@@ -412,11 +414,21 @@ class AdapterContract(unittest.TestCase):
         step = "## STEP 1 — SPLIT BY POPULATION"
         self.assertEqual(live.split(step)[1].split("## STEP 2")[0], old.split(step)[1].split("## STEP 2")[0])
 
+    # ---- prompt lineage, pinned on FROZEN fixtures (invariant 3): v0.2 -> v0.3 -> v0.4, each step an enumerated edit ----
+
+    V03_FIXTURE_SHA256 = "3ef4ecfb373d163393aa7b3d90e2492947a5f64817665716b5b43ad1e8f4ed5e"  # the prompt the private v0.3 run used
+
+    def fixtures(self):
+        fx = ROOT / "tests" / "fixtures"
+        return ((fx / "research_audit_live_v0.2.md").read_text(), (fx / "research_audit_live_v0.3.md").read_text(),
+                (ROOT / "prompts" / "research_audit_live.md").read_text())
+
     def test_v0_3_is_v0_2_plus_the_citation_rule_and_nothing_else(self):
         """Invariant 3 / "keep every unit and constant": the ONLY difference between the prompt that produced the 2026-10-05
-        jobs (verbatim in tests/fixtures) and the current one is rule L7 and the version strings."""
-        v02 = (ROOT / "tests" / "fixtures" / "research_audit_live_v0.2.md").read_text()
-        v03 = (ROOT / "prompts" / "research_audit_live.md").read_text()
+        jobs (frozen verbatim in tests/fixtures) and the v0.3 prompt (frozen too: the private validation run used it) is
+        rule L7 and the version strings. Both ends are fixtures, so this does not move when the live prompt does."""
+        v02, v03, _ = self.fixtures()
+        self.assertEqual(hashlib.sha256(v03.encode("utf-8")).hexdigest(), self.V03_FIXTURE_SHA256)
         start, end = v03.index("### L7. Cite only identifiers a tool result printed"), v03.index("---\n\n## HOW TO RETURN")
         l7 = v03[start:end]
         rest = v03[:start] + v03[end:]
@@ -431,13 +443,103 @@ class AdapterContract(unittest.TestCase):
             self.assertEqual(rest.count(new), 1, new)
             rest = rest.replace(new, old)
         self.assertEqual(rest, v02)
-        # the new rule says what the worker enforces, in plain words, and asks for the identifier at fetch time
+        # the v0.3 rule says what the worker enforces, in plain words, and asks for the identifier at fetch time
         for needle in ("exact text match", "An id counts only if a tool result printed it", "state the PMID (or DOI, or NCT number)",
                        "delete the row", "A deleted study is no longer evidence", "Fewer is fine", "there is no second run",
                        "address of a link in a search result you\n  did not open"):
             self.assertIn(needle, l7.replace("  \n", "\n") if needle.startswith("address") else l7, needle)
         # it asks for nothing the schema or the scoring does not already have: no new field, no number, no constant
         self.assertNotRegex(l7, r"\d+(\.\d+)?\s*(mg|mcg|IU|%)")
+
+    # The ONE rule block v0.4 adds, and the exact replacements it makes. Anything outside this list is a failure.
+    L8_HEADING = "### L8. Open before you conclude"
+    V04_EDITS = (  # (v0.4 text, v0.3 text) -- every one occurs exactly once
+        ("**Version `live-research-v0.4`.", "**Version `live-research-v0.3`."),
+        ("`live-research-v0.4` adds ONE more rule block, L8 (open the leads before you conclude), and changes three\n"
+         "sentences (Rule 1, L4 and L7) so that each says an empty result is allowed only after L8.\n", ""),
+        ("the worker records `live-research-v0.4` in the job\nclaim,", "the worker records `live-research-v0.3` in the job\nclaim,"),
+        ("`live-research-v0.2` or `live-research-v0.3` is still served, with this prompt.\n", "`live-research-v0.2` is still served, with this prompt.\n"),
+        ("; L8 added in `live-research-v0.4`)", ")"),
+        ("- `meta.prompt`: `live-research-v0.4`.", "- `meta.prompt`: `live-research-v0.3`."),
+        # Rule 1, L4 and L7: each empty-result sentence now says "only after L8" (the three sentences the owner named)
+        ("an empty\n   audit is a valid result only after L8 and is far better than a plausible invention.",
+         "an empty\n   audit is a valid result and is far better than a plausible invention."),
+        ("an empty inventory (only after L8), and a plain\n  statement", "an empty inventory, and a plain\n  statement"),
+        ("- **Fewer is fine, only after L8.** If this leaves", "- **Fewer is fine.** If this leaves"),
+        ("A short audit that cites only what was printed is allowed, but only after L8;\n  a fuller audit with one unprinted id is not.\n",
+         "A short audit that cites only what was printed is a complete, accepted\n  answer; a fuller audit with one unprinted id is not.\n"),
+    )
+
+    def l8_block(self, v04):
+        start, end = v04.index(self.L8_HEADING), v04.index("---\n\n## HOW TO RETURN")
+        return v04[start:end]
+
+    def test_v0_4_is_v0_3_plus_the_enumerated_edits_and_rule_L8_and_nothing_else(self):
+        _, v03, v04 = self.fixtures()
+        self.assertNotEqual(v04, v03)
+        rest = v04.replace(self.l8_block(v04), "")
+        for new, old in self.V04_EDITS:
+            self.assertEqual(rest.count(new), 1, new)
+            rest = rest.replace(new, old)
+        self.assertEqual(rest, v03)  # byte for byte: no other word of the v0.3 prompt moved
+        # the sentences that were NOT to be touched
+        self.assertIn("Not counted: an id you typed into a URL, a search query or a WebFetch question; an id you\n"
+                      "  remember; a number or a DOI tail you read out of the address of a link in a search result you\n"
+                      "  did not open; a PMID you turned into a DOI or the other way round.", v04)
+        self.assertIn("a fuller audit with one unprinted id is not", v04)
+        self.assertEqual(v04.count("a complete, accepted answer"), 0)
+        self.assertNotIn("accepted answer", v04)
+        # the shared STEPS 0-7 stay word for word equal to the retained audit-v0.4 prompt
+        old = (ROOT / "prompts" / "research_audit.md").read_text()
+        step = "## STEP 1 — SPLIT BY POPULATION"
+        self.assertEqual(v04.split(step)[1].split("## STEP 2")[0], old.split(step)[1].split("## STEP 2")[0])
+
+    def test_L8_tells_the_model_to_open_every_relevant_lead_and_gives_no_excuse_and_no_number(self):
+        _, _, v04 = self.fixtures()
+        l8 = self.l8_block(v04)
+        flat = " ".join(l8.split())  # line breaks are not part of the wording
+        for needle in ("**Open every relevant lead.** Use WebFetch on every result that names a study, a trial, a systematic review "
+                       "or a meta-analysis of the product or of one of its listed actives",
+                       "no relevant lead is left unopened", "WebFetch", "every relevant lead", "`could_not_access`", "the search result printed no identifier",
+                       "I did not open it", "are not reasons to skip a lead", "The second is the reason to open it",
+                       "ask for the identifier exactly as L7 says", "An empty inventory is the right answer only after this",
+                       "One search with no page opened is not that answer", "A search result is a list of leads, not evidence",
+                       "stays CONTEXT as L4 says", "Do not keep or invent a row"):
+            self.assertIn(needle, flat, needle)
+        self.assertRegex(flat, r"address and what came back .*in `could_not_access`, as it happened and nothing more")
+        # no number of pages, searches, turns, tokens or minutes: the only digits are the rule names it points at (L7, L4)
+        body = "\n".join(l8.splitlines()[1:])  # the heading names the rule itself
+        self.assertEqual(re.findall(r"\d", re.sub(r"\bL\d\b", "", body)), [], "L8 must contain no number")
+        self.assertNotRegex(flat, r"(?i)\b(at least|at most|minimum|maximum|no more than|up to|first \w+) (one|two|three|four|five|\d+)\b")
+        # it must not tell the model that the worker rejects a thin audit (it does not), and must not promise approval
+        self.assertNotRegex(flat, r"(?i)worker (rejects|refuses|fails)")
+        self.assertNotRegex(flat, r"(?i)approved|validated|verified by")
+
+    def test_every_paragraph_that_allows_an_empty_result_in_the_live_rules_points_at_L8(self):
+        """The three v0.3 sentences that sanctioned an early, empty finish ("an empty audit is a valid result", L4's empty
+        inventory, L7's "Fewer is fine ... a complete, accepted answer") each carry "only after L8" now. STEP 1 is the
+        retained audit-v0.4 text, equal word for word and not editable here; the live rules header ("the stricter one
+        wins") and L8 ("wherever ...") govern it."""
+        _, _, v04 = self.fixtures()
+        outside_l8 = v04.replace(self.l8_block(v04), "")  # L8 is the rule the others point at
+        paragraphs = re.split(r"\n\s*\n", outside_l8)
+        # list items of the rules are single paragraphs after a bullet; split them too so a bullet is judged alone
+        units = []
+        for para in paragraphs:
+            units.extend(re.split(r"\n(?=(?:\d+\.|-) )", para))
+        pat = re.compile(r"(?i)empty\s+(inventory|audit|result)|\bfewer is fine\b")
+        hits = [u for u in units if pat.search(u)]
+        # the header note, Rule 1, STEP 1 (shared text), L4 and L7 -- if one is added or removed this test must be re-read
+        self.assertEqual(len(hits), 5, [h[:60] for h in hits])
+        shared_step_1 = "real finding: emit the row with `effectPoints: \"unclear\"` and an empty"
+        for u in hits:
+            if shared_step_1 in u:
+                continue  # STEP 1: retained audit-v0.4 text, not editable here (see the docstring)
+            self.assertIn("L8", u, u[:160])
+        # ... and L8 itself names every place that may be read as allowing an empty result
+        l8 = " ".join(self.l8_block(v04).split())
+        self.assertIn("empty inventory", l8)
+        self.assertIn("Before you write that nothing could be confirmed, or return an empty inventory", l8)
 
     def test_run_dirs_are_unique_private_and_not_named_from_input(self):
         with tempfile.TemporaryDirectory() as t:
@@ -743,20 +845,22 @@ class Jobs(Base):
         out = self.run_job(web_events() + [ev_result(bad)], jobspec=job(target, jid="job-2"))
         self.assertEqual(out.code, "audit_contract_violation")
 
-    def test_a_job_queued_under_the_previous_prompt_version_is_served_not_lost(self):
+    def test_a_job_queued_under_a_previous_prompt_version_is_served_not_lost(self):
         # One attempt per job: refusing it would end it for good. It is run with the CURRENT prompt, and the audit says so.
-        self.assertEqual(w.SUPPORTED_PROMPT_VERSIONS, ("live-research-v0.3", "live-research-v0.2"))
-        out = self.run_job(web_events() + [ev_result(good_audit())], jobspec=job(pv="live-research-v0.2"))
-        self.assertEqual(out.kind, "completed")
-        (sent,) = self.api.of("complete")
-        self.assertEqual(sent["audit"]["meta"]["prompt"], "live-research-v0.3")
-        self.assertEqual(sent["source_access_v2"]["runner"]["prompt_version"], "live-research-v0.3")
-        self.assertIn("meta.prompt = live-research-v0.3", Path(str(self.rec) + ".stdin").read_text())
-        # ... while an audit that claims the OLD prompt (a model that ignored the request) is not delivered
-        bad = good_audit()
-        bad["meta"]["prompt"] = "live-research-v0.2"
-        out = self.run_job(web_events() + [ev_result(bad)], jobspec=job(pv="live-research-v0.2", jid="job-2"))
-        self.assertEqual(out.code, "audit_contract_violation")
+        self.assertEqual(w.SUPPORTED_PROMPT_VERSIONS, ("live-research-v0.4", "live-research-v0.3", "live-research-v0.2"))
+        for n, old in enumerate(("live-research-v0.2", "live-research-v0.3")):
+            out = self.run_job(web_events() + [ev_result(good_audit())], jobspec=job(pv=old, jid=f"job-old-{n}"))
+            self.assertEqual(out.kind, "completed", old)
+            sent = self.api.of("complete")[-1]
+            self.assertEqual(sent["audit"]["meta"]["prompt"], "live-research-v0.4", old)
+            self.assertEqual(sent["source_access_v2"]["runner"]["prompt_version"], "live-research-v0.4", old)
+            self.assertIn("meta.prompt = live-research-v0.4", Path(str(self.rec) + ".stdin").read_text(), old)
+        # ... while an audit that claims an OLD prompt (a model that ignored the request) is not delivered
+        for n, old in enumerate(("live-research-v0.2", "live-research-v0.3")):
+            bad = good_audit()
+            bad["meta"]["prompt"] = old
+            out = self.run_job(web_events() + [ev_result(bad)], jobspec=job(pv=old, jid=f"job-bad-{n}"))
+            self.assertEqual(out.code, "audit_contract_violation", old)
 
     def test_unsupported_prompt_version_and_invalid_target_run_nothing(self):
         j = job(pv="audit-v0.4")["job"]

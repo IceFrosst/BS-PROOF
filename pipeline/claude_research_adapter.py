@@ -65,14 +65,16 @@ ADAPTER_VERSION = "claude-research-adapter-v0.1"
 # this prompt and is not served here. Bump the version in the prompt file's header
 # and here together (invariant 3). The research jobs have no cache, so unlike the
 # S1-S8 and label domains nothing is invalidated by a bump.
-LIVE_PROMPT_VERSION = "live-research-v0.3"
-# Job prompt versions this worker will run. A job queued before the website was upgraded still carries the previous
+LIVE_PROMPT_VERSION = "live-research-v0.4"
+# Job prompt versions this worker will run. A job queued before the website was upgraded still carries an earlier
 # version; with ONE attempt per job, refusing it would lose it for good, so it is served with the current prompt
 # (the audit's `meta.prompt` and the stored provenance say what actually ran). Anything else is refused untouched.
 # v0.3 (2026-10-06) = v0.2 + rule L7, the citation check (docs/research/pc-research-worker.md "Why the Vitamin D job
-# failed three times").
-PREVIOUS_PROMPT_VERSION = "live-research-v0.2"
-SERVED_JOB_PROMPT_VERSIONS = (LIVE_PROMPT_VERSION, PREVIOUS_PROMPT_VERSION)
+# failed three times"). v0.4 = v0.3 + rule L8, "open before you conclude", and three sentences that now say an empty
+# result is allowed only after L8 (the one private validation run of v0.3 ended with one search, no page opened and an
+# empty inventory; docs/research/pc-research-worker.md "Validation run 1 (2026-10-05 UTC): FAILED").
+PREVIOUS_PROMPT_VERSIONS = ("live-research-v0.3", "live-research-v0.2")
+SERVED_JOB_PROMPT_VERSIONS = (LIVE_PROMPT_VERSION, *PREVIOUS_PROMPT_VERSIONS)
 LIVE_PROMPT_FILE = "prompts/research_audit_live.md"
 AUDIT_SCHEMA_FILE = "schemas/research_audit.json"
 

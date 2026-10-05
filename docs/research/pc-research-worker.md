@@ -1,23 +1,28 @@
 # Main-PC research worker — contract, install, health, rollback
 
-Status (2026-10-06, UTC) — **CANDIDATE ONLY: fixes the CAUSE of the Vitamin D failures, plus ONE attempt per job and MEDIUM effort. NOT applied, NOT installed, NOT deployed, NO model run to test it.**
+Status (2026-10-06, UTC) — **CANDIDATE `live-research-v0.4` on a local branch: id recognition, prompt rule L8 ("open before you conclude"), ONE attempt per job and MEDIUM effort. NOT applied, NOT installed, NOT deployed, NOT pushed, and NOT shown to work: the v0.4 prompt has had NO model run, and the one private run of its predecessor (v0.3) FAILED the owner's usability criterion (section "Validation run 1").**
 The user asked for live research on `claude-sonnet-5-5` at effort **medium** with **one** attempt per job (no automatic second or
-third model run), and then said the real question is *why an attempt fails*, so a cap alone is not the fix. **Why it failed** (replayed
-from the three original captures, section "Why the Vitamin D job failed three times"): the worker's inventory-grounding guard refused
+third model run), and then said the real question is *why an attempt fails*, so a cap alone is not the fix. **What the replay of the
+three original captures shows** (section "Why the Vitamin D job failed three times"): the worker's inventory-grounding guard refused
 each audit because cited ids were not "printed in returned tool text". That was TRUE for 4 of the 33 cited ids over the three runs
 (the model asserted an id no returned result printed) and FALSE for 14 of them: those papers WERE retrieved, and the ids WERE in
 returned text, but in a form the extraction did not recognise (a Markdown-bold `**PMID:** 123` label the small summariser model
-wrote; a DOI inside a URL ending `/full`). The other 15 were accepted. The guard is unchanged and strict: it was the id *recognition*
-that was too narrow, plus a model that did not know the check exists. In the repository this candidate changes: (1) the id
-extraction, in lockstep in the worker and the server, for exactly those two measured forms; (2) the live prompt `live-research-v0.2`
--> `live-research-v0.3` = v0.2 plus ONE rule block (L7, the citation check; proven by test to be the only difference), with every
-tier accepting both versions so no queued job and no old runtime is stranded; (3) effort `xhigh` -> `medium`, model unchanged;
-(4) one attempt per job in the SQL (`docs/research-jobs.sql`, migration 001), and `bsproof_research_complete` accepting the v0.3
-job version (migration 002); (5) the grounding refusal is classified `audit_contract_violation`, not a retryable worker fault.
-**Nothing here is live until the owner follows "One attempt per job and medium effort: what changed, install order, drain" (the order
-matters). Even then a research run can still fail**: the replay shows 4 residual unprinted ids that no parser change may accept; L7
-is the fix for those and it is UNPROVEN until a model runs it (none has). Medium does not guarantee success. Everything below that
-says "three attempts", "requeued" or "re-claimed" describes the 2026-10-04/05 production state until the migrations are applied.
+wrote; a DOI inside a URL ending `/full`). The other 15 were accepted. The guard is unchanged and strict. **What the candidate changes**
+(see the table in "One attempt per job and medium effort"): (1) the id extraction, in lockstep in the worker and the server, for exactly those two
+measured forms (this part is replay-verified: 14 of the 18 refused rows; each original attempt STILL fails when replayed, with 1, 1 and 2 rows
+refused); (2) the live prompt `live-research-v0.2` -> `v0.3` (= v0.2 plus rule L7, the citation check) -> **`v0.4`** (= v0.3 plus rule L8, which
+tells the model to open with WebFetch every relevant study/trial/review lead a search surfaced before it concludes that nothing could be confirmed, and
+changes three sentences so that an empty result is allowed only after L8); every tier accepts v0.4, v0.3 and v0.2 so no queued job and no old runtime is
+stranded; (3) effort `xhigh` -> `medium` (REQUESTED on the command line; the CLI stream reports no effort level, so it is not observed or proven), model unchanged;
+(4) one attempt per job in the SQL (`docs/research-jobs.sql`, migration 001), and `bsproof_research_complete` accepting the v0.4, v0.3 and v0.2 job versions (migration 002);
+(5) the grounding refusal is classified `audit_contract_violation`, not a retryable worker fault. **What is NOT claimed:** that the Vitamin D failure, or any
+failure, is fixed. Only the id-recognition part is verified (by replay). Whether L8 makes a single `medium` invocation open the leads and return a usable audit is
+UNPROVEN: v0.3 was run once and ended with one search, nothing opened and an empty inventory, and v0.4 has not been run by any model. The early stop of that one run is a
+reading of the prompt text and of the model's own output (n = 1; effort and prompt were changed together), not a controlled finding. No wording here may call the candidate
+"fixed", "validated", "verified", "proven" or "approved". **Nothing here is live until the owner follows "One attempt per job and medium effort: what changed,
+install order, drain" (the order matters), and nothing is released without a validation run that the owner judges useful (section "Validation plan for v0.4").
+Even then a research run can still fail**: the replay shows 4 residual unprinted ids that no parser change may accept, and a one-attempt job that fails ends `failed`.
+Everything below that says "three attempts", "requeued" or "re-claimed" describes the 2026-10-04/05 production state until the migrations are applied.
 
 Status (2026-10-05, times UTC): **RELEASED_EVERYONE under a USER-ACCEPTED HELD-OPEN hosting condition (not a fully hosted service).**
 Production `SCAN_LIVE_RESEARCH_ENABLED` is `on` (it was `owners`): live research is open to every signed-in Google user; an
@@ -96,7 +101,7 @@ Facts, none of them secret:
 
 Files: `scripts/pc_research_worker.py` (loop, HTTP, leases, validation),
 `pipeline/claude_research_adapter.py` (only model boundary),
-`prompts/research_audit_live.md` (`live-research-v0.2`),
+`prompts/research_audit_live.md` (`live-research-v0.4`; v0.2 and v0.3 are frozen verbatim in `tests/fixtures`),
 `schemas/research_audit.json` (unchanged strict audit validator),
 `schemas/source_access_v2.json` (canonical V2 schema), `deploy/` (examples and
 release script), and focused Python/TypeScript tests.
@@ -689,7 +694,7 @@ shared project (re-verified read-only on 2026-10-04), and `1` is the wrong first
 `owners` as above; `1` / `true` / `on` / `yes` is the separate general-use decision of step 7.
 (Until 2026-10-06 its sha256 stayed `48783cd3a6d9535b0a8ca8a792c0f73b3d32a98d3b0550c730731b5d9cd9a4fb`; that file is the one
 that was APPLIED and is kept byte-for-byte as `tests/fixtures/research-jobs-baseline-48783cd3.sql`. The current file is the
-one-attempt + v0.3 revision, sha256 `7fb43b838f6191072ffe268704ea7a30ce13fcfe7aefd5ff48751080e078e9ec`; the migrations are 001 `9d147ecf30bd5ba4c47c33e50dd18fc11bbca10e5371354240eb919aff33fb41` and 002 `1f2368e155e5c36cf79b27eba8d05e7b7aac4d62b9cd084e1e88a5ec392c46fb`.)
+one-attempt + v0.4 revision, sha256 `e323562c81329bef1569fa73359a5c2835a0ba3052d0ba68ecc13b820510fef1` (it was `7fb43b838f6191072ffe268704ea7a30ce13fcfe7aefd5ff48751080e078e9ec` in the v0.3 candidate); the migrations are 001 `9d147ecf30bd5ba4c47c33e50dd18fc11bbca10e5371354240eb919aff33fb41` and 002 (`docs/research-jobs-migration-002-prompt-v0.4.sql`) `760acd70dc945bfbef9f477bd27d1ea5cfdcc6073f9eed050a83978e344518cc`.)
 
 ## Why the Vitamin D job failed three times
 
@@ -702,7 +707,7 @@ refused id; the real extent was 10 of 10 cited rows (run 1), 5 of 13 (run 2), 3 
 | stage | what the capture shows | rows | verdict |
 |---|---|---|---|
 | **A. Extraction missed a printed PMID** (`extract_ids`, and its twin `idsIn` on the server) | A content-bearing WebFetch summary printed `**PMID:** 35939577` with the title, journal, year. The pattern `PMID[:\s#]*digits` does not allow the `**` the summariser put after the colon. Run 1's summariser used that form throughout: the OLD pattern recognised **0** labelled PMIDs in run 1's returned text (18 now), 33 of 43 in run 2. | 13 | **parser fault. The model had retrieved the paper.** |
-| **B. Extraction mangled a printed DOI** | A search result printed `https://frontiersin.org/articles/10.3389/fpubh.2022.979649/full`. The DOI regex captures `…979649/full`, which is not the cited `…979649`. (`/pdf` did the same in run 1.) | 1 | **parser fault.** |
+| **B. Extraction mangled a printed DOI** | A search result printed `https://frontiersin.org/articles/10.3389/fpubh.2022.979649/full`. The DOI regex captures `…979649/full`, which is not the cited `…979649`. (A `/pdf` form of the same address was also printed, in the Links list of a search result in run 1 (its raw stream, line 28); run 1 cited no DOI, so no cited row depended on it. The cited DOI is in run 3.) | 1 | **parser fault.** |
 | **C. The id is not printed by any returned result** | (1) a bare number in a "The PMID list … is:" line, then an efetch whose question did not ask for the PMID; (2) an id typed into the model's own Europe PMC request, whose summary returned the title but not the id; (3) a number inside the address of a third-party "full citation" link in a search result that was never opened; (4) a DOI assembled from the tails of two `pubs.rsc.org` link addresses. | 4 | **model citation process. The guard is right to refuse; it must stay.** |
 | accepted as printed | | 15 | — |
 
@@ -717,29 +722,40 @@ refused rows, so the extraction fix ALONE rescues none of them: stage C is why r
 - A + B (`PMID_RE`, `DOI_WEB_VIEW_SUFFIXES`; `idsIn` on the server; one shared fixture `tests/fixtures/id-extraction-cases.json` run by Python and
   TypeScript): a PMID is recognised when the returned text labels it `PMID` with only whitespace, `:`, `#` or `*` before the digits; a DOI
   read out of a URL ending exactly `/full` or `/pdf` also yields the bare DOI (the full capture is kept too). Still NOT recognised, by test:
-  a bare number, "PMID list … 123", "PMIDs: 123", a table cell, a number in a link address, an id that appears only in the model's own
-  request, `__PMID:__`, any other URL tail, a different DOI behind `/full`. A receipt that is missing, failed (error/wall/refusal), for a
+  a bare number, "PMID list … 123", "PMIDs: 123", a table cell, a number in a third-party link slug (`…/medline/citation/<n>/full_citation`; a
+  `pubmed.ncbi.nlm.nih.gov/<n>/` address IS recognised), an id that appears only in a request URL's query
+  string (`…efetch…id=…`), `__PMID:__`, any other URL tail, a different DOI behind `/full`. A receipt that is missing, failed (error/wall/refusal), for a
   different paper, or an invented id cannot ground a row (`test_negative_*`).
+- **What the guard still accepts (pre-existing and UNCHANGED; the owner's R1).** It grounds an id on the WHOLE text of a SUCCESSFUL returned result. A
+  WebSearch result begins `Web search results for query: "<the model's own query>"`, so an id the model typed into its own search QUERY is echoed in the
+  returned text and counts as grounded: in the committed replay fixture, run 3's `10.1056/NEJMoa2202106` is printed in no returned result except that header
+  echo, and it is grounded. An id inside a link address of a search result that was never opened (`pubmed.ncbi.nlm.nih.gov/<n>/`, a DOI in a URL) counts, and so
+  does a fetch summary that restates a requested URL. The guard also does not check that an id belongs to the paper the audit row describes. Rule L7 asks the model
+  not to rely on any of these; the guard does NOT enforce it. Any tightening is a separate, explicitly authorised change on both the worker and the server. Do NOT
+  read "an id that appears only in the model's own request is never recognised" into this section: that holds for a request URL's query string, not for a search query echo.
 - The server recomputes this grounding in `complete` and answers 422 `invalid_result`, which the worker never retries; so the two sides MUST
   agree (a worker-only fix would turn an accepted audit into a lost job). Deploy order below.
-- C (`prompts/research_audit_live.md` rule L7, `live-research-v0.3`): tells the model the check exists and how it works (exact text match on
+- C (`prompts/research_audit_live.md` rule L7, added in `live-research-v0.3`): tells the model the check exists and how it works (exact text match on
   returned results; one unprinted id loses the whole run; there is no second run), to ask WebFetch to print the PMID/DOI/NCT exactly as printed
-  when it opens a record, to check every inventory row against a returned result before answering, to delete a row it cannot find (and the
-  claims that rested on it, and list it in `could_not_access`), and that a shorter audit with an empty inventory and `unclear` is a complete,
-  accepted answer. No unit, number, constant, gate or schema field changed; `tests/test_pc_research_worker.py` proves v0.3 = the v0.2 text
-  (kept verbatim in `tests/fixtures/research_audit_live_v0.2.md`) + L7 + the version strings.
-- Nothing is whitelisted, repaired, stripped or re-run. No id is accepted because the model asserted it or because a URL was requested.
-  Haiku summaries stay summaries (`access` must be `snippet`, `original_documents` 0).
+  when it opens a record, to check every inventory row against a returned result before answering, and to delete a row it cannot find (and the
+  claims that rested on it, and list it in `could_not_access`). As written in v0.3 it also said that a shorter audit with an empty inventory and
+  `unclear` "is a complete, accepted answer"; **v0.4 deletes that phrase** (see "Validation run 1" for why) and limits the empty finish to "only after L8".
+  No unit, number, constant, gate or schema field changed. `tests/test_pc_research_worker.py` proves, on FROZEN fixtures, v0.3 = the v0.2 text
+  (`tests/fixtures/research_audit_live_v0.2.md`) + L7 + the version strings, and v0.4 = the v0.3 text (`tests/fixtures/research_audit_live_v0.3.md`,
+  sha256 `3ef4ecfb373d163393aa7b3d90e2492947a5f64817665716b5b43ad1e8f4ed5e`, byte-for-byte the prompt the private run used) + an enumerated list of replacements + L8.
+- Nothing is whitelisted, repaired, stripped or re-run. No id is accepted merely because the model asserted it; an id counts when some SUCCESSFUL returned
+  text contains it, which includes the query echo and link addresses described above. Haiku summaries stay summaries (`access` must be `snippet`, `original_documents` 0).
 
 **Limits, plainly.** One invocation can still fail (the model may ignore L7 or the summariser may not print the id), and with one attempt
-that job then ends `failed`. L7 has been tested against nothing but its own text; the replay proves the extraction fix, not the prompt. A
-scoped validation run (one job, on the owner's decision) is the only way to learn whether L7 works. This is also why a third path was NOT
+that job then ends `failed`. The replay proves the extraction fix, not the prompt, and the one private run of v0.3 cited no id, so it tested neither
+L7 nor anything about ids. A scoped validation run (one invocation, on the owner's decision) is the only way to learn whether L7 and L8 work. This is also why a third path was NOT
 taken: accepting "the model requested this PMID and a page came back" would let a redirect or a wrong page ground an invented id.
 
 ## One attempt per job and medium effort: what changed, install order, drain
 
 **Status: a CANDIDATE in the repository. Migrations 001 and 002 have NOT been applied, the new runtime has NOT been built or installed, the
-website has NOT been deployed with it, and no real job was run to test any of it.** Research stays EXPERIMENTAL and UNGRADED; the
+website has NOT been deployed with it, no real job was run to test any of it, and the v0.4 prompt has had NO model run.** (One private invocation of the predecessor
+prompt v0.3 failed the owner's usability criterion; see "Validation run 1".) Research stays EXPERIMENTAL and UNGRADED; the
 ENLT-error / progress copy is unchanged apart from the one stalled-notice line below.
 
 What changed (and what did not):
@@ -747,19 +763,19 @@ What changed (and what did not):
 | | before | after (candidate) |
 |---|---|---|
 | model / effort | `claude-sonnet-5-5` / `xhigh` | `claude-sonnet-5-5` / **`medium`** (live research only; the S1-S8 and label adapters are untouched) |
-| live prompt | `live-research-v0.2` | **`live-research-v0.3`** = v0.2 + rule L7 (citation check), nothing else (proved by test) |
+| live prompt | `live-research-v0.2` | **`live-research-v0.4`** = v0.3 + rule L8 ("open before you conclude") + three sentences that now say an empty result is allowed only after L8; v0.3 = v0.2 + rule L7 (citation check). Both steps are proved by test on frozen fixtures; the L8 effect on the model is UNPROVEN |
 | id recognition (worker `extract_ids`, server `idsIn`) | `PMID: 123`, `PMID 123`, pubmed URL, DOI, PMC, NCT | the same + Markdown-bold `**PMID:** 123` + the bare DOI behind a `/full` or `/pdf` URL tail; nothing else |
 | claims per job | up to 3 (`attempts < 3`) | **1** (`attempts < 1`) |
 | posted `fail` with `retryable: true` | requeued while `attempts < 3` | **final** (`failed`, the posted code); `retryable` is ignored for requeueing |
 | expired lease | re-claimed; third expiry -> `failed(lease_expired)` | **final**: the next claim ends it as `failed(lease_expired)` |
 | inventory id not printed by any returned result | `worker_internal_error`, retryable | `audit_contract_violation`, not retryable; guard unchanged |
-| job prompt versions | `complete` accepts v0.2 only | `complete` (migration 002) and the server accept v0.2 AND v0.3; the worker serves both; the website stamps v0.3 on new jobs |
+| job prompt versions | `complete` accepts v0.2 only | `complete` (migration 002) and the server accept v0.4, v0.3 AND v0.2; the worker serves all three (always with the v0.4 prompt); the website stamps v0.4 on new jobs |
 | unchanged | lease 300 s (30-900 s clamp), heartbeat, completion CAS and replay, owner filter, 3 open jobs per owner, no global cap, RLS, grants, tokens, `SCAN_LIVE_RESEARCH_ENABLED` (public flag stays on), Google-only ownership, no turn/token/budget/runtime cap, delivery/heartbeat/poll retries (network, not model runs), the `schemas/research_audit.json` audit schema, every unit and constant | |
 
 What the one-attempt rule costs, said plainly: a transient local fault (quota or rate limit, an expired login, a missing CLI path,
 a PC that sleeps or is stopped mid-job) now ends THAT job as `failed` instead of retrying it, and the owner sees the failure code. There
 is no "research again" path (an owner's repeat request returns the same failed job: the per-scan key is unchanged). That is the
-user's decision, not an oversight. It is also why the CAUSE of grounding failures had to be fixed: with one attempt, a refused audit is a
+user's decision, not an oversight. It is also why the grounding failures had to be tackled at all, not only capped: with one attempt, a refused audit is a
 lost job.
 
 Legacy jobs: nothing is cancelled, requeued, deleted or edited by either migration. A job `running` with a live lease keeps it (heartbeat and
@@ -767,8 +783,8 @@ completion unchanged, whatever its `attempts` value: 2 or 3 from the old policy 
 finished job (`succeeded` / `failed`) stays final. An ALREADY-expired legacy running job, and any later expiry, ends as
 `lease_expired` at the next claim instead of being re-offered. A `queued` job with `attempts >= 1` (requeued by the old policy) would
 never be claimed again, so migration 001 REFUSES to apply while one exists (nothing changed); finish it under the old policy first. A job
-queued under `live-research-v0.2` before the website upgrade is still served and completed (the worker runs the v0.3 prompt for it; the
-audit's `meta.prompt` and the stored provenance say v0.3, the job row keeps its old stamp).
+queued under `live-research-v0.2` (or v0.3) before the website upgrade is still served and completed (the worker runs the v0.4 prompt for it; the
+audit's `meta.prompt` and the stored provenance say v0.4, the job row keeps its old stamp).
 
 **Which tier must be upgraded before which.** Four tiers carry the rules (website, database, worker runtime, prompt) and a wrong order
 loses jobs, because a refused completion or a refused claim is final under one attempt:
@@ -777,41 +793,56 @@ loses jobs, because a refused completion or a refused claim is final under one a
 |---|---|---|---|
 | old | old | old | production today |
 | old | 001+002 | old | fine (the SQL is a superset), one attempt per job |
-| **new** | 001+002 | **old, RUNNING** | **bad:** the old worker claims a v0.3 job and refuses it (`unsupported_prompt_version`, final). Never leave the old worker running once the website is deployed |
-| new | **old** | any | **bad:** a v0.3 job cannot complete (`unsupported_prompt_version` 409) |
-| **old** | any | **new** | **bad:** the old website rejects the v0.3 audit (422) and the lease then expires |
-| new | 001+002 | new | the target; also fine with a v0.2 job or a v0.2 result |
+| **new** | 001+002 | **old, RUNNING** | **bad:** the old worker claims a v0.4 job and refuses it (`unsupported_prompt_version`, final). Never leave the old worker running once the website is deployed |
+| new | **old** | any | **bad:** a v0.4 job cannot complete (`unsupported_prompt_version` 409) |
+| **old** | any | **new** | **bad:** the old website rejects the v0.4 audit (422) and the lease then expires |
+| new | 001+002 | new | the target; also fine with a v0.3 or v0.2 job or result |
 
 Hence the order: **stop the worker first, SQL second, website third, worker last.** (Pushing `main` IS the website deploy.)
 
-Install order (owner-run, in this order; nothing here was run):
+Install order (owner-run, in this order; nothing here was run). **Step 0 is a precondition, not an action of this document:** a validation run of the v0.4 candidate
+that the owner judges useful under "Validation plan for v0.4" (a NEW owner approval bound to the exact head, after a read-only review and the gates). Without it nothing below happens.
 
 1. **Stop the worker (drain).** `$SUP stop --drain` waits, with no deadline, for the running job to finish and then stops the worker; do not
    use `stop --now` (a cut job is lost). Leave it stopped until step 5. New jobs simply stay `queued`.
-2. **Read-only queue check**, then the SQL: `select status, attempts, count(*) from public.bsproof_research_jobs group by 1, 2 order by 1, 2;`
-   Expect no `running` row and no `queued` row with `attempts >= 1`. If a `queued` row with `attempts >= 1` exists, start the CURRENT (old) runtime, let
-   it finish that job, drain again, re-check. Then apply, each once and verifying its sha256 first, through the path that applied the first file:
-   `docs/research-jobs-migration-001-one-attempt.sql` (sha256 `9d147ecf30bd5ba4c47c33e50dd18fc11bbca10e5371354240eb919aff33fb41`) and `docs/research-jobs-migration-002-prompt-v0.3.sql` (sha256 `1f2368e155e5c36cf79b27eba8d05e7b7aac4d62b9cd084e1e88a5ec392c46fb`).
+2. **Read-only queue check, then the SQL.** Take read-only fingerprints first (the six function definitions, their ACLs and owners, the RLS flag and policies, and
+   `select status, attempts, count(*) from public.bsproof_research_jobs group by 1, 2 order by 1, 2;`). Expect NO `running` row and NO `queued` row with `attempts >= 1`:
+   - a `queued` row with `attempts >= 1` (requeued by the old policy): start the CURRENT (old) runtime, let it finish that job, drain again, re-check;
+   - **a `running` row (the drain can fire while a claim POST is in flight: the supervisor treats any worker state other than `running` as idle, and the worker writes
+     `running` only after the claim returns, `deploy/pc_research_supervisor.py` and `scripts/pc_research_worker.py`).** That job keeps its lease and would be failed as
+     `lease_expired` by migration 001 without ever having run. Do NOT cancel, requeue or edit the row or its lease: restart the OLD runtime, let it finish the job under
+     the 3-attempt SQL, drain again, and re-check until there is no `running` row. Every job and every lease is preserved.
+
+   Then apply both files, each verified against its sha256 first, through the path that applied the first file, in ONE explicit transaction with the worker STOPPED:
+   `docs/research-jobs-migration-001-one-attempt.sql` (sha256 `9d147ecf30bd5ba4c47c33e50dd18fc11bbca10e5371354240eb919aff33fb41`) and `docs/research-jobs-migration-002-prompt-v0.4.sql` (sha256 `760acd70dc945bfbef9f477bd27d1ea5cfdcc6073f9eed050a83978e344518cc`).
    Each sits behind a read-only guard (nothing changes unless it is safe), is idempotent, works in either order, and prints a VERIFY query in its header
    (read-only; expect `true`). Neither touches a table, grant, owner, RLS or any job. The files hold NO `begin;`/`commit;` of their own: submit BOTH
-   inside ONE explicit `begin; ...001...002... commit;` submission, and only with the worker stopped (see "Scope amendment and rollout hazards" below:
-   the guard and the replacement are separate statements, and the wrapper is untested on the real submission path).
-3. **Push `main`** (review first). The website now stamps v0.3, accepts the two id forms and both prompt versions. Check the Vercel deployment is READY on that
+   inside ONE `begin; ...001...002... commit;` submission (see "Scope amendment and rollout hazards": the guard and the replacement are separate statements, and the
+   wrapper is untested on the real submission path; after ANY error, verify read-only that nothing applied). **Immediately after the transaction and BEFORE the push**, run
+   BOTH VERIFY queries (001 and 002; expect `true`) and re-take the fingerprints: only the two function bodies may differ; no row, lease, grant or policy may.
+3. **Push `main`** (review first). The website now stamps v0.4, accepts the two id forms and the three prompt versions. Check the Vercel deployment is READY on that
    commit. No Vercel setting, token or flag changes; the public flag stays `on`. (While the worker is stopped nothing claims the new jobs.)
 4. **Build and install the new runtime** from that commit: `deploy/pc_research_worker_release.sh build` (refuses uncommitted runtime files), `install <tgz> <sha256>`,
    `check` (no model, no claim). `deploy/pc_research_supervisor.py` is not part of the runtime tarball (it is copied separately, see "Install" above): the
    installed copy keeps the OLD `stop` message ("re-offers it, using one of its 3 attempts"), which is merely wrong, not unsafe, until the owner re-copies it.
 5. **Start exactly ONE reviewed supervisor**: `$SUP start --expect-commit <new> --expect-unit-sha256 <U> --wait-ready 90`, then `status` READY. `start` is
    idempotent: if it prints `already running`, it started nothing and an OLD runtime is still serving; stop that one and start again (never run two).
-6. Verify without a model call: `status` READY, both VERIFY queries `true`, the owner `GET` of an existing failed job unchanged. Do not queue a test job unless the
-   owner decides to: one job is the only way to learn whether rule L7 works, it spends the subscription once at medium, and its result is still an unvalidated model audit.
+6. Verify without a model call: `status` READY, both VERIFY queries `true` again, the owner `GET` of an existing failed job unchanged. **No public job is queued or re-run to test**
+   (in particular NOT the original Vitamin D job): the validation of step 0 is the only model run the release plan has, and its result is still an unvalidated model audit.
 
 Rollback (owner decision only): the order reverses: `stop --drain`, `rollback` the runtime, promote the previous website deployment, THEN (optionally) re-apply the
 2026-10-04 function bodies (`git show f7664b2:docs/research-jobs.sql`; idempotent, keeps every job; migration 002 is a superset and can stay). A job already ended
 as `lease_expired` or `failed` under the new policy is final and is not undone. Do not roll back the runtime alone while the new website is deployed (table above).
+**Preflight before the rolled-back (v0.2-only) runtime is started (R2, read-only):** after the website rolls back, that old worker would claim any still-queued v0.4 (or
+v0.3) job and fail it permanently with `unsupported_prompt_version` (`scripts/pc_research_worker.py`). Run
+`select count(*) from public.bsproof_research_jobs where status in ('queued','running') and prompt_version <> 'live-research-v0.2';` -- the count MUST be 0. If it is not,
+do not start the old runtime: let the NEW runtime drain those jobs first (`stop --drain` it afterwards), then re-check. A `running` row after a drain is handled as in step 2
+(restart the runtime that owns it, let it finish, drain again; never cancel or edit it).
 
-Not proved here: any live behaviour (no model call, no SQL on the real database, no runtime install, no deploy), that rule L7 changes what the model does,
-that `medium` grounds better or worse than `xhigh`, or that a medium run is faster. The result is still an unvalidated model audit.
+Not proved here: any live behaviour (no SQL on the real database, no runtime install, no deploy, no model run of v0.4), that rule L7 or L8 changes what the model does,
+that `medium` grounds or researches better or worse than `xhigh`, or that a medium run is faster or cheaper (the 19.5 s of the one v0.3 run compares a run with no research to
+runs with research). Effort is REQUESTED (`--effort medium`, recorded as `effort_requested`); the CLI stream carries no effort level, so it is not observed.
+The result is still an unvalidated model audit.
 
 ## Scope amendment (durable) and rollout hazards — 2026-10-06
 
@@ -824,8 +855,8 @@ accepts an ungrounded source id.
 - a minimal source-id recognition fix in the Python worker (`PMID_RE`, `DOI_WEB_VIEW_SUFFIXES`) AND the server TypeScript (`idsIn`); the two MUST agree
   (one shared fixture runs on both);
 - an explicit source-only citation rule in the live prompt (rule L7);
-- the matching prompt version (`live-research-v0.3`), the `schemas/source_access_v2.json` `runner.prompt_version` enum, and complete-RPC compatibility
-  (`bsproof_research_complete` accepts v0.2 and v0.3);
+- the matching prompt versions (`live-research-v0.3`, then `live-research-v0.4`), the `schemas/source_access_v2.json` `runner.prompt_version` enum, and complete-RPC compatibility
+  (`bsproof_research_complete` accepts v0.4, v0.3 and v0.2);
 - versioned, narrow, NON-destructive SQL migrations (001 claim/fail, 002 complete): `create or replace` of the named functions, no table, grant, owner,
   RLS or job touched;
 - regression tests for all of it.
@@ -834,6 +865,25 @@ accepts an ungrounded source id.
 of evidence; any other constant (thresholds, caps, weights, units, turn/token/budget/deadline, provider fallback). The only operational values moved are
 the two the user named (effort `xhigh` -> `medium`, attempts 3 -> 1) plus the prompt-version strings above. The guard is unchanged: an inventory id that
 no returned tool result prints is still refused.
+
+**Second amendment (2026-10-06, after the one failed validation run): `live-research-v0.4`.** The owner's validation review (VALIDATION: FAILED, criterion 6) gave a fix card, and this
+candidate implements exactly that card and nothing wider: (1) prompt `live-research-v0.4` = the frozen v0.3 text + ONE rule block L8 ("Open before you conclude": a search result is a list
+of leads; before writing that nothing could be confirmed, open with WebFetch every result that names a study, trial, systematic review or meta-analysis of the product or one of its listed
+actives, asking for the identifier as L7 says; an unopenable lead is recorded in `could_not_access` with its address and what came back; "I did not open it" and "the search result printed no
+identifier" are not reasons to skip a lead; an empty inventory is the right answer only after this; L8 contains no number) + exactly three sentences changed (Rule 1, L4, L7: each "only after
+L8"; "a complete, accepted answer" deleted; "a fuller audit with one unprinted id is not" kept; the L7 "Not counted" bullet and everything else byte-identical); (2) the version bump carried
+through the `source_access_v2` enum, `lib/scan-research/contract.ts`, the worker/adapter constants, `docs/research-jobs.sql`, migration 002 (edited in place, unapplied; renamed
+`...-prompt-v0.4.sql`; list = v0.4, v0.3, v0.2) and the tests/fixtures; (3) static tests, a frozen v0.3 fixture, and a replay/negative fixture of the failed run; (4) the five documentation
+corrections R1-R5. **Not changed, by instruction:** `extract_ids`, `PMID_RE`, `DOI_WEB_VIEW_SUFFIXES`, `idsIn`; `validate_live_receipts_and_inventory` and its error class;
+`schemas/research_audit.json`; the one-attempt SQL (migration 001 is byte-identical); `EFFORT` (`medium`) and `MODEL`; no whitelist, repair or stripping; no turn, token, budget or deadline flag;
+no fallback; and **no code gate on the number of fetches** (under one attempt it would turn a thin audit into a lost job; L8 is wording only, and "the worker rejects a thin audit" is NOT
+true and is not said anywhere).
+
+Product-scope clarifications that bound L8 (the task owner's, for this fix; not new founder decisions): L4 stays as it is -- single-ingredient evidence is CONTEXT only, context rows stay
+optional, and component evidence is never a whole-formula efficacy claim; L8 asks only that the leads a search already surfaced are opened, with no numerical minimum of pages, searches,
+turns, tokens or minutes; a real "no evidence" or "blocked" outcome is acceptable ONLY when every relevant lead was followed and the access record is honest -- a one-search placeholder is
+not that; nothing forces an empty inventory into a false positive (L8 says not to keep or invent a row); unknown servings per day and unknown daily dose stay `unknown` (no default of one
+serving), as before. The Vitamin D3 + K2 target needs no new clinical or product decision from the founder for this fix.
 
 **Review disposition.** The independent review of `f7664b2..f2bfec3` returned NEEDS_WORK for ONE reason: its task card carried the earlier, frozen
 cap-only scope and omitted the amended root-cause objective (the implementation report had recorded it). Its four "critical" items (prompt, schema
@@ -849,19 +899,19 @@ STILL FAILS when replayed through the fixed guard (`test_the_fixed_extraction_mo
 No claim is made that the original job, or any attempt of it, would now succeed. The original job is NOT repaired, re-queued or re-run by this work. How
 the new prompt behaves is UNPROVEN: no model has run it.
 
-**Validation of the new prompt is the owner's decision.** The only way to learn whether L7 helps is ONE private Vitamin D `medium` validation invocation.
-It needs the owner's explicit approval, after the code review and the gates, and after the install order above. This document grants no such approval.
-There is no hidden second model run (a failed invocation is final), no repair or re-queue of the original job, and no new budget, deadline or provider
+**Validation of the new prompt is the owner's decision.** The only way to learn whether L7 and L8 help is ONE private Vitamin D `medium` validation invocation
+("Validation plan for v0.4"). It needs a NEW explicit owner approval bound to the exact head, after a read-only review and the gates. This document grants no such approval.
+There is no hidden second model run (a failed invocation is final), no repair, re-queue or re-run of the original job or of any public job, and no new budget, deadline or provider
 fallback.
 
 **Rollout order (restated).** Stop or drain the OLD worker and leave it stopped -> read-only queue check -> the reviewed migrations 001 and 002 in one
-transaction -> deploy v0.3 (push `main`, confirm the Vercel deploy) -> build and install the exact reviewed runtime -> start ONE reviewed supervisor.
+transaction (both VERIFY queries right after it, before the push) -> deploy v0.4 (push `main`, confirm the Vercel deploy) -> build and install the exact reviewed runtime -> start ONE reviewed supervisor.
 The tier table above says what each wrong order costs.
 
 **Hazards, plainly.**
 - Production today is the OLD state: 3 attempts, `xhigh`, prompt v0.2. Nothing in this candidate is applied, installed, deployed or pushed.
-- A wrong order loses jobs, because one attempt makes a refused claim or completion final: the new website before migration 002 (a v0.3 job cannot
-  complete, 409); a v0.2-only worker that claims a v0.3 job (final `unsupported_prompt_version`); the old website with the new worker (422, then the lease
+- A wrong order loses jobs, because one attempt makes a refused claim or completion final: the new website before migration 002 (a v0.4 job cannot
+  complete, 409); a v0.2-only worker that claims a v0.4 job (final `unsupported_prompt_version`); the old website with the new worker (422, then the lease
   expires). Nothing in code enforces the order.
 - The medium worker on the OLD 3-attempt SQL can still give one job up to 3 model runs (a retryable `fail` is requeued, an expired lease is re-claimed):
   migration 001 must come first.
@@ -873,7 +923,7 @@ The tier table above says what each wrong order costs.
 - A worker stop or lease loss is now terminal: SIGTERM, a crash, a host suspend, `stop --now`, a reboot, an OOM kill or a heartbeat outage longer than
   the lease ends the job as `lease_expired`, with no second try. Use only `stop --drain`.
 - The effort is requested, never observed: it is proved at the argv level (`--effort medium`, recorded as `effort_requested`), not from the CLI stream.
-- A job queued under v0.2 before the upgrade is served with the v0.3 prompt; its row keeps the old stamp and its provenance says v0.3.
+- A job queued under v0.2 or v0.3 before the upgrade is served with the v0.4 prompt; its row keeps the old stamp and its provenance says v0.4.
 - The server recomputes grounding on `complete` (422 on disagreement, never retried): a worker-only or website-only deploy of the id fix turns an
   accepted audit into a lost job. Both sides ship together.
 - Test limits: PGlite is one connection, so `for update skip locked` concurrency is not exercised; it runs PostgreSQL 17.5, production 17.6.
@@ -881,7 +931,7 @@ The tier table above says what each wrong order costs.
 
 ## Validation run 1 (2026-10-05 UTC): FAILED -- complete but empty
 
-**Read this before the "Status: a CANDIDATE" statements above: they say no model has run the candidate; ONE private run has now been made, and it failed the owner's usability criterion.**
+**Read this before the "Status: a CANDIDATE" statements above: ONE private run of the v0.3 predecessor of the current candidate has been made, and it failed the owner's usability criterion. The v0.4 candidate below has had no model run.**
 
 What was run (the owner approved exactly ONE invocation, after the code review and the gates): the candidate's real `scripts/pc_research_worker.py` `handle_job` against an
 in-process FAKE queue client (no network, no database, no token, no new user / scan / job / row), the real `claude -p --model claude-sonnet-5-5 --effort medium` with the v0.3 prompt
@@ -906,14 +956,37 @@ Consequence: the candidate is NOT releasable as it stands, and its one-attempt +
 retried). Production is unchanged (3 attempts, `xhigh`, v0.2). Migrations 001 and 002 were NOT applied, nothing was pushed, no runtime was built or installed. The approval for a
 model run is used up; a further run needs a NEW explicit owner approval bound to the new head, after a read-only review and the gates.
 
-Next (a fresh worker): prompt `live-research-v0.4` = v0.3 + a rule "open before you conclude" (every lead naming a study, review or meta-analysis of the product or one of its actives is opened
-with WebFetch with the identifier requested; an unopenable lead is recorded in `could_not_access`; "the search result printed no identifier" is the reason to open it, not to skip it; an empty
-inventory is right only after that), and Rule 1, L4 and the L7 "complete, accepted answer" sentence limited to "only after that rule". No numeric constant, no code gate on the number of
-fetches, the guard and the parser unchanged. A version bump touches the schema enum, `lib/scan-research/contract.ts`, migration 002 (unapplied: edit in place and re-pin its sha256) and
-`docs/research-jobs.sql`, the prompt-version tests and fixtures. Add a replay fixture of this run proving an all-empty audit is reported as NOT usable. The five documentation corrections
-the owner required for a release (query-echo grounding is wider than "request-only ids are never recognised"; a rollback check for queued v0.3 jobs; a `running` row after the drain;
-remove "fixes the CAUSE" wording; the `/pdf` claim) are still open. Founder questions, no number chosen: must each single ingredient of a blend also be researched; is any minimum of
-research required before an empty inventory is allowed; is a complete-but-empty audit acceptable to show a user under one attempt with no retry.
+What the v0.4 candidate does about it (implemented by a fresh worker from the owner's fix card; **no model has run it**): prompt `live-research-v0.4` = v0.3 + rule L8 ("Open before you conclude")
+and Rule 1, L4 and the L7 sentence limited to "only after L8" (the phrase "a complete, accepted answer" is gone); the version bump carried through the schema enum, `lib/scan-research/contract.ts`, the
+adapter/worker constants, `docs/research-jobs.sql`, migration 002 (edited in place; unapplied) and the tests and fixtures; a frozen copy of the v0.3 prompt
+(`tests/fixtures/research_audit_live_v0.3.md`, sha256 `3ef4ecfb373d163393aa7b3d90e2492947a5f64817665716b5b43ad1e8f4ed5e`, the exact text this run used) with a static lineage test (v0.4 = v0.3 + an enumerated list of replacements + L8);
+a replay/negative fixture of this run (`tests/fixtures/validation-run1-one-search-empty-audit.json`: the returned search text and the empty audit, session ids and brand stripped) that pins
+BOTH facts: the real guard accepts it (by design) AND the validation analysis (`tests/helpers/validation_usability.py`, test-only) labels it `usable: false`, "complete but empty; usability not shown", and exits non-zero.
+No numeric constant, no code gate on the number of fetches (the guard and the parser are unchanged and are not made to count pages), no whitelist. **Still open:** an independent review, the owner's read-only review, the gates,
+and a NEW explicit owner approval for ONE validation run ("Validation plan for v0.4"). Whether L8 changes what a medium invocation does is unknown.
+
+Questions the owner raised, answered by the task owner's scope clarifications (see "Second amendment"), not by a number: a blend's single ingredients are CONTEXT only and stay optional (L4 is unchanged); no
+minimum amount of research is set -- the rule is "every relevant lead the searches already surfaced"; a complete-but-empty audit is acceptable only after every relevant lead was followed and the access record is honest.
+
+## Validation plan for v0.4 (NOT approved, NOT run)
+
+One private invocation, later, only on a NEW owner approval bound to the exact head after a read-only review and the gates. The previous marker and `OWNER_APPROVED.json` (bound to `17e3231`) are used up and stay; the
+new run uses a NEW harness directory, a NEW `O_EXCL` marker and a harness that asserts `HEAD == the approved commit`. The harness is not told the marker in advance and no public or original job is re-run. Preconditions
+(all mechanical, before the run; if any fails nothing runs and the approval is void): clean tree on the approved head; the repo `.venv` with `jsonschema >= 4` and Draft 2020-12; `claude --version` exactly `2.1.287`
+with the subscription login; **no active public worker and no duplicate process** (drain first, so that quota is not contended and a second runtime cannot claim the same lease); run directory 0700 and files 0400,
+outside the repository, never committed; the three original captures hash-checked before and after. What runs: the worker's real `handle_job` against a fake queue client, the real CLI at requested `medium`,
+the original sanitized Vitamin D3 4000 IU + K2 target (servings per day and daily dose stay `unknown`).
+
+**PASS needs all seven** (unchanged from the owner's criteria): (1) exactly one invocation, one marker, originals' manifest equal before and after, zero `fail` posts and exactly one `complete`; (2) diagnostics: model `claude-sonnet-5-5` in the
+CLI init, `apiKeySource none`, model usage a subset of Sonnet and Haiku, `effort_requested == "medium"` (requested, not observed), prompt sha equal to the pinned v0.4 file; (3) `checkLiveResearchResultV2` returns `ok:true` on the byte-identical
+payload, provenance prompt v0.4; (4) every inventory id accepted by the guard, with a per-id table of where it is printed (summary/snippet body, link address, or the query-echo header only); an id printed only as (iii) the echo is a disclosed caveat and
+not evidence that L7 works; (5) pairing: each row's year, design, n or title agrees with the record printed next to that id in the same returned text, zero mismatches (link-address-only rows listed separately); (6) **usable: at least one outcome with
+a non-empty inventory** (`tests/helpers/validation_usability.py`; if every inventory is empty it is "complete but empty; usability not shown" and the run FAILS); (7) honest: every row `access: "snippet"`, `original_documents` 0, Haiku
+summaries counted as summaries, no invented form, dose, servings or population, no approval language. **Recorded, not gated:** the WebSearch/WebFetch counts and which leads of the Links lists were opened or recorded in `could_not_access`
+(a fail is never rescued by, and a pass never requires, a particular number of fetches).
+
+**A FAIL is not to be rationalised** as "almost passed", "only one id", "a parser fault", "L7 partly worked", "L8 partly worked" or "worth one more run"; a quota, auth or CLI fault is neither a pass nor a result about L7/L8 (record the code and stop).
+The marker stays used; any further run needs a fresh explicit approval. After a failure: no whitelist, no relaxing of the guard, no edit of the audit, no claim that the original job is repaired. Criterion 6 failing again = FAILED again, pre-stated.
 
 ## Verification (offline; no network, no model, no live database)
 
@@ -933,9 +1006,10 @@ caught). The same file also executes migration 001 on top of the byte-for-byte 2
 (`tests/fixtures/research-jobs-baseline-48783cd3.sql`, the file that was applied): the migrated project equals a fresh
 provisioning from the current file (catalog, owners, ACLs, comments, search_path, RLS, policies), changes no row, keeps a
 running attempt-2 job on its current lease, leaves finished jobs final, refuses (changing nothing) to run while a
-`queued` job with `attempts >= 1` exists, is idempotent, and has its own mutant suite. Migration 002 (`bsproof_research_complete` accepts the v0.2 and
-v0.3 job versions) is executed the same way: exactly one function body changes (owner, ACL, comment, `search_path`, security definer unchanged), 001 then 002 equals 002
-then 001 equals a fresh provisioning, a v0.3 job and a queued v0.2 job complete while v0.1 is refused, no row changes, and its guard and mutants are caught.
+`queued` job with `attempts >= 1` exists, is idempotent, and has its own mutant suite. Migration 002 (`bsproof_research_complete` accepts the v0.4, v0.3 and
+v0.2 job versions) is executed the same way: exactly one function body changes (owner, ACL, comment, `search_path`, security definer unchanged; its body equals the one in
+`docs/research-jobs.sql` byte for byte), 001 then 002 equals 002 then 001 equals a fresh provisioning, a v0.4 job and queued v0.3 and v0.2 jobs complete while v0.1 is refused, no row changes, and its guard and mutants are caught
+(including the mutants that accept only some of the three versions).
 `tests/scan-research-queue-parity.test.ts` runs one scripted history through the
 in-memory queue the route tests use and through the real SQL and requires identical
 answers. Limits: PGlite is one connection, so concurrent `for update skip locked`
@@ -944,7 +1018,8 @@ Python: `python3 -m unittest tests.test_source_access_v2 tests.test_pc_research_
 (needs `jsonschema`; a missing module fails, it does not skip). `tests.test_grounding_replay` replays verbatim excerpts of the three original Vitamin D raw
 streams through the real guard (old extraction patched back in reproduces the three recorded failures exactly; the fixed one grounds exactly the printed ids and refuses the
 four assertions; receipt missing / failed / for another paper / invented id cannot ground a row) and, where the private captures exist, replays the untouched originals
-(hash-pinned, opened read-only; a different file fails, a missing directory skips only that class). `tests/fixtures/id-extraction-cases.json` is run by Python
+(hash-pinned, opened read-only; a different file fails, a missing directory skips only that class). It also replays the failed validation run (`OneSearchEmptyAudit`): the guard accepts the all-empty audit by design and
+the test-only analysis `tests/helpers/validation_usability.py` marks it `usable: false` and non-pass. `tests.test_pc_research_worker` pins the prompt lineage on frozen fixtures (v0.2 -> v0.3 -> v0.4, each step an enumerated edit) and the L8 wording. `tests/fixtures/id-extraction-cases.json` is run by Python
 (`tests.test_source_access_v2`) and TypeScript (`tests/scan-research-id-parity.test.ts`) so the worker's and the server's id recognition cannot drift. No test depends on the
 machine clock, calls a model or touches the network.
 
@@ -957,7 +1032,8 @@ that the owner installs.
 The stream's returned text is transient evidence only; grounding uses identifier
 string matches and does not independently verify scientific claims. Research is
 experimental/unvalidated and does not change score, clinical approval, or user
-risk classification. There has been no model call, migration or runtime deployment of the 2026-10-06 candidate.
+risk classification. The only model call made on the 2026-10-06 candidate was the one private v0.3 validation run, which failed; the v0.4 prompt has had no model call. There has been no migration or runtime deployment of it.
+A query echo or an unopened link address can ground an id (see "What the fix does and does not do"), and the guard does not check that an id belongs to the paper a row describes.
 Review, provisioning and clinical validation remain separate human gates. An id the tool printed grounds a row; that proves the paper was
 retrieved, not that the audit's numbers or conclusions are right.
 
@@ -977,8 +1053,9 @@ retrieved, not that the audit's numbers or conclusions are right.
 - `cp deploy/bsproof-research-worker.service.example /tmp/bsproof-research-worker.service && XDG_RUNTIME_DIR=$(mktemp -d) systemd-analyze --user verify /tmp/bsproof-research-worker.service`
   (the user unit is configuration; ALWAYS with a throwaway `XDG_RUNTIME_DIR`, never the real one, see the CAUTION in the install section; on a host without the mainPC paths, "executable not found" is expected and is not a PASS for the real paths)
 - `sha256sum tests/fixtures/research-jobs-baseline-48783cd3.sql` must stay `48783cd3a6d9535b0a8ca8a792c0f73b3d32a98d3b0550c730731b5d9cd9a4fb`
-  (the file that was applied to production); `sha256sum docs/research-jobs.sql docs/research-jobs-migration-001-one-attempt.sql docs/research-jobs-migration-002-prompt-v0.3.sql`
-  must equal `7fb43b838f6191072ffe268704ea7a30ce13fcfe7aefd5ff48751080e078e9ec`, `9d147ecf30bd5ba4c47c33e50dd18fc11bbca10e5371354240eb919aff33fb41` and `1f2368e155e5c36cf79b27eba8d05e7b7aac4d62b9cd084e1e88a5ec392c46fb` (the candidate, NOT applied)
+  (the file that was applied to production); `sha256sum docs/research-jobs.sql docs/research-jobs-migration-001-one-attempt.sql docs/research-jobs-migration-002-prompt-v0.4.sql`
+  must equal `e323562c81329bef1569fa73359a5c2835a0ba3052d0ba68ecc13b820510fef1`, `9d147ecf30bd5ba4c47c33e50dd18fc11bbca10e5371354240eb919aff33fb41` and `760acd70dc945bfbef9f477bd27d1ea5cfdcc6073f9eed050a83978e344518cc` (the candidate, NOT applied; 001 is byte-identical to the v0.3 candidate's);
+  `sha256sum tests/fixtures/research_audit_live_v0.3.md` must stay `3ef4ecfb373d163393aa7b3d90e2492947a5f64817665716b5b43ad1e8f4ed5e` and `tests/fixtures/research_audit_live_v0.2.md` `f0d8a409b380bb0b617411ed63560c8d3391b2095192b70e6521fe4df22a9ec0`
 
 These tests use fake streams and fake HTTP queue clients only. They do not prove
 model behavior, account state, provisioning, or clinical validity.
@@ -990,14 +1067,16 @@ the rollout hazards are in "Scope amendment (durable) and rollout hazards". One 
 approval after review and gates; nothing here grants it.
 
 State (2026-10-06, UTC) — **READ THIS FIRST. The objective is NOT "cap the retries"; it is "make one research invocation produce a usable audit, and
-stop paying for the same failure three times".** A candidate on a local branch (NOT on `main`, NOT pushed) holds: id-recognition fix (worker + server, shared
-fixture), prompt `live-research-v0.3` (v0.2 + rule L7 only), medium effort, one attempt per job, migrations 001 and 002. Nothing is applied, installed or
-deployed, and no model has run any of it. Root cause (replayed from the three immutable captures): of 33 cited ids, 14 were retrieved and printed in a form
-the extraction did not recognise (parser fault, fixed), 4 were asserted by the model without any returned result printing them (model process; the guard must
-refuse them; rule L7 is the attempted fix and is UNPROVEN), 15 were fine. A release that ships only the cap/effort would still lose jobs to this. Next, owner-run,
-in THIS order (a wrong order loses jobs; see the table in "One attempt per job and medium effort"): `stop --drain` and leave the worker stopped -> read-only queue
-check -> apply migrations 001 and 002 -> push `main` and confirm the Vercel deploy -> build + install the runtime -> `start` -> `status`. The state below
-(2026-10-05) is the PRODUCTION state until then.
+stop paying for the same failure three times".** A candidate on a local branch (NOT on `main`, NOT pushed) holds: id-recognition change (worker + server, shared
+fixture; replay-verified), prompt `live-research-v0.4` (v0.3 + rule L8 "open before you conclude" + three sentences limited to "only after L8"), medium effort (requested), one attempt per job,
+migrations 001 and 002. Nothing is applied, installed or deployed. **The one private validation run (of the v0.3 predecessor) FAILED: complete but empty** ("Validation run 1"); v0.4 has had no model run and is
+not shown to work. Root cause of the original failures (replayed from the three immutable captures): of 33 cited ids, 14 were retrieved and printed in a form
+the extraction did not recognise (parser; changed), 4 were asserted by the model without any returned result printing them (model process; the guard must
+refuse them; rules L7 and L8 are the attempted remedy and are UNPROVEN). A release that ships only the cap/effort/parser would still lose jobs or return placeholders; do not release those alone.
+Next: independent review -> the owner's read-only review -> gates -> a NEW explicit owner approval for ONE validation run bound to the head ("Validation plan for v0.4"; criterion 6 failing again = FAILED again) ->
+only after a PASS, owner-run, in THIS order (a wrong order loses jobs; see the table in "One attempt per job and medium effort"): `stop --drain` and leave the worker stopped -> read-only queue check (no `running`,
+no `queued` with `attempts >= 1`) -> migrations 001 and 002 in ONE transaction, both VERIFY queries before the push -> push `main` and confirm the Vercel deploy -> build + install the runtime -> `start` -> `status`.
+The state below (2026-10-05) is the PRODUCTION state until then.
 
 State (2026-10-05, UTC): RELEASED_EVERYONE under the held-open hosting condition. Production runs `273c2d5` with
 `SCAN_LIVE_RESEARCH_ENABLED=on` (every signed-in Google user; the Git deploy of this documentation commit is checked after its push

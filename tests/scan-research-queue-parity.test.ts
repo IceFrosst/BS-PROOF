@@ -166,15 +166,18 @@ async function history(b: Backend): Promise<Array<[string, unknown]>> {
   await step("claim, F is skipped", b.claim());
   await step("get F stays queued", b.get(O2, F));
 
-  // Prompt versions: a job stamped v0.3 completes, a job queued under v0.2 still completes, an unknown one is refused.
-  const H = (await queue("enqueue H (prompt v0.3)", O2, 8, "live-research-v0.3")).job.id;
+  // Prompt versions: a job stamped v0.4 completes, jobs queued under v0.3 and v0.2 still complete, an unknown one is refused.
+  const H = (await queue("enqueue H (prompt v0.4)", O2, 8, "live-research-v0.4")).job.id;
   const I = (await queue("enqueue I (prompt v0.2)", O2, 9, "live-research-v0.2")).job.id;
+  const K = (await queue("enqueue K (prompt v0.3)", O1, 11, "live-research-v0.3")).job.id;
   const J = (await queue("enqueue J (prompt v0.1)", O1, 10, "live-research-v0.1")).job.id;
   const h1 = (await step("claim -> H", b.claim())).job;
   const i1 = (await step("claim -> I", b.claim())).job;
+  const k1 = (await step("claim -> K", b.claim())).job;
   const j1 = (await step("claim -> J", b.claim())).job;
-  await step("complete H (v0.3)", b.complete(H, h1.lease_token, resultFor("h")));
+  await step("complete H (v0.4)", b.complete(H, h1.lease_token, resultFor("h")));
   await step("complete I (v0.2)", b.complete(I, i1.lease_token, resultFor("i")));
+  await step("complete K (v0.3)", b.complete(K, k1.lease_token, resultFor("k")));
   await step("complete J (v0.1) is refused", b.complete(J, j1.lease_token, resultFor("j")));
   await step("get H", b.get(O2, H));
   return log;

@@ -28,6 +28,7 @@ import hashlib
 import json
 import os
 import re
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -215,6 +216,106 @@ class PortableReplay(unittest.TestCase):
         longer = [dict(r, returned_text=r["returned_text"].replace("979649/full", "979649/fullxyz").replace("979649/pdf", "979649/pdfxyz")) for r in run["receipts"]]
         self.assertIn("not grounded", guard("10.3389/fpubh.2022.979649", longer))  # only /full and /pdf are unwrapped
         self.assertIn("not grounded", guard("10.1039/C9FO03063H", run["receipts"]))  # assembled from link addresses, never printed
+
+
+# --------------------------------------------------------------------------- #
+# the one private validation run of the v0.3 candidate: ONE search, nothing opened, an empty audit
+
+ONE_SEARCH = json.loads((ROOT / "tests/fixtures/validation-run1-one-search-empty-audit.json").read_text())
+
+
+class OneSearchEmptyAudit(unittest.TestCase):
+    """2026-10-05, 19.5 s: the model ran ONE WebSearch, opened nothing and returned an empty inventory. The guard and the
+    server accept that BY DESIGN (nothing to ground) -- so it is the validation ANALYSIS, not the guard, that must refuse to
+    call it a success. The guard is deliberately NOT changed to count fetches: under one attempt a gate on the number of pages
+    would turn a thin audit into a lost job. The prompt (v0.4, rule L8) is what asks for the leads to be opened."""
+
+    def setUp(self):
+        from tests.helpers import validation_usability as vu
+        self.vu = vu
+        self.audit = ONE_SEARCH["audit"]
+        self.access = access_from(ONE_SEARCH["receipts"])
+
+    def test_the_fixture_is_the_recorded_run_with_the_session_ids_stripped(self):
+        (receipt,) = ONE_SEARCH["receipts"]
+        raw = receipt["returned_text"].encode("utf-8")
+        self.assertEqual((hashlib.sha256(raw).hexdigest(), len(raw)),
+                         (ONE_SEARCH["run"]["returned_text_sha256"], ONE_SEARCH["run"]["returned_text_bytes"]))
+        self.assertEqual(self.vu.tool_calls({"receipts": ONE_SEARCH["receipts"]}), {"WebSearch": 1, "WebFetch": 0})
+        self.assertEqual(ONE_SEARCH["run"]["effort_requested"], "medium")
+        text = json.dumps(ONE_SEARCH)
+        for stripped in ("toolu_", "validation-local", "lease-token", "lvel"):
+            self.assertNotIn(stripped, text)
+        self.assertEqual([o["inventory"] for o in self.audit["outcomes"]], [[]])
+        self.assertEqual(self.audit["outcomes"][0]["ledger"]["effectPoints"], "unclear")
+        self.assertEqual(self.audit["self_confidence"], "low")
+
+    def test_the_search_result_DID_contain_leads_that_were_never_opened(self):
+        # what rule L8 (v0.4) exists for: a systematic review at two addresses, a publisher record and a PubMed link
+        text = ONE_SEARCH["receipts"][0]["returned_text"]
+        for lead in ("SYSTEMATIC REVIEW article", "frontiersin.org/articles/10.3389/fpubh.2022.979649/full",
+                     "/10.3389/fpubh.2022.979649/pdf", "pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h",
+                     "https://pubmed.ncbi.nlm.nih.gov/11180916/"):
+            self.assertIn(lead, text)
+        # ... and the model's own words say why it stopped (the reason L8 names and rules out)
+        stopped = " ".join(self.audit["could_not_access"])
+        self.assertIn("no identifier printed, not opened", stopped)
+
+    def test_the_real_guard_accepts_it_by_design(self):
+        ad.validate_live_receipts_and_inventory(self.audit, self.access)  # must not raise: nothing to ground
+        # ... and acceptance is not evidence of anything: the same guard still refuses an id the result does not print
+        refused = copy.deepcopy(self.audit)
+        refused["outcomes"][0]["inventory"] = [{"id": "PMID:35939577", "access": "snippet"}]
+        with self.assertRaises(ad.InventoryNotGroundedError):
+            ad.validate_live_receipts_and_inventory(refused, self.access)
+
+    def test_the_audit_is_schema_valid_so_nothing_but_the_analysis_can_catch_it(self):
+        jsonschema.validate(self.audit, json.loads((ROOT / "schemas/research_audit.json").read_text()))
+
+    def test_the_validation_analysis_marks_it_not_usable_and_non_pass(self):
+        result = self.vu.analyse(self.audit, self.access)
+        self.assertFalse(result["usable"])
+        self.assertEqual(result["label"], "complete but empty; usability not shown")
+        self.assertEqual((result["outcomes_total"], result["non_empty_outcomes"], result["inventory_rows"]), (1, 0, 0))
+        self.assertEqual(result["tool_calls"], {"WebSearch": 1, "WebFetch": 0})
+        self.assertEqual(self.vu.exit_code(result), 1)
+        self.assertEqual(result["verdict"], "NON-PASS")
+
+    def test_the_analysis_exits_non_zero_on_the_fixture_as_a_command(self):
+        done = subprocess.run([sys.executable, str(ROOT / "tests/helpers/validation_usability.py"),
+                               str(ROOT / "tests/fixtures/validation-run1-one-search-empty-audit.json")],
+                              capture_output=True, text=True, cwd=str(ROOT))
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertEqual(json.loads(done.stdout)["label"], "complete but empty; usability not shown")
+
+    def test_a_non_empty_audit_is_the_only_thing_that_meets_criterion_6(self):
+        shared = json.loads((ROOT / "tests/fixtures/source-access-v2.json").read_text())
+        met = self.vu.analyse(shared["audit"], shared["source_access_v2"])
+        self.assertTrue(met["usable"])
+        self.assertGreater(met["inventory_rows"], 0)
+        self.assertEqual(self.vu.exit_code(met), 0)
+        # one empty outcome next to one non-empty outcome still meets it; criterion 6 asks for at least one
+        mixed = copy.deepcopy(shared["audit"])
+        mixed["outcomes"].append(copy.deepcopy(mixed["outcomes"][0]))
+        mixed["outcomes"][-1]["inventory"] = []
+        self.assertTrue(self.vu.analyse(mixed)["usable"])
+        # blanking every inventory of that same audit makes it not usable again (no pass by deletion)
+        blanked = copy.deepcopy(shared["audit"])
+        for o in blanked["outcomes"]:
+            o["inventory"] = []
+        self.assertFalse(self.vu.analyse(blanked)["usable"])
+        self.assertEqual(self.vu.analyse(blanked)["label"], "complete but empty; usability not shown")
+        # a malformed or missing outcomes list is not usable either
+        self.assertFalse(self.vu.analyse({})["usable"])
+        self.assertFalse(self.vu.analyse({"outcomes": "x"})["usable"])
+
+    def test_the_runtime_has_no_fetch_count_gate(self):
+        """Owner card, "must not change": no code gate on the number of fetches. The guard counts receipts only to check that
+        its own summary adds up; a one-search run with a non-empty inventory it can ground is accepted as well."""
+        run = REPLAY["runs"]["vitd-run-1"]
+        one = [r for r in run["receipts"] if "**PMID:** 35939577" in r["returned_text"]]
+        self.assertEqual(len(one), 1)
+        self.assertIsNone(guard("35939577", one))  # a single receipt, however few pages were opened, grounds what it prints
 
 
 # --------------------------------------------------------------------------- #

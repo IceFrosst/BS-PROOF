@@ -31,6 +31,7 @@ const WORKER_TOKEN = "w".repeat(48);
 
 const SCAN_A = "aaaaaaaa-aaaa-4aaa-8aaa-000000000001";
 const SCAN_A2 = "aaaaaaaa-aaaa-4aaa-8aaa-000000000002";
+const SCAN_A3 = "aaaaaaaa-aaaa-4aaa-8aaa-000000000003";
 const SCAN_B = "bbbbbbbb-bbbb-4bbb-8bbb-000000000001";
 const SCAN_BAD = "cccccccc-cccc-4ccc-8ccc-000000000001";
 const SCAN_MISSING = "dddddddd-dddd-4ddd-8ddd-000000000001";
@@ -77,6 +78,7 @@ beforeEach(() => {
   fake.addUser("tok-mail", emailUser(USER_C, "carol@example.com"));
   fake.addRun({ id: SCAN_A, user_id: USER_A, user_email: "alice@example.com", analysis: manualAnalysis() });
   fake.addRun({ id: SCAN_A2, user_id: USER_A, analysis: manualAnalysis() });
+  fake.addRun({ id: SCAN_A3, user_id: USER_A, analysis: manualAnalysis() });
   fake.addRun({ id: SCAN_B, user_id: USER_B, analysis: manualAnalysis() });
   fake.addRun({ id: SCAN_BAD, user_id: USER_A, analysis: { schema_version: "ScanAnalysisV1", status: "label_unreadable", source: "photo" } });
   queue = new FakeResearchQueue(fake);
@@ -314,14 +316,14 @@ describe("worker route: claim, lease, completion", () => {
     expect(await claimed()).toBeNull(); // and it is never offered again
   });
 
-  it("prompt versions: new jobs are stamped v0.3; a job queued under v0.2 still completes (with a v0.3 audit, or from a not-yet-upgraded worker's v0.2 audit)", async () => {
+  it("prompt versions: new jobs are stamped v0.4; a job queued under v0.2 or v0.3 still completes (with a v0.4 audit, or from a not-yet-upgraded worker's older audit)", async () => {
     await queued();
     const c = await claimed();
-    expect(c.prompt_version).toBe("live-research-v0.3");
+    expect(c.prompt_version).toBe("live-research-v0.4");
     queue.jobs[0].prompt_version = "live-research-v0.2"; // queued before the upgrade
     expect((await complete(c)).status).toBe(200);
     const stored = (await body(await get(c.id, bearer("tok-a")))).job;
-    expect(stored.result.provenance.prompt_version).toBe("live-research-v0.3"); // what actually ran, not the job's old stamp
+    expect(stored.result.provenance.prompt_version).toBe("live-research-v0.4"); // what actually ran, not the job's old stamp
 
     await queued(SCAN_A2);
     const c2 = await claimed();
@@ -331,12 +333,22 @@ describe("worker route: claim, lease, completion", () => {
     access.runner.prompt_version = "live-research-v0.2";
     expect((await complete(c2, audit, access)).status).toBe(200);
     expect((await body(await get(c2.id, bearer("tok-a")))).job.result.provenance.prompt_version).toBe("live-research-v0.2");
+
+    await queued(SCAN_A3);
+    const c3 = await claimed();
+    queue.jobs[queue.jobs.length - 1].prompt_version = "live-research-v0.3"; // a v0.3 job, queued while v0.3 was current
+    const audit3 = validAudit();
+    audit3.meta.prompt = "live-research-v0.3";
+    const access3 = accessFor(audit3);
+    access3.runner.prompt_version = "live-research-v0.3";
+    expect((await complete(c3, audit3, access3)).status).toBe(200);
+    expect((await body(await get(c3.id, bearer("tok-a")))).job.result.provenance.prompt_version).toBe("live-research-v0.3");
   });
 
   it("an audit whose meta.prompt and receipt runner disagree, or name an unknown prompt, is refused 422 and nothing is stored", async () => {
     await queued();
     const c = await claimed();
-    for (const [metaPrompt, runnerPrompt] of [["live-research-v0.3", "live-research-v0.2"], ["live-research-v0.9", "live-research-v0.9"]]) {
+    for (const [metaPrompt, runnerPrompt] of [["live-research-v0.4", "live-research-v0.2"], ["live-research-v0.3", "live-research-v0.4"], ["live-research-v0.9", "live-research-v0.9"]]) {
       const audit = validAudit();
       audit.meta.prompt = metaPrompt;
       const access = accessFor(audit);

@@ -1,18 +1,19 @@
--- BS-PROOF research jobs -- MIGRATION 002: ACCEPT PROMPT VERSION live-research-v0.3 (written 2026-10-06).
+-- BS-PROOF research jobs -- MIGRATION 002: ACCEPT PROMPT VERSION live-research-v0.4 (and keep v0.3, v0.2).
 -- NOT RUN YET. Nothing applies this file automatically: not the app, not CI, not a deploy. Apply it once,
 -- deliberately, after review, through the same path that applied docs/research-jobs.sql. Independent of migration
 -- 001 (one attempt per job): either order is safe, and each is idempotent.
 --
--- WHY. The live research prompt gained a citation-check rule and became `live-research-v0.3` (see
--- docs/research/pc-research-worker.md "Why the Vitamin D job failed three times"). New jobs are stamped v0.3 by the
--- website, and `bsproof_research_complete` refused every job whose prompt_version was not exactly 'live-research-v0.2'
+-- WHY. The live research prompt gained a citation-check rule (`live-research-v0.3`, see
+-- docs/research/pc-research-worker.md "Why the Vitamin D job failed three times") and then an "open before you
+-- conclude" rule (`live-research-v0.4`, see "Validation run 1"). New jobs are stamped v0.4 by the website, and
+-- `bsproof_research_complete` refused every job whose prompt_version was not exactly 'live-research-v0.2'
 -- (`unsupported_prompt_version`). With one attempt per job a refused completion is a lost job, so before the website
--- or the new worker go live the function must accept v0.3, and it keeps accepting v0.2 so a job queued before the
--- upgrade, or finished by a worker that has not been upgraded yet, is not lost either.
+-- or the new worker go live the function must accept v0.4, and it keeps accepting v0.3 and v0.2 so a job queued
+-- before the upgrade, or finished by a worker that has not been upgraded yet, is not lost either.
 --
 -- WHAT IT CHANGES. Exactly ONE function body, by `create or replace`, same signature:
 --   public.bsproof_research_complete(uuid, text, jsonb)
---     `prompt_version <> 'live-research-v0.2'`  ->  `prompt_version not in ('live-research-v0.2', 'live-research-v0.3')`
+--     `prompt_version <> 'live-research-v0.2'`  ->  `prompt_version not in ('live-research-v0.4', 'live-research-v0.3', 'live-research-v0.2')`
 -- The rest of the function (summary-shape check, lease compare-and-set, replay/conflict, expiry) is byte-identical to
 -- docs/research-jobs.sql, and the body repeats `security definer` and `set search_path = pg_catalog, pg_temp`.
 -- `create or replace function` keeps the existing owner, ACL (service_role only), comment and attributes.
@@ -24,10 +25,10 @@
 --
 -- VERIFY AFTER (read-only):
 --     select pg_get_functiondef('public.bsproof_research_complete(uuid, text, jsonb)'::regprocedure)
---            like '%live-research-v0.3%' as complete_accepts_v03;
+--            like '%live-research-v0.4%' as complete_accepts_v04;
 --
 -- IDEMPOTENT. ROLLBACK (only if the owner decides): re-apply the `complete` body of the 2026-10-04 file
--- (`git show f7664b2:docs/research-jobs.sql`); a v0.3 job queued meanwhile could then not be completed.
+-- (`git show f7664b2:docs/research-jobs.sql`); a v0.4 or v0.3 job queued meanwhile could then not be completed.
 
 do $guard$
 declare
@@ -44,7 +45,7 @@ begin
 end
 $guard$;
 
--- Complete: compare-and-set on the current lease; idempotent for an identical retry. Accepts prompt versions v0.2 and v0.3.
+-- Complete: compare-and-set on the current lease; idempotent for an identical retry. Accepts prompt versions v0.4, v0.3 and v0.2.
 create or replace function public.bsproof_research_complete(p_id uuid, p_lease_token text, p_result jsonb)
 returns jsonb
 language plpgsql
@@ -67,8 +68,8 @@ begin
     return jsonb_build_object('status', 'lease_invalid');
   end if;
 
-  -- v0.3 is stamped on new jobs; v0.2 stays completable so a job queued before the upgrade is not lost.
-  if j.prompt_version not in ('live-research-v0.2', 'live-research-v0.3') then
+  -- v0.4 is stamped on new jobs; v0.3 and v0.2 stay completable so a job queued before the upgrade is not lost.
+  if j.prompt_version not in ('live-research-v0.4', 'live-research-v0.3', 'live-research-v0.2') then
     return jsonb_build_object('status', 'unsupported_prompt_version');
   end if;
 

@@ -28,6 +28,7 @@ import {
   MIGRATION_SQL,
   PROMPT,
   PROMPT_V3,
+  PROMPT_V4,
   Queue,
   RESEARCH_SQL,
   TARGET,
@@ -245,22 +246,25 @@ const completionIsACompareAndSetAndReplaySafe: Scenario = async (q) => {
 };
 
 /**
- * Prompt version v0.3 (2026-10-06): a job stamped v0.3 completes, and a job queued BEFORE the upgrade (v0.2) still does.
- * With one attempt per job a refused completion is a lost job, so neither may be refused; anything else still is.
+ * Prompt version v0.4 (the current one): a job stamped v0.4 completes, and so do the jobs queued BEFORE the upgrade (v0.3 and
+ * v0.2). With one attempt per job a refused completion is a lost job, so none of them may be refused; anything else still is.
  */
-const completeAcceptsTheCurrentAndThePreviousPromptVersionOnly: Scenario = async (q) => {
+const completeAcceptsTheCurrentAndThePreviousPromptVersionsOnly: Scenario = async (q) => {
   const v2 = (await q.enqueue(O1, S(1), TARGET, PROMPT)).job.id;
   const v3 = (await q.enqueue(O1, S(2), TARGET, PROMPT_V3)).job.id;
-  const v1 = (await q.enqueue(O1, S(3), TARGET, "live-research-v0.1")).job.id;
+  const v4 = (await q.enqueue(O1, S(3), TARGET, PROMPT_V4)).job.id;
+  const v1 = (await q.enqueue(O2, S(4), TARGET, "live-research-v0.1")).job.id; // another owner: 3 open jobs per owner
   const claims = new Map<string, string>();
-  for (let n = 0; n < 3; n++) {
+  for (let n = 0; n < 4; n++) {
     const c = (await q.claim()).job;
     claims.set(c.id, c.lease_token);
   }
-  expect(await q.complete(v3, claims.get(v3)!, resultFor("current"))).toEqual({ status: "completed" });
-  expect(await q.complete(v2, claims.get(v2)!, resultFor("queued before the upgrade"))).toEqual({ status: "completed" });
+  expect(await q.complete(v4, claims.get(v4)!, resultFor("current"))).toEqual({ status: "completed" });
+  expect(await q.complete(v3, claims.get(v3)!, resultFor("queued before the upgrade (v0.3)"))).toEqual({ status: "completed" });
+  expect(await q.complete(v2, claims.get(v2)!, resultFor("queued before the upgrade (v0.2)"))).toEqual({ status: "completed" });
   expect(await q.complete(v1, claims.get(v1)!, resultFor("obsolete"))).toEqual({ status: "unsupported_prompt_version" });
   expect((await q.row(v1)).status).toBe("running");
+  expect((await q.row(v4)).prompt_version).toBe(PROMPT_V4);
   expect((await q.row(v3)).prompt_version).toBe(PROMPT_V3);
 };
 
@@ -513,7 +517,7 @@ const QUEUE_SCENARIOS: Record<string, Scenario> = {
   aJobGetsOneAttemptAndItsExpiredLeaseFailsForGood,
   completionIsACompareAndSetAndReplaySafe,
   aJobOnAnotherPromptVersionCannotBeCompleted,
-  completeAcceptsTheCurrentAndThePreviousPromptVersionOnly,
+  completeAcceptsTheCurrentAndThePreviousPromptVersionsOnly,
   completeRefusesAnythingButTheExactSummaryShape,
   failureIsSanitisedBoundedAndReplaySafe,
   aQueuedJobWhoseAttemptIsAlreadySpentIsNeverClaimed,
@@ -610,8 +614,8 @@ const MUTANTS: Mutant[] = [
   { name: "heartbeat revives an expired lease", find: "    and lease_expires_at > now()\n  returning lease_expires_at into expires;", replace: "  returning lease_expires_at into expires;", killedBy: { queue: "heartbeatExtendsOnlyTheCurrentValidLease" } },
   {
     name: "complete accepts any token while the job is running",
-    find: "  if not found or j.lease_token_hash is distinct from h then\n    return jsonb_build_object('status', 'lease_invalid');\n  end if;\n\n  -- v0.3 is stamped on new jobs",
-    replace: "  if not found then\n    return jsonb_build_object('status', 'lease_invalid');\n  end if;\n\n  -- v0.3 is stamped on new jobs",
+    find: "  if not found or j.lease_token_hash is distinct from h then\n    return jsonb_build_object('status', 'lease_invalid');\n  end if;\n\n  -- v0.4 is stamped on new jobs",
+    replace: "  if not found then\n    return jsonb_build_object('status', 'lease_invalid');\n  end if;\n\n  -- v0.4 is stamped on new jobs",
     killedBy: { queue: "aRunningJobRejectsEveryTokenButItsOwn" },
   },
   {
@@ -630,9 +634,11 @@ const MUTANTS: Mutant[] = [
   { name: "a retryable fail requeues the job (fail cap back at 3)", find: "if coalesce(p_retryable, false) and j.attempts < 1 then", replace: "if coalesce(p_retryable, false) and j.attempts < 3 then", killedBy: { queue: "aRetryableFailureIsFinalAndTheJobIsNeverClaimedAgain" } },
   { name: "a retryable fail always requeues", find: "if coalesce(p_retryable, false) and j.attempts < 1 then", replace: "if coalesce(p_retryable, false) then", killedBy: { queue: "aRetryableFailureIsFinalAndTheJobIsNeverClaimedAgain" } },
   { name: "a legacy running job loses its lease (claim fails every running job)", find: "where status = 'running' and lease_expires_at <= now() and attempts >= 1;", replace: "where status = 'running' and attempts >= 1;", killedBy: { queue: "aLegacyRunningJobWithSeveralAttemptsCanFinishItsCurrentLease" } },
-  { name: "complete accepts only the new prompt version (a job queued before the upgrade is lost)", find: "if j.prompt_version not in ('live-research-v0.2', 'live-research-v0.3') then", replace: "if j.prompt_version <> 'live-research-v0.3' then", killedBy: { queue: "completeAcceptsTheCurrentAndThePreviousPromptVersionOnly" } },
-  { name: "complete accepts only the old prompt version (a v0.3 job can never finish)", find: "if j.prompt_version not in ('live-research-v0.2', 'live-research-v0.3') then", replace: "if j.prompt_version <> 'live-research-v0.2' then", killedBy: { queue: "completeAcceptsTheCurrentAndThePreviousPromptVersionOnly" } },
-  { name: "complete accepts any prompt version", find: "if j.prompt_version not in ('live-research-v0.2', 'live-research-v0.3') then", replace: "if false then", killedBy: { queue: "completeAcceptsTheCurrentAndThePreviousPromptVersionOnly" } },
+  { name: "complete accepts only the new prompt version (a job queued before the upgrade is lost)", find: "if j.prompt_version not in ('live-research-v0.4', 'live-research-v0.3', 'live-research-v0.2') then", replace: "if j.prompt_version <> 'live-research-v0.4' then", killedBy: { queue: "completeAcceptsTheCurrentAndThePreviousPromptVersionsOnly" } },
+  { name: "complete accepts only v0.4 and v0.3 (a job queued under v0.2 is lost)", find: "if j.prompt_version not in ('live-research-v0.4', 'live-research-v0.3', 'live-research-v0.2') then", replace: "if j.prompt_version not in ('live-research-v0.4', 'live-research-v0.3') then", killedBy: { queue: "completeAcceptsTheCurrentAndThePreviousPromptVersionsOnly" } },
+  { name: "complete accepts only v0.3 and v0.2 (a v0.4 job can never finish)", find: "if j.prompt_version not in ('live-research-v0.4', 'live-research-v0.3', 'live-research-v0.2') then", replace: "if j.prompt_version not in ('live-research-v0.3', 'live-research-v0.2') then", killedBy: { queue: "completeAcceptsTheCurrentAndThePreviousPromptVersionsOnly" } },
+  { name: "complete accepts only the old prompt version (a v0.4 job can never finish)", find: "if j.prompt_version not in ('live-research-v0.4', 'live-research-v0.3', 'live-research-v0.2') then", replace: "if j.prompt_version <> 'live-research-v0.2' then", killedBy: { queue: "completeAcceptsTheCurrentAndThePreviousPromptVersionsOnly" } },
+  { name: "complete accepts any prompt version", find: "if j.prompt_version not in ('live-research-v0.4', 'live-research-v0.3', 'live-research-v0.2') then", replace: "if false then", killedBy: { queue: "completeAcceptsTheCurrentAndThePreviousPromptVersionsOnly" } },
   { name: "the lease token is stored in the clear", find: "lease_token_hash = encode(sha256(convert_to(token, 'UTF8')), 'hex'),", replace: "lease_token_hash = token,", killedBy: { queue: "claimIsOldestFirstAndStoresOnlyTheLeaseHash" } },
   { name: "claim hands out the newest job first", find: "order by created_at, id\n  limit 1\n  for update skip locked;", replace: "order by created_at desc, id\n  limit 1\n  for update skip locked;", killedBy: { queue: "claimIsOldestFirstAndStoresOnlyTheLeaseHash" } },
   { name: "an identical replayed completion is a conflict", find: "if j.result = p_result then", replace: "if false then", killedBy: { queue: "completionIsACompareAndSetAndReplaySafe" } },
@@ -1069,9 +1075,9 @@ describe("migration 001 mutation suite: every removed guarantee in the migration
 
 
 // ----------------------------------------------------------------------------------------------------------------
-// migration 002: accept prompt version live-research-v0.3 (one function, independent of 001)
+// migration 002: accept prompt version live-research-v0.4, and keep v0.3 and v0.2 (one function, independent of 001)
 
-describe("migration 002 (prompt version v0.3) applied on top of the 2026-10-04 baseline", { timeout: 120_000 }, () => {
+describe("migration 002 (prompt version v0.4) applied on top of the 2026-10-04 baseline", { timeout: 120_000 }, () => {
   async function onBaseline002<T>(run: (db: PGlite, q: Queue) => Promise<T>, sql: string = MIGRATION2_SQL): Promise<T> {
     const db = await baselineProject();
     try {
@@ -1082,13 +1088,16 @@ describe("migration 002 (prompt version v0.3) applied on top of the 2026-10-04 b
     }
   }
 
-  it("control: the applied baseline refuses a v0.3 job (this is what migration 002 exists to fix)", async () => {
+  it("control: the applied baseline refuses a v0.4 job and a v0.3 job (this is what migration 002 exists to fix)", async () => {
     const db = await baselineProject();
     try {
       const q = new Queue(db);
-      const id = (await q.enqueue(O1, S(1), TARGET, PROMPT_V3)).job.id;
+      const id = (await q.enqueue(O1, S(1), TARGET, PROMPT_V4)).job.id;
+      const id3 = (await q.enqueue(O1, S(2), TARGET, PROMPT_V3)).job.id;
       const c = (await q.claim()).job;
-      expect(await q.complete(id, c.lease_token, resultFor("v3"))).toEqual({ status: "unsupported_prompt_version" });
+      const c3 = (await q.claim()).job;
+      expect(await q.complete(id, c.lease_token, resultFor("v4"))).toEqual({ status: "unsupported_prompt_version" });
+      expect(await q.complete(id3, c3.lease_token, resultFor("v3"))).toEqual({ status: "unsupported_prompt_version" });
     } finally {
       await db.close();
     }
@@ -1129,22 +1138,24 @@ describe("migration 002 (prompt version v0.3) applied on top of the 2026-10-04 b
     expect(verify).toContain("pg_get_functiondef");
     const before = await baselineProject();
     try {
-      expect((await before.query(verify)).rows[0]).toEqual({ complete_accepts_v03: false });
+      expect((await before.query(verify)).rows[0]).toEqual({ complete_accepts_v04: false });
     } finally {
       await before.close();
     }
-    expect(await onBaseline002(async (db) => (await db.query(verify)).rows[0])).toEqual({ complete_accepts_v03: true });
+    expect(await onBaseline002(async (db) => (await db.query(verify)).rows[0])).toEqual({ complete_accepts_v04: true });
   });
 
-  it("a v0.3 job completes, a job queued under v0.2 still completes, anything else is refused (migration 002 alone, without 001)", async () => {
+  it("a v0.4 job completes, jobs queued under v0.3 and v0.2 still complete, anything else is refused (migration 002 alone, without 001)", async () => {
     await onBaseline002(async (_db, q) => {
-      const a = (await q.enqueue(O1, S(1), TARGET, PROMPT_V3)).job.id;
+      const a = (await q.enqueue(O1, S(1), TARGET, PROMPT_V4)).job.id;
       const b = (await q.enqueue(O1, S(2), TARGET, PROMPT)).job.id;
       const c = (await q.enqueue(O1, S(3), TARGET, "live-research-v0.1")).job.id;
+      const d = (await q.enqueue(O2, S(4), TARGET, PROMPT_V3)).job.id; // another owner: 3 open jobs per owner
       const t = new Map<string, string>();
-      for (let n = 0; n < 3; n++) { const j = (await q.claim()).job; t.set(j.id, j.lease_token); }
-      expect(await q.complete(a, t.get(a)!, resultFor("v3"))).toEqual({ status: "completed" });
+      for (let n = 0; n < 4; n++) { const j = (await q.claim()).job; t.set(j.id, j.lease_token); }
+      expect(await q.complete(a, t.get(a)!, resultFor("v4"))).toEqual({ status: "completed" });
       expect(await q.complete(b, t.get(b)!, resultFor("v2"))).toEqual({ status: "completed" });
+      expect(await q.complete(d, t.get(d)!, resultFor("v3"))).toEqual({ status: "completed" });
       expect(await q.complete(c, t.get(c)!, resultFor("v1"))).toEqual({ status: "unsupported_prompt_version" });
     });
   });
@@ -1207,10 +1218,12 @@ describe("migration 002 (prompt version v0.3) applied on top of the 2026-10-04 b
   describe("mutants of migration 002", () => {
     const completeDef = "create or replace function public.bsproof_research_complete(p_id uuid, p_lease_token text, p_result jsonb)\nreturns jsonb\nlanguage plpgsql\nsecurity definer\nset search_path = pg_catalog, pg_temp\n";
     const MUTANTS2: Array<{ name: string; find: string; replace: string; kill: (m: string) => Promise<void> }> = [
-      { name: "accepts only v0.3 (a queued v0.2 job is lost)", find: "if j.prompt_version not in ('live-research-v0.2', 'live-research-v0.3') then", replace: "if j.prompt_version <> 'live-research-v0.3' then", kill: (m) => withMigrated(completeAcceptsTheCurrentAndThePreviousPromptVersionOnly, m) },
-      { name: "accepts only v0.2 (the migration changes nothing)", find: "if j.prompt_version not in ('live-research-v0.2', 'live-research-v0.3') then", replace: "if j.prompt_version <> 'live-research-v0.2' then", kill: (m) => withMigrated(completeAcceptsTheCurrentAndThePreviousPromptVersionOnly, m) },
-      { name: "accepts any version", find: "if j.prompt_version not in ('live-research-v0.2', 'live-research-v0.3') then", replace: "if false then", kill: (m) => withMigrated(completeAcceptsTheCurrentAndThePreviousPromptVersionOnly, m) },
-      { name: "complete loses SECURITY DEFINER", find: completeDef, replace: completeDef.replace("security definer\n", ""), kill: (m) => withMigrated(completeAcceptsTheCurrentAndThePreviousPromptVersionOnly, m) },
+      { name: "accepts only v0.4 (queued v0.3 and v0.2 jobs are lost)", find: "if j.prompt_version not in ('live-research-v0.4', 'live-research-v0.3', 'live-research-v0.2') then", replace: "if j.prompt_version <> 'live-research-v0.4' then", kill: (m) => withMigrated(completeAcceptsTheCurrentAndThePreviousPromptVersionsOnly, m) },
+      { name: "accepts only v0.4 and v0.3 (a queued v0.2 job is lost)", find: "if j.prompt_version not in ('live-research-v0.4', 'live-research-v0.3', 'live-research-v0.2') then", replace: "if j.prompt_version not in ('live-research-v0.4', 'live-research-v0.3') then", kill: (m) => withMigrated(completeAcceptsTheCurrentAndThePreviousPromptVersionsOnly, m) },
+      { name: "accepts only v0.3 and v0.2 (a v0.4 job can never finish)", find: "if j.prompt_version not in ('live-research-v0.4', 'live-research-v0.3', 'live-research-v0.2') then", replace: "if j.prompt_version not in ('live-research-v0.3', 'live-research-v0.2') then", kill: (m) => withMigrated(completeAcceptsTheCurrentAndThePreviousPromptVersionsOnly, m) },
+      { name: "accepts only v0.2 (the migration changes nothing)", find: "if j.prompt_version not in ('live-research-v0.4', 'live-research-v0.3', 'live-research-v0.2') then", replace: "if j.prompt_version <> 'live-research-v0.2' then", kill: (m) => withMigrated(completeAcceptsTheCurrentAndThePreviousPromptVersionsOnly, m) },
+      { name: "accepts any version", find: "if j.prompt_version not in ('live-research-v0.4', 'live-research-v0.3', 'live-research-v0.2') then", replace: "if false then", kill: (m) => withMigrated(completeAcceptsTheCurrentAndThePreviousPromptVersionsOnly, m) },
+      { name: "complete loses SECURITY DEFINER", find: completeDef, replace: completeDef.replace("security definer\n", ""), kill: (m) => withMigrated(completeAcceptsTheCurrentAndThePreviousPromptVersionsOnly, m) },
       { name: "complete loses its pinned search_path", find: completeDef, replace: completeDef.replace("set search_path = pg_catalog, pg_temp\n", ""), kill: async (m) => {
         const db = await baselineProject();
         try { await db.exec(m); await privilegesAreClosedToEveryRoleButTheSixFunctions(db); } finally { await db.close(); }
@@ -1233,7 +1246,7 @@ describe("migration 002 (prompt version v0.3) applied on top of the 2026-10-04 b
       });
     }
     it("the same scenarios pass on the unmutated migration", async () => {
-      await withMigrated(completeAcceptsTheCurrentAndThePreviousPromptVersionOnly);
+      await withMigrated(completeAcceptsTheCurrentAndThePreviousPromptVersionsOnly);
       await withMigrated(aRunningJobRejectsEveryTokenButItsOwn);
     });
   });

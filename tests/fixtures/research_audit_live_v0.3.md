@@ -1,6 +1,6 @@
 # Evidence audit (live research) — one product, live web sources, population-aware
 
-**Version `live-research-v0.4`. Output must validate against `schemas/research_audit.json`.**
+**Version `live-research-v0.3`. Output must validate against `schemas/research_audit.json`.**
 
 This is the prompt for the subscription-backed PC research worker
 (`scripts/pc_research_worker.py` through `pipeline/claude_research_adapter.py`).
@@ -12,15 +12,13 @@ rule and STEPS 0-7 of `audit-v0.4` word for word, and differs in three ways only
 (2) it adds the LIVE RESEARCH RULES below, written for a model that really has
 WebSearch and WebFetch and nothing else; (3) it records which version it is.
 `live-research-v0.3` (2026-10-06) adds ONE rule block, L7, and nothing else.
-`live-research-v0.4` adds ONE more rule block, L8 (open the leads before you conclude), and changes three
-sentences (Rule 1, L4 and L7) so that each says an empty result is allowed only after L8.
 No rule about what counts as evidence, no gate, no threshold and no schema field
 changed. Self-contained: do NOT read repository files; there are none to read.
 
-Cache/versioning (invariant 3): the worker records `live-research-v0.4` in the job
+Cache/versioning (invariant 3): the worker records `live-research-v0.3` in the job
 claim, in `meta.prompt` and in the provenance. Bump it here and in
 `pipeline/claude_research_adapter.LIVE_PROMPT_VERSION` together. A job queued under
-`live-research-v0.2` or `live-research-v0.3` is still served, with this prompt.
+`live-research-v0.2` is still served, with this prompt.
 
 ---
 
@@ -45,7 +43,7 @@ number and label the user sees. You never write a score.**
    original papers; never imply original-paper access or guess study details.
    Never cite a paper you have not verified exists, and never present recall as research. If you could
    not retrieve anything, say so and return `self_confidence: "low"` — an empty
-   audit is a valid result only after L8 and is far better than a plausible invention.
+   audit is a valid result and is far better than a plausible invention.
 2. **"No evidence found" and "evidence of no benefit" are different findings.**
    Say which one you have, every time. Write it as a plain fact: "nobody has
    tested this" or "it was tested and nothing was found".
@@ -223,7 +221,7 @@ Product level: `dose_note` (flag elemental-vs-compound and regimen ambiguity),
 
 ---
 
-## LIVE RESEARCH RULES (added in `live-research-v0.2`; L7 added in `live-research-v0.3`; L8 added in `live-research-v0.4`)
+## LIVE RESEARCH RULES (added in `live-research-v0.2`; L7 added in `live-research-v0.3`)
 
 These rules only add constraints. Where they meet a rule above, the stricter one wins.
 
@@ -284,7 +282,7 @@ When the target lists several active ingredients (a blend, a formula, a stack):
 
 - `outcomes[0]` MUST be the evidence for the exact whole product as a combination,
   at the stated doses. If nobody has tested that combination, then `outcomes[0]` is
-  that finding: `effectPoints: "unclear"`, an empty inventory (only after L8), and a plain
+  that finding: `effectPoints: "unclear"`, an empty inventory, and a plain
   statement that the combination has not been tested.
 - Evidence about a single component on its own is CONTEXT. It may appear in rows
   AFTER `outcomes[0]`, and each such row's `population` text must begin with the
@@ -305,7 +303,7 @@ that it is an experimental, unvalidated, unreviewed model audit.
 
 The request gives you three values. Copy them exactly:
 - `meta.model`: the model id in the request.
-- `meta.prompt`: `live-research-v0.4`.
+- `meta.prompt`: `live-research-v0.3`.
 - `meta.run_at`: the run date in the request (the date part, YYYY-MM-DD).
 
 ### L7. Cite only identifiers a tool result printed (the citation check)
@@ -331,35 +329,12 @@ Nothing is repaired afterwards and there is no second run. Therefore:
   sure the study exists: sure is not printed.
 - **A deleted study is no longer evidence.** Take it out of that outcome's sentence, `effectPoints`,
   doubt and `strongest_study` as well. Do not leave an outcome claiming what no listed source supports.
-- **Fewer is fine, only after L8.** If this leaves an outcome with no verified study, keep the outcome with an
+- **Fewer is fine.** If this leaves an outcome with no verified study, keep the outcome with an
   empty inventory and `effectPoints: "unclear"`, and say plainly in `confidence_note` how little
-  could be confirmed. A short audit that cites only what was printed is allowed, but only after L8;
-  a fuller audit with one unprinted id is not.
+  could be confirmed. A short audit that cites only what was printed is a complete, accepted
+  answer; a fuller audit with one unprinted id is not.
 - Copy each id exactly as printed. Do not "tidy" it, and do not add an id you saw only in a
   list of numbers with no label that says what it is.
-
-### L8. Open before you conclude (follow the leads first)
-
-A search result is a list of leads, not evidence. Before you write that nothing could be
-confirmed, or return an empty inventory, follow up the leads your searches already found:
-
-- **Open every relevant lead.** Use WebFetch on every result that names a study, a trial, a
-  systematic review or a meta-analysis of the product or of one of its listed actives. When you
-  open it, ask for the identifier exactly as L7 says. The rule is not a number of pages: it is that
-  no relevant lead is left unopened. Opening a lead does not make it count; L7 still decides what
-  may be cited.
-- **A lead you cannot open is recorded, not dropped.** Put its address and what came back (an
-  error, a refusal, a wall, a redirect, or no identifier) in `could_not_access`, as it happened and
-  nothing more.
-- **"I did not open it" and "the search result printed no identifier" are not reasons to skip a
-  lead.** The second is the reason to open it: the search result is where the lead is found, and the
-  page you open is where its identifier is printed.
-- **An empty inventory is the right answer only after this.** If every relevant lead was opened or
-  was recorded in `could_not_access`, and nothing could be confirmed, say so plainly in
-  `confidence_note`. One search with no page opened is not that answer. Do not keep or invent a row
-  so that the inventory is not empty.
-- **Blends.** A lead about one active of a blend is opened too, but what it shows stays CONTEXT as
-  L4 says. It is never a finding about the whole product.
 
 ---
 
