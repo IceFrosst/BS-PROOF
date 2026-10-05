@@ -1285,6 +1285,8 @@ model behavior, account state, provisioning, or clinical validity.
 
 ## Handoff
 
+**[History -- every paragraph in this Handoff section ("v0.5 (2026-10-06, newest ...)", "Scope (2026-10-06, durable)", both "State" paragraphs and "Earlier state") was written before the release and is kept as written. The words "newest", "READ THIS FIRST", "never run on a model", "NOT on `main`, NOT pushed", "Production is unchanged ... old worker READY" and "the PRODUCTION state until then" describe the pre-release state and are NOT current. The current state is "Release of 2f26d39" above and CLAUDE.md "Handoff addendum 8": migrations 001 + 002 applied, `2f26d39` on `main` and deployed, the 8-file runtime `bsproof-research-worker-2f26d394e711` under ONE supervisor, held-open hosting, no autostart.]**
+
 **v0.5 (2026-10-06, newest -- read the "Follow-through (live-research-v0.5)" section first).** A local, self-contained commit on `medium-one-attempt-research-f7664b2` holds the structural follow-through (lead ledger checked against receipts, enforced in the same single CLI process, V3 wire, widened SQL carrier, 8-file runtime). It was never run on a model. Next, in order: independent review of the commit; the owner's read-only review and the gates; a NEW explicit owner approval bound to the exact head for ONE successful-smoke attempt (plan and the unfilled time record in that section); only after a PASS the owner-run publication in the documented order. Production is unchanged (3 attempts, xhigh, v0.2, old worker READY). Do not re-run v0.3, v0.4, the original job or any public job to test.
 
 Scope (2026-10-06, durable): the user amended the task from cap-only to root-cause; what that authorises and what it does not, the review disposition and
