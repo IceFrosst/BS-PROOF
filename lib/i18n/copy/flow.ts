@@ -68,6 +68,8 @@ export interface FlowCopy {
   loadingCovers: string;
   photoStages: string[];
   manualStages: string[];
+  /** Said under the label-read stages: what happens next (the live research screen). */
+  loadingNext: string;
   // ---- sign-in -----------------------------------------------------------
   signInScanTitle: string;
   signInScanBody: string;
@@ -129,6 +131,10 @@ export interface FlowCopy {
   labelAlt: string;
   // ---- servings ----------------------------------------------------------
   servingsPerDay: (n: number) => string;
+  /** The label / entry gave no daily regimen: said out loud, never replaced by a guess. */
+  servingsNotStated: string;
+  /** The same fact as a table VALUE (its row is already labelled "Servings per day"). */
+  servingsValueNotStated: string;
 }
 
 export const FLOW_EN: FlowCopy = {
@@ -173,9 +179,10 @@ export const FLOW_EN: FlowCopy = {
   chooseOther: "Choose a different image",
   loadingTitle: "Checking your supplement",
   loadingSub: "Usually about 10 seconds.",
-  loadingCovers: "This check covers",
-  photoStages: ["Reading the label", "Checking your dose", "Comparing with clinical trials", "Checking safety records", "Looking up the brand"],
-  manualStages: ["Checking your dose", "Comparing with clinical trials", "Looking up what is known"],
+  loadingCovers: "This step covers",
+  photoStages: ["Reading the label", "Reading the dose, form and servings", "Saving the scan"],
+  manualStages: ["Checking what you entered", "Saving the scan"],
+  loadingNext: "Next comes live research on your saved scan, on its own screen with its own progress bar.",
   signInScanTitle: "Sign in to scan this label",
   signInScanBody: "Results are saved to your Google account so you can find them again in History. Your photo stays on this device until you scan.",
   signInSearchTitle: "Sign in to search",
@@ -208,7 +215,7 @@ export const FLOW_EN: FlowCopy = {
   refusalTooLarge: "That request is too large for this site. Use a smaller photo, or a shorter typed entry, and try again.",
   savedScanFrom: "Saved scan from",
   savedScan: "Saved scan.",
-  replayExplain: "This is the result as it was stored. Nothing was re-run and no new research was done for this view.",
+  replayExplain: "This is a saved scan, shown as it was stored. Nothing was re-run, and opening it did not request research.",
   backToHistory: "Back to history",
   scanAnother: "Scan another",
   savedToHistory: "Saved to your history.",
@@ -231,6 +238,8 @@ export const FLOW_EN: FlowCopy = {
   heroFormLabel: "FORM",
   labelAlt: "The label you scanned",
   servingsPerDay: (n) => `${n} serving${n === 1 ? "" : "s"} a day`,
+  servingsNotStated: "servings per day not stated (not assumed)",
+  servingsValueNotStated: "not stated (not assumed)",
 };
 
 export const FLOW_LT: FlowCopy = {
@@ -275,9 +284,10 @@ export const FLOW_LT: FlowCopy = {
   chooseOther: "Pasirinkti kitą nuotrauką",
   loadingTitle: "Tikriname tavo papildą",
   loadingSub: "Paprastai apie 10 sekundžių.",
-  loadingCovers: "Šis patikrinimas apima",
-  photoStages: ["Skaitome etiketę", "Tikriname dozę", "Lyginame su klinikiniais tyrimais", "Tikriname saugumo įrašus", "Ieškome gamintojo"],
-  manualStages: ["Tikriname dozę", "Lyginame su klinikiniais tyrimais", "Ieškome, kas žinoma"],
+  loadingCovers: "Šis žingsnis apima",
+  photoStages: ["Skaitome etiketę", "Skaitome dozę, formą ir porcijas", "Išsaugome skenavimą"],
+  manualStages: ["Tikriname, ką įvedei", "Išsaugome skenavimą"],
+  loadingNext: "Toliau – tiesioginis tyrimas pagal tavo išsaugotą skenavimą: atskirame ekrane su savo eigos juosta.",
   signInScanTitle: "Prisijunk, kad nuskenuotum šią etiketę",
   signInScanBody: "Rezultatai išsaugomi tavo Google paskyroje, todėl vėliau gali juos rasti Istorijoje. Nuotrauka lieka tavo įrenginyje, kol nuskenuoji.",
   signInSearchTitle: "Prisijunk, kad galėtum ieškoti",
@@ -310,7 +320,7 @@ export const FLOW_LT: FlowCopy = {
   refusalTooLarge: "Ši užklausa per didelė šiai svetainei. Naudok mažesnę nuotrauką arba trumpesnį įvestą aprašą ir bandyk dar kartą.",
   savedScanFrom: "Išsaugotas skenavimas,",
   savedScan: "Išsaugotas skenavimas.",
-  replayExplain: "Tai rezultatas tokia forma, kokia jis buvo išsaugotas. Nieko nebuvo paleista iš naujo ir šiam vaizdui jokių naujų tyrimų neatlikta.",
+  replayExplain: "Tai išsaugotas skenavimas, rodomas toks, koks buvo išsaugotas. Nieko nebuvo paleista iš naujo, o jį atvėrus tyrimas nebuvo užsakytas.",
   backToHistory: "Atgal į istoriją",
   scanAnother: "Skenuoti kitą",
   savedToHistory: "Išsaugota tavo istorijoje.",
@@ -333,6 +343,8 @@ export const FLOW_LT: FlowCopy = {
   heroFormLabel: "FORMA",
   labelAlt: "Etiketė, kurią nuskenavai",
   servingsPerDay: (n) => `${n} ${ltPlural(n, "porcija", "porcijos", "porcijų")} per dieną`,
+  servingsNotStated: "porcijų per dieną nenurodyta (nepripažįstama)",
+  servingsValueNotStated: "nenurodyta (nepripažįstama)",
 };
 
 export const FLOW_COPY: Record<Lang, FlowCopy> = { en: FLOW_EN, lt: FLOW_LT };

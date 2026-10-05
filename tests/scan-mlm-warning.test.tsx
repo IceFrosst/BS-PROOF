@@ -158,44 +158,27 @@ function mockFetchOnce(body: unknown) {
   global.fetch = (async () => new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } })) as typeof fetch;
 }
 
-describe("MLM disclosure rendered in the company section", () => {
-  it("confirmed_mlm renders the SAME warning box class as every other /scan disclosure, with honest wording", async () => {
-    mockFetchOnce(fixture({ status: "confirmed_mlm", basis: "recruits distributors who earn on downline sales", confidence: "high" }));
+/*
+ * LIVE-ONLY /scan (2026-10-05): the company profile and its MLM / direct-selling disclosure are
+ * model recall about the company, not live research, so /scan draws none of it -- not beside
+ * the research and not instead of it -- whatever the saved analysis carries. (businessModelDisclosure()
+ * itself is unchanged and still pinned by tests/company-business-model.test.ts.)
+ */
+describe("the company profile and MLM disclosure are NOT drawn on /scan", () => {
+  it.each([
+    ["confirmed_mlm", "high"],
+    ["suspected_mlm", "low"],
+    ["no_evidence", "medium"],
+    ["unknown", "low"],
+  ] as const)("%s in the analysis renders no company section and no business-model warning", async (status, confidence) => {
+    mockFetchOnce(fixture({ status, basis: "recruits distributors who earn on downline sales", confidence }));
     const el = await mount();
     await searchCreatineMonohydrate(el);
 
-    const warning = el.querySelector(".la-alert.la-alert-warn[aria-label='Business model disclosure']");
-    expect(warning).toBeTruthy();
-    expect(warning?.textContent).toContain("MLM / direct-selling business model");
-    expect(warning?.textContent).toContain("Model knowledge — unverified");
-    expect(warning?.textContent).toContain("does not affect the evidence score");
-    expect(warning?.textContent?.toLowerCase()).not.toMatch(/pyramid scheme|illegal|scam|fraud/);
-
-    // Same class already used by the caveats/validity warnings elsewhere on this page.
-    const otherWarnings = el.querySelectorAll(".la-alert-warn");
-    expect(otherWarnings.length).toBeGreaterThanOrEqual(1);
-  });
-
-  it("suspected_mlm also warns; no_evidence and unknown render nothing about business model at all", async () => {
-    mockFetchOnce(fixture({ status: "suspected_mlm", basis: "recruitment-based compensation language", confidence: "low" }));
-    const suspected = await mount();
-    await searchCreatineMonohydrate(suspected);
-    expect(suspected.querySelector(".la-alert.la-alert-warn[aria-label='Business model disclosure']")).toBeTruthy();
-    await act(async () => root?.unmount());
-    container?.remove();
-
-    mockFetchOnce(fixture({ status: "no_evidence", basis: "sold only through retail", confidence: "medium" }));
-    const noEvidence = await mount();
-    await searchCreatineMonohydrate(noEvidence);
-    expect(noEvidence.querySelector(".la-alert.la-alert-warn[aria-label='Business model disclosure']")).toBeNull();
-    expect(noEvidence.textContent).not.toMatch(/MLM|direct-selling/i);
-    await act(async () => root?.unmount());
-    container?.remove();
-
-    mockFetchOnce(fixture({ status: "unknown", basis: "", confidence: "low" }));
-    const unknown = await mount();
-    await searchCreatineMonohydrate(unknown);
-    expect(unknown.querySelector(".la-alert.la-alert-warn[aria-label='Business model disclosure']")).toBeNull();
-    expect(unknown.textContent).not.toMatch(/MLM|direct-selling/i);
+    expect(el.querySelector(".scan-lab-result")).not.toBeNull();
+    expect(el.querySelector(".la-alert.la-alert-warn[aria-label='Business model disclosure']")).toBeNull();
+    expect(el.querySelector("#scan-company, [id$='scan-company']")).toBeNull();
+    expect(el.textContent).not.toMatch(/MLM|direct-selling|Model knowledge|downline/i);
+    expect(el.querySelector(".sc-research")?.getAttribute("data-research-state")).toBe("disabled");
   });
 });

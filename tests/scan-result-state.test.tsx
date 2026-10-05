@@ -1,4 +1,8 @@
-/* Production scan result invariants retargeted to the shared A/B primitives. */
+/*
+ * /scan result state. LIVE-ONLY since 2026-10-05: a finished scan shows the label facts and the live
+ * research screen, never the retained lab card / cached audit / "no evidence run" card / model recall /
+ * company profile. (The old tab, validity, dimension and warning-bundle tests of that card were removed with it.)
+ */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { act, createElement } from "react";
@@ -51,44 +55,23 @@ describe("/scan result state", () => {
     vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("offline"); }));
     const el = await mount();
     const input = el.querySelector<HTMLInputElement>("#scan-file")!;
-    await act(async () => { Object.defineProperty(input, "files", { value: [new File(["bytes"], "label.png", { type: "image/png" })], configurable: true }); input.dispatchEvent(new Event("change", { bubbles: true })); });
+    await act(async () => { Object.defineProperty(input, "files", { value: [new File(["bytes"], "label.png", { type: "image/png" })], configurable: true }); input.dispatchEvent(new Event("change", { bubbles: true })); })
     await act(async () => el.querySelector<HTMLButtonElement>("button.la-analyze")?.click());
     await act(async () => { await Promise.resolve(); });
     expect(el.querySelector(".sc-error")?.textContent).toContain("Could not reach the analyzer: Error: offline");
     expect(el.querySelector(".sc-again")).not.toBeNull();
   });
 
-  it("places validity before the first number and keeps audit provenance, native scales, and links", async () => {
+  it("draws NO retained / cached / model-recall / company evidence, and no 'no evidence run' card, even when the analysis carries all of it", async () => {
     const retained = audit(); expect(retained).not.toBeNull();
-    const el = await mount(); await photo(el, { ...structuredClone(fixture), ledger_audit: retained });
-    const validity = el.querySelector(".scan-lab-validity")!;
-    const firstNumber = el.querySelector(".ab-general-score, .ab-number")!;
-    expect(validity.compareDocumentPosition(firstNumber) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(validity.textContent).toContain("audit-v0.2");
-    const first = el.querySelector<HTMLButtonElement>(".ab-bars.outcomes li > button")!;
-    await act(async () => first.click());
-    const effect = el.querySelector("[data-row-id=effect]")!;
-    expect(effect.textContent).toMatch(/[−+]?\d\/3/);
-    expect(effect.textContent).not.toContain("/4");
-    await act(async () => effect.querySelector("button")!.click());
-    expect(effect.querySelector("a[href^='https://']")).not.toBeNull();
-  });
-
-  it("keeps tab roving and panel labelling valid for punctuation in outcome keys", async () => {
-    const retained = audit()!;
-    retained.audit.outcomes[0].name = "Endurance / recovery (acute),";
-    const el = await mount(); await photo(el, { ...structuredClone(fixture), ledger_audit: retained });
-    const tabs = Array.from(el.querySelectorAll<HTMLButtonElement>(".ab-tabs [role=tab]"));
-    const panel = el.querySelector<HTMLElement>("[role=tabpanel]")!;
-    expect(panel.getAttribute("aria-labelledby")).toBe(tabs[0].id);
-    await act(async () => tabs[0].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
-    expect(document.activeElement).toBe(tabs[1]);
-    expect(panel.getAttribute("aria-labelledby")).toBe(tabs[1].id);
-    expect(document.getElementById(panel.getAttribute("aria-labelledby")!)).toBe(tabs[1]);
-    await act(async () => tabs[1].dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true })));
-    expect(document.activeElement).toBe(tabs[tabs.length - 1]);
-    await act(async () => tabs[tabs.length - 1].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
-    expect(document.activeElement).toBe(tabs[0]);
+    const el = await mount(); await photo(el, { ...structuredClone(fixture), ledger_audit: retained, status: "ingredient_not_supported", ingredient_label_text: "Vitamin D3", supported_ingredients: ["creatine"], queue: { queued: true } });
+    expect(el.querySelector(".scan-lab-result")).not.toBeNull(); // the scan did complete
+    for (const selector of [".ab-tabs", "[role=tablist]", ".scan-lab-validity", ".ab-general-score", ".ab-number", ".ab-card", ".ab-warnings", ".ab-headline", ".scan-section", ".scan-legend", ".la-empty", "details.ab-warning-row"]) expect(el.querySelector(selector), selector).toBeNull();
+    expect(el.textContent).not.toMatch(/No evidence run|evidence run exists|not scored|Is your dose the dose that worked|Model knowledge|MLM|Funding & independence|Publication bias|evidence score|Multi ingredient product|Nordic Labs Ü|Evidence orientation|Compatibility|Company/i);
+    expect(el.textContent).not.toMatch(/\d+\/(100|4|3)\b/);
+    // what IS there: the read-label facts and the live research screen, and nothing numeric-scored
+    expect(el.querySelector('[data-testid="read-facts"]')).not.toBeNull();
+    expect(el.querySelectorAll(".sc-research")).toHaveLength(1);
   });
 
   it("collapses capture chrome after a result, moves focus, and offers Scan another", async () => {
@@ -99,8 +82,8 @@ describe("/scan result state", () => {
     expect(document.activeElement?.classList.contains("sc-scanned")).toBe(true);
   });
 
-  it("restores quiet identity facts for typed entries without read confidence or Read from", async () => {
-    const manual = { ...fixture, source: "manual", label: undefined, input: { ingredient: "creatine", ingredient_label: "Creatine", form: "creatine_monohydrate", form_label: "Creatine monohydrate", dose_per_serving: { value: 5, unit: "g", mg: 5000 }, servings_per_day: 1, basis: "user_input" }, company: { ...fixture.company, status: "no_brand_on_label", basis_used: [] } };
+  it("restores quiet identity facts for typed entries without read confidence or Read from, and says an unentered regimen is not assumed", async () => {
+    const manual = { ...fixture, source: "manual", label: undefined, input: { ingredient: "creatine", ingredient_label: "Creatine", form: "creatine_monohydrate", form_label: "Creatine monohydrate", dose_per_serving: { value: 5, unit: "g", mg: 5000 }, servings_per_day: null }, caveats: undefined };
     const el = await mount();
     await act(async () => el.querySelector<HTMLButtonElement>(".sc-search-cta")!.click());
     const combo = el.querySelector<HTMLInputElement>('input[role="combobox"]')!;
@@ -112,20 +95,34 @@ describe("/scan result state", () => {
     mockFetch(manual);
     await act(async () => el.querySelector("form")?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
     await act(async () => { await Promise.resolve(); });
-    expect(el.querySelector(".scan-lab-disclosure")?.textContent).toContain("Servings per day");
+    const facts = el.querySelector('[data-testid="read-facts"]')!;
+    expect(facts.textContent).toContain("Servings per day");
+    expect(facts.textContent).toContain("servings per day not stated (not assumed)");
+    expect(facts.textContent).not.toMatch(/\b1 serving/);
     expect(el.textContent).not.toContain("Read confidence");
     expect(el.textContent).not.toContain("Read from:");
   });
 
-  it("keeps warning titles inside the panel and leaves technical details reachable", async () => {
+  it("shows read-label doses EXACTLY (0.05 mg is not rounded to 0 mg), the unit as printed, and an unstated regimen / form / dose as unknown, never as one serving or an elemental basis", async () => {
+    const label = { ...structuredClone(fixture.label), ingredient_vocab_id: "vitamin_d", ingredient_label_text: "Vitamin D3", form_vocab_id: null, compound_dose_mg: 0.05, printed_elemental_dose_mg: null, dose_unit_as_printed: "mcg", servings_per_day: null, is_multi_ingredient: false, other_actives: [], actives: [] };
+    const el = await mount(); await photo(el, { ...structuredClone(fixture), label, caveats: undefined });
+    const facts = el.querySelector('[data-testid="read-facts"]')!;
+    expect(facts.textContent).toContain("0.05 mg compound per serving");
+    expect(facts.textContent).not.toMatch(/\b0 mg\b/);
+    expect(facts.textContent).toContain("Unit as printed");
+    expect(facts.textContent).toContain("mcg");
+    expect(facts.textContent).toContain("form not stated");
+    expect(facts.textContent).toContain("servings per day not stated (not assumed)");
+    expect(facts.textContent).not.toMatch(/\b1 serving|elemental|Active moiety|EPA/i);
+  });
+
+  it("keeps technical details reachable, without the retired evidence-numbers paragraph", async () => {
     const el = await mount(); await photo(el);
-    const warnings = el.querySelector(".ab-warnings");
-    expect(warnings).not.toBeNull();
-    expect(warnings?.closest(".ab-card")).not.toBeNull();
-    for (const title of ["Multi ingredient product", "Funding & independence", "Publication bias", "MLM / direct-selling business model"]) expect(el.textContent).toContain(title);
     const technical = el.querySelector(".sc-technical") as HTMLDetailsElement;
-    expect(technical).not.toBeNull(); expect(technical.textContent).toContain("How these numbers were produced");
-    expect(technical.querySelector('a[href="/methodology"]')).not.toBeNull();
+    expect(technical).not.toBeNull();
+    expect(technical.textContent).toContain(fixture.run_id);
+    expect(technical.textContent).not.toContain("How these numbers were produced");
+    expect(technical.querySelector('a[href="/methodology"]')).toBeNull();
   });
 
   it("uses shared A/B styling once and the real photo hero with a fallback jar", () => {
@@ -134,68 +131,12 @@ describe("/scan result state", () => {
     expect(readFileSync(join(process.cwd(), "app", "scan-lab-result.css"), "utf8")).not.toContain(".ab-photo-hero{");
   });
 
-  it("uses the shared A/B primitives and styles the selected tab", async () => {
-    const retained = audit(); const el = await mount(); await photo(el, { ...structuredClone(fixture), ledger_audit: retained });
+  it("keeps the photo hero and replaces a failed photo element with the exact jar fallback", async () => {
+    const el = await mount(); await photo(el);
     expect(el.querySelector(".ab-photo-hero")).not.toBeNull();
-    expect(el.querySelector(".ab-card")).not.toBeNull();
-    const selected = el.querySelector(".ab-tabs [role=tab][aria-selected=true]")!;
-    expect(selected).not.toBeNull();
-    expect(selected.textContent).toContain("Outcomes");
-  });
-
-  it("keeps unmatched outcomes honest while retaining their four reachable dimensions", async () => {
-    const el = await mount(); await photo(el);
-    expect(el.querySelector(".ab-general-score")?.textContent).toBe("—");
-    const first = el.querySelector<HTMLButtonElement>(".ab-bars.outcomes li > button")!;
-    await act(async () => first.click());
-    expect(el.querySelectorAll(".ab-bars:not(.outcomes) li")).toHaveLength(4);
-    expect(el.textContent).not.toMatch(/\d+\/100|probably works/);
-  });
-
-  it("replaces a failed photo element with the exact jar fallback", async () => {
-    const el = await mount(); await photo(el);
     const image = el.querySelector<HTMLImageElement>(".scan-lab-photo")!;
     await act(async () => image.dispatchEvent(new Event("error")));
     expect(el.querySelector(".scan-lab-photo")).toBeNull();
     expect(el.querySelector(".ab-photo-hero > .ab-jar")).not.toBeNull();
-  });
-
-  it("marks the active outcome tab with aria-selected and keeps the selected pill dark", async () => {
-    const el = await mount(); await photo(el);
-    const tabs = el.querySelectorAll<HTMLButtonElement>(".ab-tabs [role=tab]");
-    await act(async () => tabs[1].click());
-    expect(tabs[1].getAttribute("aria-selected")).toBe("true");
-    expect(tabs[1].getAttribute("tabindex")).toBe("0");
-    expect(tabs[0].getAttribute("aria-selected")).toBe("false");
-  });
-
-  it("places an outcome warning bundle between the headline and its dimensions", async () => {
-    const el = await mount(); await photo(el);
-    await act(async () => el.querySelector<HTMLButtonElement>(".ab-bars.outcomes li > button")!.click());
-    const headline = el.querySelector(".ab-headline")!;
-    const warnings = el.querySelector(".ab-warnings")!;
-    const bars = el.querySelector(".ab-bars:not(.outcomes)")!;
-    expect(headline.compareDocumentPosition(warnings) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(warnings.compareDocumentPosition(bars) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  });
-
-  /* The reference card draws one hairline BETWEEN the "Outcomes" heading and
-     the list (`.ab-listhead` closes at the heading). Wrapping the list inside
-     the same element moved that rule to the foot of the last row. */
-  it("closes the list head at the heading so its rule divides heading from list", async () => {
-    const el = await mount(); await photo(el);
-    const head = el.querySelector(".ab-listhead")!;
-    expect(head.querySelector(".ab-general")).not.toBeNull();
-    expect(head.querySelector("h2")?.textContent).toBe("Outcomes");
-    expect(head.querySelector(".ab-bars.outcomes")).toBeNull();
-    const list = el.querySelector(".ab-bars.outcomes")!;
-    expect(head.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  });
-
-  it("labels the panel only through the actual selected tab", async () => {
-    const el = await mount(); await photo(el);
-    const panel = el.querySelector<HTMLElement>("[role=tabpanel]")!;
-    expect(panel.getAttribute("aria-label")).toBeNull();
-    expect(document.getElementById(panel.getAttribute("aria-labelledby")!)).toBe(el.querySelector("[role=tab][aria-selected=true]"));
   });
 });

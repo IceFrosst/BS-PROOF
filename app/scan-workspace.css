@@ -88,11 +88,15 @@
   .scan-workspace .sc-viewfinder { max-height: min(calc(100svh - 330px), 440px); min-height: 280px; }
 }
 
-/* ---- owner-private live research (components/scan-research-panel.tsx) ----
-   Visually apart from the saved audit above it: an amber edge and an
-   EXPERIMENTAL / UNGRADED tag. No bar, arc, score colour or progress fill: the
-   three-step strip only marks the job's real stage (queued / running / finished),
-   it is not a percentage. Everything wraps; nothing forces a horizontal scroll. */
+/* ---- live research (components/scan-research-panel.tsx) ----
+   /scan shows LIVE RESEARCH ONLY: this card is the whole evidence area, the loading
+   screen between the label read and the result, and the result itself. Amber edge
+   and an EXPERIMENTAL / UNGRADED tag mark it as unvalidated. The progress bar is
+   INDETERMINATE (the API reports no percentage): it slides, it never fills, and
+   under prefers-reduced-motion globals.css makes it a static half-opacity track.
+   The three-step strip only marks the job's real stage (queued / running / finished).
+   No score colour, arc or number is drawn. Everything wraps; nothing forces a
+   horizontal scroll. */
 .scan-page .sc-research { margin: 16px 0; padding: 16px; border: 1px solid var(--sp-line); border-left: 3px solid var(--sp-unverified); border-radius: 0 var(--sp-radius) var(--sp-radius) 0; background: var(--sp-white); color: var(--sp-ink); font-size: var(--fs-2); line-height: 1.45; overflow-wrap: anywhere; }
 .scan-page .sc-research h2 { margin: 0 0 8px; font-size: var(--fs-3); font-weight: 800; }
 .scan-page .sc-research h3 { margin: 16px 0 6px; font-size: var(--fs-2); font-weight: 800; }
@@ -103,6 +107,15 @@
 .scan-page .sc-research-dim { color: var(--sp-mute); font-size: var(--fs-1); }
 .scan-page .sc-research-times { margin-top: 0; }
 .scan-page .sc-research-failure { color: var(--sp-danger); font-weight: 700; }
+.scan-page .sc-research-loading { margin-top: 8px; }
+.scan-page .sc-research-head { align-items: start; margin-bottom: 8px; }
+.scan-page .sc-research-head h2 { margin: 0 0 6px; }
+.scan-page .sc-research-head .sc-research-tags { margin: 0; }
+.sc-research-bar { height: 6px; margin: 4px 0 12px; }
+.scan-page .sc-research-loading .sc-research-status { font-size: var(--fs-3); }
+/* What was read from the label: always open beside the research, so it is never lost while waiting. */
+.scan-lab-result .sc-read-facts { margin: 12px 0; }
+.scan-lab-result .sc-read-facts .sc-facts { margin-bottom: 8px; }
 .sc-research-btn {
   min-height: 44px; margin: 0 0 8px; padding: 0 18px; border: 1.5px solid var(--sp-ink); border-radius: 999px; background: var(--sp-white);
   color: var(--sp-ink); font: inherit; font-size: var(--fs-2); font-weight: 700; cursor: pointer;

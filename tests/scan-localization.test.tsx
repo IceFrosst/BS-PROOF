@@ -5,13 +5,11 @@
  * What is pinned:
  *   - one persisted choice (bsproof.lang) drives the landing, the camera copy, the
  *     tabs, the footer/skip link, the sign-in card, History and a replayed scan
- *   - a result in Lithuanian shows the SAME numbers as in English: scores,
- *     scales, doses, ranges, closeness, counts (a token-for-token comparison of
- *     every number on the card), and the A/B four-axis structure
- *   - model-authored / retained prose is requested through /api/scan/translate and
- *     shown translated; product names, raw FDA records, source quotes and the
- *     audit's "exact wording" stay original; nothing numeric/enum is sent
- *   - a failed translator leaves English on screen with a visible note
+ *   - LIVE-ONLY (2026-10-05): a result is the read-label facts plus the live research
+ *     screen, in Lithuanian, with the SAME numbers as English. The old retained-card /
+ *     model-recall / company prose is not drawn, so the translator is asked for nothing;
+ *     the live research narrative itself is never machine-translated (it stays original,
+ *     tagged English: tests/scan-research-panel.test.tsx and the e2e spec pin that)
  *   - errors, refusals, auth notices and manual-form validation are reworded live
  *   - English never calls the translator
  */
@@ -111,7 +109,8 @@ describe("the persisted choice", () => {
     const el = await mountFlow();
     expect(text(el.querySelector("h1"))).toBe("Does your Supplement actually work?");
     await scanPhoto(el);
-    expect(text(el)).toContain("Is your dose the dose that worked?");
+    expect(text(el)).toContain("Live research is off on this deployment");
+    expect(text(el)).not.toContain("Is your dose the dose that worked?");
     expect(translateBodies).toEqual([]);
   });
 
@@ -198,10 +197,7 @@ describe("a Lithuanian result", () => {
     stubApi({ scan: body });
     const en = await mountFlow();
     await scanPhoto(en);
-    const enResult = en.querySelector(".scan-lab-result")!;
-    const enNumbers = numbers(enResult);
-    const enScores = Array.from(enResult.querySelectorAll(".ab-general-score, .ab-bar-pts")).map((n) => n.textContent);
-    const enDimensions = Array.from(enResult.querySelectorAll(".ab-bars.outcomes li")).length;
+    const enFacts = numbers(en.querySelector('[data-testid="read-facts"]')!);
     await harness.cleanup();
 
     writeLang("lt");
@@ -209,120 +205,40 @@ describe("a Lithuanian result", () => {
     const lt = await mountFlow();
     await scanPhoto(lt);
     await settle(6);
-    return { lt, ltResult: lt.querySelector(".scan-lab-result")!, enNumbers, enScores, enDimensions };
+    return { lt, ltResult: lt.querySelector(".scan-lab-result")!, enFacts };
   }
 
-  it("shows the same numbers, scores and structure as English, with Lithuanian labels", async () => {
-    const { lt, ltResult, enNumbers, enScores, enDimensions } = await renderBoth(withAudit());
-    // every number on the card, token for token (mock translation keeps digits)
-    expect(numbers(ltResult)).toEqual(enNumbers);
-    expect(Array.from(ltResult.querySelectorAll(".ab-general-score, .ab-bar-pts")).map((n) => n.textContent)).toEqual(enScores);
-    expect(ltResult.querySelectorAll(".ab-bars.outcomes li")).toHaveLength(enDimensions);
-    // labels
-    expect(text(ltResult)).toContain("Bendras balas");
-    expect(text(ltResult)).toContain("Ar tavo dozė — ta, kuri veikė?");
-    expect(text(ltResult)).toContain("Ar forma ir mišinys atlaiko patikrą?");
-    expect(text(ltResult)).toContain("Kas tai gamina ir kas apie tai užfiksuota?");
-    expect(text(ltResult)).toContain("Techninė informacija");
-    expect(text(lt.querySelector(".ab-tabs button"))).toBe("Rezultatai");
-    expect(text(lt)).toContain("Skenuoti kitą");
-    // the retained-audit stamp: identifiers original, dose phrase localized, label localized
-    expect(text(ltResult.querySelector(".scan-lab-validity"))).toContain("Išsaugotas auditas · nepatikrintas iš naujo");
-    expect(text(ltResult.querySelector(".scan-lab-validity"))).toContain("audit-v0.2");
-    expect(text(ltResult.querySelector(".scan-lab-validity"))).toContain("Creatine monohydrate");
-    // basis badges
+  it("shows the read-label facts and the live research screen in Lithuanian, with the same numbers as English and no retained card", async () => {
+    const { lt, ltResult, enFacts } = await renderBoth(withAudit());
+    expect(numbers(ltResult.querySelector('[data-testid="read-facts"]')!)).toEqual(enFacts);
+    expect(text(ltResult.querySelector('[data-testid="read-facts"]'))).toContain("Etiketės duomenys");
+    expect(text(ltResult.querySelector('[data-testid="read-facts"]'))).toContain("Porcijos per dieną");
     expect(text(ltResult.querySelector(".scan-badge-label"))).toBe("Kaip atspausdinta");
-    expect(text(ltResult.querySelector(".scan-legend"))).toContain("Kaip skaityti šaltinių ženklelius");
-    // disclosures (fixed templates), caveat title + body, warning count
-    expect(text(ltResult)).toContain("Finansavimas ir nepriklausomumas");
-    expect(text(ltResult)).toContain("Publikavimo šališkumas");
-    expect(text(ltResult)).toContain("Keleto veikliųjų medžiagų produktas");
-    expect(text(ltResult)).toContain("Įrodymų balas yra tik apie creatine");
-    expect(text(ltResult)).toMatch(/\d+ įrodymų įspėjim/);
-    // dose reading re-rendered from the stored numbers
-    expect(text(ltResult.querySelector(".scan-dose"))).toContain("patenka į intervalą, kuriame tyrimuose rasta nauda (2.86 g–2.86 g)");
-    expect(text(ltResult.querySelector(".scan-note"))).toContain("Vertinta pagal paros dozę");
+    // the live research screen, in Lithuanian (here sign-in is not configured, so research is off and NOTHING takes its place)
+    expect(text(ltResult.querySelector(".sc-research h2"))).toBe("Šiam skenavimui tiesioginis tyrimas nepasiekiamas");
+    expect(text(ltResult)).toContain("Šiame diegime tiesioginis tyrimas išjungtas");
+    expect(text(ltResult)).toContain("Šiame puslapyje rodomas tik tiesioginis tyrimas");
+    expect(text(ltResult.querySelector(".sc-research-tags"))).toBe("EksperimentinisBe įvertinimo");
+    expect(text(ltResult)).toContain("Techninė informacija");
+    expect(text(lt)).toContain("Skenuoti kitą");
+    // none of the retired retained / recall / company card
+    expect(text(ltResult)).not.toMatch(/Bendras balas|Ar tavo dozė — ta, kuri veikė|Finansavimas ir nepriklausomumas|Įrodymų balas|Išsaugotas auditas/);
+    expect(ltResult.querySelector(".ab-tabs, .scan-legend, .scan-section, .scan-lab-validity")).toBeNull();
   });
 
-  it("opens an outcome with the four axes in Lithuanian; the score arithmetic and the audit's exact wording are untouched", async () => {
-    const { lt, ltResult } = await renderBoth(withAudit());
-    const first = ltResult.querySelector<HTMLButtonElement>(".ab-bars.outcomes li > button")!;
-    await click(first);
-    await settle(6);
-    const rows = Array.from(lt.querySelectorAll("[data-row-id]"));
-    expect(rows.map((r) => r.getAttribute("data-row-id"))).toEqual(["effect", "evidence", "form", "dose"]);
-    expect(rows.map((r) => text(r.querySelector(".ab-bar-name")))).toEqual(["Poveikis", "Įrodymai", "Forma", "Dozė"]);
-    // scales are the scorer's own: -3..+3 for effect, /4 for the rest
-    expect(text(rows[0].querySelector(".ab-bar-pts"))).toMatch(/[−+]?\d\/3/);
-    for (const r of rows.slice(1)) expect(text(r.querySelector(".ab-bar-pts"))).toMatch(/^(—|\d\/4)$/);
-    expect(text(rows[0].querySelector(".ab-bar-pts"))).not.toContain("/4");
-    // open the effect row: labels in LT, plain summary translated, exact wording ORIGINAL
-    await click(rows[0].querySelector("button"));
-    await settle(6);
-    const detail = document.getElementById(rows[0].querySelector("button")!.getAttribute("aria-controls")!)!;
-    expect(text(detail)).toContain("Rasta");
-    expect(text(detail)).toContain("Santrauka paprastai");
-    expect(text(detail)).toContain("LT» ");
-    const exact = detail.querySelector(".sc-audit-exact")!;
-    expect(text(exact.querySelector("summary"))).toBe("Tikslios audito formuluotės");
-    const audit = creatineAudit().audit.outcomes[0];
-    expect(text(exact)).toContain(audit.detail.effect.found);
-    expect(text(exact)).not.toContain("LT» ");
-    // sources list label localized; its identifiers stay original
-    expect(text(detail.querySelector(".sc-audit-sources b"))).toBe("Šiam rezultatui atidaryti šaltiniai");
-  });
-
-  it("asks the translator only for prose, and never for names, raw FDA fields, quotes, numbers or enums", async () => {
+  it("asks the translator for nothing, in Lithuanian too: no retained prose, company text or recall is drawn to translate", async () => {
     await renderBoth(withAudit());
-    const sent = translateBodies.flat();
-    expect(sent.length).toBeGreaterThan(3);
-    expect(sent).toContain(rich.company.profile.data.summary);
-    expect(sent).toContain(rich.literature_warnings.data.funding_independence.basis);
-    for (const raw of ["Nordic Labs", "Nordic Labs OÜ", "Creatine Pro 5000, 500 g tub", "Undeclared allergen (milk)", "Class II", "Informed Sport", "F-1234-2024", "private", "claimed", "medium", "recall"]) {
-      expect(sent, raw).not.toContain(raw);
-    }
-    for (const t of sent) expect(t).toMatch(/[A-Za-z]{3}/);
-    // each distinct string is requested once (cache), and batches stay within the endpoint's limit
-    expect(new Set(sent).size).toBe(sent.length);
-    for (const batch of translateBodies) expect(batch.length).toBeLessThanOrEqual(24);
+    expect(translateBodies).toEqual([]);
   });
 
-  it("translated prose appears in place; original product names, recall record and label quotes stay original", async () => {
-    const { ltResult } = await renderBoth(withAudit());
-    const profile = text(ltResult.querySelector(".scan-profile"));
-    expect(profile).toContain("LT» " + rich.company.profile.data.summary);
-    const registry = text(ltResult.querySelector(".scan-recalls"));
-    expect(registry).toContain("Creatine Pro 5000, 500 g tub");
-    expect(registry).toContain("Undeclared allergen (milk)");
-    expect(registry).toContain("Nordic Labs OÜ");
-    expect(text(ltResult)).toContain("Informed Sport");
-    expect(text(ltResult)).toContain("Nordic Labs");
-    // the header keeps the product name as read
-    expect(text(ltResult.closest(".sc-result-wrap")?.querySelector(".ab-title strong"))).toBe(rich.label.product_name ?? text(ltResult.closest(".sc-result-wrap")?.querySelector(".ab-title strong")));
-  });
-
-  it("flips back to English live and shows the original text again, with no new request", async () => {
+  it("flips between English and Lithuanian live with no request and no machine-translated text", async () => {
     const { lt } = await renderBoth(withAudit());
-    expect(text(lt)).toContain("LT» ");
-    const before = translateBodies.length;
+    expect(text(lt)).toContain("tiesioginis tyrimas");
     await act(async () => writeLang("en"));
     await settle();
+    expect(text(lt)).toContain("Live research is not available for this scan");
     expect(text(lt)).not.toContain("LT» ");
-    expect(text(lt)).toContain("Is your dose the dose that worked?");
-    expect(translateBodies.length).toBe(before);
-  });
-
-  it("a failed translator leaves the English on screen and says so", async () => {
-    writeLang("lt");
-    stubApi({ scan: withAudit(), translate: "down" });
-    const el = await mountFlow();
-    await scanPhoto(el);
-    await settle(6);
-    expect(text(el)).toContain(rich.company.profile.data.summary);
-    expect(text(el)).not.toContain("LT» ");
-    expect(text(el.querySelector('[data-testid="translate-status"]'))).toBe("Dalis teksto rodoma originalia anglų kalba.");
-    // the deterministic Lithuanian does not depend on the translator
-    expect(text(el)).toContain("Ar tavo dozė — ta, kuri veikė?");
+    expect(translateBodies).toEqual([]);
   });
 });
 
@@ -337,7 +253,7 @@ describe("states around the result, in Lithuanian", () => {
     expect(text(el.querySelector(".sc-error"))).toBe("Could not scan that.Could not reach the analyzer: Error: offline");
   });
 
-  it("server refusals, an unsupported ingredient and a non-label photo have Lithuanian words", async () => {
+  it("server refusals, a formerly unsupported ingredient and a non-label photo have Lithuanian words", async () => {
     writeLang("lt");
     stubApi({ scan: { status: "scan_history_required_unavailable", error: "SCAN_HISTORY_REQUIRED is on" } });
     let el = await mountFlow();
@@ -355,10 +271,11 @@ describe("states around the result, in Lithuanian", () => {
     stubApi({ scan: { ...rich, status: "ingredient_not_supported", ingredient_label_text: "Ashwagandha", supported_ingredients: ["creatine"], product: undefined, evidence: undefined, label: undefined, ledger_audit: undefined, queue: { queued: true } } });
     el = await mountFlow();
     await scanPhoto(el);
-    expect(text(el)).toContain("Ashwagandha dar nėra įrodymų žodyne.");
-    expect(text(el)).toContain("Tai ne žemas balas — tai duomenų nebuvimas.");
-    expect(text(el)).toContain("Tavo užklausa užfiksuota.");
-    expect(text(el)).toContain("Kol kas apima: creatine");
+    // live-only: an ingredient the old evidence dictionary lacks is no longer a "nothing was run" card;
+    // it is a scan like any other and its live research screen speaks (off here, so it says so, in Lithuanian)
+    expect(text(el)).not.toMatch(/dar nėra įrodymų žodyne|Tai ne žemas balas|Tavo užklausa užfiksuota|Kol kas apima/);
+    expect(text(el.querySelector(".sc-research h2"))).toBe("Šiam skenavimui tiesioginis tyrimas nepasiekiamas");
+    expect(text(el)).toContain("Šiame diegime tiesioginis tyrimas išjungtas");
   });
 
   it("an oversize photo is refused with the size and the limit in Lithuanian", async () => {
@@ -428,10 +345,7 @@ describe("sign-in and History (Google configured)", () => {
     expect(text(el.querySelector(".sc-secondary-row"))).toContain("Fotografuoti iš naujo");
   });
 
-  it.each([
-    ["en", "200 mg compound per serving"],
-    ["lt", "200 mg junginio porcijoje"],
-  ] as const)("replayed legacy active renders its compound dose in %s", async (lang, compoundCopy) => {
+  it.each(["en", "lt"] as const)("a replayed legacy scan draws no compatibility / active-ingredient chips in %s and asks for nothing", async (lang) => {
     writeLang(lang);
     fakeAuth.configured = false;
     const legacy = structuredClone(rich);
@@ -441,27 +355,18 @@ describe("sign-in and History (Google configured)", () => {
       compound_dose_mg: 200,
       form_text: "glycinate",
     }];
-    delete legacy.compatibility.actives[0].printed_elemental_dose_mg;
     stubApi({ scan: legacy });
 
     const el = await harness.mount(createElement(ScanFlow, {
       catalog,
-      initialResult: { analysis: legacy as never },
+      initialResult: { analysis: legacy as never, runId: "5c0e0478-b5c0-4bbe-b8b7-d45b2a5d3878", savedAt: null },
     }));
     await settle(6);
-    const replayNote = el.querySelector('[data-testid="replay-note"]');
-    expect(replayNote).not.toBeNull();
-
-    const compatibility = el.querySelector<HTMLElement>('.scan-section[id$="scan-form"]')!;
-    if (!compatibility.open) await click(compatibility.querySelector("summary")!);
-    const chip = el.querySelector(".scan-actives .scan-chip");
-    expect(chip).not.toBeNull();
-    expect(text(chip)).toContain("200 mg");
-    expect(text(chip)).toContain(compoundCopy);
-    expect(text(chip)).not.toMatch(/elemental|elementinio|—|–/i);
-
+    expect(el.querySelector('[data-testid="replay-note"]')).not.toBeNull();
+    expect(el.querySelector(".scan-actives, .scan-chip, .scan-section")).toBeNull();
+    expect(text(el)).not.toMatch(/200 mg (compound per serving|junginio porcijoje)|Magnesium glycinate/);
     const calls = (globalThis.fetch as unknown as { mock: { calls: Array<[unknown, RequestInit | undefined]> } }).mock.calls;
-    expect(calls.some(([url, init]) => String(url) === "/api/scan" && init?.method === "POST")).toBe(false);
+    expect(calls).toHaveLength(0);
   });
 
   it("History: signed out -> Lithuanian card; signed in -> list, empty state and a replayed scan, dated in Lithuanian, no re-run", async () => {
@@ -507,11 +412,14 @@ describe("sign-in and History (Google configured)", () => {
     expect(text(note)).toContain("Išsaugotas skenavimas,");
     expect(text(note)).toContain("Nieko nebuvo paleista iš naujo");
     expect(panel.querySelector('[aria-label="Atgal į istoriją"]')).not.toBeNull();
-    expect(text(panel)).toContain("Bendras balas");
-    // the replay used the stored record: no scan POST
+    // live-only: no stored evidence card; "live research not requested" and a deliberate button, in Lithuanian
+    expect(text(panel)).not.toContain("Bendras balas");
+    expect(text(panel.querySelector(".sc-research h2"))).toBe("Tiesioginis tyrimas neužsakytas");
+    expect(text(panel.querySelector(".sc-research-btn"))).toBe("Užsakyti šio skenavimo tiesioginį tyrimą");
+    // the replay used the stored record: no scan POST, and opening it requested no research (stubApi throws on any other request)
     const calls = (globalThis.fetch as unknown as { mock: { calls: Array<[unknown, RequestInit | undefined]> } }).mock.calls;
     expect(calls.some(([url, init]) => String(url) === "/api/scan" && init?.method === "POST")).toBe(false);
-    // translation calls carried the bearer token
-    expect(translateBodies.length).toBeGreaterThan(0);
+    expect(calls.some(([url]) => String(url).startsWith("/api/scan/research"))).toBe(false);
+    expect(translateBodies).toEqual([]);
   });
 });

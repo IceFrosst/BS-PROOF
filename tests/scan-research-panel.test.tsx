@@ -4,7 +4,8 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RESEARCH_COPY, type ResearchCopy } from "@/lib/i18n/copy/research";
 import { forgetResearchJobs, noteResearchOwner, rememberResearchJob } from "@/lib/scan-research/client";
-import { ScanResearchPanel } from "@/components/scan-research-panel";
+import { ScanResearchScreen } from "@/components/scan-research-panel";
+import { useLiveResearch } from "@/lib/scan-research/use-live-research";
 
 const SCAN = "5c0e0478-b5c0-4bbe-b8b7-d45b2a5d3878";
 const JOB = "7d1f2a9e-3b4c-4d5e-8f60-123456789abc";
@@ -37,6 +38,12 @@ const response = (body: unknown, status = 200) => new Response(JSON.stringify(bo
 const ok = (j: unknown, status = 200) => response({ status: "ok", job: j }, status);
 /** A fetch that answers EVERY call with a fresh Response (a Response body can be read once). */
 const always = (body: () => Response) => vi.fn().mockImplementation(() => Promise.resolve(body()));
+
+/* The screen is drawn by ScanFlow from the hook; this is the same pair without the rest of /scan. */
+function ScanResearchPanel(props: { scanId: string | null; ownerId: string | null; lang: "en" | "lt"; getAccessToken: (o?: { userId?: string; forceRefresh?: boolean }) => Promise<string | null>; enabled?: boolean; replay?: boolean; clock?: () => number }) {
+  const research = useLiveResearch(props);
+  return createElement(ScanResearchScreen, { research, lang: props.lang });
+}
 
 let root: Root, host: HTMLDivElement;
 const token = vi.fn(async () => "owner-token" as string | null);
@@ -95,9 +102,9 @@ describe("live research panel: a saved, owned run", () => {
 
   it("never requests anything without a saved UUID run id, a signed-in owner, or a deployment with sign-in", async () => {
     const fetchMock = vi.fn(); vi.stubGlobal("fetch", fetchMock);
-    mount({ scanId: null }); await settle(); expect(text()).toContain("no verified saved run ID");
-    mount({ scanId: "saved-1" }); await settle(); expect(text()).toContain("no verified saved run ID");
-    mount({ scanId: `${SCAN}/../x` }); await settle(); expect(text()).toContain("no verified saved run ID");
+    mount({ scanId: null }); await settle(); expect(text()).toContain("was not saved to your history");
+    mount({ scanId: "saved-1" }); await settle(); expect(text()).toContain("was not saved to your history");
+    mount({ scanId: `${SCAN}/../x` }); await settle(); expect(text()).toContain("was not saved to your history");
     mount({ ownerId: null }); await settle(); expect(text()).toContain("Sign in to view");
     mount({ enabled: false }); await settle(); expect(text()).toContain("Live research is off");
     expect(fetchMock).not.toHaveBeenCalled(); expect(token).not.toHaveBeenCalled();
@@ -121,7 +128,7 @@ describe("live research panel: a saved, owned run", () => {
 });
 
 describe("live research panel: real progress only", () => {
-  it("shows no percentage, no progress bar and no time estimate in any state, and says so", async () => {
+  it("draws an INDETERMINATE progress bar while waiting and no percentage, estimate or count in any state, and says so", async () => {
     vi.useFakeTimers();
     const fetchMock = vi.fn().mockResolvedValueOnce(ok(job("queued"))).mockResolvedValueOnce(ok(job("running"))).mockResolvedValueOnce(ok(job("succeeded")));
     vi.stubGlobal("fetch", fetchMock);
@@ -129,11 +136,18 @@ describe("live research panel: real progress only", () => {
     // the panel's own text: the model's study notes (which legitimately print "95% CI") are not the panel's progress claims
     const own = () => { const clone = host.cloneNode(true) as HTMLElement; clone.querySelectorAll("article").forEach((n) => n.remove()); return clone.textContent ?? ""; };
     mount(); await advance(0); seen.push(own());
-    expect(text()).toContain("No percentage or time estimate is shown because the worker reports none.");
+    expect(text()).toContain("The bar is indeterminate on purpose: the research worker reports no percentage");
+    // the bar exists while queued, is named, and carries NO value: ARIA's indeterminate progressbar
+    const bar = () => host.querySelector('[role="progressbar"]');
+    expect(bar()).not.toBeNull();
+    expect(bar()?.getAttribute("aria-label")).toBe("Live research progress (indeterminate)");
+    for (const attribute of ["aria-valuenow", "aria-valuemin", "aria-valuemax", "value", "style"]) expect(bar()?.hasAttribute(attribute)).toBe(false);
+    expect(bar()?.querySelector("[style]")).toBeNull();
+    await advance(2500); seen.push(own()); expect(state()).toBe("running"); expect(bar()).not.toBeNull();
     await advance(2500); seen.push(own());
-    await advance(2500); seen.push(own());
-    for (const t of seen) expect(t).not.toMatch(/\d\s*%|\bETA\b|remaining|minutes? left|about \d+ (min|sec)/i);
-    expect(host.querySelector('progress, [role="progressbar"], meter')).toBeNull();
+    for (const t of seen) expect(t).not.toMatch(/\d\s*%|\bETA\b|remaining|minutes? left|about \d+ (min|sec)|\d+ (studies|papers|sources) found/i);
+    // once the job is done the waiting screen (and its bar) is gone
+    expect(state()).toBe("succeeded"); expect(bar()).toBeNull(); expect(host.querySelector('progress, meter')).toBeNull();
   });
 
   it("flags a RUNNING job with no worker signal for longer than its lease as stalled, from the injected clock only, and keeps checking", async () => {
@@ -179,13 +193,13 @@ describe("live research panel: experimental and ungraded", () => {
     mount(props); await settle();
   }
 
-  it("draws the audit with no score, bar or verdict, and says it is experimental, ungraded and does not change the scan score", async () => {
+  it("draws the audit with no score, bar or verdict, and says it is experimental, ungraded and changes no score", async () => {
     await showResult();
     expect(host.querySelector('[data-testid="research-audit"]')).not.toBeNull();
     expect(host.querySelector(".sc-research-tags")?.textContent).toBe("ExperimentalUngraded");
     expect(text()).toContain("Experimental and ungraded");
-    expect(text()).toContain("This audit does not change the retained scan score.");
-    expect(text()).toContain("Changes scan score: no");
+    expect(text()).toContain("This audit has no score and does not change any score.");
+    expect(text()).toContain("Changes a score: no");
     expect(text()).toContain("Evidence status: experimental, not validated");
     expect(text()).not.toMatch(/\d+(\.\d+)?\s*\/\s*(100|4)\b/);
     expect(host.querySelector('svg, progress, meter, [role="progressbar"], [role="img"], canvas')).toBeNull();
@@ -278,8 +292,10 @@ describe("live research panel: a replay never asks by itself", () => {
     mount({ replay: true }); await settle();
     expect(fetchMock).not.toHaveBeenCalled(); expect(token).not.toHaveBeenCalled();
     expect(state()).toBe("idle"); expect(status()).toContain("Nothing was re-run");
-    expect(button()?.textContent).toBe("Look up live research for this scan");
-    expect(document.getElementById(button()!.getAttribute("aria-describedby")!)?.textContent).toContain("queues one");
+    expect(host.querySelector("h2")?.textContent).toBe("Live research not requested");
+    expect(text()).toContain("No saved, cached or model-recalled evidence is shown in its place");
+    expect(button()?.textContent).toBe("Request live research for this scan");
+    expect(document.getElementById(button()!.getAttribute("aria-describedby")!)?.textContent).toMatch(/never starts a second one.*queues one/);
     const pressed = button()!;
     pressed.focus();
     await act(async () => { pressed.dispatchEvent(new MouseEvent("click", { bubbles: true })); });

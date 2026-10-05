@@ -9,10 +9,13 @@
  * can be changed on the way to the screen (see the panel's `narrative` helper).
  *
  * Honesty rules the wording follows: no percentage and no time estimate (the
- * worker reports none); a search snippet or a page summary is never "a paper
- * read"; failed fetches, walls and refusals are "no content", never access; an
- * audit is experimental and ungraded and carries no score; nothing claims that
- * this research is more complete than anyone else's.
+ * worker reports none), so the progress bar is indeterminate and says so; a
+ * search snippet or a page summary is never "a paper read"; failed fetches,
+ * walls and refusals are "no content", never access; an audit is experimental
+ * and ungraded and carries no score; /scan shows this live research ONLY, so
+ * every screen that has no completed audit says that no saved, cached or
+ * model-recalled evidence is shown in its place; nothing claims that this
+ * research is more complete than anyone else's.
  */
 import type { Lang } from "@/lib/i18n/lang";
 
@@ -42,6 +45,16 @@ export interface ResearchCopy {
   notResearchable: string;
   notFound: string;
   retry: string;
+  /* the screen between the label read and the result */
+  loadingTitle: string;
+  loadingLead: string;
+  progressLabel: string;
+  leaveNote: string;
+  notRequestedTitle: string;
+  problemTitle: string;
+  noFallback: string;
+  retryPhoto: string;
+  blendNote: string;
   /* progress: real job status only */
   noEstimate: string;
   stepsLabel: string;
@@ -109,10 +122,10 @@ export const RESEARCH_COPY: Record<ResearchLanguage, ResearchCopy> = {
     title: "Live research",
     tagExperimental: "Experimental",
     tagUngraded: "Ungraded",
-    ungradedNote: "Experimental and ungraded: a model searched the web for this product, no person has checked it, and it has no score. It does not change your scan score or the saved audit above.",
-    idle: "This saved scan is shown as it was. Nothing was re-run, and live research has not been requested from here.",
-    load: "Look up live research for this scan",
-    loadHint: "If this scan has no research yet, this queues one for the private research worker.",
+    ungradedNote: "Experimental and ungraded: a model searched the web for this product, no person has checked it, and it has no score. It is not a clinical approval and does not feed any score.",
+    idle: "This saved scan has no live research loaded on this page. Nothing was re-run, and research was not requested by opening it.",
+    load: "Request live research for this scan",
+    loadHint: "If research was already requested for this scan, asking again shows that job; it never starts a second one. If there is none, this queues one for the private research worker.",
     starting: "Checking live research…",
     queued: "Queued for the private research worker.",
     running: "Research is running.",
@@ -121,14 +134,23 @@ export const RESEARCH_COPY: Record<ResearchLanguage, ResearchCopy> = {
     disabled: "Live research is off on this deployment; research was not assessed.",
     unavailable: "Live research is temporarily unavailable; research was not assessed.",
     startFailed: "Could not start live research; research was not assessed.",
-    noId: "This scan has no verified saved run ID; live research was not started.",
+    noId: "This scan was not saved to your history, so live research could not be started for it. Live research runs only on a saved scan; scan again to try once more.",
     auth: "Sign in to view private live research.",
     error: "Research status could not be loaded; research was not assessed.",
     busy: "The research worker is busy. Try again later; research was not assessed.",
     notResearchable: "This saved scan is not eligible for live research; research was not assessed.",
     notFound: "No research was found for this account, so nothing is shown.",
     retry: "Check again",
-    noEstimate: "No percentage or time estimate is shown because the worker reports none.",
+    loadingTitle: "Researching your supplement live",
+    loadingLead: "A research worker is searching the web for studies about this product, form and dose. Only this live research is shown for your scan; nothing is filled in from saved or cached results.",
+    progressLabel: "Live research progress (indeterminate)",
+    leaveNote: "You can leave this screen: leaving only stops this page from checking and does not cancel the research. Open this scan from History to look it up again.",
+    notRequestedTitle: "Live research not requested",
+    problemTitle: "Live research is not available for this scan",
+    noFallback: "This page shows live research only. No saved, cached or model-recalled evidence is shown in its place, so there is no result for this scan.",
+    retryPhoto: "Scan this photo again",
+    blendNote: "This product lists several active ingredients. Research about one ingredient is not evidence about the blend.",
+    noEstimate: "The bar is indeterminate on purpose: the research worker reports no percentage, so no progress figure, time estimate or count of studies found is shown. The steps below are the job’s real status.",
     stepsLabel: "Research status (real job status, no estimate)",
     stages: { queued: "Queued", running: "Running", finished: "Finished", completed: "Completed", failed: "Failed" },
     queuedAt: (t) => `Queued ${t}`,
@@ -145,14 +167,14 @@ export const RESEARCH_COPY: Record<ResearchLanguage, ResearchCopy> = {
     no: "no",
     missingLead: "Not recorded on this scan, so research did not guess them:",
     missing: { servings_per_day: "servings per day", dose_per_serving: "dose per serving", form: "form", other_ingredients: "whether other active ingredients are present" },
-    missingHow: "Research is requested from your saved scan only, so these cannot be added here.",
+    missingHow: "Research is requested from your saved scan only, so they cannot be added on this screen. To research with them, scan again or type the supplement with its daily servings; nothing is assumed in the meantime.",
     model: "Model",
     prompt: "Prompt version",
     provenance: "Server provenance",
     evidenceStatus: "Evidence status",
     evidenceStatusValues: { experimental_unvalidated: "experimental, not validated" },
-    affectsScore: "Changes scan score",
-    notAffectScore: "This audit does not change the retained scan score.",
+    affectsScore: "Changes a score",
+    notAffectScore: "This audit has no score and does not change any score.",
     runner: "Runner",
     access: "Source access summary",
     accessContent: "Returned content",
@@ -181,10 +203,10 @@ export const RESEARCH_COPY: Record<ResearchLanguage, ResearchCopy> = {
     title: "Tiesioginis tyrimas",
     tagExperimental: "Eksperimentinis",
     tagUngraded: "Be įvertinimo",
-    ungradedNote: "Eksperimentinis ir neįvertintas: modelis ieškojo šio produkto internete, žmogus to netikrino, balo nėra. Tai nekeičia jūsų skenavimo balo ar aukščiau esančio išsaugoto audito.",
-    idle: "Šis išsaugotas skenavimas rodomas toks, koks buvo. Nieko nebuvo paleista iš naujo, o tiesioginis tyrimas iš čia nebuvo užsakytas.",
-    load: "Rasti šio skenavimo tiesioginį tyrimą",
-    loadHint: "Jei šiam skenavimui tyrimo dar nėra, paspaudus jis bus įtrauktas į privataus tyrimų vykdytojo eilę.",
+    ungradedNote: "Eksperimentinis ir neįvertintas: modelis ieškojo šio produkto internete, žmogus to netikrino, balo nėra. Tai nėra klinikinis patvirtinimas ir jokio balo nekeičia.",
+    idle: "Šiame puslapyje šiam išsaugotam skenavimui nėra įkelto tiesioginio tyrimo. Nieko nebuvo paleista iš naujo, o jį atvėrus tyrimas nebuvo užsakytas.",
+    load: "Užsakyti šio skenavimo tiesioginį tyrimą",
+    loadHint: "Jei šiam skenavimui tyrimas jau buvo užsakytas, paprašius dar kartą bus parodyta ta pati užduotis; antra niekada nepradedama. Jei jos nėra, bus įtraukta viena užduotis į privataus tyrimų vykdytojo eilę.",
     starting: "Tikrinamas tiesioginis tyrimas…",
     queued: "Laukia eilėje privačiam tyrimų vykdytojui.",
     running: "Tyrimas vykdomas.",
@@ -193,14 +215,23 @@ export const RESEARCH_COPY: Record<ResearchLanguage, ResearchCopy> = {
     disabled: "Šiame diegime tiesioginis tyrimas išjungtas; tyrimas nevertintas.",
     unavailable: "Tiesioginis tyrimas laikinai nepasiekiamas; tyrimas nevertintas.",
     startFailed: "Tiesioginio tyrimo pradėti nepavyko; tyrimas nevertintas.",
-    noId: "Šis skenavimas neturi patvirtinto išsaugoto vykdymo ID; tiesioginis tyrimas nepradėtas.",
+    noId: "Šis skenavimas nebuvo išsaugotas jūsų istorijoje, todėl tiesioginio tyrimo jam pradėti nepavyko. Tiesioginis tyrimas vykdomas tik išsaugotam skenavimui; nuskenuokite dar kartą.",
     auth: "Prisijunkite, kad matytumėte privatų tiesioginį tyrimą.",
     error: "Nepavyko gauti tyrimo būsenos; tyrimas nevertintas.",
     busy: "Tyrimų vykdytojas užimtas. Bandykite vėliau; tyrimas nevertintas.",
     notResearchable: "Šis išsaugotas skenavimas netinka tiesioginiam tyrimui; tyrimas nevertintas.",
     notFound: "Šiai paskyrai tyrimo nerasta, todėl nieko nerodoma.",
     retry: "Patikrinti dar kartą",
-    noEstimate: "Procentai ar laiko prognozė nerodomi, nes vykdytojas jų nepraneša.",
+    loadingTitle: "Tiesiogiai tiriame jūsų papildą",
+    loadingLead: "Tyrimų vykdytojas ieško internete tyrimų apie šį produktą, formą ir dozę. Jūsų skenavimui rodomas tik šis tiesioginis tyrimas; nieko nepildoma iš išsaugotų ar podėlyje esančių rezultatų.",
+    progressLabel: "Tiesioginio tyrimo eiga (neapibrėžta)",
+    leaveNote: "Galite palikti šį ekraną: išėjus šis puslapis tik nustoja tikrinti, o tyrimas neatšaukiamas. Skenavimą vėl atverkite iš istorijos.",
+    notRequestedTitle: "Tiesioginis tyrimas neužsakytas",
+    problemTitle: "Šiam skenavimui tiesioginis tyrimas nepasiekiamas",
+    noFallback: "Šiame puslapyje rodomas tik tiesioginis tyrimas. Vietoje jo nerodomi išsaugoti, podėlyje esantys ar iš modelio atminties paimti įrodymai, todėl šiam skenavimui rezultato nėra.",
+    retryPhoto: "Skenuoti šią nuotrauką dar kartą",
+    blendNote: "Šiame produkte yra kelios veikliosios medžiagos. Tyrimas apie vieną medžiagą nėra įrodymas apie mišinį.",
+    noEstimate: "Juosta tyčia neapibrėžta: tyrimų vykdytojas procentų nepraneša, todėl eigos skaičiai, laiko prognozė ar rastų tyrimų skaičius nerodomi. Toliau pateikti žingsniai yra tikra užduoties būsena.",
     stepsLabel: "Tyrimo būsena (tikra užduoties būsena, be prognozių)",
     stages: { queued: "Eilėje", running: "Vykdoma", finished: "Baigta", completed: "Užbaigta", failed: "Nepavyko" },
     queuedAt: (t) => `Įtraukta į eilę ${t}`,
@@ -217,14 +248,14 @@ export const RESEARCH_COPY: Record<ResearchLanguage, ResearchCopy> = {
     no: "ne",
     missingLead: "Šiame skenavime nenurodyta, todėl tyrimas jų neatspėliojo:",
     missing: { servings_per_day: "porcijos per dieną", dose_per_serving: "dozė porcijoje", form: "forma", other_ingredients: "ar yra kitų veikliųjų medžiagų" },
-    missingHow: "Tyrimas užsakomas tik pagal jūsų išsaugotą skenavimą, todėl čia šių faktų pridėti negalima.",
+    missingHow: "Tyrimas užsakomas tik pagal jūsų išsaugotą skenavimą, todėl šiame ekrane jų pridėti negalima. Norėdami tirti su jais, nuskenuokite dar kartą arba įveskite papildą su dienos porcijomis; kol kas nieko nepripažįstama.",
     model: "Modelis",
     prompt: "Užklausos versija",
     provenance: "Serverio kilmės duomenys",
     evidenceStatus: "Įrodymų būsena",
     evidenceStatusValues: { experimental_unvalidated: "eksperimentinis, nepatvirtintas" },
-    affectsScore: "Keičia skenavimo balą",
-    notAffectScore: "Šis auditas nekeičia išsaugoto skenavimo balo.",
+    affectsScore: "Keičia balą",
+    notAffectScore: "Šis auditas balo neturi ir jokio balo nekeičia.",
     runner: "Vykdytojas",
     access: "Šaltinių prieigos suvestinė",
     accessContent: "Grąžintas turinys",

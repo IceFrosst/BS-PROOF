@@ -109,8 +109,8 @@ describe("EN/LT switch", () => {
   });
 });
 
-describe("loading view claims no backend progress", () => {
-  it("lists what the check covers, with no determinate bar, no done ticks and no current step, however long it takes", async () => {
+describe("label-analysis loading view claims no backend progress", () => {
+  it("lists what the step covers, with no determinate bar, no done ticks and no current step, however long it takes, and says what comes next", async () => {
     hangingFetch();
     const el = await mountFlow();
     await stagePhoto(el);
@@ -120,13 +120,16 @@ describe("loading view claims no backend progress", () => {
       await vi.advanceTimersByTimeAsync(60_000);
     });
     expect(el.querySelector(".sc-progress")).not.toBeNull();
-    expect(el.querySelectorAll(".sc-stages li").length).toBe(5);
+    expect(el.querySelectorAll(".sc-stages li").length).toBe(3);
+    // the step lists only what it really does: no legacy evidence comparison is promised
+    expect(el.querySelector(".sc-stages")?.textContent).toBe("Reading the labelReading the dose, form and servingsSaving the scan");
+    expect(el.querySelector('[data-testid="loading-next"]')?.textContent).toContain("live research on your saved scan");
     expect(el.querySelector(".sc-stages .is-done")).toBeNull();
     expect(el.querySelector(".sc-stages .is-current")).toBeNull();
     expect(el.querySelector("[aria-current]")).toBeNull();
     expect(el.querySelector(".sc-progress-bar.is-steps")).toBeNull();
     expect(el.querySelector(".sc-progress-bar span")?.getAttribute("style")).toBeNull();
-    expect(el.textContent).toContain("This check covers");
+    expect(el.textContent).toContain("This step covers");
   });
 
   it("is translated while loading", async () => {
@@ -137,8 +140,9 @@ describe("loading view claims no backend progress", () => {
     await stagePhoto(el);
     await click(buttonByText(el, /skenuoti šią etiketę/i));
     expect(el.textContent).toContain("Tikriname tavo papildą");
-    expect(el.textContent).toContain("Šis patikrinimas apima");
+    expect(el.textContent).toContain("Šis žingsnis apima");
     expect(el.textContent).toContain("Skaitome etiketę");
+    expect(el.querySelector('[data-testid="loading-next"]')?.textContent).toContain("tiesioginis tyrimas");
   });
 });
 

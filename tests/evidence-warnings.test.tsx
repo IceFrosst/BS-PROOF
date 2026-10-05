@@ -281,11 +281,13 @@ describe("test-site disclosure-only policy", () => {
     }
   });
 
-  it("/scan still carries the same three product warnings in its own bundle", () => {
-    // Nothing in this task changes /scan; this pins that the surfaces agree.
+  it("/scan no longer carries the cached product warnings (live research only, 2026-10-05); the server still produces them", () => {
+    // /scan shows live research ONLY: the model-recall MLM / funding / publication-bias warnings and
+    // the retained-audit warning bundle are not drawn there. This page's own warnings are unchanged.
     const flow = readFileSync("components/scan-flow.tsx", "utf8");
-    expect(flow).toContain("businessModelDisclosure");
-    expect(flow).toMatch(/warningCount = \(data\?\.caveats\?\.length \?\? 0\)[^\n]*\(mlm \? 1 : 0\)/);
+    expect(flow).not.toContain("businessModelDisclosure");
+    expect(flow).not.toContain("literatureDisclosures");
+    expect(flow).not.toMatch(/warningCount/);
     const scanSource = readFileSync("lib/analyze/scan.ts", "utf8");
     expect(scanSource).toContain('code: "multi_ingredient_product"');
     expect(scanSource).toContain('code: "servings_not_stated"');

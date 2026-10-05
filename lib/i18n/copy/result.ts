@@ -42,6 +42,10 @@ export interface ResultCopy {
   readFrom: string;
   formNotStated: string;
   notStated: string;
+  /** Dose per serving on a label that printed none (or a read that could not find it). */
+  doseNotStated: string;
+  /** Row label for the unit the label printed (mcg, IU, mg ...). */
+  unitAsPrinted: string;
   noDoseEntered: string;
   compoundSuffix: string; // "compound" in "4 mg compound"
   compoundPerServing: (mg: string) => string;
@@ -245,6 +249,8 @@ const EN: ResultCopy = {
   readFrom: "Read from:",
   formNotStated: "form not stated",
   notStated: "not stated",
+  doseNotStated: "not stated on the label",
+  unitAsPrinted: "Unit as printed",
   noDoseEntered: "no dose entered",
   compoundSuffix: "compound",
   compoundPerServing: (m) => `${m} compound per serving`,
@@ -451,6 +457,8 @@ const LT: ResultCopy = {
   readFrom: "Nuskaityta iš:",
   formNotStated: "forma nenurodyta",
   notStated: "nenurodyta",
+  doseNotStated: "etiketėje nenurodyta",
+  unitAsPrinted: "Etiketėje nurodytas vienetas",
   noDoseEntered: "dozė neįvesta",
   compoundSuffix: "junginio",
   compoundPerServing: (m) => `${m} junginio porcijoje`,

@@ -221,6 +221,10 @@ describe("opening a saved scan", () => {
     // The SAME renderer: the lab card, its validity stamp... and no capture chrome.
     expect(panel.querySelector(".scan-lab-result")).not.toBeNull();
     expect(panel.textContent).toContain("Creatine Pro 5000");
+    // ...and ONLY the live research screen as evidence: "not requested", never a retained / cached / no-run card
+    expect(panel.querySelector(".sc-research h2")?.textContent).toBe("Live research not requested");
+    expect(panel.querySelector(".ab-tabs, .scan-section, .scan-lab-validity, .la-empty")).toBeNull();
+    expect(panel.textContent).not.toMatch(/No evidence run|Is your dose the dose that worked|Model knowledge|MLM/i);
     expect(panel.querySelector("#scan-file")).toBeNull();
     expect(panel.querySelector("#scan-capture")).toBeNull();
     expect(buttonByText(panel, /search your supplement/i)).toBeUndefined();
@@ -251,9 +255,10 @@ describe("opening a saved scan", () => {
     const panel = () => historyPanel(el).querySelector<HTMLElement>(".sc-research");
     expect(panel()?.getAttribute("data-research-state")).toBe("idle");
     expect(panel()?.textContent).toMatch(/nothing was re-run/i);
+    expect(panel()?.querySelector("h2")?.textContent).toBe("Live research not requested");
     expect(calls.some((c) => c.url.startsWith("/api/scan/research"))).toBe(false);
 
-    await click(buttonByText(historyPanel(el), /look up live research/i));
+    await click(buttonByText(historyPanel(el), /request live research for this scan/i));
     await settle();
     const posts = calls.filter((c) => c.method === "POST");
     expect(posts).toHaveLength(1);
@@ -283,7 +288,7 @@ describe("opening a saved scan", () => {
     await openHistory(el);
     await click(rows(el)[0]);
     await settle();
-    await click(buttonByText(historyPanel(el), /look up live research/i));
+    await click(buttonByText(historyPanel(el), /request live research for this scan/i));
     await settle();
     const research = calls.find((c) => c.url === "/api/scan/research")!;
     expect(historyPanel(el).querySelector(".sc-research")?.getAttribute("data-research-state")).toBe("running");
@@ -318,8 +323,11 @@ describe("opening a saved scan", () => {
     await openHistory(el);
     await click(rows(el)[0]);
     await settle();
-    expect(historyPanel(el).textContent).toMatch(/is not in the evidence vocabulary yet/i);
+    // live-only: no legacy "not in the evidence vocabulary / nothing was run" card -- it is a saved scan
+    // like any other, with research not requested until the person asks
+    expect(historyPanel(el).textContent).not.toMatch(/evidence vocabulary|nothing was run|No evidence run/i);
     expect(historyPanel(el).querySelector('[data-testid="replay-note"]')).not.toBeNull();
+    expect(historyPanel(el).querySelector(".sc-research")?.getAttribute("data-research-state")).toBe("idle");
   });
 
   it("while it opens there is a status, and a failure is generic with the right action", async () => {
