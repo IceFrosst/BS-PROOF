@@ -3,7 +3,7 @@
  * docs/research-jobs.sql, layered over FakeSupabase (Supabase Auth + scan_runs).
  * It mirrors the SQL state machine line for line (owner filter, one job per
  * scan, open-job cap, lease token + expiry, compare-and-set complete/fail,
- * attempts) so route tests exercise the real status mapping. This file proves the
+ * attempts; ONE attempt per job since 2026-10-06) so route tests exercise the real status mapping. This file proves the
  * ROUTES, not the SQL: the SQL is executed by tests/research-jobs-sql-exec.test.ts
  * (PGlite), and tests/scan-research-queue-parity.test.ts runs one scripted history
  * through both this fake and the real file and requires identical answers.
@@ -104,13 +104,13 @@ export class FakeResearchQueue {
 
   bsproof_research_claim() {
     for (const j of this.jobs) {
-      if (j.status === "running" && (j.lease_expires_at ?? 0) <= this.now && j.attempts >= 3) {
+      if (j.status === "running" && (j.lease_expires_at ?? 0) <= this.now && j.attempts >= 1) {
         j.status = "failed";
         j.failure_code = "lease_expired";
         j.lease_hash = null;
       }
     }
-    const j = this.jobs.find((x) => x.attempts < 3 && (x.status === "queued" || (x.status === "running" && (x.lease_expires_at ?? 0) <= this.now)));
+    const j = this.jobs.find((x) => x.attempts < 1 && (x.status === "queued" || (x.status === "running" && (x.lease_expires_at ?? 0) <= this.now)));
     if (!j) return { job: null };
     const token = randomUUID().replace(/-/g, "") + randomUUID().replace(/-/g, "");
     j.status = "running";
@@ -150,7 +150,8 @@ export class FakeResearchQueue {
     if (j.status === "succeeded") return { status: "already_completed" };
     if (j.status === "failed") return { status: "already_failed" };
     if (j.status !== "running" || (j.lease_expires_at ?? 0) <= this.now) return { status: "lease_invalid" };
-    if (p.p_retryable === true && j.attempts < 3) {
+    // One attempt per job: a running job always has attempts >= 1, so `retryable` can never requeue it.
+    if (p.p_retryable === true && j.attempts < 1) {
       j.status = "queued";
       j.lease_hash = null;
       j.lease_expires_at = null;

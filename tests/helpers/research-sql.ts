@@ -20,6 +20,18 @@ import { PGlite } from "@electric-sql/pglite";
 export const RESEARCH_SQL_PATH = join(process.cwd(), "docs", "research-jobs.sql");
 export const RESEARCH_SQL = readFileSync(RESEARCH_SQL_PATH, "utf8");
 
+/**
+ * The 2026-10-04 revision of docs/research-jobs.sql, byte for byte: the file that was APPLIED to the shared project
+ * (3 attempts per job). Kept as a fixture so migration 001 is proven against exactly what production holds, not
+ * against the current file. Its sha256 is pinned in the exec test.
+ */
+export const BASELINE_SQL_PATH = join(process.cwd(), "tests", "fixtures", "research-jobs-baseline-48783cd3.sql");
+export const BASELINE_SQL = readFileSync(BASELINE_SQL_PATH, "utf8");
+export const BASELINE_SHA256 = "48783cd3a6d9535b0a8ca8a792c0f73b3d32a98d3b0550c730731b5d9cd9a4fb";
+/** Migration 001 (one attempt per job): the narrow, incremental step from the baseline to the current file. */
+export const MIGRATION_SQL_PATH = join(process.cwd(), "docs", "research-jobs-migration-001-one-attempt.sql");
+export const MIGRATION_SQL = readFileSync(MIGRATION_SQL_PATH, "utf8");
+
 export const PROMPT = "live-research-v0.2";
 export const API_FUNCTIONS = [
   "bsproof_research_enqueue(uuid, uuid, jsonb, text)",
@@ -59,6 +71,8 @@ const PROJECT_STAND_INS = `
 
 let template: Promise<PGlite> | null = null;
 let appliedTemplate: Promise<PGlite> | null = null;
+let baselineTemplate: Promise<PGlite> | null = null;
+let migratedTemplate: Promise<PGlite> | null = null;
 
 /** A project with the stand-ins and NO research objects. Cloned per call: tests never share state. */
 export async function emptyProject(): Promise<PGlite> {
@@ -85,11 +99,33 @@ export async function appliedProject(sql: string = RESEARCH_SQL): Promise<PGlite
   return db;
 }
 
+/** A project as PRODUCTION is today: only the applied 2026-10-04 file (3 attempts), no migration. */
+export async function baselineProject(): Promise<PGlite> {
+  baselineTemplate ??= (async () => {
+    const db = await emptyProject();
+    await db.exec(BASELINE_SQL);
+    return db;
+  })();
+  return (await baselineTemplate).clone();
+}
+
+/** The baseline project with migration 001 applied on top (no jobs in it). */
+export async function migratedProject(): Promise<PGlite> {
+  migratedTemplate ??= (async () => {
+    const db = await baselineProject();
+    await db.exec(MIGRATION_SQL);
+    return db;
+  })();
+  return (await migratedTemplate).clone();
+}
+
 /** Close the shared template databases (clones are closed by their tests). */
 export async function closeProjects(): Promise<void> {
-  for (const t of [template, appliedTemplate]) if (t) await (await t).close();
+  for (const t of [template, appliedTemplate, baselineTemplate, migratedTemplate]) if (t) await (await t).close();
   template = null;
   appliedTemplate = null;
+  baselineTemplate = null;
+  migratedTemplate = null;
 }
 
 export const sha256hex = (s: string) => createHash("sha256").update(s, "utf8").digest("hex");
@@ -171,7 +207,7 @@ export async function catalogSnapshot(db: PGlite) {
   const q = async (sql: string) => (await db.query(sql)).rows;
   return {
     functions: await q(`select p.oid::regprocedure::text as sig, pg_get_functiondef(p.oid) as def, p.proacl::text as acl, p.proconfig::text as cfg,
-                               p.prosecdef as definer, obj_description(p.oid, 'pg_proc') as comment
+                               p.prosecdef as definer, p.proowner::regrole::text as owner, p.provolatile as volatility, obj_description(p.oid, 'pg_proc') as comment
                         from pg_proc p join pg_namespace n on n.oid = p.pronamespace
                         where n.nspname = 'public' and p.proname like 'bsproof\\_research\\_%' order by 1`),
     table: await q(`select c.relname, c.relrowsecurity, c.relacl::text as acl, obj_description(c.oid, 'pg_class') as comment

@@ -43,14 +43,10 @@
 -- set SCAN_LIVE_RESEARCH_ENABLED=1. With the flag off nobody can enqueue.
 --
 -- JOB LIFECYCLE. queued -> running (claim, lease 300 s, attempts+1) -> succeeded | failed.
---   * ONE ATTEMPT PER JOB (user decision 2026-10-06; the 2026-10-04 revision allowed 3). A job is
---     claimed once and its model run is never repeated automatically: an expired lease is NOT
---     re-claimed (the next claim turns it into failed('lease_expired')) and a posted fail is final
---     whatever its `retryable` flag says. A project provisioned from the 2026-10-04 revision
---     (sha256 48783cd3...) is moved to this policy by docs/research-jobs-migration-001-one-attempt.sql.
 --   * Lease: a random 64-hex token returned ONCE by claim; only its SHA-256 is stored.
---     heartbeat extends it for as long as the (single) run is alive; an expired lease is
---     never given a second run, and its token is dead.
+--     heartbeat extends it; an expired lease can be re-claimed (new token), after which
+--     the old token is dead. At most 3 attempts; the third expired lease becomes
+--     failed('lease_expired').
 --   * complete / fail / heartbeat are single atomic compare-and-set statements on
 --     (id, token hash, status = 'running', lease not expired). First valid completion
 --     wins; an identical retry is 'already_completed'; a different result is 'conflict';
@@ -288,17 +284,16 @@ declare
   lease integer := least(greatest(coalesce(p_lease_seconds, 300), 30), 900);
 begin
   -- A job whose final attempt's lease ran out can never be claimed again: fail it.
-  -- (One attempt per job: the first attempt is the final one.)
   update public.bsproof_research_jobs
   set status = 'failed', failure_code = 'lease_expired',
       failure_message = 'the lease expired on the final attempt',
       lease_token_hash = null, lease_expires_at = null,
       completed_at = now(), updated_at = now()
-  where status = 'running' and lease_expires_at <= now() and attempts >= 1;
+  where status = 'running' and lease_expires_at <= now() and attempts >= 3;
 
   select * into j
   from public.bsproof_research_jobs
-  where attempts < 1
+  where attempts < 3
     and (status = 'queued' or (status = 'running' and lease_expires_at <= now()))
   order by created_at, id
   limit 1
@@ -425,9 +420,7 @@ begin
     return jsonb_build_object('status', 'lease_invalid');
   end if;
 
-  -- One attempt per job: a running job always has attempts >= 1, so this never requeues and the
-  -- `retryable` flag cannot buy a second model run. Kept (as `< 1`) so the policy is one literal.
-  if coalesce(p_retryable, false) and j.attempts < 1 then
+  if coalesce(p_retryable, false) and j.attempts < 3 then
     update public.bsproof_research_jobs
     set status = 'queued', lease_token_hash = null, lease_expires_at = null,
         failure_message = message, updated_at = now()

@@ -45,15 +45,19 @@
  *         -> 200 { status:"completed"|"already_completed" } | 409 lease_invalid|conflict
  *            | 422 { status:"invalid_result", errors:[...] }
  *     { action:"fail", job_id, lease_token, code, message, retryable }
- *         -> 200 { status:"failed"|"requeued"|"already_failed"|"already_completed" }
+ *         -> 200 { status:"failed"|"already_failed"|"already_completed" }
  *            | 409 lease_invalid
+ *            (ONE ATTEMPT per job since 2026-10-06: a posted fail is final whatever `retryable`
+ *            says, so the SQL no longer answers "requeued". The route still maps that word, for a
+ *            project still on the 3-attempt SQL until docs/research-jobs-migration-001 is applied.)
  *     401 bad/missing worker token | 503 worker_unavailable (token not configured)
  *
  * LEASES. A lease lasts LEASE_SECONDS (300) from claim and from every
  * heartbeat; heartbeat at most every ~100 s. A lease is valid only while its
- * token matches AND it has not expired AND the job is still `running`. An
- * expired lease may be re-claimed by another claim call (new token, attempts+1,
- * at most 3 attempts), after which the old token can do nothing at all. `complete`
+ * token matches AND it has not expired AND the job is still `running`. A job gets
+ * ONE attempt (2026-10-06): an expired lease is NOT re-claimed, the next claim ends
+ * the job as failed(`lease_expired`), and the token is dead. (Before 2026-10-06 an
+ * expired lease could be re-claimed, new token, attempts+1, at most 3 attempts.) `complete`
  * is a compare-and-set: the first valid completion wins; re-posting the identical
  * result with the same lease is `already_completed`; a different result is
  * `conflict`; a stale `fail` can never overwrite a completion.

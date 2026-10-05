@@ -39,8 +39,9 @@ Commands (python3 pc_research_supervisor.py <command> ...)
     stop     [--drain | --now]                                  graceful (see below)
     serve    ...                                                internal: the detached loop `start` launches
 
-Stop semantics: SIGTERM never finishes a job (the worker leaves the lease to expire, 300 s, and the
-queue re-offers it: one attempt is used). So `stop` REFUSES while a job is running unless `--now`;
+Stop semantics: SIGTERM never finishes a job (the worker leaves the lease to expire, 300 s). Under the
+one-attempt policy (2026-10-06) the queue does NOT re-offer it: the job ends as failed (`lease_expired`),
+so cutting a running job loses it. So `stop` REFUSES while a job is running unless `--now`;
 `stop --drain` waits (no deadline) until the worker is idle and then stops.
 """
 from __future__ import annotations
@@ -1215,8 +1216,9 @@ def cmd_stop(a, home: Path, tuning) -> int:
         print("drain requested: the supervisor stops when the worker is idle (no deadline; run `stop --now` to cut a job)")
     else:
         if running_job and not a.now:
-            print("a research job is RUNNING. `stop` would cut it: its lease expires within 300 s and the queue "
-                  "re-offers it, using one of its 3 attempts. Use `stop --drain` to let it finish, or `stop --now`.")
+            print("a research job is RUNNING. `stop` would cut it: its lease expires within 300 s and, with one "
+                  "attempt per job, the job then ends as failed (lease_expired); it is not re-offered. "
+                  "Use `stop --drain` to let it finish, or `stop --now`.")
             return EXIT_JOB_RUNNING
         os.kill(pid, signal.SIGTERM)
         print("stop requested (SIGTERM)")

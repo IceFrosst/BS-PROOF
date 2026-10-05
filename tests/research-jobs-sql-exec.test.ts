@@ -4,9 +4,13 @@
  * (PGlite) behind the three Supabase API roles and checks what the database does -- the opposite of the static
  * text checks in scan-research-target-sql.test.ts, which only prove what the file says.
  *
- * The file is already applied to the shared project (SHA-256 48783cd3...); this test never touches any
- * database but its own in-memory one. See tests/helpers/research-sql.ts for what the harness can and cannot
- * prove (no concurrent claims; no clock is waited for).
+ * ONE ATTEMPT PER JOB (user decision 2026-10-06). The file that was applied to the shared project (SHA-256
+ * 48783cd3..., 3 attempts) is kept byte-for-byte as tests/fixtures/research-jobs-baseline-48783cd3.sql; the current
+ * docs/research-jobs.sql is the one-attempt revision, and docs/research-jobs-migration-001-one-attempt.sql is the
+ * narrow step that moves an already-provisioned project from the first to the second. The last two describe blocks
+ * prove that step by EXECUTING it on top of the baseline. This test never touches any database but its own
+ * in-memory one. See tests/helpers/research-sql.ts for what the harness can and cannot prove (no concurrent claims;
+ * no clock is waited for).
  *
  * The second half is a mutation suite: each mutant is the same file with ONE guarantee removed. Every mutant
  * must still apply cleanly and must then be caught by the scenario that owns that guarantee. A guarantee that
@@ -17,15 +21,20 @@ import type { PGlite } from "@electric-sql/pglite";
 
 import {
   API_FUNCTIONS,
+  BASELINE_SHA256,
+  BASELINE_SQL,
   HELPER_FUNCTIONS,
+  MIGRATION_SQL,
   PROMPT,
   Queue,
   RESEARCH_SQL,
   TARGET,
   appliedProject,
+  baselineProject,
   catalogSnapshot,
   closeProjects,
   emptyProject,
+  migratedProject,
   neighbourSnapshot,
   resultFor,
   sha256hex,
@@ -159,44 +168,56 @@ const heartbeatExtendsOnlyTheCurrentValidLease: Scenario = async (q) => {
   expect(await secs(id)).toBeLessThan(0);
 };
 
-const expiredLeaseIsReclaimedAndTheOldLeaseIsDead: Scenario = async (q) => {
+const anExpiredLeaseIsFinalAndTheOldTokenIsDead: Scenario = async (q) => {
   const id = (await q.enqueue(O1, S(1))).job.id;
   const c1 = (await q.claim()).job;
   await q.expireLease(id);
   const R = resultFor("late");
-  expect(await q.heartbeat(id, c1.lease_token)).toEqual({ status: "lease_invalid" });
+  expect(await q.heartbeat(id, c1.lease_token)).toEqual({ status: "lease_invalid" }); // an expired lease cannot be revived
   expect(await q.complete(id, c1.lease_token, R)).toEqual({ status: "lease_invalid" }); // a result that arrives after expiry is refused
   expect(await q.fail(id, c1.lease_token, "late", null, false)).toEqual({ status: "lease_invalid" });
-  expect(await q.row(id)).toMatchObject({ status: "running", attempts: 1, failure_code: null });
+  expect(await q.row(id)).toMatchObject({ status: "running", attempts: 1, failure_code: null }); // nothing has swept it yet
 
-  const c2 = (await q.claim()).job; // an expired lease is re-claimable
-  expect(c2.id).toBe(id);
-  expect(c2.lease_token).not.toBe(c1.lease_token);
-  expect(await q.row(id)).toMatchObject({ status: "running", attempts: 2, lease_token_hash: sha256hex(c2.lease_token) });
+  // ONE attempt: the expired lease is NOT handed to a second run. The next claim ends the job instead.
+  expect(await q.claim()).toEqual({ job: null });
+  expect(await q.row(id)).toMatchObject({ status: "failed", attempts: 1, failure_code: "lease_expired", lease_token_hash: null });
+  expect((await q.get(O1, id)).job).toMatchObject({ status: "failed", failure_code: "lease_expired", result: null });
 
-  // The job is running with a live lease again: the OLD token still can do nothing at all.
+  // ... and the dead token still can do nothing at all.
   expect(await q.heartbeat(id, c1.lease_token)).toEqual({ status: "lease_invalid" });
   expect(await q.complete(id, c1.lease_token, R)).toEqual({ status: "lease_invalid" });
   expect(await q.fail(id, c1.lease_token, "late", null, false)).toEqual({ status: "lease_invalid" });
-  expect((await q.row(id)).status).toBe("running");
-  expect(await q.complete(id, c2.lease_token, resultFor("current"))).toEqual({ status: "completed" });
+  expect(await q.claim()).toEqual({ job: null });
 };
 
-const aJobWhoseFinalLeaseExpiresFailsForGood: Scenario = async (q) => {
+const aRunningJobRejectsEveryTokenButItsOwn: Scenario = async (q) => {
   const id = (await q.enqueue(O1, S(1))).job.id;
-  let last = "";
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    const c = (await q.claim()).job;
-    expect(c.id).toBe(id);
-    expect((await q.row(id)).attempts).toBe(attempt);
-    last = c.lease_token;
-    await q.expireLease(id);
+  const other = (await q.enqueue(O1, S(2))).job.id;
+  const c = (await q.claim()).job;
+  const o = (await q.claim()).job; // a second job, a second token
+  expect([c.id, o.id]).toEqual([id, other]);
+  for (const wrong of ["", "0".repeat(64), c.lease_token.slice(1), o.lease_token]) {
+    expect(await q.complete(id, wrong, resultFor("x")), "complete").toEqual({ status: "lease_invalid" });
+    expect(await q.fail(id, wrong, "x", null, false), "fail").toEqual({ status: "lease_invalid" });
+    expect(await q.heartbeat(id, wrong), "heartbeat").toEqual({ status: "lease_invalid" });
   }
-  expect(await q.claim()).toEqual({ job: null }); // no fourth attempt
-  expect(await q.row(id)).toMatchObject({ status: "failed", failure_code: "lease_expired", attempts: 3, lease_token_hash: null });
+  expect((await q.row(id)).status).toBe("running"); // a wrong token touched nothing
+  expect(await q.complete(id, c.lease_token, resultFor("mine"))).toEqual({ status: "completed" });
+};
+
+const aJobGetsOneAttemptAndItsExpiredLeaseFailsForGood: Scenario = async (q) => {
+  const id = (await q.enqueue(O1, S(1))).job.id;
+  const c = (await q.claim()).job;
+  expect(c.id).toBe(id);
+  expect((await q.row(id)).attempts).toBe(1);
+  await q.expireLease(id);
+  expect(await q.claim()).toEqual({ job: null }); // no second attempt
+  expect(await q.row(id)).toMatchObject({ status: "failed", failure_code: "lease_expired", attempts: 1, lease_token_hash: null });
   expect((await q.get(O1, id)).job).toMatchObject({ status: "failed", failure_code: "lease_expired" });
-  expect(await q.complete(id, last, resultFor("too late"))).toEqual({ status: "lease_invalid" });
-  expect(await q.fail(id, last, "x", null, false)).toEqual({ status: "lease_invalid" });
+  expect(await q.complete(id, c.lease_token, resultFor("too late"))).toEqual({ status: "lease_invalid" });
+  expect(await q.fail(id, c.lease_token, "x", null, false)).toEqual({ status: "lease_invalid" });
+  expect(await q.claim()).toEqual({ job: null }); // and it stays that way
+  expect((await q.row(id)).attempts).toBe(1);
 };
 
 const completionIsACompareAndSetAndReplaySafe: Scenario = async (q) => {
@@ -261,22 +282,74 @@ const failureIsSanitisedBoundedAndReplaySafe: Scenario = async (q) => {
   expect((await q.row(id)).status).toBe("failed");
 };
 
-const retryableFailuresRequeueUntilTheThirdAttempt: Scenario = async (q) => {
-  const id = (await q.enqueue(O1, S(1))).job.id;
-  for (const attempt of [1, 2]) {
-    const c = (await q.claim()).job;
-    expect((await q.row(id)).attempts).toBe(attempt);
-    expect(await q.fail(id, c.lease_token, "claude_cli_error", "boom", true)).toEqual({ status: "requeued" });
-    expect(await q.row(id)).toMatchObject({ status: "queued", lease_token_hash: null, lease_expires_at: null, failure_code: null });
-    expect(await q.heartbeat(id, c.lease_token)).toEqual({ status: "lease_invalid" }); // the requeued lease is dead
-    expect(await q.fail(id, c.lease_token, "claude_cli_error", "boom", true)).toEqual({ status: "lease_invalid" }); // so a replayed fail cannot burn another attempt
-  }
-  const c3 = (await q.claim()).job;
-  expect((await q.row(id)).attempts).toBe(3);
-  expect(await q.fail(id, c3.lease_token, "claude_cli_error", "boom", true)).toEqual({ status: "failed" }); // no attempts left
-  expect(await q.row(id)).toMatchObject({ status: "failed", failure_code: "claude_cli_error", failure_message: "boom" });
-  expect(await q.fail(id, c3.lease_token, "claude_cli_error", "boom", true)).toEqual({ status: "already_failed" });
+/**
+ * The state the OLD retry policy could leave behind: queued, attempts already >= 1. Under one attempt such a job is
+ * never claimed (its model run was already spent), which is exactly why migration 001 refuses to apply while one exists.
+ */
+const aQueuedJobWhoseAttemptIsAlreadySpentIsNeverClaimed: Scenario = async (q) => {
+  const spent = (await q.enqueue(O1, S(1))).job.id;
+  const fresh = (await q.enqueue(O1, S(2))).job.id;
+  await q.setCreatedAt(spent, "2000-01-01T00:00:00Z"); // older: it would be first in line
+  await q.db.query("update public.bsproof_research_jobs set attempts = 1 where id = $1::uuid", [spent]);
+  const c = (await q.claim()).job;
+  expect(c.id).toBe(fresh); // the spent job is skipped, the never-claimed one is served
+  expect(await q.complete(fresh, c.lease_token, resultFor("served"))).toEqual({ status: "completed" });
   expect(await q.claim()).toEqual({ job: null });
+  expect(await q.row(spent)).toMatchObject({ status: "queued", attempts: 1, lease_token_hash: null }); // untouched, not failed, not claimed
+};
+
+const aRetryableFailureIsFinalAndTheJobIsNeverClaimedAgain: Scenario = async (q) => {
+  const id = (await q.enqueue(O1, S(1))).job.id;
+  const c = (await q.claim()).job;
+  expect((await q.row(id)).attempts).toBe(1);
+  // `retryable: true` used to requeue the job for a second model run. It no longer can.
+  expect(await q.fail(id, c.lease_token, "worker_internal_error", "inventory ID is not grounded", true)).toEqual({ status: "failed" });
+  expect(await q.row(id)).toMatchObject({ status: "failed", attempts: 1, failure_code: "worker_internal_error", failure_message: "inventory ID is not grounded" });
+  expect((await q.get(O1, id)).job).toMatchObject({ status: "failed", failure_code: "worker_internal_error", result: null });
+  expect(await q.fail(id, c.lease_token, "worker_internal_error", "inventory ID is not grounded", true)).toEqual({ status: "already_failed" }); // a replay is harmless
+  expect(await q.heartbeat(id, c.lease_token)).toEqual({ status: "lease_invalid" });
+  expect(await q.complete(id, c.lease_token, resultFor("after failure"))).toEqual({ status: "lease_invalid" });
+  expect(await q.claim()).toEqual({ job: null }); // the failed job is never offered again, retryable or not
+  expect((await q.row(id)).attempts).toBe(1);
+
+  // the flag is irrelevant either way: false and null are the same single, final failure
+  for (const [n, retryable] of [[2, false], [3, null]] as const) {
+    const id2 = (await q.enqueue(O1, S(n))).job.id;
+    const c2 = (await q.claim()).job;
+    expect(c2.id).toBe(id2);
+    expect(await q.fail(id2, c2.lease_token, "claude_cli_error", "boom", retryable as unknown as boolean)).toEqual({ status: "failed" });
+    expect(await q.claim()).toEqual({ job: null });
+    expect(await q.row(id2)).toMatchObject({ status: "failed", attempts: 1, failure_code: "claude_cli_error" });
+  }
+};
+
+/**
+ * A job left running by the OLD 3-attempt policy (attempts 2 or 3, live lease) must keep working: it can heartbeat and
+ * finish with its CURRENT token. It is simulated here by the operator-editable `attempts` column; the migration tests
+ * below reach the same state through the real baseline functions.
+ */
+const aLegacyRunningJobWithSeveralAttemptsCanFinishItsCurrentLease: Scenario = async (q) => {
+  const done = (await q.enqueue(O1, S(1))).job.id;
+  const failing = (await q.enqueue(O1, S(2))).job.id;
+  const expiring = (await q.enqueue(O1, S(3))).job.id;
+  const c1 = (await q.claim()).job;
+  const c2 = (await q.claim()).job;
+  const c3 = (await q.claim()).job;
+  expect([c1.id, c2.id, c3.id]).toEqual([done, failing, expiring]);
+  await q.db.query("update public.bsproof_research_jobs set attempts = 2 where id = $1::uuid", [done]);
+  await q.db.query("update public.bsproof_research_jobs set attempts = 3 where id = $1::uuid", [failing]);
+  await q.db.query("update public.bsproof_research_jobs set attempts = 2 where id = $1::uuid", [expiring]);
+
+  expect((await q.heartbeat(done, c1.lease_token)).status).toBe("ok");
+  expect(await q.complete(done, c1.lease_token, resultFor("legacy"))).toEqual({ status: "completed" });
+  expect(await q.row(done)).toMatchObject({ status: "succeeded", attempts: 2 });
+
+  expect(await q.fail(failing, c2.lease_token, "claude_cli_error", "boom", true)).toEqual({ status: "failed" }); // not requeued
+  expect(await q.row(failing)).toMatchObject({ status: "failed", attempts: 3 });
+
+  await q.expireLease(expiring); // its lease is gone: it is final, not re-offered
+  expect(await q.claim()).toEqual({ job: null });
+  expect(await q.row(expiring)).toMatchObject({ status: "failed", failure_code: "lease_expired", attempts: 2 });
 };
 
 const identityTargetAndFinishedStatesCannotBeEdited: Scenario = async (q) => {
@@ -292,6 +365,8 @@ const identityTargetAndFinishedStatesCannotBeEdited: Scenario = async (q) => {
   ] as const) await expect(update(col, val)).rejects.toThrow(/identity and target are immutable/);
   await update("attempts", 2); // operational columns stay editable by the operator
   expect((await q.row(id)).attempts).toBe(2);
+  await update("attempts", 0); // (a queued job with attempts >= 1 is never claimed: put it back)
+  expect((await q.row(id)).attempts).toBe(0);
 
   const c = (await q.claim()).job;
   await q.complete(id, c.lease_token, resultFor("final"));
@@ -410,13 +485,16 @@ const QUEUE_SCENARIOS: Record<string, Scenario> = {
   claimIsOldestFirstAndStoresOnlyTheLeaseHash,
   leaseLengthIsClamped,
   heartbeatExtendsOnlyTheCurrentValidLease,
-  expiredLeaseIsReclaimedAndTheOldLeaseIsDead,
-  aJobWhoseFinalLeaseExpiresFailsForGood,
+  anExpiredLeaseIsFinalAndTheOldTokenIsDead,
+  aRunningJobRejectsEveryTokenButItsOwn,
+  aJobGetsOneAttemptAndItsExpiredLeaseFailsForGood,
   completionIsACompareAndSetAndReplaySafe,
   aJobOnAnotherPromptVersionCannotBeCompleted,
   completeRefusesAnythingButTheExactSummaryShape,
   failureIsSanitisedBoundedAndReplaySafe,
-  retryableFailuresRequeueUntilTheThirdAttempt,
+  aQueuedJobWhoseAttemptIsAlreadySpentIsNeverClaimed,
+  aRetryableFailureIsFinalAndTheJobIsNeverClaimedAgain,
+  aLegacyRunningJobWithSeveralAttemptsCanFinishItsCurrentLease,
   identityTargetAndFinishedStatesCannotBeEdited,
 };
 
@@ -510,18 +588,24 @@ const MUTANTS: Mutant[] = [
     name: "complete accepts any token while the job is running",
     find: "  if not found or j.lease_token_hash is distinct from h then\n    return jsonb_build_object('status', 'lease_invalid');\n  end if;\n\n  if j.prompt_version",
     replace: "  if not found then\n    return jsonb_build_object('status', 'lease_invalid');\n  end if;\n\n  if j.prompt_version",
-    killedBy: { queue: "expiredLeaseIsReclaimedAndTheOldLeaseIsDead" },
+    killedBy: { queue: "aRunningJobRejectsEveryTokenButItsOwn" },
   },
   {
     name: "fail ignores lease expiry",
     find: "    return jsonb_build_object('status', 'already_failed');\n  end if;\n  if j.status <> 'running' or j.lease_expires_at <= now() then",
     replace: "    return jsonb_build_object('status', 'already_failed');\n  end if;\n  if j.status <> 'running' then",
-    killedBy: { queue: "expiredLeaseIsReclaimedAndTheOldLeaseIsDead" },
+    killedBy: { queue: "anExpiredLeaseIsFinalAndTheOldTokenIsDead" },
   },
   { name: "get is not filtered by owner", find: "where id = p_id and owner_id = p_owner;", replace: "where id = p_id;", killedBy: { queue: "getIsOwnerFilteredAndProjectsOnlySafeFields" } },
   { name: "open-job cap is raised to 300", find: "if open_jobs >= 3 then", replace: "if open_jobs >= 300 then", killedBy: { queue: "enqueueIsIdempotentCappedAndOwnerScoped" } },
-  { name: "a final-attempt expiry is never failed", find: "where status = 'running' and lease_expires_at <= now() and attempts >= 3;", replace: "where status = 'running' and lease_expires_at <= now() and attempts >= 30;", killedBy: { queue: "aJobWhoseFinalLeaseExpiresFailsForGood" } },
-  { name: "a retryable fail requeues past the third attempt", find: "if coalesce(p_retryable, false) and j.attempts < 3 then", replace: "if coalesce(p_retryable, false) then", killedBy: { queue: "retryableFailuresRequeueUntilTheThirdAttempt" } },
+  // --- the one-attempt policy: the former 3-attempt knobs, each put back, must be caught ---
+  { name: "the expiry sweep waits for a third attempt", find: "where status = 'running' and lease_expires_at <= now() and attempts >= 1;", replace: "where status = 'running' and lease_expires_at <= now() and attempts >= 3;", killedBy: { queue: "aJobGetsOneAttemptAndItsExpiredLeaseFailsForGood" } },
+  { name: "the expiry sweep never fails a job", find: "where status = 'running' and lease_expires_at <= now() and attempts >= 1;", replace: "where status = 'running' and lease_expires_at <= now() and attempts >= 30;", killedBy: { queue: "anExpiredLeaseIsFinalAndTheOldTokenIsDead" } },
+  { name: "claim cap back at 3 (a requeued job is claimed again)", find: "  where attempts < 1\n    and (status = 'queued'", replace: "  where attempts < 3\n    and (status = 'queued'", killedBy: { queue: "aQueuedJobWhoseAttemptIsAlreadySpentIsNeverClaimed" } },
+  { name: "claim has no attempts filter at all", find: "  where attempts < 1\n    and (status = 'queued'", replace: "  where (true)\n    and (status = 'queued'", killedBy: { queue: "aQueuedJobWhoseAttemptIsAlreadySpentIsNeverClaimed" } },
+  { name: "a retryable fail requeues the job (fail cap back at 3)", find: "if coalesce(p_retryable, false) and j.attempts < 1 then", replace: "if coalesce(p_retryable, false) and j.attempts < 3 then", killedBy: { queue: "aRetryableFailureIsFinalAndTheJobIsNeverClaimedAgain" } },
+  { name: "a retryable fail always requeues", find: "if coalesce(p_retryable, false) and j.attempts < 1 then", replace: "if coalesce(p_retryable, false) then", killedBy: { queue: "aRetryableFailureIsFinalAndTheJobIsNeverClaimedAgain" } },
+  { name: "a legacy running job loses its lease (claim fails every running job)", find: "where status = 'running' and lease_expires_at <= now() and attempts >= 1;", replace: "where status = 'running' and attempts >= 1;", killedBy: { queue: "aLegacyRunningJobWithSeveralAttemptsCanFinishItsCurrentLease" } },
   { name: "the lease token is stored in the clear", find: "lease_token_hash = encode(sha256(convert_to(token, 'UTF8')), 'hex'),", replace: "lease_token_hash = token,", killedBy: { queue: "claimIsOldestFirstAndStoresOnlyTheLeaseHash" } },
   { name: "claim hands out the newest job first", find: "order by created_at, id\n  limit 1\n  for update skip locked;", replace: "order by created_at desc, id\n  limit 1\n  for update skip locked;", killedBy: { queue: "claimIsOldestFirstAndStoresOnlyTheLeaseHash" } },
   { name: "an identical replayed completion is a conflict", find: "if j.result = p_result then", replace: "if false then", killedBy: { queue: "completionIsACompareAndSetAndReplaySafe" } },
@@ -583,5 +667,360 @@ describe("mutation suite: every removed guarantee is caught by a scenario", { ti
   it("the same scenarios pass on the unmutated file (so a mutant failing is the mutation's doing)", async () => {
     for (const scenario of new Set(MUTANTS.flatMap((m) => ("queue" in m.killedBy ? [QUEUE_SCENARIOS[m.killedBy.queue]] : [])))) await withQueue(scenario);
     await withDb(privilegesAreClosedToEveryRoleButTheSixFunctions);
+  });
+});
+
+// ----------------------------------------------------------------------------------------------------------------
+// migration 001: the baseline (the 2026-10-04 file as APPLIED to production, 3 attempts) + the one-attempt step
+
+const fnBlock = (sql: string, name: string): string => {
+  const hits = [...sql.matchAll(new RegExp(`create or replace function public\\.${name}\\(.*?\\n\\$fn\\$;\\n`, "gs"))].map((m) => m[0]);
+  expect(hits, `${name} must be defined exactly once`).toHaveLength(1);
+  return hits[0];
+};
+
+/** Run `scenario` on the PRODUCTION shape (baseline + `migration`), the way the operator would. */
+async function withMigrated(scenario: Scenario, migration: string = MIGRATION_SQL): Promise<void> {
+  const db = migration === MIGRATION_SQL ? await migratedProject() : await baselineProject();
+  try {
+    if (migration !== MIGRATION_SQL) await db.exec(migration);
+    await scenario(new Queue(db));
+  } finally {
+    await db.close();
+  }
+}
+
+/** The job states the OLD policy can leave behind (reached through the real baseline functions, not by editing rows). */
+async function legacyProduction(db: PGlite) {
+  const q = new Queue(db);
+  const claim = async (id: string) => {
+    const c = (await q.claim()).job;
+    expect(c.id).toBe(id);
+    return c.lease_token as string;
+  };
+  // finished jobs (another owner, so they do not count against O1's open-job cap)
+  const done = (await q.enqueue(O2, S(1))).job.id;
+  const doneToken = await claim(done);
+  expect(await q.complete(done, doneToken, resultFor("finished"))).toEqual({ status: "completed" });
+  const failed = (await q.enqueue(O2, S(2))).job.id;
+  const failedToken = await claim(failed);
+  expect(await q.fail(failed, failedToken, "model_refused", "no", false)).toEqual({ status: "failed" });
+  const exhausted = (await q.enqueue(O2, S(3))).job.id; // the old policy's third expired lease
+  for (let n = 1; n <= 3; n++) {
+    await claim(exhausted);
+    await q.expireLease(exhausted);
+  }
+  expect(await q.claim()).toEqual({ job: null });
+  expect(await q.row(exhausted)).toMatchObject({ status: "failed", failure_code: "lease_expired", attempts: 3 });
+  // active jobs, O1: running on attempt 2 (requeued once), running on attempt 1, and a queued one that was never claimed
+  const running2 = (await q.enqueue(O1, S(4))).job.id;
+  const first = await claim(running2);
+  expect(await q.fail(running2, first, "worker_internal_error", "x", true)).toEqual({ status: "requeued" }); // the old retry
+  const running2Token = await claim(running2);
+  expect(await q.row(running2)).toMatchObject({ status: "running", attempts: 2 });
+  const running1 = (await q.enqueue(O1, S(5))).job.id;
+  const running1Token = await claim(running1);
+  const fresh = (await q.enqueue(O1, S(6))).job.id;
+  return { q, done, doneToken, failed, failedToken, exhausted, running2, running2Token, running1, running1Token, fresh };
+}
+
+const allRows = async (q: Queue) => (await q.db.query("select * from public.bsproof_research_jobs order by id")).rows;
+
+describe("migration 001 (one attempt per job) applied on top of the 2026-10-04 baseline", { timeout: 120_000 }, () => {
+  it("the baseline fixture is byte-for-byte the file that was applied to production, and it is the 3-attempt policy", async () => {
+    expect(sha256hex(BASELINE_SQL)).toBe(BASELINE_SHA256);
+    const db = await baselineProject();
+    try {
+      const q = new Queue(db);
+      const id = (await q.enqueue(O1, S(1))).job.id;
+      const c = (await q.claim()).job;
+      expect(await q.fail(id, c.lease_token, "claude_cli_error", "boom", true)).toEqual({ status: "requeued" }); // the behaviour the user stopped
+      expect((await q.claim()).job.id).toBe(id);
+    } finally {
+      await db.close();
+    }
+  });
+
+  it("the migration's two functions are the current docs/research-jobs.sql's two functions, byte for byte", () => {
+    for (const name of ["bsproof_research_claim", "bsproof_research_fail"]) {
+      expect(fnBlock(MIGRATION_SQL, name)).toBe(fnBlock(RESEARCH_SQL, name));
+      expect(fnBlock(MIGRATION_SQL, name)).not.toBe(fnBlock(BASELINE_SQL, name)); // and they really changed
+    }
+    // the other six functions are not in the migration at all
+    expect([...MIGRATION_SQL.matchAll(/create or replace function public\.(\w+)/g)].map((m) => m[1]).sort()).toEqual(["bsproof_research_claim", "bsproof_research_fail"]);
+  });
+
+  it("is non-destructive and narrow: no DDL/DML but the two create-or-replace functions and a read-only guard", () => {
+    const code = MIGRATION_SQL.split("\n").filter((l) => !l.trim().startsWith("--")).join("\n");
+    const noBodies = code.replace(/\$(fn|guard)\$[\s\S]*?\$\1\$/g, "$$$1$$ $$$1$$");
+    for (const forbidden of [/\bdrop\b/i, /\balter\b/i, /\btruncate\b/i, /\bdelete\b/i, /\binsert\b/i, /\bgrant\b/i, /\brevoke\b/i, /\bcreate\s+(table|index|trigger|policy|role|extension|schema)\b/i, /\bcomment\s+on\b/i, /\bset\s+role\b/i]) {
+      expect(noBodies, String(forbidden)).not.toMatch(forbidden);
+    }
+    // the guard is read-only: it selects and raises, nothing else
+    const guard = /\$guard\$([\s\S]*?)\$guard\$/.exec(MIGRATION_SQL)?.[1] ?? "";
+    expect(guard).toContain("raise exception");
+    expect(guard.replace(/'(?:[^']|'')*'/g, "''")).not.toMatch(/\b(update|insert|delete|drop|alter|truncate|create|grant|revoke|comment|perform|execute)\b/i);
+    // the bodies: only the two functions touch the jobs table, and only the claim function writes to it (as it did before)
+    const claim = fnBlock(MIGRATION_SQL, "bsproof_research_claim");
+    const fail = fnBlock(MIGRATION_SQL, "bsproof_research_fail");
+    expect(MIGRATION_SQL.replace(claim, "").replace(fail, "")).not.toMatch(/\b(update|insert|delete)\b\s+(public\.)?bsproof_research_jobs/i);
+    for (const body of [claim, fail]) {
+      expect(body).toContain("security definer");
+      expect(body).toContain("set search_path = pg_catalog, pg_temp");
+    }
+    expect(claim).toContain("for update skip locked");
+    expect(fail).toContain("select * into j from public.bsproof_research_jobs where id = p_id for update;");
+  });
+
+  it("the VERIFY query printed in the migration header reads false on the baseline and true after the migration", async () => {
+    const header = /-- VERIFY AFTER \(read-only\):\n([\s\S]*?);\n--\n/.exec(MIGRATION_SQL)?.[1] ?? "";
+    const verify = header.split("\n").map((l) => l.replace(/^--\s?/, "")).join("\n");
+    expect(verify).toContain("pg_get_functiondef");
+    const before = await baselineProject();
+    const after = await migratedProject();
+    try {
+      expect((await before.query(verify)).rows[0]).toEqual({ claim_one_attempt: false, fail_one_attempt: false });
+      expect((await after.query(verify)).rows[0]).toEqual({ claim_one_attempt: true, fail_one_attempt: true });
+    } finally {
+      await before.close();
+      await after.close();
+    }
+  });
+
+  it("changes exactly two function definitions: owner, ACL, comment, search_path, security definer and volatility are untouched; table, RLS, policies, indexes and trigger are identical", async () => {
+    const before = await baselineProject();
+    const after = await migratedProject();
+    try {
+      const b = await catalogSnapshot(before);
+      const a = await catalogSnapshot(after);
+      expect(a.functions.map((f) => f.sig)).toEqual(b.functions.map((f) => f.sig)); // no function added or removed
+      const changed = a.functions.filter((f, i) => f.def !== b.functions[i].def).map((f) => String(f.sig).split("(")[0]);
+      expect(changed.sort()).toEqual(["bsproof_research_claim", "bsproof_research_fail"]);
+      const strip = (fs: Array<Record<string, unknown>>) => fs.map(({ def, ...rest }) => (void def, rest));
+      expect(strip(a.functions)).toEqual(strip(b.functions));
+      expect({ ...a, functions: null }).toEqual({ ...b, functions: null });
+      expect(await neighbourSnapshot(after)).toEqual(await neighbourSnapshot(before));
+    } finally {
+      await before.close();
+      await after.close();
+    }
+  });
+
+  it("leaves a project that is indistinguishable from a fresh provisioning with the current docs/research-jobs.sql", async () => {
+    const migrated = await migratedProject();
+    const fresh = await appliedProject();
+    try {
+      expect(await catalogSnapshot(migrated)).toEqual(await catalogSnapshot(fresh));
+      expect(await neighbourSnapshot(migrated)).toEqual(await neighbourSnapshot(fresh));
+    } finally {
+      await migrated.close();
+      await fresh.close();
+    }
+  });
+
+  for (const [name, scenario] of Object.entries(QUEUE_SCENARIOS)) {
+    it(`${name} (on the migrated production shape)`, async () => {
+      await withMigrated(scenario);
+    });
+  }
+
+  it("keeps every table/function privilege closed on the migrated production shape", async () => {
+    const db = await migratedProject();
+    try {
+      await privilegesAreClosedToEveryRoleButTheSixFunctions(db);
+    } finally {
+      await db.close();
+    }
+  });
+
+  it("changes no row, and preserves every active, finished and exhausted job it finds", async () => {
+    const db = await baselineProject();
+    try {
+      const s = await legacyProduction(db);
+      const before = await allRows(s.q);
+      const catalogBefore = await catalogSnapshot(db);
+      await db.exec(MIGRATION_SQL);
+      expect(await allRows(s.q)).toEqual(before); // not one column of one row moved: nothing cancelled, requeued, deleted or finished
+      expect(await catalogSnapshot(db)).not.toEqual(catalogBefore); // (the two function bodies did change)
+      const finishedRows = [s.done, s.failed, s.exhausted].map((id) => before.find((r) => r.id === id));
+
+      // legacy ACTIVE jobs keep their lease: attempt 2 heartbeats and finishes with its current token
+      expect((await s.q.heartbeat(s.running2, s.running2Token)).status).toBe("ok");
+      expect(await s.q.complete(s.running2, s.running2Token, resultFor("legacy attempt 2"))).toEqual({ status: "completed" });
+      expect(await s.q.row(s.running2)).toMatchObject({ status: "succeeded", attempts: 2 });
+      // ... a legacy attempt-1 job that now fails is final, whatever `retryable` says
+      expect(await s.q.fail(s.running1, s.running1Token, "worker_internal_error", "x", true)).toEqual({ status: "failed" });
+      expect(await s.q.row(s.running1)).toMatchObject({ status: "failed", failure_code: "worker_internal_error", attempts: 1 });
+      // ... a never-claimed job is claimed ONCE; its expired lease is final
+      const c = (await s.q.claim()).job;
+      expect(c.id).toBe(s.fresh);
+      expect(await s.q.row(s.fresh)).toMatchObject({ status: "running", attempts: 1 });
+      await s.q.expireLease(s.fresh);
+      expect(await s.q.claim()).toEqual({ job: null });
+      expect(await s.q.row(s.fresh)).toMatchObject({ status: "failed", failure_code: "lease_expired", attempts: 1 });
+
+      // finished jobs stay final and are not offered again
+      expect(await s.q.complete(s.done, s.doneToken, resultFor("finished"))).toEqual({ status: "already_completed" });
+      expect(await s.q.complete(s.done, s.doneToken, resultFor("different"))).toEqual({ status: "conflict" });
+      expect(await s.q.fail(s.failed, s.failedToken, "x", null, true)).toEqual({ status: "already_failed" });
+      expect(await s.q.claim()).toEqual({ job: null });
+      expect([s.done, s.failed, s.exhausted].map((id) => before.find((r) => r.id === id))).toEqual(finishedRows);
+      for (const id of [s.done, s.failed, s.exhausted]) expect(await s.q.row(id)).toEqual(before.find((r) => r.id === id));
+    } finally {
+      await db.close();
+    }
+  });
+
+  it("a legacy running job whose lease has ALREADY expired is final from the next claim on (it is not re-offered); the migration itself does not touch it", async () => {
+    const db = await baselineProject();
+    try {
+      const s = await legacyProduction(db);
+      await s.q.expireLease(s.running2);
+      const before = await allRows(s.q);
+      await db.exec(MIGRATION_SQL);
+      expect(await allRows(s.q)).toEqual(before);
+      expect(await s.q.heartbeat(s.running2, s.running2Token)).toEqual({ status: "lease_invalid" });
+      const c = (await s.q.claim()).job; // the oldest remaining claimable job is the never-claimed one, not the expired legacy job
+      expect(c.id).toBe(s.fresh);
+      expect(await s.q.row(s.running2)).toMatchObject({ status: "failed", failure_code: "lease_expired", attempts: 2 });
+    } finally {
+      await db.close();
+    }
+  });
+
+  it("is idempotent: a second application changes nothing (catalog, rows, live leases)", async () => {
+    const db = await baselineProject();
+    try {
+      const s = await legacyProduction(db);
+      await db.exec(MIGRATION_SQL);
+      const before = { catalog: await catalogSnapshot(db), rows: await allRows(s.q), neighbours: await neighbourSnapshot(db) };
+      await db.exec(MIGRATION_SQL);
+      expect(await catalogSnapshot(db)).toEqual(before.catalog);
+      expect(await allRows(s.q)).toEqual(before.rows);
+      expect(await neighbourSnapshot(db)).toEqual(before.neighbours);
+      expect((await s.q.heartbeat(s.running2, s.running2Token)).status).toBe("ok");
+    } finally {
+      await db.close();
+    }
+  });
+});
+
+/** The state the guard exists for: a job the OLD retry policy requeued (queued, attempts 1). */
+async function strandedBaseline() {
+  const db = await baselineProject();
+  const q = new Queue(db);
+  const id = (await q.enqueue(O1, S(1))).job.id;
+  const c = (await q.claim()).job;
+  expect(await q.fail(id, c.lease_token, "worker_internal_error", "x", true)).toEqual({ status: "requeued" });
+  expect(await q.row(id)).toMatchObject({ status: "queued", attempts: 1 });
+  return { db, q, id };
+}
+
+describe("migration 001 guard: it refuses, changing nothing, when applying it would strand a job or when the project is not ours", { timeout: 120_000 }, () => {
+  it("a job queued with attempts >= 1 (requeued by the old policy) blocks it until the job has finished under the old policy", async () => {
+    const { db, q, id } = await strandedBaseline();
+    try {
+      const before = { catalog: await catalogSnapshot(db), rows: await allRows(q) };
+      await expect(db.exec(MIGRATION_SQL)).rejects.toThrow(/is queued with attempts >= 1.*nothing was changed/s);
+      expect(await catalogSnapshot(db)).toEqual(before.catalog); // still the 3-attempt functions
+      expect(await allRows(q)).toEqual(before.rows);
+      expect(String((await db.query<{ d: string }>("select pg_get_functiondef('public.bsproof_research_claim(integer)'::regprocedure) as d")).rows[0].d)).toContain("attempts < 3");
+
+      // drain under the OLD policy (worker running, old SQL), then the migration applies
+      const c = (await q.claim()).job;
+      expect(c.id).toBe(id);
+      expect(await q.complete(id, c.lease_token, resultFor("drained"))).toEqual({ status: "completed" });
+      await db.exec(MIGRATION_SQL);
+      expect(String((await db.query<{ d: string }>("select pg_get_functiondef('public.bsproof_research_claim(integer)'::regprocedure) as d")).rows[0].d)).toContain("attempts < 1");
+    } finally {
+      await db.close();
+    }
+  });
+
+  it("refuses on a project where docs/research-jobs.sql was never applied, and creates nothing", async () => {
+    const db = await emptyProject();
+    try {
+      const before = await neighbourSnapshot(db);
+      await expect(db.exec(MIGRATION_SQL)).rejects.toThrow(/bsproof_research_jobs is missing or BS-PROOF did not create it/);
+      expect(await neighbourSnapshot(db)).toEqual(before);
+      expect((await db.query<{ n: number }>("select count(*)::int as n from pg_proc where proname like 'bsproof\\_research\\_%'")).rows[0].n).toBe(0);
+    } finally {
+      await db.close();
+    }
+  });
+
+  for (const [name, seed, message] of [
+    ["a claim function BS-PROOF did not create", "comment on function public.bsproof_research_claim(integer) is 'someone else''s function'", /function public\.bsproof_research_claim\(integer\) is missing or BS-PROOF did not create it/],
+    ["a fail function BS-PROOF did not create", "comment on function public.bsproof_research_fail(uuid, text, text, text, boolean) is null", /function public\.bsproof_research_fail\(uuid, text, text, text, boolean\) is missing or BS-PROOF did not create it/],
+    ["a jobs table BS-PROOF did not create", "comment on table public.bsproof_research_jobs is 'someone else''s table'", /bsproof_research_jobs is missing or BS-PROOF did not create it/],
+  ] as const) {
+    it(`refuses next to ${name}, and leaves it as it was`, async () => {
+      const db = await baselineProject();
+      try {
+        await db.exec(seed);
+        const before = await catalogSnapshot(db);
+        await expect(db.exec(MIGRATION_SQL)).rejects.toThrow(message);
+        expect(await catalogSnapshot(db)).toEqual(before);
+      } finally {
+        await db.close();
+      }
+    });
+  }
+});
+
+describe("migration 001 mutation suite: every removed guarantee in the migration file is caught", { timeout: 120_000 }, () => {
+  const strandedGuardRefuses = async (sql: string) => {
+    const { db } = await strandedBaseline();
+    try {
+      await expect(db.exec(sql)).rejects.toThrow(/is queued with attempts >= 1/);
+    } finally {
+      await db.close();
+    }
+  };
+  const privileges = async (sql: string) => {
+    const db = await baselineProject();
+    try {
+      await db.exec(sql);
+      await privilegesAreClosedToEveryRoleButTheSixFunctions(db);
+    } finally {
+      await db.close();
+    }
+  };
+  const claimDef = "create or replace function public.bsproof_research_claim(p_lease_seconds integer default 300)\nreturns jsonb\nlanguage plpgsql\nsecurity definer\nset search_path = pg_catalog, pg_temp\n";
+  const failDef = "create or replace function public.bsproof_research_fail(p_id uuid, p_lease_token text, p_code text, p_message text, p_retryable boolean)\nreturns jsonb\nlanguage plpgsql\nsecurity definer\nset search_path = pg_catalog, pg_temp\n";
+  const MIGRATION_MUTANTS: Array<{ name: string; find: string; replace: string; kill: (mutated: string) => Promise<void> }> = [
+    { name: "claim keeps the 3-attempt filter", find: "  where attempts < 1\n    and (status = 'queued'", replace: "  where attempts < 3\n    and (status = 'queued'", kill: (m) => withMigrated(aQueuedJobWhoseAttemptIsAlreadySpentIsNeverClaimed, m) },
+    { name: "the expiry sweep keeps the 3-attempt threshold", find: "lease_expires_at <= now() and attempts >= 1;", replace: "lease_expires_at <= now() and attempts >= 3;", kill: (m) => withMigrated(anExpiredLeaseIsFinalAndTheOldTokenIsDead, m) },
+    { name: "fail keeps the 3-attempt requeue", find: "and j.attempts < 1 then", replace: "and j.attempts < 3 then", kill: (m) => withMigrated(aRetryableFailureIsFinalAndTheJobIsNeverClaimedAgain, m) },
+    { name: "fail requeues every retryable job", find: "if coalesce(p_retryable, false) and j.attempts < 1 then", replace: "if coalesce(p_retryable, false) then", kill: (m) => withMigrated(aRetryableFailureIsFinalAndTheJobIsNeverClaimedAgain, m) },
+    { name: "the sweep fails running jobs whose lease is still live", find: "where status = 'running' and lease_expires_at <= now() and attempts >= 1;", replace: "where status = 'running' and attempts >= 1;", kill: (m) => withMigrated(aLegacyRunningJobWithSeveralAttemptsCanFinishItsCurrentLease, m) },
+    { name: "claim loses SECURITY DEFINER", find: claimDef, replace: claimDef.replace("security definer\n", ""), kill: (m) => withMigrated(claimIsOldestFirstAndStoresOnlyTheLeaseHash, m) },
+    { name: "fail loses SECURITY DEFINER", find: failDef, replace: failDef.replace("security definer\n", ""), kill: (m) => withMigrated(aRetryableFailureIsFinalAndTheJobIsNeverClaimedAgain, m) },
+    { name: "claim loses its pinned search_path", find: claimDef, replace: claimDef.replace("set search_path = pg_catalog, pg_temp\n", ""), kill: privileges },
+    { name: "fail loses its pinned search_path", find: failDef, replace: failDef.replace("set search_path = pg_catalog, pg_temp\n", ""), kill: privileges },
+    { name: "the stranded-job guard is disabled", find: "if stranded is not null then", replace: "if false then", kill: strandedGuardRefuses },
+    { name: "the foreign-function guard is disabled", find: "if to_regprocedure(fn) is null\n       or coalesce(obj_description(to_regprocedure(fn), 'pg_proc'), '') !~ '^BS-PROOF research jobs:' then", replace: "if false then", kill: async (m) => {
+      const db = await baselineProject();
+      try {
+        await db.exec("comment on function public.bsproof_research_claim(integer) is 'someone else''s function'");
+        await expect(db.exec(m)).rejects.toThrow(/did not create it/);
+      } finally {
+        await db.close();
+      }
+    } },
+  ];
+  for (const m of MIGRATION_MUTANTS) {
+    it(`kills: ${m.name}`, async () => {
+      expect(MIGRATION_SQL.split(m.find).length - 1, "the mutation target must occur exactly once in the migration").toBe(1);
+      const mutated = MIGRATION_SQL.replace(m.find, () => m.replace);
+      expect(mutated).not.toBe(MIGRATION_SQL);
+      await expect(m.kill(mutated)).rejects.toThrow();
+    });
+  }
+
+  it("the same scenarios pass on the unmutated migration (so a mutant failing is the mutation's doing)", async () => {
+    for (const scenario of [aQueuedJobWhoseAttemptIsAlreadySpentIsNeverClaimed, anExpiredLeaseIsFinalAndTheOldTokenIsDead, aRetryableFailureIsFinalAndTheJobIsNeverClaimedAgain, aLegacyRunningJobWithSeveralAttemptsCanFinishItsCurrentLease, claimIsOldestFirstAndStoresOnlyTheLeaseHash]) await withMigrated(scenario);
+    await strandedGuardRefuses(MIGRATION_SQL);
+    await privileges(MIGRATION_SQL);
   });
 });

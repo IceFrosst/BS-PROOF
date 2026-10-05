@@ -44,8 +44,12 @@ lease is lost. A lost lease kills the CLI and discards nothing already on disk.
 
 Failures are reported, not repaired: quota/rate limit, authentication, CLI crash,
 missing structured output, schema-invalid audit, contract violations (see
-`contract_problems`) all become a `fail` with a code, the evidence and a retryable
-HINT. No number is guessed, defaulted or patched into an audit.
+`contract_problems`) and an inventory ID the grounding guard cannot find in any returned
+tool text all become a `fail` with a code, the evidence and a retryable HINT. No number is
+guessed, defaulted or patched into an audit. Since the one-attempt policy (2026-10-06) the
+server ignores the HINT for a NEW claim: a posted `fail` is terminal and a lease that expires
+is terminal too, so a job gets exactly ONE model run; the worker never re-runs the model for
+a job it already ran (delivery, heartbeat and poll retries are network retries, not model runs).
 
 Run:
     python3 scripts/pc_research_worker.py check            # local-only health check
@@ -543,8 +547,11 @@ QUOTA_CODES = ("claude_quota_or_rate_limit",)
 # What a CLI killed by a SHUTDOWN looks like when the run is classified: an abnormal exit (e.g. exit
 # -15 from systemd's cgroup-wide SIGTERM, which reaches the CLI as well as this process), no
 # result event, or no structured output. All three are retryable and none says anything about the
-# audit, so while the worker is stopping they must not be posted as a `fail`: a posted retryable
-# fail burns an attempt and, on the final attempt, finishes the job as `failed` for good.
+# audit, so while the worker is stopping they must not be posted as a `fail` with a real-looking code.
+# NOTE (one-attempt policy, 2026-10-06): a job now has a single attempt, so leaving the lease to expire
+# after a shutdown ends the job as `failed` / `lease_expired` at the next claim (it is no longer
+# re-claimed). The worker still posts nothing here: the server's `lease_expired` is the honest code
+# for a run that was cut short, a posted CLI error would not be.
 SHUTDOWN_AMBIGUOUS_CODES = ("claude_cli_error", "claude_no_result_event", "claude_no_structured_output")
 
 
@@ -662,6 +669,11 @@ def handle_job(job: dict, client: ApiClient, cfg: Config, stop: threading.Event,
                                "blend_headline_row_is_whole_formula", "web_tools_used"]
         try:
             source_access_v2 = adapter.source_access_v2(an, rr)
+        except adapter.InventoryNotGroundedError as e:
+            # The model's audit cites an ID that no returned tool text contains. The grounding guard is
+            # strict and unchanged; this is a refusal of the AUDIT (an integrity failure), not a worker
+            # fault, so it is not `worker_internal_error`. Not retryable: nothing is repaired or re-run.
+            return fail("audit_contract_violation", str(e), False)
         except adapter.ResearchAdapterError as e:
             if str(e).startswith("source_report_too_large:"):
                 return fail("source_report_too_large", str(e), False)

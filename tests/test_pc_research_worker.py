@@ -147,6 +147,7 @@ SC = json.load(open({sc!r}))
 if '--version' in sys.argv:
     print('2.1.287 (Claude Code)'); sys.exit(0)
 json.dump({{'argv': sys.argv[1:], 'env': sorted(os.environ), 'cwd': os.getcwd(), 'pid': os.getpid()}}, open(SC['record'], 'w'))
+open(SC['record'] + '.invocations', 'a').write('x')   # one character per MODEL run (--version exits above, before this)
 open(SC['record'] + '.stdin', 'w').write(sys.stdin.read())
 for ev in SC['events']:
     if ev == 'WAIT_HEARTBEAT':
@@ -304,6 +305,11 @@ class Base(unittest.TestCase):
     def cli_pid(self):
         return json.loads(self.rec.read_text())["pid"]
 
+    def model_runs(self):
+        """How many times the (fake) model CLI was actually started for a run. --version checks do not count."""
+        f = Path(str(self.rec) + ".invocations")
+        return len(f.read_text()) if f.exists() else 0
+
     def assertCliGone(self):
         """The fake CLI (which would sleep for 600 s) was killed, not waited out."""
         with self.assertRaises(ProcessLookupError):
@@ -334,6 +340,8 @@ class AdapterContract(unittest.TestCase):
         self.assertEqual(cmd[cmd.index("--allowedTools") + 1], "WebSearch,WebFetch")
         self.assertEqual(cmd[cmd.index("--permission-mode") + 1], "dontAsk")
         self.assertEqual(cmd[cmd.index("--model") + 1], "claude-sonnet-5-5")
+        self.assertEqual(cmd[cmd.index("--effort") + 1], "medium")
+        self.assertNotIn("xhigh", cmd)
         self.assertEqual(cmd[cmd.index("--output-format") + 1], "stream-json")
         for forbidden in ("--bare", "--mcp-config", "--plugin-dir", "--plugin-url", "--add-dir", "--settings",
                           "--max-turns", "--max-budget-usd", "--dangerously-skip-permissions",
@@ -342,6 +350,19 @@ class AdapterContract(unittest.TestCase):
         joined = " ".join(cmd[:cmd.index("--json-schema")])
         for tool in ("Bash", "Read", "Write", "Edit"):
             self.assertNotIn(tool, joined)
+
+    def test_live_research_runs_the_pinned_model_at_medium_effort_and_nothing_else_changed(self):
+        # User decision 2026-10-06: effort xhigh -> medium for LIVE RESEARCH ONLY. The model id is untouched, and
+        # `medium` is a level the CLI documents (low, medium, high, xhigh, max). No cap or budget flag was added.
+        self.assertEqual(ad.MODEL, "claude-sonnet-5-5")
+        self.assertEqual(ad.EFFORT, "medium")
+        self.assertIn(ad.EFFORT, ("low", "medium", "high", "xhigh", "max"))
+        cmd = ad.build_command("claude", "p", "{}")
+        self.assertEqual(cmd[cmd.index("--effort") + 1], ad.EFFORT)
+        self.assertEqual(ad.ALLOWED_TOOLS, ("WebSearch", "WebFetch"))
+        # the other model boundaries keep their own tiers: this change is not theirs
+        import claude_adapter
+        self.assertIn("xhigh", claude_adapter.VALID_EFFORT)
 
     def test_wire_schema_is_canonical_minus_dollar_schema_only(self):
         canon = ad.load_canonical_schema()
@@ -522,6 +543,7 @@ class Jobs(Base):
                           counts["captcha_browser_check_cookie_wall"], counts["haiku_refusal"],
                           counts["content_bearing"]), (1, 1, 1, 1, 1))
         self.assertFalse(diag["status"]["human_verified"])
+        self.assertEqual((diag["model_requested"], diag["effort_requested"]), ("claude-sonnet-5-5", "medium"))
         self.assertEqual(diag["blend"]["is_blend"], False)
         raw = rd / "raw-stream.jsonl"
         self.assertTrue(raw.exists())
@@ -537,6 +559,10 @@ class Jobs(Base):
         # the child process: right flags, empty cwd inside the run dir, no secrets in its environment
         rec = json.loads(self.rec.read_text())
         self.assertEqual(rec["argv"][rec["argv"].index("--tools") + 1], "WebSearch,WebFetch")
+        self.assertEqual(rec["argv"][rec["argv"].index("--model") + 1], "claude-sonnet-5-5")
+        self.assertEqual(rec["argv"][rec["argv"].index("--effort") + 1], "medium")  # the spawned process, not just the builder
+        self.assertNotIn("xhigh", rec["argv"])
+        self.assertEqual(self.model_runs(), 1)
         self.assertTrue(rec["cwd"].startswith(str(rd)))
         self.assertEqual(sorted(set(rec["env"]) - {"PWD", "SHLVL", "_", "OLDPWD", "LC_CTYPE"}), ["HOME", "PATH"])
         stdin = Path(str(self.rec) + ".stdin").read_text()
@@ -699,6 +725,73 @@ class Jobs(Base):
         self.assertEqual(out.code, "invalid_target")
         self.assertEqual(self.run_dirs(), [])
         self.assertEqual(len(self.api.of("fail")), 2)
+
+    # ---- grounding stays strict; one attempt means one model run ----
+
+    def ungrounded_audit(self):
+        audit = good_audit()
+        audit["outcomes"][0]["inventory"][0]["id"] = "PMID 99999999"  # the fake tool output only ever returned PMID 12345678
+        return audit
+
+    def test_an_ungrounded_inventory_id_is_refused_and_reported_as_an_audit_integrity_failure(self):
+        out = self.run_job(web_events() + [ev_result(self.ungrounded_audit())])
+        self.assertEqual((out.kind, out.code), ("failed", "audit_contract_violation"))  # it was `worker_internal_error`
+        self.assertEqual(self.api.of("complete"), [])  # strict: the audit is never delivered, repaired or forced through
+        (sent,) = self.api.of("fail")
+        self.assertEqual(sent["code"], "audit_contract_violation")
+        self.assertFalse(sent["retryable"])
+        self.assertIn("inventory ID is not grounded in returned tool text: 'PMID 99999999'", sent["message"])
+        self.assertEqual(sorted(sent), ["action", "code", "job_id", "lease_token", "message", "retryable"])
+        (rd,) = self.run_dirs()
+        self.assertFalse((rd / "result.json").exists())  # nothing was prepared for delivery
+        self.assertEqual(json.loads((rd / "fail.json").read_text()), sent)
+        self.assertEqual(self.model_runs(), 1)
+
+    def test_the_grounding_guard_still_accepts_a_grounded_audit_and_other_adapter_errors_stay_generic(self):
+        self.assertEqual(self.run_job(web_events() + [ev_result(good_audit())]).kind, "completed")
+        # the narrow fix is the ONE known message: every other adapter refusal keeps its previous classification
+        self.assertTrue(issubclass(ad.InventoryNotGroundedError, ad.ResearchAdapterError))
+        for message in ("SourceAccessV2 receipt byte/hash mismatch", "inventory access must be snippet; abstracts/full text are unsupported",
+                        "CLI init must declare the pinned model and apiKeySource=none"):
+            with unittest.mock.patch.object(ad, "source_access_v2", side_effect=ad.ResearchAdapterError(message)):
+                out = self.run_job(web_events() + [ev_result(good_audit())])
+            self.assertEqual(out.code, "worker_internal_error", message)
+
+    def test_the_grounding_failure_is_one_model_run_even_when_delivery_needs_retries(self):
+        # Network retries re-send the SAME `fail`; they never start the model again.
+        self.api.terminal = lambda n, a: (503, {}) if n <= 2 else (200, {"status": "failed"})
+        out = self.run_job(web_events() + [ev_result(self.ungrounded_audit())])
+        self.assertEqual((out.kind, out.code), ("failed", "audit_contract_violation"))
+        sent = self.api.of("fail")
+        self.assertEqual(len(sent), 3)
+        self.assertTrue(all(x == sent[0] for x in sent))
+        self.assertEqual(self.model_runs(), 1)
+
+    def test_a_retryable_hint_never_makes_the_worker_run_the_model_twice(self):
+        # Even if the server answered `requeued` (an un-migrated 3-attempt project), handle_job returns: it has no
+        # model retry loop. A re-run could only come from a NEW claim, which the one-attempt SQL does not allow.
+        self.api.terminal = lambda n, a: (200, {"status": "requeued"})
+        out = self.run_job([ev_init(), ev_result(None, is_error=True, subtype="error_during_execution", result="boom")], exit=1)
+        self.assertEqual((out.kind, out.code), ("failed", "claude_cli_error"))
+        (sent,) = self.api.of("fail")
+        self.assertTrue(sent["retryable"])  # the worker's hint is unchanged; the server decides, and it is final
+        self.assertEqual(self.model_runs(), 1)
+
+    def test_a_worker_loop_claims_the_job_once_and_starts_the_model_once(self):
+        binary = self.cli(web_events() + [ev_result(self.ungrounded_audit())])
+        self.api.claims = [job()]  # then the fake server answers {"job": null}: the failed job is not offered again
+        failed = threading.Event()
+        self.api.terminal = lambda n, a: (failed.set(), (200, {"status": "failed"}))[1]
+        th = threading.Thread(target=lambda: w.run_loop(self.cfg, self.stop, environ=self.environ, binary=binary,
+                                                        clock=fixed_clock), daemon=True)
+        th.start()
+        self.assertTrue(failed.wait(60))
+        self.wait_for(lambda: len([r for r in self.api.requests if r["body"].get("action") == "claim"]) >= 3, "idle polls after the failure")
+        self.stop.set()
+        th.join(30)
+        self.assertEqual(self.model_runs(), 1)
+        self.assertEqual(len(self.api.of("fail")), 1)
+        self.assertEqual(self.api.of("complete"), [])
 
     # ---- leases ----
 

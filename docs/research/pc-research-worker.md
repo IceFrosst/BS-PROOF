@@ -1,5 +1,19 @@
 # Main-PC research worker — contract, install, health, rollback
 
+Status (2026-10-06, UTC) — **CANDIDATE ONLY: ONE ATTEMPT PER JOB and MEDIUM effort. NOT applied, NOT installed, NOT deployed.**
+The user (explicitly) asked for live research on `claude-sonnet-5-5` at effort **medium** and for **one** attempt per job: no
+automatic second or third model run. Why: the earlier Vitamin D job ran three times. Every run was refused by the worker's own
+grounding guard ("inventory ID is not grounded in returned tool text"), which was reported as `worker_internal_error` with
+`retryable: true`, so the server's `bsproof_research_fail` requeued it while `attempts < 3`. In the repository this commit
+changes: the adapter effort `xhigh` -> `medium` (the model id is unchanged); the SQL attempt cap 3 -> 1 in `docs/research-jobs.sql`
+and, for the project that is already provisioned, a narrow versioned migration
+`docs/research-jobs-migration-001-one-attempt.sql`; the classification of that one grounding refusal
+(`audit_contract_violation`, not retryable); one stale line of UI copy and two operator messages. **Nothing here is live until the
+owner applies the migration and installs the new runtime** (section "One attempt per job and medium effort: what changed,
+install order, drain" below). The grounding guard itself is unchanged and strict; nothing is repaired, dropped or forced through.
+Everything below this paragraph that says "three attempts", "requeued" or "re-claimed" describes the 2026-10-04/05 production
+state until the migration is applied.
+
 Status (2026-10-05, times UTC): **RELEASED_EVERYONE under a USER-ACCEPTED HELD-OPEN hosting condition (not a fully hosted service).**
 Production `SCAN_LIVE_RESEARCH_ENABLED` is `on` (it was `owners`): live research is open to every signed-in Google user; an
 anonymous or unauthenticated caller gets 401. The user explicitly decided to finish research for everyone now and move to the
@@ -46,7 +60,8 @@ Facts, none of them secret:
   `daily_elemental_mg: null`; unknown servings were never treated as 1.
   - Attempt 1 (376 s): the model returned an audit, but the worker's own grounding guard
     refused to deliver it because one cited DOI was not in any tool output. It reported
-    `worker_internal_error` (retryable); the server requeued the job (attempt 1 of 3).
+    `worker_internal_error` (retryable); the server requeued the job (attempt 1 of 3; this is the
+    3-attempt policy that the 2026-10-06 change removes).
     This is the fail-closed design working, not data loss.
   - Attempt 2 (397 s, 22:24:48 to 22:31:55): delivered; the server answered `completed`; the
     strict canonical result is stored.
@@ -85,10 +100,11 @@ release script), and focused Python/TypeScript tests.
 
 Polls the website outbound over HTTPS, claims one job at a time, runs one audit
 through the already logged-in Claude subscription CLI (model
-`claude-sonnet-5-5`, `--effort xhigh`, `--safe-mode`, `WebSearch,WebFetch` only,
+`claude-sonnet-5-5`, `--effort medium` (was `xhigh` until 2026-10-06), `--safe-mode`, `WebSearch,WebFetch` only,
 no API key), validates the audit and transient SourceAccessV2 evidence, and posts
 it back. It computes no score and opens no listening socket. There is no runtime,
-turn, token, or model-call cap and no API fallback.
+turn, token, or model-call cap and no API fallback; the only limit on model runs is
+the one-attempt rule of the queue (one run per job, no automatic re-run).
 
 The CLI binary is explicitly pinned: set `BS_PROOF_CLAUDE_BIN` to the absolute
 executable `/home/icefrost/.local/bin/claude`; no PATH fallback is permitted.
@@ -136,22 +152,21 @@ on current unexpired lease remains authoritative. Heartbeats continue while a
 job runs and while delivery retries. There is no retry-count cap; lease loss
 stops the worker's stale delivery.
 
-Shutdown never finishes a job (the WORKER posts nothing; see the final-attempt caveat
-below). On SIGTERM/SIGINT the worker cancels the CLI and
-posts nothing: the lease is left to expire and the job is re-claimed (the SQL allows
-three attempts). This also holds when the same signal killed the CLI first (systemd
-signals the whole cgroup, so the CLI can die before the worker's own cancel
+Shutdown never finishes a job (the WORKER posts nothing). On SIGTERM/SIGINT the worker cancels the CLI and
+posts nothing: the lease is left to expire. **Under the one-attempt policy (2026-10-06) a job is not re-claimed**: the next
+claim's sweep of expired leases in `docs/research-jobs.sql` (`attempts >= 1`) ends it as `failed` with `lease_expired`.
+(Under the 3-attempt policy it was re-claimed, and only a stop on the THIRD attempt lost it.) This also holds when the same
+signal killed the CLI first (systemd signals the whole cgroup, so the CLI can die before the worker's own cancel
 propagates): while the worker is stopping, an abnormal CLI exit
 (`claude_cli_error`, `claude_no_result_event`, `claude_no_structured_output`) is not
-posted as a retryable `fail`, because that would burn an attempt and, on the third,
-fail the job for good. A finished valid result is still delivered, and real
-findings (quota, authentication, billing guard, contract violations) are still reported.
+posted as a `fail`, so the owner sees the server's honest `lease_expired` rather than a made-up CLI error. A finished valid
+result is still delivered, and real findings (quota, authentication, billing guard, contract violations) are still reported.
 
-Final-attempt caveat: "never finishes a job" means only that the worker sends no result.
-The current lease is left to expire and the job is retried while attempts remain. If the
-stop falls on the THIRD (final) attempt there is no retry left: the next claim's sweep of
-expired leases in `docs/research-jobs.sql` (`attempts >= 3`) ends the job as `failed` with
-`lease_expired`. A shutdown during the final attempt therefore loses that job, by design.
+Consequence for operations: **cutting a running job now loses it** (one attempt, no re-offer). Use `stop --drain` to let it
+finish; `stop` refuses while a job runs unless `--now`. The same goes for a quota/rate-limit, authentication, `claude_cli_not_found`
+or any other failure the worker reports: the job ends as `failed` with that code, whatever its `retryable` hint says (the
+hint is still sent; the server ignores it for requeueing). Network retries are not model runs and are unchanged: claim polling,
+heartbeats and the delivery of a `complete`/`fail` are retried with back-off until they land or the lease is lost.
 
 An audit is never "validated" by skipping validation: without `jsonschema` (Draft
 2020-12) the worker fails the job as `worker_internal_error`, and the server's
@@ -178,6 +193,14 @@ any `other_actives`); a `null` flag is unknown and is never defaulted to a blend
 blend's `outcomes[0]` must be the whole-formula row, never a `CONTEXT ONLY` row.
 Violations are failed as `audit_contract_violation`; nothing is patched. Prompt wording explicitly says that only snippets/model summaries are
 available; it must not imply full-paper access or guessed study details.
+
+An inventory `id` that appears in no returned tool text (the guard in `validate_live_receipts_and_inventory`: "inventory ID is not
+grounded in returned tool text") is a refusal of the MODEL'S audit, not a worker fault: since 2026-10-06 it is raised as
+`InventoryNotGroundedError` and reported as `audit_contract_violation` with `retryable: false` (it was `worker_internal_error`
+with `retryable: true`, which is how the same refused audit came to be run three times). The guard is unchanged: the same IDs are
+accepted and refused, the audit is never delivered, repaired or forced through, and no citation or audit field is touched. Every
+OTHER refusal in that function (receipt bytes/hash, counters, non-snippet access, pinned model/CLI) keeps the generic
+`worker_internal_error` classification.
 
 ## Local health check and operations
 
@@ -424,7 +447,8 @@ What it does (every item is a test in `tests/test_pc_research_supervisor.py`, 54
 - **Stop.** SIGTERM to the worker's group (the worker cancels its CLI and leaves the lease to expire; nothing is posted),
   `TimeoutStopSec` (60 s) then SIGKILL, then every leftover descendant is swept; never a restart while stopping. A supervisor
   that dies by SIGKILL takes the worker with it (`--pdeathsig`). `stop` REFUSES while a job runs unless `--now` (the lease then
-  expires within 300 s and the queue re-offers it, one of its 3 attempts is used); `stop --drain` waits with no deadline until
+  expires within 300 s and, with one attempt per job since 2026-10-06, the job ends as failed (`lease_expired`) and is NOT re-offered;
+  under the earlier 3-attempt policy it was re-offered); `stop --drain` waits with no deadline until
   the worker is idle, then stops.
 - **Logs.** `supervisor/supervisor.log` (0600, rotated 3 x 1 MiB, bounded line reads): fixed supervisor events plus the worker's
   own log lines with tokens, bearer values, JWTs, e-mails, UUIDs (user / job / lease ids) and any 32+ character opaque string
@@ -658,7 +682,67 @@ lives here and not in the SQL): its header still says "NOT RUN YET" and tells th
 "set SCAN_LIVE_RESEARCH_ENABLED=1". Both are out of date. The file HAS been applied to the
 shared project (re-verified read-only on 2026-10-04), and `1` is the wrong first switch: use
 `owners` as above; `1` / `true` / `on` / `yes` is the separate general-use decision of step 7.
-Its sha256 stays `48783cd3a6d9535b0a8ca8a792c0f73b3d32a98d3b0550c730731b5d9cd9a4fb`.
+(Until 2026-10-06 its sha256 stayed `48783cd3a6d9535b0a8ca8a792c0f73b3d32a98d3b0550c730731b5d9cd9a4fb`; that file is the one
+that was APPLIED and is kept byte-for-byte as `tests/fixtures/research-jobs-baseline-48783cd3.sql`. The current file is the
+one-attempt revision, sha256 `d598f19a9afcb46e0fda0fc69cbe80674b067e8c84f10f2afd8b3e94d1f16a83`; the migration is `9d147ecf30bd5ba4c47c33e50dd18fc11bbca10e5371354240eb919aff33fb41`.)
+
+## One attempt per job and medium effort: what changed, install order, drain
+
+**Status: a CANDIDATE in the repository. The migration has NOT been applied, the new runtime has NOT been built or installed, and no
+real job was run to test it.** Research stays EXPERIMENTAL and UNGRADED; the ENLT-error / progress copy is unchanged apart from the
+one stalled-notice line below.
+
+What changed (and what did not):
+
+| | before | after (candidate) |
+|---|---|---|
+| model / effort | `claude-sonnet-5-5` / `xhigh` | `claude-sonnet-5-5` / **`medium`** (live research only; the S1-S8 and label adapters are untouched) |
+| claims per job | up to 3 (`attempts < 3`) | **1** (`attempts < 1`) |
+| posted `fail` with `retryable: true` | requeued while `attempts < 3` | **final** (`failed`, the posted code); `retryable` is ignored for requeueing |
+| expired lease | re-claimed; third expiry -> `failed(lease_expired)` | **final**: the next claim ends it as `failed(lease_expired)` |
+| inventory ID not in any tool text | `worker_internal_error`, retryable | `audit_contract_violation`, not retryable; guard unchanged |
+| unchanged | lease 300 s (30-900 s clamp), heartbeat, completion CAS and replay, owner filter, 3 open jobs per owner, no global cap, RLS, grants, tokens, `SCAN_LIVE_RESEARCH_ENABLED` (public flag stays on), Google-only ownership, no turn/token/budget/runtime cap, delivery/heartbeat/poll retries (network, not model runs) | |
+
+What the one-attempt rule costs, said plainly: a transient local fault (quota or rate limit, an expired login, a missing CLI path,
+a PC that sleeps or is stopped mid-job) now ends THAT job as `failed` instead of retrying it, and the owner sees the failure code. There
+is no "research again" path (an owner's repeat request returns the same failed job: the per-scan key is unchanged). That is the
+user's decision, not an oversight.
+
+Legacy jobs: nothing is cancelled, requeued, deleted or edited. A job `running` with a live lease keeps it (heartbeat and
+completion unchanged, whatever its `attempts` value: 2 or 3 from the old policy still finishes on its current token). A
+finished job (`succeeded` / `failed`) stays final. An ALREADY-expired legacy running job, and any later expiry, ends as
+`lease_expired` at the next claim instead of being re-offered. A `queued` job with `attempts >= 1` (requeued by the old policy) would
+never be claimed again, so the migration REFUSES to apply while one exists (nothing changed); finish it under the old policy first.
+
+Install order (owner-run, in this order; nothing here was run). Mixed states: new SQL + old runtime = one attempt at `xhigh`
+(harmless, the old worker still sends `retryable`); old SQL + new runtime = up to 3 runs at `medium` (the thing to avoid). So SQL
+first, or both inside one stopped window:
+
+1. Review and merge to `main` (separate step; a push to `main` deploys the app, whose only change is one line of UI copy and a
+   comment). No Vercel setting changes; the public flag stays `on`; no token is touched.
+2. **Drain** (to avoid cutting a job and to leave no job the migration would refuse): `$SUP stop --drain` (waits, no deadline, for the
+   running job to finish and then stops the worker; the queue keeps accepting new jobs, which simply stay `queued`). Do NOT use `stop --now`
+   unless the owner accepts losing the running job.
+3. Read-only checks (separate SQL query, service-role/Management API read endpoint):
+   `select status, attempts, count(*) from public.bsproof_research_jobs group by 1, 2 order by 1, 2;` Expect: no `running` row and no
+   `queued` row with `attempts >= 1`. If a `queued` row with `attempts >= 1` exists (the last job failed with `retryable: true` and was
+   requeued by the old policy): `start` the CURRENT (old) runtime again, let it finish that job, `stop --drain`, re-check. A `running`
+   row with an expired lease is accepted by the migration but will end as `lease_expired`; prefer to wait for it.
+4. Apply `docs/research-jobs-migration-001-one-attempt.sql` ONCE (sha256 `9d147ecf30bd5ba4c47c33e50dd18fc11bbca10e5371354240eb919aff33fb41` verified first) through the same path that applied
+   `docs/research-jobs.sql`. It is one transaction: either the guard passes and the two functions are replaced, or nothing changes.
+   Then run its VERIFY query (both columns `true`). No other object is touched; grants, owners, RLS and comments are preserved.
+5. Build the new runtime from the merged commit (`deploy/pc_research_worker_release.sh build`; it refuses uncommitted runtime files),
+   `install <tgz> <sha256>` on the main PC, `check` (no model, no claim), then `$SUP start --expect-commit <new> --expect-unit-sha256 <U>
+   --wait-ready 90` and `status` READY. `deploy/pc_research_supervisor.py` is not part of the runtime tarball (it is copied separately, see "Install" above): the installed copy keeps the OLD `stop` message ("re-offers it, using one of its 3 attempts"), which is merely wrong, not unsafe, until the owner re-copies it; the behaviour (`stop` refuses while a job runs unless `--now`) is unchanged.
+6. Verify without a model call: `status` READY, the VERIFY query, the owner `GET` of an existing failed job unchanged. Do not queue a test
+   job unless the owner asks for one (it would spend the subscription once, at medium).
+
+Rollback (owner decision only): runtime `rollback` + `start` with the other commit; SQL: re-apply the two function bodies of the
+2026-10-04 file (`git show f7664b2:docs/research-jobs.sql`; idempotent, keeps every job). A job already ended as `lease_expired`
+or `failed` under the new policy is final and is not undone.
+
+Not proved here: any live behaviour (no model call, no SQL on the real database, no runtime install), that `medium` gives audits
+that ground better or worse than `xhigh` (nobody measured), or that a medium run is faster. The result is still an unvalidated model audit.
 
 ## Verification (offline; no network, no model, no live database)
 
@@ -667,12 +751,18 @@ Its sha256 stays `48783cd3a6d9535b0a8ca8a792c0f73b3d32a98d3b0550c730731b5d9cd9a4
 in-memory PostgreSQL 17 (PGlite) behind stand-ins for the `anon`, `authenticated` and
 `service_role` roles (with Supabase's default privileges), and checks the queue
 semantics (idempotent enqueue, owner cap, owner-filtered reads, hashed leases,
-heartbeat, expiry and re-claim, three attempts, completion compare-and-set and replay,
+heartbeat, expiry (final: ONE attempt per job, no re-claim), a retryable fail that is still final, jobs a legacy
+3-attempt policy left behind, completion compare-and-set and replay,
 conflict, stale-lease failure, immutability) and the privilege model (RLS, no direct
 table access for any role, six service-role-only functions, pinned `search_path`),
 the shared-project guard (refuses to run next to a foreign table/function/index/trigger
 and leaves everything intact), and idempotent re-application. A 20-mutant suite removes
-one guarantee at a time and requires a scenario to catch each.
+one guarantee at a time and requires a scenario to catch each (the former 3-attempt knobs are mutants now: each one put back is
+caught). The same file also executes migration 001 on top of the byte-for-byte 2026-10-04 baseline
+(`tests/fixtures/research-jobs-baseline-48783cd3.sql`, the file that was applied): the migrated project equals a fresh
+provisioning from the current file (catalog, owners, ACLs, comments, search_path, RLS, policies), changes no row, keeps a
+running attempt-2 job on its current lease, leaves finished jobs final, refuses (changing nothing) to run while a
+`queued` job with `attempts >= 1` exists, is idempotent, and has its own mutant suite.
 `tests/scan-research-queue-parity.test.ts` runs one scripted history through the
 in-memory queue the route tests use and through the real SQL and requires identical
 answers. Limits: PGlite is one connection, so concurrent `for update skip locked`
@@ -708,12 +798,19 @@ Review, provisioning and clinical validation remain separate human gates.
 - `git diff --check`
 - `cp deploy/bsproof-research-worker.service.example /tmp/bsproof-research-worker.service && XDG_RUNTIME_DIR=$(mktemp -d) systemd-analyze --user verify /tmp/bsproof-research-worker.service`
   (the user unit is configuration; ALWAYS with a throwaway `XDG_RUNTIME_DIR`, never the real one, see the CAUTION in the install section; on a host without the mainPC paths, "executable not found" is expected and is not a PASS for the real paths)
-- `sha256sum docs/research-jobs.sql` must stay `48783cd3a6d9535b0a8ca8a792c0f73b3d32a98d3b0550c730731b5d9cd9a4fb`
+- `sha256sum tests/fixtures/research-jobs-baseline-48783cd3.sql` must stay `48783cd3a6d9535b0a8ca8a792c0f73b3d32a98d3b0550c730731b5d9cd9a4fb`
+  (the file that was applied to production); `sha256sum docs/research-jobs.sql docs/research-jobs-migration-001-one-attempt.sql` must equal
+  `d598f19a9afcb46e0fda0fc69cbe80674b067e8c84f10f2afd8b3e94d1f16a83` and `9d147ecf30bd5ba4c47c33e50dd18fc11bbca10e5371354240eb919aff33fb41` (the candidate, NOT applied)
 
 These tests use fake streams and fake HTTP queue clients only. They do not prove
 model behavior, account state, provisioning, or clinical validity.
 
 ## Handoff
+
+State (2026-10-06, UTC): a candidate commit on a local branch (NOT on `main`, NOT pushed) holds ONE attempt per job + `medium` effort +
+the migration; nothing is applied or installed. Next, owner-run and in this order: review, push `main`, drain (`stop --drain`), read-only
+queue checks, apply migration 001, build + install the new runtime, `start`, `status`. Details and rollback in "One attempt per job
+and medium effort". The state below (2026-10-05) is the PRODUCTION state until then.
 
 State (2026-10-05, UTC): RELEASED_EVERYONE under the held-open hosting condition. Production runs `273c2d5` with
 `SCAN_LIVE_RESEARCH_ENABLED=on` (every signed-in Google user; the Git deploy of this documentation commit is checked after its push

@@ -299,18 +299,19 @@ describe("worker route: claim, lease, completion", () => {
     expect((await work({ action: "heartbeat", job_id: c.id, lease_token: c.lease_token })).status).toBe(200);
   });
 
-  it("an expired lease cannot heartbeat, complete or fail; the job is re-claimed and the old lease is dead", async () => {
-    await queued();
+  it("an expired lease cannot heartbeat, complete or fail; the job is NOT re-claimed (one attempt) and the old lease is dead", async () => {
+    const job = await queued();
     const c1 = await claimed();
     queue.expireLease(c1.id);
     expect((await work({ action: "heartbeat", job_id: c1.id, lease_token: c1.lease_token })).status).toBe(409);
     expect((await complete(c1)).status).toBe(409);
-    const c2 = await claimed();
-    expect(c2.id).toBe(c1.id);
-    expect(c2.lease_token).not.toBe(c1.lease_token);
-    expect((await complete(c1)).status).toBe(409);
     expect((await work({ action: "fail", job_id: c1.id, lease_token: c1.lease_token, code: "late", message: "", retryable: false })).status).toBe(409);
-    expect((await complete(c2)).status).toBe(200);
+    expect(await claimed()).toBeNull(); // no second attempt: the claim ends the job instead of re-offering it
+    expect(queue.jobs[0]).toMatchObject({ status: "failed", failure_code: "lease_expired", attempts: 1 });
+    expect((await body(await get(job.id, bearer("tok-a")))).job).toMatchObject({ status: "failed", failure_code: "lease_expired", result: null });
+    expect((await work({ action: "heartbeat", job_id: c1.id, lease_token: c1.lease_token })).status).toBe(409);
+    expect((await complete(c1)).status).toBe(409);
+    expect(await claimed()).toBeNull(); // and it is never offered again
   });
 
   it("a job stored with an older prompt version is refused at the SQL compare-and-set with an explicit 409", async () => {
@@ -346,17 +347,37 @@ describe("worker route: claim, lease, completion", () => {
     expect(done.result.source_access.version).toBe("SourceAccessSummaryV2");
   });
 
-  it("fail: terminal failure shows only the short code to the owner; retryable requeues; repeats are idempotent", async () => {
+  it("fail: terminal failure shows only the short code to the owner; `retryable` never requeues (one attempt); repeats are idempotent", async () => {
     const job = await queued();
-    let c = await claimed();
-    expect(await body(await work({ action: "fail", job_id: c.id, lease_token: c.lease_token, code: "transient", message: "SECRET-OPERATOR-NOTE", retryable: true }))).toEqual({ status: "requeued" });
+    const c = await claimed();
+    // retryable:true used to requeue the job for a second model run; under the one-attempt policy it is final.
+    expect(await body(await work({ action: "fail", job_id: c.id, lease_token: c.lease_token, code: "transient", message: "SECRET-OPERATOR-NOTE", retryable: true }))).toEqual({ status: "failed" });
     expect((await work({ action: "heartbeat", job_id: c.id, lease_token: c.lease_token })).status).toBe(409);
-    c = await claimed();
+    expect(await body(await work({ action: "fail", job_id: c.id, lease_token: c.lease_token, code: "transient", message: "", retryable: true }))).toEqual({ status: "already_failed" });
+    expect(await claimed()).toBeNull(); // no second model run for the same job
+    const owner = await body(await get(job.id, bearer("tok-a")));
+    expect(owner.job).toMatchObject({ status: "failed", failure_code: "transient", result: null });
+    expect(JSON.stringify(owner)).not.toContain("SECRET-OPERATOR-NOTE");
+  });
+
+  it("a non-retryable fail is the same single, final failure", async () => {
+    const job = await queued();
+    const c = await claimed();
     expect(await body(await work({ action: "fail", job_id: c.id, lease_token: c.lease_token, code: "model_refused", message: "SECRET-OPERATOR-NOTE", retryable: false }))).toEqual({ status: "failed" });
     expect(await body(await work({ action: "fail", job_id: c.id, lease_token: c.lease_token, code: "model_refused", message: "", retryable: false }))).toEqual({ status: "already_failed" });
     const owner = await body(await get(job.id, bearer("tok-a")));
     expect(owner.job).toMatchObject({ status: "failed", failure_code: "model_refused", result: null });
     expect(JSON.stringify(owner)).not.toContain("SECRET-OPERATOR-NOTE");
+  });
+
+  it("a legacy running job (attempts 2 from the old 3-attempt policy) still heartbeats and completes on its current lease", async () => {
+    const job = await queued();
+    const c = await claimed();
+    queue.jobs[0].attempts = 2; // as left by the old policy
+    expect((await work({ action: "heartbeat", job_id: c.id, lease_token: c.lease_token })).status).toBe(200);
+    expect((await complete(c)).status).toBe(200);
+    expect((await body(await get(job.id, bearer("tok-a")))).job).toMatchObject({ status: "succeeded" });
+    expect(queue.jobs[0].attempts).toBe(2);
   });
 });
 
@@ -417,7 +438,7 @@ describe("worker route: malformed or over-claiming results are rejected (422) an
     const failure = JSON.parse(readFileSync(path.join(process.cwd(), "tests/fixtures/worker-fail-wire.json"), "utf8"));
     const res = await work({ ...failure, job_id: c.id, lease_token: c.lease_token });
     expect(res.status).toBe(200);
-    expect(await body(res)).toMatchObject({ status: "requeued" });
+    expect(await body(res)).toMatchObject({ status: "failed" }); // the fixture says retryable:true; the server ignores it (one attempt)
   });
 
   it("claim -> shared Python V2 fixture -> complete -> owner GET exposes summary only", async () => {

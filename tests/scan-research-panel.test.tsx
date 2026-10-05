@@ -160,6 +160,9 @@ describe("live research panel: real progress only", () => {
     now = T0_MS + 301_000; await advance(2500);
     expect(status()).toContain("No update from the worker since 2026-10-04 19:00 UTC");
     expect(status()).toContain("no estimate is available");
+    // One attempt per job (2026-10-06): the copy must not promise a second try.
+    expect(status()).toContain("may end as failed; it is not picked up again");
+    expect(status()).not.toMatch(/picked up again or|retr(y|ied)|second (try|attempt|run)/i);
     expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(2);
     // a fresh heartbeat clears it
     fetchMock.mockImplementation(() => Promise.resolve(ok(job("running", { updated_at: "2026-10-04T19:05:00+00:00" }))));
@@ -493,6 +496,7 @@ describe("live research panel: Lithuanian", () => {
     vi.useFakeTimers(); vi.stubGlobal("fetch", vi.fn().mockResolvedValue(ok(job("running"))));
     mount({ lang: "lt", clock: () => T0_MS + 400_000 }); await advance(0);
     expect(status()).toBe(RESEARCH_COPY.lt.stalled("2026-10-04 19:00 UTC"));
+    expect(status()).toContain("nebus perimta iš naujo"); // not "may be picked up again": one attempt per job
     expect(host.querySelector('[aria-current="step"]')?.textContent).toBe(RESEARCH_COPY.lt.stages.running);
   });
 

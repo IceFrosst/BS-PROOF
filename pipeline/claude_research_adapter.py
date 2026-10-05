@@ -74,7 +74,12 @@ AUDIT_SCHEMA_FILE = "schemas/research_audit.json"
 # that claims one model when the stream shows another. Changing it needs a new
 # verification, not an env var.
 MODEL = "claude-sonnet-5-5"
-EFFORT = "xhigh"
+# Reasoning effort for the live research run ONLY (the S1-S8 / label adapters keep their own tiers).
+# `medium` since 2026-10-06 on the user's explicit request; it was `xhigh` before (the 2026-10-04/05
+# live jobs ran at xhigh). The model id above is unchanged. `medium` is one of the levels the CLI
+# lists (low, medium, high, xhigh, max). This is a quality/latency setting, not a cap: there is still no
+# turn, token, budget or runtime flag.
+EFFORT = "medium"
 
 ALLOWED_TOOLS = ("WebSearch", "WebFetch")
 # Injected by the CLI itself when --json-schema is given; the audit travels in it.
@@ -104,6 +109,14 @@ _CTRL_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 
 class ResearchAdapterError(Exception):
     """Raised for caller mistakes (bad target, missing prompt). Never for a model result."""
+
+
+class InventoryNotGroundedError(ResearchAdapterError):
+    """An audit cites an inventory ID that appears in no returned tool text.
+
+    A refusal of the MODEL'S audit by the grounding guard, not a worker fault: the worker reports it as
+    `audit_contract_violation`, not `worker_internal_error`. The guard itself is unchanged and strict;
+    nothing is repaired, dropped or forced through."""
 
 
 # --------------------------------------------------------------------------- #
@@ -807,7 +820,7 @@ def validate_live_receipts_and_inventory(audit: dict, access: dict) -> None:
                 raise ResearchAdapterError("inventory access must be snippet; abstracts/full text are unsupported")
             normalized = normalise_audit_id(row.get("id"))
             if normalized is None or normalized not in ids:
-                raise ResearchAdapterError(f"inventory ID is not grounded in returned tool text: {row.get('id')!r}")
+                raise InventoryNotGroundedError(f"inventory ID is not grounded in returned tool text: {row.get('id')!r}")
 
 
 def source_access_report(an: StreamAnalysis, rr: RunResult) -> dict:

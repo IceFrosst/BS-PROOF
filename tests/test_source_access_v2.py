@@ -72,8 +72,15 @@ class SourceAccessV2Tests(unittest.TestCase):
             ad.validate_live_receipts_and_inventory(unsupported, FIXTURE["source_access_v2"])
         ungrounded = copy.deepcopy(FIXTURE["audit"])
         ungrounded["outcomes"][0]["inventory"][0]["id"] = "PMID 99999999"
-        with self.assertRaisesRegex(ad.ResearchAdapterError, "not grounded"):
+        with self.assertRaisesRegex(ad.ResearchAdapterError, "not grounded") as ctx:
             ad.validate_live_receipts_and_inventory(ungrounded, FIXTURE["source_access_v2"])
+        # strict and unchanged, but classified: this is the model's audit being refused, not a worker fault
+        self.assertIsInstance(ctx.exception, ad.InventoryNotGroundedError)
+        self.assertIn("inventory ID is not grounded in returned tool text: 'PMID 99999999'", str(ctx.exception))
+        # only the grounding refusal has that class; the other refusals above stay generic adapter errors
+        with self.assertRaises(ad.ResearchAdapterError) as other:
+            ad.validate_live_receipts_and_inventory(unsupported, FIXTURE["source_access_v2"])
+        self.assertNotIsInstance(other.exception, ad.InventoryNotGroundedError)
 
     def test_requires_pinned_cli_init_model_key_and_usage(self):
         for path, value in (("model", "wrong-model"), ("apiKeySource", "api_key")):

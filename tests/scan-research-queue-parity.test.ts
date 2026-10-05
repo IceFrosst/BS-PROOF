@@ -2,15 +2,18 @@
 /*
  * The route tests run against tests/helpers/fake-research-queue.ts, an in-memory copy of the six SQL functions.
  * A copy can drift from the original and keep every route test green. This test runs ONE scripted history --
- * enqueue, cap, claim, heartbeat, lease expiry, re-claim, stale tokens, completion replay, conflict, retryable
- * and final failures, final-attempt expiry -- against the fake AND against the real docs/research-jobs.sql
- * (PGlite), and requires the two to answer identically at every step. If they differ, the fake is wrong.
+ * enqueue, cap, claim, heartbeat, lease expiry (final: ONE attempt per job, no re-claim), stale tokens,
+ * completion replay, conflict, a retryable fail that is still final, jobs a legacy 3-attempt policy left behind
+ * (running with attempts 2, queued with attempts already spent) -- against the fake AND against the real
+ * docs/research-jobs.sql (PGlite), and requires the two to answer identically at every step. A second test runs
+ * the same history against the PRODUCTION shape (the 2026-10-04 baseline + migration 001). If they differ, the
+ * fake is wrong.
  */
 import { afterAll, describe, expect, it } from "vitest";
 
 import { FakeResearchQueue } from "./helpers/fake-research-queue";
 import { FakeSupabase } from "./helpers/fake-supabase";
-import { Queue, appliedProject, closeProjects, resultFor, uuid } from "./helpers/research-sql";
+import { Queue, appliedProject, closeProjects, migratedProject, resultFor, uuid } from "./helpers/research-sql";
 
 afterAll(closeProjects);
 
@@ -26,6 +29,8 @@ interface Backend {
   expireLease(id: string): Promise<void>;
   /** Fix the order jobs were queued in (the SQL orders by created_at; the fake by insertion). */
   age(id: string, n: number): Promise<void>;
+  /** Put a job in a state the old 3-attempt policy could leave behind. */
+  setAttempts(id: string, attempts: number): Promise<void>;
 }
 
 const sqlBackend = (q: Queue): Backend => ({
@@ -37,6 +42,9 @@ const sqlBackend = (q: Queue): Backend => ({
   fail: (id, t, c, m, r) => q.fail(id, t, c, m, r),
   expireLease: (id) => q.expireLease(id),
   age: (id, n) => q.setCreatedAt(id, `2000-01-01T00:00:${String(n).padStart(2, "0")}Z`),
+  setAttempts: async (id, n) => {
+    await q.db.query("update public.bsproof_research_jobs set attempts = $2 where id = $1::uuid", [id, n]);
+  },
 });
 
 const fakeBackend = (f: FakeResearchQueue): Backend => ({
@@ -48,6 +56,10 @@ const fakeBackend = (f: FakeResearchQueue): Backend => ({
   fail: async (id, t, c, m, r) => f.bsproof_research_fail({ p_id: id, p_lease_token: t, p_code: c, p_message: m, p_retryable: r }),
   expireLease: async (id) => f.expireLease(id),
   age: async () => {},
+  setAttempts: async (id, n) => {
+    const j = f.jobs.find((x) => x.id === id);
+    if (j) j.attempts = n;
+  },
 });
 
 const TIME_KEYS = new Set(["created_at", "updated_at", "completed_at", "lease_expires_at"]);
@@ -93,7 +105,7 @@ async function history(b: Backend): Promise<Array<[string, unknown]>> {
   await step("get A as someone else", b.get(O2, A));
   await step("get unknown", b.get(O1, uuid(999)));
 
-  // A: lease, heartbeat, expiry, re-claim, stale tokens, completion CAS and replay
+  // A: lease, heartbeat, stale tokens, expiry. ONE attempt: the expired lease is final, never re-claimed.
   const a1 = (await step("claim -> A", b.claim())).job;
   await step("heartbeat A", b.heartbeat(A, a1.lease_token));
   await step("heartbeat A wrong token", b.heartbeat(A, "0".repeat(64)));
@@ -102,44 +114,57 @@ async function history(b: Backend): Promise<Array<[string, unknown]>> {
   await step("heartbeat A expired", b.heartbeat(A, a1.lease_token));
   await step("complete A expired", b.complete(A, a1.lease_token, resultFor("late")));
   await step("fail A expired", b.fail(A, a1.lease_token, "late", null, false));
-  const a2 = (await step("claim -> A again", b.claim())).job;
-  await step("heartbeat A with the old token", b.heartbeat(A, a1.lease_token));
-  await step("complete A with the old token", b.complete(A, a1.lease_token, resultFor("old")));
-  await step("fail A with the old token", b.fail(A, a1.lease_token, "old", null, false));
-  await step("complete A", b.complete(A, a2.lease_token, resultFor("one")));
-  await step("complete A replay", b.complete(A, a2.lease_token, resultFor("one")));
-  await step("complete A different result", b.complete(A, a2.lease_token, resultFor("two")));
-  await step("fail A after completion", b.fail(A, a2.lease_token, "late", null, false));
-  await step("fail A after completion, old token", b.fail(A, a1.lease_token, "late", null, false));
-  await step("get A done", b.get(O1, A));
-  await queue("enqueue D after a slot freed", O1, 4);
+  await step("get A expired, not yet swept", b.get(O1, A));
+  const x1 = (await step("claim after A's expiry -> X (A is not re-claimed)", b.claim())).job;
+  await step("get A failed lease_expired", b.get(O1, A));
+  await step("heartbeat A with the dead token", b.heartbeat(A, a1.lease_token));
+  await step("complete A with the dead token", b.complete(A, a1.lease_token, resultFor("old")));
+  await step("fail A with the dead token", b.fail(A, a1.lease_token, "old", null, false));
+  await queue("enqueue D after A's slot freed", O1, 4);
 
-  // X: retryable failures until the third attempt
-  for (const n of [1, 2]) {
-    const x = (await step(`claim -> X #${n}`, b.claim())).job;
-    await step(`fail X retryable #${n}`, b.fail(X, x.lease_token, "claude_cli_error", "boom", true));
-    await step(`fail X replay #${n}`, b.fail(X, x.lease_token, "claude_cli_error", "boom", true));
-    await step(`heartbeat X dead #${n}`, b.heartbeat(X, x.lease_token));
-  }
-  const x3 = (await step("claim -> X #3", b.claim())).job;
-  await step("fail X retryable, no attempts left", b.fail(X, x3.lease_token, "claude_cli_error", "boom", true));
-  await step("fail X replay", b.fail(X, x3.lease_token, "claude_cli_error", "boom", true));
-  await step("complete X after failure", b.complete(X, x3.lease_token, resultFor("x")));
-  await step("get X", b.get(O2, X));
+  // X: completion compare-and-set and replay
+  await step("complete X", b.complete(X, x1.lease_token, resultFor("one")));
+  await step("complete X replay", b.complete(X, x1.lease_token, resultFor("one")));
+  await step("complete X different result", b.complete(X, x1.lease_token, resultFor("two")));
+  await step("fail X after completion", b.fail(X, x1.lease_token, "late", null, false));
+  await step("fail X after completion, other token", b.fail(X, a1.lease_token, "late", null, false));
+  await step("get X done", b.get(O2, X));
 
-  // B: three expired leases -> failed for good at the next claim, which moves on to C
-  for (const n of [1, 2, 3]) {
-    const bj = (await step(`claim -> B #${n}`, b.claim())).job;
-    await b.expireLease(bj.id);
-  }
-  const c1 = (await step("claim after B's final expiry -> C", b.claim())).job;
+  // B: a retryable fail is still final (it used to requeue for a second and third model run)
+  const b1 = (await step("claim -> B", b.claim())).job;
+  await step("fail B retryable", b.fail(B, b1.lease_token, "worker_internal_error", "boom", true));
+  await step("fail B replay", b.fail(B, b1.lease_token, "worker_internal_error", "boom", true));
+  await step("heartbeat B dead", b.heartbeat(B, b1.lease_token));
+  await step("complete B after failure", b.complete(B, b1.lease_token, resultFor("x")));
   await step("get B", b.get(O1, B));
+
+  // C: a non-retryable fail, then the job after it
+  const c1 = (await step("claim -> C", b.claim())).job;
   await step("fail C for good", b.fail(C, c1.lease_token, "claude_quota_or_rate_limit", "limit", false));
   await step("get C", b.get(O1, C));
   const d = (await step("claim -> D", b.claim())).job;
   await step("claim with nothing claimable", b.claim());
   await step("complete D", b.complete(d.id, d.lease_token, resultFor("d")));
   await step("claim, queue empty", b.claim());
+
+  // What the OLD 3-attempt policy can have left behind (set directly; the migration tests reach it through the
+  // real baseline functions): a running job on attempt 2 finishes on its current lease ...
+  const E = (await queue("enqueue E (legacy running)", O2, 5)).job.id;
+  const e1 = (await step("claim -> E", b.claim())).job;
+  await b.setAttempts(E, 2);
+  await step("heartbeat E (attempts 2)", b.heartbeat(E, e1.lease_token));
+  await step("complete E (attempts 2)", b.complete(E, e1.lease_token, resultFor("legacy")));
+  await step("get E", b.get(O2, E));
+  // ... a running job on attempt 3 that fails does not requeue ...
+  const G = (await queue("enqueue G (legacy running, attempt 3)", O2, 7)).job.id;
+  const g1 = (await step("claim -> G", b.claim())).job;
+  await b.setAttempts(G, 3);
+  await step("fail G retryable (attempts 3)", b.fail(G, g1.lease_token, "claude_cli_error", "boom", true));
+  // ... and a queued job whose attempt was already spent is never claimed
+  const F = (await queue("enqueue F (queued, attempt already spent)", O2, 6)).job.id;
+  await b.setAttempts(F, 1);
+  await step("claim, F is skipped", b.claim());
+  await step("get F stays queued", b.get(O2, F));
   return log;
 }
 
@@ -150,6 +175,18 @@ describe("the in-memory queue used by the route tests behaves exactly like docs/
     try {
       const real = await history(sqlBackend(new Queue(db)));
       expect(real.length).toBeGreaterThan(50);
+      expect(fake.map(([label]) => label)).toEqual(real.map(([label]) => label));
+      for (let i = 0; i < real.length; i++) expect(fake[i], `step ${i}: ${real[i][0]}`).toEqual(real[i]);
+    } finally {
+      await db.close();
+    }
+  });
+
+  it("... and identically against the PRODUCTION shape: the applied 2026-10-04 file plus migration 001", async () => {
+    const fake = await history(fakeBackend(new FakeResearchQueue(new FakeSupabase())));
+    const db = await migratedProject();
+    try {
+      const real = await history(sqlBackend(new Queue(db)));
       expect(fake.map(([label]) => label)).toEqual(real.map(([label]) => label));
       for (let i = 0; i < real.length; i++) expect(fake[i], `step ${i}: ${real[i][0]}`).toEqual(real[i]);
     } finally {
