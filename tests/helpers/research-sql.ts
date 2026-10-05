@@ -31,13 +31,14 @@ export const BASELINE_SHA256 = "48783cd3a6d9535b0a8ca8a792c0f73b3d32a98d3b0550c7
 /** Migration 001 (one attempt per job): the narrow, incremental step from the baseline to the current file. */
 export const MIGRATION_SQL_PATH = join(process.cwd(), "docs", "research-jobs-migration-001-one-attempt.sql");
 export const MIGRATION_SQL = readFileSync(MIGRATION_SQL_PATH, "utf8");
-/** Migration 002 (prompt version v0.4): `bsproof_research_complete` accepts v0.4, v0.3 and v0.2. Independent of 001. */
-export const MIGRATION2_SQL_PATH = join(process.cwd(), "docs", "research-jobs-migration-002-prompt-v0.4.sql");
+/** Migration 002 (prompt version v0.5): `bsproof_research_complete` accepts v0.5, v0.4, v0.3 and v0.2. Independent of 001. */
+export const MIGRATION2_SQL_PATH = join(process.cwd(), "docs", "research-jobs-migration-002-prompt-v0.5.sql");
 export const MIGRATION2_SQL = readFileSync(MIGRATION2_SQL_PATH, "utf8");
 
 export const PROMPT = "live-research-v0.2";
 export const PROMPT_V3 = "live-research-v0.3";
 export const PROMPT_V4 = "live-research-v0.4";
+export const PROMPT_V5 = "live-research-v0.5";
 export const API_FUNCTIONS = [
   "bsproof_research_enqueue(uuid, uuid, jsonb, text)",
   "bsproof_research_get(uuid, uuid)",

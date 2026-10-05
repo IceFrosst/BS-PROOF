@@ -121,6 +121,11 @@ function validAudit(): any { return JSON.parse(JSON.stringify(V2_FIXTURE.audit))
 function accessFor(audit?: unknown): any { void audit; return JSON.parse(JSON.stringify(V2_FIXTURE.source_access_v2)); }
 const complete = (job: { id: string; lease_token: string }, audit = validAudit(), source_access_v2 = accessFor(audit)) =>
   work({ action: "complete", job_id: job.id, lease_token: job.lease_token, audit, source_access_v2 });
+/** The live-research-v0.5 wire: the shared fixture EMITTED by the real Python adapter (tests/test_source_access_v3.py pins the equality). */
+const V3_FIXTURE = JSON.parse(readFileSync(path.join(process.cwd(), "tests/fixtures/source-access-v3.json"), "utf8"));
+const v3 = () => ({ audit: JSON.parse(JSON.stringify(V3_FIXTURE.audit)) as any, source_access_v3: JSON.parse(JSON.stringify(V3_FIXTURE.source_access_v3)) as any });
+const completeV3 = (job: { id: string; lease_token: string }, parts: Record<string, unknown> = v3()) =>
+  work({ action: "complete", job_id: job.id, lease_token: job.lease_token, ...parts });
 
 describe("user routes: authentication, flag, ownership", () => {
   it("401 without a bearer on POST and GET, and for a non-Google user; no queue call is made", async () => {
@@ -316,10 +321,11 @@ describe("worker route: claim, lease, completion", () => {
     expect(await claimed()).toBeNull(); // and it is never offered again
   });
 
-  it("prompt versions: new jobs are stamped v0.4; a job queued under v0.2 or v0.3 still completes (with a v0.4 audit, or from a not-yet-upgraded worker's older audit)", async () => {
+  it("prompt versions: new jobs are stamped v0.5; a job queued under v0.2, v0.3 or v0.4 still completes (with a v0.4 audit, or from a not-yet-upgraded worker's older audit)", async () => {
     await queued();
     const c = await claimed();
-    expect(c.prompt_version).toBe("live-research-v0.4");
+    expect(c.prompt_version).toBe("live-research-v0.5");
+    expect(RESEARCH_PROMPT_VERSION).toBe("live-research-v0.5");
     queue.jobs[0].prompt_version = "live-research-v0.2"; // queued before the upgrade
     expect((await complete(c)).status).toBe(200);
     const stored = (await body(await get(c.id, bearer("tok-a")))).job;
@@ -343,6 +349,80 @@ describe("worker route: claim, lease, completion", () => {
     access3.runner.prompt_version = "live-research-v0.3";
     expect((await complete(c3, audit3, access3)).status).toBe(200);
     expect((await body(await get(c3.id, bearer("tok-a")))).job.result.provenance.prompt_version).toBe("live-research-v0.3");
+  });
+
+  describe("the live-research-v0.5 wire (source_access_v3)", () => {
+    it("a v0.5 job completes with a V3 result; the stored provenance says SourceAccessV3 and the stored record holds counters only", async () => {
+      await queued();
+      const c = await claimed();
+      expect(c.prompt_version).toBe("live-research-v0.5");
+      const res = await completeV3(c);
+      expect(res.status).toBe(200);
+      const stored = (await body(await get(c.id, bearer("tok-a")))).job;
+      expect(stored.status).toBe("succeeded");
+      expect(stored.result.provenance).toMatchObject({ prompt_version: "live-research-v0.5", source_access_version: "SourceAccessV3" });
+      expect(stored.result.source_access.follow_through).toMatchObject({ version: "lead-accounting-v1", user_turns: 2, leads: 3, ledger_rows: 3 });
+      const text = JSON.stringify(stored);
+      for (const needle of ["lead_ledger", "blog.example.org", "journal.example.org", "Please complete the CAPTCHA"]) expect(text, needle).not.toContain(needle);
+    });
+
+    it("exactly ONE receipt key: both, or neither, is 422 and nothing is stored", async () => {
+      await queued();
+      const c = await claimed();
+      const both = { ...v3(), source_access_v2: accessFor() };
+      expect((await completeV3(c, both)).status).toBe(422);
+      expect((await completeV3(c, { audit: v3().audit })).status).toBe(422);
+      expect(queue.jobs[0]).toMatchObject({ status: "running", result: null });
+    });
+
+    it("a v0.5 audit cannot travel on the weaker V2 wire, and an older audit cannot travel on V3", async () => {
+      await queued();
+      const c = await claimed();
+      const audit = validAudit();
+      audit.meta.prompt = "live-research-v0.5";
+      const access = accessFor(audit);
+      access.runner.prompt_version = "live-research-v0.5";
+      expect((await complete(c, audit, access)).status).toBe(422);
+      const older = v3();
+      older.audit.meta.prompt = "live-research-v0.4";
+      older.source_access_v3.runner.prompt_version = "live-research-v0.4";
+      expect((await completeV3(c, older)).status).toBe(422);
+      expect(queue.jobs[0]).toMatchObject({ status: "running", result: null });
+    });
+
+    it("a premature run (one search, no page, empty inventory, no ledger) is refused 422: not stored, the lease is untouched", async () => {
+      await queued();
+      const c = await claimed();
+      const p = v3();
+      for (const o of p.audit.outcomes) o.inventory = [];
+      p.source_access_v3.events = [p.source_access_v3.events[0]];
+      p.source_access_v3.summary = { requests: 1, errors: 0, walls: 0, refusals: 0, search_snippets: 1, fetch_summaries: 0, original_documents: 0 };
+      p.source_access_v3.lead_ledger = [];
+      const res = await completeV3(c, p);
+      expect(res.status).toBe(422);
+      expect(JSON.stringify(await body(res))).toMatch(/source leads not followed.*empty_without_any_page_request/);
+      expect(queue.jobs[0]).toMatchObject({ status: "running", result: null });
+      expect((await work({ action: "heartbeat", job_id: c.id, lease_token: c.lease_token })).status).toBe(200);
+    });
+
+    it("a job queued before the upgrade (stamped v0.4) that the new worker ran as v0.5 completes on the V3 wire", async () => {
+      await queued();
+      const c = await claimed();
+      queue.jobs[0].prompt_version = "live-research-v0.4";
+      expect((await completeV3(c)).status).toBe(200);
+      expect((await body(await get(c.id, bearer("tok-a")))).job.result.provenance.prompt_version).toBe("live-research-v0.5");
+    });
+
+    it("an identical V3 retry is already_completed and a different V3 result is a conflict", async () => {
+      await queued();
+      const c = await claimed();
+      expect(await body(await completeV3(c))).toEqual({ status: "completed" });
+      expect(await body(await completeV3(c))).toEqual({ status: "already_completed" });
+      const other = v3();
+      other.source_access_v3.lead_ledger[2].note = "a different note";
+      other.source_access_v3.runner.user_turns = 3;
+      expect((await completeV3(c, other)).status).toBe(409);
+    });
   });
 
   it("an audit whose meta.prompt and receipt runner disagree, or name an unknown prompt, is refused 422 and nothing is stored", async () => {

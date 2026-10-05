@@ -165,7 +165,7 @@
       "model": "claude-sonnet-5-5",
       "prompt_version": "live-research-v0.4",
       "cli_version": "2.1.287",
-      "adapter_version": "claude-research-adapter-v0.1",
+      "adapter_version": "claude-research-adapter-v0.2",
       "classifier_version": "fetch-access-v2",
       "api_key_source": "none",
       "started_at": "2026-10-03T12:00:00.000Z",

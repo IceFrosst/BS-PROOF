@@ -41,7 +41,8 @@
  *         -> 200 { job: null } | { job:{ id, lease_token, target, prompt_version } }
  *     { action:"heartbeat", job_id, lease_token }
  *         -> 200 { status:"ok", lease_expires_at } | 409 { status:"lease_invalid" }
- *     { action:"complete", job_id, lease_token, audit, source_access_v2 }
+ *     { action:"complete", job_id, lease_token, audit, source_access_v2 | source_access_v3 }   (exactly one of the two:
+ *         v3 for live-research-v0.5, v2 for v0.2-v0.4)
  *         -> 200 { status:"completed"|"already_completed" } | 409 lease_invalid|conflict
  *            | 422 { status:"invalid_result", errors:[...] }
  *     { action:"fail", job_id, lease_token, code, message, retryable }
@@ -70,11 +71,12 @@
  *
  * WHAT COMES BACK. The audit must validate against schemas/research_audit.json
  * (strict, additionalProperties:false, finite numbers) and carry
- * `meta.prompt` (one of ACCEPTED_RESEARCH_PROMPT_VERSIONS, equal to the receipt's runner prompt). `source_access_v2` (SourceAccessV2) is
+ * `meta.prompt` (one of ACCEPTED_RESEARCH_PROMPT_VERSIONS, equal to the receipt's runner prompt). `source_access_v2` (SourceAccessV2) or, for v0.5, `source_access_v3` (SourceAccessV3) is
  * transient validation input containing exact returned snippet/model-summary
- * text and hashes. The server recomputes bytes, hashes, counters and ID grounding,
+ * text and hashes (V3 also what each call requested, and the lead ledger). The server recomputes bytes, hashes, counters and
+ * ID grounding (V3: with the model's own request echo removed) and, for V3, the follow-through of the source leads; it
  * rejects abstract/full_text claims, then stores only an owner-safe
- * SourceAccessSummaryV2 projection. V1 remains supported only by its frozen
+ * SourceAccessSummaryV2 projection (V3 adds a counters-only `follow_through` record). V1 remains supported only by its frozen
  * standalone validator/tests, never by this live route.
  *
  * PROVENANCE. The server stamps `result.provenance` itself; the worker cannot
@@ -92,14 +94,21 @@ import { isUuid } from "@/lib/auth/server-auth";
 export const RESEARCH_JOB_VERSION = "ResearchJobV1" as const;
 
 /** The live prompt the PC worker must run (prompts/research_audit_live.md). */
-export const RESEARCH_PROMPT_VERSION = "live-research-v0.4" as const;
+export const RESEARCH_PROMPT_VERSION = "live-research-v0.5" as const;
 /**
- * Prompt versions a worker result may carry. v0.4 is stamped on every NEW job; v0.3 and v0.2 stay accepted so a job
+ * Prompt versions a worker result may carry. v0.5 is stamped on every NEW job; v0.4, v0.3 and v0.2 stay accepted so a job
  * queued before the upgrade, or a result from a not-yet-upgraded worker, is not lost (one attempt per job means a
- * refused result is a lost job). docs/research-jobs.sql `bsproof_research_complete` accepts the same three job versions.
+ * refused result is a lost job). docs/research-jobs.sql `bsproof_research_complete` accepts the same four job versions.
+ *
+ * WIRE BY VERSION. v0.2-v0.4 results travel as `source_access_v2` (SourceAccessV2, frozen); a v0.5 result travels as
+ * `source_access_v3` (SourceAccessV3): the same receipts plus what each tool call REQUESTED and the model's lead ledger,
+ * from which the server recomputes the follow-through (lib/scan-research/lead-accounting.ts). Each wire refuses the other's
+ * prompt versions, so a v0.5 audit cannot be posted on the weaker wire.
  */
-export const ACCEPTED_RESEARCH_PROMPT_VERSIONS = ["live-research-v0.4", "live-research-v0.3", "live-research-v0.2"] as const;
+export const ACCEPTED_RESEARCH_PROMPT_VERSIONS = ["live-research-v0.5", "live-research-v0.4", "live-research-v0.3", "live-research-v0.2"] as const;
 export type ResearchPromptVersion = (typeof ACCEPTED_RESEARCH_PROMPT_VERSIONS)[number];
+/** The prompt versions whose results travel as SourceAccessV2 (frozen at v0.4). */
+export const V2_WIRE_PROMPT_VERSIONS = ["live-research-v0.4", "live-research-v0.3", "live-research-v0.2"] as const;
 
 /** Lease length in seconds (must equal the SQL default). */
 export const LEASE_SECONDS = 300;

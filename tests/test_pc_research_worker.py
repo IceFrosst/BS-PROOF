@@ -59,6 +59,8 @@ import pc_research_worker as w  # noqa: E402
 TOKEN = "test-worker-token-0123456789abcdef"
 FIXTURE_AUDIT = ROOT / "app" / "design-lab" / "ab" / "audits" / "magnesium.json"
 FIXTURE_TARGETS = json.loads((ROOT / "tests" / "fixtures" / "research-target-v1.json").read_text())["cases"]
+# schemas/research_audit.json is the canonical audit contract of every retained audit and benchmark: this change must not move it.
+CANONICAL_AUDIT_SCHEMA_SHA256 = "0cef5ec381e653e4fbc55ec6f4eebe0204b7d534671bad3bdfa4f3fb8ba64c2b"
 FIXED_NOW = datetime.datetime(2026, 10, 4, 12, 30, 0, tzinfo=datetime.timezone.utc)
 TODAY = FIXED_NOW.date().isoformat()
 
@@ -110,13 +112,19 @@ def ev_ret(i, text, code=None, is_error=False, url=None):
     return e
 
 
-def ev_result(audit=None, **over):
+def envelope(audit, ledger=None):
+    """The live-research-v0.5 return: the audit untouched next to the lead ledger."""
+    return {"audit": audit, "lead_ledger": [] if ledger is None else ledger}
+
+
+def ev_result(audit=None, ledger=None, bare=False, **over):
+    """A CLI `result` event. `audit` is wrapped in the v0.5 envelope unless `bare` (the v0.2-v0.4 shape)."""
     r = {"type": "result", "subtype": "success", "is_error": False, "terminal_reason": "completed",
          "api_error_status": None, "num_turns": 5, "duration_ms": 1000, "total_cost_usd": 0.5,
          "modelUsage": {ad.MODEL: {"outputTokens": 5000}, "claude-haiku-4-5-20251001": {"outputTokens": 9000}},
          "result": "ok"}
     if audit is not None:
-        r["structured_output"] = audit
+        r["structured_output"] = audit if bare else envelope(audit, ledger)
     r.update(over)
     return r
 
@@ -150,18 +158,40 @@ if '--version' in sys.argv:
     print('2.1.287 (Claude Code)'); sys.exit(0)
 json.dump({{'argv': sys.argv[1:], 'env': sorted(os.environ), 'cwd': os.getcwd(), 'pid': os.getpid()}}, open(SC['record'], 'w'))
 open(SC['record'] + '.invocations', 'a').write('x')   # one character per MODEL run (--version exits above, before this)
-open(SC['record'] + '.stdin', 'w').write(sys.stdin.read())
-for ev in SC['events']:
-    if ev == 'WAIT_HEARTBEAT':
-        # Mid-run until the fake API has actually received a heartbeat (hang guard: 120 s).
-        guard = time.monotonic() + 120
-        while not os.path.exists(SC['hb_flag']) and time.monotonic() < guard:
-            time.sleep(0.01)
-        continue
-    if ev == 'HANG':
-        open(SC['record'] + '.ready', 'w').write('1')   # tell the test the CLI is mid-run
-        time.sleep(600)
-    print(json.dumps(ev), flush=True)
+# `--input-format stream-json` (checked against the real CLI 2.1.287): the first user turn is ONE JSON line on stdin, the process
+# stays alive after each `result` event, a further line is the next user turn of the SAME session, EOF on stdin ends it.
+first = sys.stdin.readline()
+open(SC['record'] + '.stdin', 'w').write(first)
+TURNS = SC.get('turns') or [SC['events']]
+for k, evs in enumerate(TURNS):
+    if k > 0:
+        line = sys.stdin.readline()
+        if not line:
+            break                       # EOF: the worker finished the run
+        open(SC['record'] + '.stdin', 'a').write(line)
+    for ev in evs:
+        if ev == 'WAIT_HEARTBEAT':
+            # Mid-run until the fake API has actually received a heartbeat (hang guard: 120 s).
+            guard = time.monotonic() + 120
+            while not os.path.exists(SC['hb_flag']) and time.monotonic() < guard:
+                time.sleep(0.01)
+            continue
+        if ev == 'HANG':
+            open(SC['record'] + '.ready', 'w').write('1')   # tell the test the CLI is mid-run
+            time.sleep(600)
+        print(json.dumps(ev), flush=True)
+else:
+    # like the real CLI: after a final `result` event it waits for the next user turn / EOF
+    if any(isinstance(e, dict) and e.get('type') == 'result' for e in TURNS[-1]):
+        extra = sys.stdin.readline()
+        if extra:
+            # the worker sent a user turn the scenario did not script: fail LOUDLY instead of waiting for it forever
+            open(SC['record'] + '.stdin', 'a').write(extra)
+            print(json.dumps({{'type': 'result', 'subtype': 'error_during_execution', 'is_error': True,
+                              'result': 'UNSCRIPTED USER TURN'}}), flush=True)
+            sys.exit(4)
+        if SC.get('hang_after_eof'):
+            time.sleep(600)             # a CLI that does not exit by itself once stdin is closed
 sys.stderr.write(SC.get('stderr', ''))
 sys.exit(SC.get('exit', 0))
 """
@@ -277,6 +307,8 @@ class Base(unittest.TestCase):
                         "CLAUDE_CODE_OAUTH_TOKEN": "oauth-should-not-leak"}
 
     def cli(self, events, **sc):
+        """`events`: the events of ONE user turn. `turns=[[...],[...]]` (in `sc`): one list per user turn of the same
+        process; the fake waits for the worker's next stdin line between them, like the real CLI."""
         scen = self.tmp_path / "scenario.json"
         scen.write_text(json.dumps({"events": events, "record": str(self.rec), "hb_flag": str(self.hb_flag), **sc}))
         path = self.tmp_path / "fake-claude"
@@ -306,6 +338,16 @@ class Base(unittest.TestCase):
 
     def cli_pid(self):
         return json.loads(self.rec.read_text())["pid"]
+
+    def stdin_turns(self):
+        """The user turns the fake CLI received on stdin, decoded: the first request, then any worker follow-ups."""
+        raw = Path(str(self.rec) + ".stdin").read_text().splitlines()
+        out = []
+        for line in raw:
+            m = json.loads(line)
+            self.assertEqual((m["type"], m["message"]["role"]), ("user", "user"))
+            out.append("".join(b["text"] for b in m["message"]["content"] if b["type"] == "text"))
+        return out
 
     def model_runs(self):
         """How many times the (fake) model CLI was actually started for a run. --version checks do not count."""
@@ -366,13 +408,36 @@ class AdapterContract(unittest.TestCase):
         import claude_adapter
         self.assertIn("xhigh", claude_adapter.VALID_EFFORT)
 
-    def test_wire_schema_is_canonical_minus_dollar_schema_only(self):
+    def test_wire_schema_is_the_live_only_envelope_around_the_untouched_canonical_audit_schema(self):
         canon = ad.load_canonical_schema()
         wire = json.loads(ad.wire_schema_text())
         self.assertIn("$schema", canon)
         self.assertNotIn("$schema", wire)
+        self.assertEqual(wire["required"], ["audit", "lead_ledger"])
+        self.assertFalse(wire["additionalProperties"])
+        # `audit` IS the canonical schema: same body, minus only the $schema annotation the CLI rejects and the $defs
+        # that moved (unchanged) to the envelope root so every "#/$defs/..." reference still resolves.
+        defs = canon.pop("$defs")
         canon.pop("$schema")
-        self.assertEqual(canon, wire)
+        self.assertEqual(wire["properties"]["audit"], canon)
+        self.assertEqual(wire["$defs"], defs)
+        self.assertEqual(wire["properties"]["lead_ledger"], json.loads((ROOT / "schemas/source_access_v3.json").read_text())["$defs"]["leadLedger"])
+        # the canonical file itself is byte-for-byte what it was before this change
+        self.assertEqual(hashlib.sha256((ROOT / "schemas/research_audit.json").read_bytes()).hexdigest(), CANONICAL_AUDIT_SCHEMA_SHA256)
+
+    def test_command_adds_only_the_stream_json_input_flag_to_the_verified_one(self):
+        """The ONLY flag change for the same-session follow-up (checked against CLI 2.1.287): `--input-format stream-json`.
+        No tool, permission, setting, MCP, session or budget flag was added or relaxed."""
+        cmd = ad.build_command("claude", "SYSTEM", "{}")
+        self.assertEqual(cmd[cmd.index("--input-format") + 1], "stream-json")
+        before = [c for i, c in enumerate(cmd) if c != "--input-format" and cmd[i - 1] != "--input-format"]
+        self.assertEqual(before, ["claude", "-p", "--safe-mode", "--strict-mcp-config", "--tools", "WebSearch,WebFetch",
+                                  "--allowedTools", "WebSearch,WebFetch", "--permission-mode", "dontAsk", "--model", ad.MODEL,
+                                  "--effort", "medium", "--no-session-persistence", "--output-format", "stream-json", "--verbose",
+                                  "--json-schema", "{}", "--system-prompt", "SYSTEM"])
+        for banned in ("--max-turns", "--max-budget-usd", "--resume", "--continue", "--session-id", "--settings", "--mcp-config",
+                       "--dangerously-skip-permissions", "--add-dir", "--permission-prompt-tool", "--replay-user-messages"):
+            self.assertNotIn(banned, cmd)
 
     def test_child_env_is_an_allowlist_without_tokens_or_keys(self):
         env = ad.child_env({"PATH": "/bin", "HOME": "/h", "LC_ALL": "C", "ANTHROPIC_API_KEY": "x",
@@ -403,9 +468,9 @@ class AdapterContract(unittest.TestCase):
     def test_live_prompt_is_distinct_versioned_and_leaves_the_retained_prompt_alone(self):
         live = (ROOT / "prompts" / "research_audit_live.md").read_text()
         old = (ROOT / "prompts" / "research_audit.md").read_text()
-        self.assertEqual(ad.LIVE_PROMPT_VERSION, "live-research-v0.4")
-        self.assertIn("**Version `live-research-v0.4`.", live.split("---", 1)[0])
-        self.assertIn("- `meta.prompt`: `live-research-v0.4`.", live)
+        self.assertEqual(ad.LIVE_PROMPT_VERSION, "live-research-v0.5")
+        self.assertIn("**Version `live-research-v0.5`.", live.split("---", 1)[0])
+        self.assertIn("- `meta.prompt`: `live-research-v0.5`.", live)
         self.assertIn("`audit-v0.4`", old.split("---", 1)[0])
         self.assertNotIn("{{INGREDIENT}}", live)
         for needle in ("WebSearch", "a summary, not the paper", "CONTEXT ONLY", "unknown", "experimental"):
@@ -418,10 +483,17 @@ class AdapterContract(unittest.TestCase):
 
     V03_FIXTURE_SHA256 = "3ef4ecfb373d163393aa7b3d90e2492947a5f64817665716b5b43ad1e8f4ed5e"  # the prompt the private v0.3 run used
 
+    V04_FIXTURE_SHA256 = "b0b69245d6effc2dc8b41dc0a9cfbcb8372e0ed88f4aa4629a6aedfda001f715"  # the prompt the second private run used
+
     def fixtures(self):
+        """(v0.2, v0.3, v0.4), all FROZEN fixtures. The live prompt (v0.5) is `current_prompt()`."""
         fx = ROOT / "tests" / "fixtures"
-        return ((fx / "research_audit_live_v0.2.md").read_text(), (fx / "research_audit_live_v0.3.md").read_text(),
-                (ROOT / "prompts" / "research_audit_live.md").read_text())
+        v04 = (fx / "research_audit_live_v0.4.md").read_text()
+        self.assertEqual(hashlib.sha256(v04.encode("utf-8")).hexdigest(), self.V04_FIXTURE_SHA256)
+        return ((fx / "research_audit_live_v0.2.md").read_text(), (fx / "research_audit_live_v0.3.md").read_text(), v04)
+
+    def current_prompt(self):
+        return (ROOT / "prompts" / "research_audit_live.md").read_text()
 
     def test_v0_3_is_v0_2_plus_the_citation_rule_and_nothing_else(self):
         """Invariant 3 / "keep every unit and constant": the ONLY difference between the prompt that produced the 2026-10-05
@@ -514,6 +586,75 @@ class AdapterContract(unittest.TestCase):
         # it must not tell the model that the worker rejects a thin audit (it does not), and must not promise approval
         self.assertNotRegex(flat, r"(?i)worker (rejects|refuses|fails)")
         self.assertNotRegex(flat, r"(?i)approved|validated|verified by")
+
+    # The ONE rule block v0.5 adds, and the exact replacements it makes. Anything outside this list is a failure.
+    L9_HEADING = "### L9. Account for every lead"
+    V05_EDITS = (  # (v0.5 text, v0.4 text) -- every one occurs exactly once
+        ("**Version `live-research-v0.5`. The `audit` part of the output must validate against `schemas/research_audit.json`.**",
+         "**Version `live-research-v0.4`. Output must validate against `schemas/research_audit.json`.**"),
+        ("`live-research-v0.5` adds ONE more rule block, L9 (the lead ledger), and changes how the result is RETURNED (see\n"
+         "HOW TO RETURN): the audit travels as the `audit` part of an envelope, next to a `lead_ledger` that the worker checks\n"
+         "against your tool calls. The audit itself, the schema and every rule about evidence are untouched.\n", ""),
+        ("the worker records `live-research-v0.5` in the job\nclaim,", "the worker records `live-research-v0.4` in the job\nclaim,"),
+        ("`live-research-v0.2`, `live-research-v0.3` or `live-research-v0.4` is still served, with this prompt.",
+         "`live-research-v0.2` or `live-research-v0.3` is still served, with this prompt."),
+        ("; L8 added in `live-research-v0.4`; L9 added in `live-research-v0.5`)", "; L8 added in `live-research-v0.4`)"),
+        ("- `meta.prompt`: `live-research-v0.5`.", "- `meta.prompt`: `live-research-v0.4`."),
+        ("Return the result through the structured-output mechanism the session provides: one JSON object with exactly two\n"
+         "keys. `audit` is the audit, a JSON object that validates against `schemas/research_audit.json`. `lead_ledger` is\n"
+         "the ledger of L9. No prose outside the object. If the research did not work, return the honest low-confidence\n"
+         "audit; do not pad it.\n",
+         "Return the audit through the structured-output mechanism the session provides: one\n"
+         "JSON object that validates against `schemas/research_audit.json`. No prose outside\n"
+         "the object. If the research did not work, return the honest low-confidence audit;\n"
+         "do not pad it.\n"),
+    )
+
+    def l9_block(self, v05):
+        start, end = v05.index(self.L9_HEADING), v05.index("---\n\n## HOW TO RETURN")
+        return v05[start:end]
+
+    def test_v0_5_is_v0_4_plus_the_enumerated_edits_and_rule_L9_and_nothing_else(self):
+        """Invariant 3: every word of the frozen v0.4 prompt (rules, L7, L8, STEPS 0-7) is still there; the only
+        differences are the version strings, the return envelope and the new rule L9. Reverse them and the bytes match."""
+        _, _, v04 = self.fixtures()
+        v05 = self.current_prompt()
+        self.assertNotEqual(v05, v04)
+        rest = v05.replace(self.l9_block(v05), "")
+        for new, old in self.V05_EDITS:
+            self.assertEqual(rest.count(new), 1, new)
+            rest = rest.replace(new, old)
+        self.assertEqual(rest, v04)
+        # L7 and L8 are word for word the v0.4 ones (a candidate must not loosen the citation check or the follow-the-leads rule)
+        for heading, end in (("### L7. Cite only", "### L8."), ("### L8. Open before", "### L9.")):
+            self.assertEqual(v05[v05.index(heading):v05.index(end)], v04[v04.index(heading):v04.index(end if end != "### L9." else "---\n\n## HOW TO RETURN")])
+        old = (ROOT / "prompts" / "research_audit.md").read_text()
+        step = "## STEP 1 — SPLIT BY POPULATION"
+        self.assertEqual(v05.split(step)[1].split("## STEP 2")[0], old.split(step)[1].split("## STEP 2")[0])
+
+    def test_L9_says_the_ledger_is_checked_against_the_calls_and_leaves_no_excuse_no_number_and_no_score(self):
+        v05 = self.current_prompt()
+        flat = " ".join(self.l9_block(v05).split())
+        for needle in ("the worker checks it against the list of tool calls you really made in this run",
+                       "You cannot certify anything in the ledger", "a page you did not request is not opened, whatever you write",
+                       "`opened`: you called WebFetch on this lead", "even if the page then failed", "`not_opened_secondary`",
+                       "`not_opened_off_topic`", "There is no other disposition", "I did not get to it", "is not one: open it",
+                       "An error does not close a lead", "the same page in another language is NOT another try",
+                       "search again for it by its title", "from an independent source", "Europe PMC",
+                       "A mirror is a mirror", "`access` stays `snippet` (L2)",
+                       "never asks for a number, a source or a score", "Do not invent a row, a source or a number so that the check passes",
+                       "L9 relaxes nothing", "L7 still decides what may be cited"):
+            self.assertIn(needle, flat, needle)
+        body = "\n".join(self.l9_block(v05).splitlines()[1:])
+        # no number of pages, searches, turns or minutes; the only digits are rule names (L2, L7, L8, L9) and the API path
+        digits = re.findall(r"\d", re.sub(r"https?://\S+", "", re.sub(r"\bL\d\b", "", body)))
+        self.assertEqual(digits, [], "L9 must contain no number")
+        self.assertNotRegex(flat, r"(?i)\b(at least|at most|minimum|maximum|no more than|up to|first \w+) (one|two|three|four|five|\d+)\b")
+        self.assertNotRegex(flat, r"(?i)\b(approved|validated|fixed|guarantee)")
+        # the HOW TO RETURN paragraph names the two keys
+        ret = v05.split("## HOW TO RETURN")[1]
+        self.assertIn("exactly two\nkeys. `audit`", ret)
+        self.assertIn("`lead_ledger`", ret)
 
     def test_every_paragraph_that_allows_an_empty_result_in_the_live_rules_points_at_L8(self):
         """The three v0.3 sentences that sanctioned an early, empty finish ("an empty audit is a valid result", L4's empty
@@ -656,11 +797,16 @@ class Jobs(Base):
         done = self.api.of("complete")
         self.assertEqual(len(done), 1)
         p = done[0]
-        self.assertEqual(sorted(p), ["action", "audit", "job_id", "lease_token", "source_access_v2"])
+        self.assertEqual(sorted(p), ["action", "audit", "job_id", "lease_token", "source_access_v3"])
         self.assertEqual((p["job_id"], p["lease_token"]), ("job-1", "lease-secret-abc"))
-        self.assertEqual(p["audit"], good_audit())  # forwarded byte-for-byte, never edited
-        sa = p["source_access_v2"]
-        self.assertEqual(sa["version"], "SourceAccessV2")
+        self.assertEqual(p["audit"], good_audit())  # forwarded byte-for-byte, never edited; the ledger is NOT part of the audit
+        sa = p["source_access_v3"]
+        self.assertEqual(sa["version"], "SourceAccessV3")
+        self.assertEqual((sa["runner"]["prompt_version"], sa["runner"]["user_turns"]), (ad.LIVE_PROMPT_VERSION, 1))
+        self.assertEqual(sa["lead_ledger"], [])
+        # every event says what the call REQUESTED (so an echoed request can never ground itself)
+        self.assertEqual([e["request"] for e in sa["events"]][:3], [
+            {"query": "magnesium sleep rct"}, {"url": "https://example.org/a"}, {"url": "https://example.org/b"}])
         self.assertEqual(sa["summary"]["walls"], 1)
         self.assertEqual(sa["summary"]["requests"], 2)
         self.assertEqual(sa["summary"]["search_snippets"], 1)
@@ -696,10 +842,16 @@ class Jobs(Base):
         self.assertEqual(self.model_runs(), 1)
         self.assertTrue(rec["cwd"].startswith(str(rd)))
         self.assertEqual(sorted(set(rec["env"]) - {"PWD", "SHLVL", "_", "OLDPWD", "LC_CTYPE"}), ["HOME", "PATH"])
-        stdin = Path(str(self.rec) + ".stdin").read_text()
+        (stdin,) = self.stdin_turns()          # one user turn: the leads were followed, nothing more was sent
         self.assertIn(ad.TARGET_BEGIN, stdin)
         self.assertIn("magnesium", stdin)
         self.assertNotIn("lease-secret-abc", stdin)
+        self.assertIn("meta.prompt = live-research-v0.5", stdin)
+        ft = json.loads((rd / "followthrough.json").read_text())
+        self.assertEqual((ft["cli_invocations"], ft["user_turns"], ft["finish_reason"]), (1, 1, "satisfied"))
+        self.assertTrue(ft["final"]["satisfied"])
+        self.assertEqual(ft["effort"]["requested_via_argv"], "medium")
+        self.assertIn("NOT observed", ft["effort"]["note"])
         # grounding is a string match only; the cited DOI/PMIDs in the fixture are mostly unseen here
         g = diag["audit_grounding"]
         self.assertIn("caveat", g)
@@ -760,7 +912,7 @@ class Jobs(Base):
     def test_structured_output_tool_use_is_a_fallback_source(self):
         events = web_events() + [
             {"type": "assistant", "message": {"content": [
-                {"type": "tool_use", "id": "so", "name": "StructuredOutput", "input": good_audit()}]}},
+                {"type": "tool_use", "id": "so", "name": "StructuredOutput", "input": envelope(good_audit())}]}},
             ev_result(None)]
         self.assertEqual(self.run_job(events).kind, "completed")
 
@@ -847,16 +999,17 @@ class Jobs(Base):
 
     def test_a_job_queued_under_a_previous_prompt_version_is_served_not_lost(self):
         # One attempt per job: refusing it would end it for good. It is run with the CURRENT prompt, and the audit says so.
-        self.assertEqual(w.SUPPORTED_PROMPT_VERSIONS, ("live-research-v0.4", "live-research-v0.3", "live-research-v0.2"))
-        for n, old in enumerate(("live-research-v0.2", "live-research-v0.3")):
+        self.assertEqual(w.SUPPORTED_PROMPT_VERSIONS, ("live-research-v0.5", "live-research-v0.4", "live-research-v0.3", "live-research-v0.2"))
+        for n, old in enumerate(("live-research-v0.2", "live-research-v0.3", "live-research-v0.4")):
             out = self.run_job(web_events() + [ev_result(good_audit())], jobspec=job(pv=old, jid=f"job-old-{n}"))
             self.assertEqual(out.kind, "completed", old)
             sent = self.api.of("complete")[-1]
-            self.assertEqual(sent["audit"]["meta"]["prompt"], "live-research-v0.4", old)
-            self.assertEqual(sent["source_access_v2"]["runner"]["prompt_version"], "live-research-v0.4", old)
-            self.assertIn("meta.prompt = live-research-v0.4", Path(str(self.rec) + ".stdin").read_text(), old)
+            self.assertEqual(sent["audit"]["meta"]["prompt"], "live-research-v0.5", old)
+            self.assertEqual(sent["source_access_v3"]["runner"]["prompt_version"], "live-research-v0.5", old)
+            self.assertNotIn("source_access_v2", sent, old)   # an old job's result still travels on the NEW wire: it ran v0.5
+            self.assertIn("meta.prompt = live-research-v0.5", self.stdin_turns()[0], old)
         # ... while an audit that claims an OLD prompt (a model that ignored the request) is not delivered
-        for n, old in enumerate(("live-research-v0.2", "live-research-v0.3")):
+        for n, old in enumerate(("live-research-v0.2", "live-research-v0.3", "live-research-v0.4")):
             bad = good_audit()
             bad["meta"]["prompt"] = old
             out = self.run_job(web_events() + [ev_result(bad)], jobspec=job(pv=old, jid=f"job-bad-{n}"))
@@ -899,9 +1052,9 @@ class Jobs(Base):
         self.assertEqual(self.run_job(web_events() + [ev_result(good_audit())]).kind, "completed")
         # the narrow fix is the ONE known message: every other adapter refusal keeps its previous classification
         self.assertTrue(issubclass(ad.InventoryNotGroundedError, ad.ResearchAdapterError))
-        for message in ("SourceAccessV2 receipt byte/hash mismatch", "inventory access must be snippet; abstracts/full text are unsupported",
+        for message in ("SourceAccessV3 receipt byte/hash mismatch", "inventory access must be snippet; abstracts/full text are unsupported",
                         "CLI init must declare the pinned model and apiKeySource=none"):
-            with unittest.mock.patch.object(ad, "source_access_v2", side_effect=ad.ResearchAdapterError(message)):
+            with unittest.mock.patch.object(ad, "source_access_v3", side_effect=ad.ResearchAdapterError(message)):
                 out = self.run_job(web_events() + [ev_result(good_audit())])
             self.assertEqual(out.code, "worker_internal_error", message)
 

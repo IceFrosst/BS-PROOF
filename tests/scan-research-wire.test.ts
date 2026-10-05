@@ -38,7 +38,8 @@ const saved = { ...process.env };
 const originalFetch = global.fetch;
 const WORKER_TOKEN = "w".repeat(48);
 const SCAN = "aaaaaaaa-aaaa-4aaa-8aaa-000000000001";
-const FIXTURE = JSON.parse(readFileSync(path.join(process.cwd(), "tests/fixtures/source-access-v2.json"), "utf8"));
+const FIXTURE = JSON.parse(readFileSync(path.join(process.cwd(), "tests/fixtures/source-access-v3.json"), "utf8"));
+const FIXTURE_V2 = JSON.parse(readFileSync(path.join(process.cwd(), "tests/fixtures/source-access-v2.json"), "utf8"));
 
 let fake: FakeSupabase;
 let queue: FakeResearchQueue;
@@ -135,8 +136,8 @@ describe("real route replies, read by the panel's own parsers", () => {
     expect(parseResearchJob(runningReply.job)!.status).toBe("running");
     expect(JSON.stringify(runningReply)).not.toContain(claim.lease_token);
 
-    // The worker completes it with the real strict V2 fixture.
-    const done = await work({ action: "complete", job_id: id, lease_token: claim.lease_token, audit: clone(FIXTURE.audit), source_access_v2: clone(FIXTURE.source_access_v2) });
+    // The worker completes it with the real strict V3 fixture (the wire of live-research-v0.5, emitted by the real adapter).
+    const done = await work({ action: "complete", job_id: id, lease_token: claim.lease_token, audit: clone(FIXTURE.audit), source_access_v3: clone(FIXTURE.source_access_v3) });
     expect(done.status).toBe(200);
 
     const reply = await j(await read(id));
@@ -167,18 +168,33 @@ describe("real route replies, read by the panel's own parsers", () => {
       model: "claude-sonnet-5-5",
       prompt_version: RESEARCH_PROMPT_VERSION,
       cli_version: "2.1.287",
-      source_access_version: "SourceAccessV2",
+      source_access_version: "SourceAccessV3",
     });
     expect(result!.source_access.version).toBe("SourceAccessSummaryV2");
     expect(result!.source_access.summary.original_documents).toBe(0);
     expect(Object.keys(result!.source_access.summary).sort()).toEqual(["errors", "fetch_summaries", "original_documents", "refusals", "requests", "search_snippets", "walls"]);
     expect(result!.source_access.inventory.every((x) => x.evidence_class === "derived_snippet")).toBe(true);
 
+    // The stored record of the follow-through is counters and timestamps only; the ledger, the queries and the addresses are not stored.
+    const stored = (finished!.result as any).source_access.follow_through;
+    expect(stored).toMatchObject({ version: "lead-accounting-v1", user_turns: 2, searches: 2, fetches: 2, fetches_with_content: 1, fetches_failed: 1, leads: 3, leads_with_content: 1, leads_blocked: 1, leads_unattempted: 1, ledger_rows: 3 });
+    expect(Object.values(stored).every((v) => typeof v === "number" || typeof v === "string")).toBe(true);
+
     // Nothing private rides along on the owner reply.
     const text = JSON.stringify(reply);
-    for (const needle of [claim.lease_token, "text_sha256", '"events"', WORKER_TOKEN, FAKE_KEY, USER_A, "alice@example.com"]) {
+    for (const needle of [claim.lease_token, "text_sha256", '"events"', '"lead_ledger"', "blog.example.org", "journal.example.org", "randomized trial", WORKER_TOKEN, FAKE_KEY, USER_A, "alice@example.com"]) {
       expect(text, needle).not.toContain(needle);
     }
+  });
+
+  it("a historical v0.4 result (SourceAccessV2 provenance) is still stored and still read by the same parser", async () => {
+    const id = (await j(await ask())).job.id as string;
+    const claim = (await j(await work({ action: "claim" }))).job;
+    const done = await work({ action: "complete", job_id: id, lease_token: claim.lease_token, audit: clone(FIXTURE_V2.audit), source_access_v2: clone(FIXTURE_V2.source_access_v2) });
+    expect(done.status).toBe(200);
+    const result = parseResearchResult(parseResearchJob((await j(await read(id))).job)!.result);
+    expect(result).not.toBeNull();
+    expect(result!.provenance).toMatchObject({ prompt_version: "live-research-v0.4", source_access_version: "SourceAccessV2" });
   });
 
   it("a worker failure arrives as a failed job with only a safe machine code, never the worker's message", async () => {
@@ -198,7 +214,7 @@ describe("real route replies, read by the panel's own parsers", () => {
   it("a stored result that over-claims is refused by the reader, not drawn (defence in depth against a drifted server)", async () => {
     const id = (await j(await ask())).job.id as string;
     const claim = (await j(await work({ action: "claim" }))).job;
-    await work({ action: "complete", job_id: id, lease_token: claim.lease_token, audit: clone(FIXTURE.audit), source_access_v2: clone(FIXTURE.source_access_v2) });
+    await work({ action: "complete", job_id: id, lease_token: claim.lease_token, audit: clone(FIXTURE.audit), source_access_v3: clone(FIXTURE.source_access_v3) });
     const stored = (await j(await read(id))).job.result;
     expect(parseResearchResult(stored)).not.toBeNull();
 

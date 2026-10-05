@@ -6,7 +6,8 @@
  * accepted here and this token is not accepted anywhere else. Body:
  *   { action: "claim" }
  *   { action: "heartbeat", job_id, lease_token }
- *   { action: "complete",  job_id, lease_token, audit, source_access_v2 }  (exactly these five keys)
+ *   { action: "complete",  job_id, lease_token, audit, source_access_v3 }  (exactly these five keys; v0.5)
+ *   { action: "complete",  job_id, lease_token, audit, source_access_v2 }  (exactly these five keys; v0.2-v0.4)
  *   { action: "fail",      job_id, lease_token, code, message?, retryable? }
  * heartbeat / complete / fail need the CURRENT valid lease (token matches, not
  * expired, job still running); anything else is 409 lease_invalid, and nothing
@@ -20,6 +21,7 @@ import { isUuid } from "@/lib/auth/server-auth";
 import { LEASE_TOKEN_RE, RESEARCH_PROMPT_VERSION } from "@/lib/scan-research/contract";
 import { json, readJsonObject } from "@/lib/scan-research/http";
 import { checkLiveResearchResultV2, SOURCE_ACCESS_V2_MAX_REQUEST_BYTES } from "@/lib/scan-research/source-access-v2";
+import { checkLiveResearchResultV3, SOURCE_ACCESS_V3_MAX_REQUEST_BYTES } from "@/lib/scan-research/source-access-v3";
 import { claimJob, completeJob, failJob, heartbeatJob, type RpcOutcome } from "@/lib/scan-research/store";
 import { authenticateWorker } from "@/lib/scan-research/worker-auth";
 
@@ -79,12 +81,16 @@ export async function POST(request: Request) {
   }
 
   if (action === "complete") {
-    if (body.bytes > SOURCE_ACCESS_V2_MAX_REQUEST_BYTES) return json({ status: "invalid_result", errors: ["/request exceeds 768 KiB"] }, 422);
-    const expected = ["action", "job_id", "lease_token", "audit", "source_access_v2"];
+    if (body.bytes > Math.max(SOURCE_ACCESS_V2_MAX_REQUEST_BYTES, SOURCE_ACCESS_V3_MAX_REQUEST_BYTES)) return json({ status: "invalid_result", errors: ["/request exceeds 768 KiB"] }, 422);
+    // Exactly ONE receipt key: v3 (live-research-v0.5) or v2 (v0.2-v0.4). Each wire refuses the other's prompt versions.
+    const receiptKey = Object.hasOwn(b, "source_access_v3") ? "source_access_v3" : "source_access_v2";
+    const expected = ["action", "job_id", "lease_token", "audit", receiptKey];
     if (Object.keys(b).length !== expected.length || expected.some((key) => !Object.hasOwn(b, key))) {
-      return json({ status: "invalid_result", errors: ["/request must contain exactly action, job_id, lease_token, audit, source_access_v2"] }, 422);
+      return json({ status: "invalid_result", errors: ["/request must contain exactly action, job_id, lease_token, audit and one of source_access_v3 or source_access_v2"] }, 422);
     }
-    const checked = checkLiveResearchResultV2(b.audit, b.source_access_v2, RESEARCH_PROMPT_VERSION);
+    const checked = receiptKey === "source_access_v3"
+      ? checkLiveResearchResultV3(b.audit, b.source_access_v3)
+      : checkLiveResearchResultV2(b.audit, b.source_access_v2, RESEARCH_PROMPT_VERSION);
     if (!checked.ok) return json({ status: "invalid_result", errors: checked.errors }, 422);
     const out = stored(await completeJob(id, lease, checked.result));
     if ("res" in out) return out.res;

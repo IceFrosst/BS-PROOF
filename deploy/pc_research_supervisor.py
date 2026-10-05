@@ -83,9 +83,12 @@ EXIT_LOCKED = 75                        # same code the worker uses for "another
 EXIT_CONFIG = 78                        # same code the worker uses for configuration errors
 
 ROOT_REL = Path(".local/share/bsproof-research-worker")
+# live-research-v0.5 (follow-through): + pipeline/research_leads.py (the pure lead accounting the adapter imports) and
+# schemas/source_access_v3.json (the V3 receipt wire + the lead ledger schema the worker validates). Both are READ by the
+# worker; nothing else about the install changed.
 RUNTIME_FILES = ("scripts/pc_research_worker.py", "scripts/pc_research_worker.requirements.txt",
-                 "pipeline/claude_research_adapter.py", "prompts/research_audit_live.md",
-                 "schemas/research_audit.json", "schemas/source_access_v2.json")
+                 "pipeline/claude_research_adapter.py", "pipeline/research_leads.py", "prompts/research_audit_live.md",
+                 "schemas/research_audit.json", "schemas/source_access_v2.json", "schemas/source_access_v3.json")
 
 # --- the reviewed unit template: the ONLY directives this supervisor understands ------------------------
 UNIT_ALLOWED = {

@@ -1,6 +1,6 @@
 # Evidence audit (live research) — one product, live web sources, population-aware
 
-**Version `live-research-v0.5`. The `audit` part of the output must validate against `schemas/research_audit.json`.**
+**Version `live-research-v0.4`. Output must validate against `schemas/research_audit.json`.**
 
 This is the prompt for the subscription-backed PC research worker
 (`scripts/pc_research_worker.py` through `pipeline/claude_research_adapter.py`).
@@ -14,16 +14,13 @@ WebSearch and WebFetch and nothing else; (3) it records which version it is.
 `live-research-v0.3` (2026-10-06) adds ONE rule block, L7, and nothing else.
 `live-research-v0.4` adds ONE more rule block, L8 (open the leads before you conclude), and changes three
 sentences (Rule 1, L4 and L7) so that each says an empty result is allowed only after L8.
-`live-research-v0.5` adds ONE more rule block, L9 (the lead ledger), and changes how the result is RETURNED (see
-HOW TO RETURN): the audit travels as the `audit` part of an envelope, next to a `lead_ledger` that the worker checks
-against your tool calls. The audit itself, the schema and every rule about evidence are untouched.
 No rule about what counts as evidence, no gate, no threshold and no schema field
 changed. Self-contained: do NOT read repository files; there are none to read.
 
-Cache/versioning (invariant 3): the worker records `live-research-v0.5` in the job
+Cache/versioning (invariant 3): the worker records `live-research-v0.4` in the job
 claim, in `meta.prompt` and in the provenance. Bump it here and in
 `pipeline/claude_research_adapter.LIVE_PROMPT_VERSION` together. A job queued under
-`live-research-v0.2`, `live-research-v0.3` or `live-research-v0.4` is still served, with this prompt.
+`live-research-v0.2` or `live-research-v0.3` is still served, with this prompt.
 
 ---
 
@@ -226,7 +223,7 @@ Product level: `dose_note` (flag elemental-vs-compound and regimen ambiguity),
 
 ---
 
-## LIVE RESEARCH RULES (added in `live-research-v0.2`; L7 added in `live-research-v0.3`; L8 added in `live-research-v0.4`; L9 added in `live-research-v0.5`)
+## LIVE RESEARCH RULES (added in `live-research-v0.2`; L7 added in `live-research-v0.3`; L8 added in `live-research-v0.4`)
 
 These rules only add constraints. Where they meet a rule above, the stricter one wins.
 
@@ -308,7 +305,7 @@ that it is an experimental, unvalidated, unreviewed model audit.
 
 The request gives you three values. Copy them exactly:
 - `meta.model`: the model id in the request.
-- `meta.prompt`: `live-research-v0.5`.
+- `meta.prompt`: `live-research-v0.4`.
 - `meta.run_at`: the run date in the request (the date part, YYYY-MM-DD).
 
 ### L7. Cite only identifiers a tool result printed (the citation check)
@@ -364,42 +361,11 @@ confirmed, or return an empty inventory, follow up the leads your searches alrea
 - **Blends.** A lead about one active of a blend is opened too, but what it shows stays CONTEXT as
   L4 says. It is never a finding about the whole product.
 
-### L9. Account for every lead (the lead ledger)
-
-L8 asks you to follow the leads. This rule makes the account of them part of your return, and the worker
-checks it against the list of tool calls you really made in this run. You cannot certify anything in the
-ledger: a page you did not request is not opened, whatever you write.
-
-- **A lead is every address in the `Links` list of every search result you receive.** The same page in
-  another language, or with a tracking tag in its address, is the same lead, not another one.
-- **Write one `lead_ledger` row per lead**: the `address` copied from the search result, a `disposition`
-  and a short `note`. The dispositions are:
-  - `opened`: you called WebFetch on this lead (or on another address of the same page), even if the page
-    then failed. Say in `note` what came back.
-  - `not_opened_secondary`: a blog, news, shop, forum or aggregator page that names no study.
-  - `not_opened_off_topic`: not about this product or one of its listed actives.
-  There is no other disposition. "I did not get to it" is not one: open it.
-- **An address that carries a study identifier** (a PubMed, PMC, Europe PMC, ClinicalTrials.gov or DOI address)
-  is the strongest kind of lead. If your inventory is empty because nothing could be confirmed, every such lead
-  must have been opened first.
-- **An error does not close a lead.** If a page came back as an HTTP error, a wall, a refusal or empty, the same
-  page in another language is NOT another try. Try the same study another way: search again for it by its title
-  and key words, or open the same record from an independent source, for example PubMed or Europe PMC (their
-  record pages print the PMID and DOI next to the title, and Europe PMC's search service at
-  `https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=<title or DOI>&format=json&resultType=lite`
-  lists records for a title). Say in `note` which source you used. A mirror is a mirror: it never becomes
-  the publisher's page, and `access` stays `snippet` (L2).
-- **The worker may answer your return with a follow-up message.** It lists leads that its records show
-  were not followed, and it is built only from your own tool calls: it never asks for a number, a source or a
-  score. Continue the same research with WebSearch and WebFetch, then return the whole object again. Do not
-  invent a row, a source or a number so that the check passes.
-- **L9 relaxes nothing.** Opening a lead does not make an identifier citeable: L7 still decides what may be cited.
-
 ---
 
 ## HOW TO RETURN
 
-Return the result through the structured-output mechanism the session provides: one JSON object with exactly two
-keys. `audit` is the audit, a JSON object that validates against `schemas/research_audit.json`. `lead_ledger` is
-the ledger of L9. No prose outside the object. If the research did not work, return the honest low-confidence
-audit; do not pad it.
+Return the audit through the structured-output mechanism the session provides: one
+JSON object that validates against `schemas/research_audit.json`. No prose outside
+the object. If the research did not work, return the honest low-confidence audit;
+do not pad it.

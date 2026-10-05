@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import Ajv2020, { type ValidateFunction } from "ajv/dist/2020";
 import auditSchema from "@/schemas/research_audit.json";
 import receiptSchema from "@/schemas/source_access_v2.json";
-import { ACCEPTED_RESEARCH_PROMPT_VERSIONS, RESEARCH_PROMPT_VERSION, RESEARCH_PROVENANCE, type ResearchPromptVersion } from "./contract";
+import { ACCEPTED_RESEARCH_PROMPT_VERSIONS, RESEARCH_PROMPT_VERSION, RESEARCH_PROVENANCE, V2_WIRE_PROMPT_VERSIONS, type ResearchPromptVersion } from "./contract";
 import { plainJsonProblem } from "./result";
 
 const PROMPT = RESEARCH_PROMPT_VERSION;
@@ -86,6 +86,10 @@ export function checkLiveResearchResultV2(audit: unknown, sourceAccess: unknown,
   const json = JSON.stringify({ audit, source_access_v2: sourceAccess });
   if (Buffer.byteLength(json, "utf8") > MAX_BYTES) return { ok: false, errors: ["/request exceeds 768 KiB"] };
   if (!isAcceptedPrompt(promptVersion)) errors.push("/prompt_version unsupported");
+  // The V2 wire is frozen at v0.4: a v0.5 result carries request metadata and a lead ledger and travels as SourceAccessV3
+  // (lib/scan-research/source-access-v3.ts). It must not be accepted here, where neither is checked.
+  const claimed = (audit as any)?.meta?.prompt;
+  if (typeof claimed === "string" && !(V2_WIRE_PROMPT_VERSIONS as readonly string[]).includes(claimed) && isAcceptedPrompt(claimed)) errors.push("/audit/meta/prompt this prompt version travels as source_access_v3");
   const validators = getValidators();
   if (!validators.validateAudit(audit)) errors.push(...schemaErrors(validators.validateAudit, "/audit"));
   if (!validators.validateReceipt(sourceAccess)) errors.push(...schemaErrors(validators.validateReceipt, "/source_access_v2"));

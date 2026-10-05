@@ -48,8 +48,8 @@
 --     re-claimed (the next claim turns it into failed('lease_expired')) and a posted fail is final
 --     whatever its `retryable` flag says. A project provisioned from the 2026-10-04 revision
 --     (sha256 48783cd3...) is moved to this policy by docs/research-jobs-migration-001-one-attempt.sql, and
---     to the v0.4 prompt version (bsproof_research_complete accepts v0.4, v0.3 and v0.2) by
---     docs/research-jobs-migration-002-prompt-v0.4.sql.
+--     to the v0.5 prompt version (bsproof_research_complete accepts v0.5, v0.4, v0.3 and v0.2) by
+--     docs/research-jobs-migration-002-prompt-v0.5.sql.
 --   * Lease: a random 64-hex token returned ONCE by claim; only its SHA-256 is stored.
 --     heartbeat extends it for as long as the (single) run is alive; an expired lease is
 --     never given a second run, and its token is dead.
@@ -375,8 +375,8 @@ begin
     return jsonb_build_object('status', 'lease_invalid');
   end if;
 
-  -- v0.4 is stamped on new jobs; v0.3 and v0.2 stay completable so a job queued before the upgrade is not lost.
-  if j.prompt_version not in ('live-research-v0.4', 'live-research-v0.3', 'live-research-v0.2') then
+  -- v0.5 is stamped on new jobs; v0.4, v0.3 and v0.2 stay completable so a job queued before the upgrade is not lost.
+  if j.prompt_version not in ('live-research-v0.5', 'live-research-v0.4', 'live-research-v0.3', 'live-research-v0.2') then
     return jsonb_build_object('status', 'unsupported_prompt_version');
   end if;
 

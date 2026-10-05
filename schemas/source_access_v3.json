@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SourceAccessV3",
+  "description": "TRANSIENT validation input for a live-research-v0.5 result (the server validates it and stores only its owner-safe summary). SourceAccessV2 plus (1) what each WebSearch / WebFetch call REQUESTED (its query or address), so an identifier the model typed itself cannot ground itself and the lead accounting can be recomputed, and (2) the model's lead_ledger. A LIVE-only wire: the canonical schemas/research_audit.json is untouched; the audit is posted exactly as the model returned it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "runner", "events", "lead_ledger", "summary"],
+  "properties": {
+    "version": {"const": "SourceAccessV3"},
+    "runner": {"type": "object", "additionalProperties": false, "required": ["model", "prompt_version", "cli_version", "adapter_version", "classifier_version", "api_key_source", "started_at", "finished_at", "user_turns"], "properties": {
+      "model": {"const": "claude-sonnet-5-5"}, "prompt_version": {"const": "live-research-v0.5"}, "cli_version": {"const": "2.1.287"},
+      "adapter_version": {"type": "string", "minLength": 1, "maxLength": 160}, "classifier_version": {"type": "string", "minLength": 1, "maxLength": 160}, "api_key_source": {"const": "none"},
+      "started_at": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,3})?Z$"}, "finished_at": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,3})?Z$"},
+      "user_turns": {"type": "integer", "minimum": 1, "maximum": 1000000}
+    }},
+    "events": {"type": "array", "maxItems": 300, "items": {"type": "object", "additionalProperties": false, "required": ["tool", "tool_use_id", "kind", "request", "returned_kind", "returned_text", "text_bytes", "text_sha256"], "properties": {
+      "tool": {"enum": ["WebSearch", "WebFetch"]}, "tool_use_id": {"type": "string", "minLength": 1, "maxLength": 160}, "kind": {"enum": ["request", "error", "wall", "refusal"]},
+      "request": {"type": "object", "additionalProperties": false, "minProperties": 1, "maxProperties": 1, "properties": {
+        "query": {"type": "string", "minLength": 1, "maxLength": 4000}, "url": {"type": "string", "minLength": 1, "maxLength": 4000}
+      }},
+      "returned_kind": {"enum": ["search_snippet", "fetch_model_summary", "no_content"]}, "returned_text": {"type": "string", "maxLength": 65536}, "text_bytes": {"type": "integer", "minimum": 0, "maximum": 262144}, "text_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+    }, "allOf": [
+      {"if": {"properties": {"tool": {"const": "WebSearch"}}, "required": ["tool"]}, "then": {"properties": {"request": {"type": "object", "required": ["query"], "properties": {"query": {"type": "string"}}}}}},
+      {"if": {"properties": {"tool": {"const": "WebFetch"}}, "required": ["tool"]}, "then": {"properties": {"request": {"type": "object", "required": ["url"], "properties": {"url": {"type": "string"}}}}}}
+    ]}},
+    "lead_ledger": {"$ref": "#/$defs/leadLedger"},
+    "summary": {"type": "object", "additionalProperties": false, "required": ["requests", "errors", "walls", "refusals", "search_snippets", "fetch_summaries", "original_documents"], "properties": {
+      "requests": {"type": "integer", "minimum": 0, "maximum": 1000000}, "errors": {"type": "integer", "minimum": 0, "maximum": 1000000}, "walls": {"type": "integer", "minimum": 0, "maximum": 1000000}, "refusals": {"type": "integer", "minimum": 0, "maximum": 1000000}, "search_snippets": {"type": "integer", "minimum": 0, "maximum": 1000000}, "fetch_summaries": {"type": "integer", "minimum": 0, "maximum": 1000000}, "original_documents": {"const": 0}
+    }}
+  },
+  "$defs": {
+    "leadLedger": {
+      "description": "One row per source LEAD of this run: every address a WebSearch result listed (a different language or tracking tag of the same page is the same lead). `opened` means you called WebFetch on it (or on another address of the same lead), even if the page then failed; the worker checks that against the tool calls and the model cannot certify it. Anything not opened is dismissed with a reason: secondary = a blog, news, shop or aggregator page that names no study; off_topic = not about the product or its listed actives.",
+      "type": "array",
+      "maxItems": 400,
+      "items": {"type": "object", "additionalProperties": false, "required": ["address", "disposition", "note"], "properties": {
+        "address": {"type": "string", "minLength": 8, "maxLength": 2000},
+        "disposition": {"enum": ["opened", "not_opened_secondary", "not_opened_off_topic"]},
+        "note": {"type": "string", "maxLength": 300}
+      }}
+    }
+  }
+}

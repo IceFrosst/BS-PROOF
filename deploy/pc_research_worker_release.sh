@@ -6,8 +6,9 @@
 #   deploy/pc_research_worker_release.sh rollback               # on the mainPC
 #   deploy/pc_research_worker_release.sh list
 #
-# The runtime contains five files and nothing else: the worker, the adapter, the
-# live prompt, the audit schema and the requirements. It never touches an app
+# The runtime contains eight files and nothing else: the worker, the adapter, the pure
+# lead-accounting module the adapter imports, the live prompt, the audit schema, the two
+# receipt schemas and the requirements (must equal deploy/pc_research_supervisor.RUNTIME_FILES). It never touches an app
 # checkout, never writes a secret, never enables or starts a service.
 #
 # Restarting after `rollback` is a separate OWNER step for whichever unit is installed:
@@ -18,8 +19,8 @@ set -euo pipefail
 
 ROOT="${BS_PROOF_RESEARCH_ROOT:-$HOME/.local/share/bsproof-research-worker}"
 FILES=(scripts/pc_research_worker.py scripts/pc_research_worker.requirements.txt
-       pipeline/claude_research_adapter.py prompts/research_audit_live.md
-       schemas/research_audit.json schemas/source_access_v2.json)
+       pipeline/claude_research_adapter.py pipeline/research_leads.py prompts/research_audit_live.md
+       schemas/research_audit.json schemas/source_access_v2.json schemas/source_access_v3.json)
 
 die() { echo "error: $*" >&2; exit 1; }
 
@@ -52,7 +53,7 @@ install)
   ( cd "$rel" && sha256sum -c SHA256SUMS >/dev/null ) || die "file checksums differ inside archive"
   python3 -m venv "$rel/venv"
   "$rel/venv/bin/pip" install --quiet --disable-pip-version-check -r "$rel/scripts/pc_research_worker.requirements.txt"
-  "$rel/venv/bin/python" -m py_compile "$rel/scripts/pc_research_worker.py" "$rel/pipeline/claude_research_adapter.py"
+  "$rel/venv/bin/python" -m py_compile "$rel/scripts/pc_research_worker.py" "$rel/pipeline/claude_research_adapter.py" "$rel/pipeline/research_leads.py"
   [ -L "$ROOT/current" ] && ln -sfn "$(readlink "$ROOT/current")" "$ROOT/previous"
   ln -sfn "releases/$name" "$ROOT/current.new" && mv -Tf "$ROOT/current.new" "$ROOT/current"
   echo "installed $name -> $ROOT/current (service NOT enabled or started; no token written)"

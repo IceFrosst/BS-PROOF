@@ -1,0 +1,1287 @@
+{
+ "about": "Shared cases for pipeline/research_leads.py and lib/scan-research/lead-accounting.ts (parity). `real_*` cases embed the search result text of the immutable 2026-10-05 v0.4 validation capture byte for byte. Expectations are hand-written, not generated from either implementation.",
+ "cases": [
+  {
+   "name": "real_v04_one_search_two_403_empty_audit_no_ledger",
+   "why": "The 2026-10-05 v0.4 validation run, shape exactly: ONE search listing nine links, then two requests to ONE record (en and es locale of the same page), both HTTP 403, an empty inventory. Nothing else was opened. Must NOT be called followed-through.",
+   "events": [
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "vitamin D3 plus vitamin K2 combination randomized trial meta-analysis bone"
+     },
+     "returned_text": "Web search results for query: \"vitamin D3 plus vitamin K2 combination randomized trial meta-analysis bone\"\n\nLinks: [{\"title\":\"Issue 4, 2020\",\"url\":\"https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h\"},{\"title\":\"Issue 4, 2020\",\"url\":\"https://pubs.rsc.org/en/content/articlepdf/2013/mw/c9fo03063h\"},{\"title\":\"pubmed.ncbi.nlm.nih.gov\",\"url\":\"https://pubmed.ncbi.nlm.nih.gov/11180916/\"},{\"title\":\"drmirkin.com\",\"url\":\"https://drmirkin.com/?p=9078\"},{\"title\":\"examine.com\",\"url\":\"https://examine.com/summaries/study/g983b0/\"},{\"title\":\"should you take vitamin k with your vitamin d\",\"url\":\"https://sciencebasedmedicine.org/should-you-take-vitamin-k-with-your-vitamin-d/\"},{\"title\":\"Claim analyzed\",\"url\":\"https://lenz.io/c/vitamin-k-vitamin-d-absorption-bone-health-81497963\"},{\"title\":\"Claim analyzed\",\"url\":\"https://lenz.io/c/81497963\"},{\"title\":\"wbldb.lievers.net\",\"url\":\"https://wbldb.lievers.net/10258814.html\"}]\n\nI've found relevant research on this topic. Here are the key findings from the search results:\n\n## Meta-Analysis Findings\n\nA meta-analysis of eight randomized controlled trials including a total of 971 subjects was conducted using comprehensive searches of Web of Science, PubMed, Embase and the Cochrane Library (from 1950 to February 2020).\n\n## Effects on Bone Mineral Density\n\nVitamin K combined with vitamin D significantly increased the total bone mineral density (BMD) with a pooled effect size of 0.316 [95% CI, 0.031 to 0.601]. A significant decrease in undercarboxylated osteocalcin can be observed with the combination of vitamin K and D, and subgroup analysis showed that K2 or vitamin K supplement less than 500 μg/day, when combined with vitamin D, can significantly increase the total BMD compared with control groups.\n\n## Vitamin K2 Advantage\n\nThe combination of vitamin K and D can significantly increase the total BMD and significantly decrease undercarboxylated osteocalcin, with a more favorable effect expected when vitamin K2 is used. A secondary analysis indicated that K₂ may be better than K₁ for that purpose.\n\n## Important Limitations\n\nIn studies on bone density, the combined supplementation has produced mixed results, and randomized trials show mixed results on fracture prevention, and no direct role in vitamin D absorption has been established.\n\n\nREMINDER: You MUST include the sources above in your response to the user using markdown hyperlinks."
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "error",
+     "request": {
+      "url": "https://pubs.rsc.org/en/content/articlelanding/2020/fo/c9fo03063h"
+     },
+     "returned_text": ""
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "error",
+     "request": {
+      "url": "https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h"
+     },
+     "returned_text": ""
+    }
+   ],
+   "ledger": [],
+   "inventory_empty": true,
+   "expect": {
+    "satisfied": false,
+    "problems": [
+     [
+      "blocked_without_independent_attempt",
+      "https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h"
+     ],
+     [
+      "identifier_lead_unopened",
+      "https://pubmed.ncbi.nlm.nih.gov/11180916/"
+     ],
+     [
+      "lead_unaccounted",
+      "https://drmirkin.com/?p=9078"
+     ],
+     [
+      "lead_unaccounted",
+      "https://examine.com/summaries/study/g983b0/"
+     ],
+     [
+      "lead_unaccounted",
+      "https://lenz.io/c/81497963"
+     ],
+     [
+      "lead_unaccounted",
+      "https://lenz.io/c/vitamin-k-vitamin-d-absorption-bone-health-81497963"
+     ],
+     [
+      "lead_unaccounted",
+      "https://pubmed.ncbi.nlm.nih.gov/11180916/"
+     ],
+     [
+      "lead_unaccounted",
+      "https://pubs.rsc.org/en/content/articlepdf/2013/mw/c9fo03063h"
+     ],
+     [
+      "lead_unaccounted",
+      "https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h"
+     ],
+     [
+      "lead_unaccounted",
+      "https://sciencebasedmedicine.org/should-you-take-vitamin-k-with-your-vitamin-d/"
+     ],
+     [
+      "lead_unaccounted",
+      "https://wbldb.lievers.net/10258814.html"
+     ]
+    ],
+    "summary": {
+     "searches": 1,
+     "distinct_queries": 1,
+     "fetches": 2,
+     "fetches_with_content": 0,
+     "fetches_failed": 2,
+     "leads": 9,
+     "leads_with_content": 0,
+     "leads_blocked": 1,
+     "leads_unattempted": 8,
+     "ledger_rows": 0,
+     "inventory_empty": true
+    },
+    "lead_outcomes": [
+     "blocked",
+     "unattempted",
+     "unattempted",
+     "unattempted",
+     "unattempted",
+     "unattempted",
+     "unattempted",
+     "unattempted",
+     "unattempted"
+    ]
+   }
+  },
+  {
+   "name": "real_v03_one_search_no_fetch_empty_audit_no_ledger",
+   "why": "The v0.3 validation run shape: one search, no page opened, empty inventory (19.5 s).",
+   "events": [
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "vitamin D3 plus vitamin K2 combination randomized trial meta-analysis bone"
+     },
+     "returned_text": "Web search results for query: \"vitamin D3 plus vitamin K2 combination randomized trial meta-analysis bone\"\n\nLinks: [{\"title\":\"Issue 4, 2020\",\"url\":\"https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h\"},{\"title\":\"Issue 4, 2020\",\"url\":\"https://pubs.rsc.org/en/content/articlepdf/2013/mw/c9fo03063h\"},{\"title\":\"pubmed.ncbi.nlm.nih.gov\",\"url\":\"https://pubmed.ncbi.nlm.nih.gov/11180916/\"},{\"title\":\"drmirkin.com\",\"url\":\"https://drmirkin.com/?p=9078\"},{\"title\":\"examine.com\",\"url\":\"https://examine.com/summaries/study/g983b0/\"},{\"title\":\"should you take vitamin k with your vitamin d\",\"url\":\"https://sciencebasedmedicine.org/should-you-take-vitamin-k-with-your-vitamin-d/\"},{\"title\":\"Claim analyzed\",\"url\":\"https://lenz.io/c/vitamin-k-vitamin-d-absorption-bone-health-81497963\"},{\"title\":\"Claim analyzed\",\"url\":\"https://lenz.io/c/81497963\"},{\"title\":\"wbldb.lievers.net\",\"url\":\"https://wbldb.lievers.net/10258814.html\"}]\n\nI've found relevant research on this topic. Here are the key findings from the search results:\n\n## Meta-Analysis Findings\n\nA meta-analysis of eight randomized controlled trials including a total of 971 subjects was conducted using comprehensive searches of Web of Science, PubMed, Embase and the Cochrane Library (from 1950 to February 2020).\n\n## Effects on Bone Mineral Density\n\nVitamin K combined with vitamin D significantly increased the total bone mineral density (BMD) with a pooled effect size of 0.316 [95% CI, 0.031 to 0.601]. A significant decrease in undercarboxylated osteocalcin can be observed with the combination of vitamin K and D, and subgroup analysis showed that K2 or vitamin K supplement less than 500 μg/day, when combined with vitamin D, can significantly increase the total BMD compared with control groups.\n\n## Vitamin K2 Advantage\n\nThe combination of vitamin K and D can significantly increase the total BMD and significantly decrease undercarboxylated osteocalcin, with a more favorable effect expected when vitamin K2 is used. A secondary analysis indicated that K₂ may be better than K₁ for that purpose.\n\n## Important Limitations\n\nIn studies on bone density, the combined supplementation has produced mixed results, and randomized trials show mixed results on fracture prevention, and no direct role in vitamin D absorption has been established.\n\n\nREMINDER: You MUST include the sources above in your response to the user using markdown hyperlinks."
+    }
+   ],
+   "ledger": [],
+   "inventory_empty": true,
+   "expect": {
+    "satisfied": false,
+    "problems": [
+     [
+      "empty_without_any_page_request",
+      ""
+     ],
+     [
+      "identifier_lead_unopened",
+      "https://pubmed.ncbi.nlm.nih.gov/11180916/"
+     ],
+     [
+      "lead_unaccounted",
+      "https://drmirkin.com/?p=9078"
+     ],
+     [
+      "lead_unaccounted",
+      "https://examine.com/summaries/study/g983b0/"
+     ],
+     [
+      "lead_unaccounted",
+      "https://lenz.io/c/81497963"
+     ],
+     [
+      "lead_unaccounted",
+      "https://lenz.io/c/vitamin-k-vitamin-d-absorption-bone-health-81497963"
+     ],
+     [
+      "lead_unaccounted",
+      "https://pubmed.ncbi.nlm.nih.gov/11180916/"
+     ],
+     [
+      "lead_unaccounted",
+      "https://pubs.rsc.org/en/content/articlepdf/2013/mw/c9fo03063h"
+     ],
+     [
+      "lead_unaccounted",
+      "https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h"
+     ],
+     [
+      "lead_unaccounted",
+      "https://sciencebasedmedicine.org/should-you-take-vitamin-k-with-your-vitamin-d/"
+     ],
+     [
+      "lead_unaccounted",
+      "https://wbldb.lievers.net/10258814.html"
+     ]
+    ],
+    "lead_outcomes": [
+     "unattempted",
+     "unattempted",
+     "unattempted",
+     "unattempted",
+     "unattempted",
+     "unattempted",
+     "unattempted",
+     "unattempted",
+     "unattempted"
+    ]
+   }
+  },
+  {
+   "name": "ledger_dismissals_alone_do_not_rescue_an_empty_unfollowed_run",
+   "why": "The model accounts for every lead in the ledger (two dismissals each) but the identifier-bearing PubMed lead was never requested and the 403 lead has no independent attempt: still not followed through.",
+   "events": [
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "vitamin D3 plus vitamin K2 combination randomized trial meta-analysis bone"
+     },
+     "returned_text": "Web search results for query: \"vitamin D3 plus vitamin K2 combination randomized trial meta-analysis bone\"\n\nLinks: [{\"title\":\"Issue 4, 2020\",\"url\":\"https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h\"},{\"title\":\"Issue 4, 2020\",\"url\":\"https://pubs.rsc.org/en/content/articlepdf/2013/mw/c9fo03063h\"},{\"title\":\"pubmed.ncbi.nlm.nih.gov\",\"url\":\"https://pubmed.ncbi.nlm.nih.gov/11180916/\"},{\"title\":\"drmirkin.com\",\"url\":\"https://drmirkin.com/?p=9078\"},{\"title\":\"examine.com\",\"url\":\"https://examine.com/summaries/study/g983b0/\"},{\"title\":\"should you take vitamin k with your vitamin d\",\"url\":\"https://sciencebasedmedicine.org/should-you-take-vitamin-k-with-your-vitamin-d/\"},{\"title\":\"Claim analyzed\",\"url\":\"https://lenz.io/c/vitamin-k-vitamin-d-absorption-bone-health-81497963\"},{\"title\":\"Claim analyzed\",\"url\":\"https://lenz.io/c/81497963\"},{\"title\":\"wbldb.lievers.net\",\"url\":\"https://wbldb.lievers.net/10258814.html\"}]\n\nI've found relevant research on this topic. Here are the key findings from the search results:\n\n## Meta-Analysis Findings\n\nA meta-analysis of eight randomized controlled trials including a total of 971 subjects was conducted using comprehensive searches of Web of Science, PubMed, Embase and the Cochrane Library (from 1950 to February 2020).\n\n## Effects on Bone Mineral Density\n\nVitamin K combined with vitamin D significantly increased the total bone mineral density (BMD) with a pooled effect size of 0.316 [95% CI, 0.031 to 0.601]. A significant decrease in undercarboxylated osteocalcin can be observed with the combination of vitamin K and D, and subgroup analysis showed that K2 or vitamin K supplement less than 500 μg/day, when combined with vitamin D, can significantly increase the total BMD compared with control groups.\n\n## Vitamin K2 Advantage\n\nThe combination of vitamin K and D can significantly increase the total BMD and significantly decrease undercarboxylated osteocalcin, with a more favorable effect expected when vitamin K2 is used. A secondary analysis indicated that K₂ may be better than K₁ for that purpose.\n\n## Important Limitations\n\nIn studies on bone density, the combined supplementation has produced mixed results, and randomized trials show mixed results on fracture prevention, and no direct role in vitamin D absorption has been established.\n\n\nREMINDER: You MUST include the sources above in your response to the user using markdown hyperlinks."
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "error",
+     "request": {
+      "url": "https://pubs.rsc.org/en/content/articlelanding/2020/fo/c9fo03063h"
+     },
+     "returned_text": ""
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "error",
+     "request": {
+      "url": "https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h"
+     },
+     "returned_text": ""
+    }
+   ],
+   "ledger": [
+    {
+     "address": "https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h",
+     "disposition": "opened",
+     "note": "n"
+    },
+    {
+     "address": "https://pubs.rsc.org/en/content/articlepdf/2013/mw/c9fo03063h",
+     "disposition": "not_opened_secondary",
+     "note": "n"
+    },
+    {
+     "address": "https://pubmed.ncbi.nlm.nih.gov/11180916/",
+     "disposition": "not_opened_off_topic",
+     "note": "n"
+    },
+    {
+     "address": "https://drmirkin.com/?p=9078",
+     "disposition": "not_opened_secondary",
+     "note": "n"
+    },
+    {
+     "address": "https://examine.com/summaries/study/g983b0/",
+     "disposition": "not_opened_secondary",
+     "note": "n"
+    },
+    {
+     "address": "https://sciencebasedmedicine.org/should-you-take-vitamin-k-with-your-vitamin-d/",
+     "disposition": "not_opened_secondary",
+     "note": "n"
+    },
+    {
+     "address": "https://lenz.io/c/vitamin-k-vitamin-d-absorption-bone-health-81497963",
+     "disposition": "not_opened_secondary",
+     "note": "n"
+    },
+    {
+     "address": "https://lenz.io/c/81497963",
+     "disposition": "not_opened_secondary",
+     "note": "n"
+    },
+    {
+     "address": "https://wbldb.lievers.net/10258814.html",
+     "disposition": "not_opened_secondary",
+     "note": "n"
+    }
+   ],
+   "inventory_empty": true,
+   "expect": {
+    "satisfied": false,
+    "problems": [
+     [
+      "blocked_without_independent_attempt",
+      "https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h"
+     ],
+     [
+      "identifier_lead_unopened",
+      "https://pubmed.ncbi.nlm.nih.gov/11180916/"
+     ]
+    ]
+   }
+  },
+  {
+   "name": "locale_alias_of_a_blocked_lead_is_not_an_independent_try",
+   "why": "en and es of the same page are ONE lead, so two 403s are one blocked lead with one missing fallback (not two leads, not a fallback).",
+   "events": [
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "q1"
+     },
+     "returned_text": "Web search results for query: \"q\"\n\nLinks: [{\"title\": \"t\", \"url\": \"https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h\"}]\n\nSummary prose.\n"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "error",
+     "request": {
+      "url": "https://pubs.rsc.org/en/content/articlelanding/2020/fo/c9fo03063h"
+     },
+     "returned_text": ""
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "error",
+     "request": {
+      "url": "https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h"
+     },
+     "returned_text": ""
+    }
+   ],
+   "ledger": [
+    {
+     "address": "https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h",
+     "disposition": "opened",
+     "note": "n"
+    }
+   ],
+   "inventory_empty": false,
+   "expect": {
+    "satisfied": false,
+    "problems": [
+     [
+      "blocked_without_independent_attempt",
+      "https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h"
+     ]
+    ],
+    "lead_outcomes": [
+     "blocked"
+    ]
+   }
+  },
+  {
+   "name": "a_later_search_with_a_new_query_is_the_independent_attempt",
+   "why": "After the 403s the model searches again for the study by title (a query not used before): the fallback is satisfied. The new search's own leads still need ledger rows.",
+   "events": [
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "q1"
+     },
+     "returned_text": "Web search results for query: \"q\"\n\nLinks: [{\"title\": \"t\", \"url\": \"https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h\"}]\n\nSummary prose.\n"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "error",
+     "request": {
+      "url": "https://pubs.rsc.org/en/content/articlelanding/2020/fo/c9fo03063h"
+     },
+     "returned_text": ""
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "error",
+     "request": {
+      "url": "https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h"
+     },
+     "returned_text": ""
+    },
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "title of the study pubmed"
+     },
+     "returned_text": "Web search results for query: \"q\"\n\nLinks: [{\"title\": \"t\", \"url\": \"https://pubmed.ncbi.nlm.nih.gov/11180916/\"}]\n\nSummary prose.\n"
+    }
+   ],
+   "ledger": [
+    {
+     "address": "https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h",
+     "disposition": "opened",
+     "note": "n"
+    },
+    {
+     "address": "https://pubmed.ncbi.nlm.nih.gov/11180916/",
+     "disposition": "not_opened_off_topic",
+     "note": "n"
+    }
+   ],
+   "inventory_empty": false,
+   "expect": {
+    "satisfied": true,
+    "problems": [],
+    "lead_outcomes": [
+     "blocked",
+     "unattempted"
+    ]
+   }
+  },
+  {
+   "name": "the_same_query_again_is_not_independent_even_with_other_case_and_spacing",
+   "why": "Searching the identical query again (case/space differences only) returns the same links; it is not an independent attempt.",
+   "events": [
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "Vitamin D3  plus K2"
+     },
+     "returned_text": "Web search results for query: \"q\"\n\nLinks: [{\"title\": \"t\", \"url\": \"https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h\"}]\n\nSummary prose.\n"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "error",
+     "request": {
+      "url": "https://pubs.rsc.org/en/content/articlelanding/2020/fo/c9fo03063h"
+     },
+     "returned_text": ""
+    },
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "vitamin d3 plus k2"
+     },
+     "returned_text": "Web search results for query: \"q\"\n\nLinks: [{\"title\": \"t\", \"url\": \"https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h\"}]\n\nSummary prose.\n"
+    }
+   ],
+   "ledger": [
+    {
+     "address": "https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h",
+     "disposition": "opened",
+     "note": "n"
+    }
+   ],
+   "inventory_empty": false,
+   "expect": {
+    "satisfied": false,
+    "problems": [
+     [
+      "blocked_without_independent_attempt",
+      "https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h"
+     ]
+    ]
+   }
+  },
+  {
+   "name": "a_fetch_of_a_different_lead_is_the_independent_attempt",
+   "why": "The blocked lead is followed by a fetch of another lead (even one that fails): an error is a try.",
+   "events": [
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "q1"
+     },
+     "returned_text": "Web search results for query: \"q\"\n\nLinks: [{\"title\": \"t\", \"url\": \"https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h\"}, {\"title\": \"t\", \"url\": \"https://drmirkin.com/?p=9078\"}]\n\nSummary prose.\n"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "error",
+     "request": {
+      "url": "https://pubs.rsc.org/en/content/articlelanding/2020/fo/c9fo03063h"
+     },
+     "returned_text": ""
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "error",
+     "request": {
+      "url": "https://drmirkin.com/?p=9078"
+     },
+     "returned_text": ""
+    }
+   ],
+   "ledger": [
+    {
+     "address": "https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h",
+     "disposition": "opened",
+     "note": "n"
+    },
+    {
+     "address": "https://drmirkin.com/?p=9078",
+     "disposition": "opened",
+     "note": "n"
+    }
+   ],
+   "inventory_empty": false,
+   "expect": {
+    "satisfied": false,
+    "problems": [
+     [
+      "blocked_without_independent_attempt",
+      "https://drmirkin.com/?p=9078"
+     ]
+    ],
+    "lead_outcomes": [
+     "blocked",
+     "blocked"
+    ]
+   }
+  },
+  {
+   "name": "a_fetch_of_an_unparseable_address_is_not_an_independent_attempt",
+   "why": "After a blocked lead the model 'fetches' an address that is not a plain http(s) address (ftp:, javascript:, user@host): that is not another lead and not an independent try.",
+   "events": [
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "q1"
+     },
+     "returned_text": "Web search results for query: \"q\"\n\nLinks: [{\"title\": \"t\", \"url\": \"https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h\"}]\n\nSummary prose.\n"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "error",
+     "request": {
+      "url": "https://pubs.rsc.org/en/content/articlelanding/2020/fo/c9fo03063h"
+     },
+     "returned_text": ""
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "error",
+     "request": {
+      "url": "ftp://example.org/x"
+     },
+     "returned_text": ""
+    }
+   ],
+   "ledger": [
+    {
+     "address": "https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h",
+     "disposition": "opened",
+     "note": "n"
+    }
+   ],
+   "inventory_empty": false,
+   "expect": {
+    "satisfied": false,
+    "problems": [
+     [
+      "blocked_without_independent_attempt",
+      "https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h"
+     ]
+    ],
+    "lead_outcomes": [
+     "blocked"
+    ]
+   }
+  },
+  {
+   "name": "a_failed_search_with_a_new_query_is_still_a_try",
+   "why": "An errored WebSearch with a new query counts as the independent attempt (an error counts as a try).",
+   "events": [
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "q1"
+     },
+     "returned_text": "Web search results for query: \"q\"\n\nLinks: [{\"title\": \"t\", \"url\": \"https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h\"}]\n\nSummary prose.\n"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "error",
+     "request": {
+      "url": "https://pubs.rsc.org/en/content/articlelanding/2020/fo/c9fo03063h"
+     },
+     "returned_text": ""
+    },
+    {
+     "tool": "WebSearch",
+     "kind": "error",
+     "request": {
+      "query": "another query"
+     },
+     "returned_text": ""
+    }
+   ],
+   "ledger": [
+    {
+     "address": "https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h",
+     "disposition": "opened",
+     "note": "n"
+    }
+   ],
+   "inventory_empty": false,
+   "expect": {
+    "satisfied": true,
+    "problems": []
+   }
+  },
+  {
+   "name": "ledger_cannot_claim_opened_without_a_request",
+   "why": "The ledger says opened for a lead for which no WebFetch was requested: refused. The model cannot certify an open.",
+   "events": [
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "q1"
+     },
+     "returned_text": "Web search results for query: \"q\"\n\nLinks: [{\"title\": \"t\", \"url\": \"https://pubmed.ncbi.nlm.nih.gov/11180916/\"}, {\"title\": \"t\", \"url\": \"https://drmirkin.com/?p=9078\"}]\n\nSummary prose.\n"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://drmirkin.com/?p=9078"
+     },
+     "returned_text": "Summary of the page."
+    }
+   ],
+   "ledger": [
+    {
+     "address": "https://pubmed.ncbi.nlm.nih.gov/11180916/",
+     "disposition": "opened",
+     "note": "n"
+    },
+    {
+     "address": "https://drmirkin.com/?p=9078",
+     "disposition": "opened",
+     "note": "n"
+    }
+   ],
+   "inventory_empty": false,
+   "expect": {
+    "satisfied": false,
+    "problems": [
+     [
+      "ledger_claims_open_without_request",
+      "https://pubmed.ncbi.nlm.nih.gov/11180916/"
+     ]
+    ],
+    "lead_outcomes": [
+     "unattempted",
+     "content"
+    ]
+   }
+  },
+  {
+   "name": "ledger_address_that_no_search_listed_is_refused",
+   "why": "An invented address (no search result listed it, nothing was fetched from it) is a ledger problem; the real lead is still unaccounted.",
+   "events": [
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "q1"
+     },
+     "returned_text": "Web search results for query: \"q\"\n\nLinks: [{\"title\": \"t\", \"url\": \"https://drmirkin.com/?p=9078\"}]\n\nSummary prose.\n"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://drmirkin.com/?p=9078"
+     },
+     "returned_text": "Summary of the page."
+    }
+   ],
+   "ledger": [
+    {
+     "address": "https://invented.example.org/study/1",
+     "disposition": "opened",
+     "note": "n"
+    }
+   ],
+   "inventory_empty": false,
+   "expect": {
+    "satisfied": false,
+    "problems": [
+     [
+      "lead_unaccounted",
+      "https://drmirkin.com/?p=9078"
+     ],
+     [
+      "ledger_unknown_address",
+      "https://invented.example.org/study/1"
+     ]
+    ]
+   }
+  },
+  {
+   "name": "a_mirror_of_the_same_record_satisfies_the_lead_and_is_classified_as_a_mirror",
+   "why": "The search listed the PubMed record; the model fetched the Europe PMC mirror of the SAME PMID and got content. One lead, outcome content, reached via a mirror (not the listed address).",
+   "events": [
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "q1"
+     },
+     "returned_text": "Web search results for query: \"q\"\n\nLinks: [{\"title\": \"t\", \"url\": \"https://pubmed.ncbi.nlm.nih.gov/11180916/\"}]\n\nSummary prose.\n"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://europepmc.org/article/MED/11180916"
+     },
+     "returned_text": "Summary of the page."
+    }
+   ],
+   "ledger": [
+    {
+     "address": "https://pubmed.ncbi.nlm.nih.gov/11180916/",
+     "disposition": "opened",
+     "note": "n"
+    }
+   ],
+   "inventory_empty": true,
+   "expect": {
+    "satisfied": true,
+    "problems": [],
+    "lead_outcomes": [
+     "content"
+    ],
+    "content_via": [
+     "mirror_same_record"
+    ]
+   }
+  },
+  {
+   "name": "the_listed_address_opened_is_classified_as_listed",
+   "why": "The listed address itself was fetched with content.",
+   "events": [
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "q1"
+     },
+     "returned_text": "Web search results for query: \"q\"\n\nLinks: [{\"title\": \"t\", \"url\": \"https://pubmed.ncbi.nlm.nih.gov/11180916/\"}]\n\nSummary prose.\n"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://pubmed.ncbi.nlm.nih.gov/11180916/"
+     },
+     "returned_text": "Summary of the page."
+    }
+   ],
+   "ledger": [
+    {
+     "address": "https://pubmed.ncbi.nlm.nih.gov/11180916/",
+     "disposition": "opened",
+     "note": "n"
+    }
+   ],
+   "inventory_empty": true,
+   "expect": {
+    "satisfied": true,
+    "problems": [],
+    "lead_outcomes": [
+     "content"
+    ],
+    "content_via": [
+     "listed_address"
+    ]
+   }
+  },
+  {
+   "name": "empty_inventory_requires_the_identifier_leads_to_be_requested",
+   "why": "Nothing could be confirmed, yet the search listed a PubMed record that was never requested: not followed through.",
+   "events": [
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "q1"
+     },
+     "returned_text": "Web search results for query: \"q\"\n\nLinks: [{\"title\": \"t\", \"url\": \"https://pubmed.ncbi.nlm.nih.gov/11180916/\"}, {\"title\": \"t\", \"url\": \"https://drmirkin.com/?p=9078\"}]\n\nSummary prose.\n"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://drmirkin.com/?p=9078"
+     },
+     "returned_text": "Summary of the page."
+    }
+   ],
+   "ledger": [
+    {
+     "address": "https://pubmed.ncbi.nlm.nih.gov/11180916/",
+     "disposition": "not_opened_off_topic",
+     "note": "n"
+    },
+    {
+     "address": "https://drmirkin.com/?p=9078",
+     "disposition": "opened",
+     "note": "n"
+    }
+   ],
+   "inventory_empty": true,
+   "expect": {
+    "satisfied": false,
+    "problems": [
+     [
+      "identifier_lead_unopened",
+      "https://pubmed.ncbi.nlm.nih.gov/11180916/"
+     ]
+    ],
+    "lead_outcomes": [
+     "unattempted",
+     "content"
+    ]
+   }
+  },
+  {
+   "name": "a_non_empty_inventory_may_dismiss_an_identifier_lead_with_a_stated_reason",
+   "why": "With evidence found the model may dismiss other leads (recorded, not verified).",
+   "events": [
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "q1"
+     },
+     "returned_text": "Web search results for query: \"q\"\n\nLinks: [{\"title\": \"t\", \"url\": \"https://pubmed.ncbi.nlm.nih.gov/11180916/\"}, {\"title\": \"t\", \"url\": \"https://drmirkin.com/?p=9078\"}]\n\nSummary prose.\n"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://drmirkin.com/?p=9078"
+     },
+     "returned_text": "Summary of the page."
+    }
+   ],
+   "ledger": [
+    {
+     "address": "https://pubmed.ncbi.nlm.nih.gov/11180916/",
+     "disposition": "not_opened_off_topic",
+     "note": "n"
+    },
+    {
+     "address": "https://drmirkin.com/?p=9078",
+     "disposition": "opened",
+     "note": "n"
+    }
+   ],
+   "inventory_empty": false,
+   "expect": {
+    "satisfied": true,
+    "problems": []
+   }
+  },
+  {
+   "name": "a_search_lead_without_any_ledger_row_is_unaccounted_even_if_it_was_fetched",
+   "why": "The page was fetched but the ledger is silent about it: unaccounted.",
+   "events": [
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "q1"
+     },
+     "returned_text": "Web search results for query: \"q\"\n\nLinks: [{\"title\": \"t\", \"url\": \"https://drmirkin.com/?p=9078\"}]\n\nSummary prose.\n"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://drmirkin.com/?p=9078"
+     },
+     "returned_text": "Summary of the page."
+    }
+   ],
+   "ledger": [],
+   "inventory_empty": false,
+   "expect": {
+    "satisfied": false,
+    "problems": [
+     [
+      "lead_unaccounted",
+      "https://drmirkin.com/?p=9078"
+     ]
+    ]
+   }
+  },
+  {
+   "name": "an_address_the_model_chose_itself_needs_no_ledger_row_but_counts_as_a_page_request",
+   "why": "A Europe PMC REST search the model built itself: not a search lead, no row required; it is a real page request, so an empty result is not 'no page opened'.",
+   "events": [
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "q1"
+     },
+     "returned_text": "Web search results for query: \"q1\"\n\nno links here\n"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=vitamin%20k2&format=json"
+     },
+     "returned_text": "Summary of the page."
+    }
+   ],
+   "ledger": [],
+   "inventory_empty": true,
+   "expect": {
+    "satisfied": true,
+    "problems": [],
+    "lead_outcomes": [
+     "content"
+    ],
+    "content_via": [
+     "model_chosen_address"
+    ]
+   }
+  },
+  {
+   "name": "a_search_with_no_links_line_gives_no_leads_and_empty_needs_a_page_request",
+   "why": "Zero leads; an empty inventory with no page requested at all is premature.",
+   "events": [
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "q1"
+     },
+     "returned_text": "Web search results for query: \"q1\"\n\nnothing\n"
+    }
+   ],
+   "ledger": [],
+   "inventory_empty": true,
+   "expect": {
+    "satisfied": false,
+    "problems": [
+     [
+      "empty_without_any_page_request",
+      ""
+     ]
+    ]
+   }
+  },
+  {
+   "name": "non_http_non_ascii_or_userinfo_addresses_are_not_leads",
+   "why": "javascript:, ftp:, user@host and non-ASCII hosts in a Links line are ignored, not turned into leads.",
+   "events": [
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "q1"
+     },
+     "returned_text": "Web search results for query: \"q\"\n\nLinks: [{\"title\": \"t\", \"url\": \"javascript:alert(1)\"}, {\"title\": \"t\", \"url\": \"ftp://example.org/x\"}, {\"title\": \"t\", \"url\": \"https://user@evil.example.org/x\"}, {\"title\": \"t\", \"url\": \"https://\\u4f8b\\u3048.jp/x\"}, {\"title\": \"t\", \"url\": \"https://drmirkin.com/?p=9078\"}]\n\nSummary prose.\n"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://drmirkin.com/?p=9078"
+     },
+     "returned_text": "Summary of the page."
+    }
+   ],
+   "ledger": [
+    {
+     "address": "https://drmirkin.com/?p=9078",
+     "disposition": "opened",
+     "note": "n"
+    }
+   ],
+   "inventory_empty": false,
+   "expect": {
+    "satisfied": true,
+    "problems": []
+   }
+  },
+  {
+   "name": "ledger_that_says_not_opened_for_a_lead_that_was_requested_is_only_a_warning",
+   "why": "Reported, never blocking: the receipts decide what was opened.",
+   "events": [
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "q1"
+     },
+     "returned_text": "Web search results for query: \"q\"\n\nLinks: [{\"title\": \"t\", \"url\": \"https://drmirkin.com/?p=9078\"}]\n\nSummary prose.\n"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://drmirkin.com/?p=9078"
+     },
+     "returned_text": "Summary of the page."
+    }
+   ],
+   "ledger": [
+    {
+     "address": "https://drmirkin.com/?p=9078",
+     "disposition": "not_opened_secondary",
+     "note": "n"
+    }
+   ],
+   "inventory_empty": false,
+   "expect": {
+    "satisfied": true,
+    "problems": [],
+    "warnings": [
+     [
+      "ledger_says_not_opened_but_requested",
+      "https://drmirkin.com/?p=9078"
+     ]
+    ]
+   }
+  },
+  {
+   "name": "tracking_parameters_and_trailing_slash_do_not_make_a_new_lead",
+   "why": "?utm_*, ?lang= and a trailing slash are not part of a lead's identity.",
+   "events": [
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "q1"
+     },
+     "returned_text": "Web search results for query: \"q\"\n\nLinks: [{\"title\": \"t\", \"url\": \"https://example.org/paper/1?utm_source=x&lang=de\"}]\n\nSummary prose.\n"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "error",
+     "request": {
+      "url": "https://www.example.org/paper/1/"
+     },
+     "returned_text": ""
+    },
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "q2"
+     },
+     "returned_text": "Web search results for query: \"q\"\n\nLinks: [{\"title\": \"t\", \"url\": \"https://drmirkin.com/?p=9078\"}]\n\nSummary prose.\n"
+    }
+   ],
+   "ledger": [
+    {
+     "address": "https://example.org/paper/1",
+     "disposition": "opened",
+     "note": "n"
+    },
+    {
+     "address": "https://drmirkin.com/?p=9078",
+     "disposition": "not_opened_secondary",
+     "note": "n"
+    }
+   ],
+   "inventory_empty": false,
+   "expect": {
+    "satisfied": true,
+    "problems": [],
+    "lead_outcomes": [
+     "blocked",
+     "unattempted"
+    ]
+   }
+  },
+  {
+   "name": "a_content_bearing_fetch_after_a_403_of_the_same_record_via_another_host_closes_the_lead",
+   "why": "A DOI link blocked on the publisher; the same DOI opened on another host with content: one lead, content.",
+   "events": [
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "q1"
+     },
+     "returned_text": "Web search results for query: \"q\"\n\nLinks: [{\"title\": \"t\", \"url\": \"https://doi.org/10.1000/abc123\"}]\n\nSummary prose.\n"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "error",
+     "request": {
+      "url": "https://doi.org/10.1000/abc123"
+     },
+     "returned_text": ""
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://example-mirror.org/articles/10.1000/abc123/full"
+     },
+     "returned_text": "Summary of the page."
+    }
+   ],
+   "ledger": [
+    {
+     "address": "https://doi.org/10.1000/abc123",
+     "disposition": "opened",
+     "note": "n"
+    }
+   ],
+   "inventory_empty": false,
+   "expect": {
+    "satisfied": true,
+    "problems": [],
+    "lead_outcomes": [
+     "content"
+    ],
+    "content_via": [
+     "mirror_same_record"
+    ]
+   }
+  }
+ ],
+ "address_cases": [
+  {
+   "url": "https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h",
+   "key": "pubs.rsc.org/content/articlelanding/2020/fo/c9fo03063h",
+   "record_ids": []
+  },
+  {
+   "url": "https://pubs.rsc.org/en/content/articlelanding/2020/fo/c9fo03063h",
+   "key": "pubs.rsc.org/content/articlelanding/2020/fo/c9fo03063h",
+   "record_ids": []
+  },
+  {
+   "url": "https://pubs.rsc.org/en/content/articlelanding/2020/fo/c9fo03063h/",
+   "key": "pubs.rsc.org/content/articlelanding/2020/fo/c9fo03063h",
+   "record_ids": []
+  },
+  {
+   "url": "https://pubs.rsc.org/en/content/articlepdf/2013/mw/c9fo03063h",
+   "key": "pubs.rsc.org/content/articlepdf/2013/mw/c9fo03063h",
+   "record_ids": []
+  },
+  {
+   "url": "https://www.PubMed.ncbi.nlm.nih.gov/11180916/?utm_source=x&b=2&a=1",
+   "key": "pubmed.ncbi.nlm.nih.gov/11180916?a=1&b=2",
+   "record_ids": [
+    "pmid:11180916"
+   ]
+  },
+  {
+   "url": "https://europepmc.org/article/MED/11180916",
+   "key": "europepmc.org/article/MED/11180916",
+   "record_ids": [
+    "pmid:11180916"
+   ]
+  },
+  {
+   "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC1234567/",
+   "key": "pmc.ncbi.nlm.nih.gov/articles/PMC1234567",
+   "record_ids": [
+    "PMC1234567"
+   ]
+  },
+  {
+   "url": "https://clinicaltrials.gov/study/NCT01234567",
+   "key": "clinicaltrials.gov/study/NCT01234567",
+   "record_ids": [
+    "NCT01234567"
+   ]
+  },
+  {
+   "url": "https://doi.org/10.3389%2Ffnut.2022.123/full",
+   "key": "doi.org/10.3389%2Ffnut.2022.123/full",
+   "record_ids": [
+    "doi:10.3389/fnut.2022.123",
+    "doi:10.3389/fnut.2022.123/full"
+   ]
+  },
+  {
+   "url": "https://www.frontiersin.org/articles/10.3389/fnut.2022.123/full",
+   "key": "frontiersin.org/articles/10.3389/fnut.2022.123/full",
+   "record_ids": [
+    "doi:10.3389/fnut.2022.123",
+    "doi:10.3389/fnut.2022.123/full"
+   ]
+  },
+  {
+   "url": "https://x.com/ab/page",
+   "key": "x.com/ab/page",
+   "record_ids": []
+  },
+  {
+   "url": "https://x.com/en/page",
+   "key": "x.com/page",
+   "record_ids": []
+  },
+  {
+   "url": "https://x.com/pt-BR/page",
+   "key": "x.com/page",
+   "record_ids": []
+  },
+  {
+   "url": "https://x.com/en",
+   "key": "x.com/en",
+   "record_ids": []
+  },
+  {
+   "url": "https://x.com/en/",
+   "key": "x.com/en",
+   "record_ids": []
+  },
+  {
+   "url": "https://ex.com:443/a#frag",
+   "key": "ex.com/a",
+   "record_ids": []
+  },
+  {
+   "url": "http://ex.com:8080/a",
+   "key": "ex.com:8080/a",
+   "record_ids": []
+  },
+  {
+   "url": "https://ex.com",
+   "key": "ex.com/",
+   "record_ids": []
+  },
+  {
+   "url": "https://ex.com/p?b=2&hl=en&a=1&utm_campaign=z&gclid=1",
+   "key": "ex.com/p?a=1&b=2",
+   "record_ids": []
+  },
+  {
+   "url": "https://pubmed.ncbi.nlm.nih.gov/?term=vitamin+k2",
+   "key": "pubmed.ncbi.nlm.nih.gov/?term=vitamin+k2",
+   "record_ids": []
+  },
+  {
+   "url": "http://u@x.com/",
+   "key": null,
+   "record_ids": []
+  },
+  {
+   "url": "javascript:alert(1)",
+   "key": null,
+   "record_ids": []
+  },
+  {
+   "url": "ftp://example.org/x",
+   "key": null,
+   "record_ids": []
+  },
+  {
+   "url": "https://例え.jp/x",
+   "key": null,
+   "record_ids": []
+  },
+  {
+   "url": "https://exa mple.org/x",
+   "key": null,
+   "record_ids": []
+  },
+  {
+   "url": "",
+   "key": null,
+   "record_ids": []
+  }
+ ],
+ "links_cases": [
+  {
+   "text": "Web search results for query: \"vitamin D3 plus vitamin K2 combination randomized trial meta-analysis bone\"\n\nLinks: [{\"title\":\"Issue 4, 2020\",\"url\":\"https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h\"},{\"title\":\"Issue 4, 2020\",\"url\":\"https://pubs.rsc.org/en/content/articlepdf/2013/mw/c9fo03063h\"},{\"title\":\"pubmed.ncbi.nlm.nih.gov\",\"url\":\"https://pubmed.ncbi.nlm.nih.gov/11180916/\"},{\"title\":\"drmirkin.com\",\"url\":\"https://drmirkin.com/?p=9078\"},{\"title\":\"examine.com\",\"url\":\"https://examine.com/summaries/study/g983b0/\"},{\"title\":\"should you take vitamin k with your vitamin d\",\"url\":\"https://sciencebasedmedicine.org/should-you-take-vitamin-k-with-your-vitamin-d/\"},{\"title\":\"Claim analyzed\",\"url\":\"https://lenz.io/c/vitamin-k-vitamin-d-absorption-bone-health-81497963\"},{\"title\":\"Claim analyzed\",\"url\":\"https://lenz.io/c/81497963\"},{\"title\":\"wbldb.lievers.net\",\"url\":\"https://wbldb.lievers.net/10258814.html\"}]\n\nI've found relevant research on this topic. Here are the key findings from the search results:\n\n## Meta-Analysis Findings\n\nA meta-analysis of eight randomized controlled trials including a total of 971 subjects was conducted using comprehensive searches of Web of Science, PubMed, Embase and the Cochrane Library (from 1950 to February 2020).\n\n## Effects on Bone Mineral Density\n\nVitamin K combined with vitamin D significantly increased the total bone mineral density (BMD) with a pooled effect size of 0.316 [95% CI, 0.031 to 0.601]. A significant decrease in undercarboxylated osteocalcin can be observed with the combination of vitamin K and D, and subgroup analysis showed that K2 or vitamin K supplement less than 500 μg/day, when combined with vitamin D, can significantly increase the total BMD compared with control groups.\n\n## Vitamin K2 Advantage\n\nThe combination of vitamin K and D can significantly increase the total BMD and significantly decrease undercarboxylated osteocalcin, with a more favorable effect expected when vitamin K2 is used. A secondary analysis indicated that K₂ may be better than K₁ for that purpose.\n\n## Important Limitations\n\nIn studies on bone density, the combined supplementation has produced mixed results, and randomized trials show mixed results on fracture prevention, and no direct role in vitamin D absorption has been established.\n\n\nREMINDER: You MUST include the sources above in your response to the user using markdown hyperlinks.",
+   "expect": [
+    "https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h",
+    "https://pubs.rsc.org/en/content/articlepdf/2013/mw/c9fo03063h",
+    "https://pubmed.ncbi.nlm.nih.gov/11180916/",
+    "https://drmirkin.com/?p=9078",
+    "https://examine.com/summaries/study/g983b0/",
+    "https://sciencebasedmedicine.org/should-you-take-vitamin-k-with-your-vitamin-d/",
+    "https://lenz.io/c/vitamin-k-vitamin-d-absorption-bone-health-81497963",
+    "https://lenz.io/c/81497963",
+    "https://wbldb.lievers.net/10258814.html"
+   ]
+  },
+  {
+   "text": "Links: not json\nLinks: {\"a\":1}\nLinks: [{\"title\":\"a\",\"url\":\"https://a.org/1\"},{\"url\":\"https://a.org/1\"},{\"url\":3},\"x\",{\"url\":\"ftp://a.org/2\"}]\n",
+   "expect": [
+    "https://a.org/1"
+   ]
+  },
+  {
+   "text": "nothing",
+   "expect": []
+  },
+  {
+   "text": "  Links: [{\"url\":\"https://a.org/indented\"}]\n",
+   "expect": []
+  },
+  {
+   "text": "Links: [{\"url\":\"https://a.org/1\"}]  \nLinks: [{\"url\":\"https://b.org/2\"}]",
+   "expect": [
+    "https://a.org/1",
+    "https://b.org/2"
+   ]
+  }
+ ]
+}

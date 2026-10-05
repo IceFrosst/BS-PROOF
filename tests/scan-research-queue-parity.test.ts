@@ -88,6 +88,7 @@ async function history(b: Backend): Promise<Array<[string, unknown]>> {
 
   const O1 = uuid(101);
   const O2 = uuid(102);
+  const O3 = uuid(103);
   let age = 0;
   const queue = async (label: string, owner: string, scan: number, promptVersion?: string) => {
     const out = await step(label, b.enqueue(owner, uuid(200 + scan), promptVersion));
@@ -166,7 +167,7 @@ async function history(b: Backend): Promise<Array<[string, unknown]>> {
   await step("claim, F is skipped", b.claim());
   await step("get F stays queued", b.get(O2, F));
 
-  // Prompt versions: a job stamped v0.4 completes, jobs queued under v0.3 and v0.2 still complete, an unknown one is refused.
+  // Prompt versions: a job stamped v0.5 completes, jobs queued under v0.4, v0.3 and v0.2 still complete, an unknown one is refused.
   const H = (await queue("enqueue H (prompt v0.4)", O2, 8, "live-research-v0.4")).job.id;
   const I = (await queue("enqueue I (prompt v0.2)", O2, 9, "live-research-v0.2")).job.id;
   const K = (await queue("enqueue K (prompt v0.3)", O1, 11, "live-research-v0.3")).job.id;
@@ -179,6 +180,12 @@ async function history(b: Backend): Promise<Array<[string, unknown]>> {
   await step("complete I (v0.2)", b.complete(I, i1.lease_token, resultFor("i")));
   await step("complete K (v0.3)", b.complete(K, k1.lease_token, resultFor("k")));
   await step("complete J (v0.1) is refused", b.complete(J, j1.lease_token, resultFor("j")));
+  // The current prompt version: it is the only queued job now, so this claim IS V5 (claims are oldest-first).
+  const V5 = (await queue("enqueue V5 (prompt v0.5)", O3, 12, "live-research-v0.5")).job.id;
+  const v5 = (await step("claim -> V5", b.claim())).job;
+  expect(v5.id).toBe(V5);
+  await step("complete V5 (v0.5)", b.complete(V5, v5.lease_token, resultFor("v5")));
+  await step("get V5", b.get(O3, V5));
   await step("get H", b.get(O2, H));
   return log;
 }

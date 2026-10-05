@@ -20,12 +20,13 @@ WIRE CONTRACT (one endpoint, POST JSON, `Authorization: Bearer <token>`):
         -> {"job": null}
         -> {"job": {"id", "lease_token", "target", "prompt_version"}}
     {"action": "heartbeat", "job_id", "lease_token"}
-    {"action": "complete", "job_id", "lease_token", "audit", "source_access_v2"}
+    {"action": "complete", "job_id", "lease_token", "audit", "source_access_v3"}   (live-research-v0.5; v0.2-v0.4: "source_access_v2")
     {"action": "fail", "job_id", "lease_token", "code", "message", "retryable"}
 
-Complete requests are capped at 768 KiB and carry transient SourceAccessV2 receipts;
-the server stores only its owner-safe summary. Failure diagnostics stay on private
-worker disk and never travel in the fail request.
+Complete requests are capped at 768 KiB and carry transient SourceAccessV3 receipts (every WebSearch / WebFetch
+call with what it requested and the exact text it returned, plus the model's lead_ledger); the server recomputes
+the lead accounting and the grounding from them and stores only its owner-safe summary. Failure diagnostics stay
+on private worker disk and never travel in the fail request.
 
   Status handling (worker side): 2xx = accepted; 404/409/410, or a JSON body whose
   `error`/`code` is lease_lost|lease_expired|stale_lease|lease_mismatch = the lease
@@ -42,9 +43,16 @@ retried. There is no runtime cap, no turn/token cap, no retry count and no
 concurrency here: one job at a time, and a run ends only when the CLI ends or the
 lease is lost. A lost lease kills the CLI and discards nothing already on disk.
 
+FOLLOW-THROUGH (live-research-v0.5). One job is still ONE CLI process and ONE model run: when the model returns
+while the tool receipts show that the source leads its searches found were not followed (pipeline/research_leads.py),
+the adapter sends a worker-authored follow-up into the SAME session instead of calling the run finished (see the
+adapter docstring). If the leads are still not followed when the model stops producing anything new, or at its
+final return, the job ends as `research_followthrough_incomplete` -- terminal, with the evidence on disk
+(`followthrough.json`). A "completed" job therefore never means "one search and a shrug".
+
 Failures are reported, not repaired: quota/rate limit, authentication, CLI crash,
 missing structured output, schema-invalid audit, contract violations (see
-`contract_problems`) and an inventory ID the grounding guard cannot find in any returned
+`contract_problems`), unfollowed leads and an inventory ID the grounding guard cannot find in any returned
 tool text all become a `fail` with a code, the evidence and a retryable HINT. No number is
 guessed, defaulted or patched into an audit. Since the one-attempt policy (2026-10-06) the
 server ignores the HINT for a NEW claim: a posted `fail` is terminal and a lease that expires
@@ -343,6 +351,19 @@ def schema_errors(audit) -> list[str]:
     return [("/" + "/".join(map(str, e.absolute_path)) + ": " + adapter.sanitize(e.message, 240)) for e in errs]
 
 
+def ledger_errors(ledger) -> list[str]:
+    """Strict Draft 2020-12 validation of the `lead_ledger` against schemas/source_access_v3.json $defs.leadLedger."""
+    try:
+        from jsonschema import Draft202012Validator
+    except ImportError as e:
+        raise RuntimeError("jsonschema>=4 is required (pip install -r scripts/pc_research_worker.requirements.txt)") from e
+    schema = dict(adapter.load_source_access_v3_schema(ROOT)["$defs"]["leadLedger"])
+    schema["$schema"] = "https://json-schema.org/draft/2020-12/schema"
+    Draft202012Validator.check_schema(schema)
+    errs = sorted(Draft202012Validator(schema).iter_errors(ledger), key=lambda e: list(map(str, e.absolute_path)))
+    return [("/lead_ledger/" + "/".join(map(str, e.absolute_path)) + ": " + adapter.sanitize(e.message, 240)) for e in errs]
+
+
 def _norm(s) -> str:
     return " ".join(str(s or "").split()).lower()
 
@@ -457,6 +478,9 @@ def contract_problems(audit: dict, target: dict, an, run_date: str) -> list[str]
 def grounding(audit: dict, an) -> dict:
     """Which cited inventory ids appeared in tool output. A string match, not verification."""
     seen, unseen, nonstd = [], [], []
+    # v0.5 runs: the identifiers the tools PRINTED, with the model's own request echoed back removed (the strict
+    # guard in the adapter uses the same set); older streams: every identifier in any returned text.
+    retrieved = adapter.grounded_ids_v3(an.receipts) if an.envelope else an.retrieved_ids
     for i, row in enumerate(audit.get("outcomes", [])):
         inv = row.get("inventory") if isinstance(row, dict) else None
         for it in inv if isinstance(inv, list) else []:
@@ -466,7 +490,7 @@ def grounding(audit: dict, an) -> dict:
                      "access": it.get("access") if isinstance(it, dict) else None}
             if norm is None:
                 nonstd.append(entry)
-            elif norm in an.retrieved_ids:
+            elif norm in retrieved:
                 seen.append(entry)
             else:
                 unseen.append(entry)
@@ -557,6 +581,26 @@ SHUTDOWN_AMBIGUOUS_CODES = ("claude_cli_error", "claude_no_result_event", "claud
 
 def utc_now() -> datetime.datetime:
     return datetime.datetime.now(datetime.timezone.utc)
+
+
+def follow_through_record(rr, follow) -> dict:
+    """What `followthrough.json` holds: the process facts, the timing of every turn and the final lead accounting.
+    Private worker disk only. `elapsed_s` is the wall time of the whole CLI process (all user turns)."""
+    return {
+        "version": "followthrough-record-v1",
+        "cli_invocations": rr.cli_invocations,
+        "user_turns": rr.user_turns,
+        "finish_reason": rr.finish_reason,
+        "closed_by_worker_after_final_result": rr.closed_after_final_result,
+        "cli_did_not_exit_by_itself": rr.forced_exit_after_final_result,
+        "timing": {"started_utc": rr.started_utc, "ended_utc": rr.ended_utc, "elapsed_s": rr.elapsed_s,
+                   "turn_results_at_s": [t.get("at_s") for t in rr.turns]},
+        "turns": rr.turns,
+        "final": follow,
+        "effort": {"requested_via_argv": adapter.EFFORT,
+                   "note": "requested on the command line (--effort). The CLI stream reports no effort level (init carries only "
+                           "per_turn_effort_active), so what ran is NOT observed and must not be claimed."},
+    }
 
 
 def handle_job(job: dict, client: ApiClient, cfg: Config, stop: threading.Event,
@@ -659,6 +703,23 @@ def handle_job(job: dict, client: ApiClient, cfg: Config, stop: threading.Event,
         if problems:
             return fail("audit_contract_violation", " | ".join(problems), True)
 
+        # FOLLOW-THROUGH: were the source leads the searches found really followed, per the tool RECEIPTS? The
+        # model's own account (the ledger) is checked against them; it cannot certify an open.
+        follow = adapter.follow_through_report(an)
+        _write_json(run_dir / "followthrough.json", follow_through_record(rr, follow))
+        if follow is None or not isinstance(an.lead_ledger, list):
+            return fail("audit_contract_violation", "the result is not the envelope {audit, lead_ledger} that "
+                        "live-research-v0.5 requires", False)
+        try:
+            lerrs = ledger_errors(an.lead_ledger)
+        except RuntimeError as e:
+            return fail("worker_internal_error", str(e), True)
+        if lerrs:
+            return fail("audit_schema_invalid", f"{len(lerrs)} lead_ledger error(s): " + " | ".join(lerrs[:20]), False)
+        if not follow["satisfied"]:
+            return fail("research_followthrough_incomplete",
+                        adapter.follow_through_message(follow, rr.finish_reason, rr.user_turns), False)
+
         sa["audit_grounding"] = grounding(audit, an)
         sa["blend"] = blend_report(audit, target)
         sa["audit_sha256"] = adapter.sha256_bytes(json.dumps(audit, sort_keys=True, ensure_ascii=False).encode("utf-8"))
@@ -666,9 +727,14 @@ def handle_job(job: dict, client: ApiClient, cfg: Config, stop: threading.Event,
         sa["checks_passed"] = ["json_schema_draft_2020_12_research_audit", "meta_prompt_and_model",
                                "only_verified_model_plus_haiku_web_summariser", "subscription_login_only",
                                "daily_dose_not_invented", "experimental_unvalidated_note",
-                               "blend_headline_row_is_whole_formula", "web_tools_used"]
+                               "blend_headline_row_is_whole_formula", "web_tools_used",
+                               "lead_ledger_schema", "source_leads_followed_per_tool_receipts",
+                               "inventory_ids_printed_by_tools_not_by_own_request_echo"]
         try:
-            source_access_v2 = adapter.source_access_v2(an, rr)
+            source_access_v3 = adapter.source_access_v3(an, rr)
+        except adapter.FollowThroughIncompleteError as e:
+            return fail("research_followthrough_incomplete", adapter.follow_through_message(
+                e.report or follow, rr.finish_reason, rr.user_turns), False)
         except adapter.InventoryNotGroundedError as e:
             # The model's audit cites an ID that no returned tool text contains. The grounding guard is
             # strict and unchanged; this is a refusal of the AUDIT (an integrity failure), not a worker
@@ -679,7 +745,7 @@ def handle_job(job: dict, client: ApiClient, cfg: Config, stop: threading.Event,
                 return fail("source_report_too_large", str(e), False)
             return fail("worker_internal_error", str(e), True)
         payload = {"action": "complete", "job_id": job_id, "lease_token": lease_token,
-                   "audit": copy.deepcopy(audit), "source_access_v2": source_access_v2}
+                   "audit": copy.deepcopy(audit), "source_access_v3": source_access_v3}
         if len(json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")) > 768 * 1024:
             return fail("source_report_too_large", "validated research report exceeds the 768 KiB request limit", False)
         _write_json(run_dir / "result.json", payload)
@@ -687,7 +753,7 @@ def handle_job(job: dict, client: ApiClient, cfg: Config, stop: threading.Event,
         _write_json(run_dir / "delivery.json", {"action": "complete", "kind": r.kind, "status": r.status,
                                                 "detail": r.detail})
         if r.kind == "ok":
-            log("job completed", job=job_id, run_dir=run_dir.name)
+            log("job completed", job=job_id, run_dir=run_dir.name, elapsed_s=rr.elapsed_s, user_turns=rr.user_turns)
             return JobOutcome("completed")
         log("completion not accepted", job=job_id, kind=r.kind, status=r.status, detail=r.detail)
         return JobOutcome("lease_lost" if r.kind == "lease_lost" else "undelivered", r.kind)

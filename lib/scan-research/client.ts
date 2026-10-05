@@ -54,7 +54,8 @@ export type ResearchProvenance = {
   cli_version: string;
   adapter_version: string;
   classifier_version: string;
-  source_access_version: "SourceAccessV2";
+  /** V2 = results of the prompts v0.2-v0.4 (historical, still read); V3 = live-research-v0.5 (request metadata + lead ledger checked). */
+  source_access_version: "SourceAccessV2" | "SourceAccessV3";
 };
 export type ResearchOutcomeView = {
   name: string;
@@ -240,7 +241,7 @@ export function parseResearchResult(raw: unknown): ResearchResultV2 | null {
   const audit = auditOf(raw.audit);
   if (!audit) return null;
   const p = raw.provenance;
-  if (!str(p.evidence_status) || !str(p.runner) || !str(p.billing) || !str(p.model) || !str(p.prompt_version) || !str(p.cli_version) || !str(p.adapter_version) || !str(p.classifier_version) || p.source_access_version !== "SourceAccessV2") return null;
+  if (!str(p.evidence_status) || !str(p.runner) || !str(p.billing) || !str(p.model) || !str(p.prompt_version) || !str(p.cli_version) || !str(p.adapter_version) || !str(p.classifier_version) || (p.source_access_version !== "SourceAccessV2" && p.source_access_version !== "SourceAccessV3")) return null;
   // An experimental audit that says it is scored, approved or human-checked breaks the contract: do not display it as one.
   if (p.affects_score !== false || p.clinically_approved !== false || p.human_verified !== false) return null;
   const a = raw.source_access;
@@ -263,7 +264,7 @@ export function parseResearchResult(raw: unknown): ResearchResultV2 | null {
     provenance: {
       evidence_status: p.evidence_status, clinically_approved: false, human_verified: false, affects_score: false,
       runner: p.runner, billing: p.billing, model: p.model, prompt_version: p.prompt_version, cli_version: p.cli_version,
-      adapter_version: p.adapter_version, classifier_version: p.classifier_version, source_access_version: "SourceAccessV2",
+      adapter_version: p.adapter_version, classifier_version: p.classifier_version, source_access_version: p.source_access_version,
     },
   };
 }

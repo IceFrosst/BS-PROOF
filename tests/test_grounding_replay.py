@@ -62,7 +62,7 @@ RECORDED_FIRST = {
 def access_from(receipts):
     """A SourceAccessV2 object (the real schema, the real counters) whose events are exactly `receipts`."""
     access = copy.deepcopy(TEMPLATE)
-    access["runner"]["prompt_version"] = ad.LIVE_PROMPT_VERSION
+    access["runner"]["prompt_version"] = ad.V2_WIRE_PROMPT_VERSION   # these are v0.2-v0.4 streams: the V2 wire (v0.5 travels as V3)
     events = []
     summary = {k: 0 for k in access["summary"]}
     for i, r in enumerate(receipts):

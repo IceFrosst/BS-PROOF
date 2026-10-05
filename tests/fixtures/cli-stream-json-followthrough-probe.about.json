@@ -1,0 +1,7 @@
+{
+ "about": "A PROTOCOL PROBE, not a research run and not a model run. The REAL claude CLI 2.1.287, with exactly the adapter's command (incl. `--input-format stream-json`), was driven by pipeline/claude_research_adapter.run_research against a LOCAL mock of the Messages API (scripted model turns, fake key, throwaway HOME, no provider, no network); a wrapper rewrote init.apiKeySource so the adapter's billing guard saw the subscription-shaped value. It shows ONE process answering THREE user turns of the same session: a premature return (empty ledger), a blocked fetch with no independent attempt, and a satisfied return. Sanitised: uuids/session ids, cwd, init lists the adapter does not read, and every audit body replaced by a stub; everything else is as the CLI emitted it.",
+ "cli": "claude 2.1.287",
+ "turns": 3,
+ "api_calls_seen_by_the_mock": 8,
+ "user_turns_sent": 3
+}
