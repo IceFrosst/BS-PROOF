@@ -60,6 +60,8 @@ function setEvents(f: Fixture, events: any[]) {
   }
   f.source_access_v3.summary = s;
 }
+/** A WebFetch request as SourceAccessV3 carries it: the address AND the prompt the model put to the summariser. */
+const fetchReq = (url: string, prompt = "state the PMID exactly as printed") => ({ url, prompt });
 const empty = (f: Fixture) => { for (const o of f.audit.outcomes) o.inventory = []; };
 
 describe("SourceAccessV3: the shared fixture (emitted by the real adapter)", () => {
@@ -116,13 +118,62 @@ describe("grounding: only what a tool PRINTED, never the model's own request", (
     expect([...idsIn(f.source_access_v3.events[0].returned_text)]).toContain("pmid:99999999");
   });
 
-  it("the same id printed OUTSIDE the echo is grounded", () => {
+  it("an id typed into the SAME query is not grounded by that result even when printed outside the verbatim echo", () => {
     const f = copy();
     cite(f, "PMID 99999999");
     const q = "PMID 99999999 magnesium sleep";
     f.source_access_v3.events[0].request.query = q;
     setText(f, 0, search(q, [PUB, WALLED, BLOG], "A randomized trial is listed. PMID: 99999999 reports sleep outcomes."));
+    expect(errorsOf(f).join("\n")).toMatch(/inventory\/0\/id not grounded/);
+  });
+
+  it("the same id printed by a DIFFERENT independent result is grounded", () => {
+    const f = copy();
+    cite(f, "PMID 99999999");
+    f.source_access_v3.events[0].request.query = "magnesium sleep";
+    setText(f, 0, search("magnesium sleep", [PUB, WALLED, BLOG], "A randomized trial is listed. PMID: 99999999 reports sleep outcomes."));
+    f.source_access_v3.events[1].request.prompt = "Does this page report PMID 99999999?";   // typed later, into ANOTHER call
+    setText(f, 1, "The page does not mention PMID 99999999.");
     expect(check(f).ok).toBe(true);
+  });
+
+  it("'the page does not mention PMID X' with X typed into the WebFetch prompt cannot ground X", () => {
+    for (const answer of ["The page does not mention PMID 31234567.", "PMID: 31234567 is not shown. Title as printed.", "You asked: Does this page report PMID 31234567? No."]) {
+      const f = copy();
+      cite(f, "PMID 31234567");
+      f.source_access_v3.events[1].request.prompt = "Does this page report PMID 31234567?";
+      setText(f, 1, answer);
+      expect(errorsOf(f).join("\n"), answer).toMatch(/inventory\/0\/id not grounded/);
+    }
+  });
+
+  it("a DOI typed into the prompt is excluded, but a PMID the page itself prints is kept", () => {
+    const f = copy();
+    f.source_access_v3.events[1].request.prompt = "Is this 10.1234/ABCD.5678 the paper?";
+    setText(f, 1, "Yes, DOI 10.1234/abcd.5678. PMID: 12345678.");
+    cite(f, "10.1234/abcd.5678");
+    expect(errorsOf(f).join("\n")).toMatch(/not grounded/);
+    cite(f, "PMID 12345678");
+    expect(check(f).ok).toBe(true);
+  });
+
+  it("the prompt text echoed back verbatim is stripped and the event may still ground another id", () => {
+    const f = copy();
+    cite(f, "PMID 27654321");
+    f.source_access_v3.events[1].request.prompt = "Report PMID 31234567 and the title";
+    setText(f, 1, "You asked: Report PMID 31234567 and the title. The page prints PMID: 27654321.");
+    expect(check(f).ok).toBe(true);
+  });
+
+  it("a failed fetch whose prompt and text name the id grounds nothing", () => {
+    for (const kind of ["error", "wall", "refusal"] as const) {
+      const f = copy();
+      cite(f, "PMID 88888888");
+      const events = f.source_access_v3.events;
+      events[2] = ev("WebFetch", kind, fetchReq(WALLED, "Does it print PMID 88888888?"), "PMID: 88888888", 3);
+      setEvents(f, events);
+      expect(errorsOf(f).join("\n"), kind).toMatch(/inventory\/0\/id not grounded/);
+    }
   });
 
   it("a DOI typed in the query and echoed back does not ground itself", () => {
@@ -149,7 +200,7 @@ describe("grounding: only what a tool PRINTED, never the model's own request", (
       const f = copy();
       cite(f, "PMID 88888888");
       const events = f.source_access_v3.events;
-      events[2] = ev("WebFetch", kind, { url: WALLED }, "PMID: 88888888 Please complete the CAPTCHA", 3);   // the text carries the id; the kind says it was no access
+      events[2] = ev("WebFetch", kind, fetchReq(WALLED), "PMID: 88888888 Please complete the CAPTCHA", 3);   // the text carries the id; the kind says it was no access
       setEvents(f, events);                                                                                 // counters recomputed: only the grounding can object
       expect(errorsOf(f).join("\n"), kind).toMatch(/inventory\/0\/id not grounded/);
     }
@@ -198,8 +249,8 @@ describe("the lead ledger is checked against the requests, never believed", () =
     setEvents(f, [
       f.source_access_v3.events[0],
       f.source_access_v3.events[1],
-      ev("WebFetch", "error", { url: WALLED }, "", 3),
-      ev("WebFetch", "error", { url: alias }, "", 4),
+      ev("WebFetch", "error", fetchReq(WALLED), "", 3),
+      ev("WebFetch", "error", fetchReq(alias), "", 4),
     ]);
     const errs = errorsOf(f).join("\n");
     expect(errs).toMatch(/blocked_without_independent_attempt x1/);
@@ -210,7 +261,7 @@ describe("the lead ledger is checked against the requests, never believed", () =
     setEvents(f, [
       f.source_access_v3.events[0],
       f.source_access_v3.events[1],
-      ev("WebFetch", "error", { url: WALLED }, "", 3),
+      ev("WebFetch", "error", fetchReq(WALLED), "", 3),
       ev("WebSearch", "request", { query: "  MAGNESIUM glycinate  sleep randomized trial " }, search("magnesium glycinate sleep randomized trial", [PUB, WALLED, BLOG]), 4),
     ]);
     expect(errorsOf(f).join("\n")).toMatch(/blocked_without_independent_attempt x1/);
@@ -220,7 +271,7 @@ describe("the lead ledger is checked against the requests, never believed", () =
     const f = copy();
     setEvents(f, [
       f.source_access_v3.events[0],
-      ev("WebFetch", "request", { url: "https://europepmc.org/article/MED/12345678" }, "Summary for PMID: 12345678: randomized sleep trial.", 2),
+      ev("WebFetch", "request", fetchReq("https://europepmc.org/article/MED/12345678"), "Summary for PMID: 12345678: randomized sleep trial.", 2),
     ]);
     f.source_access_v3.lead_ledger = [
       { address: PUB, disposition: "opened", note: "Europe PMC mirror of the same record" },
@@ -265,8 +316,8 @@ describe("premature and thin runs are not accepted", () => {
     const links = [PUB, ...nineLinks().slice(0, 7), "https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h"];
     setEvents(f, [
       ev("WebSearch", "request", { query: "q" }, search("q", links), 1),
-      ev("WebFetch", "error", { url: "https://pubs.rsc.org/en/content/articlelanding/2020/fo/c9fo03063h" }, "", 2),
-      ev("WebFetch", "error", { url: "https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h" }, "", 3),
+      ev("WebFetch", "error", fetchReq("https://pubs.rsc.org/en/content/articlelanding/2020/fo/c9fo03063h"), "", 2),
+      ev("WebFetch", "error", fetchReq("https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h"), "", 3),
     ]);
     f.source_access_v3.lead_ledger = [];
     const errs = errorsOf(f).join("\n");
@@ -293,7 +344,7 @@ describe("premature and thin runs are not accepted", () => {
     empty(f);
     setEvents(f, [
       ev("WebSearch", "request", { query: "q" }, search("q", [PUB, BLOG]), 1),
-      ev("WebFetch", "error", { url: PUB }, "", 2),
+      ev("WebFetch", "error", fetchReq(PUB), "", 2),
       ev("WebSearch", "request", { query: "study title pubmed" }, search("study title pubmed", [BLOG]), 3),
     ]);
     f.source_access_v3.lead_ledger = [
@@ -306,7 +357,7 @@ describe("premature and thin runs are not accepted", () => {
   it("it is not a fetch-count quota: many failed fetches of one lead still fail, one content fetch passes", () => {
     const f = copy();
     const events: any[] = [f.source_access_v3.events[0]];
-    for (let i = 0; i < 40; i++) events.push(ev("WebFetch", "error", { url: WALLED }, "", i + 2));
+    for (let i = 0; i < 40; i++) events.push(ev("WebFetch", "error", fetchReq(WALLED), "", i + 2));
     setEvents(f, events);
     cite(f, "PMID 12345678");
     expect(errorsOf(f).join("\n")).toMatch(/blocked_without_independent_attempt/);
@@ -346,11 +397,17 @@ describe("wire discipline", () => {
     expect(check(f).ok).toBe(false);
   });
 
-  it("request metadata must match the tool: a search has a query, a fetch has a url, never both or neither", () => {
+  it("request metadata must match the tool: a search has a query alone, a fetch has a url AND a prompt, nothing else", () => {
     const mut: Array<(e: any[]) => void> = [
       (e) => { e[0].request = { url: PUB }; },
       (e) => { e[1].request = { query: "q" }; },
       (e) => { e[0].request = { query: "q", url: PUB }; },
+      (e) => { e[0].request = { query: "q", prompt: "p" }; },            // a search carries no prompt
+      (e) => { e[1].request = { url: PUB }; },                           // a fetch without its prompt
+      (e) => { e[1].request = { prompt: "p" }; },                        // a fetch without its address
+      (e) => { e[1].request = { url: PUB, prompt: "p", query: "q" }; },  // a third field
+      (e) => { e[1].request = { url: PUB, prompt: "" }; },
+      (e) => { e[1].request = { url: PUB, prompt: "x".repeat(4001) }; }, // never shortened: refused whole
       (e) => { e[0].request = {}; },
       (e) => { delete e[0].request; },
       (e) => { e[0].request = { query: "" }; },
@@ -360,6 +417,9 @@ describe("wire discipline", () => {
       m(f.source_access_v3.events);
       expect(check(f).ok).toBe(false);
     }
+    const f = copy();
+    f.source_access_v3.events[1].request.prompt = "x".repeat(4000);     // the longest the wire carries is carried
+    expect(check(f).ok).toBe(true);
   });
 
   it("rejects changed text bytes/hash, counters, duplicate tool ids, request-without-content and non-request-with-content", () => {

@@ -14,6 +14,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { account, leadKey, parseLinks, urlRecordIds, type LeadEvent } from "@/lib/scan-research/lead-accounting";
+import { groundedIdsV3 } from "@/lib/scan-research/source-access-v3";
 
 type Case = {
   name: string;
@@ -34,7 +35,17 @@ const F = JSON.parse(readFileSync(path.join(process.cwd(), "tests", "fixtures", 
   cases: Case[];
   address_cases: { url: string; key: string | null; record_ids: string[] }[];
   links_cases: { text: string; expect: string[] }[];
+  grounding_cases: { name: string; why: string; events: LeadEvent[]; expect_grounded: string[] }[];
 };
+
+describe("server grounding agrees with the worker's: what the tool printed, minus what the model typed into the same call", () => {
+  it("has the shared grounding cases", () => expect(F.grounding_cases.length).toBeGreaterThanOrEqual(8));
+  for (const c of F.grounding_cases) {
+    it(c.name, () => {
+      expect([...groundedIdsV3(c.events)].sort()).toEqual([...c.expect_grounded].sort());
+    });
+  }
+});
 
 describe("server lead accounting agrees with the worker's on every shared case", () => {
   for (const c of F.cases) {

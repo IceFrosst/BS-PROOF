@@ -1,5 +1,5 @@
 {
- "about": "Shared cases for pipeline/research_leads.py and lib/scan-research/lead-accounting.ts (parity). `real_*` cases embed the search result text of the immutable 2026-10-05 v0.4 validation capture byte for byte. Expectations are hand-written, not generated from either implementation.",
+ "about": "Shared cases for pipeline/research_leads.py and lib/scan-research/lead-accounting.ts (parity). `real_*` cases embed the search result text of the immutable 2026-10-05 v0.4 validation capture byte for byte. Expectations are hand-written, not generated from either implementation. `grounding_cases` (added with the WebFetch-prompt capture): which identifiers one run's CONTENT-bearing results may ground, expectations hand-written; the identifiers the model typed into the SAME call (search query / WebFetch prompt) never ground themselves, even when a tool paraphrases them back.",
  "cases": [
   {
    "name": "real_v04_one_search_two_403_empty_audit_no_ledger",
@@ -1282,6 +1282,171 @@
     "https://a.org/1",
     "https://b.org/2"
    ]
+  }
+ ],
+ "grounding_cases": [
+  {
+   "name": "a_page_that_does_not_mention_the_pmid_in_the_prompt_cannot_ground_it",
+   "why": "The model typed PMID 31234567 into its WebFetch prompt; the summariser answers that the page does not mention it. The paraphrase is not a printed identifier.",
+   "events": [
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://journal.example.org/articles/vitd-trial",
+      "prompt": "Does this page report PMID 31234567?"
+     },
+     "returned_text": "The page does not mention PMID 31234567. It is a news article about vitamin D."
+    }
+   ],
+   "expect_grounded": []
+  },
+  {
+   "name": "the_prompt_text_echoed_back_verbatim_is_stripped_too",
+   "why": "A summary that quotes the model's own question back, with an unrelated identifier the page itself prints, grounds only the page's identifier.",
+   "events": [
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://journal.example.org/articles/vitd-trial",
+      "prompt": "Report PMID 31234567 and the DOI"
+     },
+     "returned_text": "You asked: Report PMID 31234567 and the DOI. The page prints PMID: 27654321."
+    }
+   ],
+   "expect_grounded": [
+    "pmid:27654321"
+   ]
+  },
+  {
+   "name": "the_same_pmid_printed_by_an_earlier_independent_search_snippet_is_grounded",
+   "why": "The identifier was typed into a later fetch prompt, but an earlier successful search result printed it itself: that independent event grounds it.",
+   "events": [
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "vitamin d fracture trial"
+     },
+     "returned_text": "Web search results for query: \"vitamin d fracture trial\"\n\nLinks: [{\"title\":\"t\",\"url\":\"https://example.org/a-page\"}]\n\nA randomized trial is listed. PMID: 31234567 reports fracture outcomes.\n"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://journal.example.org/articles/vitd-trial",
+      "prompt": "Does this page report PMID 31234567?"
+     },
+     "returned_text": "The page does not mention PMID 31234567."
+    }
+   ],
+   "expect_grounded": [
+    "pmid:31234567"
+   ]
+  },
+  {
+   "name": "a_failed_fetch_cannot_ground_whatever_its_text_says",
+   "why": "Error, wall and refusal results never ground anything, even when they print a labelled identifier.",
+   "events": [
+    {
+     "tool": "WebFetch",
+     "kind": "wall",
+     "request": {
+      "url": "https://journal.example.org/articles/vitd-trial",
+      "prompt": "p"
+     },
+     "returned_text": "PMID: 11111111 Please complete the CAPTCHA"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "refusal",
+     "request": {
+      "url": "https://journal.example.org/articles/vitd-trial",
+      "prompt": "p"
+     },
+     "returned_text": "I cannot access this page. PMID: 22222222"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "error",
+     "request": {
+      "url": "https://journal.example.org/articles/vitd-trial",
+      "prompt": "p"
+     },
+     "returned_text": "PMID: 33333333"
+    }
+   ],
+   "expect_grounded": []
+  },
+  {
+   "name": "an_identifier_in_the_search_query_cannot_be_grounded_by_a_paraphrase_of_it",
+   "why": "A search tool that rewrites the query ('searched for pubmed record 99999999') prints the identifier in a form the verbatim strip cannot remove; the query's own identifiers are excluded.",
+   "events": [
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "PMID 99999999 magnesium sleep"
+     },
+     "returned_text": "Web search results for query: \"PMID 99999999 magnesium sleep\"\n\nLinks: [{\"title\":\"t\",\"url\":\"https://example.org/a-page\"}]\n\nThe search was run for PMID: 99999999 and found a randomized trial. PMID: 12345678 reports sleep outcomes.\n"
+    }
+   ],
+   "expect_grounded": [
+    "pmid:12345678"
+   ]
+  },
+  {
+   "name": "a_doi_typed_in_the_prompt_is_excluded_but_the_pmid_the_page_prints_is_kept",
+   "why": "Identifier kinds are normalised the same way on both sides (doi lower-cased, trailing dot dropped).",
+   "events": [
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://journal.example.org/articles/vitd-trial",
+      "prompt": "Is this 10.1234/ABCD.5678. the paper?"
+     },
+     "returned_text": "Yes. DOI 10.1234/abcd.5678 and PMID: 44444444."
+    }
+   ],
+   "expect_grounded": [
+    "pmid:44444444"
+   ]
+  },
+  {
+   "name": "the_requested_address_echoed_back_is_stripped_but_a_labelled_pmid_in_it_is_not_excluded",
+   "why": "Only the verbatim address echo is stripped (unchanged v0.5 rule); the prompt carries no identifier here, so a PMID the page itself prints is grounded.",
+   "events": [
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://pubmed.ncbi.nlm.nih.gov/55555555/",
+      "prompt": "state the title"
+     },
+     "returned_text": "Fetched https://pubmed.ncbi.nlm.nih.gov/55555555/ . PMID: 55555555. Title as printed."
+    }
+   ],
+   "expect_grounded": [
+    "pmid:55555555"
+   ]
+  },
+  {
+   "name": "a_fetched_address_echo_alone_grounds_nothing",
+   "why": "Unchanged: the address the model chose is not a source for the identifier inside it.",
+   "events": [
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://pubmed.ncbi.nlm.nih.gov/77777777/",
+      "prompt": "state the title"
+     },
+     "returned_text": "Fetched https://pubmed.ncbi.nlm.nih.gov/77777777/ and summarised it. A title and an abstract."
+    }
+   ],
+   "expect_grounded": []
   }
  ]
 }

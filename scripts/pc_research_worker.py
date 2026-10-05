@@ -894,7 +894,10 @@ def check(cfg_env_file: Path | None, environ=None) -> int:
         import jsonschema
         from jsonschema import Draft202012Validator  # noqa: F401
         import importlib.metadata as md
-        line(True, f"jsonschema {md.version('jsonschema')} (Draft 2020-12)")
+        jv = md.version("jsonschema")
+        # The receipts and the lead ledger are validated with Draft 2020-12, which jsonschema 3.x does not have: the venv this
+        # worker runs from must carry exactly the major the requirements pin (>=4,<5), whatever else is installed.
+        line(jv.split(".")[0] == "4", f"jsonschema {jv} (Draft 2020-12; this runtime needs 4.x, as scripts/pc_research_worker.requirements.txt pins)")
     except ImportError as e:
         line(False, f"jsonschema>=4 missing: {e}")
     try:

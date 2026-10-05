@@ -433,7 +433,8 @@
     "tool_use_id": "tool-fetch-1",
     "kind": "request",
     "request": {
-     "url": "https://pubmed.ncbi.nlm.nih.gov/12345678/"
+     "url": "https://pubmed.ncbi.nlm.nih.gov/12345678/",
+     "prompt": "state the PMID exactly as printed"
     },
     "returned_kind": "fetch_model_summary",
     "returned_text": "Summary for PMID: 12345678: randomized sleep trial, title and year as printed.",
@@ -445,7 +446,8 @@
     "tool_use_id": "tool-wall-1",
     "kind": "wall",
     "request": {
-     "url": "https://journal.example.org/articles/sleep-trial"
+     "url": "https://journal.example.org/articles/sleep-trial",
+     "prompt": "state the PMID exactly as printed"
     },
     "returned_kind": "no_content",
     "returned_text": "Please complete the CAPTCHA",

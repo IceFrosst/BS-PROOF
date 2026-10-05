@@ -207,11 +207,30 @@ def strip_echo(text, needle) -> str:
     return text
 
 
-def grounding_text(event) -> str:
-    """The returned text of one CONTENT-bearing event with the model's own request echo removed (V3 grounding)."""
+def own_request_text(event) -> str:
+    """What the model itself TYPED into this call that a tool may echo or paraphrase back: the search query, or the
+    question (`prompt`) it put to the WebFetch summariser. Empty when the event carries none."""
     req = event.get("request") if isinstance(event.get("request"), dict) else {}
-    needle = req.get("query") if event.get("tool") == "WebSearch" else req.get("url")
-    return strip_echo(event.get("returned_text"), needle)
+    own = req.get("query") if event.get("tool") == "WebSearch" else req.get("prompt")
+    return own if isinstance(own, str) else ""
+
+
+def grounding_text(event) -> str:
+    """The returned text of one CONTENT-bearing event with the model's own request echo removed (V3 grounding).
+
+    Removed verbatim: the search query, or for a WebFetch the requested address AND the model's own prompt (longer
+    needle first, so one containing the other cannot leave a mangled remainder). A PARAPHRASED echo ("the page does not
+    mention PMID 123") is not text-removable; the identifiers the model typed into the SAME call are therefore also
+    excluded one level up (the adapter's `grounded_ids_v3`, `source-access-v3.ts groundedIdsV3`)."""
+    req = event.get("request") if isinstance(event.get("request"), dict) else {}
+    if event.get("tool") == "WebSearch":
+        needles = [req.get("query")]
+    else:
+        needles = sorted((n for n in (req.get("url"), req.get("prompt")) if isinstance(n, str) and n), key=len, reverse=True)
+    text = event.get("returned_text")
+    for needle in needles:
+        text = strip_echo(text, needle)
+    return text if isinstance(text, str) else ""
 
 
 # --------------------------------------------------------------------------- #
@@ -414,10 +433,45 @@ def account(events, ledger, inventory_empty: bool) -> dict:
             "warnings": warnings, "summary": summary, "leads": leads}
 
 
-def signature(report: dict, n_events: int) -> tuple:
-    """What a continuation turn must change to count as progress: the set of problems and the number of tool
-    events. The same pair twice means the model produced nothing new (no numeric limit is involved)."""
-    return (frozenset((p["code"], p["address"]) for p in report["problems"]), n_events)
+# The delivery wire's OWN capacity (schemas/source_access_v3.json: events maxItems 300, lead_ledger maxItems 400). They are
+# not operational budgets: they are the sizes past which a result can never be posted, so a run that is already past them
+# and still unsatisfied can only end `research_followthrough_incomplete`.
+WIRE_MAX_EVENTS = 300
+WIRE_MAX_LEDGER_ROWS = 400
+# Problems only a NEW tool call can resolve; the others (an unaccounted lead, an unknown or over-claimed ledger row) are
+# fixed by editing the ledger, which needs no receipt.
+TOOL_CALL_PROBLEMS = (P_IDENTIFIER_UNOPENED, P_NO_FALLBACK, P_EMPTY_NO_PAGE)
+
+
+def wire_capacity_exhausted(report: dict, n_events: int, n_ledger_rows: int) -> bool:
+    """True when ANOTHER continuation turn could not produce a result the wire can carry.
+
+    Over capacity already (more than 300 events / 400 ledger rows): every further result is undeliverable. At the
+    limit: only if what is still unresolved needs one more tool call (events) or one more ledger row (ledger rows).
+    A SATISFIED report is never asked this; the caller ends it as satisfied, valid or not for the wire."""
+    codes = {p["code"] for p in report["problems"]}
+    if n_events > WIRE_MAX_EVENTS or n_ledger_rows > WIRE_MAX_LEDGER_ROWS:
+        return True
+    if n_events >= WIRE_MAX_EVENTS and codes & set(TOOL_CALL_PROBLEMS):
+        return True
+    return n_ledger_rows >= WIRE_MAX_LEDGER_ROWS and P_UNACCOUNTED in codes
+
+
+def problem_keys(report: dict) -> frozenset:
+    return frozenset((p["code"], p["address"]) for p in report["problems"])
+
+
+def made_progress(previous: frozenset, report: dict, new_events: int) -> bool:
+    """Did a continuation turn REDUCE the problems the worker reported before it?
+
+    Yes only when at least one previously reported problem is gone. New tool calls and new links are not progress by
+    themselves (the model can search forever and still leave every lead unfollowed). A turn that added no tool call
+    must also leave FEWER problems than before: otherwise a ledger-only turn could trade one problem for another
+    without end. A turn that added tool calls is bounded by the wire's own event capacity instead."""
+    current = problem_keys(report)
+    if not (previous - current):
+        return False
+    return new_events > 0 or len(current) < len(previous)
 
 
 # --------------------------------------------------------------------------- #

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "SourceAccessV3",
-  "description": "TRANSIENT validation input for a live-research-v0.5 result (the server validates it and stores only its owner-safe summary). SourceAccessV2 plus (1) what each WebSearch / WebFetch call REQUESTED (its query or address), so an identifier the model typed itself cannot ground itself and the lead accounting can be recomputed, and (2) the model's lead_ledger. A LIVE-only wire: the canonical schemas/research_audit.json is untouched; the audit is posted exactly as the model returned it.",
+  "description": "TRANSIENT validation input for a live-research-v0.5 result (the server validates it and stores only its owner-safe summary). SourceAccessV2 plus (1) what each call REQUESTED (a WebSearch: its query; a WebFetch: its address AND the prompt the model put to the summariser, never truncated), so an identifier the model typed itself cannot ground itself and the lead accounting can be recomputed, and (2) the model's lead_ledger. A LIVE-only wire: the canonical schemas/research_audit.json is untouched; the audit is posted exactly as the model returned it.",
   "type": "object",
   "additionalProperties": false,
   "required": ["version", "runner", "events", "lead_ledger", "summary"],
@@ -15,13 +15,14 @@
     }},
     "events": {"type": "array", "maxItems": 300, "items": {"type": "object", "additionalProperties": false, "required": ["tool", "tool_use_id", "kind", "request", "returned_kind", "returned_text", "text_bytes", "text_sha256"], "properties": {
       "tool": {"enum": ["WebSearch", "WebFetch"]}, "tool_use_id": {"type": "string", "minLength": 1, "maxLength": 160}, "kind": {"enum": ["request", "error", "wall", "refusal"]},
-      "request": {"type": "object", "additionalProperties": false, "minProperties": 1, "maxProperties": 1, "properties": {
-        "query": {"type": "string", "minLength": 1, "maxLength": 4000}, "url": {"type": "string", "minLength": 1, "maxLength": 4000}
+      "request": {"type": "object", "additionalProperties": false, "minProperties": 1, "maxProperties": 2, "properties": {
+        "query": {"type": "string", "minLength": 1, "maxLength": 4000}, "url": {"type": "string", "minLength": 1, "maxLength": 4000},
+        "prompt": {"type": "string", "minLength": 1, "maxLength": 4000}
       }},
       "returned_kind": {"enum": ["search_snippet", "fetch_model_summary", "no_content"]}, "returned_text": {"type": "string", "maxLength": 65536}, "text_bytes": {"type": "integer", "minimum": 0, "maximum": 262144}, "text_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
     }, "allOf": [
-      {"if": {"properties": {"tool": {"const": "WebSearch"}}, "required": ["tool"]}, "then": {"properties": {"request": {"type": "object", "required": ["query"], "properties": {"query": {"type": "string"}}}}}},
-      {"if": {"properties": {"tool": {"const": "WebFetch"}}, "required": ["tool"]}, "then": {"properties": {"request": {"type": "object", "required": ["url"], "properties": {"url": {"type": "string"}}}}}}
+      {"if": {"properties": {"tool": {"const": "WebSearch"}}, "required": ["tool"]}, "then": {"properties": {"request": {"type": "object", "required": ["query"], "maxProperties": 1, "properties": {"query": {"type": "string"}}}}}},
+      {"if": {"properties": {"tool": {"const": "WebFetch"}}, "required": ["tool"]}, "then": {"properties": {"request": {"type": "object", "required": ["url", "prompt"], "maxProperties": 2, "properties": {"url": {"type": "string"}, "prompt": {"type": "string"}}}}}}
     ]}},
     "lead_ledger": {"$ref": "#/$defs/leadLedger"},
     "summary": {"type": "object", "additionalProperties": false, "required": ["requests", "errors", "walls", "refusals", "search_snippets", "fetch_summaries", "original_documents"], "properties": {

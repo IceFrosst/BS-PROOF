@@ -804,9 +804,10 @@ class Jobs(Base):
         self.assertEqual(sa["version"], "SourceAccessV3")
         self.assertEqual((sa["runner"]["prompt_version"], sa["runner"]["user_turns"]), (ad.LIVE_PROMPT_VERSION, 1))
         self.assertEqual(sa["lead_ledger"], [])
-        # every event says what the call REQUESTED (so an echoed request can never ground itself)
+        # every event says what the call REQUESTED (so an echoed request can never ground itself): a search its query, a fetch its
+        # address AND the prompt the model put to the summariser (web_events() uses prompt "p")
         self.assertEqual([e["request"] for e in sa["events"]][:3], [
-            {"query": "magnesium sleep rct"}, {"url": "https://example.org/a"}, {"url": "https://example.org/b"}])
+            {"query": "magnesium sleep rct"}, {"url": "https://example.org/a", "prompt": "p"}, {"url": "https://example.org/b", "prompt": "p"}])
         self.assertEqual(sa["summary"]["walls"], 1)
         self.assertEqual(sa["summary"]["requests"], 2)
         self.assertEqual(sa["summary"]["search_snippets"], 1)
@@ -1169,6 +1170,27 @@ class Jobs(Base):
         out = self.run_job([ev_init(), ev_result(None, is_error=True, result="usage limit reached")], stop=stop, exit=1)
         self.assertEqual(out.code, "claude_quota_or_rate_limit")
         self.assertEqual([f["code"] for f in self.api.of("fail")], ["claude_quota_or_rate_limit"])
+
+    def test_check_asserts_the_runtime_venvs_jsonschema_major_is_4(self):
+        """The follow-through / receipt tests and the worker need Draft 2020-12 (jsonschema 4.x); system python3 carries 3.2."""
+        import contextlib
+        import importlib.metadata as md
+        import io
+
+        def run_check(version):
+            out = io.StringIO()
+            real = md.version
+            with unittest.mock.patch.object(md, "version", lambda n: version if n == "jsonschema" else real(n)), contextlib.redirect_stdout(out):
+                w.check(None, environ={"PATH": os.environ.get("PATH", ""), "HOME": str(self.tmp_path), "BS_PROOF_CLAUDE_BIN": self.cli([])})
+            return [l for l in out.getvalue().splitlines() if "jsonschema" in l]
+
+        self.assertEqual([l[:4] for l in run_check("4.26.0")], ["ok  "])
+        self.assertEqual([l[:4] for l in run_check("3.2.0")], ["FAIL"])
+        self.assertEqual([l[:4] for l in run_check("5.0.0")], ["FAIL"])
+        rel = (ROOT / "deploy/pc_research_worker_release.sh").read_text()
+        self.assertIn('m.version("jsonschema").split(".")[0] == "4"', rel)                  # the installer asserts it in the venv it just built
+        self.assertLess(rel.index('m.version("jsonschema")'), rel.index("py_compile"))
+        self.assertIn("jsonschema>=4.0,<5", (ROOT / "scripts/pc_research_worker.requirements.txt").read_text())
 
     def test_a_worker_without_jsonschema_fails_closed(self):
         with unittest.mock.patch.dict(sys.modules, {"jsonschema": None}):  # `import jsonschema` now raises ImportError

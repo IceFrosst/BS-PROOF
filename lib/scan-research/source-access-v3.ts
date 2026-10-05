@@ -5,10 +5,12 @@
  * It is the V2 check (lib/scan-research/source-access-v2.ts: bytes, hashes, counters, inventory grounded in returned text,
  * abstract/full_text refused) PLUS two things the V2 wire could not carry:
  *
- *  1. What each tool call REQUESTED (its query or address). An identifier is grounded only in what a tool PRINTED: the
- *     model's own request, echoed back by the tool ("Web search results for query: ..."), is removed from the returned
- *     text first, so an id the model typed itself cannot ground itself (V2 could not tell; it still cannot, and stays
- *     frozen for the historical prompts).
+ *  1. What each tool call REQUESTED (a WebSearch: its query; a WebFetch: its address and the prompt the model put to the
+ *     summariser). An identifier is grounded only in what a tool PRINTED: the model's own request, echoed back by the tool
+ *     ("Web search results for query: ..."), is removed from the returned text first, and every identifier the model typed
+ *     into the SAME call is excluded, so an id the model typed itself cannot ground itself even when a summariser paraphrases
+ *     it ("the page does not mention PMID 123"). Another, independent successful result can still ground it. (V2 could not
+ *     tell; it still cannot, and stays frozen for the historical prompts.)
  *  2. The model's `lead_ledger`, from which the follow-through is RECOMPUTED (lib/scan-research/lead-accounting.ts): every
  *     source lead a search listed is accounted for, the ledger cannot claim a page that was not requested, an error is
  *     followed by an independent attempt, and an empty inventory needs the identifier-bearing leads to have been requested.
@@ -23,7 +25,7 @@ import type { ValidateFunction } from "ajv/dist/2020";
 import auditSchema from "@/schemas/research_audit.json";
 import receiptSchema from "@/schemas/source_access_v3.json";
 import { RESEARCH_PROVENANCE } from "./contract";
-import { account, groundingText, LEAD_ACCOUNTING_VERSION, type LeadEvent } from "./lead-accounting";
+import { account, groundingText, LEAD_ACCOUNTING_VERSION, ownRequestText, type LeadEvent } from "./lead-accounting";
 import { plainJsonProblem } from "./result";
 import { compileStrict2020, idsIn, normalizeId } from "./source-access-v2";
 
@@ -42,6 +44,23 @@ function getValidators() {
 }
 function schemaErrors(validate: ValidateFunction, prefix: string): string[] {
   return (validate.errors ?? []).slice(0, MAX_ERRORS).map((e) => `${prefix}${e.instancePath || "/"} ${e.message ?? "invalid"}`.slice(0, 200));
+}
+
+/**
+ * Identifiers a run's CONTENT-bearing results may ground: per event, what the tool printed with the model's own request echo
+ * removed, MINUS every identifier found in that same event's own query / WebFetch prompt (which also covers a summariser that
+ * paraphrases the question: "the page does not mention PMID 123"). The same identifier printed by a DIFFERENT successful
+ * result still grounds it; error / wall / refusal results ground nothing. Mirrors claude_research_adapter.grounded_ids_v3;
+ * tests/fixtures/lead-accounting-cases.json `grounding_cases` pins both.
+ */
+export function groundedIdsV3(events: LeadEvent[]): Set<string> {
+  const grounded = new Set<string>();
+  for (const e of events) {
+    if (e.kind !== "request" || !e.returned_text) continue;
+    const own = idsIn(ownRequestText(e));
+    for (const id of idsIn(groundingText(e))) if (!own.has(id)) grounded.add(id);
+  }
+  return grounded;
 }
 
 export type FollowThroughRecord = {
@@ -93,7 +112,6 @@ export function checkLiveResearchResultV3(audit: unknown, sourceAccess: unknown)
   if (a.meta.model !== "claude-sonnet-5-5" || a.meta.prompt !== V3_PROMPT_VERSION || runner.prompt_version !== a.meta.prompt) errors.push("/audit/meta model or prompt mismatch");
 
   const seen = new Set<string>();
-  const grounded = new Set<string>();
   const summary = { requests: 0, errors: 0, walls: 0, refusals: 0, search_snippets: 0, fetch_summaries: 0, original_documents: 0 };
   for (const [i, e] of receipt.events.entries()) {
     if (seen.has(e.tool_use_id)) errors.push(`/source_access_v3/events/${i}/tool_use_id duplicate`);
@@ -109,11 +127,11 @@ export function checkLiveResearchResultV3(audit: unknown, sourceAccess: unknown)
     if (e.kind === "request" && e.returned_text.length > 0) {
       if (e.returned_kind === "search_snippet") summary.search_snippets++;
       if (e.returned_kind === "fetch_model_summary") summary.fetch_summaries++;
-      // GROUNDING: what the tool printed, with the model's own request echo removed. Only content-bearing results count.
-      for (const id of idsIn(groundingText(e as LeadEvent))) grounded.add(id);
     }
   }
   if (Object.keys(summary).some((key) => summary[key as keyof typeof summary] !== receipt.summary[key])) errors.push("/source_access_v3/summary mismatch");
+  // GROUNDING: what the tool printed (request echo removed), minus what the model typed into the same call.
+  const grounded = groundedIdsV3(receipt.events as LeadEvent[]);
   const inventoryTotal = a.outcomes.reduce((n: number, row: any) => n + row.inventory.length, 0);
   if (inventoryTotal > 300) errors.push("/audit inventory exceeds 300 items");
   for (const [o, row] of a.outcomes.entries()) for (const [i, item] of row.inventory.entries()) {

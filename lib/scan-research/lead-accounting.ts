@@ -29,7 +29,7 @@ export const MAX_ADDRESS_CHARS = 2000;
 export type LeadEvent = {
   tool: "WebSearch" | "WebFetch";
   kind: "request" | "error" | "wall" | "refusal";
-  request?: { query?: string; url?: string };
+  request?: { query?: string; url?: string; prompt?: string };
   returned_text?: string;
 };
 export type LedgerRow = { address?: unknown; disposition?: unknown; note?: unknown };
@@ -163,10 +163,25 @@ export function stripEcho(text: unknown, needle: unknown): string {
   return typeof needle === "string" && needle ? t.split(needle).join(" ") : t;
 }
 
-/** The returned text of one content-bearing event with the model's own request echo removed (V3 grounding). */
+/** What the model itself TYPED into this call that a tool may echo or paraphrase back: the search query, or the question
+ *  (`prompt`) it put to the WebFetch summariser. Mirrors research_leads.own_request_text. */
+export function ownRequestText(event: LeadEvent): string {
+  const own = event.tool === "WebSearch" ? event.request?.query : event.request?.prompt;
+  return typeof own === "string" ? own : "";
+}
+
+/** The returned text of one content-bearing event with the model's own request echo removed (V3 grounding): the search
+ *  query, or for a WebFetch the requested address AND the model's own prompt (longer needle first, so one containing the
+ *  other cannot leave a mangled remainder). A PARAPHRASED echo is not text-removable; the identifiers typed into the same
+ *  call are excluded one level up (source-access-v3.ts groundedIdsV3). Mirrors research_leads.grounding_text. */
 export function groundingText(event: LeadEvent): string {
   const req = event.request ?? {};
-  return stripEcho(event.returned_text, event.tool === "WebSearch" ? req.query : req.url);
+  const needles: unknown[] = event.tool === "WebSearch"
+    ? [req.query]
+    : [req.url, req.prompt].filter((n): n is string => typeof n === "string" && n.length > 0).sort((a, b) => b.length - a.length);
+  let text: unknown = event.returned_text;
+  for (const n of needles) text = stripEcho(text, n);
+  return typeof text === "string" ? text : "";
 }
 
 type Node = { key: string; addresses: string[]; ids: Set<string>; from_search: boolean };

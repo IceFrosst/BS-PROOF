@@ -46,8 +46,10 @@ This module is the whole contract with the CLI and nothing else:
     run finished. It is not a second invocation, not a retry and not an attempt: the same process and session
     keep going. No flag, tool, setting, environment variable or permission changes, and a follow-up carries only
     fixed sentences plus addresses that this run's own tool results returned. The loop ends when the receipts
-    show the leads followed, or when a follow-up produced nothing new (same unresolved items, no new tool call:
-    `stalled`), never by a counter.
+    show the leads followed (`satisfied`), when a follow-up reduced none of the problems reported before it
+    (`stalled`; new tool calls and links alone are not progress), or when the delivery wire's own capacity (300
+    events / 400 ledger rows) means no further turn could be delivered (`receipt_capacity`). Never by a counter of
+    turns, seconds or tokens.
 
 Stdlib only at module level (invariant: the deterministic-layer rule is applied to
 this file too, although it is a boundary). `jsonschema` is NOT used here.
@@ -439,11 +441,20 @@ def follow_through_report(an: "StreamAnalysis") -> dict | None:
 class FollowThrough:
     """Decides, each time the CLI ends a turn (a `result` event), whether the run is finished or the SAME session
     must go on. It reads only the raw stream on disk; it never changes an audit and never decides anything the
-    tool receipts do not show. Returns the follow-up text to send, or None to finish."""
+    tool receipts do not show. Returns the follow-up text to send, or None to finish.
+
+    A run ends here as (finish_reason): `satisfied` (the receipts show the leads followed; checked FIRST, so a valid
+    result at the wire's capacity still passes), `receipt_capacity` (still unsatisfied and the delivery wire's own
+    300-event / 400-ledger-row limit means no further turn could be delivered), `stalled` (the continuation turn
+    resolved none of the problems reported before it, however many tool calls or links it added), or an error / cancel.
+    No count of turns, seconds or tokens is involved: the bounds are the wire's own sizes and the requirement that
+    each turn reduce the unresolved problems. An unsatisfied end is the terminal `research_followthrough_incomplete`
+    of the worker, in this same process, never a model retry."""
 
     def __init__(self, raw_path: Path, run_dir: Path, cancel: threading.Event, t0: float):
         self.raw_path, self.run_dir, self.cancel, self.t0 = Path(raw_path), Path(run_dir), cancel, t0
-        self.seen: set = set()
+        self.previous: frozenset | None = None      # the problems reported by the previous continuation
+        self.previous_events = 0
         self.turns: list = []
         self.finish_reason: str | None = None
 
@@ -451,7 +462,8 @@ class FollowThrough:
         an = analyze_stream(self.raw_path)
         r = an.result
         turn = {"turn": len(self.turns) + 1, "at_s": round(time.monotonic() - self.t0, 3),
-                "subtype": r.get("subtype"), "is_error": r.get("is_error"), "tool_events": len(an.receipts)}
+                "subtype": r.get("subtype"), "is_error": r.get("is_error"), "tool_events": len(an.receipts),
+                "ledger_rows": len(an.lead_ledger) if isinstance(an.lead_ledger, list) else None}
         self.turns.append(turn)
 
         def finish(reason: str):
@@ -472,10 +484,11 @@ class FollowThrough:
         turn["summary"] = rep["summary"]
         if rep["satisfied"]:
             return finish("satisfied")
-        sig = research_leads.signature(rep, len(an.receipts))
-        if sig in self.seen:
+        if research_leads.wire_capacity_exhausted(rep, len(an.receipts), len(an.lead_ledger)):
+            return finish("receipt_capacity")
+        if self.previous is not None and not research_leads.made_progress(self.previous, rep, len(an.receipts) - self.previous_events):
             return finish("stalled")
-        self.seen.add(sig)
+        self.previous, self.previous_events = research_leads.problem_keys(rep), len(an.receipts)
         text = research_leads.continuation_message(rep)
         turn["decision"] = "continue"
         try:
@@ -952,7 +965,8 @@ def analyze_stream(raw_path: Path) -> StreamAnalysis:
             an.receipts.append({"tool": c["tool"], "tool_use_id": str(cid or ""),
                                 "kind": receipt_kind, "returned_kind": returned_kind,
                                 "returned_text": text,
-                                "request": {"url": _CTRL_RE.sub("", str(c["input"].get("url") or ex.get("url") or ""))}})
+                                "request": {"url": _CTRL_RE.sub("", str(c["input"].get("url") or ex.get("url") or "")),
+                                            "prompt": _CTRL_RE.sub("", str(c["input"].get("prompt") or ""))}})
             an.fetches.append({
                 "n": len(an.fetches) + 1, "tool_use_id": cid, "url": sanitize(url, 2000),
                 "host": host, "class": cls, "reason": reason,
@@ -1072,15 +1086,17 @@ class FollowThroughIncompleteError(ResearchAdapterError):
 
 
 def grounded_ids_v3(events: list) -> set:
-    """Identifiers printed in returned CONTENT, with the model's own request echoed back removed first.
+    """Identifiers printed in returned CONTENT, minus everything the model itself typed into the SAME call.
 
-    A tool that repeats the request ("Web search results for query: <your query>") or an address does not make an
-    identifier the model typed itself a printed one. Not detected, and said so: a summariser that paraphrases the
-    model's WebFetch question in its own words (e.g. "the page does not show PMID 123")."""
+    Per content-bearing event: the request echo is removed from the returned text first (the search query; the WebFetch
+    address and prompt), and then every identifier found in that event's OWN query / prompt is excluded as well, which
+    also covers a summariser that paraphrases the question ("the page does not mention PMID 123"). The same identifier
+    printed by a DIFFERENT, independent successful result (e.g. the search that listed it) still grounds it. Error, wall
+    and refusal results never ground anything."""
     ids: set = set()
     for e in events:
         if e.get("kind") == "request" and e.get("returned_text"):
-            ids.update(extract_ids(research_leads.grounding_text(e)))
+            ids.update(extract_ids(research_leads.grounding_text(e)) - extract_ids(research_leads.own_request_text(e)))
     return ids
 
 
@@ -1090,20 +1106,25 @@ def source_access_v3(an: StreamAnalysis, rr: RunResult) -> dict:
     cli_version_value = _check_run_identity(an, rr)
     if not an.envelope or not isinstance(an.audit, dict) or not isinstance(an.lead_ledger, list):
         raise ResearchAdapterError("a live-research-v0.5 result must be the envelope {audit, lead_ledger}")
-    if len(an.receipts) > 300:
-        raise ResearchAdapterError("source_report_too_large: SourceAccessV3 exceeds 300 events")
+    if len(an.receipts) > research_leads.WIRE_MAX_EVENTS:
+        raise ResearchAdapterError(f"source_report_too_large: SourceAccessV3 exceeds {research_leads.WIRE_MAX_EVENTS} events")
     events = []
     for item in an.receipts:
         text = item["returned_text"]
         raw = text.encode("utf-8")
         if len(text) > 65536 or len(raw) > 262144:
             raise ResearchAdapterError("source_report_too_large: a returned tool result exceeds the receipt limit")
-        key = "query" if item["tool"] == "WebSearch" else "url"
-        value = (item.get("request") or {}).get(key)
-        if not isinstance(value, str) or not value or len(value) > 4000:
-            raise ResearchAdapterError(f"invalid_request_metadata: a {item['tool']} request has no usable {key} (empty or over 4000 characters)")
+        keys = ("query",) if item["tool"] == "WebSearch" else ("url", "prompt")
+        request = {}
+        for key in keys:
+            value = (item.get("request") or {}).get(key)
+            if not isinstance(value, str) or not value or len(value) > 4000:
+                # Never shortened: a request that cannot be carried whole is refused, with the field named.
+                raise ResearchAdapterError(f"invalid_request_metadata: a {item['tool']} request has no usable {key} "
+                                           f"(empty, or longer than 4000 characters; it is never truncated)")
+            request[key] = value
         events.append({"tool": item["tool"], "tool_use_id": item["tool_use_id"], "kind": item["kind"],
-                       "request": {key: value}, "returned_kind": item["returned_kind"], "returned_text": text,
+                       "request": request, "returned_kind": item["returned_kind"], "returned_text": text,
                        "text_bytes": len(raw), "text_sha256": sha256_bytes(raw)})
     summary = {k: 0 for k in ("requests", "errors", "walls", "refusals", "search_snippets", "fetch_summaries", "original_documents")}
     counter_for_kind = {"request": "requests", "error": "errors", "wall": "walls", "refusal": "refusals"}
@@ -1178,6 +1199,10 @@ def follow_through_message(report: dict, finish_reason: str | None = None, user_
         tail.append(f"user_turns={user_turns}")
     if finish_reason:
         tail.append(f"finish={finish_reason}")
+    if finish_reason == "receipt_capacity":
+        tail.append(f"wire limit {research_leads.WIRE_MAX_EVENTS} events/{research_leads.WIRE_MAX_LEDGER_ROWS} ledger rows")
+    elif finish_reason == "stalled":
+        tail.append("the last turn resolved none of the reported problems")
     return ("the source leads the searches found were not followed (per the tool receipts): " + (bits or "none")
             + ("; " + ", ".join(tail) if tail else ""))
 

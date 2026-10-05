@@ -59,6 +59,11 @@ def search(q, links, prose="Prose."):
     return f'Web search results for query: "{q}"\n\nLinks: ' + json.dumps([{"title": "t", "url": u} for u in links]) + f"\n\n{prose}\n"
 
 
+def fetch_req(url, prompt="state the PMID exactly as printed"):
+    """A WebFetch request as SourceAccessV3 carries it: the address AND the prompt the model put to the summariser."""
+    return {"url": url, "prompt": prompt}
+
+
 def cite(audit, i):
     audit["outcomes"][0]["inventory"][0]["id"] = i
 
@@ -108,17 +113,61 @@ class Emission(unittest.TestCase):
         with self.assertRaises(ad.ResearchAdapterError):
             ad.source_access_v3(an, rr)
 
+    def emit_with(self, mutate):
+        with tempfile.TemporaryDirectory() as td:
+            s = copy.deepcopy(FX["fake_stream"])
+            mutate(s)
+            raw = Path(td) / "s.jsonl"
+            raw.write_text("".join(json.dumps(x) + "\n" for x in s))
+            an = ad.analyze_stream(raw)
+        rr = ad.RunResult(Path("."), Path("."), Path("."), Path("."), Path("."), Path("."), "2026-10-03T12:00:00Z", ended_utc="2026-10-03T12:00:03Z", cli_version="2.1.287")
+        return ad.source_access_v3(an, rr)
+
     def test_a_request_without_a_usable_query_or_address_is_refused_at_emission(self):
         for bad in ("", "x" * 4001):
-            with tempfile.TemporaryDirectory() as td:
-                s = copy.deepcopy(FX["fake_stream"])
-                s[1]["message"]["content"][0]["input"]["query"] = bad
-                raw = Path(td) / "s.jsonl"
-                raw.write_text("".join(json.dumps(x) + "\n" for x in s))
-                an = ad.analyze_stream(raw)
-            rr = ad.RunResult(Path("."), Path("."), Path("."), Path("."), Path("."), Path("."), "2026-10-03T12:00:00Z", ended_utc="2026-10-03T12:00:03Z", cli_version="2.1.287")
-            with self.assertRaisesRegex(ad.ResearchAdapterError, "invalid_request_metadata"):
-                ad.source_access_v3(an, rr)
+            with self.assertRaisesRegex(ad.ResearchAdapterError, "invalid_request_metadata: a WebSearch request has no usable query"):
+                self.emit_with(lambda s: s[1]["message"]["content"][0]["input"].update(query=bad))
+            with self.assertRaisesRegex(ad.ResearchAdapterError, "invalid_request_metadata: a WebFetch request has no usable url"):
+                self.emit_with(lambda s: s[1]["message"]["content"][1]["input"].update(url=bad))
+
+    def test_a_webfetch_prompt_is_captured_whole_and_a_missing_or_oversized_one_is_refused_never_shortened(self):
+        # captured exactly (control characters out, nothing else touched), up to the 4000 the wire allows
+        long_ok = "p" * 4000
+        access = self.emit_with(lambda s: s[1]["message"]["content"][1]["input"].update(prompt=long_ok))
+        self.assertEqual(access["events"][1]["request"], {"url": PUB, "prompt": long_ok})
+        access = self.emit_with(lambda s: s[1]["message"]["content"][1]["input"].update(prompt="a\x00b\x07c\nd"))
+        self.assertEqual(access["events"][1]["request"]["prompt"], "abc\nd")
+        for bad in ("", "x" * 4001, None):
+            def mutate(s, bad=bad):
+                if bad is None:
+                    s[1]["message"]["content"][1]["input"].pop("prompt")
+                else:
+                    s[1]["message"]["content"][1]["input"].update(prompt=bad)
+            with self.assertRaisesRegex(ad.ResearchAdapterError, "invalid_request_metadata: a WebFetch request has no usable prompt .*never truncated"):
+                self.emit_with(mutate)
+
+    def test_the_schema_requires_url_and_prompt_for_a_webfetch_and_the_query_alone_for_a_websearch(self):
+        schema = json.loads((ROOT / ad.SOURCE_ACCESS_V3_SCHEMA_FILE).read_text())
+        validator = Draft202012Validator(schema)
+        self.assertEqual(list(validator.iter_errors(FX["source_access_v3"])), [])
+        def invalid(mut):
+            access = copy.deepcopy(FX["source_access_v3"])
+            mut(access)
+            return bool(list(validator.iter_errors(access)))
+        self.assertTrue(invalid(lambda a: a["events"][1]["request"].pop("prompt")))                      # fetch: url alone
+        self.assertTrue(invalid(lambda a: a["events"][1]["request"].pop("url")))                         # fetch: prompt alone
+        self.assertTrue(invalid(lambda a: a["events"][1]["request"].update(query="x")))                  # fetch: a third field
+        self.assertTrue(invalid(lambda a: a["events"][0]["request"].update(prompt="x")))                 # search: query only
+        self.assertTrue(invalid(lambda a: a["events"][0]["request"].update(url="https://example.org/")))
+        self.assertTrue(invalid(lambda a: a["events"][1]["request"].update(prompt="x" * 4001)))
+        self.assertTrue(invalid(lambda a: a["events"][1]["request"].update(prompt="")))
+
+    def test_the_frozen_v2_wire_still_carries_no_request_and_its_schema_is_byte_identical(self):
+        self.assertEqual(hashlib.sha256((ROOT / "schemas/source_access_v2.json").read_bytes()).hexdigest(),
+                         "c510b052c293cef4d4f8a9b55e6dd3f59ad5e986299af010bf0682ee15f64ed2")      # frozen historical compatibility
+        v2 = json.loads((ROOT / "schemas/source_access_v2.json").read_text())
+        self.assertNotIn("request", v2["properties"]["events"]["items"]["properties"])
+        self.assertTrue(all("request" not in e for e in V2["source_access_v2"]["events"]))
 
 
 class Grounding(unittest.TestCase):
@@ -141,13 +190,64 @@ class Grounding(unittest.TestCase):
         self.assertIn("pmid:99999999", ad.extract_ids(access["events"][0]["returned_text"]))     # V2 behaviour, for contrast
         self.refused(audit, access)
 
-    def test_the_same_id_printed_outside_the_echo_is_grounded(self):
+    def test_an_id_the_model_typed_into_the_query_is_not_grounded_by_the_same_result_even_outside_the_echo(self):
+        """A search tool that paraphrases the query back (not a verbatim copy) still prints the id it was asked about."""
         audit, access = fresh()
         cite(audit, "PMID 99999999")
         q = "PMID 99999999 magnesium sleep"
         access["events"][0]["request"]["query"] = q
         set_text(access, 0, search(q, [PUB, WALLED, BLOG], "A randomized trial is listed. PMID: 99999999 reports sleep outcomes."))
+        self.refused(audit, access)
+
+    def test_the_same_id_printed_by_a_different_independent_result_is_grounded(self):
+        audit, access = fresh()
+        cite(audit, "PMID 99999999")
+        access["events"][0]["request"]["query"] = "magnesium sleep"
+        set_text(access, 0, search("magnesium sleep", [PUB, WALLED, BLOG], "A randomized trial is listed. PMID: 99999999 reports sleep outcomes."))
+        access["events"][1]["request"]["prompt"] = "Does this page report PMID 99999999?"     # typed later, into ANOTHER call
+        set_text(access, 1, "The page does not mention PMID 99999999.")
         ad.validate_live_receipts_and_inventory_v3(audit, access)
+
+    def test_a_page_that_does_not_mention_the_pmid_in_the_prompt_cannot_ground_it(self):
+        """The model's WebFetch `prompt` is its own question to the summariser; 'the page does not mention PMID X' is a paraphrase echo."""
+        for answer in ("The page does not mention PMID 31234567.", "PMID: 31234567 is not shown. Title as printed.",
+                       "You asked: Does this page report PMID 31234567? No."):
+            audit, access = fresh()
+            cite(audit, "PMID 31234567")
+            access["events"][1]["request"]["prompt"] = "Does this page report PMID 31234567?"
+            set_text(access, 1, answer)
+            self.refused(audit, access)
+
+    def test_a_doi_typed_into_the_prompt_is_excluded_but_what_the_page_prints_is_kept(self):
+        audit, access = fresh()
+        cite(audit, "10.1234/abcd.5678")
+        access["events"][1]["request"]["prompt"] = "Is this 10.1234/ABCD.5678 the paper?"
+        set_text(access, 1, "Yes, DOI 10.1234/abcd.5678. PMID: 12345678.")
+        self.refused(audit, access)
+        cite(audit, "PMID 12345678")
+        ad.validate_live_receipts_and_inventory_v3(audit, access)
+
+    def test_the_prompt_text_echoed_back_verbatim_is_stripped_and_the_event_may_still_ground_another_id(self):
+        audit, access = fresh()
+        cite(audit, "PMID 27654321")
+        access["events"][1]["request"]["prompt"] = "Report PMID 31234567 and the title"
+        set_text(access, 1, "You asked: Report PMID 31234567 and the title. The page prints PMID: 27654321.")
+        ad.validate_live_receipts_and_inventory_v3(audit, access)
+
+    def test_a_failed_fetch_whose_prompt_and_text_name_the_id_grounds_nothing(self):
+        for kind in ("error", "wall", "refusal"):
+            audit, access = fresh()
+            cite(audit, "PMID 88888888")
+            events = access["events"]
+            events[2] = ev("WebFetch", kind, fetch_req(WALLED, "Does it print PMID 88888888?"), "PMID: 88888888", 3)
+            set_events(access, events)
+            self.refused(audit, access)
+
+    def test_the_shared_grounding_cases_hold_in_python(self):
+        cases = json.loads((ROOT / "tests/fixtures/lead-accounting-cases.json").read_text())["grounding_cases"]
+        self.assertGreaterEqual(len(cases), 8)
+        for c in cases:
+            self.assertEqual(sorted(ad.grounded_ids_v3(c["events"])), sorted(c["expect_grounded"]), c["name"])
 
     def test_a_fetched_address_echoed_back_cannot_ground_the_pmid_in_it(self):
         audit, access = fresh()
@@ -162,7 +262,7 @@ class Grounding(unittest.TestCase):
             audit, access = fresh()
             cite(audit, "PMID 88888888")
             events = access["events"]
-            events[2] = ev("WebFetch", kind, {"url": WALLED}, "PMID: 88888888 Please complete the CAPTCHA", 3)
+            events[2] = ev("WebFetch", kind, fetch_req(WALLED), "PMID: 88888888 Please complete the CAPTCHA", 3)
             set_events(access, events)
             self.refused(audit, access)
 
@@ -212,8 +312,8 @@ class Ledger(unittest.TestCase):
 
     def test_other_locale_of_a_blocked_page_is_not_independent(self):
         audit, access = fresh()
-        set_events(access, [access["events"][0], access["events"][1], ev("WebFetch", "error", {"url": WALLED}, "", 3),
-                            ev("WebFetch", "error", {"url": "https://journal.example.org/es/articles/sleep-trial"}, "", 4)])
+        set_events(access, [access["events"][0], access["events"][1], ev("WebFetch", "error", fetch_req(WALLED), "", 3),
+                            ev("WebFetch", "error", fetch_req("https://journal.example.org/es/articles/sleep-trial"), "", 4)])
         self.incomplete(audit, access, "blocked_without_independent_attempt x1")
 
     def test_the_v0_3_and_v0_4_shapes(self):
@@ -230,7 +330,7 @@ class Ledger(unittest.TestCase):
         for o in audit["outcomes"]:
             o["inventory"] = []
         set_events(access, [ev("WebSearch", "request", {"query": "q"}, search("q", [PUB] + nine[:7] + [rsc % "es"]), 1),
-                            ev("WebFetch", "error", {"url": rsc % "en"}, "", 2), ev("WebFetch", "error", {"url": rsc % "es"}, "", 3)])
+                            ev("WebFetch", "error", fetch_req(rsc % "en"), "", 2), ev("WebFetch", "error", fetch_req(rsc % "es"), "", 3)])
         access["lead_ledger"] = []
         msg = ad.follow_through_message(self.incomplete(audit, access, "identifier_lead_unopened x1"))
         self.assertIn("blocked_without_independent_attempt x1", msg)

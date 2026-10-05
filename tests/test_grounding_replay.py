@@ -37,6 +37,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 import jsonschema  # noqa: E402,F401
 from pipeline import claude_research_adapter as ad  # noqa: E402
+from pipeline import research_leads as rl  # noqa: E402
 
 REPLAY = json.loads((ROOT / "tests/fixtures/grounding-replay-vitd-20261005.json").read_text())
 TEMPLATE = json.loads((ROOT / "tests/fixtures/source-access-v2.json").read_text())["source_access_v2"]
@@ -357,6 +358,28 @@ class FullCaptureReplay(unittest.TestCase):
                 ad.source_access_v2(an, self.rr())
             first_unprinted = next(r["id"] for r in REPLAY["runs"][name]["rows"] if r["id"] in RESIDUAL[name])
             self.assertEqual(str(ctx.exception), f"inventory ID is not grounded in returned tool text: {first_unprinted!r}", name)
+
+    def test_the_v3_rule_with_the_webfetch_prompt_captured_refuses_nothing_the_echo_only_rule_did_not_on_the_originals(self):
+        """The v0.5 V3 grounding (request echo stripped; and now every id the model typed into the SAME call excluded) replayed on the
+        untouched originals, whose receipts now carry the WebFetch prompt. V3 refuses the V2-refused rows PLUS one the V2 rule only
+        accepted through the search tool's echo of the model's own query (run 3, the NEJM DOI it typed into a search). Adding the
+        prompt / query exclusion on top of the echo strip refuses nothing more on any original."""
+        expected_v3 = {"vitd-run-1": {"36853379"}, "vitd-run-2": {"PMID:35939577"},
+                       "vitd-run-3": {"31454046", "10.1039/C9FO03063H", "10.1056/NEJMoa2202106"}}
+        for name in CAPTURE_DIRS:
+            an = self.stream(name)
+            echo_only = set()
+            for r in an.receipts:
+                if r["kind"] == "request" and r["returned_text"]:
+                    echo_only |= ad.extract_ids(rl.grounding_text(r))
+            full = ad.grounded_ids_v3(an.receipts)
+            rows = [r["id"] for r in REPLAY["runs"][name]["rows"]]
+            refused_full = {i for i in rows if ad.normalise_audit_id(i) not in full}
+            refused_echo = {i for i in rows if ad.normalise_audit_id(i) not in echo_only}
+            self.assertEqual(refused_full, expected_v3[name], name)
+            self.assertEqual(refused_full, refused_echo, name)
+            self.assertTrue(RESIDUAL[name] <= refused_full, name)                      # every V2 refusal is still a V3 refusal
+            self.assertTrue(all(r["request"].get("prompt") for r in an.receipts if r["tool"] == "WebFetch"), name)
 
     def test_the_originals_are_still_byte_identical(self):
         for name in CAPTURE_DIRS:

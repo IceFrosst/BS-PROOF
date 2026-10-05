@@ -53,6 +53,8 @@ install)
   ( cd "$rel" && sha256sum -c SHA256SUMS >/dev/null ) || die "file checksums differ inside archive"
   python3 -m venv "$rel/venv"
   "$rel/venv/bin/pip" install --quiet --disable-pip-version-check -r "$rel/scripts/pc_research_worker.requirements.txt"
+  "$rel/venv/bin/python" -c 'import importlib.metadata as m, sys; sys.exit(0 if m.version("jsonschema").split(".")[0] == "4" else 1)' \
+    || die "the runtime venv must carry jsonschema 4.x (Draft 2020-12 receipts); see scripts/pc_research_worker.requirements.txt"
   "$rel/venv/bin/python" -m py_compile "$rel/scripts/pc_research_worker.py" "$rel/pipeline/claude_research_adapter.py" "$rel/pipeline/research_leads.py"
   [ -L "$ROOT/current" ] && ln -sfn "$(readlink "$ROOT/current")" "$ROOT/previous"
   ln -sfn "releases/$name" "$ROOT/current.new" && mv -Tf "$ROOT/current.new" "$ROOT/current"
