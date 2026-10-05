@@ -142,7 +142,9 @@ def web_events(doi="10.1000/xyz123"):
         ev_ret(4, "I cannot provide the content: the page shows a reCAPTCHA check", code=200),
         ev_use(5, "WebFetch", url="https://example.org/d", prompt="p"),
         ev_ret(5, "I cannot extract this PDF binary.", code=200),
-        ev_use(6, "WebFetch", url="https://pubmed.ncbi.nlm.nih.gov/12345678/", prompt="p"),
+        # W2 (2026-10-06): an address that carries the PMID the model typed cannot ground that PMID, so the page it opens is a
+        # journal page whose summary prints the PMID itself (the one content-bearing fetch W1 needs).
+        ev_use(6, "WebFetch", url="https://journal.example.org/articles/trial-46", prompt="p"),
         ev_ret(6, "Trial of 46 adults ... PMID 12345678", code=200),
     ]
 
@@ -931,8 +933,15 @@ class Jobs(Base):
         self.assertEqual(out.code, "billing_guard_overage")
 
     def test_no_web_tool_use_is_not_source_grounded(self):
-        out = self.run_job([ev_init(), ev_result(good_audit())])
+        # W1 (2026-10-06): a return without a single tool call no longer ends on the spot -- no WebFetch has returned content, so the
+        # worker asks ONCE, in the same process, for a page; a model that answers with the same return and still no tool use is
+        # not source-grounded and ends as no_web_tools_used (before the follow-through, the first return decided it)
+        first = [ev_init(), ev_result(good_audit())]
+        out = self.run_job([], turns=[first, [ev_init(), ev_result(good_audit())]])
         self.assertEqual(out.code, "no_web_tools_used")
+        self.assertEqual(len(self.stdin_turns()), 2)
+        self.assertEqual(self.model_runs(), 1)
+        self.assertEqual(self.api.of("complete"), [])
 
     def test_oversized_returned_tool_text_is_failed_without_truncation(self):
         events = web_events() + [ev_result(good_audit())]

@@ -245,7 +245,7 @@ class Grounding(unittest.TestCase):
 
     def test_the_shared_grounding_cases_hold_in_python(self):
         cases = json.loads((ROOT / "tests/fixtures/lead-accounting-cases.json").read_text())["grounding_cases"]
-        self.assertGreaterEqual(len(cases), 16)
+        self.assertGreaterEqual(len(cases), 25)
         for c in cases:
             self.assertEqual(sorted(ad.grounded_ids_v3(c["events"])), sorted(c["expect_grounded"]), c["name"])
 
@@ -254,6 +254,14 @@ class Grounding(unittest.TestCase):
         self.assertGreaterEqual(len(cases), 6)
         for c in cases:
             self.assertEqual(sorted(ad.own_request_ids(c["text"])), sorted(c["expect"]), c["text"])
+
+    def test_the_shared_own_request_text_cases_hold_in_python(self):
+        """The exact text the loose extractor reads for each call: a search's query; a fetch's prompt, its address as written and the
+        address percent-decoded (ASCII escapes only, at most 3 passes, malformed / non-ASCII escapes left alone, no throw)."""
+        cases = json.loads((ROOT / "tests/fixtures/lead-accounting-cases.json").read_text())["own_request_text_cases"]
+        self.assertGreaterEqual(len(cases), 8)
+        for c in cases:
+            self.assertEqual(rl.own_request_text(c["event"]), c["expect"], c["name"])
 
     def test_the_own_request_read_is_loose_but_the_grounding_extractor_stays_strict(self):
         """`extract_ids` (grounding) stays strict: a bare number or a glued label in RETURNED text is not an identifier."""
@@ -309,6 +317,54 @@ class Grounding(unittest.TestCase):
         access["events"][1]["request"]["url"] = url
         set_text(access, 1, f"Fetched {url} and summarised it. The page has a title and abstract.")
         self.refused(audit, access)
+
+    def only_the_page_prints_the_id(self, text, url=PUB, prompt="state the PMID exactly as printed"):
+        """The fixture with NO independent source of 12345678: the search neither lists nor prints it; ONE fetch of `url` does."""
+        audit, access = fresh()
+        set_text(access, 0, search("magnesium glycinate sleep randomized trial", [WALLED, BLOG]))
+        access["events"][1]["request"] = fetch_req(url, prompt)
+        set_text(access, 1, text)
+        return audit, access
+
+    def test_w2_a_typed_address_cannot_ground_its_own_id_when_the_summary_repeats_it_with_a_label(self):
+        """Owner W2 (2026-10-06): the PubMed address the model TYPED carries 12345678; a summary that repeats it with the label is not
+        a source for it. (Before W2 this was grounded: the verbatim address echo was stripped, the labelled repeat was not.)"""
+        for text in ("**PMID:** 12345678. Randomized trial of 46 adults.", "PMID: 12345678", "pmid 12345678 reports sleep outcomes."):
+            audit, access = self.only_the_page_prints_the_id(text)
+            self.assertIn("pmid:12345678", ad.extract_ids(access["events"][1]["returned_text"]))      # the V2 / returned-text read, for contrast
+            self.refused(audit, access)
+
+    def test_w2_an_independent_earlier_search_whose_query_has_no_id_still_grounds_it(self):
+        audit, access = self.only_the_page_prints_the_id("**PMID:** 12345678. Randomized trial of 46 adults.")
+        set_text(access, 0, search("magnesium glycinate sleep randomized trial", [WALLED, BLOG], "A randomized trial is listed. PMID: 12345678 reports sleep outcomes."))
+        ad.validate_live_receipts_and_inventory_v3(audit, access)
+
+    def test_w2_a_typed_address_id_is_excluded_from_its_own_call_only(self):
+        audit, access = self.only_the_page_prints_the_id("PMID: 12345678. It cites PMID: 27654321.")
+        self.assertEqual(ad.grounded_ids_v3(access["events"]) & {"pmid:12345678", "pmid:27654321"}, {"pmid:27654321"})
+        # a second, independent, successful fetch of ANOTHER address that prints it grounds it
+        events = access["events"]
+        events.insert(2, ev("WebFetch", "request", fetch_req("https://journal.example.org/articles/review-9"), "References: PMID: 12345678.", 9))
+        self.assertIn("pmid:12345678", ad.grounded_ids_v3(events))
+        # ... but a failed one cannot
+        events[2] = ev("WebFetch", "wall", fetch_req("https://journal.example.org/articles/review-9"), "", 9)
+        self.assertNotIn("pmid:12345678", ad.grounded_ids_v3(events))
+
+    def test_w2_percent_encoded_and_query_delimited_addresses_are_read_as_the_id_they_carry(self):
+        for url, cited, text in (("https://doi.org/10.1056%2FNEJMoa2034577", "10.1056/NEJMoa2034577", "DOI: 10.1056/NEJMoa2034577. PMID: 12345678."),
+                                 ("https://doi.org/10.1056%2fNEJMoa2034577?utm_source=x#top", "10.1056/NEJMoa2034577", "DOI 10.1056/NEJMoa2034577. PMID: 12345678."),
+                                 ("https://example.org/go?doi=10.1056%252FNEJMoa2034577", "10.1056/NEJMoa2034577", "DOI 10.1056/NEJMoa2034577. PMID: 12345678."),
+                                 ("https://clinicaltrials.gov/study/NCT01234567", "NCT01234567", "NCT01234567 is completed. PMID: 12345678.")):
+            audit, access = self.only_the_page_prints_the_id(text, url=url)
+            cite(audit, cited)
+            self.refused(audit, access)
+            self.assertIn("pmid:12345678", ad.grounded_ids_v3(access["events"]), url)      # what the page itself prints stays grounded
+
+    def test_w2_the_loose_read_is_applied_to_the_request_only_the_returned_text_is_read_as_before(self):
+        events = [{"tool": "WebFetch", "kind": "request", "request": {"url": "https://journal.example.org/a", "prompt": "title"},
+                   "returned_text": "Bare numbers 31234567 and 27654321, PMID: 44444444."}]
+        self.assertEqual(ad.grounded_ids_v3(events), {"pmid:44444444"})     # unlabelled numbers in RETURNED text still ground nothing
+        self.assertEqual(ad.extract_ids(events[0]["returned_text"]), {"pmid:44444444"})
 
     def test_error_wall_and_refusal_results_cannot_ground(self):
         for kind in ("error", "wall", "refusal"):
@@ -368,6 +424,45 @@ class Ledger(unittest.TestCase):
         set_events(access, [access["events"][0], access["events"][1], ev("WebFetch", "error", fetch_req(WALLED), "", 3),
                             ev("WebFetch", "error", fetch_req("https://journal.example.org/es/articles/sleep-trial"), "", 4)])
         self.incomplete(audit, access, "blocked_without_independent_attempt x1")
+
+    def test_w1_a_non_empty_audit_where_every_fetch_failed_is_refused_although_every_other_rule_is_met(self):
+        """Owner W1 (2026-10-06). The audit cites a study grounded in the search's link list; every lead is tried or dismissed and each
+        failed fetch is followed by an independent attempt; but no WebFetch ever returned page content."""
+        audit, access = fresh()
+        set_events(access, [access["events"][0], ev("WebFetch", "error", fetch_req(PUB), "", 2), ev("WebFetch", "wall", fetch_req(WALLED), "", 3), access["events"][3]])
+        report = self.incomplete(audit, access, "empty_without_any_page_request x1")
+        self.assertEqual([[p["code"], p["address"]] for p in report["problems"]], [[rl.P_EMPTY_NO_PAGE, ""]])
+        self.assertFalse(report["summary"]["inventory_empty"])
+
+    def test_w1_a_non_empty_audit_whose_run_only_searched_is_refused(self):
+        audit, access = fresh()
+        set_events(access, [access["events"][0]])
+        access["lead_ledger"] = [{"address": a, "disposition": "not_opened_secondary", "note": "n"} for a in (PUB, WALLED, BLOG)]
+        report = self.incomplete(audit, access, "empty_without_any_page_request x1")
+        self.assertEqual([[p["code"], p["address"]] for p in report["problems"]], [[rl.P_EMPTY_NO_PAGE, ""]])
+
+    def test_w1_one_content_bearing_page_and_a_valid_audit_is_accepted_no_quota(self):
+        audit, access = fresh()
+        set_events(access, [access["events"][0], access["events"][1]])            # one search, ONE page that returned content
+        access["lead_ledger"] = [{"address": PUB, "disposition": "opened", "note": "n"},
+                                 {"address": WALLED, "disposition": "not_opened_secondary", "note": "n"},
+                                 {"address": BLOG, "disposition": "not_opened_secondary", "note": "n"}]
+        ad.validate_live_receipts_and_inventory_v3(audit, access)
+
+    def test_w1_the_rule_is_the_same_for_an_empty_audit(self):
+        audit, access = fresh()
+        for o in audit["outcomes"]:
+            o["inventory"] = []
+        set_events(access, [access["events"][0], ev("WebFetch", "error", fetch_req(PUB), "", 2), ev("WebFetch", "error", fetch_req(WALLED), "", 3), access["events"][3]])
+        report = self.incomplete(audit, access, "empty_without_any_page_request x1")
+        self.assertNotIn(rl.P_NO_FALLBACK, {p["code"] for p in report["problems"]})
+
+    def test_w1_only_a_webfetch_that_returned_text_counts(self):
+        ok = {"tool": "WebFetch", "kind": "request", "request": {"url": PUB}, "returned_text": "x"}
+        self.assertTrue(rl.has_page_content(ok))
+        for bad in ({**ok, "tool": "WebSearch"}, {**ok, "returned_text": ""}, {**ok, "returned_text": None}, {**ok, "returned_text": 5},
+                    {**ok, "kind": "error"}, {**ok, "kind": "wall"}, {**ok, "kind": "refusal"}, {k: v for k, v in ok.items() if k != "returned_text"}, None, "x"):
+            self.assertFalse(rl.has_page_content(bad), bad)
 
     def test_the_v0_3_and_v0_4_shapes(self):
         nine = [f"https://lead{i}.example.org/page" for i in range(9)]

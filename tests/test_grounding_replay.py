@@ -359,32 +359,125 @@ class FullCaptureReplay(unittest.TestCase):
             first_unprinted = next(r["id"] for r in REPLAY["runs"][name]["rows"] if r["id"] in RESIDUAL[name])
             self.assertEqual(str(ctx.exception), f"inventory ID is not grounded in returned tool text: {first_unprinted!r}", name)
 
-    def test_the_v3_rule_with_the_webfetch_prompt_captured_refuses_nothing_the_echo_only_rule_did_not_on_the_originals(self):
-        """The v0.5 V3 grounding (request echo stripped; and every id the model's own query / prompt could mean excluded from the SAME
-        call, read LOOSELY: bare 5-9 digit runs, PMC / NCT / DOI shapes) replayed on the untouched originals, whose receipts now
-        carry the WebFetch prompt. V3 refuses the V2-refused rows PLUS one the V2 rule only accepted through the search tool's echo
-        of the model's own query (run 3, the NEJM DOI it typed into a search). Adding the loose prompt / query exclusion on top of the
-        echo strip refuses nothing more on any original: the exact refused sets are pinned below."""
-        expected_v3 = {"vitd-run-1": {"36853379"}, "vitd-run-2": {"PMID:35939577"},
+    def test_the_v3_rule_with_the_typed_address_excluded_too_refuses_exactly_the_pinned_stricter_sets_on_the_originals(self):
+        """The v0.5 V3 grounding replayed on the untouched originals, whose receipts carry the WebFetch address and prompt. Three
+        tiers, each pinned exactly (hand-written, not generated):
+          * V2 (returned text only)                          -> 1 / 1 / 2 refused rows: unchanged, the V2 wire is frozen;
+          * V3 before W2 (echo stripped; the model's own query / PROMPT excluded, loosely)
+                                                              -> {36853379} / {PMID:35939577} / 3 rows: the previous pin;
+          * V3 with W2 (2026-10-06: the address the model TYPED into a WebFetch is excluded from its own call too)
+                                                              -> run 1 refuses ALL TEN rows (nine were grounded only by a WebFetch whose
+                                                                 typed NCBI efetch address carried those very ids, repeated by the
+                                                                 summariser with a label), run 2 and run 3 unchanged.
+        Each tier contains the one before it (nothing is loosened)."""
+        v2_expected = {"vitd-run-1": {"36853379"}, "vitd-run-2": {"PMID:35939577"}, "vitd-run-3": {"31454046", "10.1039/C9FO03063H"}}
+        before_w2_expected = {"vitd-run-1": {"36853379"}, "vitd-run-2": {"PMID:35939577"},
+                              "vitd-run-3": {"31454046", "10.1039/C9FO03063H", "10.1056/NEJMoa2202106"}}
+        w2_expected = {"vitd-run-1": {"19937427", "23525894", "25694037", "30293909", "32219282", "33030563", "35939577", "36033779",
+                                      "36853379", "37011645"},
+                       "vitd-run-2": {"PMID:35939577"},
                        "vitd-run-3": {"31454046", "10.1039/C9FO03063H", "10.1056/NEJMoa2202106"}}
+
+        def own_before_w2(r):   # what the model typed into the call, as v0.5 read it before W2: the query, or the PROMPT alone
+            return r["request"].get("query") if r["tool"] == "WebSearch" else r["request"].get("prompt")
+
         for name in CAPTURE_DIRS:
             an = self.stream(name)
-            echo_only = set()
+            rows = [r["id"] for r in REPLAY["runs"][name]["rows"]]
+            v2_ids, before_ids = set(), set()
             for r in an.receipts:
                 if r["kind"] == "request" and r["returned_text"]:
-                    echo_only |= ad.extract_ids(rl.grounding_text(r))
+                    v2_ids |= ad.extract_ids(r["returned_text"])
+                    before_ids |= ad.extract_ids(rl.grounding_text(r)) - ad.own_request_ids(own_before_w2(r) or "")
+            refused_v2 = {i for i in rows if ad.normalise_audit_id(i) not in v2_ids}
+            refused_before = {i for i in rows if ad.normalise_audit_id(i) not in before_ids}
             full = ad.grounded_ids_v3(an.receipts)
-            rows = [r["id"] for r in REPLAY["runs"][name]["rows"]]
             refused_full = {i for i in rows if ad.normalise_audit_id(i) not in full}
-            refused_echo = {i for i in rows if ad.normalise_audit_id(i) not in echo_only}
-            self.assertEqual(refused_full, expected_v3[name], name)
-            self.assertEqual(refused_full, refused_echo, name)
-            self.assertTrue(RESIDUAL[name] <= refused_full, name)                      # every V2 refusal is still a V3 refusal
+            self.assertEqual(refused_v2, v2_expected[name], name)
+            self.assertEqual(refused_before, before_w2_expected[name], name)
+            self.assertEqual(refused_full, w2_expected[name], name)
+            self.assertTrue(refused_v2 <= refused_before <= refused_full, name)        # nothing is loosened, at any tier
+            self.assertTrue(RESIDUAL[name] <= refused_v2, name)
+            self.assertEqual(len(refused_v2), {"vitd-run-1": 1, "vitd-run-2": 1, "vitd-run-3": 2}[name], name)    # V2: 1 / 1 / 2
             self.assertTrue(all(r["request"].get("prompt") for r in an.receipts if r["tool"] == "WebFetch"), name)
 
     def test_the_originals_are_still_byte_identical(self):
         for name in CAPTURE_DIRS:
             self.stream(name)  # asserts the pinned sha256
+
+
+# --------------------------------------------------------------------------- #
+# the ONE successful v0.5 smoke (4228a3f, 2026-10-05), replayed under the W1 + W2 code
+
+SMOKE_RUN = Path(os.environ["BS_PROOF_REPLAY_SMOKE_RUN"]) if os.environ.get("BS_PROOF_REPLAY_SMOKE_RUN") else None
+SMOKE_SHA256 = {"result.json": "a4a29161362e5e5600effe640f440a53eb1a11ccc0c66c6f9afb8b96f8746035",
+                "raw-stream.jsonl": "b0e95533dafc8f1e1670c89fd1cfcfcad56e2afa239afefdd8bbc8e8b1240f7b"}
+
+
+@unittest.skipUnless(SMOKE_RUN and (SMOKE_RUN / "result.json").is_file(),
+                     "set BS_PROOF_REPLAY_SMOKE_RUN to the private run directory of the 2026-10-05 smoke (the original, opened read-only)")
+class SmokeV05Replay(unittest.TestCase):
+    """The successful smoke's ORIGINAL payload, byte for byte, under the W1 (a content-bearing WebFetch is needed whatever the
+    inventory) and W2 (the address the model typed into a WebFetch is excluded from its own call) guards, and the worker's own
+    follow-through replayed at both of the run's checkpoints. Nothing is repaired, re-requested or written: a run that no longer
+    passed would be a failure of this class, not something to adjust."""
+
+    def setUp(self):
+        self.payload_bytes = (SMOKE_RUN / "result.json").read_bytes()
+        self.payload = json.loads(self.payload_bytes)
+        self.audit, self.access = self.payload["audit"], self.payload["source_access_v3"]
+
+    def test_the_inputs_are_the_original_bytes(self):
+        for name, digest in SMOKE_SHA256.items():
+            self.assertEqual(hashlib.sha256((SMOKE_RUN / name).read_bytes()).hexdigest(), digest, name)
+
+    def test_the_original_payload_passes_the_worker_guard_unchanged(self):
+        ad.validate_live_receipts_and_inventory_v3(copy.deepcopy(self.audit), copy.deepcopy(self.access))
+
+    def test_the_cited_id_is_grounded_by_a_fetch_whose_typed_address_does_not_carry_it(self):
+        events = self.access["events"]
+        ids = [r["id"] for o in self.audit["outcomes"] for r in o["inventory"]]
+        self.assertEqual(ids, ["PMID:32219282"])
+        sources = [i for i, e in enumerate(events) if e["kind"] == "request" and e["returned_text"]
+                   and "pmid:32219282" in ad.extract_ids(rl.grounding_text(e))]
+        self.assertEqual(sources, [4])
+        self.assertNotIn("pmid:32219282", ad.own_request_ids(rl.own_request_text(events[4])))
+        self.assertIn("pmid:32219282", ad.grounded_ids_v3(events))
+
+    def test_four_webfetches_returned_content_so_the_new_rule_is_met_with_room_to_spare(self):
+        self.assertEqual([i for i, e in enumerate(self.access["events"]) if rl.has_page_content(e)], [4, 9, 13, 14])
+
+    def test_the_final_account_is_satisfied_with_the_recorded_summary(self):
+        rep = rl.account(self.access["events"], self.access["lead_ledger"], ad.inventory_is_empty(self.audit))
+        self.assertTrue(rep["satisfied"], rep["problems"])
+        self.assertEqual((rep["problems"], rep["warnings"]), ([], []))
+        self.assertEqual({k: rep["summary"][k] for k in ("searches", "distinct_queries", "fetches", "fetches_with_content", "fetches_failed",
+                                                          "leads", "leads_with_content", "leads_blocked", "leads_unattempted", "ledger_rows")},
+                         {"searches": 2, "distinct_queries": 2, "fetches": 13, "fetches_with_content": 4, "fetches_failed": 9,
+                          "leads": 15, "leads_with_content": 3, "leads_blocked": 6, "leads_unattempted": 6, "ledger_rows": 15})
+
+    def test_the_followthrough_replayed_at_both_checkpoints_decides_as_it_did_in_the_run(self):
+        import tempfile
+        import threading
+        import time
+        lines = (SMOKE_RUN / "raw-stream.jsonl").read_bytes().splitlines(keepends=True)
+        cuts = [i + 1 for i, l in enumerate(lines) if b'"type":"result"' in l.replace(b'": "', b'":"')]
+        self.assertEqual(len(cuts), 2)
+        recorded = json.loads((SMOKE_RUN / "followthrough.json").read_text())["turns"]
+        with tempfile.TemporaryDirectory() as td:
+            raw = Path(td) / "raw-stream.jsonl"
+            ft = ad.FollowThrough(raw, Path(td), threading.Event(), time.monotonic())
+            sent = []
+            for n in cuts:
+                raw.write_bytes(b"".join(lines[:n]))
+                sent.append(ft.on_result())
+            got = [{k: t.get(k) for k in ("turn", "decision", "problems", "tool_events", "ledger_rows", "summary")} for t in ft.turns]
+            self.assertEqual(got, [{k: t.get(k) for k in ("turn", "decision", "problems", "tool_events", "ledger_rows", "summary")} for t in recorded])
+            self.assertEqual([t["decision"] for t in ft.turns], ["continue", "satisfied"])
+            self.assertEqual([x is not None for x in sent], [True, False])
+            # the follow-up the model actually received is reproduced byte for byte (W1 was not what asked for it)
+            self.assertEqual(sent[0].encode("utf-8"), (SMOKE_RUN / "continuation-1.txt").read_bytes())
+        self.assertEqual(ft.finish_reason, "satisfied")
 
 
 if __name__ == "__main__":

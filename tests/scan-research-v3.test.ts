@@ -19,7 +19,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import { checkLiveResearchResultV2, idsIn } from "@/lib/scan-research/source-access-v2";
-import { checkLiveResearchResultV3, ownRequestIds } from "@/lib/scan-research/source-access-v3";
+import { checkLiveResearchResultV3, groundedIdsV3, ownRequestIds } from "@/lib/scan-research/source-access-v3";
 
 type Fixture = { audit: Record<string, any>; source_access_v3: Record<string, any> };
 const original = JSON.parse(readFileSync("tests/fixtures/source-access-v3.json", "utf8")) as Fixture;
@@ -255,6 +255,59 @@ describe("grounding: only what a tool PRINTED, never the model's own request", (
     expect([...idsIn(f.source_access_v3.events[1].returned_text)]).toContain("pmid:77777777");   // what V2 would have accepted
   });
 
+  // W2 (owner, 2026-10-06): the address the model TYPED into a WebFetch joins its prompt in the same-call exclusion.
+  const onlyThePagePrintsIt = (text: string, url = PUB, prompt = "state the PMID exactly as printed") => {
+    const f = copy();   // the search neither lists nor prints 12345678; ONE fetch of `url` is the only source
+    setText(f, 0, search("magnesium glycinate sleep randomized trial", [WALLED, BLOG]));
+    f.source_access_v3.events[1].request = fetchReq(url, prompt);
+    setText(f, 1, text);
+    return f;
+  };
+
+  it("W2: a typed PubMed address cannot ground its own PMID when the summary repeats it with a label", () => {
+    for (const text of ["**PMID:** 12345678. Randomized trial of 46 adults.", "PMID: 12345678", "pmid 12345678 reports sleep outcomes."]) {
+      const f = onlyThePagePrintsIt(text);
+      expect([...idsIn(f.source_access_v3.events[1].returned_text)]).toContain("pmid:12345678");   // what V2 / the returned-text read accepts
+      expect(errorsOf(f).join("\n"), text).toMatch(/inventory\/0\/id not grounded/);
+    }
+  });
+
+  it("W2: an independent earlier search whose query has no id still grounds it (the returned source text is read as before)", () => {
+    const f = onlyThePagePrintsIt("**PMID:** 12345678. Randomized trial of 46 adults.");
+    setText(f, 0, search("magnesium glycinate sleep randomized trial", [WALLED, BLOG], "A randomized trial is listed. PMID: 12345678 reports sleep outcomes."));
+    expect(check(f).ok).toBe(true);
+  });
+
+  it("W2: the address id is excluded from its own call only: another independent successful fetch grounds it, a failed one does not", () => {
+    const events = (f: Fixture) => f.source_access_v3.events as any[];
+    const f = onlyThePagePrintsIt("PMID: 12345678. It cites PMID: 27654321.");
+    expect(groundedIdsV3(events(f))).toEqual(new Set(["pmid:27654321"]));
+    const review = "https://journal.example.org/articles/review-9";
+    const withReview = [...events(f).slice(0, 2), ev("WebFetch", "request", fetchReq(review), "References: PMID: 12345678.", 9), ...events(f).slice(2)];
+    expect(groundedIdsV3(withReview).has("pmid:12345678")).toBe(true);
+    const withFailed = [...events(f).slice(0, 2), ev("WebFetch", "wall", fetchReq(review), "", 9), ...events(f).slice(2)];
+    expect(groundedIdsV3(withFailed).has("pmid:12345678")).toBe(false);
+  });
+
+  it("W2: a percent-encoded, query-delimited or doubly encoded address is read as the id it carries; the page's own PMID stays grounded", () => {
+    for (const [url, cited, text] of [
+      ["https://doi.org/10.1056%2FNEJMoa2034577", "10.1056/NEJMoa2034577", "DOI: 10.1056/NEJMoa2034577. PMID: 12345678."],
+      ["https://doi.org/10.1056%2fNEJMoa2034577?utm_source=x#top", "10.1056/NEJMoa2034577", "DOI 10.1056/NEJMoa2034577. PMID: 12345678."],
+      ["https://example.org/go?doi=10.1056%252FNEJMoa2034577", "10.1056/NEJMoa2034577", "DOI 10.1056/NEJMoa2034577. PMID: 12345678."],
+      ["https://clinicaltrials.gov/study/NCT01234567", "NCT01234567", "NCT01234567 is completed. PMID: 12345678."],
+    ]) {
+      const f = onlyThePagePrintsIt(text, url);
+      cite(f, cited);
+      expect(errorsOf(f).join("\n"), url).toMatch(/inventory\/0\/id not grounded/);
+      expect(groundedIdsV3(f.source_access_v3.events as any[]).has("pmid:12345678"), url).toBe(true);
+    }
+  });
+
+  it("W2: the loose read is applied to the request only; unlabelled numbers in RETURNED text still ground nothing", () => {
+    const events = [{ tool: "WebFetch", kind: "request", request: { url: "https://journal.example.org/a", prompt: "title" }, returned_text: "Bare numbers 31234567 and 27654321, PMID: 44444444." }] as any[];
+    expect([...groundedIdsV3(events)]).toEqual(["pmid:44444444"]);
+  });
+
   it("an id printed only in an error / wall / refusal result cannot ground a citation", () => {
     for (const kind of ["error", "wall", "refusal"] as const) {
       const f = copy();
@@ -399,7 +452,24 @@ describe("premature and thin runs are not accepted", () => {
     expect(errs).toMatch(/empty_without_any_page_request x1/);
   });
 
-  it("an empty run IS accepted when every lead was requested or honestly dismissed and the errors were followed up", () => {
+  it("an empty run is accepted when every lead was requested or honestly dismissed, the errors were followed up AND one fetch returned content", () => {
+    const f = copy();
+    empty(f);
+    setEvents(f, [
+      ev("WebSearch", "request", { query: "q" }, search("q", [PUB, BLOG, WALLED]), 1),
+      ev("WebFetch", "error", fetchReq(PUB), "", 2),
+      ev("WebSearch", "request", { query: "study title pubmed" }, search("study title pubmed", [BLOG]), 3),
+      ev("WebFetch", "request", fetchReq(WALLED), "A page summary without an identifier.", 4),
+    ]);
+    f.source_access_v3.lead_ledger = [
+      { address: PUB, disposition: "opened", note: "HTTP error; searched again by title" },
+      { address: BLOG, disposition: "not_opened_secondary", note: "blog" },
+      { address: WALLED, disposition: "opened", note: "read" },
+    ];
+    expect(check(f).ok).toBe(true);
+  });
+
+  it("W1: an empty run whose every fetch failed is NO LONGER accepted, however honest: no page ever returned content", () => {
     const f = copy();
     empty(f);
     setEvents(f, [
@@ -411,7 +481,36 @@ describe("premature and thin runs are not accepted", () => {
       { address: PUB, disposition: "opened", note: "HTTP error; searched again by title" },
       { address: BLOG, disposition: "not_opened_secondary", note: "blog" },
     ];
-    expect(check(f).ok).toBe(true);   // honest exhaustion is a valid terminal result; it is not a successful smoke by itself
+    expect(errorsOf(f).join("\n")).toMatch(/source leads not followed: empty_without_any_page_request x1$/);
+  });
+
+  it("W1: a NON-empty audit needs a content-bearing page too: a search only, or only failed fetches, is refused (the owner's near miss)", () => {
+    const only = copy();   // cites a study grounded in the search's link list; every lead dismissed unopened
+    setEvents(only, [only.source_access_v3.events[0]]);
+    only.source_access_v3.lead_ledger = [PUB, WALLED, BLOG].map((address) => ({ address, disposition: "not_opened_secondary", note: "n" }));
+    expect(errorsOf(only).join("\n")).toMatch(/source leads not followed: empty_without_any_page_request x1$/);
+
+    const failed = copy();   // every fetch failed, every failure followed by an independent attempt, every lead accounted for
+    setEvents(failed, [failed.source_access_v3.events[0], ev("WebFetch", "error", fetchReq(PUB), "", 2), ev("WebFetch", "wall", fetchReq(WALLED), "", 3), failed.source_access_v3.events[3]]);
+    expect(errorsOf(failed).join("\n")).toMatch(/source leads not followed: empty_without_any_page_request x1$/);
+  });
+
+  it("W1: a fetch marked as a request but without any returned text is not content (and the wire refuses it as well)", () => {
+    const f = copy();
+    setEvents(f, [f.source_access_v3.events[0], { ...ev("WebFetch", "request", fetchReq(PUB), "", 2), returned_kind: "fetch_model_summary" }]);
+    f.source_access_v3.lead_ledger = [PUB, WALLED, BLOG].map((address) => ({ address, disposition: address === PUB ? "opened" : "not_opened_secondary", note: "n" }));
+    const errs = errorsOf(f).join("\n");
+    expect(errs).toMatch(/request without content/);
+    expect(errs).toMatch(/empty_without_any_page_request x1/);
+  });
+
+  it("W1: ONE content-bearing page plus a valid audit is accepted: there is no minimum number of pages", () => {
+    const f = copy();
+    setEvents(f, [f.source_access_v3.events[0], f.source_access_v3.events[1]]);
+    f.source_access_v3.lead_ledger = [PUB, WALLED, BLOG].map((address) => ({ address, disposition: address === PUB ? "opened" : "not_opened_secondary", note: "n" }));
+    const r = check(f);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.result.source_access.follow_through).toMatchObject({ fetches: 1, fetches_with_content: 1, leads_with_content: 1 });
   });
 
   it("it is not a fetch-count quota: many failed fetches of one lead still fail, one content fetch passes", () => {

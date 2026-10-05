@@ -1,9 +1,9 @@
 {
- "about": "Shared cases for pipeline/research_leads.py and lib/scan-research/lead-accounting.ts (parity). `real_*` cases embed the search result text of the immutable 2026-10-05 v0.4 validation capture byte for byte. Expectations are hand-written, not generated from either implementation. `grounding_cases` (added with the WebFetch-prompt capture): which identifiers one run's CONTENT-bearing results may ground, expectations hand-written; the identifiers the model typed into the SAME call (search query / WebFetch prompt) never ground themselves, even when a tool paraphrases them back. `own_request_cases` (added with the loose own-request exclusion): what the model's OWN query / WebFetch prompt could mean, read deliberately loosely (every bare 5-9 digit run is a PMID candidate; PMC / NCT / DOI shapes inside any text; a DOI also without sentence punctuation stuck to it), expectations hand-written; it only ever EXCLUDES ids from the same call's result and never grounds one.",
+ "about": "Shared cases for pipeline/research_leads.py and lib/scan-research/lead-accounting.ts (parity). `real_*` cases embed the search result text of the immutable 2026-10-05 v0.4 validation capture byte for byte. Expectations are hand-written, not generated from either implementation. `grounding_cases` (added with the WebFetch-prompt capture): which identifiers one run's CONTENT-bearing results may ground, expectations hand-written; the identifiers the model typed into the SAME call (search query / WebFetch prompt) never ground themselves, even when a tool paraphrases them back. `own_request_cases` (added with the loose own-request exclusion): what the model's OWN query / WebFetch prompt could mean, read deliberately loosely (every bare 5-9 digit run is a PMID candidate; PMC / NCT / DOI shapes inside any text; a DOI also without sentence punctuation stuck to it), expectations hand-written; it only ever EXCLUDES ids from the same call's result and never grounds one. W1/W2 (2026-10-06): `w1_*` cases pin that ANY inventory needs at least one content-bearing WebFetch (kind request, non-empty returned text; one is enough, no quota); `w2_*` grounding cases pin that the address the model typed into a WebFetch joins its prompt in the same-call exclusion (loose extractor on the request metadata only; the returned text is read with the normal extractor; a later independent successful result still grounds the id); `own_request_text_cases` pin the exact request text both languages build, including the ASCII-only percent-decoding (at most 3 passes, malformed / non-ASCII escapes left as written, no throw), expectations hand-written.",
  "cases": [
   {
    "name": "real_v04_one_search_two_403_empty_audit_no_ledger",
-   "why": "The 2026-10-05 v0.4 validation run, shape exactly: ONE search listing nine links, then two requests to ONE record (en and es locale of the same page), both HTTP 403, an empty inventory. Nothing else was opened. Must NOT be called followed-through.",
+   "why": "The 2026-10-05 v0.4 validation run, shape exactly: ONE search listing nine links, then two requests to ONE record (en and es locale of the same page), both HTTP 403, an empty inventory. Nothing else was opened. Must NOT be called followed-through. W1 (2026-10-06): whatever the inventory holds, at least one WebFetch must have returned content, so this run also carries empty_without_any_page_request.",
    "events": [
     {
      "tool": "WebSearch",
@@ -38,6 +38,10 @@
      [
       "blocked_without_independent_attempt",
       "https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h"
+     ],
+     [
+      "empty_without_any_page_request",
+      ""
      ],
      [
       "identifier_lead_unopened",
@@ -184,7 +188,7 @@
   },
   {
    "name": "ledger_dismissals_alone_do_not_rescue_an_empty_unfollowed_run",
-   "why": "The model accounts for every lead in the ledger (two dismissals each) but the identifier-bearing PubMed lead was never requested and the 403 lead has no independent attempt: still not followed through.",
+   "why": "The model accounts for every lead in the ledger (two dismissals each) but the identifier-bearing PubMed lead was never requested and the 403 lead has no independent attempt: still not followed through. W1 (2026-10-06): whatever the inventory holds, at least one WebFetch must have returned content, so this run also carries empty_without_any_page_request.",
    "events": [
     {
      "tool": "WebSearch",
@@ -267,6 +271,10 @@
       "https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h"
      ],
      [
+      "empty_without_any_page_request",
+      ""
+     ],
+     [
       "identifier_lead_unopened",
       "https://pubmed.ncbi.nlm.nih.gov/11180916/"
      ]
@@ -275,7 +283,7 @@
   },
   {
    "name": "locale_alias_of_a_blocked_lead_is_not_an_independent_try",
-   "why": "en and es of the same page are ONE lead, so two 403s are one blocked lead with one missing fallback (not two leads, not a fallback).",
+   "why": "en and es of the same page are ONE lead, so two 403s are one blocked lead with one missing fallback (not two leads, not a fallback). W1 (2026-10-06): whatever the inventory holds, at least one WebFetch must have returned content, so this run also carries empty_without_any_page_request.",
    "events": [
     {
      "tool": "WebSearch",
@@ -316,6 +324,10 @@
      [
       "blocked_without_independent_attempt",
       "https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h"
+     ],
+     [
+      "empty_without_any_page_request",
+      ""
      ]
     ],
     "lead_outcomes": [
@@ -325,7 +337,7 @@
   },
   {
    "name": "a_later_search_with_a_new_query_is_the_independent_attempt",
-   "why": "After the 403s the model searches again for the study by title (a query not used before): the fallback is satisfied. The new search's own leads still need ledger rows.",
+   "why": "After the 403s the model searches again for the study by title (a query not used before): the fallback is satisfied. The new search's own leads still need ledger rows. (W1: an earlier content-bearing fetch of an address the model chose itself keeps this case about the fallback rule alone; it is not part of the fallback.)",
    "events": [
     {
      "tool": "WebSearch",
@@ -334,6 +346,14 @@
       "query": "q1"
      },
      "returned_text": "Web search results for query: \"q\"\n\nLinks: [{\"title\": \"t\", \"url\": \"https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h\"}]\n\nSummary prose.\n"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://other.example.org/page-1"
+     },
+     "returned_text": "Summary of the page."
     },
     {
      "tool": "WebFetch",
@@ -378,13 +398,14 @@
     "problems": [],
     "lead_outcomes": [
      "blocked",
+     "content",
      "unattempted"
     ]
    }
   },
   {
    "name": "the_same_query_again_is_not_independent_even_with_other_case_and_spacing",
-   "why": "Searching the identical query again (case/space differences only) returns the same links; it is not an independent attempt.",
+   "why": "Searching the identical query again (case/space differences only) returns the same links; it is not an independent attempt. W1 (2026-10-06): whatever the inventory holds, at least one WebFetch must have returned content, so this run also carries empty_without_any_page_request.",
    "events": [
     {
      "tool": "WebSearch",
@@ -425,13 +446,17 @@
      [
       "blocked_without_independent_attempt",
       "https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h"
+     ],
+     [
+      "empty_without_any_page_request",
+      ""
      ]
     ]
    }
   },
   {
    "name": "a_fetch_of_a_different_lead_is_the_independent_attempt",
-   "why": "The blocked lead is followed by a fetch of another lead (even one that fails): an error is a try.",
+   "why": "The blocked lead is followed by a fetch of another lead (even one that fails): an error is a try. W1 (2026-10-06): whatever the inventory holds, at least one WebFetch must have returned content, so this run also carries empty_without_any_page_request.",
    "events": [
     {
      "tool": "WebSearch",
@@ -477,6 +502,10 @@
      [
       "blocked_without_independent_attempt",
       "https://drmirkin.com/?p=9078"
+     ],
+     [
+      "empty_without_any_page_request",
+      ""
      ]
     ],
     "lead_outcomes": [
@@ -487,7 +516,7 @@
   },
   {
    "name": "a_fetch_of_an_unparseable_address_is_not_an_independent_attempt",
-   "why": "After a blocked lead the model 'fetches' an address that is not a plain http(s) address (ftp:, javascript:, user@host): that is not another lead and not an independent try.",
+   "why": "After a blocked lead the model 'fetches' an address that is not a plain http(s) address (ftp:, javascript:, user@host): that is not another lead and not an independent try. W1 (2026-10-06): whatever the inventory holds, at least one WebFetch must have returned content, so this run also carries empty_without_any_page_request.",
    "events": [
     {
      "tool": "WebSearch",
@@ -528,6 +557,10 @@
      [
       "blocked_without_independent_attempt",
       "https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h"
+     ],
+     [
+      "empty_without_any_page_request",
+      ""
      ]
     ],
     "lead_outcomes": [
@@ -537,7 +570,7 @@
   },
   {
    "name": "a_failed_search_with_a_new_query_is_still_a_try",
-   "why": "An errored WebSearch with a new query counts as the independent attempt (an error counts as a try).",
+   "why": "An errored WebSearch with a new query counts as the independent attempt (an error counts as a try). (W1: an earlier content-bearing fetch of an address the model chose itself keeps this case about the fallback rule alone; it is not part of the fallback.)",
    "events": [
     {
      "tool": "WebSearch",
@@ -546,6 +579,14 @@
       "query": "q1"
      },
      "returned_text": "Web search results for query: \"q\"\n\nLinks: [{\"title\": \"t\", \"url\": \"https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h\"}]\n\nSummary prose.\n"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://other.example.org/page-1"
+     },
+     "returned_text": "Summary of the page."
     },
     {
      "tool": "WebFetch",
@@ -1003,7 +1044,7 @@
   },
   {
    "name": "tracking_parameters_and_trailing_slash_do_not_make_a_new_lead",
-   "why": "?utm_*, ?lang= and a trailing slash are not part of a lead's identity.",
+   "why": "?utm_*, ?lang= and a trailing slash are not part of a lead's identity. (W1: an earlier content-bearing fetch of an address the model chose itself keeps this case about the fallback rule alone; it is not part of the fallback.)",
    "events": [
     {
      "tool": "WebSearch",
@@ -1012,6 +1053,14 @@
       "query": "q1"
      },
      "returned_text": "Web search results for query: \"q\"\n\nLinks: [{\"title\": \"t\", \"url\": \"https://example.org/paper/1?utm_source=x&lang=de\"}]\n\nSummary prose.\n"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://other.example.org/page-1"
+     },
+     "returned_text": "Summary of the page."
     },
     {
      "tool": "WebFetch",
@@ -1048,6 +1097,7 @@
     "problems": [],
     "lead_outcomes": [
      "blocked",
+     "content",
      "unattempted"
     ]
    }
@@ -1097,6 +1147,281 @@
     ],
     "content_via": [
      "mirror_same_record"
+    ]
+   }
+  },
+  {
+   "name": "w1_a_non_empty_audit_whose_run_only_searched_and_dismissed_every_lead_is_refused",
+   "why": "W1 (owner, 2026-10-06). The audit cites a study (inventory not empty), but no WebFetch was ever requested: one search, every other lead dismissed unopened. Before W1 only an EMPTY inventory needed a page; now any inventory does.",
+   "events": [
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "q1"
+     },
+     "returned_text": "Web search results for query: \"q\"\n\nLinks: [{\"title\": \"t\", \"url\": \"https://example.org/paper/1\"}, {\"title\": \"t\", \"url\": \"https://drmirkin.com/?p=9078\"}]\n\nSummary prose.\n"
+    }
+   ],
+   "ledger": [
+    {
+     "address": "https://example.org/paper/1",
+     "disposition": "not_opened_secondary",
+     "note": "n"
+    },
+    {
+     "address": "https://drmirkin.com/?p=9078",
+     "disposition": "not_opened_secondary",
+     "note": "n"
+    }
+   ],
+   "inventory_empty": false,
+   "expect": {
+    "satisfied": false,
+    "problems": [
+     [
+      "empty_without_any_page_request",
+      ""
+     ]
+    ],
+    "summary": {
+     "fetches": 0,
+     "fetches_with_content": 0,
+     "inventory_empty": false
+    }
+   }
+  },
+  {
+   "name": "w1_a_non_empty_audit_where_every_fetch_failed_is_refused_even_with_independent_fallbacks",
+   "why": "W1. Every lead is accounted for and every failed fetch is followed by an independent attempt (the next lead, then a new search), so no other rule fires; but an error, a wall and a refusal are not content: no page text was ever returned.",
+   "events": [
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "q1"
+     },
+     "returned_text": "Web search results for query: \"q\"\n\nLinks: [{\"title\": \"t\", \"url\": \"https://example.org/paper/1\"}, {\"title\": \"t\", \"url\": \"https://drmirkin.com/?p=9078\"}, {\"title\": \"t\", \"url\": \"https://journal.example.org/articles/2\"}]\n\nSummary prose.\n"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "error",
+     "request": {
+      "url": "https://example.org/paper/1"
+     },
+     "returned_text": ""
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "wall",
+     "request": {
+      "url": "https://drmirkin.com/?p=9078"
+     },
+     "returned_text": ""
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "refusal",
+     "request": {
+      "url": "https://journal.example.org/articles/2"
+     },
+     "returned_text": ""
+    },
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "q2"
+     },
+     "returned_text": "Web search results for query: \"q\"\n\nSummary prose.\n"
+    }
+   ],
+   "ledger": [
+    {
+     "address": "https://example.org/paper/1",
+     "disposition": "opened",
+     "note": "n"
+    },
+    {
+     "address": "https://drmirkin.com/?p=9078",
+     "disposition": "opened",
+     "note": "n"
+    },
+    {
+     "address": "https://journal.example.org/articles/2",
+     "disposition": "opened",
+     "note": "n"
+    }
+   ],
+   "inventory_empty": false,
+   "expect": {
+    "satisfied": false,
+    "problems": [
+     [
+      "empty_without_any_page_request",
+      ""
+     ]
+    ],
+    "summary": {
+     "fetches": 3,
+     "fetches_with_content": 0,
+     "fetches_failed": 3
+    },
+    "lead_outcomes": [
+     "blocked",
+     "blocked",
+     "blocked"
+    ]
+   }
+  },
+  {
+   "name": "w1_a_fetch_request_that_returned_no_text_is_not_page_content",
+   "why": "W1: 'actual content returned'. A WebFetch event marked kind=request whose returned_text is empty carries no page; the lead is still 'attempted' for the ledger rules, but the run has no content-bearing fetch. (The server's wire check also rejects such an event; this pins the accounting rule itself.)",
+   "events": [
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "q1"
+     },
+     "returned_text": "Web search results for query: \"q\"\n\nLinks: [{\"title\": \"t\", \"url\": \"https://example.org/paper/1\"}]\n\nSummary prose.\n"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://example.org/paper/1"
+     },
+     "returned_text": ""
+    }
+   ],
+   "ledger": [
+    {
+     "address": "https://example.org/paper/1",
+     "disposition": "opened",
+     "note": "n"
+    }
+   ],
+   "inventory_empty": false,
+   "expect": {
+    "satisfied": false,
+    "problems": [
+     [
+      "empty_without_any_page_request",
+      ""
+     ]
+    ],
+    "summary": {
+     "fetches": 1,
+     "fetches_with_content": 1
+    },
+    "lead_outcomes": [
+     "content"
+    ]
+   }
+  },
+  {
+   "name": "w1_a_search_result_with_text_is_never_a_page_even_for_an_empty_audit_that_requested_other_fetches",
+   "why": "W1. A WebSearch that returned text does not count as page content; only a WebFetch does. Here the only content-bearing event is a search.",
+   "events": [
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "q1"
+     },
+     "returned_text": "Web search results for query: \"q\"\n\nLinks: [{\"title\": \"t\", \"url\": \"https://example.org/paper/1\"}]\n\nSummary prose.\n"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "wall",
+     "request": {
+      "url": "https://example.org/paper/1"
+     },
+     "returned_text": ""
+    },
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "q2"
+     },
+     "returned_text": "Web search results for query: \"q\"\n\nLinks: [{\"title\": \"t\", \"url\": \"https://drmirkin.com/?p=9078\"}]\n\nSummary prose.\n"
+    }
+   ],
+   "ledger": [
+    {
+     "address": "https://example.org/paper/1",
+     "disposition": "opened",
+     "note": "n"
+    },
+    {
+     "address": "https://drmirkin.com/?p=9078",
+     "disposition": "not_opened_secondary",
+     "note": "n"
+    }
+   ],
+   "inventory_empty": true,
+   "expect": {
+    "satisfied": false,
+    "problems": [
+     [
+      "empty_without_any_page_request",
+      ""
+     ]
+    ],
+    "summary": {
+     "fetches": 1,
+     "fetches_with_content": 0
+    }
+   }
+  },
+  {
+   "name": "w1_one_content_bearing_fetch_is_enough_for_a_non_empty_audit_and_no_other_page_is_demanded",
+   "why": "W1: no quota. ONE WebFetch that returned text satisfies the new rule; the other lead may still be dismissed with a stated reason (recorded, not verified).",
+   "events": [
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "q1"
+     },
+     "returned_text": "Web search results for query: \"q\"\n\nLinks: [{\"title\": \"t\", \"url\": \"https://example.org/paper/1\"}, {\"title\": \"t\", \"url\": \"https://drmirkin.com/?p=9078\"}]\n\nSummary prose.\n"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://example.org/paper/1"
+     },
+     "returned_text": "Summary of the page."
+    }
+   ],
+   "ledger": [
+    {
+     "address": "https://example.org/paper/1",
+     "disposition": "opened",
+     "note": "n"
+    },
+    {
+     "address": "https://drmirkin.com/?p=9078",
+     "disposition": "not_opened_secondary",
+     "note": "n"
+    }
+   ],
+   "inventory_empty": false,
+   "expect": {
+    "satisfied": true,
+    "problems": [],
+    "summary": {
+     "fetches": 1,
+     "fetches_with_content": 1,
+     "leads_with_content": 1,
+     "leads_unattempted": 1
+    },
+    "lead_outcomes": [
+     "content",
+     "unattempted"
     ]
    }
   }
@@ -1415,8 +1740,8 @@
    ]
   },
   {
-   "name": "the_requested_address_echoed_back_is_stripped_but_a_labelled_pmid_in_it_is_not_excluded",
-   "why": "Only the verbatim address echo is stripped (unchanged v0.5 rule); the prompt carries no identifier here, so a PMID the page itself prints is grounded.",
+   "name": "the_requested_address_echoed_back_is_stripped_and_a_labelled_pmid_in_it_is_excluded_too",
+   "why": "W2 (owner, 2026-10-06; was: a labelled PMID in the typed address WAS grounded). The PMID is in the address the model typed itself, the page repeats it with a label, and nothing else printed it: the model's own address cannot ground its own id. The verbatim address echo is still stripped first.",
    "events": [
     {
      "tool": "WebFetch",
@@ -1428,9 +1753,7 @@
      "returned_text": "Fetched https://pubmed.ncbi.nlm.nih.gov/55555555/ . PMID: 55555555. Title as printed."
     }
    ],
-   "expect_grounded": [
-    "pmid:55555555"
-   ]
+   "expect_grounded": []
   },
   {
    "name": "a_fetched_address_echo_alone_grounds_nothing",
@@ -1590,6 +1913,189 @@
    "expect_grounded": [
     "pmid:27654321"
    ]
+  },
+  {
+   "name": "w2_a_typed_pubmed_address_cannot_ground_its_own_id_when_the_summary_repeats_it_with_a_label",
+   "why": "W2. The model typed the PubMed address; the summariser answers 'PMID: 31234567' with the label. There is no independent source of that id in the run, so it is NOT grounded (the loose extractor is applied to the request metadata only).",
+   "events": [
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://pubmed.ncbi.nlm.nih.gov/31234567/",
+      "prompt": "state the title and design"
+     },
+     "returned_text": "**PMID:** 31234567. Title as printed. Randomized trial."
+    }
+   ],
+   "expect_grounded": []
+  },
+  {
+   "name": "w2_an_independent_earlier_search_without_the_id_in_its_query_still_grounds_it",
+   "why": "W2 positive. The id is in the typed address of a later fetch, but an earlier successful search whose query does not contain it printed it itself: that independent event grounds it (the returned source text is read with the normal extractor).",
+   "events": [
+    {
+     "tool": "WebSearch",
+     "kind": "request",
+     "request": {
+      "query": "magnesium glycinate sleep randomized trial"
+     },
+     "returned_text": "Web search results for query: \"magnesium glycinate sleep randomized trial\"\n\nLinks: [{\"title\":\"t\",\"url\":\"https://example.org/a-page\"}]\n\nA randomized trial is listed. PMID: 31234567 reports sleep outcomes.\n"
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://pubmed.ncbi.nlm.nih.gov/31234567/",
+      "prompt": "state the title"
+     },
+     "returned_text": "**PMID:** 31234567. Title as printed."
+    }
+   ],
+   "expect_grounded": [
+    "pmid:31234567"
+   ]
+  },
+  {
+   "name": "w2_the_address_id_is_excluded_only_from_its_own_call_and_the_page_may_ground_other_ids",
+   "why": "W2. The first fetch's address carries 31234567, so that call grounds only what else it prints (27654321); a SECOND, independent successful fetch of another address prints 31234567 itself and grounds it.",
+   "events": [
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://pubmed.ncbi.nlm.nih.gov/31234567/",
+      "prompt": "state the title"
+     },
+     "returned_text": "PMID: 31234567. A review that cites PMID: 27654321."
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://journal.example.org/articles/review-9",
+      "prompt": "state the references"
+     },
+     "returned_text": "References include PMID: 31234567."
+    }
+   ],
+   "expect_grounded": [
+    "pmid:27654321",
+    "pmid:31234567"
+   ]
+  },
+  {
+   "name": "w2_a_failed_independent_fetch_does_not_rescue_a_typed_address_id",
+   "why": "W2. An error / wall / refusal result grounds nothing, so it cannot rescue an id the model typed into its own address either.",
+   "events": [
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://pubmed.ncbi.nlm.nih.gov/31234567/",
+      "prompt": "state the title"
+     },
+     "returned_text": "PMID: 31234567. Title as printed."
+    },
+    {
+     "tool": "WebFetch",
+     "kind": "wall",
+     "request": {
+      "url": "https://journal.example.org/articles/review-9",
+      "prompt": "state the references"
+     },
+     "returned_text": "Access denied. PMID: 31234567"
+    }
+   ],
+   "expect_grounded": []
+  },
+  {
+   "name": "w2_a_percent_encoded_doi_in_the_typed_address_is_excluded_and_the_pmid_the_page_prints_is_kept",
+   "why": "W2. The typed address carries the DOI as 10.1056%2FNEJMoa2034577; the summary prints it decoded. The ASCII percent-decoding makes them the same id (same rule in both languages); the page's own PMID is a different id and stays grounded.",
+   "events": [
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://doi.org/10.1056%2FNEJMoa2034577",
+      "prompt": "state the title"
+     },
+     "returned_text": "DOI: 10.1056/NEJMoa2034577. PMID: 12345678."
+    }
+   ],
+   "expect_grounded": [
+    "pmid:12345678"
+   ]
+  },
+  {
+   "name": "w2_a_lower_case_escape_and_a_doi_that_ends_at_a_query_are_excluded_whole",
+   "why": "W2. '%2f' (lower case) is decoded, and a DOI followed by '?utm_source=x#top' is read up to the delimiter, so the clean DOI the summary prints is the model's own.",
+   "events": [
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://doi.org/10.1056%2fNEJMoa2034577?utm_source=x#top",
+      "prompt": "state the title"
+     },
+     "returned_text": "DOI 10.1056/NEJMoa2034577. PMID: 22222222."
+    }
+   ],
+   "expect_grounded": [
+    "pmid:22222222"
+   ]
+  },
+  {
+   "name": "w2_a_doubly_encoded_doi_in_the_typed_address_is_decoded_to_the_fixed_point",
+   "why": "W2. '%252F' is '%2F' after one pass and '/' after two (at most three passes are made).",
+   "events": [
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://example.org/go?doi=10.1056%252FNEJMoa2034577",
+      "prompt": "state the title"
+     },
+     "returned_text": "DOI 10.1056/NEJMoa2034577. PMID: 33333333."
+    }
+   ],
+   "expect_grounded": [
+    "pmid:33333333"
+   ]
+  },
+  {
+   "name": "w2_malformed_and_non_ascii_escapes_in_the_typed_address_are_left_alone_and_nothing_throws",
+   "why": "W2 parity pin. '%zz' and '%C3%A9' stay as written, '%7e' is '~'; none of it can throw (decodeURIComponent would on the TypeScript side). The DOI after a lower-case '%2f' is still excluded and the PMID the page prints is kept.",
+   "events": [
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://example.org/a%zz/b%C3%A9/c%7e?id=10.1234%2fabcd.5678",
+      "prompt": "state the title"
+     },
+     "returned_text": "DOI 10.1234/abcd.5678. PMID: 12121212."
+    }
+   ],
+   "expect_grounded": [
+    "pmid:12121212"
+   ]
+  },
+  {
+   "name": "w2_a_typed_registry_address_cannot_ground_its_own_nct",
+   "why": "W2. The model typed a ClinicalTrials.gov address with the NCT number; the page repeats it with the label and nothing else printed it.",
+   "events": [
+    {
+     "tool": "WebFetch",
+     "kind": "request",
+     "request": {
+      "url": "https://clinicaltrials.gov/study/NCT01234567",
+      "prompt": "state the status"
+     },
+     "returned_text": "NCT01234567: completed. Phase 3."
+    }
+   ],
+   "expect_grounded": []
   }
  ],
  "own_request_cases": [
@@ -1633,6 +2139,105 @@
     "doi:10.3389/fnut.2020.00001/full",
     "pmid:00001"
    ]
+  }
+ ],
+ "own_request_text_cases": [
+  {
+   "name": "a_search_is_its_query_only",
+   "event": {
+    "tool": "WebSearch",
+    "kind": "request",
+    "request": {
+     "query": "vitamin d trial"
+    },
+    "returned_text": "x"
+   },
+   "expect": "vitamin d trial"
+  },
+  {
+   "name": "a_fetch_is_its_prompt_then_its_address_as_written_then_decoded_with_the_delimiters_blanked",
+   "event": {
+    "tool": "WebFetch",
+    "kind": "request",
+    "request": {
+     "url": "https://doi.org/10.1056%2FNEJMoa2034577?x=1#top",
+     "prompt": "title"
+    },
+    "returned_text": "x"
+   },
+   "expect": "title\nhttps://doi.org/10.1056%2FNEJMoa2034577?x=1#top\nhttps://doi.org/10.1056/NEJMoa2034577 x 1 top"
+  },
+  {
+   "name": "a_doubly_encoded_slash_is_decoded_in_two_passes",
+   "event": {
+    "tool": "WebFetch",
+    "kind": "request",
+    "request": {
+     "url": "https://e.org/a%252Fb",
+     "prompt": "p"
+    },
+    "returned_text": "x"
+   },
+   "expect": "p\nhttps://e.org/a%252Fb\nhttps://e.org/a/b"
+  },
+  {
+   "name": "at_most_three_passes_are_made",
+   "event": {
+    "tool": "WebFetch",
+    "kind": "request",
+    "request": {
+     "url": "https://e.org/a%2525252Fb",
+     "prompt": "p"
+    },
+    "returned_text": "x"
+   },
+   "expect": "p\nhttps://e.org/a%2525252Fb\nhttps://e.org/a%2Fb"
+  },
+  {
+   "name": "malformed_and_non_ascii_escapes_stay_and_a_lower_case_ascii_escape_is_decoded",
+   "event": {
+    "tool": "WebFetch",
+    "kind": "request",
+    "request": {
+     "url": "https://e.org/a%zz%2/b%C3%A9%7e",
+     "prompt": "p"
+    },
+    "returned_text": "x"
+   },
+   "expect": "p\nhttps://e.org/a%zz%2/b%C3%A9%7e\nhttps://e.org/a%zz%2/b%C3%A9~"
+  },
+  {
+   "name": "a_fetch_with_no_prompt_is_its_address_alone",
+   "event": {
+    "tool": "WebFetch",
+    "kind": "request",
+    "request": {
+     "url": "https://e.org/x"
+    },
+    "returned_text": "x"
+   },
+   "expect": "https://e.org/x\nhttps://e.org/x"
+  },
+  {
+   "name": "a_fetch_with_no_address_is_its_prompt_alone",
+   "event": {
+    "tool": "WebFetch",
+    "kind": "request",
+    "request": {
+     "prompt": "only a prompt"
+    },
+    "returned_text": "x"
+   },
+   "expect": "only a prompt"
+  },
+  {
+   "name": "an_event_with_no_request_is_empty",
+   "event": {
+    "tool": "WebFetch",
+    "kind": "request",
+    "returned_text": "x"
+   },
+   "expect": ""
   }
  ]
 }

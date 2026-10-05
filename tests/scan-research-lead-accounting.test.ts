@@ -13,7 +13,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { account, leadKey, parseLinks, urlRecordIds, type LeadEvent } from "@/lib/scan-research/lead-accounting";
+import { account, hasPageContent, leadKey, ownRequestText, parseLinks, unquoteAscii, urlRecordIds, type LeadEvent } from "@/lib/scan-research/lead-accounting";
 import { groundedIdsV3, ownRequestIds } from "@/lib/scan-research/source-access-v3";
 
 type Case = {
@@ -37,10 +37,11 @@ const F = JSON.parse(readFileSync(path.join(process.cwd(), "tests", "fixtures", 
   links_cases: { text: string; expect: string[] }[];
   grounding_cases: { name: string; why: string; events: LeadEvent[]; expect_grounded: string[] }[];
   own_request_cases: { text: string; expect: string[] }[];
+  own_request_text_cases: { name: string; event: LeadEvent; expect: string }[];
 };
 
 describe("server grounding agrees with the worker's: what the tool printed, minus what the model typed into the same call", () => {
-  it("has the shared grounding cases", () => expect(F.grounding_cases.length).toBeGreaterThanOrEqual(16));
+  it("has the shared grounding cases", () => expect(F.grounding_cases.length).toBeGreaterThanOrEqual(25));
   for (const c of F.grounding_cases) {
     it(c.name, () => {
       expect([...groundedIdsV3(c.events)].sort()).toEqual([...c.expect_grounded].sort());
@@ -52,6 +53,33 @@ describe("server grounding agrees with the worker's: what the tool printed, minu
       expect([...ownRequestIds(c.text)].sort()).toEqual([...c.expect].sort());
     });
   }
+});
+
+describe("the text the loose own-request read sees is built identically in both languages (W2)", () => {
+  it("has the shared own-request-text cases", () => expect(F.own_request_text_cases.length).toBeGreaterThanOrEqual(8));
+  for (const c of F.own_request_text_cases) {
+    it(c.name, () => expect(ownRequestText(c.event)).toBe(c.expect));
+  }
+  it("unquoteAscii never throws and leaves malformed and non-ASCII escapes exactly as written (decodeURIComponent would throw)", () => {
+    for (const s of ["%", "%2", "%zz", "%E0%A4%A", "%C3%A9", "%FF", "100%", "a%2Fb%", "%%2F%2"]) expect(() => unquoteAscii(s), s).not.toThrow();
+    expect(unquoteAscii("%E0%A4%A")).toBe("%E0%A4%A");
+    expect(unquoteAscii("%C3%A9%FF%80")).toBe("%C3%A9%FF%80");
+    expect(unquoteAscii("a%2Fb%2fc%7e%41")).toBe("a/b/c~A");
+    expect(unquoteAscii("%252F")).toBe("/");
+    expect(unquoteAscii("%25252525")).toBe("%25");   // three passes at most: %25252525 -> %252525 -> %2525 -> %25
+    expect(unquoteAscii("%%2F%2")).toBe("%/%2");
+  });
+});
+
+describe("W1: a content-bearing WebFetch is a WebFetch the tool answered with page text", () => {
+  const ok: LeadEvent = { tool: "WebFetch", kind: "request", request: { url: "https://a.example.org/1" }, returned_text: "x" };
+  it("counts only tool WebFetch + kind request + non-empty returned text", () => {
+    expect(hasPageContent(ok)).toBe(true);
+    for (const bad of [
+      { ...ok, tool: "WebSearch" }, { ...ok, returned_text: "" }, { ...ok, returned_text: undefined }, { ...ok, returned_text: 5 },
+      { ...ok, kind: "error" }, { ...ok, kind: "wall" }, { ...ok, kind: "refusal" },
+    ]) expect(hasPageContent(bad as unknown as LeadEvent), JSON.stringify(bad)).toBe(false);
+  });
 });
 
 describe("server lead accounting agrees with the worker's on every shared case", () => {
@@ -89,7 +117,7 @@ describe("the verdict is not a fetch-count quota and not a reading of free text"
     for (let i = 0; i < 100; i++) many.push({ tool: "WebFetch", kind: "error", request: { url: "https://a.example.org/1" }, returned_text: "" });
     const bad = account(many, [{ address: "https://a.example.org/1", disposition: "opened", note: "n" }], false);
     expect(bad.satisfied).toBe(false);
-    expect(bad.problems.map((p) => p.code)).toEqual(["blocked_without_independent_attempt"]);
+    expect(bad.problems.map((p) => p.code)).toEqual(["blocked_without_independent_attempt", "empty_without_any_page_request"]);   // W1: no page ever returned content
   });
   it("a note that says 'not opened' changes nothing: only the request in the stream counts", () => {
     const search: LeadEvent = { tool: "WebSearch", kind: "request", request: { query: "q1" }, returned_text: link("https://a.example.org/1") };

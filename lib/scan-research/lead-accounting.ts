@@ -11,7 +11,8 @@
  * (every address a search result listed in its `Links: [...]` line, merged when they differ only by locale / tracking
  * parameters or carry the same record identifier), whether a WebFetch was REALLY requested for each, and whether the
  * model's `lead_ledger` accounts for all of them without claiming a request that was not made. It is NOT a fetch-count
- * quota, not a reading of any free text, and not a check that the science is right.
+ * quota, not a reading of any free text, and not a check that the science is right. Whatever the inventory holds (W1,
+ * 2026-10-06), at least ONE WebFetch must have RETURNED CONTENT (`hasPageContent`); a single content-bearing page satisfies it.
  */
 
 export const LEAD_ACCOUNTING_VERSION = "lead-accounting-v1" as const;
@@ -163,11 +164,52 @@ export function stripEcho(text: unknown, needle: unknown): string {
   return typeof needle === "string" && needle ? t.split(needle).join(" ") : t;
 }
 
-/** What the model itself TYPED into this call that a tool may echo or paraphrase back: the search query, or the question
- *  (`prompt`) it put to the WebFetch summariser. Mirrors research_leads.own_request_text. */
+const PCT_ESCAPE_RE = /%([0-9A-Fa-f]{2})/g;
+const ADDRESS_DELIMITERS_RE = /[?#&=]/g;
+const MAX_PCT_PASSES = 3;
+
+/** Percent-escapes of ASCII characters (%00-%7F) decoded, nothing else: at most MAX_PCT_PASSES passes (a doubly encoded
+ *  `%252F` is read too), stopping early when a pass changes nothing. A malformed or truncated escape, and every escape
+ *  >= %80, stays exactly as written; never throws (unlike decodeURIComponent). A pure string rewrite: the address is never
+ *  fetched, resolved or opened. Mirrors research_leads.unquote_ascii. */
+export function unquoteAscii(input: string): string {
+  let text = input;
+  for (let pass = 0; pass < MAX_PCT_PASSES; pass++) {
+    const decoded = text.replace(PCT_ESCAPE_RE, (m, h: string) => (parseInt(h, 16) < 0x80 ? String.fromCharCode(parseInt(h, 16)) : m));
+    if (decoded === text) break;
+    text = decoded;
+  }
+  return text;
+}
+
+/** The address the model TYPED into a WebFetch, in the two forms a summariser may print an identifier from: as written, and
+ *  percent-decoded with the query delimiters (? # & =) turned into spaces, so a DOI that ends at `?` / `#` / `&` is read whole.
+ *  Read only for the loose own-request exclusion. Mirrors research_leads.request_address_text. */
+export function requestAddressText(url: string): string {
+  return `${url}\n${unquoteAscii(url).replace(ADDRESS_DELIMITERS_RE, " ")}`;
+}
+
+/** What the model itself TYPED into this call that a tool may echo or paraphrase back: the search query; or, for a WebFetch,
+ *  the question (`prompt`) it put to the summariser AND the address it asked for (a page that repeats the id of its own
+ *  address with a label does not thereby ground it). Mirrors research_leads.own_request_text. */
 export function ownRequestText(event: LeadEvent): string {
-  const own = event.tool === "WebSearch" ? event.request?.query : event.request?.prompt;
-  return typeof own === "string" ? own : "";
+  if (event.tool === "WebSearch") {
+    const query = event.request?.query;
+    return typeof query === "string" ? query : "";
+  }
+  const parts: string[] = [];
+  const prompt = event.request?.prompt;
+  const url = event.request?.url;
+  if (typeof prompt === "string" && prompt) parts.push(prompt);
+  if (typeof url === "string" && url) parts.push(requestAddressText(url));
+  return parts.join("\n");
+}
+
+/** True for a WebFetch the tool actually ANSWERED with page content: tool WebFetch, kind `request` (an error, a cookie /
+ *  captcha wall and a summariser refusal are failed tries, never content) and a non-empty returned text. A WebSearch never
+ *  counts, and neither does a fetch that was only attempted. Mirrors research_leads.has_page_content. */
+export function hasPageContent(event: LeadEvent): boolean {
+  return event !== null && typeof event === "object" && event.tool === "WebFetch" && event.kind === "request" && typeof event.returned_text === "string" && event.returned_text.length > 0;
 }
 
 /** The returned text of one content-bearing event with the model's own request echo removed (V3 grounding): the search
@@ -340,7 +382,8 @@ export function account(eventsIn: unknown, ledgerIn: unknown, inventoryEmpty: bo
       if (!independent) problems.push({ code: P_NO_FALLBACK, address: c.addresses[0] });
     }
   }
-  if (inventoryEmpty && !fetches.length) problems.push({ code: P_EMPTY_NO_PAGE, address: "" });
+  // W1: whatever the inventory holds, at least one WebFetch must have RETURNED page content (one is enough; no quota).
+  if (!events.some(hasPageContent)) problems.push({ code: P_EMPTY_NO_PAGE, address: "" });
 
   problems.sort(byCodeThenAddress);
   warnings.sort(byCodeThenAddress);

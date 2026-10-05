@@ -65,6 +65,9 @@ def grounded_audit(pmid="12345678"):
     return a
 
 
+PAGE_CHOSEN_BY_MODEL = {"tool": "WebFetch", "kind": "request", "request": {"url": "https://other.example.org/page-1"}, "returned_text": "Summary of the page."}
+
+
 def row(a, d="opened", n="n"):
     return {"address": a, "disposition": d, "note": n}
 
@@ -116,7 +119,8 @@ class LeadModule(unittest.TestCase):
         self.assertFalse(rep["satisfied"])
 
     def test_progress_is_a_reduction_of_the_reported_problems_not_new_tool_calls_or_links(self):
-        ev = [{"tool": "WebSearch", "kind": "request", "request": {"query": "q"}, "returned_text": links(MIRKIN, PUBMED)}]
+        ev = [{"tool": "WebSearch", "kind": "request", "request": {"query": "q"}, "returned_text": links(MIRKIN, PUBMED)},
+              PAGE_CHOSEN_BY_MODEL]   # W1: one content-bearing page, so the only problems here are the two unaccounted leads
         before = rl.account(ev, [], False)
         prev = rl.problem_keys(before)
         self.assertEqual(len(prev), 2)                                              # two unaccounted leads
@@ -212,8 +216,11 @@ class AdapterAnalysis(Base):
         self.assertEqual(sum(1 for l in raw.read_text().splitlines() if '"type":"result"' in l), 3)
         self.assertEqual(sum(1 for l in raw.read_text().splitlines() if '"subtype":"init"' in l), 3)   # init is re-emitted per turn
         rep = ad.follow_through_report(an)
-        self.assertTrue(rep["satisfied"], rep["problems"])
+        # every lead rule is met; the ONE problem left is W1 (2026-10-06): this protocol probe never had a WebFetch answer with
+        # page content (its only fetch was refused), which is exactly what the new rule asks for
+        self.assertEqual([[p["code"], p["address"]] for p in rep["problems"]], [[rl.P_EMPTY_NO_PAGE, ""]])
         self.assertEqual(rep["summary"]["leads_blocked"], 1)
+        self.assertEqual(rep["summary"]["fetches_with_content"], 0)
 
     def test_the_real_cli_probe_replays_through_the_worker_as_one_process_and_three_user_turns(self):
         """The captured REAL event shapes (init per turn, one result per turn) drive the real adapter + worker: 3 user turns, ONE process."""
@@ -227,6 +234,10 @@ class AdapterAnalysis(Base):
         self.assertEqual(len(turns), 3)
         # the probe's audit was a stub: swap in the worker-test audit with the same (empty) inventory so the contract checks run
         audit = empty_audit()
+        # W1: the probe never had a page answer, so the last turn gets ONE content-bearing fetch of an address the model chose itself
+        last = turns[-1]
+        k = next(i for i, e in enumerate(last) if e.get("type") == "assistant" and any(b.get("name") == "StructuredOutput" for b in e["message"]["content"]))
+        last[k:k] = [ev_use(901, "WebFetch", url="https://other.example.org/page-1", prompt="state the PMID"), ev_ret(901, "Summary of the page.", code=200)]
         for t in turns:
             for e in t:
                 if e.get("type") == "result":
@@ -321,14 +332,52 @@ class FollowThroughJobs(Base):
                                      {"tool": "WebFetch", "kind": "error", "request": {"url": RSC_EN}, "returned_text": ""},
                                      {"tool": "WebFetch", "kind": "error", "request": {"url": RSC_ES}, "returned_text": ""}],
                                     [row(RSC_ES)], True)["satisfied"])
-        # the model answers the follow-up by searching for the study by title: a query not used before = the independent attempt
-        t2 = [ev_init()] + search(4, "title of the study pubmed", links(MIRKIN)) + [ev_result(empty_audit(), [row(RSC_ES, "opened", "403"), row(MIRKIN, "not_opened_secondary", "blog")])]
+        # the model answers the follow-up by searching for the study by title (a query not used before = the independent attempt)
+        # AND opens another lead, which returns page content (W1: one is enough)
+        t2 = ([ev_init()] + search(4, "title of the study pubmed", links(MIRKIN)) + fetch(5, MIRKIN, text="Some page summary.", code=200)
+              + [ev_result(empty_audit(), [row(RSC_ES, "opened", "403"), row(MIRKIN, "opened", "read")])])
         out = self.run_job([], turns=[t1, t2])
-        self.assertEqual(out.kind, "completed", out)               # honestly exhausted: every lead tried or dismissed, errors followed up
+        self.assertEqual(out.kind, "completed", out)
         self.assertEqual(self.stdin_turns()[1].count("blocked_without_independent_attempt"), 2)  # named in the sentence and in the data
         (rd,) = self.run_dirs()
         ft = json.loads((rd / "followthrough.json").read_text())
-        self.assertEqual(ft["final"]["summary"]["fetches_with_content"], 0)   # ... and the record says no page was ever readable
+        self.assertEqual(ft["final"]["summary"]["fetches_with_content"], 1)   # one page, no quota
+
+    def test_w1_a_run_where_no_page_ever_returned_content_is_no_longer_called_exhausted_it_ends_terminally(self):
+        """Before W1 (2026-10-06) this run -- every lead tried or dismissed, the errors followed up by an independent search, an EMPTY
+        inventory -- was `completed`. Whatever the inventory holds, at least one WebFetch must now have returned content."""
+        t1 = ([ev_init()] + search(1, "q one", links(RSC_ES)) + fetch(2, RSC_EN) + fetch(3, RSC_ES)
+              + [ev_result(empty_audit(), [row(RSC_ES, "opened", "403")])])
+        t2 = [ev_init()] + search(4, "title of the study pubmed", links(MIRKIN)) + [ev_result(empty_audit(), [row(RSC_ES, "opened", "403"), row(MIRKIN, "not_opened_secondary", "blog")])]
+        t3 = [ev_init(), ev_result(empty_audit(), [row(RSC_ES, "opened", "403"), row(MIRKIN, "not_opened_secondary", "blog")])]   # nothing new
+        out = self.run_job([], turns=[t1, t2, t3])
+        self.assertEqual((out.kind, out.code), ("failed", "research_followthrough_incomplete"))
+        (fail,) = self.api.of("fail")
+        self.assertFalse(fail["retryable"])
+        self.assertIn("empty_without_any_page_request x1", fail["message"])
+        self.assertNotIn("blocked_without_independent_attempt", fail["message"])   # the fallback WAS tried; only the missing page is left
+        self.assertIn("finish=stalled", fail["message"])
+        self.assertEqual((self.model_runs(), len(self.stdin_turns())), (1, 3))
+        self.assertEqual(self.api.of("complete"), [])
+
+    def test_w1_a_non_empty_audit_that_never_opened_a_page_is_followed_up_and_completes_with_one_page(self):
+        """The owner's W1 near miss: a return that cites a study but dismissed every lead unopened. It is not completed; ONE content page
+        in the follow-up completes it in the same process."""
+        t1 = [ev_init()] + search(1, "q one", links(MIRKIN, PUBMED)) + [ev_result(grounded_audit(), [row(MIRKIN, "not_opened_secondary", "blog"), row(PUBMED, "not_opened_secondary", "old")])]
+        t2 = ([ev_init()] + fetch(2, MIRKIN, text="PMID: 12345678. Trial of 46 adults. Title X. 2019.", code=200)
+              + [ev_result(grounded_audit(), [row(MIRKIN, "opened", "read"), row(PUBMED, "not_opened_secondary", "old")])])
+        out = self.run_job([], turns=[t1, t2])
+        self.assertEqual(out.kind, "completed", out)
+        self.assertEqual(self.model_runs(), 1)
+        turns = self.stdin_turns()
+        self.assertEqual(len(turns), 2)
+        self.assertIn("empty_without_any_page_request", turns[1])
+        self.assertIn("No WebFetch in this run has returned page content yet", turns[1])
+        (rd,) = self.run_dirs()
+        ft = json.loads((rd / "followthrough.json").read_text())
+        self.assertEqual([t["decision"] for t in ft["turns"]], ["continue", "satisfied"])
+        self.assertEqual(ft["turns"][0]["problems"], [[rl.P_EMPTY_NO_PAGE, ""]])
+        self.assertFalse(ft["turns"][0]["summary"]["inventory_empty"])
 
     def test_the_model_cannot_certify_an_open_it_did_not_make(self):
         t1 = [ev_init()] + search(1, "q one", links(PUBMED)) + [ev_result(grounded_audit(), [row(PUBMED, "opened", "I opened and read it")])]
