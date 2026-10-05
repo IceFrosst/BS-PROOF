@@ -879,6 +879,42 @@ The tier table above says what each wrong order costs.
 - Test limits: PGlite is one connection, so `for update skip locked` concurrency is not exercised; it runs PostgreSQL 17.5, production 17.6.
 - One invocation can still fail, and that job then ends `failed`. Research stays EXPERIMENTAL and UNGRADED, never scored.
 
+## Validation run 1 (2026-10-05 UTC): FAILED -- complete but empty
+
+**Read this before the "Status: a CANDIDATE" statements above: they say no model has run the candidate; ONE private run has now been made, and it failed the owner's usability criterion.**
+
+What was run (the owner approved exactly ONE invocation, after the code review and the gates): the candidate's real `scripts/pc_research_worker.py` `handle_job` against an
+in-process FAKE queue client (no network, no database, no token, no new user / scan / job / row), the real `claude -p --model claude-sonnet-5-5 --effort medium` with the v0.3 prompt
+on the owner subscription, and the ORIGINAL sanitized Vitamin D3 4000 IU + K2 target of the failed job. The old worker had been drained first (queue empty: 0 queued, 0 running) and was
+restored afterwards; the three original captures were hash-checked before and after (unchanged). The effort is REQUESTED only: the CLI stream has no effort field.
+
+What happened: `completed` in 19.5 s, 3 turns, ONE WebSearch, ZERO WebFetch; one outcome with an EMPTY inventory, `effectPoints: "unclear"`, and a `confidence_note` saying only one
+search was run and no source was opened. Models: `claude-sonnet-5-5` (4 in / 1947 out tokens) and Haiku 4.5 (10328 in / 423 out) only; `original_documents` 0; the only returned text
+is a Haiku-written search summary. The worker's guard and the server's own check (`checkLiveResearchResultV2`, applied to the byte-identical payload) accepted it.
+
+What it does NOT show: acceptance of an EMPTY inventory is by design (there is nothing to ground) and is NOT evidence that the cause fix works. No id was cited, so the per-id table and
+the pairing check are vacuous; the route, the SQL, the deploy and the supervisor were not exercised; nothing says the early stop would recur (n = 1), and effort and prompt were changed
+together, so L7 and medium cannot be told apart. The owner's criterion 6 (at least one non-empty inventory) FAILED: "complete but empty; usability not shown".
+
+Why it stopped (a reading of the prompt and of the model's own output, not a controlled experiment): `prompts/research_audit_live.md` never orders the model to open the leads a search
+returns ("Search before you write" is satisfied by one search); L7 says an id read out of a link address of an unopened result does not count, that one unprinted id loses the whole run
+with no second run, and that a short audit "is a complete, accepted answer"; the older Rule 1 and L4 text also sanction an empty inventory. With one attempt and no retry, citing nothing
+was the cheapest compliant action. The one search result did contain leads (a Frontiers systematic review at `/full` and `/pdf`, a pubs.rsc.org record, a PubMed link), and the
+three original xhigh attempts made 34-44 WebSearch + WebFetch calls each (23-29 WebFetch).
+
+Consequence: the candidate is NOT releasable as it stands, and its one-attempt + medium + parser parts must not be released alone (a cap-only release; a `succeeded` placeholder cannot be
+retried). Production is unchanged (3 attempts, `xhigh`, v0.2). Migrations 001 and 002 were NOT applied, nothing was pushed, no runtime was built or installed. The approval for a
+model run is used up; a further run needs a NEW explicit owner approval bound to the new head, after a read-only review and the gates.
+
+Next (a fresh worker): prompt `live-research-v0.4` = v0.3 + a rule "open before you conclude" (every lead naming a study, review or meta-analysis of the product or one of its actives is opened
+with WebFetch with the identifier requested; an unopenable lead is recorded in `could_not_access`; "the search result printed no identifier" is the reason to open it, not to skip it; an empty
+inventory is right only after that), and Rule 1, L4 and the L7 "complete, accepted answer" sentence limited to "only after that rule". No numeric constant, no code gate on the number of
+fetches, the guard and the parser unchanged. A version bump touches the schema enum, `lib/scan-research/contract.ts`, migration 002 (unapplied: edit in place and re-pin its sha256) and
+`docs/research-jobs.sql`, the prompt-version tests and fixtures. Add a replay fixture of this run proving an all-empty audit is reported as NOT usable. The five documentation corrections
+the owner required for a release (query-echo grounding is wider than "request-only ids are never recognised"; a rollback check for queued v0.3 jobs; a `running` row after the drain;
+remove "fixes the CAUSE" wording; the `/pdf` claim) are still open. Founder questions, no number chosen: must each single ingredient of a blend also be researched; is any minimum of
+research required before an empty inventory is allowed; is a complete-but-empty audit acceptable to show a user under one attempt with no retry.
+
 ## Verification (offline; no network, no model, no live database)
 
 `docs/research-jobs.sql` is proven by EXECUTING it, not by reading its text:
