@@ -24,6 +24,10 @@
  *                 the same read first. Only when it finds NO job and the person's own
  *                 fresh scan was cut off before its request got through
  *                 (`askIfNone`) is research asked for -- once, by the same POST.
+ *    "Check again" is a READ (GET) only, whatever the screen it was pressed on: a lookup
+ *    that now says "none" ends on "not requested" and never asks. A POST happens only
+ *    for (a) a fresh scan's first request, (b) a restored FRESH scan's lookup-none, and
+ *    (c) the explicit "Request live research" button, pressed after a lookup that said none.
  *  - IT KEEPS FOLLOWING THE JOB until the job's own status ends it. A transient
  *    failure of a READ (network error, a request that never finished, 429 / 5xx,
  *    "cannot verify sign-in right now") does not end the screen and is not silent:
@@ -190,8 +194,9 @@ export function useLiveResearch({ scanId, ownerId, getAccessToken, enabled = tru
     const { signal } = controller;
     const owner = ownerId;
     const scan = scanId;
-    // Asking (POST) is allowed for a fresh scan, for a restored fresh scan whose lookup found nothing, and for an explicit press.
-    const mayAsk = !lookFirst || askIfNone || presses > 0;
+    // Asking (POST) after a lookup is allowed only for a fresh scan, and for a restored FRESH scan whose lookup found nothing. A press never
+    // widens that: "Request live research" after a lookup that already said none asks directly (the `lookedNone` branch below); "Check again" reads only.
+    const mayAsk = !lookFirst || askIfNone;
 
     const publish = (state: ResearchState, job: LiveResearchJob | null = null, reconnecting = false) => {
       if (signal.aborted) return;
@@ -273,7 +278,7 @@ export function useLiveResearch({ scanId, ownerId, getAccessToken, enabled = tru
         if (first.verdict.kind === "none") {
           if (knownId) { forgetResearchJob(owner, scan); publish("not-found"); return; }
           if (!lookFirst) { forgetResearchJob(owner, scan); publish("not-found"); return; }
-          // The scan has no job. Say so; ask only when the person's own fresh scan was cut off before it got through, or they pressed the button.
+          // The scan has no job. Say so; ask here only when the person's own fresh scan was cut off before it got through (a press asks via the `lookedNone` branch above, never from here).
           lookedNone.current = key;
           if (!mayAsk) { publish("idle"); return; }
           first = await ask();

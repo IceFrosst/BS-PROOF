@@ -374,6 +374,38 @@ describe("live research panel: a replay reads the scan's job and never asks by i
     expect(state()).toBe("queued"); expect(host.querySelector('[data-testid="research-reconnecting"]')).toBeNull();
     expect(calls(fetchMock)).toEqual([`GET ${LOOKUP}`, `GET ${LOOKUP}`, `GET ${LOOKUP}`]);
   });
+
+  it("'Check again' after a failed lookup is a READ: the lookup now says none -> 'not requested', NO POST; only the explicit 'Request live research' button then asks, exactly once", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(response({ status: "research_unavailable" }, 503)).mockResolvedValueOnce(notFound()).mockResolvedValue(ok(job("queued"), 201)); vi.stubGlobal("fetch", fetchMock);
+    mount({ replay: true }); await settle();
+    expect(state()).toBe("unavailable"); expect(button()?.textContent).toBe("Check again");
+    await press(button()); await settle();
+    expect(state()).toBe("idle"); expect(host.querySelector("h2")?.textContent).toBe("Live research not requested");
+    expect(calls(fetchMock)).toEqual([`GET ${LOOKUP}`, `GET ${LOOKUP}`]); // no job was asked for by 'Check again'
+    expect(button()?.textContent).toBe("Request live research for this scan");
+    await press(button()); await settle();
+    expect(calls(fetchMock)).toEqual([`GET ${LOOKUP}`, `GET ${LOOKUP}`, "POST /api/scan/research"]); // the lookup had said none: the deliberate press asks directly
+    expect(state()).toBe("queued");
+  });
+
+  it("'Check again' after the lookup's automatic retries ran out (network error) is a READ too: lookup now none -> 'not requested', no POST; the explicit button then asks exactly once", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockRejectedValue(new TypeError("Load failed")); vi.stubGlobal("fetch", fetchMock);
+    mount({ replay: true }); await advance(0);
+    for (const ms of RESEARCH_RETRY_DELAYS_MS) await advance(ms);
+    expect(state()).toBe("error"); expect(button()?.textContent).toBe("Check again");
+    const before = fetchMock.mock.calls.length;
+    expect(before).toBe(RESEARCH_RETRY_DELAYS_MS.length + 1);
+    expect(calls(fetchMock).every((c) => c === `GET ${LOOKUP}`)).toBe(true);
+    fetchMock.mockReset(); fetchMock.mockResolvedValueOnce(notFound()).mockResolvedValue(ok(job("queued"), 201));
+    await act(async () => { button()!.dispatchEvent(new MouseEvent("click", { bubbles: true })); await vi.advanceTimersByTimeAsync(0); });
+    expect(state()).toBe("idle");
+    expect(calls(fetchMock)).toEqual([`GET ${LOOKUP}`]); // one read, no POST
+    expect(button()?.textContent).toBe("Request live research for this scan");
+    await act(async () => { button()!.dispatchEvent(new MouseEvent("click", { bubbles: true })); await vi.advanceTimersByTimeAsync(0); });
+    expect(calls(fetchMock)).toEqual([`GET ${LOOKUP}`, "POST /api/scan/research"]);
+    expect(state()).toBe("queued");
+  });
 });
 
 describe("live research panel: following a job to its end (the completion path)", () => {

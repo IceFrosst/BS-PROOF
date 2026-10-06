@@ -395,6 +395,32 @@ describe("a pending FRESH intent never gets stuck, and a History view never star
     expect(server.jobsCreated).toBe(1);
   });
 
+  it("a restored 'saved' scan whose lookup FAILS: 'Check again' only READS (the lookup now says none -> 'not requested', no POST, no job); only the explicit button then asks, exactly once", async () => {
+    await firstVisit();
+    expect(JSON.parse(checkpoint()!).intent).toBe("saved");
+    server.job = null; // an operator removed it
+    server.fault = (c) => (c.url.startsWith("/api/scan/research?") ? jsonResponse({ status: "research_unavailable" }, 503) : undefined);
+    const el = await reload();
+    expect(state(el)).toBe("unavailable");
+    expect(server.posts).toHaveLength(1); // only the original
+    server.fault = null;
+    const lookups = server.lookups.length;
+    await click(buttonByText(scanPanel(el), /check again/i));
+    await advance(0);
+    expect(state(el)).toBe("idle");
+    expect(server.lookups.length).toBe(lookups + 1); // one read
+    expect(server.posts).toHaveLength(1); // 'Check again' started nothing
+    expect(server.job).toBeNull();
+    expect(server.jobsCreated).toBe(1);
+    await advance(60_000);
+    expect(server.posts).toHaveLength(1);
+    await click(buttonByText(scanPanel(el), /request live research for this scan/i));
+    await advance(0);
+    expect(server.posts).toHaveLength(2); // the deliberate press asked directly: exactly one more POST
+    expect(server.jobsCreated).toBe(2);
+    expect(state(el)).toBe("queued");
+  });
+
   it("'Scan another' clears the pointer: the next reload is the landing screen", async () => {
     await firstVisit();
     const el = await reload();

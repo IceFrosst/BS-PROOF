@@ -55,6 +55,8 @@ class Server {
   requests: string[] = [];
   jobGetFault: "none" | "abort" = "none";
   jobGetFaults = 0;
+  /** The next N lookups of a scan's job answer 503 `research_unavailable` (as before migration 003 is applied / the database is down). */
+  lookupFaults = 0;
   view(status: Status) {
     // A job that is still open was heard from just now (the browser's own clock decides "no update from the worker"), so a screenshot is not a stalled one.
     return { id: JOB_ID, scan_id: RUN_ID, status, prompt_version: "live-research-v0.5", target, created_at: T0, updated_at: status === "queued" || status === "running" ? new Date().toISOString() : T0, completed_at: status === "succeeded" || status === "failed" ? T0 : null, failure_code: status === "failed" ? "worker_failed" : null, result: status === "succeeded" ? result : null };
@@ -70,7 +72,10 @@ class Server {
     });
     await page.route("**/api/scan/history", (route) => route.fulfill(json({ status: "ok", runs: this.scanStored ? [{ id: RUN_ID, created_at: "2026-10-06T09:59:00Z", source: "photo", status: "ok", product_name: "Vitamin D3 2000 IU" }] : [], next_cursor: null })));
     await page.route(`**/api/scan/history/${RUN_ID}`, (route) => route.fulfill(this.scanStored ? json({ status: "ok", run_id: RUN_ID, analysis: VITAMIN_D }) : json({ status: "not_found" }, 404)));
-    await page.route(/\/api\/scan\/research\?scan_id=/, (route) => route.fulfill(this.job ? json({ status: "ok", job: this.view(this.job) }) : json({ status: "not_found" }, 404)));
+    await page.route(/\/api\/scan\/research\?scan_id=/, (route) => {
+      if (this.lookupFaults > 0) { this.lookupFaults -= 1; return route.fulfill(json({ status: "research_unavailable" }, 503)); }
+      return route.fulfill(this.job ? json({ status: "ok", job: this.view(this.job) }) : json({ status: "not_found" }, 404));
+    });
     await page.route("**/api/scan/research", (route) => {
       if (route.request().method() !== "POST") return route.continue();
       if (this.job) return route.fulfill(json({ status: "ok", created: false, job: this.view(this.job) }));
@@ -185,6 +190,26 @@ test.describe("reload and resume of the Scan tab and its live research (build wi
     expect(server.requests.filter((r) => r.startsWith("POST"))).toEqual([]);
     await page.waitForTimeout(3000);
     expect(server.jobsCreated).toBe(0);
+  });
+
+  test("'Check again' after a failed lookup of a History scan only READS: the lookup now says none -> 'not requested', NO POST; only the explicit button then asks, exactly once", async ({ page }) => {
+    const server = await signedInPage(page);
+    server.scanStored = true; // an old saved scan without research
+    server.lookupFaults = 1; // the first lookup: 503 research_unavailable
+    await signIn(page);
+    await tab(page, "History").click();
+    await page.getByRole("button", { name: /Vitamin D3 2000 IU/ }).click();
+    const panel = page.locator(".sw-panel").nth(1).locator(".sc-research");
+    await expect(panel).toHaveAttribute("data-research-state", "unavailable");
+    await panel.getByRole("button", { name: "Check again" }).click();
+    await expect(panel.getByRole("heading", { name: "Live research not requested" })).toBeVisible();
+    await page.waitForTimeout(1500);
+    expect(server.posts).toBe(0); // 'Check again' started nothing
+    expect(server.jobsCreated).toBe(0);
+    await panel.getByRole("button", { name: "Request live research for this scan" }).click();
+    await expect(panel).toHaveAttribute("data-research-state", "queued");
+    expect(server.posts).toBe(1); // the deliberate press: exactly one POST, one job
+    expect(server.jobsCreated).toBe(1);
   });
 
   test("a job that already exists is found when its scan is opened from History, and the card arrives by itself", async ({ page }) => {
