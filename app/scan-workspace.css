@@ -146,3 +146,31 @@
 @media (min-width: 560px) {
   .sc-research-dl div { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 12px; }
 }
+
+/* LIVE RESULT CARD (components/live-result-card.tsx). It reuses the approved ab-* card, tabs, warnings block and bar rows
+   (design-lab/ab/ab.css placed by scan-lab-result.css); this only fits them inside the research section: the outcome headline
+   carries no number tile, the section's own box/margins are not stacked on the card, and long model text and ids wrap. */
+/* A grid item of .la-result (display: grid) takes its content's min-content width unless told otherwise: the outcome tab strip is
+   nowrap, so without this the whole section grew wider than the phone and the card's right edge was clipped. */
+.scan-page .sc-research { min-width: 0; max-width: 100%; }
+.scan-page .sc-research-result { padding: 12px; }
+.scan-page .sc-research .sc-live-card { margin: 12px 0; min-width: 0; }
+.scan-page .sc-research .sc-live-card p { margin: 0; }
+.scan-page .sc-research .sc-live-card h3 { margin: 4px 0 6px; font-size: 22px; font-weight: 800; line-height: 1.15; color: var(--ab-ink); }
+.scan-page .sc-research .sc-live-card .ab-listhead h3 { margin: 0; font-size: 17px; }
+.scan-lab-result .sc-live-card .ab-headline.sc-live-headline { grid-template-columns: minmax(0, 1fr); }
+.sc-live-card .ab-headline > div, .sc-live-card .ab-bar-detail, .sc-live-card .ab-warning-list { min-width: 0; overflow-wrap: anywhere; }
+.sc-live-card .ab-tabs button[role="tab"][aria-selected="true"] small { color: #dfe8d6; }
+.sc-live-card .ab-tabs { margin-top: 8px; }
+.sc-live-card .ab-tabs button { gap: 6px; }
+.sc-live-card [role="tabpanel"]:focus-visible, .sc-live-card .ab-tabs button:focus-visible, .sc-live-card .ab-bars button:focus-visible, .sc-live-card .ab-warnings summary:focus-visible, .sc-live-card .ab-warning-list summary:focus-visible { outline: 3px solid #bc8344; outline-offset: 2px; }
+.sc-live-card .ab-warning-list ul, .sc-live-sources ul { margin: 4px 0 0; padding-left: 18px; display: grid; gap: 4px; }
+.sc-live-card .ab-warning-list details > summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-weight: 650; overflow-wrap: anywhere; }
+.sc-live-src-id { font-weight: 650; overflow-wrap: anywhere; }
+.sc-live-src-note { color: var(--ab-muted); }
+.sc-live-card p[lang="en"], .sc-live-card h3[lang="en"] { padding-left: 8px; border-left: 2px solid var(--ab-line); }
+.sc-live-card .ab-tabs [lang="en"], .sc-live-card .ab-bar-name [lang="en"], .sc-live-card .ab-pop [lang="en"] { border-left: 0; padding-left: 0; }
+.sc-live-more { margin-top: 12px; }
+.sc-live-card .ab-bars.outcomes .sc-live-sentence { color: var(--ab-ink); font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
+.sc-live-card .sc-live-stamp-line { display: block; margin-top: 2px; }
+.sc-live-card .sc-live-stamp-line[lang="en"] { padding-left: 0; border-left: 0; font-weight: 600; color: var(--ab-ink); overflow-wrap: anywhere; }

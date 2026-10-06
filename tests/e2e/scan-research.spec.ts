@@ -49,7 +49,7 @@ const job = (status: "queued" | "running" | "succeeded", updated = T0) => ({ id:
 /* The scan that used to say "No evidence run exists": vitamin D3 50 mcg printed, form NOT stated, daily regimen NOT stated. */
 const VITAMIN_D = { ...RICH, label: { ...RICH.label, ingredient_vocab_id: "vitamin_d", ingredient_label_text: "Vitamin D3", form_vocab_id: null, compound_dose_mg: 0.05, printed_elemental_dose_mg: null, dose_unit_as_printed: "mcg", servings_per_day: null, is_multi_ingredient: false, other_actives: [], actives: [], product_name: "Vitamin D3 2000 IU", brand: "Acme" } };
 const stored = { ...VITAMIN_D, run_id: RUN_ID, persistence: { status: "stored", run_id: RUN_ID, image: { status: "stored" } } };
-const LEGACY = /No evidence run|evidence run exists|That form has not been run|not a low score|Is your dose the dose that worked|Model knowledge|MLM|Funding & independence|Publication bias|Nordic Labs/i;
+const LEGACY = /No evidence run|evidence run exists|That form has not been run|not a low score|Is your dose the dose that worked|Model knowledge|MLM|Nordic Labs/i; // "Funding & independence" / "Publication bias" are live, outcome-scoped warnings now (tests/e2e/scan-result-card.spec.ts)
 
 const tab = (page: Page, name: string) => page.getByRole("tab", { name, exact: true });
 async function shot(page: Page, name: string, locator = page.locator(".sc-research")) {
@@ -189,14 +189,17 @@ test.describe("live research screen with mocked Google sign-in (build with sign-
     await expect(panel.locator('[aria-current="step"]')).toHaveText("Completed");
     const audit = panel.getByTestId("research-audit");
     await expect(audit).toContainText(SENTENCE);
-    await expect(audit).toContainText("requests that returned content: 3");
-    await expect(audit).toContainText("page summaries (written by Claude Haiku): 1");
-    await expect(audit).toContainText("refusals: 4");
-    await expect(audit).toContainText("paper not opened");
-    await expect(audit).toContainText("This audit has no score and does not change any score.");
+    // the established card comes first; source access, model and timestamps are collapsed secondary detail BELOW it
+    await expect(panel.getByRole("tab", { name: "Outcomes", exact: true })).toHaveAttribute("aria-selected", "true");
+    const more = panel.getByTestId("research-more");
+    await expect(more).toContainText("requests that returned content: 3");
+    await expect(more).toContainText("page summaries (written by Claude Haiku): 1");
+    await expect(more).toContainText("refusals: 4");
+    await expect(more).toContainText("paper not opened");
+    await expect(panel).toContainText("This audit has no score and does not change any score.");
     await expect(panel).toHaveAttribute("data-research-phase", "result");
     await expect(panel).not.toContainText(/\d+\s*\/\s*100|\bETA\b/);
-    await expect(panel.locator("progress, meter, [role=progressbar], svg, canvas")).toHaveCount(0); // the loading screen and its bar are gone
+    await expect(panel.locator("progress, meter, [role=progressbar], canvas")).toHaveCount(0); // the loading screen and its bar are gone
     await expect(page.locator(".scan-lab-result")).not.toContainText(LEGACY);
     await expect(panel.getByRole("status")).toBeFocused(); // focus follows the switch to the result
     expect(gets.every((g) => g.auth === "Bearer e2e-token")).toBe(true);
@@ -211,7 +214,7 @@ test.describe("live research screen with mocked Google sign-in (build with sign-
     expect(axe.violations).toEqual([]);
     await expect(page.locator(".sc-topbar")).toHaveCount(1);
     await expect(page.locator(".sw-tabs")).toHaveCount(1);
-    await expect(panel.getByRole("tablist")).toHaveCount(0);
+    await expect(panel.getByRole("tablist")).toHaveCount(1); // the result card's own Outcomes / outcome tabs
   });
 
   test("Lithuanian: every control is Lithuanian and the model's own text stays English, tagged and byte-identical", async ({ page }) => {
@@ -235,7 +238,8 @@ test.describe("live research screen with mocked Google sign-in (build with sign-
     const narrative = panel.locator('[lang="en"]', { hasText: SENTENCE });
     await expect(narrative.first()).toBeVisible();
     await expect(narrative.first()).toContainText(SENTENCE);
-    await expect(panel.getByRole("button")).toHaveCount(0);
+    await expect(panel.locator("button.sc-research-btn")).toHaveCount(0);
+    await expect(panel.getByRole("tab").first()).toHaveText("Rezultatai");
     await noHorizontalScroll(page);
     await shot(page, `configured-lt-${test.info().project.name}`, panel.getByTestId("research-audit"));
     const axe = await new AxeBuilder({ page }).include(".sc-research").analyze();

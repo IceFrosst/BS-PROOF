@@ -58,6 +58,10 @@ const advance = (ms: number) => act(async () => { await vi.advanceTimersByTimeAs
 const text = () => host.textContent ?? "";
 const status = () => host.querySelector('[role="status"]')?.textContent ?? "";
 const state = () => host.querySelector("section")?.getAttribute("data-research-state");
+/* The result is the established card: open an outcome's tab, then read one row at a time. */
+const press = (el: Element | null | undefined) => act(() => { (el as HTMLElement).click(); });
+const openOutcome = () => press(host.querySelectorAll('[role="tab"]')[1]);
+const readRow = (id: string) => { press(host.querySelector(`[data-row-id="${id}"] > button`)); return host.querySelector(`[data-testid="research-axis-${id}"]`)?.textContent ?? ""; };
 const button = () => host.querySelector("button");
 const calls = (fetchMock: ReturnType<typeof vi.fn>) => fetchMock.mock.calls.map((c) => `${(c[1] as RequestInit)?.method ?? "GET"} ${String(c[0])}`);
 
@@ -134,7 +138,7 @@ describe("live research panel: real progress only", () => {
     vi.stubGlobal("fetch", fetchMock);
     const seen: string[] = [];
     // the panel's own text: the model's study notes (which legitimately print "95% CI") are not the panel's progress claims
-    const own = () => { const clone = host.cloneNode(true) as HTMLElement; clone.querySelectorAll("article").forEach((n) => n.remove()); return clone.textContent ?? ""; };
+    const own = () => { const clone = host.cloneNode(true) as HTMLElement; clone.querySelectorAll('[data-testid="research-audit"]').forEach((n) => n.remove()); return clone.textContent ?? ""; };
     mount(); await advance(0); seen.push(own());
     expect(text()).toContain("The bar is indeterminate on purpose: the research worker reports no percentage");
     // the bar exists while queued, is named, and carries NO value: ARIA's indeterminate progressbar
@@ -196,7 +200,7 @@ describe("live research panel: experimental and ungraded", () => {
     mount(props); await settle();
   }
 
-  it("draws the audit with no score, bar or verdict, and says it is experimental, ungraded and changes no score", async () => {
+  it("draws the audit as the established result card, says it is experimental, ungraded and changes no score, and carries no score, headline or progress bar", async () => {
     await showResult();
     expect(host.querySelector('[data-testid="research-audit"]')).not.toBeNull();
     expect(host.querySelector(".sc-research-tags")?.textContent).toBe("ExperimentalUngraded");
@@ -204,9 +208,11 @@ describe("live research panel: experimental and ungraded", () => {
     expect(text()).toContain("This audit has no score and does not change any score.");
     expect(text()).toContain("Changes a score: no");
     expect(text()).toContain("Evidence status: experimental, not validated");
-    expect(text()).not.toMatch(/\d+(\.\d+)?\s*\/\s*(100|4)\b/);
-    expect(host.querySelector('svg, progress, meter, [role="progressbar"], [role="img"], canvas')).toBeNull();
-    expect(text()).not.toMatch(/not scored|Small benefit|Moderate benefit|\bStrong\b|certainty|average|mean score|\bGeneral\b/i);
+    expect(host.querySelector('progress, meter, [role="progressbar"], canvas, .ab-number, .ab-general')).toBeNull();
+    openOutcome();
+    expect(host.querySelectorAll('[data-testid="research-axes"] > li')).toHaveLength(4);
+    const chrome = Array.from(host.querySelectorAll(".ab-bar-word, .ab-bar-pts, .ab-tabs")).map((n) => n.textContent).join(" | ");
+    expect(chrome).not.toMatch(/\d+(\.\d+)?\s*\/\s*(100|3)\b|not scored|\bStrong\b|certainty|average|mean score|\bGeneral\b/i);
   });
 
   it("shows source access as returned content versus no content, and says page summaries are Haiku-written, not papers", async () => {
@@ -238,15 +244,25 @@ describe("live research panel: experimental and ungraded", () => {
 
   it("shows the model's text verbatim: every number, unit, quotation, id, citation and hedge survives untouched", async () => {
     await showResult();
-    for (const s of [SENTENCE, STUDY, DOUBT, RANGE]) expect(text()).toContain(s);
-    expect(text()).toContain("Model’s statement: " + SENTENCE);
+    expect(text()).toContain(SENTENCE); // the Outcomes list carries the research's sentence
+    openOutcome();
+    expect(text()).toContain(SENTENCE);
+    const effect = readRow("effect");
+    for (const s of [STUDY, DOUBT]) expect(effect).toContain(s);
+    expect(effect).toContain("Strongest study (model’s wording) " + STUDY);
+    expect(effect).toContain("PMID:123456");
+    expect(readRow("dose")).toContain(RANGE);
   });
 
   it("does not add a numeric bar or a blended number for a result, and leaves the retained audit alone (no import of its scorer)", async () => {
     await showResult();
-    const panel = host.querySelector(".sc-research-audit")!;
-    expect(panel.querySelectorAll("article")).toHaveLength(1); // one outcome in, one outcome out: no "overall"
+    const panel = host.querySelector('[data-testid="research-audit"]')!;
+    expect(panel.querySelectorAll('[data-testid="research-outcome-list"] > li')).toHaveLength(1); // one outcome in, one outcome out: no "overall"
+    expect(panel.querySelectorAll('[role="tab"]')).toHaveLength(2); // Outcomes + that one outcome
     expect(panel.textContent).not.toMatch(/overall|combined|blend score|weighted/i);
+    openOutcome();
+    // this partial audit carries no scan form/dose facts match numbers: every bar is unfilled
+    expect(panel.querySelectorAll(".ab-bar-track i")).toHaveLength(0);
   });
 });
 
@@ -459,10 +475,13 @@ describe("live research panel: Lithuanian", () => {
     for (const s of english(RESEARCH_COPY.en)) expect(controls, s).not.toMatch(word(s));
     for (const s of [lt.title, lt.tagExperimental, lt.tagUngraded, lt.succeeded, lt.stages.queued, lt.stages.completed, lt.access, lt.haikuNote, lt.notAccessedNote, lt.narrativeNote, lt.ownWordsNote, lt.factLabels.servingsPerDay.length ? lt.missingLead : "", lt.missingHow, lt.notAffectScore, `${lt.affectsScore}: ${lt.no}`, `${lt.summaryLabels.requests}: 3`, `${lt.summaryLabels.walls}: 1`, lt.knownLimitations["ID matching does not verify study numbers or clinical validity."], lt.accessNone, lt.inventoryItem]) expect(text()).toContain(s);
     // the narrative is the original English, byte for byte, in an element tagged lang="en"
-    for (const s of [SENTENCE, STUDY, DOUBT, RANGE]) {
-      const holder = Array.from(host.querySelectorAll('[lang="en"]')).find((n) => n.textContent?.includes(s));
-      expect(holder, s).toBeTruthy();
-    }
+    const tagged = (s: string) => Array.from(host.querySelectorAll('[lang="en"]')).find((n) => n.textContent?.includes(s));
+    expect(tagged(SENTENCE), SENTENCE).toBeTruthy();
+    press(host.querySelectorAll('[role="tab"]')[1]);
+    readRow("effect");
+    for (const s of [STUDY, DOUBT]) expect(tagged(s), s).toBeTruthy();
+    readRow("dose");
+    expect(tagged(RANGE), RANGE).toBeTruthy();
     expect(host.querySelector("[role=note]")?.textContent).toBe(lt.narrativeNote);
     // the English words the model wrote are not mistaken for controls; the LT page has no EN yes/no/none
     expect(controls).not.toMatch(/: (yes|no)\b/);
@@ -515,7 +534,10 @@ describe("live research panel: Lithuanian", () => {
     mount({ lang: "en" }); await settle(); expect(status()).toBe("Research audit returned.");
     mount({ lang: "lt" }); await settle(); expect(status()).toBe(RESEARCH_COPY.lt.succeeded);
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    for (const s of [SENTENCE, STUDY, DOUBT]) expect(text()).toContain(s);
+    expect(text()).toContain(SENTENCE);
+    openOutcome();
+    const effect = readRow("effect");
+    for (const s of [STUDY, DOUBT]) expect(effect).toContain(s);
   });
 });
 

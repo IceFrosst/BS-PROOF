@@ -13,8 +13,16 @@
  *                  no percentage, no ETA, no count of studies found. The words say
  *                  what is really happening (the job's own status, its real
  *                  timestamps, "no update from the worker" when its lease lapsed).
- *   result         the completed audit, and ONLY that. EXPERIMENTAL and UNGRADED: no
- *                  score, bar, arc or verdict, never run through the retained rubric.
+ *   result         the completed audit, and ONLY that, as the established result card
+ *                  (components/live-result-card.tsx: Outcomes tab, one tab per outcome,
+ *                  warnings block, four expandable rows Effect / Evidence / Form / Dose;
+ *                  lib/scan-research/result-card.ts decides each row's state and whether
+ *                  its bar may be filled). EXPERIMENTAL and UNGRADED: no score, headline
+ *                  or general number, never run through the retained rubric; a bar is
+ *                  filled only from the audit's own Form / Dose match number when the
+ *                  scan facts it depends on are known, otherwise unfilled with a reason.
+ *                  The model, source-access inventory and timestamps are collapsed
+ *                  secondary detail BELOW the card, not a wall before it.
  *   not-requested  a saved scan opened from History that has no job this page knows:
  *                  "Live research not requested" and a deliberate button. Opening a
  *                  scan never asks for research by itself.
@@ -33,10 +41,13 @@
  * way to the screen. Every control is Lithuanian. NOTHING RAW: a failing server's
  * text, stack or secret never reaches the screen, only a short allow-listed code.
  */
-import { useId, type ReactNode } from "react";
+import { useId, useMemo, type ReactNode } from "react";
 
+import { LiveResultCard } from "@/components/live-result-card";
+import { RESEARCH_CARD_COPY } from "@/lib/i18n/copy/research-card";
 import { RESEARCH_COPY, type ResearchCopy, type ResearchLanguage } from "@/lib/i18n/copy/research";
 import { formatUtc, missingFacts, type LiveResearchJob, type ResearchFacts, type ResearchResultV2 } from "@/lib/scan-research/client";
+import { buildLiveResultCard } from "@/lib/scan-research/result-card";
 import type { LiveResearch, ResearchState } from "@/lib/scan-research/use-live-research";
 
 function statusLine(c: ResearchCopy, state: ResearchState, job: LiveResearchJob | null, stalled: boolean): string {
@@ -98,13 +109,11 @@ export function ScanResearchScreen({ research, lang, head, context, onRescan }: 
   }
 
   if (phase === "result" && result) {
-    return <section className="sc-research" aria-labelledby={headingId} data-research-state={state} data-research-phase="result">
+    return <section className="sc-research sc-research-result" aria-labelledby={headingId} data-research-state={state} data-research-phase="result">
       <h2 id={headingId}>{c.title}</h2>
       {tags}
       {status}
-      {job ? <Progress c={c} job={job} /> : null}
-      {job?.facts ? <Facts c={c} facts={job.facts} /> : null}
-      <Audit c={c} lang={lang} result={result} />
+      <ResultView c={c} lang={lang} result={result} job={job} />
     </section>;
   }
 
@@ -197,43 +206,56 @@ function Facts({ c, facts }: { c: ResearchCopy; facts: ResearchFacts }) {
 const COUNTED = ["requests", "search_snippets", "fetch_summaries", "original_documents"] as const;
 const UNCOUNTED = ["errors", "walls", "refusals"] as const;
 
-function Audit({ c, lang, result }: { c: ResearchCopy; lang: ResearchLanguage; result: ResearchResultV2 }) {
+/**
+ * The completed live audit as the established result card: Outcomes tab, one tab per
+ * outcome, a warnings block, and the four horizontal rows (Effect, Evidence, Form,
+ * Dose). The card comes first. Everything else (what was read from the label, the
+ * model, the source-access inventory, the timestamps) is secondary detail below it,
+ * collapsed. The audit's own text is shown verbatim and, in Lithuanian, tagged English.
+ */
+function ResultView({ c, lang, result, job }: { c: ResearchCopy; lang: ResearchLanguage; result: ResearchResultV2; job: LiveResearchJob | null }) {
+  const facts = job?.facts ?? null;
+  const rawResult = job?.result ?? null;
+  const card = useMemo(() => buildLiveResultCard(result, rawResult, facts), [result, rawResult, facts]);
+  return <>
+    <p className="sc-research-note">{c.ungradedNote}</p>
+    {lang === "lt" ? <p className="sc-research-note" role="note">{c.narrativeNote}</p> : null}
+    <p className="sc-research-dim">{c.ownWordsNote}</p>
+    <LiveResultCard key={job?.id ?? "result"} card={card} facts={facts} lang={lang} />
+    <AuditMore c={c} lang={lang} result={result} job={job} card={card} facts={facts} />
+  </>;
+}
+
+function AuditMore({ c, lang, result, job, card, facts }: { c: ResearchCopy; lang: ResearchLanguage; result: ResearchResultV2; job: LiveResearchJob | null; card: ReturnType<typeof buildLiveResultCard>; facts: ResearchFacts | null }) {
   const { audit, provenance, source_access: access } = result;
-  // Model-written text is rendered verbatim -- never through a translator -- and tagged English in the LT view.
+  const k = RESEARCH_CARD_COPY[lang];
   const en = lang === "lt" ? "en" : undefined;
   const status = c.evidenceStatusValues[provenance.evidence_status] ?? provenance.evidence_status;
   const limit = (text: string) => c.knownLimitations[text] ?? text;
-  return <div className="sc-research-audit" data-testid="research-audit">
-    <p className="sc-research-note">{c.ungradedNote}</p>
-    <p lang={en}>{audit.product} · {audit.ingredient} · {audit.form} · {audit.daily_dose}</p>
+  return <details className="sc-research-details sc-live-more" data-testid="research-more">
+    <summary>{k.moreTitle}</summary>
+    <p className="sc-research-dim">{k.moreLead}</p>
+    {facts ? <Facts c={c} facts={facts} /> : null}
+    <p lang={en}><span lang={lang}>{k.moreLabels.product}: </span>{audit.product} · {audit.ingredient} · {audit.form} · {audit.daily_dose}</p>
     {audit.dose_note ? <p lang={en}>{audit.dose_note}</p> : null}
+    {card.audit.note !== null ? <p lang={en}><span lang={lang}>{k.moreLabels.note}: </span>{card.audit.note}</p> : null}
+    {card.audit.selfConfidence !== null ? <p lang={en}><span lang={lang}>{k.moreLabels.selfConfidence}: </span>{card.audit.selfConfidence}</p> : null}
+    {card.audit.confidenceNote !== null ? <p lang={en}><span lang={lang}>{k.moreLabels.confidenceNote}: </span>{card.audit.confidenceNote}</p> : null}
     <p>{c.model}: {audit.model} · {c.prompt}: {audit.prompt}</p>
     <p>{c.provenance}: {c.evidenceStatus}: {status} · {c.runner}: {provenance.runner} · {c.affectsScore}: {provenance.affects_score ? c.yes : c.no}</p>
     <p>{c.notAffectScore}</p>
+    {job ? <Progress c={c} job={job} /> : null}
 
     <h3>{c.access}</h3>
     <p className="sc-research-group">{c.accessContent}</p>
-    <ul className="sc-research-counts">{COUNTED.map((k) => <li key={k}>{c.summaryLabels[k]}: {access.summary[k]}</li>)}</ul>
+    <ul className="sc-research-counts">{COUNTED.map((key) => <li key={key}>{c.summaryLabels[key]}: {access.summary[key]}</li>)}</ul>
     <p className="sc-research-dim">{c.haikuNote}</p>
     <p className="sc-research-group">{c.accessNone}</p>
-    <ul className="sc-research-counts">{UNCOUNTED.map((k) => <li key={k}>{c.summaryLabels[k]}: {access.summary[k]}</li>)}</ul>
+    <ul className="sc-research-counts">{UNCOUNTED.map((key) => <li key={key}>{c.summaryLabels[key]}: {access.summary[key]}</li>)}</ul>
     <p className="sc-research-dim">{c.notAccessedNote}</p>
     <p>{c.inventory}: {access.inventory.map((item) => item.id).join(" · ") || c.none} — {c.inventoryItem}</p>
     <p className="sc-research-dim">{c.inventoryNote}</p>
     {access.limitations.length ? <p>{c.sourceLimitations}: {access.limitations.map(limit).join("; ")}</p> : null}
     {audit.could_not_access.length ? <p lang={en}><span lang={lang}>{c.couldNotAccess}: </span>{audit.could_not_access.join("; ")}</p> : null}
-
-    {lang === "lt" ? <p className="sc-research-note" role="note">{c.narrativeNote}</p> : null}
-    <p className="sc-research-dim">{c.ownWordsNote}</p>
-    {audit.outcomes.map((o, i) => <article key={`${o.name}-${i}`} className="sc-research-outcome">
-      <h3 lang={en}>{o.name}</h3>
-      {o.population ? <p lang={en}><span lang={lang}>{c.population}: </span>{o.population}</p> : null}
-      <p lang={en}><span lang={lang}>{c.statement}: </span>{o.sentence}</p>
-      <p lang={en}><span lang={lang}>{c.basis}: </span>{o.strongest_study}</p>
-      <p lang={en}><span lang={lang}>{c.doubt}: </span>{o.strongest_doubt}</p>
-      {o.study_that_would_move_this ? <p lang={en}><span lang={lang}>{c.wouldMove}: </span>{o.study_that_would_move_this}</p> : null}
-      {o.effective_daily_range ? <p lang={en}><span lang={lang}>{c.dailyRange}: </span>{o.effective_daily_range}</p> : null}
-      <p>{c.outcomeIds}: {o.inventory.map((item) => item.id).join(" · ") || c.none}</p>
-    </article>)}
-  </div>;
+  </details>;
 }

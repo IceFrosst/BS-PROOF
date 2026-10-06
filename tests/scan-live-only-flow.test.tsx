@@ -21,7 +21,8 @@ import { resetTranslationsForTests } from "@/lib/i18n/translate-client";
 import { forgetResearchJobs, noteResearchOwner } from "@/lib/scan-research/client";
 
 import { USER_A, USER_B, fakeAuth, installFakeGoogle, removeFakeGoogle, sessionFor } from "./helpers/fake-supabase-browser";
-import { JOB_ID, RESULT, SENTENCE, STUDY, researchJob } from "./helpers/live-research-fixtures";
+import { JOB_ID, RESULT, SENTENCE, STUDY, TARGET, researchJob } from "./helpers/live-research-fixtures";
+import { audit as mockAudit, blendAudit, liveResult, outcome as mockOutcome, SYN_SENTENCE, UNKNOWN_ROW } from "./helpers/live-result-card-fixtures";
 import { installLocalStorage } from "./helpers/local-storage";
 import { Harness, STORED, buttonByText, click, jsonResponse, record, stageAndScan, stagePhoto, type RecordedCall } from "./helpers/scan-ui";
 
@@ -42,8 +43,13 @@ function vitaminD(overrides: Record<string, unknown> = {}) {
   scan.label = { ...scan.label, ingredient_vocab_id: "vitamin_d", ingredient_label_text: "Vitamin D3", form_vocab_id: null, compound_dose_mg: 0.05, printed_elemental_dose_mg: null, dose_unit_as_printed: "mcg", servings_per_day: null, is_multi_ingredient: false, other_actives: [], actives: [], product_name: "Vitamin D3 2000 IU", brand: "Acme" };
   return { ...scan, run_id: RUN, persistence: { ...STORED, run_id: RUN }, ...overrides };
 }
-const LEGACY = /No evidence run|evidence run exists|That form has not been run|not a low score|Is your dose the dose that worked|Model knowledge|MLM|Funding & independence|Publication bias|Evidence orientation|Nordic Labs/i;
-const LEGACY_LT = /įrodymų paleidimo nėra|Ši forma dar nebuvo tirta|Bendras balas|Finansavimas ir nepriklausomumas|Publikavimo šališkumas/;
+/* "Funding & independence" / "Publication bias" are NOT here: the live result card shows them as warnings of an
+   outcome of the LIVE audit, and only when that audit flagged them (pinned below and in tests/live-result-card*.test.*).
+   The fixture audit here flags neither, so they still must not appear. */
+const LEGACY = /No evidence run|evidence run exists|That form has not been run|not a low score|Is your dose the dose that worked|Model knowledge|MLM|Evidence orientation|Nordic Labs/i;
+const NO_CACHED_WARNINGS = /Funding & independence|Publication bias|multi-level|Retained audit/i;
+const LEGACY_LT = /įrodymų paleidimo nėra|Ši forma dar nebuvo tirta|Bendras balas/;
+const NO_CACHED_WARNINGS_LT = /Finansavimas ir nepriklausomumas|Publikavimo šališkumas/;
 
 type Answer = Response | Promise<Response> | undefined;
 interface Routes {
@@ -189,12 +195,18 @@ describe("fresh scan: label read -> saved scan -> live research loading screen -
     expect(text(scanPanel(el).querySelector(".sc-research-tags"))).toBe("ExperimentalUngraded");
     // the model's own words, character for character, and no score of any kind
     expect(text(scanPanel(el))).toContain(SENTENCE);
-    expect(text(scanPanel(el))).toContain(STUDY);
-    expect(text(scanPanel(el))).toContain("PMID:123456");
     expect(text(scanPanel(el))).toContain("Changes a score: no");
     expect(text(scanPanel(el))).not.toMatch(LEGACY);
+    expect(text(scanPanel(el))).not.toMatch(NO_CACHED_WARNINGS);
     expect(text(scanPanel(el))).not.toMatch(/\d+(\.\d+)?\s*\/\s*(100|4|3)\b/);
-    expect(scanPanel(el).querySelector("svg, meter, progress, .ab-general-score, .ab-bar-pts")).toBeNull();
+    expect(scanPanel(el).querySelector("meter, progress, .ab-general-score, .ab-number")).toBeNull();
+    // the established card: Outcomes tab selected, then the outcome's own tab with its four rows; the study note is in the Effect row
+    expect(scanPanel(el).querySelector('[role="tab"][aria-selected="true"]')?.textContent).toBe("Outcomes");
+    await click(scanPanel(el).querySelectorAll('[role="tab"]')[1]);
+    expect(Array.from(scanPanel(el).querySelectorAll('[data-testid="research-axes"] > li')).map((li) => li.getAttribute("data-row-id"))).toEqual(["effect", "evidence", "form", "dose"]);
+    await click(scanPanel(el).querySelector('[data-row-id="effect"] > button'));
+    expect(text(scanPanel(el))).toContain(STUDY);
+    expect(text(scanPanel(el))).toContain("PMID:123456");
     // focus is handed to the new state, not left on a removed screen
     expect(document.activeElement?.classList.contains("sc-research-status")).toBe(true);
 
@@ -538,7 +550,110 @@ describe("History: a saved scan never researches by itself", () => {
     expect(historyPanel(el).querySelectorAll('[data-testid="research-audit"]')).toHaveLength(1);
   });
 
+  it("History replay of an already-known finished job shows the same card with NO new POST and no model rerun", async () => {
+    const result = liveResult(mockAudit([mockOutcome()]));
+    const known = { ...TARGET, form: { vocab_id: "magnesium_bisglycinate", label: "Magnesium bisglycinate" }, dose: { ...TARGET.dose, compound_per_serving_mg: 1000, printed_elemental_per_serving_mg: 200, unit_as_printed: "mg" }, servings_per_day: 2 };
+    const fill = (li: HTMLElement) => (li.querySelector(".ab-bar-track i") as HTMLElement | null)?.style.width ?? null;
+    const { el, calls } = await openSaved(scripted(ok(researchJob(RUN, "succeeded", { target: known, result }), 200)));
+    await click(buttonByText(historyPanel(el), /request live research for this scan/i));
+    await advance(0);
+    expect(posts(calls)).toHaveLength(1); // the one deliberate press; the server's idempotency answers with the existing job
+    expect(historyPanel(el).querySelectorAll('[data-testid="research-audit"]')).toHaveLength(1);
+    await click(Array.from(historyPanel(el).querySelectorAll<HTMLElement>('[role="tab"]')).find((t) => t.textContent === "Sleep quality"));
+    expect(Array.from(historyPanel(el).querySelectorAll<HTMLElement>('[data-testid="research-axes"] > li')).map((li) => fill(li))).toEqual([null, null, "75%", "50%"]);
+    // opening it again looks the job up (GET); it never asks again
+    await click(historyPanel(el).querySelector('[aria-label="Back to history"]'));
+    await advance(0);
+    await click(el.querySelector("button.sw-run"));
+    await advance(0);
+    expect(posts(calls)).toHaveLength(1);
+    expect(historyPanel(el).querySelectorAll('[data-testid="research-audit"]')).toHaveLength(1);
+  });
+
   const token = (calls: RecordedCall[]) => calls.find((c) => c.url.startsWith("/api/scan/history/"))?.headers.Authorization;
+});
+
+describe("the completed live audit is the ESTABLISHED result card: outcome tabs, a warnings block, four expandable rows (mocked audits, no model)", () => {
+  const known = { ...TARGET, form: { vocab_id: "magnesium_bisglycinate", label: "Magnesium bisglycinate" }, dose: { ...TARGET.dose, compound_per_serving_mg: 1000, printed_elemental_per_serving_mg: 200, unit_as_printed: "mg" }, servings_per_day: 2 };
+  const rows = (el: HTMLElement) => Array.from(scanPanel(el).querySelectorAll<HTMLElement>('[data-testid="research-axes"] > li'));
+  const fill = (li: HTMLElement) => (li.querySelector(".ab-bar-track i") as HTMLElement | null)?.style.width ?? null;
+
+  it("known scan facts: after the one POST the finished audit is a card whose Form and Dose bars are filled from the audit's own numbers; Effect and Evidence are not; warnings are the selected outcome's own", async () => {
+    const result = liveResult(mockAudit([mockOutcome(), UNKNOWN_ROW()]));
+    const calls = stubApi({ scan: () => jsonResponse(vitaminD()), research: scripted(ok(researchJob(RUN, "queued", { target: known }), 201), ok(researchJob(RUN, "succeeded", { target: known, result }))) });
+    const el = await mount();
+    await advance(0);
+    await stageAndScan(el);
+    await advance(0);
+    expect(stage(el)).toBe("loading");
+    expect(scanPanel(el).querySelector('[data-testid="research-audit"]')).toBeNull(); // no finished result before the backend job succeeded
+    await advance(2500);
+    expect(stage(el)).toBe("result");
+    expect(scanPanel(el).querySelectorAll('[data-testid="research-audit"]')).toHaveLength(1);
+    expect(text(scanPanel(el).querySelector('[role="tab"][aria-selected="true"]'))).toBe("Outcomes");
+    expect(text(scanPanel(el))).toContain(SYN_SENTENCE);
+    await click(Array.from(scanPanel(el).querySelectorAll<HTMLElement>('[role="tab"]')).find((t) => t.textContent === "Sleep quality"));
+    expect(rows(el).map((li) => li.getAttribute("data-row-id"))).toEqual(["effect", "evidence", "form", "dose"]);
+    expect(rows(el).map((li) => fill(li))).toEqual([null, null, "75%", "50%"]);
+    expect(rows(el).map((li) => li.getAttribute("data-axis-state"))).toEqual(["data", "data", "filled", "filled"]);
+    const block = scanPanel(el).querySelector('[data-testid="research-warnings"]')!;
+    expect(block.getAttribute("data-warning-count")).toBe("3"); // methodology + funding + publication; scan facts are all known
+    expect(Array.from(block.querySelectorAll("[data-warning]")).map((n) => n.getAttribute("data-warning"))).toEqual(["methodology", "funding", "publication"]);
+    await click(Array.from(scanPanel(el).querySelectorAll<HTMLElement>('[role="tab"]')).find((t) => t.textContent === "Muscle cramps"));
+    expect(rows(el).map((li) => fill(li))).toEqual([null, null, null, null]);
+    expect(Array.from(scanPanel(el).querySelectorAll("[data-warning]")).map((n) => n.getAttribute("data-warning"))).toEqual(["no_human_controlled_trial"]);
+    expect(text(scanPanel(el))).not.toMatch(LEGACY);
+    // one request ever, and nothing re-run to render the card
+    await advance(60_000);
+    expect(posts(calls)).toHaveLength(1);
+    expect(researchCalls(calls)).toHaveLength(2);
+  });
+
+  it("the facts the research was given decide the bars: this vitamin D read has no form and no servings, so Form and Dose stay unfilled with named reasons and product warnings", async () => {
+    const result = liveResult(mockAudit([mockOutcome()]));
+    stubApi({ scan: () => jsonResponse(vitaminD()), research: scripted(ok(researchJob(RUN, "succeeded", { result }), 201)) });
+    const el = await mount();
+    await advance(0);
+    await stageAndScan(el);
+    await advance(0);
+    await click(Array.from(scanPanel(el).querySelectorAll<HTMLElement>('[role="tab"]')).find((t) => t.textContent === "Sleep quality"));
+    expect(rows(el).map((li) => fill(li))).toEqual([null, null, null, null]);
+    expect(rows(el).map((li) => li.getAttribute("data-axis-reason"))).toEqual(["size_not_graded", "snippet_only", "form_not_stated", "servings_not_stated"]);
+    const ids = Array.from(scanPanel(el).querySelectorAll("[data-warning]")).map((n) => n.getAttribute("data-warning"));
+    expect(ids).toEqual(["servings_not_stated", "form_not_stated", "methodology", "funding", "publication"]);
+    expect(text(scanPanel(el).querySelector('[data-testid="research-audit"]'))).not.toMatch(/\b0\/4|\b1\/4|one serving a day (is|was) (taken|assumed)/i); // no default serving, no quarter, no zero
+  });
+
+  it("a combination product (label says several actives): the exact-combination row and the CONTEXT ONLY row are shown, none is graded, and no blend efficacy is read from a component", async () => {
+    const result = liveResult(blendAudit());
+    stubApi({ scan: () => jsonResponse(vitaminD()), research: scripted(ok(researchJob(RUN, "succeeded", { target: { ...known, is_multi_ingredient: true }, result }), 201)) });
+    const el = await mount();
+    await advance(0);
+    await stageAndScan(el);
+    await advance(0);
+    const tabs = Array.from(scanPanel(el).querySelectorAll<HTMLElement>('[role="tab"]'));
+    expect(tabs.map((t) => t.textContent)).toEqual(["Outcomes", "This exact D3 + K2 product", "Bone density (D plus K context)Context only"]);
+    for (const name of ["This exact D3 + K2 product", "Bone density (D plus K context)Context only"]) {
+      await click(Array.from(scanPanel(el).querySelectorAll<HTMLElement>('[role="tab"]')).find((t) => t.textContent === name));
+      expect(rows(el).map((li) => fill(li))).toEqual([null, null, null, null]);
+      expect(Array.from(scanPanel(el).querySelectorAll("[data-warning]")).map((n) => n.getAttribute("data-warning"))).toContain("blend");
+    }
+    expect(scanPanel(el).querySelector('[data-testid="research-context-banner"]')).not.toBeNull();
+  });
+
+  it("an account switch removes the finished card and everything of the previous person", async () => {
+    const result = liveResult(mockAudit([mockOutcome()]));
+    stubApi({ scan: () => jsonResponse(vitaminD()), research: scripted(ok(researchJob(RUN, "succeeded", { target: known, result }), 201)) });
+    const el = await mount();
+    await advance(0);
+    await stageAndScan(el);
+    await advance(0);
+    expect(scanPanel(el).querySelector('[data-testid="research-audit"]')).not.toBeNull();
+    fakeAuth.setSession(sessionFor(USER_B, "tok-b"));
+    await advance(0);
+    expect(scanPanel(el).querySelector('.scan-lab-result, .sc-research, [data-testid="research-audit"]')).toBeNull();
+    expect(text(el)).not.toContain(SYN_SENTENCE);
+  });
 });
 
 describe("Lithuanian: every control, caveat and state is Lithuanian; the research narrative stays original English", () => {
@@ -560,16 +675,21 @@ describe("Lithuanian: every control, caveat and state is Lithuanian; the researc
     expect(text(scanPanel(el).querySelector('[data-testid="read-facts"]'))).toContain("porcijų per dieną nenurodyta (prielaida nedaroma)");
     expect(text(loading.querySelector(".sc-research-tags"))).toBe("EksperimentinisBe įvertinimo");
     expect(text(scanPanel(el))).not.toMatch(LEGACY_LT);
+    expect(text(scanPanel(el))).not.toMatch(NO_CACHED_WARNINGS_LT);
 
     await advance(2500);
     const result = scanPanel(el).querySelector(".sc-research")!;
     expect(result.getAttribute("data-research-phase")).toBe("result");
     expect(text(result.querySelector('[role="status"]'))).toBe("Gautas tyrimo auditas.");
     expect(text(result)).toContain("Modelio parašytas tyrimo tekstas rodomas originalia anglų kalba");
-    const statement = Array.from(result.querySelectorAll<HTMLElement>('p[lang="en"]')).find((p) => p.textContent?.includes("Modelio teiginys"));
-    expect(statement?.textContent).toBe(`Modelio teiginys: ${SENTENCE}`);
+    const tagged = (s: string) => Array.from(result.querySelectorAll<HTMLElement>('[lang="en"]')).find((n) => n.textContent === s || n.textContent?.includes(s));
+    expect(tagged(SENTENCE)?.textContent).toBe(SENTENCE);
+    expect(text(result.querySelector('[role="tab"][aria-selected="true"]'))).toBe("Rezultatai");
+    await click(result.querySelectorAll('[role="tab"]')[1]);
     expect(result.querySelector('h3[lang="en"]')?.textContent).toBe("Serum 25(OH)D");
-    expect(text(result)).toContain(STUDY);
+    expect(Array.from(result.querySelectorAll('[data-testid="research-axes"] .ab-bar-name')).map((n) => n.textContent)).toEqual(["Poveikis", "Įrodymai", "Forma", "Dozė"]);
+    await click(result.querySelector('[data-row-id="effect"] > button'));
+    expect(tagged(STUDY)).toBeTruthy();
     expect(calls.some((c) => c.url === "/api/scan/translate")).toBe(false);
   });
 
