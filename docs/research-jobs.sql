@@ -14,7 +14,7 @@
 -- result back. Nothing in the web app calls a model for this. Contract and
 -- semantics: lib/scan-research/contract.ts.
 --
--- WHAT IT TOUCHES. One new table, public.bsproof_research_jobs, and eight new
+-- WHAT IT TOUCHES. One new table, public.bsproof_research_jobs, and nine new
 -- functions named public.bsproof_research_*. It does not alter, drop, delete,
 -- truncate or grant on any other table (scan_runs, scan_users, the portfolio schemas),
 -- creates no extension and no role, creates no policy, and touches nothing in the
@@ -22,7 +22,7 @@
 --
 -- PRIVACY MODEL. RLS is enabled with NO policy, and every privilege on the table is
 -- revoked from public, anon, authenticated AND service_role: the table cannot be read
--- or written over PostgREST by anyone. The only door is the six service-role-only
+-- or written over PostgREST by anyone. The only door is the seven service-role-only
 -- functions below (SECURITY DEFINER, search_path pinned, EXECUTE revoked from public /
 -- anon / authenticated and granted to service_role alone). They are called only from
 -- server code that holds SUPABASE_SERVICE_ROLE_KEY. The service role bypasses RLS, so
@@ -277,6 +277,29 @@ end
 $fn$;
 comment on function public.bsproof_research_get(uuid, uuid) is 'BS-PROOF research jobs: owner-filtered read.';
 
+-- Owner-filtered read BY SCAN (migration 003: docs/research-jobs-migration-003-get-by-scan.sql). READ-ONLY: it never
+-- creates, queues, claims or changes a job, so a page that reloads can find the job its scan already has without asking
+-- for research again. Someone else's job, a scan with no job and a scan that does not exist are indistinguishable:
+-- {"job": null}. At most one row can match: (owner_id, scan_id) is unique.
+create or replace function public.bsproof_research_get_by_scan(p_owner uuid, p_scan uuid)
+returns jsonb
+language plpgsql
+security definer
+stable
+set search_path = pg_catalog, pg_temp
+as $fn$
+declare
+  j public.bsproof_research_jobs;
+begin
+  select * into j from public.bsproof_research_jobs where scan_id = p_scan and owner_id = p_owner;
+  if not found then
+    return jsonb_build_object('job', null);
+  end if;
+  return jsonb_build_object('job', public.bsproof_research_view(j));
+end
+$fn$;
+comment on function public.bsproof_research_get_by_scan(uuid, uuid) is 'BS-PROOF research jobs: owner-filtered read by scan.';
+
 -- Claim: the oldest queued job, or the oldest running job whose lease has expired.
 create or replace function public.bsproof_research_claim(p_lease_seconds integer default 300)
 returns jsonb
@@ -448,12 +471,13 @@ end
 $fn$;
 comment on function public.bsproof_research_fail(uuid, text, text, text, boolean) is 'BS-PROOF research jobs: lease-checked failure.';
 
--- Narrow grants: the six API functions to service_role alone; the two helpers to nobody.
+-- Narrow grants: the seven API functions to service_role alone; the two helpers to nobody.
 revoke all on function public.bsproof_research_jobs_guard() from public, anon, authenticated, service_role;
 revoke all on function public.bsproof_research_view(public.bsproof_research_jobs) from public, anon, authenticated, service_role;
 
 revoke all on function public.bsproof_research_enqueue(uuid, uuid, jsonb, text) from public, anon, authenticated;
 revoke all on function public.bsproof_research_get(uuid, uuid) from public, anon, authenticated;
+revoke all on function public.bsproof_research_get_by_scan(uuid, uuid) from public, anon, authenticated;
 revoke all on function public.bsproof_research_claim(integer) from public, anon, authenticated;
 revoke all on function public.bsproof_research_heartbeat(uuid, text, integer) from public, anon, authenticated;
 revoke all on function public.bsproof_research_complete(uuid, text, jsonb) from public, anon, authenticated;
@@ -461,6 +485,7 @@ revoke all on function public.bsproof_research_fail(uuid, text, text, text, bool
 
 grant execute on function public.bsproof_research_enqueue(uuid, uuid, jsonb, text) to service_role;
 grant execute on function public.bsproof_research_get(uuid, uuid) to service_role;
+grant execute on function public.bsproof_research_get_by_scan(uuid, uuid) to service_role;
 grant execute on function public.bsproof_research_claim(integer) to service_role;
 grant execute on function public.bsproof_research_heartbeat(uuid, text, integer) to service_role;
 grant execute on function public.bsproof_research_complete(uuid, text, jsonb) to service_role;

@@ -1,7 +1,7 @@
 // @vitest-environment node
 /*
  * The website -> PC research queue, route level (docs/research-jobs.sql,
- * lib/scan-research/contract.ts). Supabase Auth, scan_runs and the six queue
+ * lib/scan-research/contract.ts). Supabase Auth, scan_runs and the seven queue
  * functions are in-memory fakes; zero network, no model, no real key.
  *
  * Pinned: unauthenticated 401 on every user route, a non-Google bearer, the
@@ -17,7 +17,7 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { POST as enqueue } from "@/app/api/scan/research/route";
+import { GET as lookup, POST as enqueue } from "@/app/api/scan/research/route";
 import { GET as status } from "@/app/api/scan/research/[id]/route";
 import { POST as worker } from "@/app/api/scan/research/worker/route";
 import { RESEARCH_PROMPT_VERSION } from "@/lib/scan-research/contract";
@@ -97,6 +97,9 @@ const post = (body: unknown, headers: Record<string, string> = {}) =>
   enqueue(new Request("http://localhost/api/scan/research/", { method: "POST", headers: { "Content-Type": "application/json", ...headers }, body: typeof body === "string" ? body : JSON.stringify(body) }));
 const get = (id: string, headers: Record<string, string> = {}) =>
   status(new Request(`http://localhost/api/scan/research/${id}/`, { headers }), { params: Promise.resolve({ id }) });
+/** GET /api/scan/research?scan_id=... : the job a scan already has (read-only). `query` replaces the whole query string. */
+const find = (scan: string | null, headers: Record<string, string> = {}, query: string | null = null) =>
+  lookup(new Request(`http://localhost/api/scan/research/${query ?? (scan === null ? "" : `?scan_id=${scan}`)}`, { headers }));
 const work = (body: unknown, token: string | null = WORKER_TOKEN) =>
   worker(
     new Request("http://localhost/api/scan/research/worker/", {
@@ -182,6 +185,128 @@ describe("user routes: authentication, flag, ownership", () => {
     expect(res.status).toBe(503);
     const text = JSON.stringify(await body(res));
     for (const needle of [FAKE_KEY, PROVIDER_FRAGMENT, FAKE_URL]) expect(text).not.toContain(needle);
+  });
+});
+
+describe("GET /api/scan/research?scan_id=: the job a scan already has (read-only)", () => {
+  it("401 without a bearer or for a non-Google user BEFORE any lookup; 503 when Supabase cannot verify", async () => {
+    expect((await find(SCAN_A)).status).toBe(401);
+    expect((await find(SCAN_A, bearer("nope"))).status).toBe(401);
+    expect((await find(SCAN_A, bearer("tok-mail"))).status).toBe(401);
+    expect(queue.rpcCalls).toHaveLength(0);
+    delete process.env.SUPABASE_URL;
+    const res = await find(SCAN_A, bearer("tok-a"));
+    expect(res.status).toBe(503);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    expect(queue.rpcCalls).toHaveLength(0);
+  });
+
+  it("returns the owner's job in every state with the same body as the by-id read, no-store", async () => {
+    const job = await queued(SCAN_A, "tok-a");
+    const res = await find(SCAN_A, bearer("tok-a"));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    const found = await body(res);
+    expect(found).toEqual(await body(await get(job.id, bearer("tok-a"))));
+    expect(found.job).toMatchObject({ id: job.id, scan_id: SCAN_A, status: "queued", result: null });
+    expect(await body(await find(SCAN_A.toUpperCase(), bearer("tok-a")))).toEqual(found); // the id is case-insensitive, like the others
+
+    await claimed();
+    expect((await body(await find(SCAN_A, bearer("tok-a")))).job.status).toBe("running");
+    const c = queue.jobs[0];
+    queue.jobs[0] = { ...c, status: "failed", failure_code: "claude_quota_or_rate_limit", failure_message: "operator-only text" };
+    const failed = await body(await find(SCAN_A, bearer("tok-a")));
+    expect(failed.job).toMatchObject({ status: "failed", failure_code: "claude_quota_or_rate_limit", result: null });
+    expect(JSON.stringify(failed)).not.toContain("operator-only");
+  });
+
+  it("never exposes a lease token, the owner id or any worker detail, and the response carries only {status, job}", async () => {
+    await queued();
+    const c = await claimed();
+    const found = await body(await find(SCAN_A, bearer("tok-a")));
+    expect(Object.keys(found).sort()).toEqual(["job", "status"]);
+    const text = JSON.stringify(found);
+    for (const needle of [c.lease_token, USER_A, USER_B, "lease", "attempts"]) expect(text).not.toContain(needle);
+  });
+
+  it("another owner's scan, a scan with no job, a missing scan, a malformed id and a malformed query are ALL the same 404", async () => {
+    await queued(SCAN_A, "tok-a");
+    await queued(SCAN_B, "tok-b");
+    const answers = [
+      await find(SCAN_A, bearer("tok-b")), // my scan, someone else asking
+      await find(SCAN_B, bearer("tok-a")), // their scan, me asking
+      await find(SCAN_A2, bearer("tok-a")), // mine, but never researched
+      await find(SCAN_MISSING, bearer("tok-a")), // does not exist
+      await find("not-a-uuid", bearer("tok-a")),
+      await find(null, bearer("tok-a")), // no scan_id at all
+      await find(null, bearer("tok-a"), `?scan_id=${SCAN_A}&scan_id=${SCAN_A}`),
+      await find(null, bearer("tok-a"), `?scan_id=${SCAN_A}&owner_id=${USER_B}`),
+      await find(null, bearer("tok-a"), `?id=${SCAN_A}`),
+      await find(null, bearer("tok-a"), `?scan_id=`),
+    ];
+    expect(answers.map((r) => r.status)).toEqual(Array(answers.length).fill(404));
+    const bodies = await Promise.all(answers.map(body));
+    for (const b of bodies) expect(b).toEqual(bodies[0]);
+    for (const r of answers) expect(r.headers.get("cache-control")).toBe("no-store");
+    expect(JSON.stringify(bodies[0])).not.toContain(SCAN_A);
+    // the owner still reads their own
+    expect((await find(SCAN_A, bearer("tok-a"))).status).toBe(200);
+  });
+
+  it("is READ-ONLY: it never creates, queues or changes a job, however often it is asked and whoever asks", async () => {
+    await queued(SCAN_A, "tok-a");
+    const before = JSON.stringify(queue.jobs);
+    for (const [scan, token] of [[SCAN_A, "tok-a"], [SCAN_A, "tok-b"], [SCAN_A2, "tok-a"], [SCAN_B, "tok-a"], [SCAN_MISSING, "tok-b"], [SCAN_A2, "tok-a"]] as const) await find(scan, bearer(token));
+    expect(JSON.stringify(queue.jobs)).toBe(before);
+    expect(queue.jobs).toHaveLength(1);
+    // the only queue functions it touched are reads
+    const fns = new Set(queue.rpcCalls.map((c) => c.fn));
+    expect([...fns].sort()).toEqual(["bsproof_research_enqueue", "bsproof_research_get_by_scan"]);
+    expect(queue.rpcCalls.filter((c) => c.fn === "bsproof_research_enqueue")).toHaveLength(1); // the one from queued() above
+    // and it never reads the scan: no scan_runs request is made for it
+    const reads = fake.calls.length;
+    await find(SCAN_A2, bearer("tok-a"));
+    expect(fake.calls.slice(reads).filter((c) => c.url.includes("scan_runs"))).toHaveLength(0);
+  });
+
+  it("does not depend on the research flag: off, owner-only and on all answer the owner's existing job (it can start nothing)", async () => {
+    await queued(SCAN_A, "tok-a");
+    for (const flag of [undefined, "0", "owners", "1"]) {
+      if (flag === undefined) delete process.env.SCAN_LIVE_RESEARCH_ENABLED;
+      else process.env.SCAN_LIVE_RESEARCH_ENABLED = flag;
+      expect((await find(SCAN_A, bearer("tok-a"))).status, String(flag)).toBe(200);
+      expect((await find(SCAN_A2, bearer("tok-a"))).status, String(flag)).toBe(404);
+    }
+    expect(queue.jobs).toHaveLength(1);
+  });
+
+  it("503 research_unavailable when migration 003 is not applied (never 'no job'); 502 on a broken answer; no provider text, URL or key", async () => {
+    await queued();
+    queue.missing = true;
+    const res = await find(SCAN_A, bearer("tok-a"));
+    expect(res.status).toBe(503);
+    const unavailable = await body(res);
+    expect(unavailable.status).toBe("research_unavailable");
+    for (const needle of [FAKE_KEY, PROVIDER_FRAGMENT, FAKE_URL]) expect(JSON.stringify(unavailable)).not.toContain(needle);
+    queue.missing = false;
+    const rpc = queue.fetch;
+    global.fetch = (async (input: string | URL | Request, init?: RequestInit) =>
+      String(input instanceof Request ? input.url : input).includes("/rpc/bsproof_research_get_by_scan") ? new Response(PROVIDER_FRAGMENT, { status: 500 }) : rpc(input, init)) as typeof fetch;
+    const broken = await find(SCAN_A, bearer("tok-a"));
+    expect(broken.status).toBe(502);
+    const brokenBody = await body(broken);
+    expect(brokenBody.status).toBe("research_failed");
+    for (const needle of [FAKE_KEY, PROVIDER_FRAGMENT, FAKE_URL]) expect(JSON.stringify(brokenBody)).not.toContain(needle);
+    global.fetch = rpc;
+    queue.bsproof_research_get_by_scan = () => ({ job: "garbage" }) as never;
+    expect((await find(SCAN_A, bearer("tok-a"))).status).toBe(404); // not a job: the same 404, never drawn
+  });
+
+  it("a row the database answers for another scan is refused, not drawn", async () => {
+    await queued(SCAN_A, "tok-a");
+    const real = queue.bsproof_research_get_by_scan.bind(queue);
+    queue.bsproof_research_get_by_scan = (p) => real({ ...p, p_scan: SCAN_A }); // asked for A2, the database answers A's job
+    expect((await find(SCAN_A2, bearer("tok-a"))).status).toBe(404);
   });
 });
 

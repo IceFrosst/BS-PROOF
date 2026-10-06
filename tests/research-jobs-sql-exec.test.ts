@@ -25,6 +25,7 @@ import {
   BASELINE_SQL,
   HELPER_FUNCTIONS,
   MIGRATION2_SQL,
+  MIGRATION3_SQL,
   MIGRATION_SQL,
   PROMPT,
   PROMPT_V3,
@@ -415,6 +416,7 @@ const identityTargetAndFinishedStatesCannotBeEdited: Scenario = async (q) => {
 // ----------------------------------------------------------------------------------------------------------------
 // privileges and catalog (what the roles can actually do), and the shared-project guard
 
+const BY_SCAN_FUNCTION = "bsproof_research_get_by_scan(uuid, uuid)";
 const privilegesAreClosedToEveryRoleButTheSixFunctions: DbScenario = async (db) => {
   const rows = async (sql: string, params: unknown[] = []) => (await db.query<Record<string, unknown>>(sql, params)).rows;
   const T = "public.bsproof_research_jobs";
@@ -429,6 +431,11 @@ const privilegesAreClosedToEveryRoleButTheSixFunctions: DbScenario = async (db) 
 
   for (const sig of [...API_FUNCTIONS, ...HELPER_FUNCTIONS]) {
     const fq = sig.startsWith("public.") ? sig : `public.${sig}`;
+    // A project that migration 003 has not reached (the baseline, 001, 002) legitimately has no get_by_scan; nothing else may be missing.
+    if (!(await rows("select to_regprocedure($1) is not null as ok", [fq]))[0].ok) {
+      expect(sig).toBe(BY_SCAN_FUNCTION);
+      continue;
+    }
     const isApi = (API_FUNCTIONS as readonly string[]).includes(sig);
     const can = async (role: string) => (await rows("select has_function_privilege($1, $2, 'execute') as ok", [role, fq]))[0].ok;
     expect(await can("service_role"), `${sig} for service_role`).toBe(isApi);
@@ -844,7 +851,7 @@ describe("migration 001 (one attempt per job) applied on top of the 2026-10-04 b
     }
   });
 
-  it("001 + 002 leave a project that is indistinguishable from a fresh provisioning with the current docs/research-jobs.sql", async () => {
+  it("001 + 002 + 003 leave a project that is indistinguishable from a fresh provisioning with the current docs/research-jobs.sql", async () => {
     const migrated = await fullyMigratedProject();
     const fresh = await appliedProject();
     try {
@@ -862,7 +869,12 @@ describe("migration 001 (one attempt per job) applied on top of the 2026-10-04 b
     try {
       const a = await catalogSnapshot(only001);
       const b = await catalogSnapshot(fresh);
-      const changed = a.functions.filter((f, i) => f.def !== b.functions[i].def).map((f) => String(f.sig).split("(")[0]);
+      // migration 003 adds one function that 001 alone does not have; it is compared on its own below
+      const withoutBySc = (fs: Array<Record<string, unknown>>) => fs.filter((f) => !String(f.sig).includes("get_by_scan"));
+      expect(b.functions.length - a.functions.length).toBe(1);
+      expect(withoutBySc(b.functions).length).toBe(a.functions.length);
+      const fb = withoutBySc(b.functions);
+      const changed = a.functions.filter((f, i) => f.def !== fb[i].def).map((f) => String(f.sig).split("(")[0]);
       expect(changed).toEqual(["bsproof_research_complete"]);
       expect({ ...a, functions: null }).toEqual({ ...b, functions: null });
     } finally {
@@ -1197,6 +1209,7 @@ describe("migration 002 (prompt version v0.5) applied on top of the 2026-10-04 b
     const a = await fullyMigratedProject();
     const b = await baselineProject();
     try {
+      await b.exec(MIGRATION3_SQL);
       await b.exec(MIGRATION2_SQL);
       await b.exec(MIGRATION_SQL);
       expect(await catalogSnapshot(b)).toEqual(await catalogSnapshot(a));
@@ -1259,6 +1272,315 @@ describe("migration 002 (prompt version v0.5) applied on top of the 2026-10-04 b
     it("the same scenarios pass on the unmutated migration", async () => {
       await withMigrated(completeAcceptsTheCurrentAndThePreviousPromptVersionsOnly);
       await withMigrated(aRunningJobRejectsEveryTokenButItsOwn);
+    });
+  });
+});
+
+// ----------------------------------------------------------------------------------------------------------------
+// migration 003: bsproof_research_get_by_scan -- the READ of one owner's job for one scan (one new function)
+
+describe("migration 003 (read the job of a scan) applied on top of the production shape", { timeout: 120_000 }, () => {
+  const FN = "public.bsproof_research_get_by_scan(uuid, uuid)";
+  const O2 = uuid(102);
+  /** The production project as it is today (baseline + 001 + 002), without 003. */
+  async function before003<T>(run: (db: PGlite) => Promise<T>): Promise<T> {
+    const db = await migratedProject();
+    try {
+      await db.exec(MIGRATION2_SQL);
+      return await run(db);
+    } finally {
+      await db.close();
+    }
+  }
+  async function on003<T>(run: (db: PGlite, q: Queue) => Promise<T>, sql: string = MIGRATION3_SQL): Promise<T> {
+    return before003(async (db) => {
+      await db.exec(sql);
+      return run(db, new Queue(db));
+    });
+  }
+
+  it("control: the project as production has it today has no such function (this is what migration 003 adds)", async () => {
+    await before003(async (db) => {
+      expect((await db.query<{ ok: boolean }>("select to_regprocedure($1) is not null as ok", [FN])).rows[0].ok).toBe(false);
+    });
+  });
+
+  it("creates exactly ONE function and changes nothing else: table, RLS, policies, indexes, trigger, every existing function byte for byte, every neighbour", async () => {
+    await before003(async (before) => {
+      const b = await catalogSnapshot(before);
+      const nb = await neighbourSnapshot(before);
+      await on003(async (after) => {
+        const a = await catalogSnapshot(after);
+        expect(a.functions.length).toBe(b.functions.length + 1);
+        expect(a.functions.filter((f) => !b.functions.some((g) => g.sig === f.sig)).map((f) => f.sig)).toEqual(["bsproof_research_get_by_scan(uuid,uuid)"]);
+        expect(a.functions.filter((f) => b.functions.some((g) => g.sig === f.sig))).toEqual(b.functions);
+        expect({ ...a, functions: null }).toEqual({ ...b, functions: null });
+        expect(await neighbourSnapshot(after)).toEqual(nb);
+      });
+    });
+  });
+
+  it("the function is the current docs/research-jobs.sql's, byte for byte, and the migration issues exactly that DDL (one function, one comment, the revoke and the grant)", () => {
+    expect(fnBlock(MIGRATION3_SQL, "bsproof_research_get_by_scan")).toBe(fnBlock(RESEARCH_SQL, "bsproof_research_get_by_scan"));
+    expect([...MIGRATION3_SQL.matchAll(/create or replace function public\.(\w+)/g)].map((m) => m[1])).toEqual(["bsproof_research_get_by_scan"]);
+    const code = MIGRATION3_SQL.split("\n").filter((l) => !l.trim().startsWith("--")).join("\n");
+    expect(code).not.toMatch(/\b(insert|update|delete|truncate|drop|alter|create (table|index|trigger|policy|role|extension|schema))\b/i);
+    expect(code).not.toMatch(/grant (select|all)/i);
+    const stmts = code.replace(/\$guard\$[\s\S]*?\$guard\$/, "").replace(/\$fn\$[\s\S]*?\$fn\$/, "").split(";").map((s) => s.replace(/\s+/g, " ").trim()).filter(Boolean);
+    expect(stmts).toEqual([
+      "do",
+      "create or replace function public.bsproof_research_get_by_scan(p_owner uuid, p_scan uuid) returns jsonb language plpgsql security definer stable set search_path = pg_catalog, pg_temp as",
+      "comment on function public.bsproof_research_get_by_scan(uuid, uuid) is 'BS-PROOF research jobs: owner-filtered read by scan.'",
+      "revoke all on function public.bsproof_research_get_by_scan(uuid, uuid) from public, anon, authenticated",
+      "grant execute on function public.bsproof_research_get_by_scan(uuid, uuid) to service_role",
+      "notify pgrst, 'reload schema'",
+    ]);
+  });
+
+  it("001 + 002 + 003 leave a project that is indistinguishable from a fresh provisioning, in any order", async () => {
+    const fresh = await appliedProject();
+    try {
+      const want = await catalogSnapshot(fresh);
+      for (const order of [[MIGRATION3_SQL, MIGRATION2_SQL, MIGRATION_SQL], [MIGRATION2_SQL, MIGRATION3_SQL, MIGRATION_SQL], [MIGRATION_SQL, MIGRATION2_SQL, MIGRATION3_SQL]]) {
+        const db = await baselineProject();
+        try {
+          for (const sql of order) await db.exec(sql);
+          expect(await catalogSnapshot(db)).toEqual(want);
+        } finally {
+          await db.close();
+        }
+      }
+    } finally {
+      await fresh.close();
+    }
+  });
+
+  it("is idempotent, and applying it again keeps every job", async () => {
+    await on003(async (db, q) => {
+      const id = (await q.enqueue(O1, S(1))).job.id;
+      const once = await catalogSnapshot(db);
+      await db.exec(MIGRATION3_SQL);
+      expect(await catalogSnapshot(db)).toEqual(once);
+      expect((await q.getByScan(O1, S(1))).job.id).toBe(id);
+      expect(await q.count()).toBe(1);
+    });
+  });
+
+  it("the VERIFY query in its header reads false on today's production and true after the migration", async () => {
+    const header = /-- VERIFY AFTER \(read-only\):\n([\s\S]*?);\n--\n/.exec(MIGRATION3_SQL)?.[1] ?? "";
+    const verify = header.split("\n").map((l) => l.replace(/^--\s?/, "")).join("\n");
+    expect(verify).toContain("has_function_privilege");
+    await before003(async (db) => {
+      expect((await db.query(verify)).rows[0]).toEqual({ get_by_scan_exists: false, service_role_can_read: false, api_roles_cannot: false });
+    });
+    expect(await on003(async (db) => (await db.query(verify)).rows[0])).toEqual({ get_by_scan_exists: true, service_role_can_read: true, api_roles_cannot: true });
+  });
+
+  it("the PREFLIGHT query in its header finds nothing on a clean project", async () => {
+    const header = /-- PREFLIGHT \(read-only, in a SEPARATE query; must return no row\):\n([\s\S]*?);\n--\n/.exec(MIGRATION3_SQL)?.[1] ?? "";
+    const query = header.split("\n").map((l) => l.replace(/^--\s?/, "")).join("\n");
+    expect(query).toContain("bsproof_research_get_by_scan");
+    await before003(async (db) => {
+      expect((await db.query(query)).rows).toEqual([]);
+    });
+    await on003(async (db) => {
+      expect((await db.query(query)).rows).toEqual([]); // its own function carries the BS-PROOF comment
+    });
+  });
+
+  it("returns the owner's job in every state with the SAME owner-facing projection as bsproof_research_get, and nothing else", async () => {
+    await on003(async (db, q) => {
+      const queued = (await q.enqueue(O1, S(1))).job;
+      expect((await q.getByScan(O1, S(1))).job).toEqual(queued);
+      expect((await q.getByScan(O1, S(1))).job).toEqual((await q.get(O1, queued.id)).job);
+
+      const running = (await q.claim()).job;
+      expect(running.id).toBe(queued.id);
+      const asRunning = (await q.getByScan(O1, S(1))).job;
+      expect(asRunning.status).toBe("running");
+      expect(asRunning.result).toBeNull();
+
+      const result = resultFor("done");
+      expect((await q.complete(running.id, running.lease_token, result)).status).toBe("completed");
+      const done = (await q.getByScan(O1, S(1))).job;
+      expect(done).toMatchObject({ id: queued.id, scan_id: S(1), status: "succeeded", result });
+      expect(done.completed_at).not.toBeNull();
+      expect(done).toEqual((await q.get(O1, queued.id)).job);
+
+      const id2 = (await q.enqueue(O1, S(2))).job.id;
+      const c2 = (await q.claim()).job;
+      await q.fail(id2, c2.lease_token, "claude_quota_or_rate_limit", "operator-only diagnostic text", false);
+      const failed = (await q.getByScan(O1, S(2))).job;
+      expect(failed).toMatchObject({ id: id2, status: "failed", failure_code: "claude_quota_or_rate_limit", result: null });
+      for (const reply of [asRunning, done, failed]) {
+        expect(Object.keys(reply).sort()).toEqual(["completed_at", "created_at", "failure_code", "id", "prompt_version", "result", "scan_id", "status", "target", "updated_at"]);
+      }
+      const wire = JSON.stringify([asRunning, done, failed]);
+      for (const secret of ["lease_token", "lease_token_hash", "owner_id", "failure_message", "operator-only", "attempts", c2.lease_token]) expect(wire).not.toContain(secret);
+    });
+  });
+
+  it("is owner-filtered INSIDE the function: another owner, a scan with no job, an unknown scan and null arguments are all {job: null}, and nothing is created", async () => {
+    await on003(async (db, q) => {
+      const mine = (await q.enqueue(O1, S(1))).job;
+      const theirs = (await q.enqueue(O2, S(2))).job;
+      expect(await q.count()).toBe(2);
+      const snapshot = JSON.stringify((await db.query("select * from public.bsproof_research_jobs order by id")).rows);
+
+      expect(await q.getByScan(O2, S(1))).toEqual({ job: null }); // my scan, someone else asking
+      expect(await q.getByScan(O1, S(2))).toEqual({ job: null }); // their scan, me asking
+      expect(await q.getByScan(O1, S(99))).toEqual({ job: null }); // a scan nobody researched (or that does not exist)
+      expect(await q.getByScan(uuid(777), S(1))).toEqual({ job: null }); // a stranger
+      expect(await q.getByScan(null, S(1))).toEqual({ job: null });
+      expect(await q.getByScan(O1, null)).toEqual({ job: null });
+      expect(await q.getByScan(null, null)).toEqual({ job: null });
+      // the job id is not a scan id: asking by it finds nothing
+      expect(await q.getByScan(O1, mine.id)).toEqual({ job: null });
+      expect(await q.getByScan(O2, theirs.id)).toEqual({ job: null });
+
+      // READ-ONLY: nothing was created, queued, claimed, touched or re-stamped.
+      expect(await q.count()).toBe(2);
+      expect(JSON.stringify((await db.query("select * from public.bsproof_research_jobs order by id")).rows)).toBe(snapshot);
+    });
+  });
+
+  it("is stable and read-only by declaration: STABLE, SECURITY DEFINER, search_path pinned, and it works under a read-only transaction", async () => {
+    await on003(async (db, q) => {
+      await q.enqueue(O1, S(1));
+      const meta = (await db.query<{ volatility: string; definer: boolean; cfg: string; comment: string }>(
+        "select p.provolatile as volatility, p.prosecdef as definer, p.proconfig::text as cfg, obj_description(p.oid, 'pg_proc') as comment from pg_proc p where p.oid = $1::regprocedure",
+        [FN],
+      )).rows[0];
+      expect(meta).toEqual({ volatility: "s", definer: true, cfg: "{\"search_path=pg_catalog, pg_temp\"}", comment: "BS-PROOF research jobs: owner-filtered read by scan." });
+      await db.exec("set role service_role");
+      try {
+        await db.exec("begin read only");
+        const r = (await db.query<{ r: { job: { status: string } | null } }>("select public.bsproof_research_get_by_scan($1::uuid, $2::uuid) as r", [O1, S(1)])).rows[0].r;
+        await db.exec("rollback");
+        expect(r.job?.status).toBe("queued");
+      } finally {
+        await db.exec("reset role");
+      }
+    });
+  });
+
+  it("only service_role may call it: anon, authenticated and PUBLIC are refused, and no role gained a direct read of the jobs table", async () => {
+    await on003(async (db, q) => {
+      await q.enqueue(O1, S(1));
+      await privilegesAreClosedToEveryRoleButTheSixFunctions(db);
+      expect((await db.query<{ ok: boolean }>("select has_function_privilege('service_role', $1, 'execute') as ok", [FN])).rows[0].ok).toBe(true);
+      for (const role of ["anon", "authenticated"]) {
+        expect((await db.query<{ ok: boolean }>("select has_function_privilege($1, $2, 'execute') as ok", [role, FN])).rows[0].ok, role).toBe(false);
+        await db.exec(`set role ${role}`);
+        try {
+          await expect(db.query(`select public.bsproof_research_get_by_scan('${O1}', '${S(1)}')`), role).rejects.toThrow(/permission denied for function/);
+          await expect(db.query("select * from public.bsproof_research_jobs"), role).rejects.toThrow(/permission denied for table/);
+        } finally {
+          await db.exec("reset role");
+        }
+      }
+      expect((await db.query("select 1 from pg_proc p, aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a where p.oid = $1::regprocedure and a.grantee = 0 and a.privilege_type = 'EXECUTE'", [FN])).rows).toEqual([]);
+      await db.exec("set role service_role");
+      try {
+        await expect(db.query("select * from public.bsproof_research_jobs")).rejects.toThrow(/permission denied for table/);
+      } finally {
+        await db.exec("reset role");
+      }
+    });
+  });
+
+  it("the guard refuses, changing nothing, on an empty project, next to a foreign table and next to a foreign function of that name", async () => {
+    const empty = await emptyProject();
+    try {
+      await expect(empty.exec(MIGRATION3_SQL)).rejects.toThrow(/bsproof_research_jobs is missing or BS-PROOF did not create it/);
+      expect((await empty.query<{ n: number }>("select count(*)::int as n from pg_proc where proname like 'bsproof\\_research\\_%'")).rows[0].n).toBe(0);
+    } finally {
+      await empty.close();
+    }
+    await before003(async (db) => {
+      await db.exec("create function public.bsproof_research_get_by_scan(a uuid, b uuid) returns jsonb language sql as $$ select '{\"foreign\": true}'::jsonb $$");
+      const snap = await catalogSnapshot(db);
+      await expect(db.exec(MIGRATION3_SQL)).rejects.toThrow(/function bsproof_research_get_by_scan\(uuid,uuid\) already exists and BS-PROOF did not create it/);
+      expect(await catalogSnapshot(db)).toEqual(snap);
+      expect((await db.query<{ r: { foreign: boolean } }>("select public.bsproof_research_get_by_scan(null, null) as r")).rows[0].r).toEqual({ foreign: true });
+    });
+    await before003(async (db) => {
+      await db.exec("comment on function public.bsproof_research_view(public.bsproof_research_jobs) is 'someone else''s function'");
+      const snap = await catalogSnapshot(db);
+      await expect(db.exec(MIGRATION3_SQL)).rejects.toThrow(/bsproof_research_view\(public.bsproof_research_jobs\) is missing or BS-PROOF did not create it/);
+      expect(await catalogSnapshot(db)).toEqual(snap);
+    });
+    const foreign = await emptyProject();
+    try {
+      await foreign.exec("create table public.bsproof_research_jobs (x int)");
+      await expect(foreign.exec(MIGRATION3_SQL)).rejects.toThrow(/missing or BS-PROOF did not create it/);
+    } finally {
+      await foreign.close();
+    }
+  });
+
+  describe("mutants of migration 003: every removed guarantee is caught by the scenario that owns it", () => {
+    const bySc = "create or replace function public.bsproof_research_get_by_scan(p_owner uuid, p_scan uuid)\nreturns jsonb\nlanguage plpgsql\nsecurity definer\nstable\nset search_path = pg_catalog, pg_temp\n";
+    const readsTheOwnersJobOnly = async (db: PGlite, q: Queue) => {
+      const mine = (await q.enqueue(O1, S(1))).job;
+      await q.enqueue(O2, S(2));
+      expect((await q.getByScan(O1, S(1))).job?.id).toBe(mine.id);
+      expect(await q.getByScan(O2, S(1))).toEqual({ job: null });
+      expect(await q.getByScan(O1, S(2))).toEqual({ job: null });
+      expect(await q.getByScan(null, S(1))).toEqual({ job: null });
+      expect(await q.getByScan(O1, mine.id)).toEqual({ job: null });
+      void db;
+    };
+    const exposesOnlyTheProjection = async (_db: PGlite, q: Queue) => {
+      const id = (await q.enqueue(O1, S(1))).job.id;
+      const c = (await q.claim()).job;
+      await q.fail(id, c.lease_token, "gone", "operator-only", false);
+      const reply = JSON.stringify(await q.getByScan(O1, S(1)));
+      for (const secret of ["lease_token_hash", "owner_id", "failure_message", "operator-only", "attempts"]) expect(reply).not.toContain(secret);
+    };
+    const privilegesClosed = async (sql: string) => {
+      await before003(async (db) => {
+        await db.exec(sql);
+        await privilegesAreClosedToEveryRoleButTheSixFunctions(db);
+        for (const role of ["anon", "authenticated"]) {
+          await db.exec(`set role ${role}`);
+          try {
+            await expect(db.query(`select public.bsproof_research_get_by_scan('${O1}', '${S(1)}')`)).rejects.toThrow(/permission denied for function/);
+          } finally {
+            await db.exec("reset role");
+          }
+        }
+      });
+    };
+    const MUTANTS3: Array<{ name: string; find: string; replace: string; kill: (m: string) => Promise<void> }> = [
+      { name: "the owner filter is removed (anyone reads anyone's job by scan)", find: "where scan_id = p_scan and owner_id = p_owner;", replace: "where scan_id = p_scan;", kill: (m) => on003(readsTheOwnersJobOnly, m) },
+      { name: "the scan filter is removed (any job of the owner)", find: "where scan_id = p_scan and owner_id = p_owner;", replace: "where owner_id = p_owner;", kill: (m) => on003(readsTheOwnersJobOnly, m) },
+      { name: "it looks the JOB id up instead of the scan id", find: "where scan_id = p_scan and owner_id = p_owner;", replace: "where id = p_scan and owner_id = p_owner;", kill: (m) => on003(readsTheOwnersJobOnly, m) },
+      { name: "it returns the raw row instead of the owner projection", find: "return jsonb_build_object('job', public.bsproof_research_view(j));", replace: "return jsonb_build_object('job', to_jsonb(j));", kill: (m) => on003(exposesOnlyTheProjection, m) },
+      { name: "it loses SECURITY DEFINER (the service role has no table access)", find: bySc, replace: bySc.replace("security definer\n", ""), kill: (m) => on003(readsTheOwnersJobOnly, m) },
+      { name: "it loses its pinned search_path", find: bySc, replace: bySc.replace("set search_path = pg_catalog, pg_temp\n", ""), kill: privilegesClosed },
+      { name: "the revoke from anon / authenticated / public is removed", find: "revoke all on function public.bsproof_research_get_by_scan(uuid, uuid) from public, anon, authenticated;", replace: "", kill: privilegesClosed },
+      { name: "it is also granted to authenticated", find: "to service_role;\n\nnotify", replace: "to service_role, authenticated;\n\nnotify", kill: privilegesClosed },
+      { name: "the comment prefix the guards look for is changed", find: "'BS-PROOF research jobs: owner-filtered read by scan.'", replace: "'owner-filtered read by scan.'", kill: privilegesClosed },
+      { name: "the foreign-function guard is disabled", find: "if foreign_fn is not null then", replace: "if false then", kill: async (m) => {
+        await before003(async (db) => {
+          await db.exec("create function public.bsproof_research_get_by_scan(a uuid, b uuid) returns jsonb language sql as $$ select '{}'::jsonb $$");
+          await expect(db.exec(m)).rejects.toThrow(/already exists and BS-PROOF did not create it/);
+        });
+      } },
+    ];
+    for (const m of MUTANTS3) {
+      it(`kills: ${m.name}`, async () => {
+        expect(MIGRATION3_SQL.split(m.find).length - 1, "the mutation target must occur exactly once in migration 003").toBe(1);
+        const mutated = MIGRATION3_SQL.replace(m.find, () => m.replace);
+        expect(mutated).not.toBe(MIGRATION3_SQL);
+        await expect(m.kill(mutated)).rejects.toThrow();
+      });
+    }
+    it("the same scenarios pass on the unmutated migration", async () => {
+      await on003(readsTheOwnersJobOnly);
+      await on003(exposesOnlyTheProjection);
+      await privilegesClosed(MIGRATION3_SQL);
     });
   });
 });

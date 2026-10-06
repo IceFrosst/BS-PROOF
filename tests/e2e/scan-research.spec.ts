@@ -246,7 +246,7 @@ test.describe("live research screen with mocked Google sign-in (build with sign-
     expect(axe.violations).toEqual([]);
   });
 
-  test("History replay asks for nothing by itself; the button asks once; signing out discards the panel and stops polling", async ({ page }) => {
+  test("History replay READS its job and asks for nothing by itself; the button asks once; signing out discards the panel and stops polling", async ({ page }) => {
     await signedInPage(page);
     const research: string[] = [];
     page.on("request", (r: Request) => { if (r.url().includes("/api/scan/research")) research.push(`${r.method()} ${new URL(r.url()).pathname}`); });
@@ -254,6 +254,8 @@ test.describe("live research screen with mocked Google sign-in (build with sign-
     await page.route(`**/api/scan/history/${RUN_ID}`, (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ status: "ok", run_id: RUN_ID, analysis: VITAMIN_D }) }));
     await page.route("**/api/scan/research", (route) => route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify({ status: "ok", created: true, job: job("running") }) }));
     await page.route(`**/api/scan/research/${JOB_ID}`, (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ status: "ok", job: job("running") }) }));
+    // opening a saved scan READS the job it already has (none yet: the same 404 the server gives for "no job")
+    await page.route(/\/api\/scan\/research\?scan_id=/, (route) => route.fulfill({ status: 404, contentType: "application/json", body: JSON.stringify({ status: "not_found" }) }));
     await page.goto("/scan");
     await page.locator("#scan-file").setInputFiles({ name: "label.png", mimeType: "image/png", buffer: PNG });
     await signIn(page);
@@ -266,16 +268,16 @@ test.describe("live research screen with mocked Google sign-in (build with sign-
     await expect(panel.getByRole("heading", { name: "Live research not requested" })).toBeVisible();
     await expect(page.locator(".sw-panel").nth(1)).not.toContainText(LEGACY);
     await expect(page.locator(".sw-panel").nth(1).locator(".ab-tabs, .scan-section, .scan-lab-validity, .la-empty, [role=progressbar]")).toHaveCount(0);
-    expect(research).toEqual([]);
+    expect(research).toEqual(["GET /api/scan/research"]); // the lookup of the scan's job, never a POST
     await shot(page, `configured-replay-idle-${test.info().project.name}`, panel);
 
     await panel.getByRole("button", { name: "Request live research for this scan" }).click();
     await expect(panel.getByRole("status")).toHaveText("Research is running.");
-    expect(research).toEqual(["POST /api/scan/research"]);
+    expect(research).toEqual(["GET /api/scan/research", "POST /api/scan/research"]);
     await expect(panel.getByRole("status")).toBeFocused();
 
     await tick(page, 2500);
-    await expect.poll(() => research).toEqual(["POST /api/scan/research", `GET /api/scan/research/${JOB_ID}`]);
+    await expect.poll(() => research).toEqual(["GET /api/scan/research", "POST /api/scan/research", `GET /api/scan/research/${JOB_ID}`]);
 
     // sign out from History: the panel and its poll go with the account's data
     await page.getByRole("button", { name: "Back to history" }).first().click();

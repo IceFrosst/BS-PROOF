@@ -71,6 +71,7 @@ function stubApi(routes: { list?: (call: RecordedCall) => Answer; detail?: (call
       if (path === "/api/scan/history") answer = routes.list?.(call);
       else if (path.startsWith("/api/scan/history/")) answer = routes.detail?.(call, decodeURIComponent(path.slice("/api/scan/history/".length)));
       else if (path === "/api/scan") answer = routes.scan?.(call);
+      else if (path.startsWith("/api/scan/research?")) answer = routes.research?.(call) ?? jsonResponse({ status: "not_found" }, 404); // the lookup of a scan's job: none unless a test says so
       else if (path === "/api/scan/research" || path.startsWith("/api/scan/research/")) answer = routes.research?.(call) ?? jsonResponse({ status: "research_disabled" }, 503);
       if (!answer) throw new Error(`unexpected request ${call.method} ${path}`);
       return answer;
@@ -211,9 +212,10 @@ describe("opening a saved scan", () => {
     await click(rows(el)[0]);
     await settle();
 
-    // Opening a saved scan asks for NOTHING but that run: no scan, no model call, and no research request either.
-    expect(calls.map((c) => `${c.method} ${c.url}`)).toEqual(["GET /api/scan/history", `GET /api/scan/history/${RUN_1}`]);
+    // Opening a saved scan reads that run and READS (GET) the job it may already have: no scan, no model call, no POST, no research request.
+    expect(calls.map((c) => `${c.method} ${c.url}`)).toEqual(["GET /api/scan/history", `GET /api/scan/history/${RUN_1}`, `GET /api/scan/research?scan_id=${RUN_1}`]);
     expect(calls[1].headers.Authorization).toBe("Bearer tok-a");
+    expect(calls[2].headers.Authorization).toBe("Bearer tok-a");
     expect(calls.some((c) => c.method === "POST")).toBe(false);
     expect(calls.some((c) => c.url === "/api/scan")).toBe(false);
 
@@ -246,7 +248,8 @@ describe("opening a saved scan", () => {
     const calls = stubApi({
       list: () => listOf(run1),
       detail: (_c, id) => detailOf(id),
-      research: (c) => jsonResponse({ status: "ok", job: researchJob("queued") }, c.method === "POST" ? 201 : 200),
+      // no job for the scan until the person presses the button; then the one POST creates it
+      research: (c) => (c.url.startsWith("/api/scan/research?") && !calls.some((x) => x.method === "POST") ? jsonResponse({ status: "not_found" }, 404) : jsonResponse({ status: "ok", job: researchJob("queued") }, c.method === "POST" ? 201 : 200)),
     });
     const el = await mountWorkspace();
     await openHistory(el);
@@ -256,7 +259,7 @@ describe("opening a saved scan", () => {
     expect(panel()?.getAttribute("data-research-state")).toBe("idle");
     expect(panel()?.textContent).toMatch(/nothing was re-run/i);
     expect(panel()?.querySelector("h2")?.textContent).toBe("Live research not requested");
-    expect(calls.some((c) => c.url.startsWith("/api/scan/research"))).toBe(false);
+    expect(calls.filter((c) => c.url.startsWith("/api/scan/research")).map((c) => `${c.method} ${c.url}`)).toEqual([`GET /api/scan/research?scan_id=${RUN_1}`]); // the lookup only
 
     await click(buttonByText(historyPanel(el), /request live research for this scan/i));
     await settle();
@@ -282,7 +285,7 @@ describe("opening a saved scan", () => {
     const calls = stubApi({
       list: () => listOf(run1),
       detail: (_c, id) => detailOf(id),
-      research: () => jsonResponse({ status: "ok", job: researchJob("running") }),
+      research: (c) => (c.url.startsWith("/api/scan/research?") && !calls.some((x) => x.method === "POST") ? jsonResponse({ status: "not_found" }, 404) : jsonResponse({ status: "ok", job: researchJob("running") })),
     });
     const el = await mountWorkspace();
     await openHistory(el);
@@ -290,16 +293,16 @@ describe("opening a saved scan", () => {
     await settle();
     await click(buttonByText(historyPanel(el), /request live research for this scan/i));
     await settle();
-    const research = calls.find((c) => c.url === "/api/scan/research")!;
     expect(historyPanel(el).querySelector(".sc-research")?.getAttribute("data-research-state")).toBe("running");
-    expect(research.signal?.aborted).toBe(false);
+    const before = calls.length;
 
     fakeAuth.setSession(null);
     await settle();
-    expect(research.signal?.aborted).toBe(true);
     expect(historyPanel(el).querySelector(".sc-research")).toBeNull();
     expect(historyPanel(el).querySelector('[data-testid="signin-card"]')).not.toBeNull();
     expect(historyPanel(el).textContent).not.toMatch(/Magnesium|research is running/i);
+    await new Promise((r) => setTimeout(r, 20));
+    expect(calls.length).toBe(before); // nothing is read after the account left, with anybody's token
   });
 
   it("Back returns to the list and puts focus on the row that was opened", async () => {

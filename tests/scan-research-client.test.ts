@@ -4,6 +4,11 @@ import { LEASE_SECONDS } from "@/lib/scan-research/contract";
 import {
   RESEARCH_LEASE_SECONDS,
   RESEARCH_MAX_RESPONSE_BYTES,
+  RESEARCH_REQUEST_TIMEOUT_MS,
+  RESEARCH_RETRY_DELAYS_MS,
+  ResearchTimeout,
+  researchJobPath,
+  researchLookupPath,
   forgetResearchJob,
   forgetResearchJobs,
   formatUtc,
@@ -194,6 +199,67 @@ describe("live research owner client: the result (SourceAccessSummaryV2)", () =>
     expect(mutate((r) => { r.audit = null; })).toBeNull();
     expect(parseResearchResult(null)).toBeNull();
     expect(parseResearchResult([])).toBeNull();
+  });
+});
+
+describe("live research owner client: a request has a ceiling and a lookup has a path", () => {
+  afterEach(() => { vi.useRealTimers(); });
+
+  it("builds the lookup and job paths from ids only (the scan id is encoded, nothing else is added)", () => {
+    expect(researchLookupPath(SCAN)).toBe(`/api/scan/research?scan_id=${SCAN}`);
+    expect(researchJobPath(JOB)).toBe(`/api/scan/research/${JOB}`);
+    expect(researchLookupPath("a&b=c")).toBe("/api/scan/research?scan_id=a%26b%3Dc");
+  });
+
+  it("a request that never answers ends in a ResearchTimeout at the ceiling and cancels the fetch; the caller's own abort is NOT a timeout", async () => {
+    vi.useFakeTimers();
+    let seen: AbortSignal | undefined;
+    vi.spyOn(globalThis, "fetch").mockImplementation((_u, init) => { seen = init?.signal as AbortSignal; return new Promise<Response>(() => undefined); }); // ignores the abort on purpose
+    const pending = researchRequest("/api/scan/research/x", "tok", new AbortController().signal);
+    const caught = pending.catch((e: unknown) => e);
+    await vi.advanceTimersByTimeAsync(RESEARCH_REQUEST_TIMEOUT_MS - 1);
+    expect(seen?.aborted).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    const error = await caught;
+    expect(error).toBeInstanceOf(ResearchTimeout);
+    expect((error as Error).message).toBe("timeout");
+    expect(seen?.aborted).toBe(true);
+
+    const controller = new AbortController();
+    vi.spyOn(globalThis, "fetch").mockImplementation((_u, init) => new Promise<Response>((_r, reject) => { init?.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError"))); }));
+    const left = researchRequest("/api/scan/research/x", "tok", controller.signal).catch((e: unknown) => e);
+    controller.abort();
+    const aborted = await left;
+    expect(aborted).not.toBeInstanceOf(ResearchTimeout);
+    expect((aborted as Error).name).toBe("AbortError");
+  });
+
+  it("a body that stalls after the headers is cut at the ceiling too", async () => {
+    vi.useFakeTimers();
+    const stream = new ReadableStream({ start() { /* never enqueues, never closes */ } });
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(stream, { status: 200 }));
+    const caught = researchRequest("/api/scan/research/x", "tok", new AbortController().signal).catch((e: unknown) => e);
+    await vi.advanceTimersByTimeAsync(RESEARCH_REQUEST_TIMEOUT_MS);
+    expect(await caught).toBeInstanceOf(ResearchTimeout);
+  });
+
+  it("a token read that hangs is a ResearchTimeout as well, and the timer is cleared when the request finishes in time", async () => {
+    vi.useFakeTimers();
+    const hung = vi.fn(() => new Promise<string | null>(() => undefined));
+    const caught = researchWithCurrentToken("/api/scan/research/x", hung, new AbortController().signal, "owner-1").catch((e: unknown) => e);
+    await vi.advanceTimersByTimeAsync(RESEARCH_REQUEST_TIMEOUT_MS);
+    expect(await caught).toBeInstanceOf(ResearchTimeout);
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response('{"status":"ok"}', { status: 200 }));
+    const done = await researchWithCurrentToken("/api/scan/research/x", async () => "tok", new AbortController().signal, "owner-1");
+    expect(done.json.status).toBe("ok");
+    expect(vi.getTimerCount()).toBe(0); // nothing is left ticking
+  });
+
+  it("the automatic retry waits are finite, increasing and bounded: a transient failure is never retried for ever", () => {
+    expect(RESEARCH_RETRY_DELAYS_MS.length).toBeGreaterThanOrEqual(3);
+    expect([...RESEARCH_RETRY_DELAYS_MS]).toEqual([...RESEARCH_RETRY_DELAYS_MS].sort((a, b) => a - b));
+    expect(Math.max(...RESEARCH_RETRY_DELAYS_MS)).toBeLessThanOrEqual(60_000);
+    expect(Math.min(...RESEARCH_RETRY_DELAYS_MS)).toBeGreaterThanOrEqual(1000);
   });
 });
 

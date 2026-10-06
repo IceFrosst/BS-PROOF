@@ -22,6 +22,7 @@ type Json = any; // eslint-disable-line @typescript-eslint/no-explicit-any -- js
 interface Backend {
   enqueue(owner: string, scan: string, promptVersion?: string): Promise<Json>;
   get(owner: string, id: string): Promise<Json>;
+  getByScan(owner: string, scan: string): Promise<Json>;
   claim(): Promise<Json>;
   heartbeat(id: string, token: string): Promise<Json>;
   complete(id: string, token: string, result: unknown): Promise<Json>;
@@ -36,6 +37,7 @@ interface Backend {
 const sqlBackend = (q: Queue): Backend => ({
   enqueue: (o, s, v) => q.enqueue(o, s, undefined, v),
   get: (o, id) => q.get(o, id),
+  getByScan: (o, s) => q.getByScan(o, s),
   claim: () => q.claim(),
   heartbeat: (id, t) => q.heartbeat(id, t),
   complete: (id, t, r) => q.complete(id, t, r),
@@ -50,6 +52,7 @@ const sqlBackend = (q: Queue): Backend => ({
 const fakeBackend = (f: FakeResearchQueue): Backend => ({
   enqueue: async (o, s, v) => f.bsproof_research_enqueue({ p_owner: o, p_scan: s, p_target: { version: "ResearchJobV1", ingredient: { vocab_id: "magnesium", label: "Magnesium" } }, p_prompt_version: v ?? "live-research-v0.2" }),
   get: async (o, id) => f.bsproof_research_get({ p_owner: o, p_id: id }),
+  getByScan: async (o, s) => f.bsproof_research_get_by_scan({ p_owner: o, p_scan: s }),
   claim: async () => f.bsproof_research_claim(),
   heartbeat: async (id, t) => f.bsproof_research_heartbeat({ p_id: id, p_lease_token: t }),
   complete: async (id, t, r) => f.bsproof_research_complete({ p_id: id, p_lease_token: t, p_result: r }),
@@ -105,6 +108,11 @@ async function history(b: Backend): Promise<Array<[string, unknown]>> {
   await step("get A as owner", b.get(O1, A));
   await step("get A as someone else", b.get(O2, A));
   await step("get unknown", b.get(O1, uuid(999)));
+  await step("get by scan as owner", b.getByScan(O1, uuid(201)));
+  await step("get by scan as someone else (the same scan, their own job)", b.getByScan(O2, uuid(201)));
+  await step("get by scan as a stranger", b.getByScan(O3, uuid(201)));
+  await step("get by scan, a scan with no job", b.getByScan(O1, uuid(998)));
+  await step("get by scan with a JOB id", b.getByScan(O1, A));
 
   // A: lease, heartbeat, stale tokens, expiry. ONE attempt: the expired lease is final, never re-claimed.
   const a1 = (await step("claim -> A", b.claim())).job;
@@ -118,6 +126,7 @@ async function history(b: Backend): Promise<Array<[string, unknown]>> {
   await step("get A expired, not yet swept", b.get(O1, A));
   const x1 = (await step("claim after A's expiry -> X (A is not re-claimed)", b.claim())).job;
   await step("get A failed lease_expired", b.get(O1, A));
+  await step("get by scan A failed lease_expired", b.getByScan(O1, uuid(201)));
   await step("heartbeat A with the dead token", b.heartbeat(A, a1.lease_token));
   await step("complete A with the dead token", b.complete(A, a1.lease_token, resultFor("old")));
   await step("fail A with the dead token", b.fail(A, a1.lease_token, "old", null, false));
@@ -130,6 +139,7 @@ async function history(b: Backend): Promise<Array<[string, unknown]>> {
   await step("fail X after completion", b.fail(X, x1.lease_token, "late", null, false));
   await step("fail X after completion, other token", b.fail(X, a1.lease_token, "late", null, false));
   await step("get X done", b.get(O2, X));
+  await step("get by scan X done", b.getByScan(O2, uuid(201)));
 
   // B: a retryable fail is still final (it used to requeue for a second and third model run)
   const b1 = (await step("claim -> B", b.claim())).job;

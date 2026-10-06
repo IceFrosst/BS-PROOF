@@ -1,7 +1,7 @@
 /*
  * The queue's storage client: Supabase PostgREST RPC with the SERVICE ROLE key,
  * server-side only (docs/research-jobs.sql). The table itself is not reachable
- * by any role over REST; every operation is one of six service-role-only
+ * by any role over REST; every operation is one of seven service-role-only
  * functions, each atomic in the database (claim uses `for update skip locked`,
  * complete/fail/heartbeat are compare-and-set on the lease).
  *
@@ -71,6 +71,13 @@ export const enqueueJob = (owner: string, scan: string, target: unknown, promptV
   rpc("bsproof_research_enqueue", { p_owner: owner, p_scan: scan, p_target: target, p_prompt_version: promptVersion });
 
 export const getJob = (owner: string, id: string) => rpc("bsproof_research_get", { p_owner: owner, p_id: id });
+
+/**
+ * READ-ONLY: the one job of (owner, scan), or `{ job: null }` (docs/research-jobs-migration-003-get-by-scan.sql). It never
+ * creates a job, so a page that reloads can find the research its scan already has without asking for research again.
+ * Until that migration is applied PostgREST answers 404 and this is `unavailable`, never "no job".
+ */
+export const getJobByScan = (owner: string, scan: string) => rpc("bsproof_research_get_by_scan", { p_owner: owner, p_scan: scan });
 
 export const claimJob = () => rpc("bsproof_research_claim", { p_lease_seconds: LEASE_SECONDS });
 

@@ -1,5 +1,5 @@
 /*
- * An in-memory stand-in for the six bsproof_research_* Postgres functions in
+ * An in-memory stand-in for the seven bsproof_research_* Postgres functions in
  * docs/research-jobs.sql, layered over FakeSupabase (Supabase Auth + scan_runs).
  * It mirrors the SQL state machine line for line (owner filter, one job per
  * scan, open-job cap, lease token + expiry, compare-and-set complete/fail,
@@ -99,6 +99,12 @@ export class FakeResearchQueue {
 
   bsproof_research_get(p: Record<string, unknown>) {
     const j = this.jobs.find((x) => x.id === p.p_id && x.owner_id === p.p_owner);
+    return { job: j ? this.view(j) : null };
+  }
+
+  /** READ-ONLY: the one job of (owner, scan), or null. Never creates a job. Mirrors bsproof_research_get_by_scan (migration 003). */
+  bsproof_research_get_by_scan(p: Record<string, unknown>) {
+    const j = this.jobs.find((x) => x.scan_id === p.p_scan && x.owner_id === p.p_owner);
     return { job: j ? this.view(j) : null };
   }
 

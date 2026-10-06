@@ -34,6 +34,9 @@ export const MIGRATION_SQL = readFileSync(MIGRATION_SQL_PATH, "utf8");
 /** Migration 002 (prompt version v0.5): `bsproof_research_complete` accepts v0.5, v0.4, v0.3 and v0.2. Independent of 001. */
 export const MIGRATION2_SQL_PATH = join(process.cwd(), "docs", "research-jobs-migration-002-prompt-v0.5.sql");
 export const MIGRATION2_SQL = readFileSync(MIGRATION2_SQL_PATH, "utf8");
+/** Migration 003 (read the job of a scan): ONE new read-only function, `bsproof_research_get_by_scan`. Independent of 001 and 002. */
+export const MIGRATION3_SQL_PATH = join(process.cwd(), "docs", "research-jobs-migration-003-get-by-scan.sql");
+export const MIGRATION3_SQL = readFileSync(MIGRATION3_SQL_PATH, "utf8");
 
 export const PROMPT = "live-research-v0.2";
 export const PROMPT_V3 = "live-research-v0.3";
@@ -42,6 +45,7 @@ export const PROMPT_V5 = "live-research-v0.5";
 export const API_FUNCTIONS = [
   "bsproof_research_enqueue(uuid, uuid, jsonb, text)",
   "bsproof_research_get(uuid, uuid)",
+  "bsproof_research_get_by_scan(uuid, uuid)",
   "bsproof_research_claim(integer)",
   "bsproof_research_heartbeat(uuid, text, integer)",
   "bsproof_research_complete(uuid, text, jsonb)",
@@ -126,11 +130,12 @@ export async function migratedProject(): Promise<PGlite> {
   return (await migratedTemplate).clone();
 }
 
-/** PRODUCTION after the whole release: the baseline with migration 001 and then migration 002 applied. */
+/** PRODUCTION after the whole release: the baseline with migrations 001, 002 and then 003 applied. */
 export async function fullyMigratedProject(): Promise<PGlite> {
   fullyMigratedTemplate ??= (async () => {
     const db = await migratedProject();
     await db.exec(MIGRATION2_SQL);
+    await db.exec(MIGRATION3_SQL);
     return db;
   })();
   return (await fullyMigratedTemplate).clone();
@@ -184,6 +189,9 @@ export class Queue {
   }
   get(owner: string, id: string) {
     return this.api("select public.bsproof_research_get($1::uuid, $2::uuid) as r", [owner, id]);
+  }
+  getByScan(owner: string | null, scan: string | null) {
+    return this.api("select public.bsproof_research_get_by_scan($1::uuid, $2::uuid) as r", [owner, scan]);
   }
   claim(leaseSeconds = 300) {
     return this.api("select public.bsproof_research_claim($1::integer) as r", [leaseSeconds]);

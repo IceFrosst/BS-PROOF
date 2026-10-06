@@ -6,7 +6,7 @@
  * state (lib/scan-research/use-live-research.ts) and renders this; nothing here
  * fetches anything. One of four screens, by `research.phase`:
  *
- *   loading        (starting / queued / running) a TOP-LEVEL loading screen with an
+ *   loading        (looking / starting / queued / running) a TOP-LEVEL loading screen with an
  *                  INDETERMINATE progress bar. The API reports a status and server
  *                  timestamps, never a percentage, so the bar carries no value
  *                  (role=progressbar without aria-valuenow) and no number is shown:
@@ -22,9 +22,10 @@
  *                  audit's own Form / Dose match number is text only in the detail).
  *                  The model, source-access inventory and timestamps are collapsed
  *                  secondary detail BELOW the card, not a wall before it.
- *   not-requested  a saved scan opened from History that has no job this page knows:
+ *   not-requested  a saved scan opened from History whose lookup found no job:
  *                  "Live research not requested" and a deliberate button. Opening a
- *                  scan never asks for research by itself.
+ *                  scan never asks for research by itself; a job it already has is
+ *                  looked up and followed (the loading screen, then the result).
  *   problem        failed / refused / unavailable / busy / not saved / not eligible /
  *                  signed out ... each one says what happened, what is NOT shown in
  *                  its place (no saved, cached or model-recalled evidence) and what
@@ -55,6 +56,8 @@ function statusLine(c: ResearchCopy, state: ResearchState, job: LiveResearchJob 
     case "running": return stalled && job ? c.stalled(formatUtc(job.updated_at) ?? "—") : c.running;
     case "queued": return c.queued;
     case "starting": return c.starting;
+    case "looking": return c.looking;
+    case "invalid": return c.invalid;
     case "idle": return c.idle;
     case "failed": return c.failed;
     case "disabled": return c.disabled;
@@ -80,7 +83,7 @@ export function ScanResearchScreen({ research, lang, head, context, onRescan }: 
 }) {
   const c = RESEARCH_COPY[lang];
   const headingId = useId();
-  const { state, phase, job, result, stalled, canAsk, press, statusRef } = research;
+  const { state, phase, job, result, stalled, reconnecting, canAsk, press, statusRef } = research;
   const text = statusLine(c, state, job, stalled);
   const open = job !== null && (job.status === "queued" || job.status === "running");
 
@@ -99,6 +102,7 @@ export function ScanResearchScreen({ research, lang, head, context, onRescan }: 
       <p className="sc-research-dim">{c.loadingLead}</p>
       <IndeterminateBar c={c} />
       {status}
+      {reconnecting ? <p className="sc-research-dim sc-research-reconnecting" role="status" data-testid="research-reconnecting">{c.reconnecting}</p> : null}
       {job ? <Progress c={c} job={job} /> : null}
       <p className="sc-research-dim">{c.noEstimate}</p>
       {open ? <p className="sc-research-dim">{c.leaveNote}</p> : null}

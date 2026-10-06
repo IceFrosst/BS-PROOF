@@ -3,7 +3,7 @@ import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RESEARCH_COPY, type ResearchCopy } from "@/lib/i18n/copy/research";
-import { forgetResearchJobs, noteResearchOwner, rememberResearchJob } from "@/lib/scan-research/client";
+import { forgetResearchJobs, noteResearchOwner, rememberResearchJob, RESEARCH_REQUEST_TIMEOUT_MS, RESEARCH_RETRY_DELAYS_MS } from "@/lib/scan-research/client";
 import { ScanResearchScreen } from "@/components/scan-research-panel";
 import { useLiveResearch } from "@/lib/scan-research/use-live-research";
 
@@ -305,33 +305,54 @@ describe("live research panel: the facts it used, and the ones it did not have",
   });
 });
 
-describe("live research panel: a replay never asks by itself", () => {
-  it("shows the saved scan as it was, sends nothing on open, and asks (once, with the owner's token) only when the person presses the button", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(ok(job("queued"), 201)); vi.stubGlobal("fetch", fetchMock);
+const LOOKUP = `/api/scan/research?scan_id=${SCAN}`;
+const notFound = () => response({ status: "not_found", error: "No research job of yours for that scan." }, 404);
+
+describe("live research panel: a replay reads the scan's job and never asks by itself", () => {
+  it("reads the job of the scan first (GET, owner's token, nothing else); with none it says 'not requested' and asks (POST, once) only when the person presses the button", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(notFound()).mockResolvedValue(ok(job("queued"), 201)); vi.stubGlobal("fetch", fetchMock);
     mount({ replay: true }); await settle();
-    expect(fetchMock).not.toHaveBeenCalled(); expect(token).not.toHaveBeenCalled();
+    expect(calls(fetchMock)).toEqual([`GET ${LOOKUP}`]); expect(token).toHaveBeenCalledWith({ userId: "owner-1" });
     expect(state()).toBe("idle"); expect(status()).toContain("Nothing was re-run");
     expect(host.querySelector("h2")?.textContent).toBe("Live research not requested");
     expect(text()).toContain("No saved, cached or model-recalled evidence is shown in its place");
     expect(button()?.textContent).toBe("Request live research for this scan");
-    expect(document.getElementById(button()!.getAttribute("aria-describedby")!)?.textContent).toMatch(/never starts a second one.*queues one/);
+    expect(document.getElementById(button()!.getAttribute("aria-describedby")!)?.textContent).toMatch(/queues one live research job.*never starts a second one/);
     const pressed = button()!;
     pressed.focus();
     await act(async () => { pressed.dispatchEvent(new MouseEvent("click", { bubbles: true })); });
     await settle();
     expect(document.activeElement).toBe(host.querySelector('[role="status"]')); // focus is not dropped when the button goes
-    expect(calls(fetchMock)).toEqual(["POST /api/scan/research"]);
-    expect(JSON.parse(String(fetchMock.mock.calls[0][1].body))).toEqual({ scan_id: SCAN });
+    expect(calls(fetchMock)).toEqual([`GET ${LOOKUP}`, "POST /api/scan/research"]); // the lookup said none, so the press asks directly
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1].body))).toEqual({ scan_id: SCAN });
     expect(state()).toBe("queued");
   });
 
-  it("looks up (GET) a job this page already knows, and never asks for research again", async () => {
+  it("a scan that already HAS a job: the job is found by the scan, shown, and followed to its end by itself -- no POST, no button", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockResolvedValueOnce(ok(job("running"))).mockResolvedValueOnce(ok(job("running", { updated_at: "2026-10-04T19:01:00+00:00" }))).mockResolvedValueOnce(ok(job("succeeded"))); vi.stubGlobal("fetch", fetchMock);
+    mount({ replay: true }); await advance(0);
+    expect(state()).toBe("running"); expect(host.querySelector('[data-research-phase="loading"]')).not.toBeNull(); expect(button()).toBeNull();
+    await advance(2500); expect(state()).toBe("running");
+    await advance(2500);
+    expect(state()).toBe("succeeded"); expect(host.querySelector('[data-testid="research-audit"]')).not.toBeNull();
+    expect(calls(fetchMock)).toEqual([`GET ${LOOKUP}`, `GET /api/scan/research/${JOB}`, `GET /api/scan/research/${JOB}`]);
+    await advance(60_000); expect(fetchMock).toHaveBeenCalledTimes(3); // finished: nothing more is asked
+  });
+
+  it("looks up (GET) a job this page already knows by its id, and never asks for research again", async () => {
     vi.useFakeTimers();
     noteResearchOwner("owner-1"); rememberResearchJob("owner-1", SCAN, JOB);
     const fetchMock = vi.fn().mockResolvedValue(ok(job("succeeded"))); vi.stubGlobal("fetch", fetchMock);
     mount({ replay: true }); await advance(0);
     expect(calls(fetchMock)).toEqual([`GET /api/scan/research/${JOB}`]);
     expect(state()).toBe("succeeded"); expect(host.querySelector('[data-testid="research-audit"]')).not.toBeNull();
+  });
+
+  it("a lookup answer for another scan's job is dropped, never drawn", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(ok(job("succeeded", { scan_id: "11111111-1111-4111-8111-111111111111" }))));
+    mount({ replay: true }); await settle();
+    expect(state()).toBe("error"); expect(host.querySelector('[data-testid="research-audit"]')).toBeNull();
   });
 
   it("a replayed job that is another account's or gone is the same 404 and shows nothing of it", async () => {
@@ -342,16 +363,140 @@ describe("live research panel: a replay never asks by itself", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("'Check again' after a transient error looks the known job up (GET); it does not post a second research request", async () => {
-    const fetchMock = vi.fn().mockResolvedValueOnce(ok(job("queued"), 201)).mockResolvedValueOnce(response({ status: "research_failed" }, 502)).mockImplementation(() => Promise.resolve(ok(job("failed"))));
-    vi.useFakeTimers(); vi.stubGlobal("fetch", fetchMock);
+  it("a transient failure of the lookup is retried visibly and by itself; it never turns into 'not requested' and never POSTs", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockRejectedValueOnce(new TypeError("Load failed")).mockResolvedValueOnce(response({ status: "auth_unavailable" }, 503)).mockResolvedValue(ok(job("queued")));
+    vi.stubGlobal("fetch", fetchMock);
+    mount({ replay: true }); await advance(0);
+    expect(state()).toBe("looking"); expect(host.querySelector('[data-testid="research-reconnecting"]')?.textContent).toBe(RESEARCH_COPY.en.reconnecting);
+    await advance(2500); expect(state()).toBe("looking"); expect(host.querySelector('[data-testid="research-reconnecting"]')).not.toBeNull();
+    await advance(5000);
+    expect(state()).toBe("queued"); expect(host.querySelector('[data-testid="research-reconnecting"]')).toBeNull();
+    expect(calls(fetchMock)).toEqual([`GET ${LOOKUP}`, `GET ${LOOKUP}`, `GET ${LOOKUP}`]);
+  });
+});
+
+describe("live research panel: following a job to its end (the completion path)", () => {
+  it("fresh scan: ONE POST, then GETs of the same job; queued -> running -> succeeded replaces the loading screen with the card by itself", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockResolvedValueOnce(ok(job("queued"), 201)).mockResolvedValueOnce(ok(job("running"))).mockResolvedValueOnce(ok(job("running"))).mockResolvedValueOnce(ok(job("succeeded"))); vi.stubGlobal("fetch", fetchMock);
+    mount(); await advance(0);
+    expect(state()).toBe("queued"); expect(host.querySelector('[data-research-phase="loading"]')).not.toBeNull();
+    await advance(2500); expect(state()).toBe("running");
+    await advance(2500); expect(state()).toBe("running");
+    await advance(2500); expect(state()).toBe("succeeded");
+    expect(host.querySelector('[data-research-phase="result"]')).not.toBeNull(); expect(host.querySelector('[data-testid="research-audit"]')).not.toBeNull();
+    expect(calls(fetchMock)).toEqual(["POST /api/scan/research", `GET /api/scan/research/${JOB}`, `GET /api/scan/research/${JOB}`, `GET /api/scan/research/${JOB}`]);
+    await advance(120_000); expect(fetchMock).toHaveBeenCalledTimes(4);
+  });
+
+  it("a failed job ends the progress and shows the failure; an unusable 'succeeded' payload is an integrity message, never a blank", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(ok(job("running"), 201)).mockResolvedValue(ok(job("failed"))));
     mount(); await advance(0); await advance(2500);
+    expect(state()).toBe("failed"); expect(host.querySelector('[data-research-phase="problem"]')).not.toBeNull(); expect(text()).toContain("worker_failed");
+    expect(host.querySelector('[role="progressbar"]')).toBeNull();
+  });
+
+  it("ONE transient failure of a poll (network error, 502, 503 sign-in check, 429) does not end the poll: it says it is retrying, then goes on and the card appears", async () => {
+    for (const bad of [() => Promise.reject(new TypeError("Load failed")), () => Promise.resolve(response({ status: "research_failed" }, 502)), () => Promise.resolve(response({ status: "auth_unavailable" }, 503)), () => Promise.resolve(response({ status: "rate" }, 429)), () => Promise.resolve(new Response("<html>Bad gateway</html>", { status: 502 }))]) {
+      vi.useFakeTimers();
+      const fetchMock = vi.fn().mockResolvedValueOnce(ok(job("queued"), 201)).mockImplementationOnce(bad).mockResolvedValue(ok(job("succeeded")));
+      vi.stubGlobal("fetch", fetchMock);
+      mount(); await advance(0); await advance(2500);
+      expect(state()).toBe("queued"); expect(host.querySelector('[data-testid="research-reconnecting"]')?.textContent).toBe(RESEARCH_COPY.en.reconnecting);
+      expect(host.querySelector('[data-research-phase="loading"]')).not.toBeNull();
+      await advance(2500);
+      expect(state()).toBe("succeeded"); expect(host.querySelector('[data-testid="research-reconnecting"]')).toBeNull(); expect(host.querySelector('[data-testid="research-audit"]')).not.toBeNull();
+      expect(calls(fetchMock).filter((c) => c.startsWith("POST"))).toHaveLength(1);
+      act(() => root.unmount()); root = createRoot(host); vi.useRealTimers(); vi.unstubAllGlobals(); forgetResearchJobs();
+    }
+  });
+
+  it("a request that NEVER finishes is abandoned after its ceiling and read again: the screen is not left on 'running' for ever", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockResolvedValueOnce(ok(job("running"), 201))
+      .mockImplementationOnce((_url: string, init: RequestInit) => new Promise((_resolve, reject) => { init.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError"))); }))
+      .mockResolvedValue(ok(job("succeeded")));
+    vi.stubGlobal("fetch", fetchMock);
+    mount(); await advance(0); await advance(2500);
+    expect(state()).toBe("running"); // the poll is hanging
+    await advance(RESEARCH_REQUEST_TIMEOUT_MS - 1); expect(host.querySelector('[data-testid="research-reconnecting"]')).toBeNull();
+    await advance(1); expect(host.querySelector('[data-testid="research-reconnecting"]')).not.toBeNull(); // abandoned, said so
+    await advance(2500);
+    expect(state()).toBe("succeeded");
+    expect(calls(fetchMock).filter((c) => c.startsWith("POST"))).toHaveLength(1);
+  });
+
+  it("after the last automatic retry it shows the problem with 'Check again' (a GET of the same job, no POST); coming back to the tab reads once more by itself", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockResolvedValueOnce(ok(job("queued"), 201)).mockResolvedValue(response({ status: "research_failed" }, 502)); vi.stubGlobal("fetch", fetchMock);
+    mount(); await advance(0);
+    let waited = 0;
+    for (const ms of RESEARCH_RETRY_DELAYS_MS) { waited += ms; }
+    await advance(2500 + waited + 1000);
     expect(state()).toBe("error"); expect(text()).toContain("could not be loaded");
     expect(host.querySelector(".sc-research-steps")).not.toBeNull(); // the last good job is still shown
     expect(button()?.textContent).toBe("Check again");
+    const before = fetchMock.mock.calls.length;
+    await advance(120_000); expect(fetchMock.mock.calls.length).toBe(before); // parked: nothing is hammered
+    fetchMock.mockResolvedValue(ok(job("succeeded")));
+    await act(async () => { document.dispatchEvent(new Event("visibilitychange")); await vi.advanceTimersByTimeAsync(0); });
+    expect(state()).toBe("succeeded");
+    expect(calls(fetchMock).filter((c) => c.startsWith("POST"))).toHaveLength(1);
+    expect(fetchMock.mock.calls.length).toBe(before + 1);
+  });
+
+  it("'Check again' looks the known job up (GET); it does not post a second research request", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(ok(job("queued"), 201)).mockResolvedValue(response({ status: "research_unavailable" }, 503));
+    vi.useFakeTimers(); vi.stubGlobal("fetch", fetchMock);
+    mount(); await advance(0); await advance(2500);
+    expect(state()).toBe("unavailable"); // a deployment problem, not a transient one: shown at once, with its button
+    expect(host.querySelector(".sc-research-steps")).not.toBeNull(); // the last good job is still shown
+    expect(button()?.textContent).toBe("Check again");
+    fetchMock.mockImplementation(() => Promise.resolve(ok(job("failed"))));
     await act(async () => { button()!.dispatchEvent(new MouseEvent("click", { bubbles: true })); await vi.advanceTimersByTimeAsync(0); });
     expect(calls(fetchMock)).toEqual(["POST /api/scan/research", `GET /api/scan/research/${JOB}`, `GET /api/scan/research/${JOB}`]);
     expect(state()).toBe("failed");
+  });
+
+  it("a tab that comes back (visibility, focus, network) while a poll is waiting reads at once; never a second request in flight, never a POST", async () => {
+    vi.useFakeTimers();
+    let release: (r: Response) => void = () => undefined;
+    const fetchMock = vi.fn().mockResolvedValueOnce(ok(job("running"), 201))
+      .mockImplementationOnce(() => new Promise<Response>((resolve) => { release = resolve; }))
+      .mockResolvedValue(ok(job("succeeded")));
+    vi.stubGlobal("fetch", fetchMock);
+    mount(); await advance(0);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await act(async () => { document.dispatchEvent(new Event("visibilitychange")); await vi.advanceTimersByTimeAsync(1100); }); // cuts the wait short (past the burst guard)
+    expect(fetchMock).toHaveBeenCalledTimes(2); expect(state()).toBe("running");
+    await act(async () => { window.dispatchEvent(new Event("focus")); window.dispatchEvent(new Event("online")); window.dispatchEvent(new Event("pageshow")); document.dispatchEvent(new Event("visibilitychange")); await vi.advanceTimersByTimeAsync(50); });
+    expect(fetchMock).toHaveBeenCalledTimes(2); // that read is still in flight: nothing is added to it
+    await act(async () => { release(ok(job("running"))); await vi.advanceTimersByTimeAsync(0); });
+    await advance(2500);
+    expect(state()).toBe("succeeded");
+    expect(calls(fetchMock).filter((c) => c.startsWith("POST"))).toHaveLength(1);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("a hidden tab does not wake the poll", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockResolvedValueOnce(ok(job("running"), 201)).mockResolvedValue(ok(job("running"))); vi.stubGlobal("fetch", fetchMock);
+    mount(); await advance(0);
+    const hidden = vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+    await act(async () => { document.dispatchEvent(new Event("visibilitychange")); await vi.advanceTimersByTimeAsync(1100); });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    hidden.mockRestore();
+  });
+
+  it("the wake listeners go with the screen: after an unmount nothing is read", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockResolvedValueOnce(ok(job("running"), 201)).mockResolvedValue(ok(job("running"))); vi.stubGlobal("fetch", fetchMock);
+    mount(); await advance(0);
+    act(() => root.unmount()); root = createRoot(host);
+    await act(async () => { document.dispatchEvent(new Event("visibilitychange")); window.dispatchEvent(new Event("focus")); await vi.advanceTimersByTimeAsync(60_000); });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -411,9 +556,8 @@ describe("live research panel: the owner, the session and stale answers", () => 
     vi.useFakeTimers();
     const fetchMock = always(() => ok(job("running"))); vi.stubGlobal("fetch", fetchMock);
     mount(); await advance(0);
-    const signal = fetchMock.mock.calls[0][1].signal as AbortSignal;
     mount({ ownerId: null }); await advance(0);
-    expect(signal.aborted).toBe(true); expect(state()).toBe("auth"); expect(text()).toContain("Sign in to view");
+    expect(state()).toBe("auth"); expect(text()).toContain("Sign in to view");
     expect(host.querySelector(".sc-research-steps")).toBeNull(); expect(host.querySelector('[data-testid="research-facts"]')).toBeNull();
     await advance(30_000); expect(fetchMock).toHaveBeenCalledTimes(1);
   });
@@ -442,7 +586,8 @@ describe("live research panel: the owner, the session and stale answers", () => 
     for (const bad of [{ ...result, provenance: null }, { ...result, provenance: { ...result.provenance, affects_score: true } }, { ...result, source_access: { ...result.source_access, version: "SourceAccessV1" } }, { ...result, source_access: { ...result.source_access, summary: { ...result.source_access.summary, original_documents: 1 } } }, null]) {
       vi.stubGlobal("fetch", vi.fn().mockResolvedValue(ok(job("succeeded", { result: bad }))));
       mount(); await settle();
-      expect(text()).toContain("Research status could not be loaded"); expect(text()).not.toContain("Research audit returned");
+      expect(state()).toBe("invalid"); expect(host.querySelector('[data-research-phase="problem"]')).not.toBeNull();
+      expect(text()).toContain(RESEARCH_COPY.en.invalid); expect(text()).not.toContain("Research audit returned");
       expect(host.querySelector('[data-testid="research-audit"]')).toBeNull();
       act(() => root.unmount()); root = createRoot(host);
     }
@@ -509,6 +654,7 @@ describe("live research panel: Lithuanian", () => {
   });
 
   it("the replay prompt, its button and the stalled notice are Lithuanian too", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(notFound()));
     mount({ lang: "lt", replay: true }); await settle();
     expect(status()).toBe(RESEARCH_COPY.lt.idle); expect(button()?.textContent).toBe(RESEARCH_COPY.lt.load); expect(text()).toContain(RESEARCH_COPY.lt.loadHint);
     act(() => root.unmount()); root = createRoot(host);

@@ -33,6 +33,7 @@ import { formatSavedAt, ScanFlow } from "@/components/scan-flow";
 import type { CatalogIngredient } from "@/lib/analyze/catalog";
 import type { ScanAnalysis } from "@/lib/analyze/scan";
 import type { AuthSession } from "@/lib/auth/use-supabase-session";
+import { getJson, isObject, parseSaved, type Failure } from "@/lib/saved-scans/client";
 import { FLOW_COPY } from "@/lib/i18n/copy/flow";
 import { HISTORY_COPY } from "@/lib/i18n/copy/history";
 import { useLang } from "@/lib/i18n/locale";
@@ -57,40 +58,6 @@ export interface ScanHistoryProps {
 
 export const SESSION_ENDED_NOTICE = "Your session ended. Sign in again to continue.";
 
-type Failure = "auth" | "not_found" | "unavailable" | "failed";
-
-type GetResult = { ok: true; json: unknown } | { ok: false; failure: Failure };
-
-/**
- * One authorised, uncached GET for `owner`. The token is re-read from the SDK
- * for this request (and only if the live session still belongs to `owner`); a
- * 401 refreshes it once and retries once.
- */
-async function getJson(url: string, owner: string, getAccessToken: AuthSession["getAccessToken"], signal: AbortSignal): Promise<GetResult> {
-  const send = (token: string) => fetch(url, { method: "GET", headers: { Authorization: `Bearer ${token}` }, cache: "no-store", signal });
-  try {
-    const first = await getAccessToken({ userId: owner });
-    if (!first) return { ok: false, failure: "auth" };
-    let res = await send(first);
-    if (res.status === 401) {
-      const fresh = await getAccessToken({ userId: owner, forceRefresh: true });
-      if (!fresh || fresh === first) return { ok: false, failure: "auth" };
-      res = await send(fresh);
-    }
-    if (res.status === 401) return { ok: false, failure: "auth" };
-    if (res.status === 404) return { ok: false, failure: "not_found" };
-    if (res.status === 503) return { ok: false, failure: "unavailable" };
-    if (!res.ok) return { ok: false, failure: "failed" };
-    return { ok: true, json: await res.json() };
-  } catch {
-    return { ok: false, failure: "failed" };
-  }
-}
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 function parseRuns(json: unknown): HistoryRun[] | null {
   if (!isObject(json) || json.status !== "ok" || !Array.isArray(json.runs)) return null;
   const runs: HistoryRun[] = [];
@@ -105,15 +72,6 @@ function parseRuns(json: unknown): HistoryRun[] | null {
     });
   }
   return runs;
-}
-
-/** The stored analysis, only if it is for the run that was asked for and carries what the renderer needs. */
-function parseSaved(json: unknown, runId: string): ScanAnalysis | null {
-  if (!isObject(json) || json.status !== "ok" || typeof json.run_id !== "string") return null;
-  if (json.run_id.toLowerCase() !== runId.toLowerCase()) return null;
-  const analysis = json.analysis;
-  if (!isObject(analysis) || typeof analysis.status !== "string" || !isObject(analysis.basis_legend)) return null;
-  return analysis as unknown as ScanAnalysis;
 }
 
 function words(value: string): string {

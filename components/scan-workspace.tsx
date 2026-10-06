@@ -8,6 +8,12 @@
  *            MOUNTED while History is showing (the panel is only `hidden`), so
  *            a staged photo, a scan still running and a finished result all
  *            survive a trip to History. Its camera is switched off while hidden.
+ *            After a page RELOAD the scan it was showing is put back
+ *            (lib/saved-scans/use-scan-resume.ts: the saved scan is read again
+ *            with the person's own token, then its research job is read and
+ *            followed to its end -- no rescan, no new research). Until that has
+ *            been decided the camera stays off, and while the saved scan is read
+ *            a short "Restoring your scan" line takes the place of the camera.
  *   History  <ScanHistory>, mounted only while it is the visible tab, so it
  *            asks for the list every time it is opened and shows nothing from a
  *            previous visit. A scan that finishes and is reported stored bumps
@@ -26,6 +32,7 @@ import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } f
 
 import { ScanFlow } from "@/components/scan-flow";
 import { ScanHistory } from "@/components/history-tab";
+import { useScanResume } from "@/lib/saved-scans/use-scan-resume";
 import type { CatalogIngredient } from "@/lib/analyze/catalog";
 import { useSupabaseSession } from "@/lib/auth/use-supabase-session";
 import { FLOW_COPY } from "@/lib/i18n/copy/flow";
@@ -74,6 +81,7 @@ export function ScanWorkspace({ catalog }: { catalog: CatalogIngredient[] }) {
     return token ? { Authorization: `Bearer ${token}` } : null;
   }, [configured, getAccessToken, userId]);
 
+  const resume = useScanResume(auth);
   const onScanStored = useCallback(() => setRefreshToken((n) => n + 1), []);
   const goToScan = useCallback(() => setTab("scan"), []);
 
@@ -129,7 +137,36 @@ export function ScanWorkspace({ catalog }: { catalog: CatalogIngredient[] }) {
       </div>
 
       <div role="tabpanel" id={panelId("scan")} aria-labelledby={tabId("scan")} className="sw-panel" hidden={tab !== "scan"}>
-        <ScanFlow catalog={catalog} auth={auth} active={tab === "scan"} onScanStored={onScanStored} hideTopbar />
+        {resume.phase === "restoring" ? (
+          <div className="sw-detail" data-testid="resume-restoring">
+            <p className="sw-status" role="status">{t.restoringTitle}</p>
+            <p className="sw-lede">{t.restoringBody}</p>
+          </div>
+        ) : resume.phase === "failed" ? (
+          <div className="sw-detail">
+            <div className="sw-error" role="alert" data-testid="resume-failed">
+              <strong>{t.restoreFailedTitle}</strong>
+              <span>{t.restoreFailedBody}</span>
+              <button type="button" className="button button-outline sw-retry" onClick={resume.retry}>{t.tryAgain}</button>
+              <button type="button" className="button button-outline sw-retry" onClick={resume.startNew}>{t.restoreStartNew}</button>
+            </div>
+          </div>
+        ) : resume.phase === "ready" ? (
+          <ScanFlow
+            key={`restored-${resume.scanId}`}
+            catalog={catalog}
+            auth={auth}
+            active={tab === "scan"}
+            initialResult={{ runId: resume.scanId, savedAt: null, analysis: resume.analysis }}
+            restored={{ intent: resume.intent }}
+            onLeave={resume.leave}
+            hideTopbar
+          />
+        ) : (
+          // `pending` (the page has only just mounted) holds the camera for one beat, so a reload that is about to
+          // put a scan back never switches the camera on for a frame first.
+          <ScanFlow key="live" catalog={catalog} auth={auth} active={tab === "scan" && resume.phase !== "pending"} onScanStored={onScanStored} hideTopbar />
+        )}
       </div>
 
       <div role="tabpanel" id={panelId("history")} aria-labelledby={tabId("history")} className="sw-panel" hidden={tab !== "history"}>

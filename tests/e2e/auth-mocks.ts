@@ -44,12 +44,13 @@ export function sessionBody(token: string, id = "e2e-user", email = "e2e@example
   };
 }
 
-export async function mockSupabase(page: Page, state: { exchange: "ok" | "fail" }) {
+/** `userId` / `email` default to the shared fake owner; a test that needs a real-looking owner id (the reload checkpoint only accepts UUIDs) passes its own. */
+export async function mockSupabase(page: Page, state: { exchange: "ok" | "fail"; userId?: string; email?: string }) {
   await page.route(`${SUPABASE}/auth/v1/**`, (route) => {
     const url = route.request().url();
     if (url.includes("grant_type=id_token")) {
       return state.exchange === "ok"
-        ? route.fulfill({ contentType: "application/json", body: JSON.stringify(sessionBody("e2e-token")) })
+        ? route.fulfill({ contentType: "application/json", body: JSON.stringify(sessionBody("e2e-token", state.userId, state.email)) })
         : route.fulfill({ status: 400, contentType: "application/json", body: JSON.stringify({ error: "invalid_grant", error_description: "Unacceptable audience in id_token" }) });
     }
     if (url.includes("/logout")) return route.fulfill({ status: 204, body: "" });

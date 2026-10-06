@@ -31,6 +31,19 @@
  */
 
 export const RESEARCH_POLL_MS = 2500;
+/**
+ * One request's ceiling, connection and body together. Without it a connection that dies silently (a phone that slept, a
+ * network that changed) leaves a poll awaiting forever and the screen says "running" for ever. Past it the request is
+ * abandoned and counted as a transient failure; a read is then simply asked again.
+ */
+export const RESEARCH_REQUEST_TIMEOUT_MS = 20_000;
+/**
+ * The waits between automatic re-reads after a transient failure (network error, timeout, 429 / 5xx / 502 / auth-check
+ * unavailable). Only READS are repeated this way (a poll, or the lookup of a scan's job); each wait is visible on screen
+ * ("retrying"). After the last one the page stops and shows "Check again", and a return to the tab / the network coming
+ * back reads once more on its own.
+ */
+export const RESEARCH_RETRY_DELAYS_MS: readonly number[] = [2500, 5000, 10_000, 20_000, 30_000, 30_000];
 /** Mirror of LEASE_SECONDS in lib/scan-research/contract.ts (a running job's lease). */
 export const RESEARCH_LEASE_SECONDS = 300;
 /** Same ceiling the server applies to one stored job (lib/scan-research/store.ts MAX_RESPONSE_BYTES). */
@@ -298,23 +311,62 @@ async function boundedText(response: Response, max: number): Promise<string | nu
  * `{ status, created?, job? }`: provider text, stack traces and anything else a
  * failing server might send are never kept, so none of it can reach the screen.
  */
-export async function researchRequest(path: string, token: string, signal: AbortSignal, body?: unknown): Promise<{ response: Response; json: ResearchReply }> {
-  const response = await fetch(path, { method: body ? "POST" : "GET", headers: { Authorization: `Bearer ${token}`, ...(body ? { "Content-Type": "application/json" } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}), cache: "no-store", signal });
-  let json: ResearchReply = { status: "error" };
+export async function researchRequest(path: string, token: string, signal: AbortSignal, body?: unknown, timeoutMs: number = RESEARCH_REQUEST_TIMEOUT_MS): Promise<{ response: Response; json: ResearchReply }> {
+  // The caller's signal (leave, sign-out, another scan) and this request's own deadline both cancel the fetch AND the body read.
+  const own = new AbortController();
+  const relay = () => own.abort();
+  if (signal.aborted) own.abort();
+  else signal.addEventListener("abort", relay, { once: true });
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  // The deadline is a RACE as well as an abort: a connection that dies silently must end this request even where nothing
+  // reacts to the abort. The caller leaving is an abort (never retried); running out of time is a timeout (transient).
+  const deadline = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => { own.abort(); reject(new ResearchTimeout()); }, timeoutMs);
+  });
+  const work = (async () => {
+    const response = await fetch(path, { method: body ? "POST" : "GET", headers: { Authorization: `Bearer ${token}`, ...(body ? { "Content-Type": "application/json" } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}), cache: "no-store", signal: own.signal });
+    let json: ResearchReply = { status: "error" };
+    try {
+      const text = await boundedText(response, RESEARCH_MAX_RESPONSE_BYTES);
+      const parsed: unknown = text === null ? null : JSON.parse(text);
+      if (record(parsed)) json = { status: str(parsed.status) && STATUS_RE.test(parsed.status) ? parsed.status : "error", ...(typeof parsed.created === "boolean" ? { created: parsed.created } : {}), ...("job" in parsed ? { job: parsed.job } : {}) };
+    } catch { /* expose only a safe generic error */ }
+    return { response, json };
+  })();
   try {
-    const text = await boundedText(response, RESEARCH_MAX_RESPONSE_BYTES);
-    const parsed: unknown = text === null ? null : JSON.parse(text);
-    if (record(parsed)) json = { status: str(parsed.status) && STATUS_RE.test(parsed.status) ? parsed.status : "error", ...(typeof parsed.created === "boolean" ? { created: parsed.created } : {}), ...("job" in parsed ? { job: parsed.job } : {}) };
-  } catch { /* expose only a safe generic error */ }
-  return { response, json };
+    return await Promise.race([work, deadline]);
+  } finally {
+    clearTimeout(timer);
+    signal.removeEventListener("abort", relay);
+  }
+}
+
+/** A request that did not finish within RESEARCH_REQUEST_TIMEOUT_MS. Carries nothing from the network. */
+export class ResearchTimeout extends Error {
+  constructor() {
+    super("timeout");
+    this.name = "ResearchTimeout";
+  }
+}
+
+/** The path that reads the job a scan already has (read-only). The scan id is validated before a URL is built. */
+export const researchLookupPath = (scanId: string) => `/api/scan/research?scan_id=${encodeURIComponent(scanId)}`;
+/** The path that reads one job by its id. */
+export const researchJobPath = (jobId: string) => `/api/scan/research/${encodeURIComponent(jobId)}`;
+
+/** `work`, or a ResearchTimeout when it has not finished in `ms` (the token read of a session whose refresh hangs). */
+function within<T>(work: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new ResearchTimeout()), ms); });
+  return Promise.race([work, late]).finally(() => clearTimeout(timer));
 }
 
 export async function researchWithCurrentToken(path: string, getToken: (options?: { userId?: string; forceRefresh?: boolean }) => Promise<string | null>, signal: AbortSignal, ownerId: string, body?: unknown) {
-  const first = await getToken({ userId: ownerId });
+  const first = await within(getToken({ userId: ownerId }), RESEARCH_REQUEST_TIMEOUT_MS);
   if (!first) throw new Error("auth");
   let result = await researchRequest(path, first, signal, body);
   if (result.response.status === 401) {
-    const fresh = await getToken({ userId: ownerId, forceRefresh: true });
+    const fresh = await within(getToken({ userId: ownerId, forceRefresh: true }), RESEARCH_REQUEST_TIMEOUT_MS);
     // A refresh that hands back the same token (or none) means the session is not recoverable: say so, do not loop.
     if (!fresh || fresh === first) throw new Error("auth");
     result = await researchRequest(path, fresh, signal, body);

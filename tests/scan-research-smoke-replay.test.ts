@@ -18,6 +18,9 @@ import { describe, expect, it } from "vitest";
 import { account, groundingText, hasPageContent, ownRequestText, type LeadEvent } from "@/lib/scan-research/lead-accounting";
 import { checkLiveResearchResultV3, groundedIdsV3, ownRequestIds } from "@/lib/scan-research/source-access-v3";
 import { idsIn } from "@/lib/scan-research/source-access-v2";
+import { parseResearchJob, parseResearchResult } from "@/lib/scan-research/client";
+import { buildLiveResultCard } from "@/lib/scan-research/result-card";
+import { publicJob } from "@/lib/scan-research/store";
 
 const RUN = process.env.BS_PROOF_REPLAY_SMOKE_RUN;
 const SHA = {
@@ -40,6 +43,26 @@ describe.skipIf(!have)("the successful v0.5 smoke, original bytes, under the W1 
     if (!r.ok) return;
     expect(r.result.source_access.inventory).toEqual([{ id: "pmid:32219282", evidence_class: "derived_snippet" }]);
     expect(r.result.source_access.follow_through).toMatchObject({ user_turns: 2, searches: 2, distinct_queries: 2, fetches: 13, fetches_with_content: 4, fetches_failed: 9, leads: 15, leads_with_content: 3, leads_blocked: 6, leads_unattempted: 6, ledger_rows: 15 });
+  });
+
+  it("the finished job that the server would STORE for it is drawn by the browser's own parsers: publicJob -> parseResearchJob -> parseResearchResult -> the result card (the completion path ends in a card, not an error)", () => {
+    const p = JSON.parse(read("result.json").toString("utf8"));
+    const checked = checkLiveResearchResultV3(p.audit, p.source_access_v3);
+    expect(checked.ok, checked.ok ? "" : checked.errors.join("; ")).toBe(true);
+    if (!checked.ok) return;
+    const row = {
+      id: "7d1f2a9e-3b4c-4d5e-8f60-123456789abc", scan_id: "5c0e0478-b5c0-4bbe-b8b7-d45b2a5d3878", status: "succeeded", prompt_version: "live-research-v0.5", target: null,
+      created_at: "2026-10-05T21:04:00+00:00", updated_at: "2026-10-05T21:06:00+00:00", completed_at: "2026-10-05T21:06:00+00:00", failure_code: null,
+      result: JSON.parse(JSON.stringify(checked.result)), // what jsonb hands back
+    };
+    const job = parseResearchJob(publicJob(row));
+    expect(job?.status).toBe("succeeded");
+    const parsed = parseResearchResult(job?.result);
+    expect(parsed, "the client must be able to draw what the server stored").not.toBeNull();
+    expect(parsed?.provenance.source_access_version).toBe("SourceAccessV3");
+    expect(parsed?.source_access.inventory).toEqual([{ id: "pmid:32219282", evidence_class: "derived_snippet" }]);
+    expect(parsed!.audit.outcomes.length).toBeGreaterThan(0);
+    expect(buildLiveResultCard(parsed!, job?.result, job?.facts ?? null).rows.length).toBeGreaterThan(0);
   });
 
   it("the cited id is grounded by a fetch whose typed address does not carry it; four fetches returned content", () => {

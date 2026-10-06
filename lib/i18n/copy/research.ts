@@ -28,6 +28,9 @@ export interface ResearchCopy {
   ungradedNote: string;
   /* status lines */
   idle: string;
+  looking: string;
+  invalid: string;
+  reconnecting: string;
   load: string;
   loadHint: string;
   starting: string;
@@ -123,9 +126,12 @@ export const RESEARCH_COPY: Record<ResearchLanguage, ResearchCopy> = {
     tagExperimental: "Experimental",
     tagUngraded: "Ungraded",
     ungradedNote: "Experimental and ungraded: a model searched the web for this product, no person has checked it, and it has no score. It is not a clinical approval and does not feed any score.",
-    idle: "This saved scan has no live research loaded on this page. Nothing was re-run, and research was not requested by opening it.",
+    idle: "No live research has been requested for this saved scan. Nothing was re-run, and opening it did not request research.",
+    looking: "Looking for the research on this scan…",
+    invalid: "The research finished, but its result did not pass this page’s checks, so none of it is shown. Nothing was put in its place.",
+    reconnecting: "Connection problem: the research itself is not affected. Trying again automatically.",
     load: "Request live research for this scan",
-    loadHint: "If research was already requested for this scan, asking again shows that job; it never starts a second one. If there is none, this queues one for the private research worker.",
+    loadHint: "This queues one live research job for the private research worker. If one already exists for this scan, you see that job instead; it never starts a second one.",
     starting: "Checking live research…",
     queued: "Queued for the private research worker.",
     running: "Research is running.",
@@ -204,9 +210,12 @@ export const RESEARCH_COPY: Record<ResearchLanguage, ResearchCopy> = {
     tagExperimental: "Eksperimentinis",
     tagUngraded: "Be įvertinimo",
     ungradedNote: "Eksperimentinis ir neįvertintas: modelis ieškojo šio produkto internete, žmogus to netikrino, balo nėra. Tai nėra klinikinis patvirtinimas ir jokio balo nekeičia.",
-    idle: "Šiame puslapyje šiam išsaugotam skenavimui nėra įkelto tiesioginio tyrimo. Nieko nebuvo paleista iš naujo, o jį atvėrus tyrimas nebuvo užsakytas.",
+    idle: "Šiam išsaugotam skenavimui tiesioginis tyrimas nebuvo užsakytas. Nieko nebuvo paleista iš naujo, o jį atvėrus tyrimas nebuvo užsakytas.",
+    looking: "Ieškoma šio skenavimo tyrimo…",
+    invalid: "Tyrimas baigtas, bet jo rezultatas neatitiko šio puslapio patikrų, todėl nieko iš jo nerodoma. Nieko kito vietoj jo nepateikta.",
+    reconnecting: "Ryšio problema: pats tyrimas nepaveiktas. Bandoma dar kartą automatiškai.",
     load: "Užsakyti šio skenavimo tiesioginį tyrimą",
-    loadHint: "Jei šiam skenavimui tyrimas jau buvo užsakytas, paprašius dar kartą bus parodyta ta pati užduotis; antra niekada nepradedama. Jei jos nėra, bus įtraukta viena užduotis į privataus tyrimų vykdytojo eilę.",
+    loadHint: "Į privataus tyrimų vykdytojo eilę bus įtraukta viena tiesioginio tyrimo užduotis. Jei šiam skenavimui ji jau yra, pamatysite tą užduotį; antra niekada nepradedama.",
     starting: "Tikrinamas tiesioginis tyrimas…",
     queued: "Laukia eilėje privačiam tyrimų vykdytojui.",
     running: "Tyrimas vykdomas.",

@@ -67,7 +67,7 @@ function stubApi(routes: Routes) {
     const path = call.url;
     let answer: Answer;
     if (path === "/api/scan") answer = routes.scan?.(call);
-    else if (path === "/api/scan/research" || path.startsWith("/api/scan/research/")) answer = routes.research?.(call);
+    else if (path === "/api/scan/research" || path.startsWith("/api/scan/research/") || path.startsWith("/api/scan/research?")) answer = routes.research?.(call);
     else if (path === "/api/scan/history") answer = routes.list?.(call);
     else if (path.startsWith("/api/scan/history/")) answer = routes.detail?.(call, decodeURIComponent(path.slice("/api/scan/history/".length)));
     if (!answer) throw new Error(`unexpected request ${call.method} ${path}`);
@@ -77,6 +77,13 @@ function stubApi(routes: Routes) {
 }
 const researchCalls = (calls: RecordedCall[]) => calls.filter((c) => c.url.startsWith("/api/scan/research"));
 const posts = (calls: RecordedCall[]) => calls.filter((c) => c.method === "POST" && c.url === "/api/scan/research");
+const lookups = (calls: RecordedCall[]) => calls.filter((c) => c.method === "GET" && c.url.startsWith("/api/scan/research?scan_id="));
+const notFound = () => jsonResponse({ status: "not_found", error: "No research job of yours for that scan." }, 404);
+/** A research route for a SAVED scan: the lookup by scan answers `onLookup`, everything else follows the script (the POST, then polls by id). */
+function savedScanResearch(onLookup: () => Response, ...rest: Array<Response | (() => Response)>) {
+  const walk = rest.length ? scripted(...rest) : () => { throw new Error("unexpected research request"); };
+  return (c: RecordedCall) => (c.method === "GET" && c.url.startsWith("/api/scan/research?scan_id=") ? onLookup() : walk());
+}
 const ok = (job: unknown, status = 200) => jsonResponse({ status: "ok", job }, status);
 
 /** A research route that walks a script: the first answer is the POST, each later one a poll. */
@@ -381,7 +388,8 @@ describe("problems are visible, actionable and never a blank or a legacy card", 
     const { el } = await scanWith(scripted(ok({ ...researchJob(RUN, "succeeded"), result: { ...RESULT, provenance: { ...RESULT.provenance, affects_score: true } } }, 201)));
     expect(stage(el)).toBe("problem");
     expect(scanPanel(el).querySelector('[data-testid="research-audit"]')).toBeNull();
-    expect(scanPanel(el).querySelector(".sc-research")?.getAttribute("data-research-state")).toBe("error");
+    expect(scanPanel(el).querySelector(".sc-research")?.getAttribute("data-research-state")).toBe("invalid");
+    expect(text(scanPanel(el).querySelector(".sc-research"))).toContain("did not pass this page’s checks"); // an integrity message, never a blank
   });
 
   it("Google/session errors: a 401 refreshes the token ONCE and retries; a second 401 says to sign in instead of looping", async () => {
@@ -450,11 +458,9 @@ describe("a late reply never reaches the wrong person or a screen that is gone",
     await stageAndScan(el);
     await advance(0);
     expect(stage(el)).toBe("loading");
-    const poll = researchCalls(calls)[0];
 
     fakeAuth.setSession(sessionFor(USER_B, "tok-b"));
     await advance(0);
-    expect(poll.signal?.aborted).toBe(true);
     expect(scanPanel(el).querySelector(".scan-lab-result, .sc-research")).toBeNull();
     await advance(10_000);
     expect(researchCalls(calls)).toHaveLength(1); // nothing further was asked, with anybody's token
@@ -467,9 +473,7 @@ describe("a late reply never reaches the wrong person or a screen that is gone",
     await advance(0);
     await stageAndScan(el);
     await advance(0);
-    const signal = researchCalls(calls)[0].signal;
     await harness.cleanup();
-    expect(signal?.aborted).toBe(true);
     await advance(30_000);
     expect(researchCalls(calls)).toHaveLength(1);
     expect(el.isConnected).toBe(false);
@@ -494,7 +498,7 @@ describe("a late reply never reaches the wrong person or a screen that is gone",
   });
 });
 
-describe("History: a saved scan never researches by itself", () => {
+describe("History: a saved scan reads its research job, follows it by itself, and never asks by itself", () => {
   const listRun = { id: RUN, created_at: "2026-09-20T10:30:00Z", source: "photo", status: "ok", product_name: "Vitamin D3 2000 IU" };
   async function openSaved(research?: Routes["research"]) {
     const calls = stubApi({
@@ -511,10 +515,12 @@ describe("History: a saved scan never researches by itself", () => {
     return { el, calls };
   }
 
-  it("opening it shows 'Live research not requested' and a deliberate button; no research request, no legacy card, no spend", async () => {
-    const { el, calls } = await openSaved();
+  it("a scan with NO job: the job is looked up by the scan (one GET, the owner's token), then 'Live research not requested' and a deliberate button; no POST, no legacy card, no spend", async () => {
+    const { el, calls } = await openSaved(savedScanResearch(notFound));
     const panel = historyPanel(el);
-    expect(researchCalls(calls)).toHaveLength(0);
+    expect(researchCalls(calls).map((c) => `${c.method} ${c.url}`)).toEqual([`GET /api/scan/research?scan_id=${RUN}`]);
+    expect(lookups(calls)[0].headers.Authorization).toBe("Bearer tok-a");
+    expect(posts(calls)).toHaveLength(0);
     expect(token(calls)).toBe("Bearer tok-a");
     expect(panel.querySelector(".sc-research")?.getAttribute("data-research-state")).toBe("idle");
     expect(text(panel.querySelector(".sc-research h2"))).toBe("Live research not requested");
@@ -526,15 +532,17 @@ describe("History: a saved scan never researches by itself", () => {
     // the read-label facts are kept, with the regimen unknown said out loud
     expect(text(panel.querySelector('[data-testid="read-facts"]'))).toContain("servings per day not stated (not assumed)");
     await advance(60_000);
-    expect(researchCalls(calls)).toHaveLength(0);
+    expect(researchCalls(calls)).toHaveLength(1); // nothing more, ever, until the button
+    expect(posts(calls)).toHaveLength(0);
   });
 
-  it("the button asks ONCE; the server's idempotent answer (the job already exists) is shown, not a second job, and the poll then drives the loading screen", async () => {
-    const { el, calls } = await openSaved(scripted(ok(researchJob(RUN, "running"), 200), ok(researchJob(RUN, "succeeded"))));
+  it("the button asks ONCE; the server's idempotent answer is shown, not a second job, and the poll then drives the loading screen; re-opening the scan READS the job, never asks again", async () => {
+    const { el, calls } = await openSaved(savedScanResearch(notFound, ok(researchJob(RUN, "running"), 200), ok(researchJob(RUN, "succeeded"))));
     await click(buttonByText(historyPanel(el), /request live research for this scan/i));
     await advance(0);
     expect(posts(calls)).toHaveLength(1);
     expect(JSON.parse(String(posts(calls)[0].body))).toEqual({ scan_id: RUN });
+    expect(lookups(calls)).toHaveLength(1); // the press asked at once: the lookup had just said "none"
     expect(historyPanel(el).querySelector(".sc-research")?.getAttribute("data-research-phase")).toBe("loading");
     expect(historyPanel(el).querySelectorAll('[role="progressbar"]')).toHaveLength(1);
     await advance(2500);
@@ -550,28 +558,65 @@ describe("History: a saved scan never researches by itself", () => {
     expect(historyPanel(el).querySelectorAll('[data-testid="research-audit"]')).toHaveLength(1);
   });
 
-  it("History replay of an already-known finished job shows the same card with NO new POST and no model rerun", async () => {
+  it("a scan that ALREADY has a running job: opening it finds the job by the scan and shows loading, then the finished card appears by ITSELF -- no button, no POST, no refresh", async () => {
+    const result = liveResult(mockAudit([mockOutcome()]));
+    const done = () => ok(researchJob(RUN, "succeeded", { result }));
+    const { el, calls } = await openSaved(savedScanResearch(() => ok(researchJob(RUN, "queued")), ok(researchJob(RUN, "running")), ok(researchJob(RUN, "running")), done()));
+    const panel = historyPanel(el);
+    expect(panel.querySelector(".sc-research")?.getAttribute("data-research-phase")).toBe("loading");
+    expect(panel.querySelector(".sc-research")?.getAttribute("data-research-state")).toBe("queued");
+    expect(panel.querySelectorAll('[role="progressbar"]')).toHaveLength(1);
+    expect(Array.from(panel.querySelectorAll(".sc-research button"))).toHaveLength(0);
+    await advance(2500);
+    expect(panel.querySelector(".sc-research")?.getAttribute("data-research-state")).toBe("running");
+    await advance(2500);
+    expect(panel.querySelector(".sc-research")?.getAttribute("data-research-state")).toBe("running");
+    await advance(2500);
+    expect(panel.querySelector(".sc-research")?.getAttribute("data-research-phase")).toBe("result");
+    expect(panel.querySelectorAll('[data-testid="research-audit"]')).toHaveLength(1);
+    expect(panel.querySelectorAll('[role="progressbar"]')).toHaveLength(0);
+    expect(posts(calls)).toHaveLength(0);
+    expect(researchCalls(calls).map((c) => c.url)).toEqual([`/api/scan/research?scan_id=${RUN}`, `/api/scan/research/${JOB_ID}`, `/api/scan/research/${JOB_ID}`, `/api/scan/research/${JOB_ID}`]);
+    await advance(60_000);
+    expect(researchCalls(calls)).toHaveLength(4);
+  });
+
+  it("a scan whose job already FINISHED: the same card as the live view, from the lookup alone -- no button, no POST, no model rerun", async () => {
     const result = liveResult(mockAudit([mockOutcome()]));
     const known = { ...TARGET, form: { vocab_id: "magnesium_bisglycinate", label: "Magnesium bisglycinate" }, dose: { ...TARGET.dose, compound_per_serving_mg: 1000, printed_elemental_per_serving_mg: 200, unit_as_printed: "mg" }, servings_per_day: 2 };
     const fill = (li: HTMLElement) => (li.querySelector(".ab-bar-track i") as HTMLElement | null)?.style.width ?? null;
-    const { el, calls } = await openSaved(scripted(ok(researchJob(RUN, "succeeded", { target: known, result }), 200)));
-    await click(buttonByText(historyPanel(el), /request live research for this scan/i));
-    await advance(0);
-    expect(posts(calls)).toHaveLength(1); // the one deliberate press; the server's idempotency answers with the existing job
+    const finished = () => ok(researchJob(RUN, "succeeded", { target: known, result }), 200);
+    const { el, calls } = await openSaved(savedScanResearch(finished, finished()));
+    expect(posts(calls)).toHaveLength(0); // opening it asked for nothing
     expect(historyPanel(el).querySelectorAll('[data-testid="research-audit"]')).toHaveLength(1);
+    expect(Array.from(historyPanel(el).querySelectorAll(".sc-research button")).map((b) => b.textContent)).not.toContain("Request live research for this scan");
     await click(Array.from(historyPanel(el).querySelectorAll<HTMLElement>('[role="tab"]')).find((t) => t.textContent === "Sleep quality"));
     const replayRows = Array.from(historyPanel(el).querySelectorAll<HTMLElement>('[data-testid="research-axes"] > li'));
     expect(replayRows.map((li) => fill(li))).toEqual([null, null, null, null]); // the same card as the live view: nothing is filled, the numbers stay in the detail as text
     expect(replayRows.map((li) => li.getAttribute("data-fill"))).toEqual(["none", "none", "none", "none"]);
     expect(replayRows.map((li) => li.getAttribute("data-axis-state"))).toEqual(["data", "data", "data", "data"]);
     expect(replayRows.map((li) => li.querySelector(".ab-bar-pts")?.textContent)).toEqual(["—", "—", "—", "—"]);
-    // opening it again looks the job up (GET); it never asks again
+    // opening it again reads the job (GET by its id now); it never asks
     await click(historyPanel(el).querySelector('[aria-label="Back to history"]'));
     await advance(0);
     await click(el.querySelector("button.sw-run"));
     await advance(0);
-    expect(posts(calls)).toHaveLength(1);
+    expect(posts(calls)).toHaveLength(0);
     expect(historyPanel(el).querySelectorAll('[data-testid="research-audit"]')).toHaveLength(1);
+  });
+
+  it("a scan whose job FAILED shows the failure, not endless progress; a lookup that cannot be answered says so with a way to retry and never POSTs", async () => {
+    const failed = await openSaved(savedScanResearch(() => ok(researchJob(RUN, "failed", { failure_code: "claude_quota_or_rate_limit" }))));
+    expect(historyPanel(failed.el).querySelector(".sc-research")?.getAttribute("data-research-state")).toBe("failed");
+    expect(text(historyPanel(failed.el))).toContain("claude_quota_or_rate_limit");
+    expect(historyPanel(failed.el).querySelectorAll('[role="progressbar"]')).toHaveLength(0);
+    expect(posts(failed.calls)).toHaveLength(0);
+    await harness.cleanup();
+    forgetResearchJobs(); noteResearchOwner(null); fakeAuth.setSession(sessionFor(USER_A, "tok-a"));
+    const down = await openSaved(savedScanResearch(() => jsonResponse({ status: "research_unavailable" }, 503)));
+    expect(historyPanel(down.el).querySelector(".sc-research")?.getAttribute("data-research-state")).toBe("unavailable");
+    expect(Array.from(historyPanel(down.el).querySelectorAll(".sc-research button")).map((b) => b.textContent)).toEqual(["Check again"]);
+    expect(posts(down.calls)).toHaveLength(0);
   });
 
   const token = (calls: RecordedCall[]) => calls.find((c) => c.url.startsWith("/api/scan/history/"))?.headers.Authorization;

@@ -243,7 +243,7 @@ describe("docs/research-jobs.sql on a shared Supabase project", () => {
   });
 
   it("every API function is SECURITY DEFINER with a pinned search_path and EXECUTE only for service_role", () => {
-    const fns = ["enqueue", "get", "claim", "heartbeat", "complete", "fail"];
+    const fns = ["enqueue", "get", "get_by_scan", "claim", "heartbeat", "complete", "fail"];
     for (const f of fns) {
       const name = `public.bsproof_research_${f}`;
       const def = new RegExp(`create or replace function ${name}\\([^)]*\\)[\\s\\S]*?\\$fn\\$;?`).exec(CODE)?.[0] ?? "";

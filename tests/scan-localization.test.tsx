@@ -63,6 +63,7 @@ function stubApi(opts: { scan?: unknown; translate?: Mode; history?: unknown } =
       if (call.url === "/api/scan") return jsonResponse(opts.scan ?? rich);
       if (call.url === "/api/scan/history") return jsonResponse({ status: "ok", runs: opts.history ?? [], next_cursor: null });
       if (call.url.startsWith("/api/scan/history/")) return jsonResponse({ status: "ok", run_id: call.url.split("/").pop(), analysis: opts.scan ?? rich });
+      if (call.url.startsWith("/api/scan/research?")) return jsonResponse({ status: "not_found" }, 404); // a saved scan's job lookup: it has none
       throw new Error(`unexpected request ${call.method} ${call.url}`);
     }),
   );
@@ -416,10 +417,10 @@ describe("sign-in and History (Google configured)", () => {
     expect(text(panel)).not.toContain("Bendras balas");
     expect(text(panel.querySelector(".sc-research h2"))).toBe("Tiesioginis tyrimas neužsakytas");
     expect(text(panel.querySelector(".sc-research-btn"))).toBe("Užsakyti šio skenavimo tiesioginį tyrimą");
-    // the replay used the stored record: no scan POST, and opening it requested no research (stubApi throws on any other request)
+    // the replay used the stored record: no scan POST, and opening it requested no research (it only READ the scan's job; stubApi throws on any other request)
     const calls = (globalThis.fetch as unknown as { mock: { calls: Array<[unknown, RequestInit | undefined]> } }).mock.calls;
     expect(calls.some(([url, init]) => String(url) === "/api/scan" && init?.method === "POST")).toBe(false);
-    expect(calls.some(([url]) => String(url).startsWith("/api/scan/research"))).toBe(false);
+    expect(calls.filter(([url]) => String(url).startsWith("/api/scan/research")).map(([url, init]) => `${init?.method ?? "GET"} ${String(url).split("?")[0]}`)).toEqual(["GET /api/scan/research"]); // the lookup, never a POST
     expect(translateBodies).toEqual([]);
   });
 });

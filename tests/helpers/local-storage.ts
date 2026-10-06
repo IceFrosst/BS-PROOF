@@ -25,6 +25,13 @@ class MemoryStorage implements Storage {
   }
 }
 
+/** The same in-memory storage for `window.sessionStorage` (the reload checkpoint lives there). It survives a simulated "reload" because the TEST holds it. */
+export function installSessionStorage(): Storage {
+  const storage = new MemoryStorage();
+  Object.defineProperty(window, "sessionStorage", { value: storage, configurable: true, writable: true });
+  return storage;
+}
+
 export function installLocalStorage(): Storage {
   const storage = new MemoryStorage();
   Object.defineProperty(window, "localStorage", { value: storage, configurable: true, writable: true });

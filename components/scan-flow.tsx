@@ -59,10 +59,21 @@
  *
  * REPLAY. `initialResult` renders a scan from the History tab through this very
  * component with no scan request at all, dated "Saved scan from ...". Opening a
- * saved scan NEVER requests research by itself: it looks a job up only when this
- * page already knows one, and otherwise says "Live research not requested" and
- * waits for a deliberate button (the server is idempotent per scan, so asking
- * again never starts a second job).
+ * saved scan NEVER requests research by itself: it READS the scan's research job
+ * (read-only GET by owner + scan) -- a job that exists is shown and followed to its
+ * end, automatically, the loading screen replaced by the finished card -- and when
+ * there is none it says "Live research not requested" and waits for a deliberate
+ * button (the server is idempotent per scan, so asking again never starts a second
+ * job).
+ *
+ * RELOAD. A reload used to throw the Scan tab away. This component keeps an opaque
+ * pointer for it in the tab's sessionStorage (lib/scan-research/resume.ts: owner id,
+ * scan id, intent -- never a token, photo, analysis or result) and
+ * components/scan-workspace.tsx puts the scan back through the same replay path
+ * (`restored`): the saved scan is read again, its job is READ and followed. Only the
+ * person's own fresh scan whose request the reload cut off (`intent: "fresh"`, no job
+ * on the server) may ask for research, once. "Scan another" and sign-out clear the
+ * pointer; a scan merely opened from History never writes one.
  *
  * Rules this component keeps, all from CLAUDE.md:
  *
@@ -93,6 +104,7 @@ import { FLOW_COPY } from "@/lib/i18n/copy/flow";
 import { RESULT_COPY, enumWord } from "@/lib/i18n/copy/result";
 import { useLang, type Lang } from "@/lib/i18n/locale";
 import { TranslationProvider, TranslationStatus, useHasTranslationProvider, useTr, type TranslateHeaders } from "@/lib/i18n/translate-client";
+import { clearResumeCheckpoint, noteFreshScan, noteJobKnown, type ResumeIntent } from "@/lib/scan-research/resume";
 import { useLiveResearch } from "@/lib/scan-research/use-live-research";
 
 type Basis = keyof ScanAnalysis["basis_legend"];
@@ -180,7 +192,15 @@ export interface ScanFlowProps {
    * signed in as the owner (it is hidden the moment the signed-in person changes).
    */
   initialResult?: SavedScanResult;
-  /** Replay only: what the back control does (it replaces "Scan another"). */
+  /**
+   * With `initialResult`: this saved scan is the one the Scan tab was showing before the page was reloaded
+   * (components/scan-workspace.tsx), not one opened from History. It reads the scan's research job and follows it
+   * to its end; `intent: "fresh"` additionally lets it ask for research ONCE if the server has no job for it (the
+   * person's own new scan whose request the reload cut off). The back control is "Scan another" and it clears the
+   * reload checkpoint.
+   */
+  restored?: { intent: ResumeIntent };
+  /** Replay / restore only: what the back control does (it replaces "Scan another"). */
   onLeave?: () => void;
   /** A new scan finished AND the server reports it stored, so History is now out of date. */
   onScanStored?: (info: { runId: string }) => void;
@@ -264,7 +284,7 @@ function StandaloneScanFlow(props: ScanFlowProps & { auth: AuthSession }) {
   );
 }
 
-function ScanFlowInner({ catalog, hideTopbar = false, auth: sharedAuth, active = true, initialResult, onLeave, onScanStored }: ScanFlowProps) {
+function ScanFlowInner({ catalog, hideTopbar = false, auth: sharedAuth, active = true, initialResult, restored, onLeave, onScanStored }: ScanFlowProps) {
   const { lang, toggleLang, f, r, tr } = useLocalized();
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -281,6 +301,8 @@ function ScanFlowInner({ catalog, hideTopbar = false, auth: sharedAuth, active =
   const { getAccessToken, signOut } = auth;
   const authConfigured = auth.configured;
   const replay = initialResult !== undefined;
+  // A saved scan put back by a reload: shown like a replay, but it is the Scan tab's own scan (see `restored` above).
+  const restoring = replay && restored !== undefined;
 
   // WHOSE SCREEN IS THIS. Everything a request returns is stamped with the
   // owner it was made for, and only the CURRENT owner's outcome is ever drawn.
@@ -413,6 +435,7 @@ function ScanFlowInner({ catalog, hideTopbar = false, auth: sharedAuth, active =
   // "Scan another": back to the landing state. Clearing the staged file is
   // what restarts the viewfinder.
   const reset = useCallback(() => {
+    clearResumeCheckpoint(); // the scan the person leaves is no longer "the scan to put back after a reload"
     setOutcome(null);
     clearFile();
   }, [clearFile]);
@@ -557,8 +580,10 @@ function ScanFlowInner({ catalog, hideTopbar = false, auth: sharedAuth, active =
   const typed = data?.source === "manual";
 
   const showingResult = finished;
-  const leave = replay ? (onLeave ?? (() => undefined)) : reset;
-  const leaveLabel = replay ? f.backToHistory : f.scanAnother;
+  const leave = restoring
+    ? () => { clearResumeCheckpoint(); onLeave?.(); }
+    : replay ? (onLeave ?? (() => undefined)) : reset;
+  const leaveLabel = replay && !restoring ? f.backToHistory : f.scanAnother;
   const savedAtLabel = replay ? formatSavedAt(initialResult?.savedAt ?? initialResult?.analysis.analyzed_at, lang) : null;
   // Say only what the server reported. A signed-in scan is "saved" only when
   // the run row was actually stored; a failure is shown as one, not hidden.
@@ -581,8 +606,23 @@ function ScanFlowInner({ catalog, hideTopbar = false, auth: sharedAuth, active =
   // an unsaved scan has no id, so it asks for nothing and says so.
   const researchShown = labResult && data?.status !== "analyzer_unavailable" && data?.status !== "not_a_supplement_label";
   const researchScanId = !researchShown ? null : replay ? initialResult?.runId ?? null : data?.persistence?.status === "stored" ? data.run_id ?? null : null;
-  const research = useLiveResearch({ scanId: researchScanId, ownerId: auth.userId, getAccessToken, enabled: auth.configured, replay });
+  // A History scan only READS its job (and waits for the button); a restored scan reads it too, and a restored FRESH scan may ask once.
+  const askIfNone = restored?.intent === "fresh";
+  const research = useLiveResearch({ scanId: researchScanId, ownerId: auth.userId, getAccessToken, enabled: auth.configured, replay: replay && !askIfNone, discover: replay, askIfNone });
   const waiting = researchShown && research.phase === "loading";
+
+  // THE RELOAD CHECKPOINT (lib/scan-research/resume.ts): an opaque pointer -- owner, scan id, intent -- so a page reload can
+  // put this scan and its research back. Written for the person's own scan once the server says it is stored, upgraded when
+  // its job is known to exist; a scan merely opened from History never writes one.
+  const checkpointOwner = auth.configured ? auth.userId : null;
+  const tracksResume = !replay || restoring;
+  useEffect(() => {
+    if (tracksResume && !restoring && checkpointOwner && researchScanId) noteFreshScan(checkpointOwner, researchScanId);
+  }, [tracksResume, restoring, checkpointOwner, researchScanId]);
+  const knownJobId = research.job?.id ?? null;
+  useEffect(() => {
+    if (tracksResume && checkpointOwner && researchScanId && knownJobId) noteJobKnown(checkpointOwner, researchScanId);
+  }, [tracksResume, checkpointOwner, researchScanId, knownJobId]);
 
   // Between "waiting" and anything else the screen changes: move focus and scroll to the
   // new state -- but only when this tab is the visible one and the person has not already
@@ -592,7 +632,8 @@ function ScanFlowInner({ catalog, hideTopbar = false, auth: sharedAuth, active =
   useEffect(() => {
     const before = lastPhase.current;
     lastPhase.current = settledPhase;
-    if (before !== "loading" || settledPhase === null || settledPhase === "loading" || !activeRef.current) return;
+    // "Not requested" is not news: a saved scan whose lookup found no job is already described by its dated note.
+    if (before !== "loading" || settledPhase === null || settledPhase === "loading" || settledPhase === "not-requested" || !activeRef.current) return;
     const status = research.statusRef.current;
     if (!status || typeof window === "undefined") return;
     const here = document.activeElement;
@@ -886,7 +927,7 @@ function ScanFlowInner({ catalog, hideTopbar = false, auth: sharedAuth, active =
               ) : (
                 <>{f.savedScan}</>
               )}{" "}
-              {f.replayExplain}
+              {restoring ? f.restoredExplain : f.replayExplain}
             </p>
           ) : null}
           {!labResult ? <div className="sc-scanned" ref={replay ? undefined : setResultTop} tabIndex={-1}><span className="sc-thumb sc-thumb-typed" aria-hidden="true">!</span><div className="sc-scanned-main"><p className="sc-scanned-kicker">{headerKicker}</p><h2 className="sc-scanned-name">{headerName}</h2></div><button type="button" className="sc-again" onClick={leave}>{leaveLabel}</button></div> : null}

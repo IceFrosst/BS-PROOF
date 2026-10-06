@@ -86,6 +86,12 @@ export interface FlowCopy {
   googleExchangeSlow: string;
   tryAgain: string;
   sessionEnded: string;
+  /* a page reload puts the scan the person was looking at back (components/scan-workspace.tsx) */
+  restoringTitle: string;
+  restoringBody: string;
+  restoreFailedTitle: string;
+  restoreFailedBody: string;
+  restoreStartNew: string;
   signedOutCleared: string;
   signedOutStopped: string;
   // ---- search sheet ------------------------------------------------------
@@ -107,6 +113,7 @@ export interface FlowCopy {
   savedScanFrom: string;
   savedScan: string;
   replayExplain: string;
+  restoredExplain: string;
   backToHistory: string;
   scanAnother: string;
   savedToHistory: string;
@@ -198,6 +205,11 @@ export const FLOW_EN: FlowCopy = {
   googleExchangeSlow: "Sign-in is taking longer than expected. Wait a moment, or use the Google button to try again.",
   tryAgain: "Try again",
   sessionEnded: "Your session ended. Sign in again to continue.",
+  restoringTitle: "Restoring your scan…",
+  restoringBody: "Looking up your last scan and its research. Nothing is scanned again.",
+  restoreFailedTitle: "Could not restore your scan",
+  restoreFailedBody: "Your saved scan is still in History. Try again, or start a new scan.",
+  restoreStartNew: "Start a new scan",
   signedOutCleared: "You signed out, so the last result was cleared from this screen.",
   signedOutStopped: "You signed out, so the scan in progress was stopped.",
   searchTitle: "Search your supplement",
@@ -216,6 +228,7 @@ export const FLOW_EN: FlowCopy = {
   savedScanFrom: "Saved scan from",
   savedScan: "Saved scan.",
   replayExplain: "This is a saved scan, shown as it was stored. Nothing was re-run, and opening it did not request research.",
+  restoredExplain: "This page was reloaded, so your scan was put back as it was stored. Nothing was scanned again.",
   backToHistory: "Back to history",
   scanAnother: "Scan another",
   savedToHistory: "Saved to your history.",
@@ -303,6 +316,11 @@ export const FLOW_LT: FlowCopy = {
   googleExchangeSlow: "Prisijungimas trunka ilgiau nei tikėtasi. Palauk akimirką arba bandyk dar kartą paspausdamas Google mygtuką.",
   tryAgain: "Bandyti dar kartą",
   sessionEnded: "Tavo sesija baigėsi. Prisijunk dar kartą, kad tęstum.",
+  restoringTitle: "Atkuriamas tavo skenavimas…",
+  restoringBody: "Ieškoma tavo paskutinio skenavimo ir jo tyrimo. Nieko nėra skenuojama iš naujo.",
+  restoreFailedTitle: "Nepavyko atkurti tavo skenavimo",
+  restoreFailedBody: "Tavo išsaugotas skenavimas vis dar yra istorijoje. Bandyk dar kartą arba pradėk naują skenavimą.",
+  restoreStartNew: "Pradėti naują skenavimą",
   signedOutCleared: "Atsijungei, todėl paskutinis rezultatas pašalintas iš šio ekrano.",
   signedOutStopped: "Atsijungei, todėl vykstantis skenavimas sustabdytas.",
   searchTitle: "Ieškoti papildo",
@@ -321,6 +339,7 @@ export const FLOW_LT: FlowCopy = {
   savedScanFrom: "Išsaugotas skenavimas,",
   savedScan: "Išsaugotas skenavimas.",
   replayExplain: "Tai išsaugotas skenavimas, rodomas toks, koks buvo išsaugotas. Nieko nebuvo paleista iš naujo, o jį atvėrus tyrimas nebuvo užsakytas.",
+  restoredExplain: "Šis puslapis buvo perkrautas, todėl tavo skenavimas grąžintas toks, koks buvo išsaugotas. Nieko nebuvo skenuota iš naujo.",
   backToHistory: "Atgal į istoriją",
   scanAnother: "Skenuoti kitą",
   savedToHistory: "Išsaugota tavo istorijoje.",
