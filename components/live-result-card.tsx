@@ -8,9 +8,11 @@
  * components/scan-flow.tsx before the live-only change), so nothing here restyles them.
  *
  * What it adds is honesty, decided in lib/scan-research/result-card.ts and only drawn
- * here: every row says its state out loud (filled / data / unknown / not assessed / not
- * gradeable), a bar is filled ONLY where that adapter allows it, an unfilled bar names
- * its reason, and no row, tab or tile carries a score, a headline or a general number.
+ * here: every row says its state out loud (data / unknown / not assessed / not
+ * gradeable), no bar is ever filled (a new live audit is ungraded), every unfilled bar
+ * names its reason, and no row, tab or tile carries a score, a fraction, a grade word,
+ * a headline or a general number. The audit's own 0-4 Form / Dose number is shown only
+ * inside the expanded detail, as quoted text marked "text only".
  *
  * Text the research MODEL wrote is drawn verbatim (never translated, trimmed or
  * rounded) and tagged lang="en" in Lithuanian; every control, label, state word and
@@ -18,8 +20,8 @@
  *
  * Accessibility: role=tablist / tab / tabpanel with roving tabindex and arrow / Home /
  * End keys; each row is a real button with aria-expanded / aria-controls; warnings are
- * native <details>; bars are decorative (aria-hidden) because the state word and the
- * number beside them carry the same facts as text.
+ * native <details>; bars are decorative (aria-hidden) and always unfilled, because the
+ * state word beside them carries the same facts as text.
  */
 import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 
@@ -29,9 +31,6 @@ import { RESULT_COPY, enumWord, ledgerWord } from "@/lib/i18n/copy/result";
 import type { ResearchFacts } from "@/lib/scan-research/client";
 import type { AxisId, AxisView, DetailBlock, LiveResultCardData, LiveWarning, OutcomeCard, SourceView } from "@/lib/scan-research/result-card";
 
-const AXIS_COLOR: Record<AxisId, string> = { effect: "var(--ab-r1)", evidence: "var(--ab-r4)", form: "var(--ab-r2)", dose: "var(--ab-r3)" };
-/** The established 0-4 fit words (lib/evidence-ledger FIT_WORDS), keyed by the audit's own number. */
-const FIT_WORDS = ["No match", "Poor match", "Partial match", "Close match", "Exact match"] as const;
 const EFFECT_TIER_WORDS: Record<string, string> = { "-3": "Harm reported", "0": "No meaningful effect", "1": "Small benefit", "2": "Moderate benefit", "3": "Large benefit", unclear: "Unclear" };
 
 type Lang = ResearchLanguage;
@@ -49,10 +48,8 @@ function Line({ label, children }: { label: string; children: ReactNode }) {
   return <p><b>{label}</b> {children}</p>;
 }
 
-function axisWord(c: CardCopy, axis: AxisView, lang: Lang): string {
-  if (axis.state === "filled" && axis.fit !== null) return ledgerWord(lang, FIT_WORDS[axis.fit]);
+function axisWord(c: CardCopy, axis: AxisView): string {
   if (axis.state === "data") return axis.id === "effect" ? c.axisWord.effectData : c.axisWord.evidenceData;
-  if (axis.state === "filled") return c.axisWord.unknown;
   return c.axisWord[axis.state];
 }
 
@@ -140,7 +137,7 @@ function AxisBody({ axisId, axis, row, card, facts, lang, c }: { axisId: AxisId;
 
     {axisId === "form" ? <>
       <Line label={c.labels.formOnScan}>{facts?.form ?? c.labels.notStated}</Line>
-      <Line label={c.labels.modelFit}>{fitText(c, row.formFitRaw)}{axis.state === "filled" ? "" : ` · ${c.labels.textOnly}`}</Line>
+      <Line label={c.labels.modelFit}>{fitText(c, row.formFitRaw)} · {c.labels.textOnly}</Line>
     </> : null}
 
     {axisId === "dose" ? <>
@@ -151,7 +148,7 @@ function AxisBody({ axisId, axis, row, card, facts, lang, c }: { axisId: AxisId;
       <Said label={c.labels.dailyDose} lang={lang}>{card.audit.dailyDose}</Said>
       {card.audit.doseNote !== null ? <Said label={c.labels.doseNote} lang={lang}>{card.audit.doseNote}</Said> : null}
       {row.effectiveDailyRange !== null ? <Said label={c.labels.range} lang={lang}>{row.effectiveDailyRange}</Said> : null}
-      <Line label={c.labels.modelFit}>{fitText(c, row.doseFitRaw)}{axis.state === "filled" ? "" : ` · ${c.labels.textOnly}`}</Line>
+      <Line label={c.labels.modelFit}>{fitText(c, row.doseFitRaw)} · {c.labels.textOnly}</Line>
     </> : null}
 
     <DetailLines block={row.detail[axisId]} lang={lang} />
@@ -242,14 +239,13 @@ export function LiveResultCard({ card, facts, lang }: { card: LiveResultCardData
         const isOpen = open === axis.id;
         const label = axis.id === "effect" ? r.dimEffect : axis.id === "evidence" ? r.dimEvidence : axis.id === "form" ? r.dimForm : r.dimDose;
         const detailId = `${scope}-${current.key}-${axis.id}`;
-        const fill = axis.fill;
-        return <li key={axis.id} className={isOpen ? "open" : ""} data-row-id={axis.id} data-axis-state={axis.state} data-axis-reason={axis.reason} data-fill={fill === null ? "none" : String(fill)}>
+        return <li key={axis.id} className={isOpen ? "open" : ""} data-row-id={axis.id} data-axis-state={axis.state} data-axis-reason={axis.reason} data-fill="none">
           <button type="button" aria-expanded={isOpen} aria-controls={detailId} onClick={() => setOpen(isOpen ? null : axis.id)}>
             <span className="ab-bar-name">{label}</span>
-            <span className="ab-bar-word">{axisWord(c, axis, lang)}</span>
-            <span className="ab-bar-pts">{axis.fit !== null ? `${axis.fit}/4` : "—"}</span>
+            <span className="ab-bar-word">{axisWord(c, axis)}</span>
+            <span className="ab-bar-pts">—</span>
             <Chevron />
-            <span className={`ab-bar-track ${fill === null ? "hatch" : "fill"}`} aria-hidden="true">{fill !== null ? <i style={{ width: `${Math.round(fill * 100)}%`, background: AXIS_COLOR[axis.id] }} /> : null}</span>
+            <span className="ab-bar-track hatch" aria-hidden="true" />
           </button>
           {isOpen ? <div id={detailId} className="ab-bar-detail" data-testid={`research-axis-${axis.id}`}>
             <AxisBody axisId={axis.id} axis={axis} row={current} card={card} facts={facts} lang={lang} c={c} />

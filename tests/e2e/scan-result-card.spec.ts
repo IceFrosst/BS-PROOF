@@ -91,7 +91,7 @@ test.describe("live result card (build with sign-in configured; mocked sign-in a
     expect(results.violations).toEqual([]);
   }
 
-  test("known product: Outcomes tab, outcome tabs by keyboard, the warnings block, and four rows whose bars are filled ONLY where the audit's own number and the scan's facts allow", async ({ page }) => {
+  test("known product: Outcomes tab, outcome tabs by keyboard, the warnings block, and four rows, none of them graded or filled (a new live audit is ungraded)", async ({ page }) => {
     await open(page, liveResult(audit([outcome(), UNKNOWN_ROW()])), targetOf());
     const card = page.locator(".sc-live-card");
     await expect(card).toBeVisible();
@@ -109,14 +109,16 @@ test.describe("live result card (build with sign-in configured; mocked sign-in a
     await expect(page.locator('[data-testid="research-axes"] > li')).toHaveCount(4);
     await expect(page.locator('[data-testid="research-axes"] > li .ab-bar-name')).toHaveText(["Effect", "Evidence", "Form", "Dose"]);
     await expect(row(page, "effect")).toHaveAttribute("data-axis-state", "data");
-    await expect(row(page, "form")).toHaveAttribute("data-axis-state", "filled");
-    await expect(row(page, "form").locator(".ab-bar-track i")).toHaveCSS("width", /.+/);
-    await expect(row(page, "effect").locator(".ab-bar-track i")).toHaveCount(0);
-    await expect(row(page, "evidence").locator(".ab-bar-track i")).toHaveCount(0);
-    const trackBox = await row(page, "form").locator(".ab-bar-track").boundingBox();
-    const fillBox = await row(page, "form").locator(".ab-bar-track i").boundingBox();
-    expect(Math.round((fillBox!.width / trackBox!.width) * 100)).toBeGreaterThanOrEqual(73); // 3/4, minus the track's 1px borders
-    expect(Math.round((fillBox!.width / trackBox!.width) * 100)).toBeLessThanOrEqual(77);
+    await expect(row(page, "form")).toHaveAttribute("data-axis-state", "data");
+    await expect(row(page, "form")).toHaveAttribute("data-axis-reason", "fit_not_graded");
+    // no live row is ever filled: no fill element, data-fill none, no n/4 and no grade word on the summary row
+    for (const id of ["effect", "evidence", "form", "dose"]) {
+      await expect(row(page, id)).toHaveAttribute("data-fill", "none");
+      await expect(row(page, id).locator(".ab-bar-track i")).toHaveCount(0);
+      await expect(row(page, id).locator(".ab-bar-track")).toHaveClass(/hatch/);
+      await expect(row(page, id).locator(".ab-bar-pts")).toHaveText("—");
+      await expect(row(page, id).locator("> button")).not.toContainText(/\d\s*\/\s*4|\d of 4|No match|Poor match|Partial match|Close match|Exact match/);
+    }
 
     // the warnings block: 3 for this outcome, collapsed, then opened
     const warnings = page.getByTestId("research-warnings");
@@ -137,8 +139,11 @@ test.describe("live result card (build with sign-in configured; mocked sign-in a
     await noHorizontalScroll(page); await noClippedCard(page);
     await shot(page, "card-4-effect-open");
     await axe(page);
+    await row(page, "form").locator("> button").click();
+    await expect(page.getByTestId("research-axis-form")).toContainText("Research’s own match number 3 of 4 · text only");
     await row(page, "dose").locator("> button").click();
     await expect(page.getByTestId("research-axis-dose")).toContainText("Servings per day on your scan 2");
+    await expect(page.getByTestId("research-axis-dose")).toContainText("Research’s own match number 2 of 4 · text only");
     await shot(page, "card-5-dose-open");
 
     // the other outcome: nothing cited, so nothing is assessed and nothing is filled; its warnings are its own

@@ -5,8 +5,8 @@
  * What this is NOT: a scorer. It never calls `score()`, never makes a headline, a
  * general score, a certainty grade or a band, and it adds no constant. The card shows
  * four rows per outcome, in the established order Effect, Evidence, Form, Dose, and
- * this module only decides, for each row, WHICH EXPLICIT STATE it is in and whether
- * its horizontal bar may be drawn filled.
+ * this module only decides, for each row, WHICH EXPLICIT STATE and reason it is in.
+ * No live row is ever drawn filled: every bar is unfilled, with a named reason.
  *
  * The boundary it respects (investigated before it was written; see CLAUDE.md):
  *  - lib/evidence-ledger `score()` and the old retained `/scan` card turned a model's
@@ -19,12 +19,15 @@
  *    for NEW research: never a fill from a tier a model chose ("Size not graded",
  *    hatched). The same reasoning keeps the Evidence row unfilled: nothing the model
  *    counted came from an opened paper, so this page grades no strength of evidence.
- *  - Form and Dose are the two rows whose existing contract IS a 0-4 match number
- *    (`ledger.formFit` / `ledger.doseFit`, the audit's own words, never ours). A bar
- *    is filled from THAT number, and only when every fact the number depends on is
- *    known and the row is about this very product. Anything else is an unfilled bar
- *    with a named reason. Nothing is defaulted: unknown is not 0, not 1/4, not one
- *    serving a day, not an average, and a context row or a blend is never graded.
+ *  - Form and Dose have an existing 0-4 match contract (`ledger.formFit` /
+ *    `ledger.doseFit`, the audit's own words, never ours), but that number was graded
+ *    for the three approved retained audits ONLY. A NEW live audit is ungraded
+ *    (affects_score=false), so its 0-4 is never turned into a bar, a fraction or a
+ *    grade word: the number survives as the audit's own quoted TEXT (`formFitRaw` /
+ *    `doseFitRaw`), and the row is an unfilled "data" row with the reason
+ *    `fit_not_graded`. Anything else is an unfilled bar with a named reason. Nothing
+ *    is defaulted: unknown is not 0, not 1/4, not one serving a day, not an average,
+ *    and a context row or a blend is never graded.
  *
  * Every string the audit wrote is passed through untouched (no trim, no rounding, no
  * rewording): ids, units, numbers and quotations stay byte-for-byte.
@@ -38,13 +41,12 @@ export const AXIS_ORDER = ["effect", "evidence", "form", "dose"] as const;
 export type AxisId = (typeof AXIS_ORDER)[number];
 
 /**
- * filled         the bar is drawn to the audit's own formFit / doseFit (Form and Dose only)
- * data           the audit has findings for this row; nothing here is graded, so the bar is unfilled
+ * data           the audit has findings for this row (for Form / Dose: its own 0-4 match number, as text); nothing here is graded, so the bar is unfilled
  * unknown        the audit says unknown / unclear, or the scan fact the row needs is not recorded
  * not_assessed   no study was cited, so nothing was assessed (NOT "no evidence exists")
  * not_gradeable  a context-only row or a blend: shown, never graded
  */
-export type AxisState = "filled" | "data" | "unknown" | "not_assessed" | "not_gradeable";
+export type AxisState = "data" | "unknown" | "not_assessed" | "not_gradeable";
 
 export type AxisReason =
   | "context_only"
@@ -52,7 +54,7 @@ export type AxisReason =
   | "size_not_graded"
   | "effect_unclear"
   | "snippet_only"
-  | "fit_model_reported"
+  | "fit_not_graded"
   | "fit_unknown"
   | "fit_missing"
   | "form_not_stated"
@@ -65,10 +67,10 @@ export interface AxisView {
   id: AxisId;
   state: AxisState;
   reason: AxisReason;
-  /** 0..1, ONLY when state is "filled"; null otherwise (an unfilled bar is never a zero-width fill). */
-  fill: number | null;
-  /** The audit's own 0-4 number, ONLY when state is "filled". */
-  fit: 0 | 1 | 2 | 3 | 4 | null;
+  /** Always null: a live row is never drawn filled (an unfilled bar is never a zero-width fill either). */
+  fill: null;
+  /** Always null: the audit's own 0-4 number is shown as text (`formFitRaw` / `doseFitRaw`), never as a row grade. */
+  fit: null;
 }
 
 export type WarningId =
@@ -134,7 +136,7 @@ export interface OutcomeCard {
   strongestDoubt: string;
   studyThatWouldMove: string | null;
   effectiveDailyRange: string | null;
-  /** The audit's raw fit values, for display as TEXT only (never a bar unless the row is "filled"). */
+  /** The audit's raw fit values, for display as TEXT only (never a bar, a fraction or a grade word). */
   formFitRaw: string | null;
   doseFitRaw: string | null;
   bodyIsRct: boolean | null;
@@ -327,16 +329,17 @@ interface AxisInput {
   doseFit: unknown;
 }
 
-const unfilled = (id: AxisId, state: Exclude<AxisState, "filled">, reason: AxisReason): AxisView => ({ id, state, reason, fill: null, fit: null });
+const unfilled = (id: AxisId, state: AxisState, reason: AxisReason): AxisView => ({ id, state, reason, fill: null, fit: null });
 
 function fitAxis(id: "form" | "dose", fit: unknown): AxisView {
   const parsed = parseFit(fit);
   if (parsed === "unknown") return unfilled(id, "unknown", "fit_unknown");
   if (parsed === null) return unfilled(id, "unknown", "fit_missing");
-  return { id, state: "filled", reason: "fit_model_reported", fill: parsed / 4, fit: parsed };
+  // A parsed 0-4 is the audit's own words about a row of an UNGRADED audit: it stays as text, it never fills a bar.
+  return unfilled(id, "data", "fit_not_graded");
 }
 
-/** The whole fill policy, in one place. */
+/** The whole row policy, in one place. No row is ever filled. */
 export function axesOf(input: AxisInput): AxisView[] {
   const { facts, blend, context, hasSource } = input;
   const effect: AxisView = context

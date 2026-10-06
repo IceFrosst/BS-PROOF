@@ -52,13 +52,14 @@ describe("row order and shape", () => {
   });
 });
 
-describe("fill policy: a bar is filled ONLY from the audit's own Form / Dose number, for an eligible row with known scan facts", () => {
-  it("known single-ingredient product, form + dose + servings recorded: Form 3/4 and Dose 2/4 are filled; Effect and Evidence are NOT", () => {
+describe("fill policy: a NEW live audit is ungraded, so NO row is ever filled; the audit's own Form / Dose number is kept as text only", () => {
+  it("known single-ingredient product, form + dose + servings recorded: Form 3 and Dose 2 stay as the audit's own raw text; all four rows are unfilled, none is graded", () => {
     const row = only([outcome()]);
     expect(axis(row, "effect")).toMatchObject({ state: "data", reason: "size_not_graded", fill: null, fit: null });
     expect(axis(row, "evidence")).toMatchObject({ state: "data", reason: "snippet_only", fill: null, fit: null });
-    expect(axis(row, "form")).toMatchObject({ state: "filled", reason: "fit_model_reported", fill: 0.75, fit: 3 });
-    expect(axis(row, "dose")).toMatchObject({ state: "filled", reason: "fit_model_reported", fill: 0.5, fit: 2 });
+    expect(axis(row, "form")).toMatchObject({ state: "data", reason: "fit_not_graded", fill: null, fit: null });
+    expect(axis(row, "dose")).toMatchObject({ state: "data", reason: "fit_not_graded", fill: null, fit: null });
+    expect([row.formFitRaw, row.doseFitRaw]).toEqual(["3", "2"]); // the audit's exact values, kept as text
   });
 
   it("the Effect tier a model chose never draws a bar: every tier leaves Effect unfilled, and the tier stays as text", () => {
@@ -69,10 +70,20 @@ describe("fill policy: a bar is filled ONLY from the audit's own Form / Dose num
     }
   });
 
-  it("an audit fit of 0 on an eligible row is the audit's own 'no match' (a drawn, empty, non-hatched bar), never a stand-in for unknown", () => {
+  it("an audit fit of 0 on an eligible row is kept as the raw text \"0\" (not drawn, not a grade), and stays distinct from unknown", () => {
     const row = only([outcome({ ledger: { formFit: "0", doseFit: "unknown" } })]);
-    expect(axis(row, "form")).toMatchObject({ state: "filled", fill: 0, fit: 0 });
+    expect(axis(row, "form")).toMatchObject({ state: "data", reason: "fit_not_graded", fill: null, fit: null });
+    expect(row.formFitRaw).toBe("0");
     expect(axis(row, "dose")).toMatchObject({ state: "unknown", reason: "fit_unknown", fill: null, fit: null });
+    expect(row.doseFitRaw).toBe("unknown");
+  });
+
+  it("a numeric fit (number or string, 0..4) never fills, never gets a fraction or a grade word, and its exact raw text is kept", () => {
+    for (const fit of [0, 1, 2, 3, 4, "0", "1", "2", "3", "4"]) {
+      const row = only([outcome({ ledger: { formFit: fit, doseFit: fit } })]);
+      for (const id of ["form", "dose"] as const) expect(axis(row, id), `${String(fit)} ${id}`).toMatchObject({ state: "data", reason: "fit_not_graded", fill: null, fit: null });
+      expect([row.formFitRaw, row.doseFitRaw]).toEqual([String(fit), String(fit)]);
+    }
   });
 
   it("unknown, missing or malformed fits are unknown and unfilled: never 0, never a quarter, never clamped", () => {
@@ -108,14 +119,14 @@ describe("fill policy: a bar is filled ONLY from the audit's own Form / Dose num
   it("form not stated on the scan: Form is unknown and unfilled whatever number the model gave", () => {
     const row = only([outcome({ ledger: { formFit: "4" } })], facts({ form: null }));
     expect(axis(row, "form")).toMatchObject({ state: "unknown", reason: "form_not_stated", fill: null });
-    expect(axis(row, "dose").state).toBe("filled"); // an unrelated unknown does not blank the other bar
+    expect(axis(row, "dose")).toMatchObject({ state: "data", reason: "fit_not_graded", fill: null }); // an unrelated unknown does not change the other row's text
   });
 
   it("servings per day not stated (or 0): Dose is unknown, never one serving a day and never the per-serving number", () => {
     for (const servingsPerDay of [null, 0]) {
       const row = only([outcome({ ledger: { doseFit: "4" } })], facts({ servingsPerDay }));
       expect(axis(row, "dose")).toMatchObject({ state: "unknown", reason: "servings_not_stated", fill: null, fit: null });
-      expect(axis(row, "form").state).toBe("filled");
+      expect(axis(row, "form")).toMatchObject({ state: "data", reason: "fit_not_graded", fill: null });
     }
   });
 
@@ -125,8 +136,8 @@ describe("fill policy: a bar is filled ONLY from the audit's own Form / Dose num
   });
 
   it("a recorded elemental amount alone, or a compound mass alone, is a recorded dose; nothing is converted", () => {
-    expect(axis(only([outcome()], facts({ compoundPerServingMg: null })), "dose").state).toBe("filled");
-    expect(axis(only([outcome()], facts({ printedElementalPerServingMg: null })), "dose").state).toBe("filled");
+    expect(axis(only([outcome()], facts({ compoundPerServingMg: null })), "dose")).toMatchObject({ state: "data", reason: "fit_not_graded", fill: null });
+    expect(axis(only([outcome()], facts({ printedElementalPerServingMg: null })), "dose")).toMatchObject({ state: "data", reason: "fit_not_graded", fill: null });
   });
 
   it("scan facts unavailable: Form and Dose are unknown, with a product warning saying so", () => {
@@ -136,39 +147,41 @@ describe("fill policy: a bar is filled ONLY from the audit's own Form / Dose num
     expect(ids(row)).toContain("facts_unavailable");
   });
 
-  it("whether other ingredients are present is unknown (typed entry): rows can still fill, and the unknown is a product warning", () => {
+  it("whether other ingredients are present is unknown (typed entry): the rows keep their own text, and the unknown is a product warning", () => {
     const row = only([outcome()], facts({ multiIngredient: null }));
-    expect(axis(row, "form").state).toBe("filled");
+    expect(axis(row, "form")).toMatchObject({ state: "data", reason: "fit_not_graded", fill: null });
     expect(ids(row)).toContain("other_ingredients_unknown");
   });
 
-  it("PROPERTY: over every combination of tier, fits, inventory and scan facts, only Form/Dose ever fill, only from the audit's own number, only when every dependency is known", () => {
+  it("PROPERTY: over every combination of tier, fits, inventory and scan facts, NO row is ever filled, no row carries a number, and the audit's raw Form / Dose text is kept", () => {
     const tiers = ["-3", "0", "1", "2", "3", "unclear"];
     const fits = ["0", "1", "2", "3", "4", "unknown"];
     const factSets: Array<ResearchFacts | null> = [
       null, KNOWN_FACTS, facts({ form: null }), facts({ servingsPerDay: null }), facts({ compoundPerServingMg: null, printedElementalPerServingMg: null }), facts({ multiIngredient: true }), facts({ multiIngredient: null }),
     ];
-    let filled = 0;
+    let notGraded = 0;
     for (const tier of tiers) for (const formFit of fits) for (const doseFit of fits) for (const hasSource of [true, false]) for (const f of factSets) {
       const row = only([outcome({ ledger: { effectPoints: tier, formFit, doseFit }, ...(hasSource ? {} : { inventory: [] }) })], f);
       expect(row.axes).toHaveLength(4);
-      expect(axis(row, "effect").fill).toBeNull();
-      expect(axis(row, "evidence").fill).toBeNull();
+      expect([row.formFitRaw, row.doseFitRaw]).toEqual([formFit, doseFit]);
       for (const a of row.axes) {
-        if (a.fill === null) { expect(a.fit).toBeNull(); expect(a.state).not.toBe("filled"); continue; }
-        filled += 1;
+        expect(a.fill).toBeNull();
+        expect(a.fit).toBeNull();
+        expect(a.state).not.toBe("filled");
+        expect(a.reason).not.toBe("fit_model_reported");
+        if (a.reason !== "fit_not_graded") continue;
+        // the audit's own number appears as the reason only on a Form / Dose row whose every dependency is known
+        notGraded += 1;
+        expect(a.state).toBe("data");
         expect(["form", "dose"]).toContain(a.id);
-        expect(a.state).toBe("filled");
-        expect(a.fill).toBe((a.fit as number) / 4);
-        expect(String(a.fit)).toBe(a.id === "form" ? formFit : doseFit);
         expect(hasSource).toBe(true);
         expect(f).not.toBeNull();
         expect(f!.multiIngredient).not.toBe(true);
-        if (a.id === "form") expect(f!.form).not.toBeNull();
-        if (a.id === "dose") { expect(f!.servingsPerDay).toBeGreaterThan(0); expect(f!.compoundPerServingMg !== null || f!.printedElementalPerServingMg !== null).toBe(true); }
+        if (a.id === "form") { expect(f!.form).not.toBeNull(); expect(formFit).not.toBe("unknown"); }
+        if (a.id === "dose") { expect(doseFit).not.toBe("unknown"); expect(f!.servingsPerDay).toBeGreaterThan(0); expect(f!.compoundPerServingMg !== null || f!.printedElementalPerServingMg !== null).toBe(true); }
       }
     }
-    expect(filled).toBeGreaterThan(0);
+    expect(notGraded).toBeGreaterThan(0);
   });
 });
 

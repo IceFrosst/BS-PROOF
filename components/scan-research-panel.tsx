@@ -16,11 +16,10 @@
  *   result         the completed audit, and ONLY that, as the established result card
  *                  (components/live-result-card.tsx: Outcomes tab, one tab per outcome,
  *                  warnings block, four expandable rows Effect / Evidence / Form / Dose;
- *                  lib/scan-research/result-card.ts decides each row's state and whether
- *                  its bar may be filled). EXPERIMENTAL and UNGRADED: no score, headline
- *                  or general number, never run through the retained rubric; a bar is
- *                  filled only from the audit's own Form / Dose match number when the
- *                  scan facts it depends on are known, otherwise unfilled with a reason.
+ *                  lib/scan-research/result-card.ts decides each row's state and reason).
+ *                  EXPERIMENTAL and UNGRADED: no score, headline or general number,
+ *                  never run through the retained rubric; NO bar is ever filled (the
+ *                  audit's own Form / Dose match number is text only in the detail).
  *                  The model, source-access inventory and timestamps are collapsed
  *                  secondary detail BELOW the card, not a wall before it.
  *   not-requested  a saved scan opened from History that has no job this page knows:

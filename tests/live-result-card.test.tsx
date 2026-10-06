@@ -132,37 +132,51 @@ describe("the established card: Outcomes tab, one tab per outcome", () => {
   });
 });
 
-describe("the four rows: explicit state, horizontal fill only where the adapter allows it", () => {
+describe("the four rows: explicit state, and NO row is ever filled (a new live audit is ungraded)", () => {
   const trackOf = (id: string) => row(id).querySelector(".ab-bar-track")!;
   const fillWidth = (id: string) => (trackOf(id).querySelector("i") as HTMLElement | null)?.style.width ?? null;
   const word = (id: string) => row(id).querySelector(".ab-bar-word")?.textContent;
   const pts = (id: string) => row(id).querySelector(".ab-bar-pts")?.textContent;
 
-  it("known eligible outcome: Form and Dose are FILLED to the audit's own 3/4 and 2/4; Effect and Evidence are unfilled and say why", () => {
+  it("known eligible outcome: Form and Dose are NOT filled and show no n/4 and no grade word; all four rows are hatched, say 'not graded' and say why", () => {
     mount(audit());
     click(tabNamed("Sleep quality"));
-    expect(trackOf("form").classList.contains("fill")).toBe(true);
-    expect(fillWidth("form")).toBe("75%");
-    expect([word("form"), pts("form")]).toEqual(["Close match", "3/4"]);
-    expect(fillWidth("dose")).toBe("50%");
-    expect([word("dose"), pts("dose")]).toEqual(["Partial match", "2/4"]);
-    for (const id of ["effect", "evidence"]) {
+    for (const id of ["effect", "evidence", "form", "dose"]) {
       expect(trackOf(id).classList.contains("hatch"), id).toBe(true);
+      expect(trackOf(id).classList.contains("fill"), id).toBe(false);
       expect(trackOf(id).querySelector("i"), id).toBeNull();
-      expect(pts(id)).toBe("—");
+      expect(fillWidth(id), id).toBeNull();
+      expect(pts(id), id).toBe("—");
+      expect(row(id).getAttribute("data-fill"), id).toBe("none");
+      // the bars are decorative: the same facts are text beside them
+      expect(trackOf(id).getAttribute("aria-hidden"), id).toBe("true");
     }
     expect(word("effect")).toBe(RESEARCH_CARD_COPY.en.axisWord.effectData);
-    expect(row("effect").getAttribute("data-axis-state")).toBe("data");
-    expect(row("form").getAttribute("data-axis-state")).toBe("filled");
-    // the bars are decorative: the same facts are text beside them
-    for (const id of ["effect", "evidence", "form", "dose"]) expect(trackOf(id).getAttribute("aria-hidden")).toBe("true");
+    expect(word("evidence")).toBe(RESEARCH_CARD_COPY.en.axisWord.evidenceData);
+    for (const id of ["form", "dose"]) {
+      expect(word(id), id).toBe(RESEARCH_CARD_COPY.en.axisWord.evidenceData);
+      expect(row(id).getAttribute("data-axis-state"), id).toBe("data");
+      expect(row(id).getAttribute("data-axis-reason"), id).toBe("fit_not_graded");
+    }
+    const summaries = rows().map((r) => r.querySelector("button")!.textContent!).join(" ");
+    expect(summaries).not.toMatch(/\d\s*\/\s*4|\d of 4|No match|Poor match|Partial match|Close match|Exact match/);
   });
 
-  it("uses the established per-row colours (Effect r1, Evidence r4, Form r2, Dose r3) for a drawn fill", () => {
+  it("the audit's own Form and Dose numbers appear ONLY in the expanded detail, verbatim and marked 'text only', with the not-graded reason", () => {
     mount(audit());
     click(tabNamed("Sleep quality"));
-    expect((trackOf("form").querySelector("i") as HTMLElement).style.background).toContain("--ab-r2");
-    expect((trackOf("dose").querySelector("i") as HTMLElement).style.background).toContain("--ab-r3");
+    click(rowButton("form"));
+    const form = host.querySelector('[data-testid="research-axis-form"]')!.textContent!;
+    expect(form).toContain(`${RESEARCH_CARD_COPY.en.labels.modelFit} 3 of 4 · ${RESEARCH_CARD_COPY.en.labels.textOnly}`);
+    expect(form).toContain(RESEARCH_CARD_COPY.en.reasons.fit_not_graded);
+    expect(form).not.toMatch(/Close match|Exact match|Partial match/);
+    click(rowButton("dose"));
+    const dose = host.querySelector('[data-testid="research-axis-dose"]')!.textContent!;
+    expect(dose).toContain(`${RESEARCH_CARD_COPY.en.labels.modelFit} 2 of 4 · ${RESEARCH_CARD_COPY.en.labels.textOnly}`);
+    expect(dose).toContain(RESEARCH_CARD_COPY.en.reasons.fit_not_graded);
+    expect(dose).not.toMatch(/Close match|Exact match|Partial match/);
+    expect(RESEARCH_CARD_COPY.en.labels.textOnly).toMatch(/text only/);
+    expect(RESEARCH_CARD_COPY.lt.labels.textOnly).toMatch(/tik tekstas/);
   });
 
   it("unknown outcome (nothing cited): all four rows unfilled and 'Not assessed' — never a zero fill, never 'no evidence'", () => {
@@ -177,7 +191,7 @@ describe("the four rows: explicit state, horizontal fill only where the adapter 
     expect(text()).not.toMatch(/no evidence (exists|found)|0\/4|0\/3/i);
   });
 
-  it("scan facts unknown: Dose is 'Unknown' with the servings reason (no one-serving default); Form stays filled", () => {
+  it("scan facts unknown: Dose is 'Unknown' with the servings reason (no one-serving default); Form keeps its own text, unfilled", () => {
     mount(audit(), facts({ servingsPerDay: null }));
     click(tabNamed("Sleep quality"));
     expect(row("dose").getAttribute("data-axis-state")).toBe("unknown");
@@ -185,7 +199,8 @@ describe("the four rows: explicit state, horizontal fill only where the adapter 
     expect(fillWidth("dose")).toBeNull();
     click(rowButton("dose"));
     expect(host.querySelector('[data-testid="research-axis-dose"]')?.textContent).toContain(RESEARCH_CARD_COPY.en.reasons.servings_not_stated);
-    expect(row("form").getAttribute("data-axis-state")).toBe("filled");
+    expect(row("form").getAttribute("data-axis-state")).toBe("data");
+    expect(fillWidth("form")).toBeNull();
   });
 
   it("each row expands and collapses with aria-expanded / aria-controls, and several rows can be read one after another", () => {
@@ -405,6 +420,17 @@ describe("Lithuanian", () => {
     for (const v of leaves(RESEARCH_CARD_COPY.lt)) { expect(v.trim()).not.toBe(""); if (v.length > 6) expect(en.has(v)).toBe(false); }
   });
 
+  it("Lithuanian: the audit's raw Form fit is shown in the detail as the audit's own number, marked 'tik tekstas', with the Lithuanian not-graded reason", () => {
+    mount(audit(), KNOWN_FACTS, "lt");
+    const c = RESEARCH_CARD_COPY.lt;
+    click(tabNamed("Sleep quality"));
+    click(rowButton("form"));
+    const form = host.querySelector('[data-testid="research-axis-form"]')!.textContent!;
+    expect(form).toContain(`${c.labels.modelFit} 3 iš 4 · ${c.labels.textOnly}`);
+    expect(form).toContain(c.reasons.fit_not_graded);
+    expect(row("form").querySelector(".ab-bar-pts")?.textContent).toBe("—");
+  });
+
   it("the whole card's controls, states, reasons and warnings are Lithuanian; the model's text is verbatim in an element tagged lang=en", () => {
     mount(audit(), facts({ servingsPerDay: null }), "lt");
     const c = RESEARCH_CARD_COPY.lt;
@@ -417,7 +443,10 @@ describe("Lithuanian", () => {
     expect(warnings()?.querySelector("summary")?.textContent).toBe(r.warningCount(4));
     expect(row("effect").querySelector(".ab-bar-word")?.textContent).toBe(c.axisWord.effectData);
     expect(row("dose").querySelector(".ab-bar-word")?.textContent).toBe(c.axisWord.unknown);
-    expect(row("form").querySelector(".ab-bar-word")?.textContent).toBe("Artimas atitikimas");
+    expect(row("form").querySelector(".ab-bar-word")?.textContent).toBe(c.axisWord.evidenceData);
+    expect(row("form").querySelector(".ab-bar-pts")?.textContent).toBe("—");
+    expect(row("form").getAttribute("data-fill")).toBe("none");
+    expect(host.textContent).not.toContain("Artimas atitikimas");
     click(rowButton("effect"));
     const d = host.querySelector('[data-testid="research-axis-effect"]')!;
     expect(d.textContent).toContain(c.reasons.size_not_graded);

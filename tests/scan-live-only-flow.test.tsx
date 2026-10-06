@@ -560,7 +560,11 @@ describe("History: a saved scan never researches by itself", () => {
     expect(posts(calls)).toHaveLength(1); // the one deliberate press; the server's idempotency answers with the existing job
     expect(historyPanel(el).querySelectorAll('[data-testid="research-audit"]')).toHaveLength(1);
     await click(Array.from(historyPanel(el).querySelectorAll<HTMLElement>('[role="tab"]')).find((t) => t.textContent === "Sleep quality"));
-    expect(Array.from(historyPanel(el).querySelectorAll<HTMLElement>('[data-testid="research-axes"] > li')).map((li) => fill(li))).toEqual([null, null, "75%", "50%"]);
+    const replayRows = Array.from(historyPanel(el).querySelectorAll<HTMLElement>('[data-testid="research-axes"] > li'));
+    expect(replayRows.map((li) => fill(li))).toEqual([null, null, null, null]); // the same card as the live view: nothing is filled, the numbers stay in the detail as text
+    expect(replayRows.map((li) => li.getAttribute("data-fill"))).toEqual(["none", "none", "none", "none"]);
+    expect(replayRows.map((li) => li.getAttribute("data-axis-state"))).toEqual(["data", "data", "data", "data"]);
+    expect(replayRows.map((li) => li.querySelector(".ab-bar-pts")?.textContent)).toEqual(["—", "—", "—", "—"]);
     // opening it again looks the job up (GET); it never asks again
     await click(historyPanel(el).querySelector('[aria-label="Back to history"]'));
     await advance(0);
@@ -578,7 +582,7 @@ describe("the completed live audit is the ESTABLISHED result card: outcome tabs,
   const rows = (el: HTMLElement) => Array.from(scanPanel(el).querySelectorAll<HTMLElement>('[data-testid="research-axes"] > li'));
   const fill = (li: HTMLElement) => (li.querySelector(".ab-bar-track i") as HTMLElement | null)?.style.width ?? null;
 
-  it("known scan facts: after the one POST the finished audit is a card whose Form and Dose bars are filled from the audit's own numbers; Effect and Evidence are not; warnings are the selected outcome's own", async () => {
+  it("known scan facts: after the one POST the finished audit is a card whose four rows are ALL unfilled and carry no n/4 (the audit's own Form / Dose numbers are text in the detail); warnings are the selected outcome's own", async () => {
     const result = liveResult(mockAudit([mockOutcome(), UNKNOWN_ROW()]));
     const calls = stubApi({ scan: () => jsonResponse(vitaminD()), research: scripted(ok(researchJob(RUN, "queued", { target: known }), 201), ok(researchJob(RUN, "succeeded", { target: known, result }))) });
     const el = await mount();
@@ -594,8 +598,12 @@ describe("the completed live audit is the ESTABLISHED result card: outcome tabs,
     expect(text(scanPanel(el))).toContain(SYN_SENTENCE);
     await click(Array.from(scanPanel(el).querySelectorAll<HTMLElement>('[role="tab"]')).find((t) => t.textContent === "Sleep quality"));
     expect(rows(el).map((li) => li.getAttribute("data-row-id"))).toEqual(["effect", "evidence", "form", "dose"]);
-    expect(rows(el).map((li) => fill(li))).toEqual([null, null, "75%", "50%"]);
-    expect(rows(el).map((li) => li.getAttribute("data-axis-state"))).toEqual(["data", "data", "filled", "filled"]);
+    expect(rows(el).map((li) => fill(li))).toEqual([null, null, null, null]);
+    expect(rows(el).map((li) => li.getAttribute("data-fill"))).toEqual(["none", "none", "none", "none"]);
+    expect(rows(el).map((li) => li.getAttribute("data-axis-state"))).toEqual(["data", "data", "data", "data"]);
+    expect(rows(el).map((li) => li.getAttribute("data-axis-reason"))).toEqual(["size_not_graded", "snippet_only", "fit_not_graded", "fit_not_graded"]);
+    expect(rows(el).map((li) => li.querySelector(".ab-bar-pts")?.textContent)).toEqual(["—", "—", "—", "—"]);
+    expect(rows(el).map((li) => li.querySelector("button")!.textContent).join(" ")).not.toMatch(/\d\s*\/\s*4|\d of 4|No match|Poor match|Partial match|Close match|Exact match/);
     const block = scanPanel(el).querySelector('[data-testid="research-warnings"]')!;
     expect(block.getAttribute("data-warning-count")).toBe("3"); // methodology + funding + publication; scan facts are all known
     expect(Array.from(block.querySelectorAll("[data-warning]")).map((n) => n.getAttribute("data-warning"))).toEqual(["methodology", "funding", "publication"]);
