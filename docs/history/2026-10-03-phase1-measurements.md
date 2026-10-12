@@ -403,3 +403,25 @@ arms and one-claim-per-trial. Retrieval is no longer the binding limit for
 healthy-adult strength: the readable open-access literature is. 295 of 386
 intervention-scope RCTs are abstract-only, and abstracts rarely print arm
 statistics.
+
+## Review tables as a source of per-trial numbers (measured 2026-10-12, no model)
+
+`scripts/experiments/sr_table_coverage.py` over the 79 creatine reviews with a
+PMC full text (of 83; 4 fetch errors): candidate per-arm rows matched to the
+corpus by first author + year -> 36 corpus trials, 23 of them unreadable to us.
+**Hand triage: only ~8 of the 23 carry real per-arm OUTCOME rows** (the rest
+are characteristics rows: age, BMI): strength 6 (Camic 2014, Kaviani 2019,
+Law 2009, Stone 1999, Syrotuik 2001, Vandenberghe 1997 -- all from ONE review,
+10.7717/peerj.20380: pre/post mean ± SD per arm, trial total n only) and lean
+mass 2 (Gotshalk 2002, Rawson 1999, with per-arm n). 175 candidate rows name
+trials not in our corpus at all.
+
+**Quality, checked where we also read the trial:** 4 outcome rows agree with
+our direct read; 1 does not, and the paper settles it -- Bonilla 2021
+(PMC8308441) has three arms (training + creatine 132.16, training 127.50,
+untrained control 121.31 kg). Our read compared creatine with the matched
+training arm (the isolating contrast); the review's table compared it with the
+untrained control (training confounded) and mistypes one SD (17.72 for 17.27).
+Also seen: "± SD" values that look like SEs (Vandenberghe 37.682 ± 0.27).
+These are exactly the errors a span check cannot catch when the original paper
+is the one we cannot read.
