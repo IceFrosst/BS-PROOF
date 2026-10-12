@@ -425,3 +425,30 @@ untrained control (training confounded) and mistypes one SD (17.72 for 17.27).
 Also seen: "± SD" values that look like SEs (Vandenberghe 37.682 ± 0.27).
 These are exactly the errors a span check cannot catch when the original paper
 is the one we cannot read.
+
+## All-outcomes run — 20261012_102130 (v1.35, intervention scope, 2026-10-12)
+
+`--with-sr --full-text-only --intervention-scope --all-outcomes`: 139 studies,
+0 partial failures; only S6B re-mapping and S5N/S5R for newly mapped claims
+were new calls. 20 outcomes pooled or refused; with the full vocabulary S6B
+re-mapped claims (strength k 7 -> 9, endurance 2 -> 1, muscular_endurance 3).
+
+- **muscle_strength k = 9, SMD +0.31 [+0.06, +0.55]** -- first CI excluding
+  zero, inside the published +0.20..+0.46. Benefit "meaningful", certainty Very
+  low -> **I**: risk of bias -1 (0 % low-RoB weight), imprecision -1 (CI
+  crosses 0.20; 184 < 400), publication bias -1 (11 registered unpublished vs
+  9 pooled). Benchmark: precision now passes (1.3x), overlap 6/6, coverage 38 %
+  -> not testable.
+- lean_body_mass k 7, +0.18 (D+); muscle_power k 8, +0.08 (I); new outcomes
+  mostly k <= 3 (attention, soreness, sleep quality k = 1 "large", all I);
+  kidney/renal function has NO outcome in vocab/outcome.json, so creatine's
+  main safety question cannot be graded.
+
+**RoB semantics bug (v2 only).** S4 scores item 1 = 0 when the paper says only
+"randomised" with no method named, and item 5 = 0 when attrition reporting is
+incomplete (prompts/s4_rob.md); `pool.rob_status` reads every 0 as "judged
+inadequate" -> high RoB. Corpus: item 1 = 0 in 79/139 studies. RoB 2 treats
+"not described" as some concerns. What-if (high only if item 2 = 0; low if
+item 1 = 1, item 2 = 1, item 5 != 0; else unclear): high-RoB weight power
+58 -> 38 %, strength 30 -> 11 %, muscular_endurance 66 -> 0 %; RoB downgrade
+power -2 -> -1, muscular_endurance -2 -> -1; no letter changes in this run.

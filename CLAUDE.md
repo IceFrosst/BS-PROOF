@@ -316,7 +316,11 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
    (intervention scope, 139 studies, arm-n + add-on fixes): strength k=7
    +0.27 (I), lean k=8 (D+), power k=8 (I); benchmark: lean SMD pass,
    strength not testable (coverage 33 %). The binding limit is now readable
-   open-access full text (295/386 creatine RCTs are abstract-only).
+   open-access full text (295/386 creatine RCTs are abstract-only). All-outcomes
+   run `20261012_102130`: strength k=9 +0.31 [+0.06, +0.55] (I: RoB, imprecision,
+   publication bias); open: `pool.rob_status` misreads S4 "not described" (0)
+   as high RoB; registry "unpublished" counts are an upper bound; no kidney
+   outcome in the vocab.
 1. Verify on a real phone: live camera, a busy label read after the
    thinking-mode fix, PWA install.
 2. Check whether the text calls (`deepseek-chat`) also need thinking disabled

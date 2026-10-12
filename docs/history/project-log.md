@@ -10,6 +10,17 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-12 — all-outcomes run (20261012_102130); review-table route measured
+
+- Review tables (`scripts/experiments/sr_table_coverage.py`): ~8 unreadable
+  trials gain real per-arm rows (6 strength, all one review); one checked row
+  used the wrong comparator. Not built; at most a sensitivity estimate later.
+- All-outcomes run: strength k=9, +0.31 [+0.06, +0.55] (meaningful, Very low
+  -> I); lean k=7 D+; power k=8 I; 15 more outcomes, mostly k <= 3. Benchmark:
+  strength precision passes, coverage 38 %. No kidney outcome in the vocab.
+- Found: `pool.rob_status` misreads S4's "method not described" (0) as
+  "inadequate" (high RoB). Measured impact in the measurements note.
+
 ## 2026-10-06 — intervention-scope creatine run (20261005_224647)
 
 - 139 studies (40 new); resumed once after a memory-pressure stop. Strength
