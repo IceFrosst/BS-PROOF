@@ -65,11 +65,13 @@ def registered_outcome_text(rec: dict) -> str:
 
 
 def registry_check(records: list[dict], ingredient: str, outcome_terms: list[str],
-                   corpus_ncts: set[str], *, today: date | None = None) -> dict:
+                   corpus_ncts: set[str], *, today: date | None = None,
+                   published: set[str] | None = None) -> dict:
     """Registered vs published trials for one ingredient x outcome."""
     pats = [_word(t) for t in outcome_terms if t]
     corpus = {n.upper() for n in corpus_ncts if n}
-    registered, in_corpus, unpublished = [], [], []
+    registered, in_corpus, unpublished, unlinked = [], [], [], []
+    found = {n.upper() for n in published or ()}
     for rec in records:
         if _section(rec, "protocolSection", "designModule", "studyType") != "INTERVENTIONAL":
             continue
@@ -82,7 +84,13 @@ def registry_check(records: list[dict], ingredient: str, outcome_terms: list[str
         registered.append(nct)
         if nct in corpus:
             in_corpus.append(nct)
+        elif nct in found:
+            # A primary publication cites this NCT id (Europe PMC), though the
+            # registry links none. Founder 2026-10-12: 5 of 11 creatine-strength
+            # "unpublished" trials in 20261012_102130 were published this way.
+            unlinked.append(nct)
         elif unpublished_flag(rec, today=today)["flagged"]:
             unpublished.append(nct)
     return {"registered": len(registered), "in_corpus": len(in_corpus),
-            "unpublished": sorted(unpublished), "upper_bound": True}
+            "unpublished": sorted(unpublished), "published_unlinked": sorted(unlinked),
+            "upper_bound": True}

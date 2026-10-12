@@ -10,6 +10,18 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-12 — RoB semantics and registry publication check fixed (founder)
+
+- `pool.rob_status` reads S4's own meanings: HIGH only when blinding/placebo is
+  missing; an undescribed randomisation method or incomplete attrition
+  reporting is "unclear". `REVIEW_PENDING.md` #0 amended.
+- Registry: a flagged "unpublished" trial that a primary (non-review,
+  non-protocol) Europe PMC paper cites by NCT id counts as `published_unlinked`
+  (`europepmc.publications_for_registration`; failed lookups stay counted).
+  Audit of creatine strength: 5 of 11 "unpublished" had such papers.
+- 190 Python tests. NOT yet re-run: the next run (cache replay) shows the
+  effect on the letters.
+
 ## 2026-10-12 — all-outcomes run (20261012_102130); review-table route measured
 
 - Review tables (`scripts/experiments/sr_table_coverage.py`): ~8 unreadable

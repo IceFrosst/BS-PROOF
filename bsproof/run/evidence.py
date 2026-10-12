@@ -23,8 +23,22 @@ def _registry(ingredient: str, items: list[dict]) -> dict | None:
         print(f"  registry check unavailable ({exc}); publication bias left to Egger")
         return None
     ncts = corpus_ncts(items)
-    return {o["id"]: registry_check(records, ingredient, o.get("search_terms") or [], ncts)
-            for o in vocab.load("outcome")["outcomes"]}
+    outcomes = vocab.load("outcome")["outcomes"]
+    first = {o["id"]: registry_check(records, ingredient, o.get("search_terms") or [], ncts)
+             for o in outcomes}
+    # Second pass: a flagged trial a primary paper cites by NCT id is published.
+    # A failed lookup leaves the trial counted (never shrinks the count by error).
+    from sources.europepmc import publications_for_registration
+    published = set()
+    for nct in sorted({n for r in first.values() for n in r["unpublished"]}):
+        try:
+            if publications_for_registration(nct):
+                published.add(nct)
+        except SourceError:
+            pass
+    return {o["id"]: registry_check(records, ingredient, o.get("search_terms") or [], ncts,
+                                    published=published)
+            for o in outcomes}
 
 
 def evidence_stage(opts, product: dict, extracted, run_context: dict) -> dict:

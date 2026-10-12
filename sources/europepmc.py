@@ -250,6 +250,17 @@ def is_synthesis(rec: dict) -> bool:
     return any(any(s in t for s in SYNTHESIS_TAGS) for t in tags)
 
 
+def publications_for_registration(nct_id: str) -> list[dict]:
+    """Primary publications that cite a registry id anywhere Europe PMC indexes
+    (abstract, full text). Reviews and protocols are not the trial's report.
+    Raises SourceError on a failed search (never read as "unpublished")."""
+    hits = search(f'"{nct_id}"', page_size=25, max_records=25)
+    return [h for h in hits if not is_synthesis(h)
+            and "protocol" not in (h.get("title") or "").lower()
+            and not any("protocol" in str(t).lower()
+                        for t in (h.get("pubTypeList") or {}).get("pubType", []))]
+
+
 def oa_status(rec: dict) -> str:
     if rec.get("isOpenAccess") == "Y" or rec.get("inEPMC") == "Y" or rec.get("pmcid"):
         return "full_text"

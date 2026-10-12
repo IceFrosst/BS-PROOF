@@ -34,7 +34,11 @@ weight is not the product's exact form; publication bias via Egger (α = 0.10) a
 unreported axes) are reported, not downgraded; (b) a CI too wide for any §4 row
 grades **I** ("inconclusive"). Also: risk of bias per trial = HIGH if
 randomisation, blinding or attrition is inadequate, LOW only if randomisation
-and blinding are adequate.
+and blinding are adequate. **Amended 2026-10-12 (founder):** read with S4's own
+meanings -- HIGH only when blinding/placebo is missing (item 2 = 0); an
+undescribed randomisation method (item 1 = 0) or incomplete attrition reporting
+(item 5 = 0) is "some concerns" (unclear), as in Cochrane RoB 2
+(`pool.rob_status`).
 
 **Added later on 2026-10-03 (second reviewer, MCIDs, method gaps):**
 

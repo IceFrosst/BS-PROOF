@@ -134,16 +134,28 @@ def selection_key(effect: "StudyEffect") -> tuple:
 
 
 def rob_status(s4: dict | None) -> str:
-    """Study-level risk of bias from the S4 items (1 = adequate, 0 = inadequate,
-    None = not reported). HIGH if randomisation, blinding or attrition is judged
-    inadequate; LOW only when randomisation AND blinding are adequate and
-    attrition is not inadequate; otherwise UNCLEAR. Unknown never counts as low."""
+    """Study-level risk of bias from the S4 items, read with S4's OWN meanings
+    (prompts/s4_rob.md), not as "1 adequate / 0 inadequate":
+
+      item 1  1 = a randomisation method is named; 0 = only "randomised" is
+              said (or alternation, which S4 cannot tell apart) -- NOT DESCRIBED
+      item 2  1 = double-blind AND an indistinguishable placebo; 0 = single-blind,
+              open-label or no placebo -- a real design flaw
+      item 5  0 = attrition reporting incomplete -- not "attrition too high"
+
+    HIGH only when item 2 is 0. LOW when item 1 = 1, item 2 = 1 and item 5 is
+    not 0. Otherwise UNCLEAR ("some concerns", Cochrane RoB 2: an undescribed
+    method is not an inadequate one). Unknown never counts as low.
+
+    Founder 2026-10-12. Measured on 20261012_102130: the previous rule read any
+    0 as "inadequate" and rated 79/139 studies' "randomised, method not named"
+    as HIGH risk of bias."""
     s4 = s4 or {}
-    items = [s4.get("item1_randomisation_method"), s4.get("item2_double_blind_placebo"),
-             s4.get("item5_attrition_ok")]
-    if 0 in items:
+    rand, blind, attrition = (s4.get("item1_randomisation_method"),
+                              s4.get("item2_double_blind_placebo"), s4.get("item5_attrition_ok"))
+    if blind == 0:
         return "high"
-    if items[0] == 1 and items[1] == 1:
+    if rand == 1 and blind == 1 and attrition != 0:
         return "low"
     return "unclear"
 
