@@ -10,6 +10,24 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-13 — fixes #1 #3 #6 #8 (v1.36); off-target populations deferred
+
+- #1 S4 gets the FULL text (`worker_payload.FULL_TEXT_AGENTS`): it was sent a
+  6,248-char head + tail and missed the methods (randomisation, blinding).
+- #3 Registry: patient trials (healthyVolunteers = False) are reported as
+  `off_target_population`, not unpublished (fields now requested from
+  ClinicalTrials.gov). Projected on 20261013_072633: strength unpublished 6 -> 1,
+  lean 10 -> 7 (vs 7 pooled: still -1). Title matching was audited and not
+  automated (too noisy; NCT05109039 likely = Brooks 2023).
+- #6 Audit of 88 no-effect claims: 49 no numbers read (22 PDF/HTML text, 24 no
+  numeric table, ~1 real reader miss), 21 span-check rejections -- fixed the
+  glued-decimal tokenizer ("PRE33.90"), clearing 8 fully + 1 partly.
+- #8 S5 v1.36 reports matched add-on pairs (ingredient + X vs X) as their own
+  claims. The bump invalidates every agent's cache: next run is a full
+  re-extraction.
+- #7 off-target populations stay excluded; recorded as open item 0b in
+  REVIEW_PENDING. 193 Python tests.
+
 ## 2026-10-12 — RoB semantics and registry publication check fixed (founder)
 
 - `pool.rob_status` reads S4's own meanings: HIGH only when blinding/placebo is

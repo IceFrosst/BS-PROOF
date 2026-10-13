@@ -34,5 +34,30 @@ class Registry(unittest.TestCase):
         self.assertEqual(r["published_unlinked"], ["NCT2"])
 
 
+    def test_a_patient_trial_is_off_target_not_unpublished(self):
+        patient = rec("NCT3")
+        patient["protocolSection"]["eligibilityModule"] = {"healthyVolunteers": False}
+        unknown = rec("NCT4")                                   # no eligibility field: still counted
+        r = registry_check([patient, unknown], "creatine", ["strength"], set())
+        self.assertEqual((r["off_target_population"], r["unpublished"]), (["NCT3"], ["NCT4"]))
+
+
+class SpanGlued(unittest.TestCase):
+    def test_a_decimal_glued_to_letters_is_found_an_integer_is_not(self):
+        from pipeline.span_check import find_number
+        self.assertEqual(find_number(33.90, "Grip (kg) PRE33.90 (9.73)33.59"), "exact")
+        self.assertEqual(find_number(33.59, "Grip (kg) PRE33.90 (9.73)33.59"), "exact")
+        self.assertIsNone(find_number(2, "VO2max improved"))
+
+
+class S4FullText(unittest.TestCase):
+    def test_s4_gets_the_whole_paper_others_are_fitted(self):
+        from bsproof.worker_payload import _payload
+        rec = {"_canonical": "x", "ingredient": "creatine", "title": "t", "abstract": "a"}
+        text = "METHODS double-blind " + "x" * 40000 + " RESULTS"
+        self.assertEqual(_payload("S4", rec, text, None, None)["text"], text)
+        self.assertLess(len(_payload("S7", rec, text, None, None)["text"]), len(text))
+
+
 if __name__ == "__main__":
     unittest.main()

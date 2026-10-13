@@ -15,6 +15,18 @@ Last swept: **2026-08-08**.
 
 ## OPEN
 
+### 0b. Off-target populations — TO ADDRESS LATER (founder 2026-10-13)
+
+The v2 pool is healthy adults; trials in other populations (patients, clinical
+groups, children) are refused as "off-target" (`pool._study_effects`), and the
+registry publication-bias check now skips registered trials that do not accept
+healthy volunteers (`registry_bias.healthy_population`). Founder decision for
+now: **keep excluding them**. To decide later: grade separate populations (e.g.
+an older-adults or a clinical ECU) and/or count some adjacent groups as GRADE
+*indirectness* instead of excluding them. Measured weight of the question
+(20261013_072633): creatine strength refused 9 trials, lean mass 6, as
+off-target.
+
 ### 0. Evidence method v2 — GRADE rule thresholds (FOUNDER REVIEW, 2026-10-03)
 
 **DECIDED 2026-10-03 (founder): everything below is accepted "for now, may

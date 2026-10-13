@@ -58,6 +58,12 @@ def names_ingredient(rec: dict, ingredient: str) -> bool:
     return False
 
 
+def healthy_population(rec: dict) -> bool:
+    """False only when the registry says the trial does NOT accept healthy
+    volunteers. Missing / unknown keeps the trial counted (never inferred)."""
+    return _section(rec, "protocolSection", "eligibilityModule", "healthyVolunteers") is not False
+
+
 def registered_outcome_text(rec: dict) -> str:
     mod = _section(rec, "protocolSection", "outcomesModule") or {}
     rows = (mod.get("primaryOutcomes") or []) + (mod.get("secondaryOutcomes") or [])
@@ -70,7 +76,7 @@ def registry_check(records: list[dict], ingredient: str, outcome_terms: list[str
     """Registered vs published trials for one ingredient x outcome."""
     pats = [_word(t) for t in outcome_terms if t]
     corpus = {n.upper() for n in corpus_ncts if n}
-    registered, in_corpus, unpublished, unlinked = [], [], [], []
+    registered, in_corpus, unpublished, unlinked, off_target = [], [], [], [], []
     found = {n.upper() for n in published or ()}
     for rec in records:
         if _section(rec, "protocolSection", "designModule", "studyType") != "INTERVENTIONAL":
@@ -84,6 +90,12 @@ def registry_check(records: list[dict], ingredient: str, outcome_terms: list[str
         registered.append(nct)
         if nct in corpus:
             in_corpus.append(nct)
+        elif not healthy_population(rec):
+            # The pool is healthy adults (patients are refused as off-target,
+            # founder 2026-10-13), so a patient trial is not "missing" from it.
+            # Measured: 4 of 10 lean-mass "unpublished" trials in 20261013_072633
+            # were knee OA, head-and-neck cancer, child myositis, haemodialysis.
+            off_target.append(nct)
         elif nct in found:
             # A primary publication cites this NCT id (Europe PMC), though the
             # registry links none. Founder 2026-10-12: 5 of 11 creatine-strength
@@ -93,4 +105,5 @@ def registry_check(records: list[dict], ingredient: str, outcome_terms: list[str
             unpublished.append(nct)
     return {"registered": len(registered), "in_corpus": len(in_corpus),
             "unpublished": sorted(unpublished), "published_unlinked": sorted(unlinked),
+            "off_target_population": sorted(off_target),
             "upper_bound": True}

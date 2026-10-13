@@ -359,7 +359,13 @@ def _claude_bin() -> str:
 #   the outcome's name. Measured on RSMOKE6: S5N wrote "DXA total body BF-FFM",
 #   so the natural-unit pool and the kg benchmarks (vocab/benchmarks.json)
 #   could not be compared.
-PROMPT_VERSION = "v1.35"
+# v1.36 (2026-10-13): S5 reports a MATCHED ADD-ON pair (ingredient + X vs X)
+#   as its own claim, besides any plain-placebo comparison, so
+#   eligibility.matched_addon_claim can keep it. Measured: isrctn68542582
+#   (PLA / GAA / GAA + CrM) carried only GAA + CrM vs PLA, a combination
+#   contrast, and was refused whole. Same run of changes: S4 gets the full text
+#   (payload change, re-runs S4 without a prompt edit).
+PROMPT_VERSION = "v1.36"
 
 # Tier -> model. FULL IDs, NOT ALIASES.
 #

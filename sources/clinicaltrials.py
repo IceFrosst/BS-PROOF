@@ -185,7 +185,8 @@ def facts_for(nct_id: str) -> dict | None:
 
 
 SEARCH_FIELDS = ("NCTId,BriefTitle,OverallStatus,CompletionDate,HasResults,StudyType,"
-                 "ReferencesModule,OutcomesModule,ArmsInterventionsModule")
+                 "ReferencesModule,OutcomesModule,ArmsInterventionsModule,"
+                 "ConditionsModule,EligibilityModule")
 
 
 def search_completed(ingredient: str, *, max_pages: int = 20, page_size: int = 100) -> list[dict]:

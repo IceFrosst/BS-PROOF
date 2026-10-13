@@ -320,7 +320,10 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
    run `20261013_072633` (RoB semantics + registry-unlinked fixes): strength
    k=9 +0.31 [+0.06, +0.55] **C+**, lean k=7 D+, power k=8 I; benchmark:
    strength precision passes, coverage 38 % (not testable). No kidney outcome
-   in the vocab (parked).
+   in the vocab (parked). Off-target populations stay excluded for now; how to
+   grade them is open (`docs/REVIEW_PENDING.md` 0b). v1.36 fixes (S4 full text,
+   glued-decimal span check, registry population filter, S5 matched add-on
+   pairs) need a FULL re-extraction (the bump invalidates every agent's cache).
 1. Verify on a real phone: live camera, a busy label read after the
    thinking-mode fix, PWA install.
 2. Check whether the text calls (`deepseek-chat`) also need thinking disabled

@@ -42,9 +42,18 @@ _N_FIELDS = {"n_ingredient": "ingredient_arm", "n_control": "control_arm"}
 _TOKEN = re.compile(r"(?<![\w.])([-−–]?)(\d{1,3}(?:,\d{3})+|\d+)?(?:[.·](\d+))?(?![\w])")
 
 
+# A DECIMAL glued to letters, as table text flattened from PDF / JATS prints it
+# ("PRE33.90 (9.73)", "POST36.96"). Measured 2026-10-13: 21 S5N claims in run
+# 20261013_072633 were rejected because _TOKEN's look-behind forbids a letter
+# before the number. Decimals only: an integer glued to letters is usually part
+# of a name ("VO2max", "CO2") and must never verify a number.
+_GLUED = re.compile(r"(?<=[A-Za-z])(\d+)[.·](\d+)(?![\w])")
+
+
 def _tokens(text: str) -> list[tuple[float, int, bool]]:
     """(value, decimals, has_sign) for every number printed in `text`."""
-    out = []
+    out = [(float(f"{m.group(1)}.{m.group(2)}"), len(m.group(2)), False)
+           for m in _GLUED.finditer(text or "")]
     for m in _TOKEN.finditer(text or ""):
         sign, whole, frac = m.group(1), m.group(2), m.group(3)
         if whole is None and frac is None:

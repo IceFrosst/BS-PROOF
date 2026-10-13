@@ -172,6 +172,18 @@ def _tables_text(record: dict, cap_chars: int = 4000,
     return out
 
 
+# Agents sent the FULL study text, never the budget slice. S4 (risk of bias)
+# reads randomisation, blinding and attrition from the METHODS, which the
+# head + tail slice removed. Measured 2026-10-13 on run 20261013_072633: S4 got
+# 6,248 of 11,456-50,296 chars for 8 of 9 pooled strength trials; "blind" never
+# reached it in 4, items 1 and 2 came back null in 5 / 5, so no trial could be
+# rated low risk of bias. Full text is also the text S5 already gets (its
+# prompt exceeds the budget), so S4 now SHARES S5's prompt cache instead of
+# writing its own. workers.run_agent still retries a "prompt is too long" call
+# with a middle elision.
+FULL_TEXT_AGENTS = frozenset({"S4"})
+
+
 def _fit_text(agent: str, text: str, fixed_chars: int) -> str:
     """
     Trim the study text so system + schema + payload stays under budget.
@@ -194,6 +206,8 @@ def _fit_text(agent: str, text: str, fixed_chars: int) -> str:
     Half head, half tail: S3 needs the methods (n, population, design), S5 needs
     the results. Neither is served by keeping only one end.
     """
+    if agent in FULL_TEXT_AGENTS:
+        return text
     extra = AGENT_BUDGET_TRIM.get(agent, 0)
     room = PROMPT_BUDGET_CHARS - fixed_chars - extra
     if room <= 0:

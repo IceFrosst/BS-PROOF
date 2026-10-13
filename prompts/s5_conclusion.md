@@ -115,6 +115,17 @@ adequately-powered, isolated NULL scored as evidence for creatine. The
 evidence_span must therefore quote a BETWEEN-GROUP sentence; a pre/post
 within-group sentence does not establish direction.
 
+MATCHED ADD-ON PAIRS. When the trial has an arm that receives the study
+ingredient PLUS a co-intervention (training, another supplement) and another
+arm that receives THE SAME co-intervention WITHOUT the ingredient (for example
+"GAA + creatine" and "GAA", or "training + creatine" and "training +
+placebo"), report the comparison of THAT pair as its own claim for each
+outcome the paper compares them on, naming those two arms in
+`ingredient_arm` / `control_arm` (contrast `vs_ingredient_free`). Report it IN
+ADDITION to any comparison against a plain placebo or no-treatment arm, never
+instead of it. That pair is the one that isolates the ingredient; a comparison
+against an arm without the co-intervention mixes the two effects.
+
 contrast — WHICH ARMS DOES THIS CLAIM COMPARE?
   vs_ingredient_free  the claim compares against an arm that received NO study
                       ingredient (placebo, no-treatment, different agent)
