@@ -6,6 +6,8 @@ invalid runs, were removed on 2026-10-02 and remain in git history.
 
 | When (UTC) | Mode | Ingredient | Form | Kind | File |
 |---|---|---|---|---|---|
+| 2026-10-13 07:26 UTC | claude-sr-ft-inter | `creatine` | `creatine_monohydrate` | summary | [runs/20261013_072633_creatine_creatine-monohydrate_claude-sr-ft-inter_summary.md](runs/20261013_072633_creatine_creatine-monohydrate_claude-sr-ft-inter_summary.md) |
+| 2026-10-13 07:26 UTC | claude-sr-ft-inter | `creatine` | `creatine_monohydrate` | full | [runs/20261013_072633_creatine_creatine-monohydrate_claude-sr-ft-inter_full.md](runs/20261013_072633_creatine_creatine-monohydrate_claude-sr-ft-inter_full.md) |
 | 2026-10-12 10:21 UTC | claude-sr-ft-inter | `creatine` | `creatine_monohydrate` | summary | [runs/20261012_102130_creatine_creatine-monohydrate_claude-sr-ft-inter_summary.md](runs/20261012_102130_creatine_creatine-monohydrate_claude-sr-ft-inter_summary.md) |
 | 2026-10-12 10:21 UTC | claude-sr-ft-inter | `creatine` | `creatine_monohydrate` | full | [runs/20261012_102130_creatine_creatine-monohydrate_claude-sr-ft-inter_full.md](runs/20261012_102130_creatine_creatine-monohydrate_claude-sr-ft-inter_full.md) |
 | 2026-10-05 22:46 UTC | claude-sr-ft-top5-inter | `creatine` | `creatine_monohydrate` | summary | [runs/20261005_224647_creatine_creatine-monohydrate_claude-sr-ft-top5-inter_summary.md](runs/20261005_224647_creatine_creatine-monohydrate_claude-sr-ft-top5-inter_summary.md) |
