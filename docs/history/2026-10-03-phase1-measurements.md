@@ -452,3 +452,20 @@ inadequate" -> high RoB. Corpus: item 1 = 0 in 79/139 studies. RoB 2 treats
 item 1 = 1, item 2 = 1, item 5 != 0; else unclear): high-RoB weight power
 58 -> 38 %, strength 30 -> 11 %, muscular_endurance 66 -> 0 %; RoB downgrade
 power -2 -> -1, muscular_endurance -2 -> -1; no letter changes in this run.
+
+## Re-run with the RoB and registry fixes — 20261013_072633 (2026-10-13)
+
+Same command as 20261012_102130 (all outcomes, intervention scope), replayed
+from cache; 139 studies, 0 partial failures.
+
+| outcome | k | SMD [95% CI] | letter | unpublished (unlinked-published) |
+|---|---|---|---|---|
+| muscle_strength | 9 | +0.31 [+0.06, +0.55] | **I -> C+** (meaningful, Low: RoB -1, imprecision -1) | 11 -> 6 (5) |
+| lean_body_mass | 7 | +0.18 [-0.11, +0.46] | D+ (none, Low; publication bias still -1) | 16 -> 10 (6) |
+| muscle_power | 8 | +0.08 [-0.28, +0.45] | I (RoB -2 -> -1) | 5 -> 3 (2) |
+| muscular_endurance | 3 | +0.16 [-2.07, +2.38] | I (RoB -2 -> -1) | 2 -> 1 (1) |
+| cognitive_function | 2 | +0.20 [-0.44, +0.84] | I | 4 -> 2 (2) |
+
+Strength's publication-bias downgrade went (6 unpublished < 9 pooled), giving
+the first non-I strength letter. Benchmark unchanged: precision passes (1.3x),
+overlap 6/6, coverage 38 % -> not testable.
