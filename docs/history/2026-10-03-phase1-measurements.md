@@ -469,3 +469,10 @@ from cache; 139 studies, 0 partial failures.
 Strength's publication-bias downgrade went (6 unpublished < 9 pooled), giving
 the first non-I strength letter. Benchmark unchanged: precision passes (1.3x),
 overlap 6/6, coverage 38 % -> not testable.
+
+**S4 cannot see the methods (measured 2026-10-13).** For the 9 pooled strength
+trials S4 is sent 6,248 characters (head + tail, `_fit_text` at
+PROMPT_BUDGET_CHARS = 12,000) of papers 11,456-50,296 characters long; 8 of 9
+are elided. In 4 of the 9 the word "blind" never reaches S4, and item 1 / item 2
+come back null in 5 / 5 -- so no trial can be rated low risk of bias, and the
+RoB downgrade is partly an artefact of truncation, not of the trials.
