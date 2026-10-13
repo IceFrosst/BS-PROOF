@@ -159,7 +159,6 @@ Examples from `python3 -m pipeline.selftest` (~510 checks, zero cost, no network
 | **[`docs/SYSTEM_DESIGN.md`](docs/SYSTEM_DESIGN.md)** | the app: `/scan`, the API, the Evidence Ledger card, design system, history, sign-in, PWA |
 | **[`docs/ANCHORS.md`](docs/ANCHORS.md)** | the 35-anchor calibration set (`docs/anchors.csv` is authoritative) |
 | **[`docs/REVIEW_PENDING.md`](docs/REVIEW_PENDING.md)** | open questions and proposed constant changes awaiting the founder |
-| **[`pipeline_v2_demo.excalidraw`](pipeline_v2_demo.excalidraw)** | how one run works, end to end; regenerated from the code by `scripts/write_demo_diagram.py` |
 | **[`docs/history/`](docs/history/)** | closed audits, archives and the dated project log — not a task list |
 
 ## Status

@@ -190,8 +190,8 @@ export type ProductGradesV2 =
   | { status: "graded"; ingredient: string; form: string | null; dose_mg: number | null; run_id: string;
       method_status: string; population: string | null; outcomes: OutcomeGrade[] };
 
-// Dev-only preview (scripts/experiments/v2_preview.py): a shadow sample built
-// from a stability run, never a retained run, so it is refused in production.
+// Dev/test override of the runs directory (tests/grade-v2-parity.test.ts points
+// it at a fixture). Ignored in production, where only retained runs grade.
 const PREVIEW_DIR = process.env.NODE_ENV !== "production" ? process.env.EVIDENCE_V2_RUNS_DIR : undefined;
 const RETAINED_RUNS = path.join(process.cwd(), "reports", "runs");
 const RUNS_DIR = PREVIEW_DIR ? path.resolve(PREVIEW_DIR) : RETAINED_RUNS;

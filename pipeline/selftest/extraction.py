@@ -422,7 +422,7 @@ def run(check):
     # wiring, S7 envelope walls, table shipping). They had ZERO callers, so
     # "the selftest passes" said nothing about them -- reviewed 2026-08-25,
     # the S7 envelope check was failing while every gate printed green.
-    _w._self_check_v13_shadow_wiring()
+    _w._self_check_table_route_wiring()
     check("workers' embedded contract checks actually ran", True,
           "zero-caller self-checks rot silently; this line keeps them wired")
     _body = ("METHODS " + "m" * 30000 + " RESULTS the group improved, p = 0.001 "

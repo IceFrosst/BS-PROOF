@@ -1,6 +1,6 @@
 """
 The v13 measured-effect SHADOW path's per-study helpers: arm aliasing, table
-candidate selection and claim enrichment. Off unless SP_V13_SHADOW=1, and never
+candidate selection and claim enrichment (the table route). Off unless SP_NUMERIC_TABLES=1, and never
 read by production scoring. Moved verbatim out of workers.py on 2026-10-03;
 bsproof.workers re-exports every name. The wiring self-check that drives these
 through extract_study stays in workers.py.
@@ -429,4 +429,4 @@ def _shadow_enrich_claims(out: dict, record: dict, call) -> None:
         audit["alias_refusal"] = alias_reason
     if table_error:
         audit["table_error"] = table_error
-    out["_v13_shadow"] = audit
+    out["_table_route"] = audit

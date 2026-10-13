@@ -21,3 +21,4 @@ test-results/
 
 # ...but the template IS committed; it carries no secrets.
 !.env.example
+next-env.d.ts

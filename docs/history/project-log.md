@@ -10,6 +10,25 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-13 — repo cleanup (founder-approved list)
+
+- Deleted: 3 superseded runs (20261005_080012, 20261005_224647,
+  20261012_102130; ~14 MB, in git history) + their INDEX rows;
+  `pipeline_v2_demo.excalidraw`, `scripts/write_demo_diagram.py`,
+  `scripts/write_demo_report.py`; `scripts/experiments/poolability.py`,
+  `pool_shadow.py`, `v2_preview.py`, `sr_table_coverage.py`; the v13 shadow
+  (`pipeline/v13_shadow.py`, `SP_V13_SHADOW`, its score/dashboard writers);
+  `run_coverage.py`, `run_sr_inheritance.py`; `next-env.d.ts` untracked
+  (gitignored). Dashboard schemas still accept an optional `v13_shadow` key
+  (old artifacts carry it); `EVIDENCE_V2_RUNS_DIR` stays as a test override.
+- Table route (S1 + S5T) switched OFF by default (`SP_NUMERIC_TABLES=1` turns it
+  on): 277/277 v2 claims took S5N's numbers. Code kept until the v1.36 re-run
+  confirms v2 is unchanged (it still writes into v14's S5 claims).
+- CLAUDE.md "Current state" / "Next" rewritten (stale Phase-1 snapshot, done
+  retrieval item, overtaken S7 replay item, changelog paragraph moved out).
+- Gates: 193 Python tests, selftest, invariants; typecheck, lint, 506 vitest,
+  knip clean.
+
 ## 2026-10-13 — fixes #1 #3 #6 #8 (v1.36); off-target populations deferred
 
 - #1 S4 gets the FULL text (`worker_payload.FULL_TEXT_AGENTS`): it was sent a

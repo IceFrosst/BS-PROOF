@@ -36,17 +36,15 @@ PER_STUDY = ("S3", "S4", "S5", "S7", "S8")
 MIN_TEXT_CHARS = 200
 
 
-def _v13_shadow_enabled() -> bool:
-    """Return whether the experimental v13 wiring is explicitly enabled."""
-    return os.environ.get("SP_V13_SHADOW", "0") == "1"
-
-
 def _numeric_tables_enabled() -> bool:
     """The table route for arm-level numbers (S1 design facts + the S5T table
-    selector, bsproof/worker_shadow.py). ON by default since 2026-10-03 for
-    evidence method v2 (docs/EVIDENCE_METHOD.md §8 Phase 2); SP_NUMERIC_TABLES=0
-    turns it off. It adds calls but no v14 score reads its fields."""
-    return _v13_shadow_enabled() or os.environ.get("SP_NUMERIC_TABLES", "1") == "1"
+    selector, bsproof/worker_shadow.py). OFF by default since 2026-10-13
+    (SP_NUMERIC_TABLES=1 turns it on): S5N reads every v2 number itself --
+    measured on 20261013_072633, 277 of 277 mapped claims took S5N's numbers and
+    none fell back to S5's table-enriched ones -- so the route cost one S1 call
+    per study plus S5T calls for nothing v2 reads. It still writes into S5's
+    claims when on (which v14 reads); kept until v14 retires."""
+    return os.environ.get("SP_NUMERIC_TABLES", "0") == "1"
 
 
 def _second_reviewer_enabled() -> bool:
@@ -221,7 +219,7 @@ def _verify_numbers(out: dict, record: dict, claims: list[dict] | None = None) -
 S6_BATCH = os.environ.get("SP_S6_BATCH", "1") == "1"
 
 
-def _self_check_v13_shadow_wiring() -> None:
+def _self_check_table_route_wiring() -> None:
     """Offline contract checks for the shadow boundary (never run on import)."""
     from unittest.mock import patch
 
@@ -342,8 +340,7 @@ def _self_check_v13_shadow_wiring() -> None:
         # The table helpers are looked up in two modules since the 2026-10-03
         # split: worker_payload (via _payload) and worker_shadow (via
         # _shadow_enrich_claims). Patch both, or one path reads real tables.
-        with patch.dict(os.environ, {"SP_V13_SHADOW": "1"} if shadow else
-                        {"SP_NUMERIC_TABLES": "0"},
+        with patch.dict(os.environ, {"SP_NUMERIC_TABLES": "1" if shadow else "0"},
                         clear=not shadow), patch.object(
                             _wp, "_tables_text",
                             lambda _record, **_kw: tables), patch.object(
@@ -361,24 +358,24 @@ def _self_check_v13_shadow_wiring() -> None:
     assert "S5T" in calls
     malicious = run(True, "malicious")
     assert "estimate_kind" not in malicious["S5"]["claims"][0]
-    assert malicious["_v13_shadow"]["claims"][0]["status"] == "refused"
+    assert malicious["_table_route"]["claims"][0]["status"] == "refused"
     multi = run(True, "multi-arm")
-    assert "S5T" in calls and multi["_v13_shadow"]["selector_calls"] == 1
+    assert "S5T" in calls and multi["_table_route"]["selector_calls"] == 1
     reordered = run(True, "reordered")
     assert reordered["S5"]["claims"][0]["estimate_kind"] == "mean_difference"
-    assert reordered["_v13_shadow"]["claims"][0]["status"] == "enriched"
+    assert reordered["_table_route"]["claims"][0]["status"] == "enriched"
     for refusal_mode in ("blend", "unknown", "not-isolated"):
         refused = run(True, refusal_mode)
         assert "S5T" not in calls
-        assert "alias_refusal" in refused["_v13_shadow"]
+        assert "alias_refusal" in refused["_table_route"]
     for malformed_mode in ("missing-key", "extra-key", "bool-number"):
         malformed = run(True, malformed_mode)
-        assert malformed["_v13_shadow"]["claims"][0]["status"] == "refused"
+        assert malformed["_table_route"]["claims"][0]["status"] == "refused"
         assert "estimate_kind" not in malformed["S5"]["claims"][0]
     selector_failed = run(True, "selector-exception")
     assert "S6B" in calls and not any(
         f.get("agent") == "S5T" for f in selector_failed.get("_failed", []))
-    assert selector_failed["_v13_shadow"]["failures"][0]["stage"] == "selector"
+    assert selector_failed["_table_route"]["failures"][0]["stage"] == "selector"
     selector_quota = run(True, "selector-quota")
     assert selector_quota.get("_quota_exhausted")
     assert any(f.get("agent") == "S5T"
@@ -387,7 +384,7 @@ def _self_check_v13_shadow_wiring() -> None:
     off = run(False, "valid")
     off_again = run(False, "valid")
     assert "S1" not in calls and "S5T" not in calls
-    assert "_v13_shadow" not in off and off == off_again
+    assert "_table_route" not in off and off == off_again
 
     # Structured table extraction (shadow-only path): colspan/rowspan headers
     # merge into composite column labels; the flat extract_tables output is

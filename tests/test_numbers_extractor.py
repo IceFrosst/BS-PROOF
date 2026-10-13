@@ -75,7 +75,7 @@ class Wiring(unittest.TestCase):
     def run_study(self, env=None, **kw):
         from bsproof import workers
         call, calls = self.fake(**kw)
-        base = {"SP_NUMERIC_TABLES": "0", "SP_V13_SHADOW": "0", "SP_SECOND_REVIEWER": "0",
+        base = {"SP_NUMERIC_TABLES": "0", "SP_SECOND_REVIEWER": "0",
                 "SP_NUMBERS_EXTRACTOR": "1"}
         with mock.patch.dict(os.environ, {**base, **(env or {})}):
             out = workers.extract_study(REC, "x" * 500 + SPAN, call=call)

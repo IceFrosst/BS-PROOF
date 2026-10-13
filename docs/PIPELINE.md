@@ -2,10 +2,7 @@
 
 What happens in one extraction run, and the steps to run one on your machine.
 The rules that govern changes are in `CLAUDE.md`; the scoring method and its
-constants are in `docs/SPEC.md`; a picture of one run is
-`pipeline_v2_demo.excalidraw` (regenerate with
-`python3 scripts/write_demo_diagram.py`, which imports its constants from
-`pipeline/scoring.py` so it cannot drift; open it at excalidraw.com).
+constants are in `docs/SPEC.md`.
 
 Merged 2026-10-02 from `ARCHITECTURE.md`, `ON_MACHINE_STEPS.md` and
 `GROK_CLI_SETUP.md` (all three are in git history).
@@ -207,7 +204,7 @@ keeps only numbers both readings agree on and queues conflicts in
 
 Every human-facing run goes under `reports/runs/` with a row in `INDEX.md`
 (`scripts/auto_report_push.py` does this at the end of a
-run; `scripts/write_demo_report.py` writes a wiring report). Never overwrite an
+run). Never overwrite an
 old run. Label the provider.
 
 ### Re-scoring without re-extracting

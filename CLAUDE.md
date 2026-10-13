@@ -169,12 +169,10 @@ bsproof/                the extraction layer (may call a model; pipeline/ may no
   claude_adapter.py grok_adapter.py label_adapter.py   the model boundaries
   workers.py            per-study fan-out (extract_study / extract_corpus); call= injectable
   worker_payload.py     what each agent is sent, fitted to the input budget
-  worker_shadow.py      v13 shadow helpers (off unless SP_V13_SHADOW=1)
+  worker_shadow.py      table route (S1 + S5T; off unless SP_NUMERIC_TABLES=1, retires with v14)
   worker_quota.py       subscription-limit detection
   run/                  run_pipeline stages: options, corpus, extract, score, report
 run_pipeline.py         one ingredient end to end (--wiring / --grok / --with-sr; --help)
-run_sr_inheritance.py   SR-table uplift alone
-run_coverage.py         OA + methods-fact coverage, no model
 
 pipeline/   deterministic, NO MODEL, unit-tested
   scoring.py arcs.py donut.py      formula, arcs, rendering
@@ -192,7 +190,6 @@ pipeline/   deterministic, NO MODEL, unit-tested
   effect_s.py                      reported effect -> signed contribution s
   calibration.py                   anchor harness
   effect_harvest.py                deterministic table candidates for the S5T table route
-  v13_shadow.py                    shadow analysis, NOT imported by production scoring
   storage.py vocab.py preview.py showcase.py
   invariants.py selftest/          the two gates (selftest is a package; run with -m)
 sources/    deterministic HTTP layer: europepmc, clinicaltrials, oa, fulltext
@@ -260,30 +257,36 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
 
 ---
 
-## Current state (snapshot, 2026-10-03)
+## Current state (snapshot, 2026-10-13)
 
-- **Method:** evidence method v2 (`docs/EVIDENCE_METHOD.md`) was **adopted
-  2026-10-03**: random-effects meta-analysis + GRADE + per-outcome letter
-  grades, replacing the v14 aggregation (which fails its creatine-strength
-  face-validity check). Decisions in its §9 — second reviewer is a second Claude
-  model for now (a different-vendor reviewer is future work); vitamin C is the
-  next ingredient. Implementation is at **Phase 1**; production still scores v14.
-
-- **Evidence:** two retained creatine monohydrate runs — `20260904_185830`
-  (v14 re-composition of `20260825_175339`) and `20261005_080012`, the first
-  with an `evidence_v2` block (branch `Jans_attempt` only; it would change the
-  live v14 score if merged). Every run is
-  `public_claims_allowed: false`; anchors are not calibrated. Run-to-run
-  extraction variance (not the formula) is the binding precision problem.
+- **Method:** evidence method v2 (`docs/EVIDENCE_METHOD.md`, adopted
+  2026-10-03): random-effects meta-analysis + GRADE + per-outcome letter
+  grades, replacing v14. Built end to end and running in **shadow** beside v14:
+  numbers extractor S5N + second reviewer S5R (Opus), span check, effect sizes
+  (SD from SE / CI), consistency guard, pooling, GRADE (RoB, imprecision,
+  inconsistency, registry publication bias), letters, `evidence_v2` run block,
+  `/scan` grade card, benchmark (`vocab/benchmarks.json`, 10 creatine
+  meta-analyses; pass rule in `pipeline/benchmark.RULES`). **Production still
+  scores v14.** Founder decisions: `docs/REVIEW_PENDING.md` #0; open: 0b
+  (off-target populations, excluded for now).
+- **Evidence:** live site uses `20260904_185830` (v14). Latest v2 run
+  `20261013_072633` (branch `Jans_attempt`, intervention scope, all outcomes,
+  139 studies): creatine strength k=9 SMD +0.31 [+0.06, +0.55] **C+**, lean
+  mass k=7 **D+**, power k=8 **I**, other outcomes mostly k <= 3 (I). Benchmark:
+  strength not testable (coverage 38 % < 50 %). Merging a new run to `main`
+  changes the live v14 creatine score -- deliberately not done yet. Every run
+  is `public_claims_allowed: false`.
+- **Binding limit:** readable open-access full text (295/386 creatine RCTs are
+  abstract-only), then off-target populations and figure-only results.
 - **App:** `/scan` is the product surface. Photo (live camera via
   `getUserMedia`, with a `capture="environment"` file-input fallback) or typed
   ingredient + form + dose → `POST /api/scan`. Exact single-ingredient matches
   to three retained audits (creatine monohydrate 4000 mg/day, vitamin D3
   2000 IU/day, magnesium glycinate 300 mg/day) show the Evidence Ledger card;
-  everything else shows the same card shell as "Not assessed", with the
-  continuous v14 `evidence.rows` kept in the API as a backup. Model-written
-  sections (compatibility, company + MLM disclosure, funding/publication-bias
-  disclosures, evidence prior for unscored ingredients) are badged unverified.
+  a retained run with an `evidence_v2` block shows the v2 grade card instead;
+  everything else shows "Not assessed". Model-written sections (compatibility,
+  company + MLM disclosure, funding/publication-bias disclosures, evidence
+  prior for unscored ingredients) are badged unverified.
 - **Label reads** run on DeepSeek with thinking mode disabled
   (`ChatRequest.disableThinking`, DeepSeek only); prompt `label-v1.3` states
   the schema's list limits.
@@ -294,50 +297,29 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
 
 ## Next
 
-0. **Evidence method v2** (`docs/EVIDENCE_METHOD.md` §8). Phase 1a done: papers
-   carry poolable numbers (93% of PMC full texts) but current extractions make
-   only 5–27% of trials poolable. Phase 1b done: same-endpoint numbers
-   reproduce; WHICH endpoints become poolable does not
-   (`docs/history/2026-10-03-phase1-measurements.md`). Phase 2 step 1 done
-   (span check, effect sizes, table route on by default), the `max_turns` fix
-   (free-text schema headroom), shadow pooling (`pipeline/pool.py`) and GRADE +
-   letter grades (`pipeline/grade.py`), second reviewer (`pipeline/review.py`,
-   `SP_SECOND_REVIEWER=1`), crossover + dose indirectness, registry check. Next:
-   S5 claim rule (v1.29) + measure hierarchy done; v2 grades flow run ->
-   artifact `evidence_v2` -> `lib/analyze/grade-v2.ts` -> `/scan` grade card
-   (dev preview: `EVIDENCE_V2_RUNS_DIR`). Per-claim numbers extractor S5N
-   built (v1.33, on by default; per-arm SE/CI -> SD in `effect_size`): smoke
-   RSMOKE5 makes 7/11 mapped claims poolable, all reviewer-agreed; v1.34 adds
-   the before/after/∆ consistency guard (refuses) and the baseline-imbalance
-   flag (downgrades via RoB) -- RSMOKE6 confirmed both live. Benchmark built:
-   `vocab/benchmarks.json` (19 rows, 10 creatine meta-analyses, quotes
-   verified by `scripts/benchmark_v2.py verify`), `pipeline/benchmark.py`.
-   Runs `20261005_080012` (supplement scope) and `20261005_224647`
-   (intervention scope, 139 studies, arm-n + add-on fixes): strength k=7
-   +0.27 (I), lean k=8 (D+), power k=8 (I); benchmark: lean SMD pass,
-   strength not testable (coverage 33 %). The binding limit is now readable
-   open-access full text (295/386 creatine RCTs are abstract-only). All-outcomes
-   run `20261013_072633` (RoB semantics + registry-unlinked fixes): strength
-   k=9 +0.31 [+0.06, +0.55] **C+**, lean k=7 D+, power k=8 I; benchmark:
-   strength precision passes, coverage 38 % (not testable). No kidney outcome
-   in the vocab (parked). Off-target populations stay excluded for now; how to
-   grade them is open (`docs/REVIEW_PENDING.md` 0b). v1.36 fixes (S4 full text,
-   glued-decimal span check, registry population filter, S5 matched add-on
-   pairs) need a FULL re-extraction (the bump invalidates every agent's cache).
+0. **Evidence method v2** (`docs/EVIDENCE_METHOD.md` §8; history in
+   `docs/history/project-log.md` and `2026-10-03-phase1-measurements.md`).
+   a. Full creatine re-extraction under **v1.36** (S4 full text, glued-decimal
+      span check, registry population filter, S5 matched add-on pairs; the
+      table route is now off by default). The bump invalidates every agent's
+      cache. Then re-check letters and the benchmark.
+   b. Founder: per-outcome meaningful-change thresholds (MCID) for the newly
+      graded outcomes (they use the flagged 0.2 SD default); kidney / renal
+      outcome (parked); off-target populations (REVIEW_PENDING 0b).
+   c. After the re-run: delete the table route (S1, S5T,
+      `worker_shadow.py`, `effect_harvest.py`) if v2 is unchanged.
+   d. Phase 4 switch once the benchmark passes: v2 live, v14 archived,
+      vitamin D / magnesium / vitamin C runs, Evidence Ledger retired.
 1. Verify on a real phone: live camera, a busy label read after the
    thinking-mode fix, PWA install.
 2. Check whether the text calls (`deepseek-chat`) also need thinking disabled
    (`literature_warnings` at 1024 max tokens may degrade to `unavailable`).
 3. Set up Supabase (run `docs/scan-history.sql`) and Google credentials, then
    verify history and sign-in end to end.
-4. Pipeline: replay S7 under v1.28 on all 155 usable creatine studies, review
-   drift, rescore from the unchanged S3/S5 corpus. `rescore_run.py --verify`
-   cannot re-assemble v13 runs (the `studies_list` projection drops per-arm
-   facts) — fix the projection first.
-5. Constrain retrieval to the intervention, not the document.
-6. Measure extraction stability (same corpus, same prompt, twice) before any
-   anchor calibration.
-7. Right-size dashboard CI (path filters; full Playwright matrix only for UI
+4. Measure extraction stability (same corpus, same prompt, twice) before any
+   anchor calibration; outcome mapping moves ±2 trials per outcome between
+   runs.
+5. Right-size dashboard CI (path filters; full Playwright matrix only for UI
    changes).
 
 Later: Grok/Claude agreement table, Grok telemetry capture, dose bands at scale,

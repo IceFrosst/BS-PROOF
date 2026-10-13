@@ -13,7 +13,6 @@ on:
       - "CLAUDE.md"
       - "AGENTS.md"
       - "scripts/experiments/**"
-      - "pipeline_v2_demo.excalidraw"
       - ".claude/**"
   pull_request:
     paths-ignore:
@@ -22,7 +21,6 @@ on:
       - "CLAUDE.md"
       - "AGENTS.md"
       - "scripts/experiments/**"
-      - "pipeline_v2_demo.excalidraw"
       - ".claude/**"
   # Nightly full run, so a dependency or Chromium update that breaks the suite
   # surfaces even in a week with only docs pushes.

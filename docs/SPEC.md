@@ -10,7 +10,7 @@ GRADE + letter grades), being implemented in phases. This spec describes
 production (v14) until the Phase 4 switch.
 **Related:** `docs/PIPELINE.md` (how a run executes), `docs/SYSTEM_DESIGN.md`
 (the `/scan` app, including how the Evidence Ledger is used for display),
-`docs/ANCHORS.md` + `anchors.csv` (calibration), `pipeline_v2_demo.excalidraw`.
+`docs/ANCHORS.md` + `anchors.csv` (calibration).
 
 ---
 
