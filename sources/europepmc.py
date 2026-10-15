@@ -9,7 +9,7 @@ RETRIEVAL PRIORITY IS INVERTED ON PURPOSE: syntheses are fetched before
 primaries. One open-access systematic review carries characteristics-of-included
 -studies and a RoB table for ~15 primaries that cannot be read directly, so an
 SR is worth an order of magnitude more than a primary at fetch time. It still
-contributes ZERO evidence mass (invariant 6). SPEC section 4.
+is never pooled as a study (invariant 6). docs/METHOD.md §3.
 """
 from __future__ import annotations
 import re
@@ -165,8 +165,9 @@ def outcome_query(ingredient: str, outcome_id: str) -> str:
 
     Querying per outcome gives every outcome its own pool and its own quota, so
     the canonical outcome set is populated by construction rather than by
-    whatever the relevance ranking happened to favour. It also keeps SPEC section
-    1's decision intact -- the user is still never asked what they want it for.
+    whatever the relevance ranking happened to favour. It also keeps the outcome
+    set coming from the literature (docs/METHOD.md §1) -- the user is still never
+    asked what they want it for.
     """
     terms = outcome_terms(outcome_id)
     if not terms:

@@ -8,7 +8,7 @@
 --   * explicit column types, no bare or omitted types
 --
 -- The access pattern is exact-key lookup on a 5-tuple, which is a btree index,
--- which is why this is a relational store and not a vector DB (SPEC section 10).
+-- which is why this is a relational store and not a vector DB.
 
 CREATE TABLE IF NOT EXISTS study (
     canonical_id      TEXT PRIMARY KEY,   -- "registry:nct01234567" etc, from dedup
@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS study (
     is_synthesis      INTEGER NOT NULL DEFAULT 0,   -- 0/1; no BOOLEAN in SQLite
     design_rank       INTEGER,            -- NULL = unclassified, needs S1
     design_basis      TEXT,
-    oa                TEXT,               -- full_text | sr_table | abstract_only
+    oa                TEXT,               -- full_text | abstract_only (sr_table: v14-era rows)
     oa_location       TEXT,               -- JSON: reachable OA copy found off-PMC
     retracted         INTEGER NOT NULL DEFAULT 0,
     merged_from       TEXT,               -- JSON array of the papers collapsed here

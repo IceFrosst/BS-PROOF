@@ -5,7 +5,7 @@ export const metadata: Metadata = { title: "Methodology" };
 
 /* The method is being validated (2026-10-15): this page says what the grade
  * will be and that no product carries one yet. The full method is
- * docs/EVIDENCE_METHOD.md; the retired v14 score is docs/history/v14-scoring-model.md. */
+ * docs/METHOD.md; the retired v14 score is docs/history/v14-scoring-model.md. */
 export default function MethodologyPage() {
   return (
     <main id="main-content" tabIndex={-1}>

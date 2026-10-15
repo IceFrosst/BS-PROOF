@@ -117,7 +117,7 @@ def _ineligible(ext: dict) -> str | None:
     if s3.get("self_declared_underpowered") is True:
         return "self_declared_underpowered"
     # Third refusal, 2026-08-10 (decision delegated by the founder the same day;
-    # measured basis in docs/REVIEW_PENDING.md #4). A trial whose every treatment
+    # measured basis in the v14-era REVIEW_PENDING #4, at tag v14-final). A trial whose every treatment
     # arm co-administers another active ingredient tests a COMBINATION --
     # creatine+HMB vs placebo says nothing about creatine alone, in either
     # direction. 21 of 143 studies in the audited corpus were this shape, every

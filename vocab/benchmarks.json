@@ -1,6 +1,6 @@
 {
  "version": "2026-10-03",
- "description": "Published pooled estimates the evidence-v2 pool is benchmarked against (docs/EVIDENCE_METHOD.md §3 stage 8, §8 Phase 2/4). Every row carries a VERBATIM quote cut programmatically from the Europe PMC abstract, PMC full text or PMC table (whitespace normalised); `scripts/benchmark_v2.py verify` re-fetches each source and checks the quote is in it and every number is in the quote. Values are never typed from memory (invariant 5). A benchmark is compared like for like only: SMD with our SMD, a mean difference with our natural-unit pool in the same unit (pipeline/benchmark.py).",
+ "description": "Published pooled estimates the evidence-v2 pool is benchmarked against (docs/METHOD.md §16). Every row carries a VERBATIM quote cut programmatically from the Europe PMC abstract, PMC full text or PMC table (whitespace normalised); `scripts/benchmark_v2.py verify` re-fetches each source and checks the quote is in it and every number is in the quote. Values are never typed from memory (invariant 5). A benchmark is compared like for like only: SMD with our SMD, a mean difference with our natural-unit pool in the same unit (pipeline/benchmark.py).",
  "excluded": [
   {
    "source": "10.3390/nu17020238",

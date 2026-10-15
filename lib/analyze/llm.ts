@@ -33,10 +33,10 @@
  * the caller, JSON out. A call that "needs a second turn" is a prompt bug.
  *
  * WHAT A MODEL ANSWER MAY BECOME. The label read feeds deterministic code (dose
- * conversion, the scorer). The compatibility and company calls produce
+ * conversion). The compatibility and company calls produce
  * MODEL-PRIOR text that is shown with a "model knowledge, unverified" badge and
  * never enters a score, a dose band or an evidence arc. That boundary is the
- * whole reason the pipeline exists (see docs/SYSTEM_DESIGN.md), so keep it: no
+ * whole reason the pipeline exists (see docs/APP.md), so keep it: no
  * function here returns a number that scoring code consumes.
  */
 import fs from "node:fs";

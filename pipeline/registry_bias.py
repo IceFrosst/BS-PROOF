@@ -20,10 +20,9 @@ What it counts, per outcome:
 
 `unpublished` is an UPPER BOUND: a trial can be published without the registry
 linking it, and a trial in our corpus without a stated NCT id is not matched.
-That is why it is REPORTED BESIDE the grade and does not downgrade it yet: the
-rule turning the count into a downgrade is a founder decision
-(docs/REVIEW_PENDING.md #0), and SPEC §12 ("shown, never scored") still governs
-it.
+It is reported beside the grade, and pipeline/grade.py applies the founder rule
+(2026-10-03): -1 publication bias when the unpublished count is at least the
+number of trials pooled (grade.RULES["registry_unpublished_ratio"]).
 """
 from __future__ import annotations
 

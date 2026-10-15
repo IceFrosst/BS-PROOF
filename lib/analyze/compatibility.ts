@@ -7,12 +7,13 @@
  *   model     prompts/compatibility.md -- a DeepSeek fill-in ONLY for pairs the
  *             table does not cover. basis "model_prior", shown with a badge.
  *
- * The evidence-run form fit (does the scored run's form match the label's) is
- * a third, deterministic input: it comes from the retained artifact through
- * product-score and is basis "evidence_run".
+ * The evidence-run form fit (does a graded run's form match the label's) is a
+ * third, deterministic input, basis "evidence_run" -- claimed only when a run
+ * actually graded the ingredient. While grading is not active (2026-10-15) the
+ * scan always passes "ingredient_not_scored", so the badge never shows.
  *
- * Nothing here produces a number the scorer consumes. Compatibility QUALIFIES
- * a product; it never moves an arc.
+ * Nothing here produces a number any grade consumes. Compatibility QUALIFIES
+ * a product; it never moves a grade.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -290,7 +291,8 @@ export async function compatibilitySection(
   const actives = resolveActives(input.ingredient, input.actives, input.otherActives);
   const interactions = curatedInteractions(actives);
   const formNotes = curatedFormNotes(input.ingredient, input.formId);
-  const basisUsed = new Set<Basis>(["evidence_run"]);
+  const graded = input.evidenceFormFit.status === "exact_form_scored" || input.evidenceFormFit.status === "form_not_scored";
+  const basisUsed = new Set<Basis>(graded ? ["evidence_run"] : []);
   if (interactions.length || formNotes.length) basisUsed.add("curated_table");
 
   const section: CompatibilitySection = {

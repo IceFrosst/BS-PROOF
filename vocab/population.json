@@ -1,7 +1,7 @@
 {
  "vocab": "population",
  "version": "v1",
- "status": "PROVISIONAL — the axes are settled (SPEC §5); the ADJACENCY GRAPH below is a guess awaiting Tier-3 calibration. See SPEC §13.",
+ "status": "PROVISIONAL — the axes are settled (docs/METHOD.md §5); the ADJACENCY GRAPH below is a guess awaiting calibration (docs/DECISIONS.md, open 1).",
  "policy": {
   "four_axes": "A population is a 5-tuple as of 2026-08-08 (health_status added). All variants are precomputed offline, so the delta between them costs table rows, not runtime queries.",
   "unknown_is_a_value": "Every axis has an 'unknown' member. Unknown is a known unknown that the adjacency graph handles explicitly — never silently treated as the general case (invariant 5).",

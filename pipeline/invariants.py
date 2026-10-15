@@ -14,7 +14,7 @@ Invariant 1 used to be a CI grep:
 
 That gate was RED on every push from commit 30b768f onward -- the commit that
 added a legitimate `import claude_adapter as _ca` to pipeline/selftest.py to pin
-effort-in-the-cache-key. A text search cannot tell "scoring.py calls a model"
+effort-in-the-cache-key. A text search cannot tell "pool.py calls a model"
 from "the test suite reads a constant", so the only way to get CI green was to
 delete the check or ignore it. Both workflows were ignored instead: measured
 2026-08-10, `selftest` had failed 14 of its last 14 runs and `dashboard` 11 of 11.

@@ -11,7 +11,7 @@
  * Ledger were removed and evidence method v2 is not connected until it is
  * validated. <GradingNotice> says so on the landing screen and on every result.
  *
- * Design: docs/SYSTEM_DESIGN.md §11 (full history in
+ * Design: docs/APP.md §11 (full history in
  * docs/history/2026-09-16-scan-design-log.md). The page is a state machine
  * (./flow-state.ts) and each state OWNS the viewport:
  *

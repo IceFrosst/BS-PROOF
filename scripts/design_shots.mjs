@@ -20,37 +20,6 @@ const base = process.env.BASE ?? "http://localhost:3111";
 const fixture = JSON.parse(fs.readFileSync("tests/fixtures/scan-photo-rich.json", "utf8"));
 const cameraFallbackAsset = "public/icon-512.png";
 
-// A product that DOES match a retained audit: creatine monohydrate, single
-// active, 4,000 mg printed compound per day. The mocked body is exactly the
-// shape `POST /api/scan` returns for such a label — the retained audit file,
-// its plain sidecar and the provenance stamp — so the fully populated card can
-// be reviewed. Without it every review shot is the unmatched "Not assessed"
-// shell and the scored design is never seen.
-const retainedAudit = JSON.parse(fs.readFileSync("lib/evidence-ledger/audits/creatine.json", "utf8"));
-const retainedPlain = JSON.parse(fs.readFileSync("lib/evidence-ledger/audits/plain/creatine.json", "utf8"));
-const matchedFixture = {
-  ...fixture,
-  label: {
-    ...fixture.label,
-    product_name: "Creatine Pro 4000",
-    compound_dose_mg: 4000,
-    is_multi_ingredient: false,
-    other_actives: [],
-    actives: [{ name: "Creatine Monohydrate", compound_dose_mg: 4000, form_text: "monohydrate" }],
-  },
-  ledger_audit: {
-    audit: retainedAudit,
-    plain: retainedPlain,
-    provenance: {
-      kind: "retained_previous_audit",
-      prompt_version: retainedAudit.meta.prompt,
-      target_product: "Creatine monohydrate",
-      target_dose: "4,000 mg (4 g) printed compound per day",
-      note: "Retained previous audit. It was not re-verified on this scan.",
-    },
-  },
-};
-
 const manualFixture = {
   ...fixture,
   source: "manual",
@@ -188,25 +157,6 @@ for (const [name, dev] of [["390", devices["iPhone 13"]], ["360", { ...devices["
     await p.waitForTimeout(150);
   }
 
-  // --- outcome tabs: scroll the Outcomes list into view, then open one outcome ---
-  await p.locator(".ab-tabs").scrollIntoViewIfNeeded();
-  await p.evaluate(() => window.scrollBy(0, -72));
-  await p.waitForTimeout(300);
-  await p.screenshot({ path: `${out}/${name}-5b-tabs-outcomes.png` });
-  await p.locator(".ab-bars.outcomes li > button").nth(0).click();
-  await p.waitForTimeout(400);
-  await p.locator(".ab-tabs").scrollIntoViewIfNeeded();
-  await p.evaluate(() => window.scrollBy(0, -72));
-  await p.waitForTimeout(300);
-  await p.screenshot({ path: `${out}/${name}-5c-tabs-outcome.png` });
-  // --- one expanded dimension detail ---
-  await p.locator(".ab-bars:not(.outcomes) li > button").nth(0).click();
-  await p.waitForTimeout(180);
-  await p.locator(".ab-bars:not(.outcomes)").scrollIntoViewIfNeeded();
-  await p.screenshot({ path: `${out}/${name}-5d-detail.png` });
-  await p.locator(".ab-tabs [role='tab']").nth(0).click();
-  await p.waitForTimeout(200);
-
   // --- manual (typed) result via the sheet ---
   delay = 300;
   reply = { status: 200, body: manualFixture };
@@ -260,30 +210,6 @@ for (const [name, dev] of [["390", devices["iPhone 13"]], ["360", { ...devices["
   await p.waitForTimeout(300);
   await p.evaluate(() => window.scrollTo(0, 0));
   await p.screenshot({ path: `${out}/${name}-10-not-supported.png`, fullPage: true });
-
-  // --- a product that MATCHES a retained audit: the fully scored card ---
-  reply = { status: 200, body: matchedFixture };
-  await p.click(".sc-again-bottom");
-  await p.waitForTimeout(400);
-  await captureOrUpload(p);
-  await p.waitForTimeout(500);
-  await p.locator("button.la-analyze").click();
-  await p.waitForSelector(".scan-result", { timeout: 15000 });
-  await p.waitForTimeout(600);
-  await p.evaluate(() => window.scrollTo(0, 0));
-  await p.screenshot({ path: `${out}/${name}-11-matched-outcomes.png` });
-  await p.screenshot({ path: `${out}/${name}-11-matched-full.png`, fullPage: true });
-  await p.locator(".ab-bars.outcomes li > button").nth(0).click();
-  await p.waitForTimeout(400);
-  await p.evaluate(() => window.scrollTo(0, 0));
-  await p.screenshot({ path: `${out}/${name}-11-matched-outcome.png` });
-  await p.locator(".ab-bars:not(.outcomes) li > button").nth(0).click();
-  await p.waitForTimeout(250);
-  await p.locator(".ab-bars:not(.outcomes)").scrollIntoViewIfNeeded();
-  await p.evaluate(() => window.scrollBy(0, -72));
-  await p.waitForTimeout(200);
-  await p.screenshot({ path: `${out}/${name}-11-matched-detail.png` });
-  console.log(`${name}: matched result height ${await p.evaluate(() => document.documentElement.scrollHeight)}px, overflow ${await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)}px`);
 
   await ctx.close();
 }

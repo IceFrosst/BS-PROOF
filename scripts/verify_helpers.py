@@ -25,7 +25,7 @@ that would assert an attribution this tool has not earned. AGENTS.md now asks
 helpers to add their own trailer, which is what would make this precise.
 
 The highest-value part is not the commit list -- it is the CONSTANT DIFF. A
-changed number in pipeline/scoring.py reprices every score in the system and looks
+changed rule in pipeline/grade.py regrades every outcome in the system and looks
 like nothing in a diff stat. Invariant 4 says constants are founder decisions;
 this is the check that notices when one moved.
 """
@@ -199,8 +199,8 @@ def main(argv: list[str]) -> int:
         for d in drift:
             print(f"  CHANGED  {d}")
         print("\n  A constant moved since the last verified commit. Invariant 4:")
-        print("  these are founder decisions and need docs/REVIEW_PENDING.md +")
-        print("  SPEC 13. If this was not a founder call, it must be reverted.")
+        print("  these are founder decisions and need docs/DECISIONS.md.")
+        print("  If this was not a founder call, it must be reverted.")
     else:
         print("  none -- every watched constant holds its verified value")
 

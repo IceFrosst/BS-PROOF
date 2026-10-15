@@ -2,7 +2,7 @@
 
 `SCORING_MODEL = "v14-applicability-discount"` scored every BS-PROOF run from
 2026-09-04 until the founder committed to evidence method v2
-(`docs/EVIDENCE_METHOD.md`) on 2026-10-15. This file keeps what v14 was, how it
+(`docs/METHOD.md`) on 2026-10-15. This file keeps what v14 was, how it
 was built and what it taught, so a v2 result can be compared against it later.
 
 **The code is not gone, only out of the tree.** The last commit with v14 intact
@@ -13,12 +13,13 @@ git show v14-final:pipeline/scoring.py          # read one file
 git worktree add ../bsproof-v14 v14-final       # a full working copy
 ```
 
-The live site still served the v14 creatine run `20260904_185830` at the time of
-retirement; the app's TypeScript ports (`lib/analyze/{scoring,vocab,product-score}.ts`)
-still mirror v14 until the app is moved to v2.
+The live site served the v14 creatine run `20260904_185830` at retirement. The
+same day the app's TypeScript ports of v14 (`lib/analyze/{scoring,product-score,
+dose-effectiveness}.ts`), the `/runs` dashboard, the Evidence Ledger and every v14
+run artifact were removed too; all are at `v14-final`.
 
-Longer reasoning lives in `docs/SPEC.md` (as of `v14-final`, the v14 method
-spec, §7–§10 and §13), `docs/history/spec-changelog.md` and
+Longer reasoning lives in `docs/history/v14-spec.md` (the v14 method spec,
+§7–§10 and §13), `docs/history/spec-changelog.md` and
 `docs/history/project-log.md`.
 
 ---
@@ -115,7 +116,7 @@ v14 scoring    pipeline/assemble.py   worker JSON → Study objects → ECU rows
                pipeline/donut.py      text rendering of the four arcs
                pipeline/synthesis.py + synthesis_bridge.py   SR resolution, q_s, SR-table-derived trials
                pipeline/effect_harvest.py   deterministic table candidates for S5T
-               pipeline/calibration.py      35-anchor harness (docs/anchors.csv, docs/ANCHORS.md)
+               pipeline/calibration.py      35-anchor harness (now docs/history/v14-anchors.csv / .md)
                pipeline/preview.py          projection for capped (--limit) runs
                pipeline/product_score.py    product lookup behind the app / scripts/analyze_label.py
 reports        scripts/{auto_report_push, dashboard_artifact, rescore_run, archive_reports}.py
@@ -198,10 +199,11 @@ SMD +0.31 [+0.06, +0.55], **C+**.
   variances that v2 could pool directly (deduplicated against trials already
   read).
 - **Funding as a sensitivity analysis.** S8 still extracts funding. v14 used it
-  as a weight; v2's method (§3 stage 5) plans "independently funded only" as a
+  as a weight; v2's method (`docs/METHOD.md` §15) plans "independently funded only" as a
   sensitivity check.
-- **The anchors** (`docs/anchors.csv`, 35 face-validity cases) were written
-  against v14 bands. They need re-expressing as v2 letters before reuse.
+- **The anchors** (`docs/history/v14-anchors.csv`, 35 face-validity cases) were
+  written against v14 bands. They serve as a shopping list for v2 benchmark rows,
+  including negative controls (`docs/METHOD.md` §16).
 - **The experiments** under `scripts/experiments/` (as of `v14-final`) document
   how each v14 constant was chosen: vote counting vs effect size, the null
   penalty sweep, the form ladder width, S7 body mass. `extraction_stability.py`

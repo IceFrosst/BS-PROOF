@@ -2,7 +2,7 @@
 The ONE place in this codebase that talks to a model.
 
 Everything else is deterministic. If you find yourself importing this module
-into dedup.py or scoring.py, stop -- those have right answers and must not
+into pipeline/ (dedup, pooling, grading), stop -- those have right answers and must not
 have a model in the loop.
 
 Runs subagents as PURE FUNCTIONS via Claude Code headless mode, on the
@@ -212,7 +212,7 @@ def _claude_bin() -> str:
 # tell an underpowered null ("CI -3.1 to +3.5", answers nothing) from a well-run
 # one ("CI -0.3 to +0.5", rules a real effect out), and invariant 7 already
 # treats those as opposites. Unblocks the founder decision on vote counting
-# (SPEC 13): both candidate fixes need effect-size coverage on nulls, which was
+# (v14 spec §13, docs/history/v14-spec.md): both candidate fixes need effect-size coverage on nulls, which was
 # 19%. Extraction fidelity only -- no scoring change rides on this bump.
 # v1.14 (2026-08-11): three fixes from the 22-agent extraction audit
 # (docs/history/2026-08-11-extraction-accuracy-audit.md). Targets were chosen by
@@ -242,7 +242,7 @@ def _claude_bin() -> str:
 # cannot see it. vs_ingredient_arm claims are excluded symmetrically; unclear
 # keeps. S6B gains post-fatigue examples -- "RSA after a fatiguing protocol"
 # went to muscle_power despite the v1.12 recovery rule.
-# v1.12 (2026-08-10): three fixes from the null audit (docs/REVIEW_PENDING.md #4;
+# v1.12 (2026-08-10): three fixes from the null audit (v14-era REVIEW_PENDING #4, at tag v14-final;
 # 5 of the 7 muscle_strength nulls that survived every gate were wrong).
 #   S3 gains `ingredient_isolated` -- a trial whose every ingredient arm
 #   co-administers another active tests a COMBINATION, and 21/143 studies were
@@ -267,7 +267,7 @@ def _claude_bin() -> str:
 # Replaying the dumped extractions with those benefits sized from the numbers
 # already present moved muscle_strength from -4 to +7 (d -0.125 -> +0.249) -- the
 # largest single lever measured, larger than either scope refusal in
-# docs/REVIEW_PENDING.md #4. The prompt now carries explicit thresholds (d>=0.5 or
+# that same audit. The prompt now carries explicit thresholds (d>=0.5 or
 # >=5% relative = meaningful; d<0.2 or <2% = trivial) so the judgement is not
 # re-invented per call, and `unstated` is reserved for genuinely no numeric basis.
 # v1.10 (2026-08-10): S3 reports `comparator` and `self_declared_underpowered`.
@@ -377,7 +377,7 @@ PROMPT_VERSION = "v1.36"
 # version to bump, and it silently breaks "the same bottle scores the same
 # tomorrow". Pinning is not an optimisation here; it is the invariant.
 #
-# Change these after you A/B on the 35 anchors, not before. SPEC.md section 15.
+# Change these after an A/B measurement (and the benchmark, docs/METHOD.md §16), not before.
 TIER_MODEL = {
     "A": os.environ.get("SP_MODEL_A", "claude-haiku-4-5-20251001"),
     "B": os.environ.get("SP_MODEL_B", "claude-sonnet-5"),
@@ -396,12 +396,11 @@ TIER_MODEL = {
     # is defensible under S6's own "prefer null when unsure" rule but is lost
     # evidence, and it cost 36% more output tokens to get there.
     #
-    # SAMPLE IS 7 STUDIES and the 35 calibration anchors have still never been
-    # run. SPEC 15 calls tiers "a prior, not a measurement"; this is a small
-    # measurement, not the anchor eval. Revert with SP_MODEL_C=claude-opus-5.
+    # SAMPLE IS 7 STUDIES: tiers are "a prior, not a measurement" (v14 spec §15);
+    # this is a small measurement, not a validation. Revert with SP_MODEL_C=claude-opus-5.
     "C": os.environ.get("SP_MODEL_C", "claude-sonnet-5"),
-    # R: the evidence-method-v2 SECOND REVIEWER (S5R, docs/EVIDENCE_METHOD.md
-    # §9 decision 5). It must be a DIFFERENT model from the S5 extractor it
+    # R: the evidence-method-v2 SECOND REVIEWER (S5R, docs/METHOD.md §7; founder
+    # decision 2026-10-03 in docs/DECISIONS.md). It must be a DIFFERENT model from the S5 extractor it
     # double-checks -- call() refuses otherwise -- so its misreadings are not
     # simply reviewer 1's misreadings again. Opus by default: the reviewer only
     # reads numbers, and the stronger reader is the point. Not yet measured.
@@ -1153,9 +1152,9 @@ def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
     """
     Run one subagent. Returns (result_dict | None, meta).
 
-    Contract, per SPEC.md section 16:
+    Contract (docs/METHOD.md §7):
       - schema violation -> retry x2 -> None + flag. NEVER repair by inference.
-      - None from S6 means DISCARD the extraction, not 'try something else'.
+      - None from S6B means DISCARD the claim, not 'try something else'.
     """
     if agent not in AGENTS:
         raise KeyError(f"unknown subagent {agent}")

@@ -1,10 +1,18 @@
 # BS-PROOF — project instructions
 
 Read this before touching anything. It holds the rules that are not obvious from
-the code and that a well-meaning refactor will destroy. It is deliberately short:
-the reasoning and measurements behind each rule live in `docs/SPEC.md` and
-`docs/history/` (the full pre-2026-10-02 version of this file, with every dated
-entry, is `docs/history/2026-10-02-claude-md-archive.md`).
+the code and that a well-meaning refactor will destroy. It is deliberately short.
+The current docs, one per topic and none duplicating another:
+
+| Doc | Topic |
+|---|---|
+| `docs/METHOD.md` | the evidence method, section-numbered (code cites `METHOD §N`) |
+| `docs/PIPELINE.md` | running the pipeline, flags, switches, checking a run |
+| `docs/APP.md` | the app, section-numbered (code cites `APP §N`) |
+| `docs/DECISIONS.md` | open founder decisions, the v2 work list, decided items |
+| `docs/history/` | archives and the dated project log; never current |
+
+A change that makes any doc untrue updates that doc in the same commit.
 
 **Do not append dated change notes here.** Log them in
 `docs/history/project-log.md` (newest first) and only update `Current state` /
@@ -20,19 +28,18 @@ doesn't match the specific product as weaker (GRADE indirectness). Two parts:
 1. **Evidence pipeline** (Python, offline): retrieve papers → extract facts with
    model "subagents" → deterministic **evidence method v2** (random-effects
    meta-analysis + GRADE + a letter per outcome) → immutable run artifacts in
-   `reports/runs/`. Method: `docs/EVIDENCE_METHOD.md`; how to run: `docs/PIPELINE.md`.
+   `reports/runs/`.
 2. **App** (Next.js 16 on Vercel): `/scan` reads a supplement label (photo or
    typed). **Evidence grading is not active in the app yet**: it shows the
    label facts and model-written background badged "unverified", plus a
-   notice that grades are not active. Design: `docs/SYSTEM_DESIGN.md`.
+   notice that grades are not active.
 
 v2 replaced the v14 scoring model on 2026-10-15 (founder decision). v14 —
 its scorer, runs, `/runs` dashboard, TS ports and the Evidence Ledger — is
 recorded in `docs/history/v14-scoring-model.md`; its code is at tag `v14-final`.
 `lib/analyze/grade-v2.ts` (the v2 letter re-matched to a product) is built and
-parity-pinned but **deliberately not called** until v2 is validated.
-`SPEC.md`, `PIPELINE.md`, `SYSTEM_DESIGN.md` still describe v14 in places until
-the docs pass.
+parity-pinned but **deliberately not called** until v2 is validated
+(`docs/APP.md` §4).
 
 ---
 
@@ -78,7 +85,7 @@ The GRADE rules and letter table (`grade.RULES`, `TABLE`, `LEVELS`,
 `OFF_DOSE`, `VARIANTS`), the second-reviewer tolerances (`review.RULES`), study
 selection (`pool.ROUTE_RANK`, `CONFIDENCE`), the benchmark pass rule
 (`benchmark.RULES`) and every per-outcome MCID in `vocab/outcome.json` —
-founder calls. Propose in `docs/REVIEW_PENDING.md`. A hook warns when a watched
+founder calls. Propose in `docs/DECISIONS.md`. A hook warns when a watched
 one moves (`scripts/verify_helpers.WATCHED_CONSTANTS`).
 
 ### 5. `null` is a valid answer everywhere
@@ -120,7 +127,7 @@ higher" (`pipeline/review.py`).
 
 ---
 
-## Grading in one screen (evidence method v2, `docs/EVIDENCE_METHOD.md`)
+## Grading in one screen (evidence method v2; full detail `docs/METHOD.md`)
 
 ```
 per trial, per outcome   ONE effect, chosen by a fixed order (measure hierarchy,
@@ -148,7 +155,8 @@ Things that look simplifiable and are not:
   Change Python first, then re-sync. The dose conversion and dose tiers the
   scan still runs are pinned by `tests/vocab-parity.test.ts` /
   `tests/test_vocab_goldens.py` to `tests/golden_vocab_parity.json`.
-- **Status is `shadow`** (`evidence_v2.STATUS`) until the benchmark passes.
+- **Status is `shadow`** (`evidence_v2.STATUS`) until validation passes
+  (`docs/METHOD.md` §16).
 
 ---
 
@@ -156,7 +164,7 @@ Things that look simplifiable and are not:
 
 | Path | Auth | Public claims? |
 |---|---|---|
-| `claude_adapter` (production) | Claude subscription + `--safe-mode` | Only after the benchmark passes |
+| `claude_adapter` (production) | Claude subscription + `--safe-mode` | Only after validation passes (METHOD §16) |
 
 Per study: S3 (design, arms) first, then S4 (RoB), S5 (claims), S7 (form +
 dose), S8 (funding) in parallel, then S6B (outcome mapping, one call per study)
@@ -206,8 +214,8 @@ lib/scan-history/ lib/auth/   optional Supabase history + Google sign-in
 
 prompts/*.md  schemas/*.json  vocab/*.json
 reports/runs/          immutable run archive: <id>_summary.md, _full.md, _context.json
-docs/                  EVIDENCE_METHOD (method), SPEC (v14-era spec), PIPELINE, SYSTEM_DESIGN, history/
-scripts/               report/artifact writers, benchmark, goldens, experiments/
+docs/                  METHOD, PIPELINE, APP, DECISIONS, history/ (+ the Supabase SQL)
+scripts/               report writer, benchmark, replay_from_cache, goldens, helper checks, experiments/
 tests/                 vitest (TS) + Python tests; tests/e2e/ Playwright
 ```
 
@@ -217,6 +225,7 @@ tests/                 vitest (TS) + Python tests; tests/e2e/ Playwright
 # Python gates — run after ANY change to pipeline/, sources/ or vocab/
 python3 -m pipeline.invariants
 python3 -m pipeline.selftest          # ~180 checks, offline, ~0.5 s
+.venv/bin/python -m pytest -q tests/  # Python tests
 
 # Pipeline (needs the .venv interpreter — bare python3 lacks httpx; a hook blocks it)
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt   # once
@@ -224,6 +233,7 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt   # once
 .venv/bin/python run_pipeline.py creatine --form creatine_monohydrate \
     --full-text-only --intervention-scope --all-outcomes                         # Claude production
 .venv/bin/python scripts/benchmark_v2.py compare reports/runs/<id>_context.json
+.venv/bin/python scripts/replay_from_cache.py <outdir> -- <run args>         # cache-only regression replay
 
 # App
 npm ci && cp .env.example .env.local   # set DEEPSEEK_API_KEY for photo reads
@@ -233,7 +243,7 @@ npm run test:e2e                       # Playwright (slow)
 ```
 
 Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
-(manual) path still scores. `LABEL_ANALYZER_ENABLED=0` disables both.
+(manual) path still works. `LABEL_ANALYZER_ENABLED=0` disables both.
 
 ---
 
@@ -262,50 +272,49 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
 
 ## Current state (snapshot, 2026-10-15)
 
-- **Method:** evidence method v2 is the pipeline's only method (branch
-  `simplify/v2-only`, 2026-10-15); v14 retired (`docs/history/v14-scoring-model.md`,
-  tag `v14-final`). `evidence_v2.STATUS = "shadow"` until the benchmark passes.
-  `main` and the live site still run v14 (`20260904_185830`).
+- **Method:** evidence method v2 is the pipeline's only method; v14 retired.
+  `evidence_v2.STATUS = "shadow"` until validation passes. `main` and the live
+  site still run v14 until the simplification branches merge.
 - **Latest v2 run** `20261014_185045` (v1.36, 138/139 studies). A cache-only
-  replay of the same extraction on 2026-10-15 gives strength **k = 9, C-**
-  (+0.17 [+0.02, +0.32]) where the stored run says k = 7, I: two trials' table
-  numbers failed to verify in the original run (a network fetch at span-check
-  time), so a fetch hiccup moves a letter. Lean mass k = 10 D+ **passes** the
-  benchmark; strength coverage 29–38 % (< 50 %, not testable).
-- **Known v2 problems** (the algorithm pass): a single trial can earn an **A**
-  (muscle soreness, sleep quality: k = 1, "Moderate"); span-check verification
-  depends on live table fetches; 64 refusals are "no verified effect estimate";
-  v14's claim-level arm firewall (`_resolve_claim_arms`) never ran in v2.
+  replay of the same extraction gives strength **k = 9, C−** (+0.17
+  [+0.02, +0.32]) where the stored run says k = 7, I: two trials' table numbers
+  failed to verify in the original run (a network fetch). Lean mass k = 10 D+
+  **passes** the benchmark; strength coverage 29–38 % (not testable).
+- **Known v2 problems:** the work list in `docs/DECISIONS.md` (a single small
+  trial can earn an A; fetch-dependent verification; the largest refusal reason;
+  coverage; no negative-control benchmarks; stability unmeasured).
+- **`origin/main` has diverged.** Since the branch point (`d9cedc4`,
+  2026-09-22) `main` gained 68 commits (~52k lines: live research worker, live
+  result card, research-jobs SQL, scan-history UI, localisation) that
+  `Jans_attempt` and the `simplify/*` branches do not contain, and that partly
+  build on what they removed. How the two lines combine is a founder / team
+  decision; do not merge or resolve conflicts without it.
 - **Binding limit:** readable open-access full text (295/386 creatine RCTs are
   abstract-only), then off-target populations and figure-only results.
-- **App:** `/scan` is the product surface (photo or typed → `POST /api/scan`).
-  Every supported product ends in status `not_graded`; a notice on the landing
-  screen and on every result says grades are not active yet. What is shown:
-  label facts, and model-written sections badged unverified (literature
-  orientation, compatibility, company + MLM disclosure, funding /
-  publication-bias disclosures). Label reads: DeepSeek, thinking disabled,
+- **App:** `/scan` answers `not_graded` for every supported product and says
+  grades are not active yet; it shows label facts and model-written sections
+  badged unverified (`docs/APP.md`). Label reads: DeepSeek, thinking disabled,
   prompt `label-v1.3`.
 - **Optional infra, unverified:** Supabase scan history, Google sign-in. PWA
   installable, no offline cache.
 
-## Next (the 2026-10-15 simplification plan)
+## Next
 
-Done on `simplify/a-dead-weight` → `simplify/v2-only` → `simplify/app-v2-off`:
-A (dead weight); B/C/D (v2 only; replay of the v1.36 run gives byte-identical
-`evidence_v2`); E (`/runs` dashboard and v14 runs dropped, push opt-in); F (v14
-and the Evidence Ledger out of the app, grading notice); G (tests, CI, agents).
-
-- **H** Docs: SPEC / EVIDENCE_METHOD / PIPELINE / SYSTEM_DESIGN / AGENTS.md / README.
-- **v2 algorithm pass:** the known problems above, then MCIDs (REVIEW_PENDING
-  0b), the benchmark, and a stability measurement (same corpus twice). When it
-  validates: connect `grade-v2.ts` in `lib/analyze/scan.ts`, build the grade
-  card, remove the notice.
-- Unverified on a real phone: live camera, busy-label read, PWA install;
-  Supabase history and Google sign-in against real projects.
+1. **Finish the 2026-10-15 simplification and merge it.** Done on stacked local
+   branches `simplify/a-dead-weight` → `simplify/v2-only` → `simplify/app-v2-off`
+   → `simplify/docs`: A (dead weight), B/C/D (v2 only; byte-identical
+   `evidence_v2` on replay), E (`/runs` dashboard and v14 runs dropped, push
+   opt-in), F (v14 and the Evidence Ledger out of the app, grading notice),
+   G (tests, CI, agents), H (docs). What is left is listed in
+   `docs/history/project-log.md` (2026-10-15, H).
+2. **v2 work list** (`docs/DECISIONS.md`), then connect `grade-v2.ts` in
+   `lib/analyze/scan.ts`, build the grade card and remove the notice.
+3. Verify on a real phone (live camera, busy-label read, PWA install) and
+   against real Supabase / Google projects.
 
 ## Conventions
 
-- Deterministic code → unit tests. Model output → anchor evals, per provider.
+- Deterministic code → unit tests. Model output → the benchmark and stability
+  checks (`docs/METHOD.md` §16).
 - Evidence spans on every model output.
-- New constants → SPEC §13 first.
-- Separate backends → separate runs and labels, no silent merge.
+- New constants → `docs/DECISIONS.md` first.

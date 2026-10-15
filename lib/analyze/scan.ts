@@ -2,7 +2,7 @@
  * THE SCAN ORCHESTRATOR: one label image -> one ScanAnalysisV1.
  *                        or, since 2026-09-15, one TYPED product -> the same.
  *
- * Stages, in dependency order (docs/SYSTEM_DESIGN.md has the diagram):
+ * Stages, in dependency order (docs/APP.md §3 has the diagram):
  *
  *   0  label read            vision model     -> what is PRINTED          [MODEL]
  *      -- or --

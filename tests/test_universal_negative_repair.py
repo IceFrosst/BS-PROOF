@@ -50,18 +50,6 @@ class UniversalNegativeRepairTests(unittest.TestCase):
         ]}
         self.assertIsNone(_ineligible({"S3": {**factorial, "ingredient_isolated": "no"}, "record": {"ingredient": "A"}}))
 
-    def test_incident_ledger_reconciles_without_asserting_a_corrected_score(self):
-        ledger = json.loads((Path(__file__).parents[1] / "docs" / "history" /
-                             "2026-08-25-negative-contributors.v1.json").read_text())
-        rows = ledger["adjudications"]
-        self.assertEqual(ledger["source_totals"],
-                         {"studies": 32, "contributions": 43, "points": -95.73})
-        self.assertEqual(len(rows), 32)
-        self.assertEqual(len({row["study_id"] for row in rows}), 32)
-        self.assertEqual(sum(len(row["original_contributions"]) for row in rows), 43)
-        self.assertTrue(all(not row["corrected_score_asserted"] for row in rows))
-        self.assertEqual(sum(row["action"] == "exclude_scope" for row in rows), 2)
-
     def test_claude_stream_transport_recovers_only_exact_max_turns_wrappers(self):
         from bsproof import claude_adapter
         schema = json.dumps({"type": "object", "required": ["x"],

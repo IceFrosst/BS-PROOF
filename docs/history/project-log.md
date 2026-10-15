@@ -10,6 +10,57 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-15 — simplification H: docs consolidated; what is left before merging
+
+Branch `simplify/docs` (on `simplify/app-v2-off`), not merged.
+
+- Current docs, one per topic: `docs/METHOD.md` (new; `EVIDENCE_METHOD.md` +
+  the still-valid parts of `SPEC.md`, section-numbered), `docs/PIPELINE.md`
+  (rewritten), `docs/APP.md` (`SYSTEM_DESIGN.md` cut to the current app; §7 and
+  §11 keep their numbers), `docs/DECISIONS.md` (`REVIEW_PENDING.md` cut to open
+  v2 decisions, the v2 work list and decided items), `README.md`, `AGENTS.md`
+  (its contradictory push rules reconciled: branch first, `main` deploys).
+- Archived: `SPEC.md` → `history/v14-spec.md`, `ANCHORS.md` + `anchors.csv` →
+  `history/v14-anchors.*` (a shopping list for v2 benchmark rows, including
+  negative controls). Deleted from history: the four raw competitor briefs, the
+  Ledger notes (rubric, large-effect audit, effect ladder), the launch review,
+  the v14 universal-negative incident ledger + its JSON and test, the old team
+  changelog (its one cited DeepSeek quirk moved into the code comments).
+- Every code citation of a removed doc now points at `METHOD §N` / `APP §N` /
+  `DECISIONS`; misleading v14 wording fixed in docstrings and two user-visible
+  strings (site title/description, the literature-orientation disclaimer).
+  `schemas/ecu.json` and `fulltext.looks_like_included_studies` (v14/SR only)
+  removed; the compatibility section no longer claims an "Evidence run" basis.
+  `scripts/design_shots.mjs` works again (Ledger shots removed).
+- New `scripts/replay_from_cache.py` (cache-only replay + compare): confirms
+  E/F/G/H left `evidence_v2` byte-identical (900 cache hits, 5 known misses).
+- Corrections found while writing METHOD: the registry rule DOES downgrade
+  (`registry_bias.py` docstring said it did not); the 400-participant OIS rule
+  exists, but costs only one level, which is why a 14-participant trial grades A.
+- Gates: invariants, selftest (178), 156 Python tests, typecheck, lint, 212
+  vitest, build.
+
+**Left before merging** (founder decisions marked):
+
+1. **`origin/main` has moved on (founder / team).** Since the branch point
+   (`d9cedc4`, 2026-09-22) `main` gained 68 commits (~52k lines: the live
+   research worker, live result card, research-jobs SQL, scan-history UI,
+   localisation) that `Jans_attempt` and these branches do not contain, and
+   that partly build on what was removed here (the Ledger-style card,
+   `research_audit` prompts, `SYSTEM_DESIGN.md`). Merging needs a decision on
+   how the two lines combine before any conflict is resolved.
+2. Dead CSS: ~175 class selectors no component references (`ab.css`, `scan.css`,
+   `scan-ledger-result.css`, `base.css`); prune with a before/after screenshot
+   comparison (`scripts/design_shots.mjs`).
+3. Retrieval still fetches up to 200 systematic reviews per ingredient,
+   classifies them and looks up their publishers, but nothing reads them since
+   S2 was removed. Remove (replay-gated) or keep for future forest-plot work
+   (founder).
+4. Prompts still carry v14 wording and fields only v14 read (e.g. S5's
+   direction/magnitude labels, "form arc" in `s7_form.md`). Editing them needs a
+   `PROMPT_VERSION` bump = full re-extraction, so bundle it with the next
+   re-extraction in the v2 work list.
+
 ## 2026-10-15 — simplification E/F/G: dashboard dropped, grading switched off in the app
 
 Branch `simplify/app-v2-off` (on `simplify/v2-only`), not merged.

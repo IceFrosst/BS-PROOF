@@ -2,7 +2,7 @@
 Span check: is every number the extractor reported actually printed in the
 paper? NO MODEL MAY ENTER THIS FILE.
 
-Evidence method v2 (docs/EVIDENCE_METHOD.md §3 stage 3): a model may only COPY
+Evidence method v2 (docs/METHOD.md §7): a model may only COPY
 numbers. This module verifies each numeric field of an S5 claim against what it
 was copied from and REFUSES (never repairs) anything it cannot find:
 

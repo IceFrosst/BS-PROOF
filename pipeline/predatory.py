@@ -199,8 +199,8 @@ def flag_records(records: list[dict], path: Path | None = None) -> dict:
     Flag each record and report WHAT WAS CHECKED alongside what was found.
 
     `publishers_resolved` is not decoration. A flag count is a verdict, and a
-    verdict without its coverage is a false claim -- the same rule the arcs
-    live by. "0 flagged over 0 publishers" means NOT CHECKED at the level the
+    verdict without its coverage is a false claim -- the same rule a grade
+    lives by. "0 flagged over 0 publishers" means NOT CHECKED at the level the
     list is expressed in; "0 flagged over 240 publishers" is a real answer.
     Rendering them identically is how the truncated-list bug read as a clean
     corpus for four commits.

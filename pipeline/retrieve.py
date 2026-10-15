@@ -7,16 +7,17 @@ with zero model calls and produces the corpus that per-study workers consume.
 
 Order matters and is not arbitrary:
 
-  1. DISCOVER syntheses before primaries. One open-access systematic review
-     carries characteristics-of-included-studies and a RoB table for ~15
-     primaries that cannot be read directly (SPEC section 4).
+  1. DISCOVER syntheses and primaries. Syntheses are classified, deduplicated
+     and stored, but since 2026-10-15 nothing reads them (v14's SR-table route
+     was removed); whether to drop their retrieval is an open item
+     (docs/history/project-log.md, 2026-10-15 H). Primaries feed docs/METHOD.md §3.
   2. CLASSIFY from PubMed tags before anything else touches the records, so the
      non-human override fires early -- a randomised blinded rat study is rank 12,
      and letting it through as rank 4 is a 250x weight error.
   3. DEDUP BEFORE CONCLUSIONS EXIST. This is architectural, not an optimisation.
      Thirty meta-analyses over nine RCTs must collapse to nine evidence units,
      and a model asked to merge conclusions later would correctly observe that
-     they agree -- reading 30 corroborations into one trial (SPEC section 6).
+     they agree -- reading 30 corroborations into one trial (docs/METHOD.md §4).
   4. REGISTRY FACTS last, because only deduplicated units have a trial identity
      worth looking up.
 
@@ -96,7 +97,7 @@ def retrieve(ingredient: str, store: Store, *, max_syntheses: int = 200,
     log(f"  classified  {cstats['deterministic_pct']}% from tags, "
         f"{cstats['needs_model']} need S1")
 
-    # Syntheses are separated here and NEVER enter evidence mass (invariant 6).
+    # Syntheses are separated here and are NEVER pooled as studies (invariant 6).
     # They are kept because they are the highest-value fetch target, not because
     # they count.
     syntheses = [r for r in classified if r["is_synthesis"]]

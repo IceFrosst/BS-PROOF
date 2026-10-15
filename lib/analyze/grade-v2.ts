@@ -26,7 +26,7 @@ export interface DoseBand {
 }
 
 /** pipeline/dose.py dose_match_for: the product's dose against one trial's
- * dose, on SPEC §8's tiers. An interval straddling a tier is "unspecified",
+ * dose, on the tiers of docs/METHOD.md §9. An interval straddling a tier is "unspecified",
  * never rounded. Pinned by tests/vocab-parity.test.ts. */
 export function doseMatchFor(productLow: number | null, productHigh: number | null, band: DoseBand): string {
   if (band.low === null || band.high === null || productLow === null || productHigh === null) return "unspecified";
@@ -175,7 +175,7 @@ export function letterFromRecord(rec: GradeRecord, studies: MatchedStudy[], weig
   };
 }
 
-/** Re-match the stored trials to THIS product (vocab.form_match exact = same id; SPEC §8 dose tiers). */
+/** Re-match the stored trials to THIS product (vocab.form_match exact = same id; METHOD §9 dose tiers). */
 export function matchStudies(
   studies: StoredStudy[],
   form: string | null,

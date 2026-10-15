@@ -1,5 +1,5 @@
 /* The three capture states of /scan. Each one owns the viewport while it is
- * active (docs/SYSTEM_DESIGN.md §11, state model). */
+ * active (docs/APP.md §11, state model). */
 
 import { SaveResultCard } from "./google-sign-in";
 import { ScanCamera } from "./scan-camera";

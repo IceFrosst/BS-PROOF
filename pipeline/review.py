@@ -9,7 +9,7 @@ S5N is off or returned nothing), then the deterministic span check; reviewer 2
 is S5R: a DIFFERENT
 Claude model that is shown the same paper and the claim's identity (outcome,
 timepoint, arm labels) but NOT reviewer 1's numbers, and extracts them again.
-(docs/EVIDENCE_METHOD.md §9 decision 5: a second Claude model for now; a
+(docs/DECISIONS.md, 2026-10-03: a second Claude model for now; a
 different-vendor reviewer is future work.)
 
 `reconcile` compares the two, field by field. It never averages and never picks
@@ -39,7 +39,7 @@ is ignored: adding numbers would need its own span check, and the union of two
 extractions is not a double-checked extraction.
 
 THE TOLERANCES IN `RULES` ARE CONSTANTS (invariant 4), listed for founder
-review in docs/REVIEW_PENDING.md #0.
+review in docs/DECISIONS.md.
 """
 from __future__ import annotations
 

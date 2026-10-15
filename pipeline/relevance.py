@@ -105,7 +105,7 @@ def relevance_check(record: dict, ingredient: str) -> tuple[bool, str]:
     # of a Novel Creatine CREAM" voted -0.7 against ORAL creatine's muscle_power
     # claim -- and its abstract reports no oral-arm result at all, so the null
     # was not just wrong-route, it was unsupported by any text. This pipeline
-    # scores oral supplementation (SPEC section 1); a cream answers a different
+    # scores oral supplementation (docs/METHOD.md §1); a cream answers a different
     # question. Title-only, like the clinical gate: a trial that merely MENTIONS
     # topical delivery in the abstract still passes.
     if re.search(r"\b(cream|topical|transdermal|ointment|gel applied|dermal)\b",

@@ -2,7 +2,7 @@
 Evidence method v2, stage 8 (validation): compare a run's pooled estimates with
 published meta-analyses. NO MODEL AND NO NETWORK IN THIS FILE.
 
-docs/EVIDENCE_METHOD.md §3 stage 8 / §8: "our CI must overlap theirs" -- the
+docs/METHOD.md §16: "our CI must overlap theirs" -- the
 Phase 2 exit is the pooled creatine-strength estimate overlapping the published
 strength CIs; Phase 4 needs >= 10 published meta-analyses.
 
@@ -32,7 +32,7 @@ PATH = Path(__file__).resolve().parents[1] / "vocab" / "benchmarks.json"
 SCALES = ("smd", "md")
 
 # THE PASS RULE (founder-approved 2026-10-04; constants, invariant 4 --
-# docs/REVIEW_PENDING.md #0). Per (outcome, scale), ALL THREE must hold:
+# docs/DECISIONS.md, decided 2026-10-04). Per (outcome, scale), ALL THREE must hold:
 #   coverage   pooled trials / eligible trials >= min_coverage. Eligible =
 #              pooled + refused for a reason other than scope ("study: ..." --
 #              off-target population, combination arm, ...: not this question).

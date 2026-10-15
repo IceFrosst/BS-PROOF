@@ -1,3 +1,8 @@
+> **ARCHIVE — the v14 method spec (`docs/SPEC.md` until 2026-10-15).** It describes
+> the retired v14 scoring model; nothing here is current. The current method is
+> `docs/METHOD.md`; the v14 summary is `v14-scoring-model.md`; the code is at tag
+> `v14-final`.
+
 # Supplement Evidence Pipeline — Technical Spec
 
 **Status:** implemented; this is the living spec of the scoring METHOD. Code

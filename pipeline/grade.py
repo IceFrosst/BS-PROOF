@@ -7,14 +7,14 @@ outcome, on top of the pool (pipeline/pool.py). NO MODEL MAY ENTER THIS FILE.
              imprecision, indirectness, publication bias -- floor Very low.
              Every downgrade carries its reason.
   benefit    the pooled estimate against the meaningful-change threshold M
-             (docs/EVIDENCE_METHOD.md §4); a CI too wide for any category is
+             (docs/METHOD.md §13); a CI too wide for any category is
              "inconclusive" and grades I.
   letter     the founder-approved table (§4, decided 2026-10-03) from
              (benefit, certainty); re-graded at M/2 and 2M, and flagged
              threshold-sensitive when the letter moves (§5 policy).
 
 THE THRESHOLDS IN `RULES` ARE CONSTANTS (invariant 4). They are the usual GRADE
-handbook rules of thumb, listed for founder review in docs/REVIEW_PENDING.md.
+handbook rules of thumb, recorded in docs/DECISIONS.md (decided 2026-10-03, "for now").
 
 The meaningful-change threshold comes from `vocab/outcome.json` ("mcid" with
 {"smd": value, "source": ..., "approved": true}) once the founder approves it;
@@ -46,7 +46,7 @@ RULES = {
 
 LEVELS = {4: "High", 3: "Moderate", 2: "Low", 1: "Very low"}
 
-# SPEC §8 dose tiers that make a trial's dose unlike the product's (indirectness).
+# METHOD §9 dose tiers that make a trial's dose unlike the product's (indirectness).
 OFF_DOSE = ("below_50", "above_200")
 
 # §4 grade table (founder decision 2026-10-03). Rows: benefit; columns: certainty.
@@ -194,7 +194,7 @@ def indirectness(studies: list[dict], weights: list[float]) -> tuple[int, list[s
     """(points 0-2, reasons, notes) from each study's `form_match` and
     `dose_match` against the product. A form is direct only when exact. A dose
     is OFF only when the product is under half (`below_50`) or over double
-    (`above_200`) the trial's daily dose (SPEC §8 tiers); 50-99 % counts as
+    (`above_200`) the trial's daily dose (METHOD §9 tiers); 50-99 % counts as
     direct -- founder decision 2026-10-03, after 5 g monohydrate (~4.4 g
     creatine) was judged off-dose against 5 g trials. > half the weight off
     costs one level per axis. Unknown trial doses are noted, never counted as a

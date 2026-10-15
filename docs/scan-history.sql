@@ -28,7 +28,7 @@
 --
 -- 4. `analysis` holds the COMPLETE ScanAnalysis JSON the caller received --
 --    not a summary -- because the point of this table is to let the owner see
---    exactly what a specific run answered, including every basis, arc and
+--    exactly what a specific run answered, including every basis and
 --    caveat. `request` holds only what was asked (the typed body, or the
 --    photo's content-type/size) -- never image bytes.
 --
@@ -133,7 +133,7 @@ create table if not exists public.scan_users (
 );
 
 comment on table  public.scan_users            is 'One row per Google-signed-in visitor to /scan. Server-write only (service role via POST /api/scan/claim); no anon policy, no public read path.';
-comment on column public.scan_users.scans      is 'Best-effort count of scan_runs claimed by this user. Read-then-write over plain fetch, not a race-free atomic increment -- see docs/SYSTEM_DESIGN.md §7.';
+comment on column public.scan_users.scans      is 'Best-effort count of scan_runs claimed by this user. Read-then-write over plain fetch, not a race-free atomic increment -- see docs/APP.md §7.';
 
 create index if not exists scan_users_email_idx on public.scan_users (email);
 

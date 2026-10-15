@@ -2,7 +2,7 @@
 Effect sizes for evidence method v2: span-verified numbers -> one signed effect
 and its sampling variance per claim. NO MODEL MAY ENTER THIS FILE.
 
-docs/EVIDENCE_METHOD.md §3 stage 4. Inputs are the claim's categorical fields
+docs/METHOD.md §10. Inputs are the claim's categorical fields
 plus the numbers `pipeline/span_check.verify_claim_numbers` VERIFIED; a number
 that failed the span check is never used. The arithmetic is
 `pipeline/meta_effects.py` (Hedges' g, SE from a CI or an exact normal p).

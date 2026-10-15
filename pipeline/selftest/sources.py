@@ -138,7 +138,7 @@ def run(check):
     check("Unpaywall RAISES without an email, never returns 'no OA'", gated,
           "a silent miss is indistinguishable from a paywalled paper")
 
-    print("\nFULL TEXT (JATS parsing, SR tables)")
+    print("\nFULL TEXT (JATS parsing, tables)")
     from sources import fulltext as ft
     jats = """<article><front><article-meta><abstract><p>Short abstract.</p>
       </abstract></article-meta></front><body>
@@ -163,10 +163,6 @@ def run(check):
     tabs = ft.extract_tables(jats)
     check("tables keep row structure", len(tabs) == 2 and tabs[0]["rows"][1][2] == "400 mg",
           "flattening a characteristics table loses which dose is whose")
-    inc = [t for t in tabs if ft.looks_like_included_studies(t)]
-    check("included-studies table identified, adverse-events table not",
-          len(inc) == 1 and "included" in (inc[0]["caption"] or "").lower(),
-          "a FILTER for S2, not a decision")
     check("unparseable XML -> empty, never a partial guess",
           ft.sections("<not xml") == {} and ft.extract_tables(None) == [])
     txt, tier = ft.best_text({"pmcid": None, "abstract": "Only an abstract."})

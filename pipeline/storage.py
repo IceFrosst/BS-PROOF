@@ -107,7 +107,7 @@ class Store:
         """
         Records must already be deduplicated -- they carry `_canonical` from
         pipeline.dedup. Writing pre-dedup records would put one trial in the
-        table four times, which is the exact failure SPEC section 6 exists to
+        table four times, which is the exact failure docs/METHOD.md §4 exists to
         prevent.
         """
         rows = []

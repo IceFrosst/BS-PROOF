@@ -11,10 +11,6 @@ the methods section instead of the whole paper matters for three reasons:
      sentence, which is where the spin is.
   3. Cost. A full paper is 10-20x an extracted section, and every token is paid
      per study across thousands of studies.
-
-This is also the input to SR-table inheritance: a systematic review's
-characteristics-of-included-studies and risk-of-bias tables are what make one
-open-access review worth ~15 unreadable primaries.
 """
 from __future__ import annotations
 import hashlib
@@ -173,10 +169,10 @@ def extract_tables(xml: str | None) -> list[dict]:
     """
     Every table with its caption, as rows of cells.
 
-    This is the SR-table inheritance path. A systematic review's
-    characteristics-of-included-studies table is a TABLE, and flattening it to
-    prose destroys the row/column structure that says which dose belongs to
-    which trial. S2 gets the structure.
+    Tables ride along in the S5 and S7 payloads (worker_payload._tables_text):
+    endpoint means / SDs and dosing protocols live there, and flattening a
+    table to prose destroys the row/column structure that says which value
+    belongs to which arm.
     """
     if not xml:
         return []
@@ -310,58 +306,14 @@ def extract_tables_structured(xml: str | None) -> list[dict]:
     return tables
 
 
-# Over-matching here is CHEAP (S2 is shown one extra table and is told to ignore
-# what it is not); under-matching is FATAL (the row structure never reaches S2 at
-# all, and s2_payload's fallback then ships every table in the paper). So both
-# lists are deliberately generous. "included" is listed bare because reviews
-# write "included systematic reviews", "included trials", "studies included in
-# the meta-analysis" -- the old literal "included stud" matched none of them.
-CAPTION_SIGNALS = (
-    "included", "characteristics", "summary of stud", "summary of find",
-    "trial characteristics", "study characteristics", "eligible stud",
-    "overview of stud", "description of stud", "quality assessment",
-    "risk of bias", "certainty of evidence", "grade",
-)
-HEADER_SIGNALS = (
-    "author", "year", "sample", "dose", "duration", "population",
-    "intervention", "participants", "patient", "trial", "stud", "reference",
-    "design", "country", "follow", "comparator", "control", "outcome",
-    "treatment", "arm", "group", "age", "sex", "n =", "no.", "citation",
-)
-
-
-def looks_like_included_studies(table: dict) -> bool:
-    """
-    Heuristic: is this an SR's characteristics-of-included-studies table?
-
-    Deliberately a FILTER, not a decision. It narrows which tables S2 is shown
-    so the call stays affordable; S2 decides what the table actually is. A
-    heuristic that decided would be a model-free judgement about scientific
-    content, which is exactly what this codebase does not do.
-    """
-    blob = " ".join(filter(None, [table.get("caption"), table.get("label")])).lower()
-    if any(k in blob for k in CAPTION_SIGNALS):
-        return True
-    # Headers are frequently split across two rows (a spanning group header over
-    # a column header), so scan both. Measured 2026-08-07 on three real OA
-    # reviews: the old single-row scan returned False on 14 of 14 tables,
-    # including "Treatment option | Reviews (n) | Patient (n) | Author, year" --
-    # which scored 2 because the signal list said "participants" and the table
-    # said "Patient".
-    rows = table.get("rows") or []
-    header = " ".join(c for row in rows[:2] for c in row).lower()
-    return sum(1 for s in HEADER_SIGNALS if s in header) >= 3
-
-
 def best_text(record: dict, *,
               prefer: tuple[str, ...] = ("methods", "results", "limitations")) -> tuple[str, str]:
     """
     The best available text for one record, plus the OA tier it earned.
 
-    Returns (text, oa_tier) where oa_tier is a scoring.OA_FACTOR key. The tier
-    is RETURNED rather than assumed because it multiplies w_study: a study read
-    from its abstract must carry 0.55, and silently treating an abstract as full
-    text would inflate every score built on it.
+    Returns (text, oa_tier), oa_tier one of full_text / abstract_only. The tier
+    is RETURNED rather than assumed: --full-text-only filters on it, and
+    silently treating an abstract as full text would hide how little was read.
 
     `limitations` joined `prefer` 2026-08-10 (v1.12), APPENDED to the shared
     blob rather than routed per-agent -- the 2026-08-09 measurement in

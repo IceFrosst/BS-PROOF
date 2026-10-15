@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Evidence method v2 benchmark (docs/EVIDENCE_METHOD.md §3 stage 8, §8).
+Evidence method v2 benchmark (docs/METHOD.md §16).
 
     # re-fetch every source and check each quote + number (network, no model)
     .venv/bin/python scripts/benchmark_v2.py verify

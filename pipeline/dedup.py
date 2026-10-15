@@ -1,6 +1,6 @@
 """
 Deterministic deduplication. No model may enter this file.
-One trial = one evidence unit. Implements SPEC.md section 6.
+One trial = one evidence unit. Implements docs/METHOD.md §4.
 
 2026-08-05 audit fixes (Grok) — reviewed 2026-08-06 (Claude), see REVIEW.md:
 - Registry regex tightened for ChiCTR / CTRI / UMIN / EudraCT full IDs.
@@ -14,7 +14,7 @@ from collections import defaultdict
 # Chinese trial into one unit. But full-string anchoring is the wrong cure:
 # registry fields arrive as "NCT01234567 (primary outcome paper)", and a
 # non-match falls through to DOI, which splits one trial across its four papers.
-# That is the dedup trap SPEC section 6 exists to prevent, so this EXTRACTS the
+# That is the dedup trap METHOD §4 exists to prevent, so this EXTRACTS the
 # ID from the field rather than validating the whole field.
 _REGISTRY_RE = re.compile(
     r"(NCT\d{8}"

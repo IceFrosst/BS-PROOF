@@ -1,66 +1,60 @@
 # Shared agent instructions
 
-`CLAUDE.md` is the canonical instruction and handoff file for Claude Code, Grok,
-and Codex. Do not create a separate Codex context or handoff trail.
+`CLAUDE.md` is the canonical instruction and handoff file for every agent
+(Claude Code, Codex, and any other AI working here). Do not create a separate
+context or handoff trail. This file only adds what applies to agents other than
+Claude Code.
 
 Before changing this repository:
 
-1. Read the entire root `CLAUDE.md`.
-2. Inspect the current branch, working tree, and recent commits so you continue
+1. Read the entire root `CLAUDE.md` (rules and invariants).
+2. Inspect the current branch, working tree and recent commits, so you continue
    existing work instead of replacing it.
-3. Read `docs/SPEC.md` before changing scoring, transfer factors, or any constant.
+3. Read `docs/METHOD.md` before changing anything that affects a grade, and
+   `docs/DECISIONS.md` before proposing a constant or rule change.
 
-Follow the workflow rules in root `CLAUDE.md`. In the same change as the code,
+**Branch first; `main` deploys.** Every push to `main` triggers a production
+deploy (`IceFrosst/BS-PROOF` → Vercel `bs-proof-dashboard`). Work on a branch or
+worktree, get the gates below green, then merge. In the same change as the code,
 add a dated entry to `docs/history/project-log.md` (what changed, what you
-verified, any handoff) and update `Current state` / `Next` in `CLAUDE.md` only if
-that snapshot changed — keep it a snapshot, not a diary. Leave every pushed
-commit as a clean resume point for either of the other agents.
+verified, any handoff), and update any doc your change makes untrue. Update
+`Current state` / `Next` in `CLAUDE.md` only if that snapshot changed.
 
-**Push completed, verified work straight to `main`** (founder, 2026-08-10). This
-replaces the old "never push directly to `main` without confirmation" rule, which
-was making agents open branches and then sit waiting — unpushed work is invisible
-work, and three agents cannot coordinate on a tree they cannot see. "Verified"
-means both gates below are green; that is the only gate on a push.
+## Ownership
 
-**Worktree-first workflow** (founder, 2026-08-12): changes are made in a working
-tree/worktree first and only pushed to `main` later, once verified. Since
-`IceFrosst/BS-PROOF` is connected to the `bs-proof-dashboard` Vercel project,
-**every push to `main` triggers a production deploy** — so do not push
-half-done or unverified work to `main`. Iterate locally (or on a branch), get
-both gates green, then push.
+**Claude Code owns every file; other agents are helpers.** You may write to any
+path, and every change you make is verified by Claude Code afterwards
+(`scripts/verify_helpers.py`), so:
 
-## Ownership (changed 2026-08-10)
-
-**Claude Code owns every file. Grok and Codex are helpers.** You may write to any
-path — no permission needed, no ownership table to consult. In exchange, every
-change you make is **verified by Claude Code afterwards**, so:
-
-1. Make your commit self-contained and reviewable. One concern per commit.
-2. Say in the commit body **what you changed and what you checked**. That is the
-   input to the verification pass; "misc fixes" makes it worthless.
-3. Run both gates before committing (see below). A helper commit that fails them
-   costs the owner a debugging session to attribute.
-4. **Never change a constant** — `k`, transfer factors, RoB thresholds, `S_VALUE`,
-   `H_PENALTY`, `H_NORM`, the OA penalty. Propose it in `docs/REVIEW_PENDING.md`.
-   Invariant 4, and sole ownership does not move that decision to Claude either.
-5. **Grok model ids**: run `grok models` and verify before setting one. `grok-4.3`
-   is not a valid CLI id and setting it failed S8 0/80 on the 2026-08-07 run.
+1. Make each commit self-contained: one concern per commit.
+2. Say in the commit body **what you changed and what you checked**.
+3. Run the gates before committing.
+4. **Never change a constant** (CLAUDE.md invariant 4: the GRADE rules, the
+   letter table, the reviewer tolerances, the benchmark pass rule, the MCIDs).
+   Propose it in `docs/DECISIONS.md`.
 
 `.claude/` is Claude Code harness configuration, not shared instructions. Do not
 read `.claude/agents/` as guidance for yourself and do not edit it.
 
-After any change to `pipeline/`, run both of these and keep them green. That is
-non-negotiable.
+## Gates
+
+After any change to `pipeline/`, `sources/`, `bsproof/` or `vocab/`:
 
 ```bash
 python3 -m pipeline.invariants    # structural: model boundary, offline imports, agent wiring
-python3 -m pipeline.selftest      # ~510 checks, no model, no network, ~0.5s
+python3 -m pipeline.selftest      # deterministic checks, no model, no network
+.venv/bin/python -m pytest -q tests/
 ```
 
-Use `python3`, not `python` — bare `python` exists only inside `.venv`. Neither
-command needs a dependency installed; if either fails on a missing module that is
-a bug in the deterministic layer, not in your environment (see
-`pipeline.invariants.dependency_problems`).
+After any change to the app (`app/`, `components/`, `lib/`, TS tests):
+
+```bash
+npm run typecheck && npm run lint && npm test && npm run build
+```
+
+Use `python3`, not `python` — bare `python` exists only inside `.venv`. The two
+`pipeline.*` gates need no installed dependency; if one fails on a missing
+module, that is a bug in the deterministic layer, not in your environment.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

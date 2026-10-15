@@ -7,8 +7,8 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL("https://bs-proof-dashboard.vercel.app"),
   applicationName: "BS Proof",
-  title: { default: "BS Proof · Evidence dashboard", template: "%s · BS Proof" },
-  description: "Inspect retained supplement evidence runs, outcome scores, scoring arcs, quality limits, and source reports.",
+  title: { default: "BS Proof", template: "%s · BS Proof" },
+  description: "What the research says about a supplement, at its form and dose: scan a label or search by ingredient.",
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],

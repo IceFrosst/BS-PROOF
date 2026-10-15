@@ -1,4 +1,4 @@
-/* /scan: tokens (--sp-*), capture states and the report (docs/SYSTEM_DESIGN.md §11).
+/* /scan: tokens (--sp-*), capture states and the report (docs/APP.md §11).
    Split out of app/globals.css on 2026-10-02; globals.css imports the files in
    their original order, so the cascade is unchanged. */
 
@@ -30,7 +30,7 @@
 }
 
 /* ---------------------------------------------------------------- SCAN ----
-   /scan design system (2026-09-16, docs/history/2026-09-16-scan-design-log.md; current summary in docs/SYSTEM_DESIGN.md §11).
+   /scan design system (2026-09-16, docs/history/2026-09-16-scan-design-log.md; current summary in docs/APP.md §11).
    A lab-grade evidence report read on a phone. One white ground, one grey
    tint, one hairline, one radius; two accents each with ONE meaning --
    green = a trial measured this, amber = a model recalled this / read this
@@ -281,7 +281,7 @@ body:has(.scan-page) .footer-inner p:last-child { display: none; }
    and a chevron -- with the coloured track full-width underneath and the
    detail expanding in place. The lab's own rubric ordinals ("2/4"), its
    person-fit bar and its reported-interval axis are NOT adopted: this
-   pipeline has no such values (see docs/history/2026-09-16-scan-design-log.md; current summary in docs/SYSTEM_DESIGN.md §11). */
+   pipeline has no such values (see docs/history/2026-09-16-scan-design-log.md; current summary in docs/APP.md §11). */
 .scan-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
 .scan-card { display: grid; gap: 10px; padding: 12px 14px 10px; border: 1px solid var(--sp-line); border-radius: var(--sp-radius); background: var(--sp-white); color: var(--sp-ink); }
 /* Inside the tab panel the card IS the panel: no second box around it. */

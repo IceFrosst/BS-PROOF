@@ -10,12 +10,13 @@ Two things live here that nothing else can supply:
   primary outcomes and S4 does the judging.
 
   The unpublished-trial flag -- a completed trial with no results is evidence of
-  publication bias in the corpus. It is SHOWN, NEVER SCORED (SPEC section 12):
-  it says something about the literature, not about this product.
+  publication bias in the corpus. pipeline/registry_bias.py counts them per
+  outcome and GRADE downgrades publication bias when they outnumber the trials
+  pooled (docs/METHOD.md §12).
 
 ct.gov also carries structured participant flow, which answers RoB item 5 for
-studies whose paper is paywalled. That is the "methods facts without the paper"
-reframe in SPEC section 4, item 2.
+studies whose paper is paywalled. (The idea that methods facts can come from
+outside the paper is v14 spec §4, docs/history/v14-spec.md.)
 """
 from __future__ import annotations
 from datetime import date

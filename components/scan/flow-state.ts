@@ -1,5 +1,5 @@
 /*
- * The /scan state machine (docs/SYSTEM_DESIGN.md §11):
+ * The /scan state machine (docs/APP.md §11):
  *
  *   landing -> staged -> loading -> result | error
  *

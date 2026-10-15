@@ -23,12 +23,12 @@ export type ManualDoseUnit = (typeof MANUAL_DOSE_UNITS)[number];
  * INPUT SANITY LIMITS — form/transport hygiene, NOT scoring constants.
  *
  * These bound what a typed field may carry so a huge or absurd number cannot
- * overflow the conversion (1e308 g → Infinity mg) or travel into the scorer
+ * overflow the conversion (1e308 g → Infinity mg) or travel into the dose conversion
  * as a "dose". They say nothing about what dose is effective, safe or plausible
  * for any ingredient — the dose axis derives its bands from trials
  * (`pipeline/dose.py`) and this ceiling is far above anything a label prints.
  * 100 g per serving is more than a serving of anything sold as a supplement;
- * 24 servings a day is one an hour. Neither is cited in docs/SPEC.md and
+ * 24 servings a day is one an hour. Neither is a method constant (docs/METHOD.md) and
  * neither belongs there.
  */
 export const MAX_MANUAL_DOSE_MG = 100_000;

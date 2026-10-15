@@ -24,7 +24,7 @@ from pipeline.grade import grade_record, letter_from_record, study_weights
 from pipeline.pool import pool_outcomes
 
 METHOD = "evidence-v2"
-STATUS = "shadow"          # until the Phase 4 benchmark passes (docs/EVIDENCE_METHOD.md §8)
+STATUS = "shadow"          # until the validation passes (docs/METHOD.md §16)
 
 
 def corpus_ncts(items: list[dict]) -> set[str]:

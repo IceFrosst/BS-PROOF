@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # PostToolUse: a changed rule in the v2 grading code (scripts/verify_helpers.py
 # WATCHED_CONSTANTS) regrades every outcome and looks like nothing in a diff stat. Invariant 4 makes those
-# founder decisions requiring docs/REVIEW_PENDING.md + SPEC 13.
+# founder decisions requiring docs/DECISIONS.md.
 #
 # Warning, not a block: a founder-approved change is legitimate and must be able
 # to land. The point is that it can never land SILENTLY.
@@ -26,7 +26,7 @@ echo "invariant 4: a grading constant moved from its last verified value." >&2
 echo "$DRIFT" >&2
 echo "" >&2
 echo "These are FOUNDER decisions, not refactors. If this was deliberate, record" >&2
-echo "it in docs/REVIEW_PENDING.md and docs/SPEC.md 13. If it was incidental," >&2
+echo "it in docs/DECISIONS.md. If it was incidental," >&2
 echo "revert it -- the GRADE rules, the letter table and the benchmark pass rule" >&2
 echo "regrade every outcome, and no benchmark may be made to pass by tuning one." >&2
 exit 2

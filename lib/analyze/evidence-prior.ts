@@ -7,16 +7,14 @@
  * access them if you have them, but even if you don't, do the analysis through
  * the system prompt of the API itself."
  *
- * PRECEDENCE, and it is not negotiable: a retained run always wins. This module
- * is called only when `scoreProduct` returns not_scored / form_not_scored /
- * recompute_refused. When a run exists, the measured rows are the answer and
- * nothing here runs.
+ * While evidence grading is not active (2026-10-15, docs/APP.md §4) this runs
+ * for every supported product. When grading is switched on, a graded run will
+ * take precedence over it.
  *
- * WHAT THIS DELIBERATELY DOES NOT PRODUCE: a 0-100 composite. That scale has a
- * specific meaning -- 50 + signed/2 discounted by applicability, computed from
- * extracted trials each carrying a quoted span -- and minting one from a
- * model's recollection would make the two indistinguishable on screen, which is
- * the single failure this project exists to prevent. Instead the model reports
+ * WHAT THIS DELIBERATELY DOES NOT PRODUCE: a grade. A grade means "computed
+ * from extracted trials, each number checked against its quoted source", and
+ * minting one from a model's recollection would make the two indistinguishable
+ * on screen, which is the single failure this project exists to prevent. Instead the model reports
  * per outcome: a DIRECTION, the STRENGTH of the literature behind it, and the
  * daily dose range at which benefit was observed. Those are things a model can
  * honestly recall and a reader can check.
@@ -144,9 +142,9 @@ export function readPriorDose(row: PriorOutcome, dose: number | null): { inRange
 }
 
 const DISCLAIMER =
-  "No extraction run exists for this ingredient, so this section is the model's own recollection of the " +
-  "literature — not trials we read, scored and can quote. Treat it as orientation. It carries no 0–100 score " +
-  "because that number means 'computed from extracted trials', and the two must not look alike.";
+  "This section is the model's own recollection of the literature — not trials we read, checked and can " +
+  "quote. Treat it as orientation. It carries no grade, because a grade means 'computed from extracted " +
+  "trials', and the two must not look alike.";
 
 /** Never throws. Returns a section that says why it is empty when it is. */
 export async function evidencePriorSection(

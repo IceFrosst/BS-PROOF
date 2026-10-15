@@ -10,7 +10,7 @@ data, and every operation over them is arithmetic or a table lookup:
   - four-axis population -> pop_match tier
 
 Putting a model in any of these loops means the same bottle grades differently
-next Tuesday. Implements SPEC sections 5 and 8.
+next Tuesday. Implements docs/METHOD.md §5 and §9.
 """
 from __future__ import annotations
 import json
@@ -19,8 +19,8 @@ from pathlib import Path
 
 VOCAB_DIR = Path(__file__).parent.parent / "vocab"
 
-# Transfer tiers. These names are the keys of FORM_FACTOR / POP_FACTOR in
-# scoring.py -- do not rename one without the other.
+# Match tiers. These names are read by pipeline/grade.py (indirectness) and
+# pipeline/pool.py (population refusal) -- do not rename one without the others.
 EXACT, ADJACENT, DIFFERENT = "exact", "adjacent", "different"
 SALT_FAMILY, UNSPECIFIED = "salt_family", "unspecified"
 
@@ -178,9 +178,9 @@ def elemental_dose_range_mg(ingredient: str, form_vocab_id: str,
 def form_match(ingredient: str, study_form_id: str | None,
                product_form_id: str | None) -> str:
     """
-    Transfer tier between the form a trial used and the form in the bottle.
-    Keys map onto FORM_FACTOR in scoring.py: exact 1.00 / salt_family 0.50 /
-    different 0.15 / unspecified 0.30.
+    Match tier between the form a trial used and the form in the bottle:
+    exact / salt_family / different / unspecified. GRADE indirectness counts
+    anything but `exact` as not the product's form (pipeline/grade.py).
     """
     if not study_form_id or not product_form_id:
         return UNSPECIFIED

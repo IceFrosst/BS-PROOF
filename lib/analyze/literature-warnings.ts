@@ -2,7 +2,7 @@
  * LITERATURE DISCLOSURE WARNINGS -- model-decided, not computed. Founder
  * 2026-09-16: two things a reader should be told about the LITERATURE BEHIND
  * an ingredient, decided the same way the MLM disclosure is decided -- "by
- * the system prompt" -- rather than by a rule in the scorer:
+ * the system prompt" -- rather than by a rule in the grading code:
  *
  *   funding_independence  who funded the trials (industry-dominated, or not)
  *   publication_bias      does the published record look selectively reported

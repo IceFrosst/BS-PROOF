@@ -1,3 +1,9 @@
+> **ARCHIVE — the v14 calibration anchors (`docs/ANCHORS.md` + `anchors.csv` until
+> 2026-10-15).** Written in v14's signed-score bands, so none can be checked
+> against v2. Kept as a shopping list: when an ingredient is run, its published
+> meta-analyses go into `vocab/benchmarks.json` (see `docs/METHOD.md`, validation).
+> `pipeline/calibration.py`, which read them, was removed with v14.
+
 # v1 Calibration Anchor Set
 
 **35 anchors** (`anchors.csv`; this document said 28 until 2026-08-06 — the

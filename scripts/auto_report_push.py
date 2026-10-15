@@ -65,7 +65,7 @@ def _slug(s: str) -> str:
 def _formula() -> str:
     return """## How the grade is built
 
-Evidence method v2 (`docs/EVIDENCE_METHOD.md`). Models extract fields only;
+Evidence method v2 (`docs/METHOD.md`). Models extract fields only;
 everything below is deterministic.
 
 ```text

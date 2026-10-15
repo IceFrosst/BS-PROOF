@@ -8,10 +8,10 @@ already decided.
 
 S1 exists only for what is left over. `classify()` returns `needs_model=True`
 rather than picking a rank it cannot justify -- an unjustified rank is worse
-than an unresolved one, because design weight is the single largest term in
-w_study (rank 4 = 1.00, rank 12 = 0.004, a 250x spread).
+than an unresolved one: only RCT-rank studies are extracted, so a wrong rank
+either drops a trial or lets a non-trial in.
 
-Ranks are SPEC section 7 (the old S1 prompt, removed 2026-10-15, used the same rules).
+Ranks: docs/METHOD.md §6.
 """
 from __future__ import annotations
 
@@ -36,7 +36,7 @@ def classify(rec: dict) -> dict:
     Returns {design_rank, design_label, needs_model, basis}. `design_rank` is
     None exactly when needs_model is True.
 
-    Rules are applied in a fixed order (SPEC section 7), because the
+    Rules are applied in a fixed order (METHOD §6), because the
     order is load-bearing: non-human subjects override design quality, so a
     randomised blinded placebo-controlled rat study is rank 12, not rank 4.
     """

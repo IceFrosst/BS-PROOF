@@ -103,7 +103,7 @@ def trial_dose(ingredient: str, s7: dict | None, s3: dict | None, claim: dict) -
 
 def dose_match_tier(ingredient: str, s7: dict | None, s3: dict | None, claim: dict,
                     product: dict) -> str | None:
-    """The product's dose against THIS trial's dose, on SPEC §8's tiers with the
+    """The product's dose against THIS trial's dose, on METHOD §9's tiers with the
     trial's own daily elemental dose as the band (dose.dose_match_for):
     in_band (1-2x the trial dose) | low_50_99 | below_50 | above_200 |
     unspecified (trial dose unknown or an interval straddling a tier). None when

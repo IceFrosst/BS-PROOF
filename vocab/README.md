@@ -46,11 +46,11 @@ a vocabulary edit invalidates cached S6 extractions. Expected, not a bug.
 
 ## Known-provisional
 
-Marked `status: PROVISIONAL` in each file, and tracked in `docs/SPEC.md` §13:
+Marked `status: PROVISIONAL` in each file; changes are founder decisions (`docs/DECISIONS.md`):
 
 - the population **adjacency graph** and the worst-axis composition rule
 - which salts are `conversion_safe`
-- the outcome list itself — 30 terms is a starting point, not an ontology
+- the outcome list itself — 31 terms is a starting point, not an ontology
 
 ## Not here yet
 

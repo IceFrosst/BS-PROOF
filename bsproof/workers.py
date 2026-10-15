@@ -41,7 +41,7 @@ def _second_reviewer_enabled() -> bool:
 def _numbers_extractor_enabled() -> bool:
     """Evidence method v2 reviewer 1 for numbers (S5N). ON by default: v2 has
     no poolable numbers without it (RSMOKE3, v1.31: 0/13 mapped S5 claims made
-    an effect). One call per S5N_CHUNK mapped claims; no v14 score reads it.
+    an effect). One call per S5N_CHUNK mapped claims.
     SP_NUMBERS_EXTRACTOR=0 falls back to S5's own numbers."""
     return os.environ.get("SP_NUMBERS_EXTRACTOR", "1") == "1"
 

@@ -43,8 +43,10 @@ journal's evidence. So:
   list is for)
 - **ISSN** → exact
 
-Most true positives are therefore unreachable until records carry a publisher
-field. That is a coverage gap, recorded in `docs/SPEC.md` §13 — not a bug.
+Since 2026-08-08 records carry the publisher from Crossref (`sources/crossref.py`),
+so publisher-level matching works where a DOI resolves (632 of 2632 studies on
+the 2026-09-04 creatine run; 5 flagged). Records without a resolvable DOI stay
+unchecked — a coverage gap, not a bug.
 
 ## Policy
 

@@ -178,7 +178,7 @@ def dose_match_for(product_low: float | None, product_high: float | None,
                    band: dict) -> str:
     """
     Product dose vs a band (in v2: one trial's own daily dose) -> a tier
-    (SPEC section 8):
+    (docs/METHOD.md §9):
 
         in_band     inside the band
         low_50_99   50-99% of the low end

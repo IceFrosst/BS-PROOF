@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Evidence method v2, Phase 1b: does extraction REPRODUCE?
-(docs/EVIDENCE_METHOD.md §8.) The same studies are extracted twice by the
+(docs/METHOD.md §16.) The same studies are extracted twice by the
 production Claude backend, each run with its OWN EMPTY cache (a shared cache
 would replay run A into run B and measure nothing), then compared field by field
 and grade by grade.

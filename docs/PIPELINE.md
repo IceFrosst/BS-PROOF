@@ -1,227 +1,133 @@
-# Evidence pipeline — how it runs and how to run it
+# Evidence pipeline — how to run it
 
-What happens in one extraction run, and the steps to run one on your machine.
-The rules that govern changes are in `CLAUDE.md`; the scoring method and its
-constants are in `docs/SPEC.md`.
-
-Merged 2026-10-02 from `ARCHITECTURE.md`, `ON_MACHINE_STEPS.md` and
-`GROK_CLI_SETUP.md` (all three are in git history).
+What one run does and how to run one on your machine. The method is
+`docs/METHOD.md`; the rules for changing anything are `CLAUDE.md`.
 
 ---
 
 ## 1. What one run does
 
 ```text
-                    ┌─────────────────────────────────────┐
-                    │  PRODUCT: ingredient + form (+ dose) │
-                    └─────────────────┬───────────────────┘
-                                      │
-          ┌───────────────────────────▼───────────────────────────┐
-          │  RETRIEVE (code)  Europe PMC / PubMed / CT.gov / OA   │
-          │  SRs first → primaries · dedup NCT>DOI>PMID>fp        │
-          └───────────────────────────┬───────────────────────────┘
-                                      │
-                    ┌─────────────────▼─────────────────┐
-                    │  STORE  study + registry_facts      │
-                    │  (SQLite, postgres-shaped)          │
-                    └─────────────────┬─────────────────┘
-                                      │
-     ┌────────────────────────────────┼────────────────────────────────┐
-     ▼                                ▼                                ▼
-┌─────────────┐              ┌────────────────┐              ┌─────────────────┐
-│ S2 on SRs   │              │ RCT primaries  │              │ Prefer full-text│
-│ (--with-sr) │              │ S3 S4 S5 S7 S8 │              │ in batch order  │
-│ → resolve   │              │ (+ S6B map)    │              │ optional FT-only│
-└──────┬──────┘              └────────┬───────┘              └────────┬────────┘
-       │         ┌────────────────────▼───────────────────┐           │
-       │         │  ADAPTER (the only model boundary)     │           │
-       │         │  claude_adapter | grok_adapter         │◄──────────┘
-       │         │  pure function · pinned PROMPT_VERSION │
-       │         └────────────────────┬───────────────────┘
-       └──────────────┬───────────────┘
-                      ▼
-          ┌───────────────────────────┐
-          │  ASSEMBLE (code)          │
-          │  eligibility firewall     │
-          │  form / dose / pop match  │
-          │  dose band from trials    │
-          └─────────────┬─────────────┘
-                        ▼
-          ┌───────────────────────────┐
-          │  SCORE (code)             │
-          │  w = design×RoB×size×…    │
-          │  signed = 100·d·c·(1−0.4H)│
-          │  SR → E′ multiplier ≤1.30 │
-          └─────────────┬─────────────┘
-                        ▼
-          ┌───────────────────────────┐
-          │  ECU rows + four arcs     │
-          │  reports/runs/ → app      │
-          └───────────────────────────┘
+run_pipeline.py <ingredient> --form <form id> [flags]
+  │
+  ├─ corpus     bsproof/run/corpus.py    retrieve into out/bsproof.sqlite (if needed),
+  │                                      dedup, classify, OA ordering, relevance gate   METHOD §3–§6
+  ├─ extract    bsproof/run/extract.py   per study: S3 → S4 S5 S7 S8 → S6B → S5N (→ S5R)
+  │                                      through bsproof/claude_adapter.py               METHOD §7
+  ├─ evidence   bsproof/run/evidence.py  span-checked effects → pool → GRADE → letter,
+  │                                      plus the ClinicalTrials.gov registry check      METHOD §8–§13
+  └─ report     bsproof/run/report.py    reports/runs/<id>_summary.md, _full.md, _context.json
 ```
 
-### Weight factors (score path)
+Everything except the extract step is deterministic. The run's grades are the
+`evidence_v2` block of `<id>_context.json` and the grade table in
+`<id>_summary.md`.
 
-```text
-w_study = design × RoB × size × funding × OA
-          × 0.85 if rob_inherited      (another team's RoB judgement)
-          × 0 if retracted
-```
-
-Form, dose and population are **not** in the weight (founder, 2026-08-07); they
-are arcs (CLAUDE.md invariant 8). `FORM_FACTOR`, `DOSE_FACTOR` and `POP_FACTOR`
-still exist in `scoring.py` and feed the arcs; the `APPLY_*_IN_WEIGHT` switches
-are all `False`.
-
-**OA tiers:** `full_text` 1.00 · `sr_table` 0.85 · `abstract_only` 0.55. A trial
-reached only through a review's table scores at `sr_table × rob_inherited` =
-**0.72** of the same trial read directly (invariant 6).
-
-**Predatory venues:** flag-only (`pipeline.predatory.ZERO_WEIGHT = False`,
-founder policy), matched publisher-side against `vocab/predatory_journals.txt`
-(see `vocab/README_PREDATORY.md`).
-
----
-
-## 2. Backends (never silent-merge)
-
-| Path | Flag | Auth | Store |
-|------|------|------|-------|
-| Wiring (synthetic, no model) | `--wiring` | none | `out/wiring_demo.sqlite` |
-| Claude production | (default) | Claude subscription + `--safe-mode` | `out/bsproof.sqlite` |
-| Grok pure-function | `--grok` | Grok CLI, signed in | `out/grok_<ingredient>.sqlite` |
-
-Both model backends use the same prompts, schemas and `PROMPT_VERSION`. Runs
-are stored and reported separately and never blended (invariant 9).
-
-### How the Grok path is kept pure
-
-| Flag / practice | Role |
-|-----------------|------|
-| `grok -p` | Headless one-shot |
-| `--max-turns 1` | No agent loop |
-| `--no-memory --no-subagents --no-plan` | No ambient agent features |
-| `--output-format json` | Machine-readable |
-| Empty `--cwd` temp dir | Avoid AGENTS.md / project rule leak |
-
-Verify every Grok model id with `grok models` before setting it (`grok-4.3`
-is not a valid CLI id and failed a run 0/80).
-
----
-
-## 3. Run it on your machine
-
-### Setup (once)
+## 2. Setup (once)
 
 ```bash
 git clone https://github.com/IceFrosst/BS-PROOF.git && cd BS-PROOF
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 ```
 
-Use `.venv/bin/python` (or `source .venv/bin/activate`) for anything that
-touches the network: bare `python3` lacks `httpx`, and a hook blocks it.
+Use `.venv/bin/python` for anything that touches the network: bare `python3`
+lacks `httpx`, and a hook blocks it. Extraction needs a signed-in Claude Code CLI
+(`claude auth status`). Green-OA lookups need `BSPROOF_CONTACT_EMAIL` (Unpaywall
+policy); without it they raise rather than silently finding nothing.
 
-### Step 1 — deterministic health check (no model)
+## 3. Run
 
 ```bash
+# 1. deterministic gates (offline, seconds)
 python3 -m pipeline.invariants
-python3 -m pipeline.selftest     # expect ALL PASSED; stop and fix otherwise
-```
+python3 -m pipeline.selftest                     # expect ALL PASSED
 
-### Step 2 — wiring demo (synthetic, no model)
-
-```bash
+# 2. wiring check: synthetic extraction, no model, writes no report
 .venv/bin/python run_pipeline.py creatine --form creatine_monohydrate --wiring
+
+# 3. a real run (Claude subscription) — the creatine v2 runs used these flags
+.venv/bin/python run_pipeline.py creatine --form creatine_monohydrate \
+    --full-text-only --intervention-scope --all-outcomes
 ```
 
-### Step 3 — Claude production
+**Run extractions solo.** No agent teams, workflows or other heavy sessions on
+the same subscription while one runs: a truncated extraction hides refusals and
+biases the result.
 
-Needs a signed-in Claude Code CLI (`claude auth status`).
-
-```bash
-.venv/bin/python run_pipeline.py creatine --form creatine_monohydrate
-```
-
-**Run extractions SOLO.** No agent teams, workflows or heavy sessions on the
-same subscription while it runs — a truncated extraction hides nulls and biases
-scores upward.
-
-**Interrupted runs resume by re-running the same command.** Every successful
-model call is committed to the adapter cache as it returns, and every fetched
-paper to `out/http_cache/`, so a re-run replays finished work for free.
-
-- *Usage limit mid-run:* the run pauses and probes every 15 min
-  (`SP_QUOTA_WAIT_S`), requeueing the hit studies, for up to 8 h in total
-  (`SP_QUOTA_MAX_WAIT_S`). If studies still carry a limit failure after that,
-  the run **stops before scoring and writes no report** (exit code 3, an
-  INCOMPLETE banner). `SP_ALLOW_INCOMPLETE=1` overrides it deliberately.
-- *Killed (closed terminal, out of memory, reboot):* re-run the same command.
-- *Progress record:* `out/checkpoints/<ingredient>_<form>.json`, rewritten after
-  every finished study (`ok` / `skipped` / `failed:<agents>` / `quota`); a new
-  start prints what the previous attempt finished.
-- Long runs: start them from your own terminal (`... 2>&1 | tee out/run.log`),
-  not a tool's background shell, which may be stopped under memory pressure.
-
-### Step 4 — Grok (optional, separate)
-
-```bash
-curl -fsSL https://x.ai/cli/install.sh | bash
-echo 'export PATH="$HOME/.grok/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc
-grok login                     # browser/device auth; subscription only, no billed key
-grok models                    # verify model ids
-.venv/bin/python -m bsproof.grok_adapter         # preflight: finds grok + 8 subagents
-.venv/bin/python -m bsproof.grok_adapter smoke   # one S8 call
-.venv/bin/python run_pipeline.py creatine --form creatine_monohydrate --grok
-```
-
-### Useful flags
-
-`run_pipeline.py --help` lists them all; an unknown flag is an error.
+### Flags (`run_pipeline.py --help`; an unknown flag is an error)
 
 | Flag | Effect |
-|------|--------|
-| `--dose <mg elemental>` | Judge the dose axis for a specific product |
-| `--limit N` | Cap studies (default: whole corpus — a capped run is a sample) |
-| `--with-sr` | S2 on meta-analyses; SR-table trials enter at the `sr_table` tier |
-| `--per-outcome` | One retrieval query per outcome (stops one outcome starving others) |
-| `--intervention-scope` / `--supplement-scope` / `--broad-scope` | Retrieval scope |
-| `--full-text-only` / `--all-oa` | Score only full-text studies (Grok default) / include abstracts |
-| `--top-outcomes N` / `--all-outcomes` | Showcase top-N outcomes by RCT count (default 5) / full vocabulary |
-| `--demo` | Exact form only + ignore population (**not production**) |
+|---|---|
+| `--form <id>` | The product's form (vocabulary id) |
+| `--dose <mg>` | The product's daily **elemental** dose, so the run's own letters judge dose indirectness |
+| `--limit N` | Extract only N studies (default: the whole corpus — a capped run is a sample) |
+| `--full-text-only` | Extract only studies with readable full text |
+| `--all-outcomes` / `--top-outcomes N` | Grade every outcome / the top N by RCT count (default 5) |
+| `--broad-scope` / `--supplement-scope` / `--intervention-scope` / `--per-outcome` | Retrieval scope (default broad; METHOD §3) |
+| `--wiring` | Synthetic extraction, no model, no report |
 
-A study costs ~10 model calls, about half of them S6. Since 2026-10-03 the
-**table route** for arm-level numbers (S1 design facts + one S5T call per claim
-that has table candidates) is on by default for evidence method v2; it adds a
-few calls per study and moves no v14 score. `SP_NUMERIC_TABLES=0` turns it off.
+### Environment switches
 
-**Second reviewer (evidence method v2, off by default).** `SP_SECOND_REVIEWER=1`
-adds one `S5R` call per study on a different model (`SP_MODEL_R`, default
-`claude-opus-5`) that re-reads the poolable numbers blind; `pipeline/review.py`
-keeps only numbers both readings agree on and queues conflicts in
-`review_v2.adjudication`. It roughly adds 1 heavier call per study: run it solo.
+| Variable | Default | Effect |
+|---|---|---|
+| `SP_SECOND_REVIEWER` | `0` | `1` adds S5R, a blind second read of the poolable numbers on a different model |
+| `SP_NUMBERS_EXTRACTOR` | `1` | `0` falls back to S5's own numbers (v2 has almost nothing to pool without S5N) |
+| `SP_MODEL_A/B/C/R`, `SP_EFFORT_A/B/C/R` | `claude_adapter.TIER_MODEL` / `TIER_EFFORT` | Model and effort per tier (pinned full ids) |
+| `SP_MAX_CONCURRENCY` | `40` | Parallel model calls |
+| `SP_MAX_BUDGET_USD` | `0.50` | Per-call ceiling the CLI enforces |
+| `SP_QUOTA_WAIT_S` / `SP_QUOTA_MAX_WAIT_S` | 15 min / 8 h | Pause-and-probe on a usage limit |
+| `SP_ALLOW_INCOMPLETE` | `0` | `1` writes a report even when studies still carry a usage-limit failure |
+| `SP_DUMP_EXTRACTIONS` | unset | Path to dump the full extractions (for auditing) |
+| `SP_AUTO_PUSH` | `0` | `1` commits and pushes `reports/` on the current branch — never with `main` checked out (a push to `main` deploys) |
+| `SP_DB`, `SP_LLM_CACHE` | `out/bsproof.sqlite`, `out/llm_cache.sqlite` | Store and model-cache paths |
 
-### Step 5 — archive results
+## 4. Interrupted runs
 
-Every human-facing run goes under `reports/runs/` with a row in `INDEX.md`
-(`scripts/auto_report_push.py` does this at the end of a
-run). Never overwrite an
-old run. Label the provider.
+Every successful model call is cached as it returns (keyed by `PROMPT_VERSION`,
+model, effort and payload) and every fetched paper is cached under
+`out/http_cache/`, so **re-running the same command resumes for free**.
 
-### Re-scoring without re-extracting
+- *Usage limit:* the run pauses and probes, requeueing the affected studies. If
+  studies still carry a limit failure after the wait budget, it stops before
+  grading and writes **no report** (exit code 3, an INCOMPLETE banner).
+- *Killed:* re-run the same command. Progress is in
+  `out/checkpoints/<ingredient>_<form>.json`.
+- Long runs: start them from your own terminal (`... 2>&1 | tee out/run.log`).
 
-Scoring is deterministic, so a scoring fix does not need a new extraction:
-`scripts/rescore_run.py` re-scores a run from its own cached extractions
-(`--recompose` for display-only changes).
+A `PROMPT_VERSION` bump invalidates the whole cache (~1000 calls for creatine):
+the next run re-extracts everything.
 
----
+## 5. Check a run
 
-## 4. If something breaks
+```bash
+# our pooled estimates vs published meta-analyses (METHOD §16), offline
+.venv/bin/python scripts/benchmark_v2.py compare reports/runs/<id>_context.json
+
+# re-check every benchmark source quote and number (network)
+.venv/bin/python scripts/benchmark_v2.py verify
+
+# regression gate for a change that must not move any grade: replay the same run
+# from the caches only (model calls blocked), before and after the change
+.venv/bin/python scripts/replay_from_cache.py out/replay/before -- <the run's args>
+.venv/bin/python scripts/replay_from_cache.py out/replay/after  -- <the run's args>
+.venv/bin/python scripts/replay_from_cache.py --compare out/replay/before out/replay/after
+```
+
+The `run-triage` helper agent (`.claude/agents/run-triage.md`) summarises a run's
+context without loading the whole file.
+
+## 6. Reports
+
+Each run writes `reports/runs/<id>_summary.md`, `_full.md` and `_context.json`
+and adds rows to `reports/INDEX.md`. Runs are immutable: never edit one, write a
+new one. Reports stay local unless `SP_AUTO_PUSH=1`.
+
+## 7. If something breaks
 
 | Symptom | Fix |
-|---------|-----|
-| `grok: command not found` | PATH + reinstall CLI |
-| auth / not logged in | `grok login` (Grok) · `claude auth status` then `/login` (Claude) |
-| smoke returns unparseable JSON | Check stdout; adapter flags may need a tweak |
-| selftest red | Fix the pipeline before any extraction |
-| rate / session limit | The run pauses and resumes itself; if it exits 3 (INCOMPLETE), re-run the same command after the reset |
+|---|---|
 | `ModuleNotFoundError: httpx` | You used bare `python3`; use `.venv/bin/python` |
+| not signed in | `claude auth status`, then log in |
+| selftest red | Fix it before any extraction |
+| exit code 3 (INCOMPLETE) | Usage limit; re-run the same command after it resets |
+| Unpaywall error about a contact email | Set `BSPROOF_CONTACT_EMAIL` |
