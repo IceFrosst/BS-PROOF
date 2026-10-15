@@ -16,7 +16,7 @@
  *     identical except for the literature-warnings answer (or with the
  *     section unavailable entirely) produce byte-identical deterministic
  *     blocks
- *   - no scoring source file mentions it at all
+ *   - no grading source file mentions it at all
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -27,7 +27,6 @@ import { literatureDisclosures, type LiteratureWarnings } from "@/lib/analyze/li
 import { LITERATURE_WARNINGS_PROMPT_VERSION, literatureWarningsSection } from "@/lib/analyze/literature-warnings";
 import { chatJson, ModelCallError, validateAgainstSchema, type ChatJsonFn } from "@/lib/analyze/llm";
 import { analyzeScan, type ScanDeps } from "@/lib/analyze/scan";
-import { scoreProduct } from "@/lib/analyze/product-score";
 import type { LabelRead } from "@/lib/analyze/vision";
 
 const ROOT = process.cwd();
@@ -152,7 +151,6 @@ function deps(overrides: Partial<ScanDeps> = {}): ScanDeps {
       "literature warnings": literatureWarningsFixture("no_concern", "unknown"),
     }),
     fetch: fakeFetch(),
-    scoreProduct,
     budgetMs: 55_000,
     now: () => (t += 10),
     ...overrides,
@@ -337,7 +335,7 @@ describe("literatureWarningsSection -- never throws", () => {
 });
 
 describe("wired into analyzeFromLabel for EVERY scan (fakes only)", () => {
-  it("present on the scored path (creatine monohydrate has a retained run)", async () => {
+  it("present for a supported ingredient (creatine monohydrate)", async () => {
     const out = await analyzeScan(
       "aW1n",
       "image/png",
@@ -349,14 +347,14 @@ describe("wired into analyzeFromLabel for EVERY scan (fakes only)", () => {
         }),
       }),
     );
-    expect(out.status).toBe("scored");
+    expect(out.status).toBe("not_graded");
     expect(out.literature_warnings?.status).toBe("ok");
     expect(out.literature_warnings?.data?.funding_independence.status).toBe("concern");
     expect(out.literature_warnings?.data?.publication_bias.status).toBe("concern");
     expect(out.meta.prompt_versions.literature_warnings).toBe(LITERATURE_WARNINGS_PROMPT_VERSION);
   });
 
-  it("present on the not-scored path (magnesium is in vocabulary, has no retained run)", async () => {
+  it("present for another supported ingredient (magnesium)", async () => {
     const out = await analyzeScan(
       "aW1n",
       "image/png",
@@ -378,7 +376,7 @@ describe("wired into analyzeFromLabel for EVERY scan (fakes only)", () => {
         }),
       }),
     );
-    expect(out.status).toBe("not_scored");
+    expect(out.status).toBe("not_graded");
     expect(out.literature_warnings?.status).toBe("ok");
     expect(out.literature_warnings?.data?.publication_bias.status).toBe("concern");
   });
@@ -404,7 +402,7 @@ describe("wired into analyzeFromLabel for EVERY scan (fakes only)", () => {
 });
 
 describe("literature_warnings never reaches scoring", () => {
-  it("identical product, different (or absent) literature-warnings content -> byte-identical product/evidence/dose_effectiveness", async () => {
+  it("identical product, different (or absent) literature-warnings content -> byte-identical product facts", async () => {
     const concern = await analyzeScan(
       "aW1n",
       "image/png",
@@ -431,27 +429,24 @@ describe("literature_warnings never reaches scoring", () => {
     // than ok -- the deterministic blocks must still match byte for byte.
     const off = await analyzeScan("aW1n", "image/png", deps({ chatJson: null }));
 
-    expect(concern.status).toBe("scored");
+    expect(concern.status).toBe("not_graded");
     expect(concern.product).toEqual(noConcern.product);
     expect(concern.product).toEqual(off.product);
-    expect(concern.evidence).toEqual(noConcern.evidence);
-    expect(concern.evidence).toEqual(off.evidence);
-    expect(concern.dose_effectiveness).toEqual(noConcern.dose_effectiveness);
-    expect(concern.dose_effectiveness).toEqual(off.dose_effectiveness);
 
     expect(concern.literature_warnings?.status).toBe("ok");
     expect(noConcern.literature_warnings?.status).toBe("ok");
     expect(off.literature_warnings?.status).toBe("unavailable");
   });
 
-  it("no scoring source file mentions literature_warnings, funding_independence or publication_bias in any form", () => {
+  it("no grading source file mentions literature_warnings, funding_independence or publication_bias in any form", () => {
     const scoringFiles = [
-      "pipeline/scoring.py",
-      "pipeline/arcs.py",
+      // The v2 grading code. pipeline/grade.py is left out on purpose: it
+      // computes its OWN registry-based publication-bias domain, which is the
+      // deterministic counterpart, not the model-written disclosure.
+      "pipeline/pool.py",
+      "pipeline/evidence_v2.py",
       "pipeline/dose.py",
-      "lib/analyze/scoring.ts",
-      "lib/analyze/product-score.ts",
-      "lib/analyze/dose-effectiveness.ts",
+      "lib/analyze/grade-v2.ts",
       "lib/analyze/vocab.ts",
     ];
     for (const rel of scoringFiles) {

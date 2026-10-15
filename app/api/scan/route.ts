@@ -2,9 +2,10 @@
  * POST /api/scan — one label image in, one ScanAnalysisV1 out.
  *                  or one typed product (JSON) in, the same ScanAnalysisV1 out.
  *
- * The product's full analysis (founder 2026-09-07): evidence score with its
- * four arcs, dose effectiveness, form and ingredient compatibility, and the
- * company's background — each section stamped with WHERE it came from. The
+ * The product's analysis: what the label says, an unverified orientation on
+ * the literature, form and ingredient compatibility, and the company's
+ * background — each section stamped with WHERE it came from. Evidence grading
+ * is not active yet (2026-10-15). The
  * orchestration and every stage live in lib/analyze/scan.ts; this file only
  * validates the request and maps the outcome to HTTP.
  *
@@ -51,7 +52,6 @@ import { NextResponse } from "next/server";
 
 import { ingredientCatalog } from "@/lib/analyze/catalog";
 import { MANUAL_DOSE_UNITS } from "@/lib/analyze/manual-dose";
-import { availableProducts } from "@/lib/analyze/product-score";
 import { BASIS_LEGEND, analyzeManual, analyzeScan, type ScanAnalysis } from "@/lib/analyze/scan";
 import {
   appVersionInfo,
@@ -300,8 +300,9 @@ export async function GET(): Promise<NextResponse> {
     {
       analyzer_available: analyzerEnabled() && !killSwitchOn(),
       manual_available: !killSwitchOn(),
-      scored_products: availableProducts(),
-      sections: ["label", "evidence", "dose_effectiveness", "compatibility", "company"],
+      // Evidence grading is not active yet (2026-10-15): no product is graded.
+      grading_active: false,
+      sections: ["label", "evidence_prior", "compatibility", "company", "literature_warnings"],
       basis_legend: BASIS_LEGEND,
       catalog: ingredientCatalog(),
       manual_input: {

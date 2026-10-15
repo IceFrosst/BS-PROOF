@@ -1,8 +1,8 @@
 /* Global stylesheet index. Order is the cascade: later files win ties, so
    keep this order when adding rules (split by surface 2026-10-02). */
-@import "../components/evidence-ledger/ab.css";
+@import "./styles/ab.css";
 @import "./styles/scan-ledger-result.css";
 @import "./styles/base.css";
-@import "./styles/dashboard.css";
+@import "./styles/article.css";
 @import "./styles/front-door.css";
 @import "./styles/scan.css";

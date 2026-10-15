@@ -1,6 +1,6 @@
 ---
 name: node-gates
-description: Run the Next.js dashboard gate stack — typecheck, lint, vitest, production build, Playwright e2e and axe — and report pass/fail with only the failing output. Use when TypeScript or TSX under app/, components/, lib/dashboard/ or tests/ has changed, before opening a dashboard PR, or when asked to "run the gates", "check the build" or "run e2e". Do NOT use for the Python selftest, which a hook already runs automatically, and do NOT edit any file.
+description: Run the Next.js app gate stack — typecheck, lint, vitest, production build, Playwright e2e and axe — and report pass/fail with only the failing output. Use when TypeScript or TSX under app/, components/, lib/ or tests/ has changed, before opening an app PR, or when asked to "run the gates", "check the build" or "run e2e". Do NOT use for the Python selftest, which a hook already runs automatically, and do NOT edit any file.
 tools: Bash, Read, Grep, Glob
 model: haiku
 color: green

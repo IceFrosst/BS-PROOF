@@ -22,7 +22,6 @@ import { businessModelDisclosure, type BusinessModel } from "@/lib/analyze/busin
 import { companySection, COMPANY_PROMPT_VERSION } from "@/lib/analyze/company";
 import { chatJson, ModelCallError, validateAgainstSchema, type ChatJsonFn } from "@/lib/analyze/llm";
 import { analyzeScan, type ScanDeps } from "@/lib/analyze/scan";
-import { scoreProduct } from "@/lib/analyze/product-score";
 import type { LabelRead } from "@/lib/analyze/vision";
 
 const ROOT = process.cwd();
@@ -191,7 +190,6 @@ function deps(businessModel: BusinessModel): ScanDeps {
       compatibility: { pairs: [], form_notes: [], overall: "No documented interaction." },
     }),
     fetch: fakeFetch(),
-    scoreProduct,
     budgetMs: 55_000,
     now: () => (t += 10),
   };
@@ -207,18 +205,14 @@ describe("business_model never reaches scoring", () => {
     expect(section.profile.basis).toBe("model_prior");
   });
 
-  it("identical product, different business_model -> byte-identical product/evidence/dose_effectiveness", async () => {
+  it("identical product, different business_model -> byte-identical product facts", async () => {
     const confirmed = await analyzeScan("aW1n", "image/png", deps({ status: "confirmed_mlm", basis: "recruits distributors who earn on downline sales", confidence: "high" }));
     const noEvidence = await analyzeScan("aW1n", "image/png", deps({ status: "no_evidence", basis: "sold only through retail", confidence: "medium" }));
     const unknown = await analyzeScan("aW1n", "image/png", deps({ status: "unknown", basis: "", confidence: "low" }));
 
-    expect(confirmed.status).toBe("scored");
+    expect(confirmed.status).toBe("not_graded");
     expect(confirmed.product).toEqual(noEvidence.product);
     expect(confirmed.product).toEqual(unknown.product);
-    expect(confirmed.evidence).toEqual(noEvidence.evidence);
-    expect(confirmed.evidence).toEqual(unknown.evidence);
-    expect(confirmed.dose_effectiveness).toEqual(noEvidence.dose_effectiveness);
-    expect(confirmed.dose_effectiveness).toEqual(unknown.dose_effectiveness);
 
     // The three runs differ ONLY in the company profile's business_model.
     expect(confirmed.company?.profile.data?.business_model.status).toBe("confirmed_mlm");
@@ -226,14 +220,13 @@ describe("business_model never reaches scoring", () => {
     expect(unknown.company?.profile.data?.business_model.status).toBe("unknown");
   });
 
-  it("no scoring source file mentions business_model or MLM in any form", () => {
+  it("no grading source file mentions business_model or MLM in any form", () => {
     const scoringFiles = [
-      "pipeline/scoring.py",
-      "pipeline/arcs.py",
+      "pipeline/pool.py",
+      "pipeline/grade.py",
+      "pipeline/evidence_v2.py",
       "pipeline/dose.py",
-      "lib/analyze/scoring.ts",
-      "lib/analyze/product-score.ts",
-      "lib/analyze/dose-effectiveness.ts",
+      "lib/analyze/grade-v2.ts",
       "lib/analyze/vocab.ts",
     ];
     for (const rel of scoringFiles) {

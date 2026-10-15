@@ -75,19 +75,5 @@ class Block(unittest.TestCase):
     def test_corpus_ncts(self):
         self.assertEqual(corpus_ncts(ITEMS), {f"NCT0000{i}" for i in range(1, 6)})
 
-    def test_block_passes_the_artifact_writer_and_schema(self):
-        from scripts.dashboard_artifact import build_dashboard_run
-        ctx_path = next((ROOT / "reports" / "runs").glob("*_context.json"))
-        ctx = json.loads(ctx_path.read_text())
-        ctx.pop("ecu_rows", None)        # a v2 run carries no v14 rows
-        registry = {"muscle_strength": {"registered": 9, "in_corpus": 2, "unpublished": ["NCT1"],
-                                        "upper_bound": True}}
-        ctx["evidence_v2"] = summarise(ITEMS, product(dose=5000), registry)
-        run_id = ctx_path.name.split("_creatine")[0] if "_creatine" in ctx_path.name else "20260904_185830"
-        art = build_dashboard_run(ctx, run_id=run_id)            # validates against the schema
-        self.assertEqual(art["evidence_v2"]["method"], "evidence-v2")
-        self.assertTrue(art["evidence_v2"]["registry_checked"])
-
-
 if __name__ == "__main__":
     unittest.main()

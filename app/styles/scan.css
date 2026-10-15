@@ -583,3 +583,7 @@ body:has(.scan-page) .footer-inner p:last-child { display: none; }
 .scan-page .sc-general-name { display: grid; gap: 5px; }
 .scan-page .sc-general-name strong { font-size: var(--fs-4); font-weight: 700; line-height: 1.05; }
 .scan-page .sc-general-name small { font-size: var(--fs-1); line-height: 1.4; color: var(--sp-mute); }
+
+/* "Evidence grades are not active yet" (2026-10-15): landing and result. */
+.sc-grading-notice { margin: 0 0 14px; }
+.scan-result .sc-grading-notice { margin: 14px 0; }

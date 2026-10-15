@@ -22,15 +22,17 @@ doesn't match the specific product as weaker (GRADE indirectness). Two parts:
    meta-analysis + GRADE + a letter per outcome) → immutable run artifacts in
    `reports/runs/`. Method: `docs/EVIDENCE_METHOD.md`; how to run: `docs/PIPELINE.md`.
 2. **App** (Next.js 16 on Vercel): `/scan` reads a supplement label (photo or
-   typed) and grades the product against the retained runs. Design:
-   `docs/SYSTEM_DESIGN.md`.
+   typed). **Evidence grading is not active in the app yet**: it shows the
+   label facts and model-written background badged "unverified", plus a
+   notice that grades are not active. Design: `docs/SYSTEM_DESIGN.md`.
 
-v2 replaced the v14 scoring model on 2026-10-15 (founder decision). v14 is
+v2 replaced the v14 scoring model on 2026-10-15 (founder decision). v14 —
+its scorer, runs, `/runs` dashboard, TS ports and the Evidence Ledger — is
 recorded in `docs/history/v14-scoring-model.md`; its code is at tag `v14-final`.
-**Transitional:** the app's TS ports (`lib/analyze/{scoring,vocab,product-score}.ts`)
-and the live site (`main`) still show the v14 run; moving the app is section F of
-the 2026-10-15 simplification plan. `SPEC.md`, `PIPELINE.md`, `SYSTEM_DESIGN.md`
-still describe v14 in places until the docs pass.
+`lib/analyze/grade-v2.ts` (the v2 letter re-matched to a product) is built and
+parity-pinned but **deliberately not called** until v2 is validated.
+`SPEC.md`, `PIPELINE.md`, `SYSTEM_DESIGN.md` still describe v14 in places until
+the docs pass.
 
 ---
 
@@ -49,7 +51,7 @@ deterministic. If you find yourself importing the adapter into `pipeline/`, stop
 
 **Model text in the app never enters a grade.** Model-written sections render
 under a "model knowledge — unverified" badge; only an evidence run produces a
-grade.
+grade (none is shown until grading is switched on).
 
 ### 2. Subagents are pure functions
 
@@ -64,7 +66,6 @@ limits.
 | S3–S8, S5N, S5R, S6B (`prompts/s*.md`, `_shared.md`) | `PROMPT_VERSION` in `bsproof/claude_adapter.py` |
 | `prompts/label.md` | `LABEL_PROMPT_VERSION` in `lib/analyze/vision.ts` |
 | compatibility / company / literature_warnings / evidence_prior | their own `*_PROMPT_VERSION` in `lib/analyze/` |
-| research_audit / effect_research (design lab only) | version stamped in the prompt / `lib/evidence-ledger/effect-contract.ts` |
 
 Separate cache domains on purpose: bumping `PROMPT_VERSION` invalidates ~1000
 cached extractions (the cache key is version + model + effort + payload, not the
@@ -108,8 +109,7 @@ refused and **counted with its reason**, never silently dropped.
 Form, dose and population are **not** study weight (weight = inverse variance);
 a mismatch is GRADE indirectness. So a letter is always shown with its pooled
 estimate, CI, k and certainty, and "no data" (`I`, k = 0) must never render like
-"tested and found nothing". (The v14 rule — the centre number never travels
-without its four arcs — still binds the app until it moves to v2.)
+"tested and found nothing".
 
 ### 9. One extraction backend; never silent-merge
 
@@ -145,10 +145,10 @@ Things that look simplifiable and are not:
   "different"`) are refused, "adjacent" is noted.
 - **Python is canonical.** `lib/analyze/grade-v2.ts` is a port pinned by
   `tests/grade-v2-parity.test.ts` to `scripts/golden_grade_v2.py` goldens.
-  Change Python first, then re-sync. (The v14 ports' goldens are frozen; their
-  generator was removed with v14.)
-- **Status is `shadow`** (`evidence_v2.STATUS`) until the benchmark passes;
-  until then the app labels the grade card "preview, not validated".
+  Change Python first, then re-sync. The dose conversion and dose tiers the
+  scan still runs are pinned by `tests/vocab-parity.test.ts` /
+  `tests/test_vocab_goldens.py` to `tests/golden_vocab_parity.json`.
+- **Status is `shadow`** (`evidence_v2.STATUS`) until the benchmark passes.
 
 ---
 
@@ -198,16 +198,14 @@ pipeline/   deterministic, NO MODEL, unit-tested
   invariants.py selftest/        the two gates (selftest is a package; run with -m)
 sources/    deterministic HTTP layer: europepmc, clinicaltrials, oa, fulltext, crossref
 
-app/        Next.js routes: /scan (product), /api/scan, /runs (run archive) and
-            /runs/<id>, /tests/supplements, /methodology, /design-lab (dev only,
-            404 in production), / (waitlist)
-components/ scan/ (the /scan UI), evidence-ledger/ (lab card), run/dashboard components
-lib/analyze/        the scan: llm.ts (model transport), vision.ts, scan.ts, grade-v2.ts, v14 TS ports
-lib/evidence-ledger/  rubric + retained audits used by /scan for exact matches
+app/        Next.js routes: /scan (product), /api/scan, /methodology, / (waitlist)
+components/ scan/ (the /scan UI), site shell, waitlist form
+lib/analyze/        the scan: llm.ts (model transport), vision.ts, scan.ts, vocab.ts,
+                    grade-v2.ts (built, not connected), model-written sections
 lib/scan-history/ lib/auth/   optional Supabase history + Google sign-in
 
 prompts/*.md  schemas/*.json  vocab/*.json
-reports/runs/          immutable run archive
+reports/runs/          immutable run archive: <id>_summary.md, _full.md, _context.json
 docs/                  EVIDENCE_METHOD (method), SPEC (v14-era spec), PIPELINE, SYSTEM_DESIGN, history/
 scripts/               report/artifact writers, benchmark, goldens, experiments/
 tests/                 vitest (TS) + Python tests; tests/e2e/ Playwright
@@ -225,7 +223,7 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt   # once
 .venv/bin/python run_pipeline.py creatine --form creatine_monohydrate --wiring   # no model
 .venv/bin/python run_pipeline.py creatine --form creatine_monohydrate \
     --full-text-only --intervention-scope --all-outcomes                         # Claude production
-.venv/bin/python scripts/benchmark_v2.py compare reports/runs/<id>_dashboard.json
+.venv/bin/python scripts/benchmark_v2.py compare reports/runs/<id>_context.json
 
 # App
 npm ci && cp .env.example .env.local   # set DEEPSEEK_API_KEY for photo reads
@@ -251,17 +249,14 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
 - **Do not delete a comment recording a MEASUREMENT.** Move it if inconvenient.
 - **Reports:** every human-facing run goes under `reports/runs/` with a row in `INDEX.md`,
   stamped with `scoring_model:` (now `evidence-v2`) and the provider. Never
-  overwrite an old run. **A finished run auto-commits and pushes `reports/`
-  on the current branch** (`SP_AUTO_PUSH=0` to keep it local) — never run one
-  while `main` is checked out. `scripts/archive_reports.py --apply` would move
-  the v14 `.md` reports to `reports/archive/`; not done yet (section E).
+  overwrite an old run. A run writes its files locally; `SP_AUTO_PUSH=1` also
+  commits and pushes `reports/` on the current branch (never with `main`
+  checked out — a push to `main` deploys).
 - **Claude Code helper agents** (`.claude/agents/`: run-triage, node-gates,
-  paper-verifier, score-tracer, spec-drift) are read-only and cost ~30k tokens
+  paper-verifier, spec-drift) are read-only and cost ~30k tokens
   each — use them only when they read far more than they report. Don't delegate
   deterministic gates; hooks in `.claude/settings.json` already run them.
-  `score-tracer` and `spec-drift` are unsafe as agent-team teammates.
-  **`score-tracer`, `run-triage` and `paper-verifier` were written for v14** and
-  need revising before use.
+  `spec-drift` is unsafe as an agent-team teammate.
 
 ---
 
@@ -284,27 +279,29 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
 - **Binding limit:** readable open-access full text (295/386 creatine RCTs are
   abstract-only), then off-target populations and figure-only results.
 - **App:** `/scan` is the product surface (photo or typed → `POST /api/scan`).
-  Exact matches to three retained audits show the Evidence Ledger card; a
-  retained run with an `evidence_v2` block shows the v2 grade card; everything
-  else "Not assessed". Model-written sections are badged unverified. Label
-  reads: DeepSeek, thinking disabled, prompt `label-v1.3`.
+  Every supported product ends in status `not_graded`; a notice on the landing
+  screen and on every result says grades are not active yet. What is shown:
+  label facts, and model-written sections badged unverified (literature
+  orientation, compatibility, company + MLM disclosure, funding /
+  publication-bias disclosures). Label reads: DeepSeek, thinking disabled,
+  prompt `label-v1.3`.
 - **Optional infra, unverified:** Supabase scan history, Google sign-in. PWA
   installable, no offline cache.
 
 ## Next (the 2026-10-15 simplification plan)
 
-Done on `simplify/a-dead-weight` → `simplify/v2-only`: A (dead weight), B/C/D
-(v2 only: v14 scoring, table route, SR route, Grok, label CLI removed; replay of
-the v1.36 run gives byte-identical `evidence_v2`).
+Done on `simplify/a-dead-weight` → `simplify/v2-only` → `simplify/app-v2-off`:
+A (dead weight); B/C/D (v2 only; replay of the v1.36 run gives byte-identical
+`evidence_v2`); E (`/runs` dashboard and v14 runs dropped, push opt-in); F (v14
+and the Evidence Ledger out of the app, grading notice); G (tests, CI, agents).
 
-- **E** Run archive / dashboard (`/runs`, `lib/dashboard`, `dashboard_artifact.py`,
-  `auto_report_push.py`): keep, shrink or drop; auto-push policy; archive the v14 reports.
-- **F** App: move `/scan` to v2 only (retire v14 TS ports, Evidence Ledger,
-  design lab); decide each model-written section; scan history / auth.
-- **G** Tests, hooks, CI right-sized to what is left; revise the v14-era helper agents.
 - **H** Docs: SPEC / EVIDENCE_METHOD / PIPELINE / SYSTEM_DESIGN / AGENTS.md / README.
 - **v2 algorithm pass:** the known problems above, then MCIDs (REVIEW_PENDING
-  0b), the benchmark, and a stability measurement (same corpus twice).
+  0b), the benchmark, and a stability measurement (same corpus twice). When it
+  validates: connect `grade-v2.ts` in `lib/analyze/scan.ts`, build the grade
+  card, remove the notice.
+- Unverified on a real phone: live camera, busy-label read, PWA install;
+  Supabase history and Google sign-in against real projects.
 
 ## Conventions
 

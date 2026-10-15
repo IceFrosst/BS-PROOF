@@ -1,39 +1,46 @@
-/* The report sections under the Evidence Ledger card on /scan. Every block
- * carries a basis badge; model knowledge is the one dashed amber badge and is
- * never typeset like a measurement (CLAUDE.md invariant 1). */
+/* The report sections of a /scan result. Every block carries a basis badge;
+ * model knowledge is the one dashed amber badge and is never typeset like a
+ * measurement (CLAUDE.md invariant 1). */
 
 import type { ReactNode } from "react";
 
 import type { businessModelDisclosure } from "@/lib/analyze/business-model";
 import type { ScanAnalysis } from "@/lib/analyze/scan";
-import type { RetainedLedgerAudit } from "@/lib/evidence-ledger";
 
-import { firstSentence, mg, severityLabel, words, type NullableNumber } from "./format";
-import type { AuditConcernNotice, EvidenceRow, Validity } from "./ledger-tabs";
+import { firstSentence, mg, severityLabel, words } from "./format";
 import { BasisBadge, Facts, Notice, Section, type Basis, type Legend } from "./primitives";
 
 type Mlm = ReturnType<typeof businessModelDisclosure>;
 type Disclosure = { title: string; body: string };
 
-/** The `evidence` block of a scan answer, as this page reads it. */
-export type ScanEvidence = {
-  status: string;
-  rows?: EvidenceRow[];
-  scored_forms?: string[];
-  run?: Record<string, unknown>;
-  population?: Record<string, string | null> | null;
-  validity?: Validity & { limitations?: string[] };
-};
+/* Evidence grading is not active yet (2026-10-15). One plain notice, shown on
+ * the landing screen and at the top of every result, so nobody reads the
+ * unverified sections below as a grade. */
+export function GradingNotice() {
+  return (
+    <div className="la-alert la-alert-warn sc-grading-notice" role="note" aria-label="Evidence grading is not active yet">
+      <strong>Evidence grades are not active yet.</strong>
+      <span>
+        We are still validating how we grade the research behind each supplement, so no product gets a grade
+        today. What you see is what the label says and background marked &ldquo;unverified&rdquo;.
+      </span>
+    </div>
+  );
+}
 
-/* Every warning row, in one order, used both inside the outcome card and in
- * the no-product card. Disclosures only: none of them changes a number. */
-export function WarningNotices({ caveats, disclosures, mlm, brand, auditWarnings }: { caveats: ScanAnalysis["caveats"] | undefined; disclosures: Disclosure[]; mlm: Mlm; brand: string | null | undefined; auditWarnings: AuditConcernNotice[] }) {
+/* The collapsible list of warnings: caveats and disclosures. */
+export function Warnings({ count, children }: { count: number; children: ReactNode }) {
+  if (!count) return null;
+  return <details className="ab-warnings"><summary><span>{count} warning{count === 1 ? "" : "s"}</span></summary><div className="ab-warning-list">{children}</div></details>;
+}
+
+/* Every warning row, in one order. Disclosures only: none of them is a grade. */
+export function WarningNotices({ caveats, disclosures, mlm, brand }: { caveats: ScanAnalysis["caveats"] | undefined; disclosures: Disclosure[]; mlm: Mlm; brand: string | null | undefined }) {
   return (
     <>
       {caveats?.map((c) => <Notice key={c.code} title={words(c.code).replace(/^\w/, (ch) => ch.toUpperCase())} lede={firstSentence(c.text)} body={c.text} />)}
       {disclosures.map((d) => <Notice key={d.title} title={d.title} lede={firstSentence(d.body)} body={d.body} role="note" ariaLabel={`${d.title} disclosure`} />)}
       {mlm ? <Notice title={mlm.title} lede={firstSentence(mlm.body.replace(/^Model knowledge — unverified\.\s*/, "").replace(/^This company/, `${brand ?? "This company"}`))} body={mlm.body} role="note" ariaLabel="Business model disclosure" /> : null}
-      {auditWarnings.map((warning) => <Notice key={warning.key} title={warning.title} lede={firstSentence(warning.body)} body={warning.body} role="note" ariaLabel={`${warning.title} disclosure`} />)}
     </>
   );
 }
@@ -74,7 +81,7 @@ export function PriorSection({ prior, legend }: { prior: NonNullable<ScanAnalysi
                   {o.note ? <p>{o.note}</p> : null}
                   {o.pooled_effect_recalled ? <p className="la-dim">Pooled estimate recalled: {o.pooled_effect_recalled}</p> : null}
                   {o.population ? <p className="la-dim">Population: {o.population}</p> : null}
-                  {o.dose_reading ? <p className={o.dose_closeness != null && o.dose_closeness >= 0.999 ? "scan-dose-hit" : "scan-dose-miss"}>{o.dose_reading}</p> : null}
+                  {o.dose_reading ? <p className={o.dose_in_range ? "scan-dose-hit" : "scan-dose-miss"}>{o.dose_reading}</p> : null}
                   <span className="la-dim">model confidence: {o.confidence}</span>
                 </li>
               ))}
@@ -116,70 +123,6 @@ export function PriorSection({ prior, legend }: { prior: NonNullable<ScanAnalysi
 }
 
 
-function DoseBar({ reading, dose }: { reading: NonNullable<ScanAnalysis["dose_effectiveness"]>["outcomes"][number]; dose: NullableNumber }) {
-  const b = reading.benefit_range_mg;
-  const n = reading.null_range_mg;
-  const candidates = [b?.high, n?.high, dose].filter((x): x is number => typeof x === "number" && x > 0);
-  const max = candidates.length ? Math.max(...candidates) * 1.25 : 1;
-  const left = (v: number) => `${Math.max(0, Math.min(100, (v / max) * 100))}%`;
-  const width = (lo: number, hi: number) => `${Math.max(1.5, Math.min(100, ((hi - lo) / max) * 100))}%`;
-  const name = reading.outcome_label ?? words(reading.outcome);
-  // The server's sentence starts with the outcome name; the heading already
-  // says it, so the prefix is dropped here (presentation only).
-  const stripped = reading.reading.startsWith(`${name}: `) ? reading.reading.slice(name.length + 2) : reading.reading;
-  const sentence = stripped.charAt(0).toUpperCase() + stripped.slice(1);
-  return (
-    <div className={`scan-dose scan-dose-${reading.tone}`}>
-      <div className="scan-dose-head">
-        <strong>{name}</strong>
-        <span>{reading.closeness == null ? "closeness —" : `closeness ${reading.closeness.toFixed(2)}`}</span>
-      </div>
-      <div className="scan-dosebar" role="img" aria-label={reading.reading}>
-        {n && n.low !== null && n.high !== null ? (
-          <span className="scan-band scan-band-null" style={{ left: left(n.low), width: width(n.low, n.high) }} />
-        ) : null}
-        {b && b.low !== null && b.high !== null ? (
-          <span className="scan-band scan-band-benefit" style={{ left: left(b.low), width: width(b.low, b.high) }} />
-        ) : null}
-        {dose !== null ? <span className="scan-marker" style={{ left: left(dose) }} /> : null}
-      </div>
-      <div className="scan-dose-scale" aria-hidden="true">
-        <span>0</span>
-        <span>{mg(max)}</span>
-      </div>
-      <p className="scan-reading">{sentence}</p>
-    </div>
-  );
-}
-
-export function DoseSection({ dose, legend, factsBasis }: { dose: NonNullable<ScanAnalysis["dose_effectiveness"]>; legend: Legend; factsBasis: Basis }) {
-  return (
-    <Section id="dose" title="Is your dose the dose that worked?" basis={["evidence_run", factsBasis]} legend={legend}>
-      <p className="scan-note">{dose.note}</p>
-      {dose.outcomes.length ? (
-        <div className="scan-doses">
-          <div className="scan-dose-key" aria-hidden="true">
-            <span>
-              <i className="scan-key scan-key-benefit" /> benefit found
-            </span>
-            <span>
-              <i className="scan-key scan-key-null" /> nothing found
-            </span>
-            <span>
-              <i className="scan-key scan-key-marker" /> your dose
-            </span>
-          </div>
-          {dose.outcomes.map((o) => (
-            <DoseBar key={o.outcome} reading={o} dose={dose.scored_dose_mg} />
-          ))}
-        </div>
-      ) : (
-        <p className="la-dim">No scored outcome, so there is no dose range to compare against.</p>
-      )}
-    </Section>
-  );
-}
-
 export function CompatibilitySection({ compat, legend, typed }: { compat: NonNullable<ScanAnalysis["compatibility"]>; legend: Legend; typed: boolean }) {
   return (
     <Section id="form" title="Does the form and the mix hold up?" basis={compat.basis_used} legend={legend}>
@@ -190,7 +133,7 @@ export function CompatibilitySection({ compat, legend, typed }: { compat: NonNul
             : compat.evidence_form_fit.status === "form_not_scored"
               ? "Your form has not been run; evidence about another form is not evidence about yours."
               : compat.evidence_form_fit.status === "ingredient_not_scored"
-                ? "No evidence run exists for this ingredient yet."
+                ? "Evidence grading is not active yet, so no form has been graded."
                 : "Form fit unknown."}
         </strong>{" "}
         <span className="la-dim">
@@ -435,22 +378,10 @@ export function SourceLegend({ legend }: { legend: Legend }) {
   );
 }
 
-export function TechnicalDetails({ data, evidence, ledgerAudit, typed }: { data: ScanAnalysis; evidence: ScanEvidence | undefined; ledgerAudit: RetainedLedgerAudit | null; typed: boolean }) {
+export function TechnicalDetails({ data, typed }: { data: ScanAnalysis; typed: boolean }) {
   return (
     <details className="sc-details sc-technical">
       <summary>Technical details</summary>
-      {evidence?.run ? (
-        <>
-          <p>
-            {ledgerAudit ? (
-              <><strong>Retained audit values.</strong> The Effect, Evidence certainty, Form and Dose values shown above come from the retained, source-verified audit for this exact form and daily dose. <a href="/methodology">Read the methodology.</a></>
-            ) : (
-              <><strong>How these numbers were produced (none are shown): legacy continuous API data.</strong> This unmatched result keeps the continuous evidence response for compatibility, but its outcome numbers are not shown and were not converted into /4 audit values. <a href="/methodology">Read the methodology.</a></>
-            )}
-          </p>
-          {ledgerAudit ? <Facts rows={Object.entries(evidence.run).map(([k, v]) => [words(k), v === null || v === undefined ? "—" : String(v)])} /> : null}
-        </>
-      ) : null}
       {data.meta ? (
         <Facts
           rows={[

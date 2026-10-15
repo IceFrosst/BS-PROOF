@@ -50,12 +50,6 @@ class UniversalNegativeRepairTests(unittest.TestCase):
         ]}
         self.assertIsNone(_ineligible({"S3": {**factorial, "ingredient_isolated": "no"}, "record": {"ingredient": "A"}}))
 
-    def test_exact_incident_run_id_is_invalid_in_status_registry(self):
-        statuses = json.loads((Path(__file__).parents[1] / "reports" / "run_statuses.json").read_text())
-        full_id = "20260825_072759_creatine_creatine-monohydrate_claude-sr-ft-top5-suppl"
-        self.assertEqual(statuses["runs"][full_id]["status"], "invalid")
-        self.assertFalse(statuses["runs"][full_id]["public_claims_allowed"])
-
     def test_incident_ledger_reconciles_without_asserting_a_corrected_score(self):
         ledger = json.loads((Path(__file__).parents[1] / "docs" / "history" /
                              "2026-08-25-negative-contributors.v1.json").read_text())

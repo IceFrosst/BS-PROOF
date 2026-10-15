@@ -24,7 +24,7 @@ import { LITERATURE_WARNINGS_PROMPT_VERSION } from "@/lib/analyze/literature-war
 const read = (f: string) => readFileSync(join(process.cwd(), "prompts", f), "utf8");
 
 /** The prompts whose free text is shown to a reader. */
-const USER_FACING = ["compatibility.md", "company.md", "literature_warnings.md", "evidence_prior.md", "research_audit.md"];
+const USER_FACING = ["compatibility.md", "company.md", "literature_warnings.md", "evidence_prior.md"];
 
 const HEADING = "## Plain-language rule for every sentence a person will read";
 
@@ -68,6 +68,5 @@ describe("the plain-language rule is in the prompts themselves", () => {
     expect(COMPANY_PROMPT_VERSION).toBe("company-v1.2");
     expect(EVIDENCE_PRIOR_PROMPT_VERSION).toBe("evidence-prior-v1.1");
     expect(LITERATURE_WARNINGS_PROMPT_VERSION).toBe("literature-warnings-v1.1");
-    expect(read("research_audit.md")).toContain("**Version `audit-v0.5`.");
   });
 });

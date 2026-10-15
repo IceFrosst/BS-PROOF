@@ -5,7 +5,7 @@ Evidence method v2 benchmark (docs/EVIDENCE_METHOD.md §3 stage 8, §8).
     # re-fetch every source and check each quote + number (network, no model)
     .venv/bin/python scripts/benchmark_v2.py verify
     # compare a run's pooled estimates with the published ones (offline)
-    .venv/bin/python scripts/benchmark_v2.py compare reports/runs/<id>_dashboard.json
+    .venv/bin/python scripts/benchmark_v2.py compare reports/runs/<id>_context.json
     .venv/bin/python scripts/benchmark_v2.py compare --stability RSMOKE6
 
 The rows are vocab/benchmarks.json; the comparison is pipeline/benchmark.py.
@@ -106,7 +106,7 @@ def main(argv: list[str]) -> int:
     v = sub.add_parser("verify")
     v.add_argument("--ingredient")
     c = sub.add_parser("compare")
-    c.add_argument("artifact", nargs="?", type=Path, help="a run's *_dashboard.json")
+    c.add_argument("artifact", nargs="?", type=Path, help="a run's *_context.json (its evidence_v2 block)")
     c.add_argument("--stability", help="an out/stability/<label>.json run instead")
     c.add_argument("--ingredient", default="creatine")
     args = ap.parse_args(argv)

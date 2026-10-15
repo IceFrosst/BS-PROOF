@@ -107,7 +107,7 @@ describe("run_id and app_version are attached after analysis, regardless of pers
       expect(res.status).toBe(200);
       const body = (await res.json()) as { run_id: string; persistence: { status: string } };
       expect(body.persistence.status).toBe("stored");
-      expect(insertedRow).toMatchObject({ id: body.run_id, source: "manual", status: "scored" });
+      expect(insertedRow).toMatchObject({ id: body.run_id, source: "manual", status: "not_graded" });
       expect(JSON.stringify(insertedRow)).not.toContain(FAKE_KEY);
     } finally {
       global.fetch = originalFetch;
@@ -163,7 +163,7 @@ describe("SCAN_HISTORY_REQUIRED=1 fails closed", () => {
       const res = await POST(manualRequest());
       expect(res.status).toBe(200);
       const body = (await res.json()) as { status: string; persistence: { status: string } };
-      expect(body.status).toBe("scored");
+      expect(body.status).toBe("not_graded");
       expect(body.persistence.status).toBe("stored");
     } finally {
       global.fetch = originalFetch;

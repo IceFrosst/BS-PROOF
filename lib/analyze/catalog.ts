@@ -12,11 +12,10 @@
  * what a person needs to pick a product and understand what will happen to the
  * dose they type: labels, aliases to search on, whether the form is the
  * vocabulary's "not stated" entry, whether a typed dose converts exactly, as a
- * bounded range, or not at all, and whether a retained evidence run exists.
+ * bounded range, or not at all.
  * `dose_conversion` is computed by calling the real converter on a unit dose,
  * so it describes the converter's behaviour rather than restating its inputs.
  */
-import { availableProducts } from "./product-score";
 import { elementalDoseRangeMg, loadFormVocab, type FormEntry } from "./vocab";
 
 export type DoseConversion = "exact" | "bounded" | "refused";
@@ -29,8 +28,6 @@ export interface CatalogForm {
   unspecified: boolean;
   /** What happens to a typed compound dose: exact, bounded interval, or no number. */
   dose_conversion: DoseConversion;
-  /** A retained, usable evidence run exists for exactly this ingredient × form. */
-  scored: boolean;
 }
 
 export interface CatalogIngredient {
@@ -66,7 +63,6 @@ let cached: CatalogIngredient[] | null = null;
 
 export function ingredientCatalog(): CatalogIngredient[] {
   if (cached) return cached;
-  const scored = new Set(availableProducts().map((p) => `${p.ingredient}|${p.form}`));
   const vocab = loadFormVocab().ingredients ?? {};
   const out: CatalogIngredient[] = [];
   for (const [id, block] of Object.entries(vocab)) {
@@ -83,7 +79,6 @@ export function ingredientCatalog(): CatalogIngredient[] {
         aliases: [...(f.aliases ?? [])],
         unspecified: f.salt_family === null,
         dose_conversion: conversionFor(id, f.id),
-        scored: scored.has(`${id}|${f.id}`),
       }))
       // Named forms first, in vocabulary order; "not stated" last so the honest
       // fallback is offered but never the default the eye lands on.

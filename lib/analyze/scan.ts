@@ -8,16 +8,18 @@
  *      -- or --
  *   0' manual entry          deterministic    -> what the user TYPED (no model)
  *   1  identity + dose       deterministic    -> ingredient, form, elemental mg
- *   2  evidence score        deterministic    -> rows + four arcs (retained run)
- *   2b evidence ORIENTATION  model            -> only when 2 found no run   [MODEL]
- *   3  dose effectiveness    deterministic    -> reading per outcome from stage 2
+ *   2  evidence grade        NOT ACTIVE       -> status `not_graded` (see below)
+ *   2b evidence ORIENTATION  model            -> what the literature says    [MODEL]
  *   4  form & compatibility  curated + model  -> cited interactions + fill-in   [MODEL]
  *   5  company background    label + registry + model                         [MODEL]
  *
- * Stage 0 (or 0') gates everything. Stages 2-3 are pure functions of the
- * product facts and the retained artifacts. Stages 2b, 4 and 5 run IN PARALLEL
- * after stage 1 and each degrades to `unavailable` on its own -- a company
- * profile that times out never costs the user the evidence score.
+ * EVIDENCE GRADING IS NOT ACTIVE (2026-10-15). The v14 score and the Evidence
+ * Ledger were removed; evidence method v2 (lib/analyze/grade-v2.ts) is built
+ * but deliberately NOT called until it is validated. Every supported product
+ * ends in status `not_graded`, and the UI says grading is not active yet.
+ *
+ * Stage 0 (or 0') gates everything. Stages 2b, 4 and 5 run IN PARALLEL after
+ * stage 1 and each degrades to `unavailable` on its own.
  *
  * ONE POST-LABEL PATH. `analyzeFromLabel` is everything after the product
  * facts are known; `analyzeScan` (photo) and `analyzeManual` (typed) both call
@@ -31,12 +33,10 @@
  * standing caveat that nothing verified the product contains what was typed.
  * The UI keys off `source` so typed data can never be typeset as a label read.
  *
- * EVERY SUPPLEMENT GETS AN ANSWER (founder 2026-09-08). A retained run always
- * wins; when there is none -- which today is everything except creatine
- * monohydrate -- stage 2b asks the model what the literature says, and the
- * result is rendered as a clearly-marked ESTIMATE with no 0-100 score. Stage 2b
- * runs for ingredients outside the vocabulary too, so a shilajit tub still gets
- * an orientation, a compatibility read and a company background.
+ * EVERY SUPPLEMENT GETS AN ANSWER (founder 2026-09-08). Stage 2b asks the
+ * model what the literature says, rendered as a clearly-marked ESTIMATE with no
+ * score. It runs for ingredients outside the vocabulary too, so a shilajit tub
+ * still gets an orientation, a compatibility read and a company background.
  *
  * TIME BUDGET. The route allows 60 s. The vision read takes 10-20 s on DeepSeek
  * (measured 2026-08-24). Whatever remains, minus a safety margin, is the
@@ -44,18 +44,14 @@
  * with `reason: time budget` rather than started and killed.
  *
  * EVERY SECTION CARRIES ITS BASIS. `label` (as printed), `user_input` (typed),
- * `evidence_run` (scored trials with provenance), `registry` (openFDA),
- * `curated_table` (cited), `model_prior` (the model's own knowledge,
- * unverified). The UI renders the badge next to each block, and the legend
- * explains the ranking. A model-prior sentence never becomes a number, and a
- * number never appears without its arcs (invariant 8).
+ * `registry` (openFDA), `curated_table` (cited), `model_prior` (the model's
+ * own knowledge, unverified). The UI renders the badge next to each block, and
+ * the legend explains the ranking. A model-prior sentence never becomes a number.
  *
  * Dependencies are injectable so the whole orchestration is unit-tested with a
  * fake label read, a fake model and a fake fetch -- zero model calls in tests.
  */
 import { catalogForm, catalogIngredient } from "./catalog";
-import { retainedAuditForProduct, type ProductMatchFacts } from "@/lib/evidence-ledger/retained-audits";
-import type { RetainedLedgerAudit } from "@/lib/evidence-ledger";
 import { census, enqueue } from "./census";
 import { companySection, type CompanySection } from "./company";
 import {
@@ -64,19 +60,11 @@ import {
   type CompatibilitySection,
   type EvidenceFormFit,
 } from "./compatibility";
-import {
-  doseEffectivenessSection,
-  scoredDose,
-  type DoseEffectivenessSection,
-  type DoseRowInput,
-} from "./dose-effectiveness";
 import { evidencePriorSection, type EvidencePriorSection } from "./evidence-prior";
 import { literatureWarningsSection, type LiteratureWarningsSection } from "./literature-warnings";
 import { chatJson, providerConfigured, type ChatJsonFn } from "./llm";
 import type { AppVersionInfo, ScanHistoryOutcome } from "@/lib/scan-history/store";
 import { checkManualDose, checkServingsPerDay, type ManualDoseUnit } from "./manual-dose";
-import { gradeProductV2, type ProductGradesV2 } from "./grade-v2";
-import { availableProducts, scoreProduct } from "./product-score";
 import { readLabel, type LabelActive, type LabelMediaType, type LabelRead } from "./vision";
 import { elementalDoseRangeMg, ingredientIds, resolveIngredientForm } from "./vocab";
 
@@ -94,7 +82,6 @@ export interface ScanDeps {
   readLabel: (imageBase64: string, mediaType: LabelMediaType) => Promise<LabelRead>;
   chatJson: ChatJsonFn | null;
   fetch: typeof fetch;
-  scoreProduct: typeof scoreProduct;
   /** Total wall clock the caller can spend, in ms. */
   budgetMs: number;
   now: () => number;
@@ -105,16 +92,27 @@ export function defaultDeps(): ScanDeps {
     readLabel,
     chatJson: providerConfigured() ? chatJson : null,
     fetch,
-    scoreProduct,
     budgetMs: 55_000,
     now: Date.now,
   };
 }
 
+/** The daily dose to compare, and why: per serving × servings a day when both are known. */
+export function scoredDose(perServing: number | null, servingsPerDay: number | null): {
+  dose: number | null;
+  basis: "daily" | "per_serving" | "none";
+} {
+  if (perServing === null) return { dose: null, basis: "none" };
+  if (servingsPerDay !== null && servingsPerDay > 0) {
+    return { dose: Math.round(perServing * servingsPerDay * 1000) / 1000, basis: "daily" };
+  }
+  return { dose: perServing, basis: "per_serving" };
+}
+
 export const BASIS_LEGEND: Record<Basis, { label: string; means: string; rank: number }> = {
   evidence_run: {
     label: "Evidence run",
-    means: "Scored from extracted trials with quoted provenance. The only source that produces a number.",
+    means: "Graded from extracted trials with quoted provenance. Not active yet: no product is graded today.",
     rank: 1,
   },
   registry: {
@@ -208,18 +206,8 @@ export interface ScanAnalysis {
     is_multi_ingredient: boolean;
     other_actives: string[];
   };
-  evidence?: Json;
-  /** One exact retained ledger audit only. Absent means no /4 audit for this exact product. */
-  ledger_audit?: RetainedLedgerAudit;
-  /**
-   * Evidence method v2 letter grades (pooled effect + GRADE), re-matched to
-   * THIS product's form and daily dose (lib/analyze/grade-v2.ts). "not_assessed"
-   * until a retained run carries an evidence_v2 block for the ingredient.
-   */
-  evidence_v2?: ProductGradesV2;
-  /** Stage 2b. Present ONLY when no retained run could answer (see scan.ts header). */
+  /** Stage 2b: the model's orientation on the literature, unverified. */
   evidence_prior?: EvidencePriorSection;
-  dose_effectiveness?: DoseEffectivenessSection;
   compatibility?: CompatibilitySection;
   company?: CompanySection;
   /**
@@ -227,7 +215,7 @@ export interface ScanAnalysis {
    * funding independence and publication bias (founder 2026-09-16, "decided
    * by the system prompt", same as the MLM disclosure). Runs for every scan
    * (scored, not-scored and ingredient-not-supported), degrades on its own,
-   * and never enters the evidence score. See lib/analyze/literature-warnings.ts.
+   * and never enters a grade. See lib/analyze/literature-warnings.ts.
    */
   literature_warnings?: LiteratureWarningsSection;
   census?: Json;
@@ -278,7 +266,6 @@ export function startRun(source: ScanSource, deps: ScanDeps): ScanRun {
   const t0 = deps.now();
   const stages: Record<string, number | null> = {
     label: null,
-    evidence: null,
     evidence_prior: null,
     compatibility: null,
     company: null,
@@ -529,54 +516,9 @@ export async function analyzeFromLabel(label: ProductFacts, run: ScanRun): Promi
     is_multi_ingredient: Boolean(label.is_multi_ingredient),
     other_actives: label.other_actives ?? [],
   };
-  // The ledger audit is a separate exact-product contract. It intentionally
-  // compares printed compound mass, not converted elemental mass, and refuses
-  // every missing/ambiguous/multi-ingredient case.
-  const matchFacts: ProductMatchFacts = {
-    ingredient,
-    form: formId,
-    compoundDoseMg: label.compound_dose_mg,
-    servingsPerDay: label.servings_per_day,
-    isMultiIngredient: Boolean(label.is_multi_ingredient),
-    actives: (label.actives ?? []).map((active) => ({ name: active.name, compoundDoseMg: active.compound_dose_mg })),
-    otherActives: label.other_actives ?? [],
-  };
-  const retainedAudit = retainedAuditForProduct(matchFacts);
-  if (retainedAudit) out.ledger_audit = retainedAudit;
-
-  // ---- stage 2: evidence (deterministic) ---------------------------------
-  const tEvidence = deps.now();
-  const result = deps.scoreProduct(ingredient, formId ?? "", scored.dose) as Json;
-  // v2 grades: the dose term needs a DAILY elemental dose; a per-serving dose
-  // with unknown servings is not one, so it is passed as unknown (no dose
-  // indirectness is judged rather than a wrong one).
-  out.evidence_v2 = gradeProductV2(ingredient, formId, scored.basis === "daily" ? scored.dose : null);
-  stages.evidence = seconds(deps.now() - tEvidence);
-  out.evidence = result;
-
-  const rows = result.status === "scored" ? (result.rows as Array<Json>) : null;
-  const scoredForms = (availableProducts().filter((p) => p.ingredient === ingredient).map((p) => p.form)) as string[];
-  const formFit: EvidenceFormFit = {
-    status:
-      result.status === "scored"
-        ? "exact_form_scored"
-        : result.status === "form_not_scored"
-          ? "form_not_scored"
-          : result.status === "not_scored"
-            ? "ingredient_not_scored"
-            : "unknown",
-    scored_forms: scoredForms,
-    form_strength: rows?.[0] ? ((((rows[0].arcs as Json)?.form as Json)?.strength as number | null) ?? null) : null,
-    form_basis: rows?.[0] ? ((((rows[0].arcs as Json)?.form as Json)?.basis as string | null) ?? null) : null,
-  };
-
-  // ---- stage 3: dose effectiveness (deterministic) -----------------------
-  out.dose_effectiveness = doseEffectivenessSection({
-    perServingElementalMg: elemental.low,
-    servingsPerDay: label.servings_per_day,
-    conversionBasis: elemental.basis,
-    rows: rows as unknown as DoseRowInput[] | null,
-  });
+  // ---- stage 2: evidence grade -- NOT ACTIVE (see the header) ------------
+  // Nothing is graded, so the compatibility read is told no form was graded.
+  const formFit: EvidenceFormFit = { status: "ingredient_not_scored", scored_forms: [], form_strength: null, form_basis: null };
 
   // ---- stage 4: compatibility (curated + model), in parallel with company --
   const compatPromise = (async () => {
@@ -613,10 +555,8 @@ export async function analyzeFromLabel(label: ProductFacts, run: ScanRun): Promi
     return section;
   })();
 
-  // Stage 2b: no retained run could answer, so ask the model what the
-  // literature says. In parallel with 4 and 5, and never when a run exists.
-  const priorPromise = (async (): Promise<EvidencePriorSection | null> => {
-    if (result.status === "scored") return null;
+  // Stage 2b: ask the model what the literature says. In parallel with 4 and 5.
+  const priorPromise = (async (): Promise<EvidencePriorSection> => {
     const t = deps.now();
     const section = await evidencePriorSection(
       {
@@ -643,19 +583,15 @@ export async function analyzeFromLabel(label: ProductFacts, run: ScanRun): Promi
   out.compatibility = compat;
   out.company = company;
   out.literature_warnings = literatureWarnings;
-  if (prior) {
-    out.evidence_prior = prior;
-    out.meta.prompt_versions.evidence_prior = prior.prompt_version;
-  }
+  out.evidence_prior = prior;
+  out.meta.prompt_versions.evidence_prior = prior.prompt_version;
   out.meta.prompt_versions.compatibility = compat.model.prompt_version;
   out.meta.prompt_versions.company = company.profile.prompt_version;
   out.meta.prompt_versions.literature_warnings = literatureWarnings.prompt_version;
-  out.meta.models.text = compat.model.model ?? company.profile.model ?? prior?.model ?? literatureWarnings.model ?? null;
+  out.meta.models.text = compat.model.model ?? company.profile.model ?? prior.model ?? literatureWarnings.model ?? null;
 
-  if (result.status !== "scored") {
-    out.census = await census(ingredient, deps.fetch);
-    out.queue = await enqueue(ingredient, formId, label.ingredient_label_text);
-  }
+  out.census = await census(ingredient, deps.fetch);
+  out.queue = await enqueue(ingredient, formId, label.ingredient_label_text);
 
   const caveats: Array<{ code: string; text: string }> = [];
   if (typed) {
@@ -670,8 +606,8 @@ export async function analyzeFromLabel(label: ProductFacts, run: ScanRun): Promi
     caveats.push({
       code: "multi_ingredient_product",
       text:
-        `This product contains more than one active ingredient. The evidence score is about ${ingredient.replace(/_/g, " ")} ` +
-        "on its own. A blend is a different question, and this score does not answer it.",
+        `This product contains more than one active ingredient. Everything here is about ${ingredient.replace(/_/g, " ")} ` +
+        "on its own. A blend is a different question.",
     });
   }
   if (elemental.basis === "compound_only" || elemental.basis === "unstated") {
@@ -691,17 +627,17 @@ export async function analyzeFromLabel(label: ProductFacts, run: ScanRun): Promi
     caveats.push({
       code: "servings_not_stated",
       text: typed
-        ? "You did not enter how many servings you take a day, so the dose in one serving was scored. Your daily dose may be higher."
-        : "The label does not say how many servings are taken a day, so the dose in one serving was scored. Your daily dose may be higher.",
+        ? "You did not enter how many servings you take a day, so the dose in one serving was used. Your daily dose may be higher."
+        : "The label does not say how many servings are taken a day, so the dose in one serving was used. Your daily dose may be higher.",
     });
   }
   if (!allowModel) {
     caveats.push({
       code: "model_sections_skipped",
-      text: "Reading the label used up most of the time this scan is allowed. The company profile, the ingredient compatibility check and the literature disclosures were skipped. The evidence score is complete.",
+      text: "Reading the label used up most of the time this scan is allowed. The literature orientation, the company profile, the ingredient compatibility check and the literature disclosures were skipped.",
     });
   }
   if (caveats.length) out.caveats = caveats;
 
-  return run.finish(String(result.status));
+  return run.finish("not_graded");
 }

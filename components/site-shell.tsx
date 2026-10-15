@@ -16,9 +16,8 @@ export function SiteHeader() {
           </Link>
           {/* "Runs" pointed at "/", which since 2026-08-25 is the waitlist and
               carries no runs at all -- a nav item promising a run archive and
-              delivering an email field. The archive lives at /runs, and the
-              nav cannot link there: /runs is unlisted, and a header link on
-              every public page would hand it to the audience it excludes.
+              delivering an email field. (The /runs archive itself was removed
+              on 2026-10-15.)
 
               Methodology stays. It is a public explainer, it makes sense to
               somebody who has just been asked for their email, and it is the

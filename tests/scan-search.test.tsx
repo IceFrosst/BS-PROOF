@@ -8,8 +8,7 @@
  *   - matchCatalog ranks label > alias > form and finds an ingredient by the
  *     name printed on a tub ("bisglycinate", "Magtein")
  *   - / stays the waitlist with no scanner; /scan carries the capture input,
- *     the upload input, the search sheet and no waitlist; /runs is the run
- *     archive (the old /tester was retired 2026-10-03)
+ *     the upload input, the search sheet and no waitlist
  */
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -18,7 +17,6 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import HomePage from "@/app/page";
 import ScanPage from "@/app/scan/page";
-import RunsPage from "@/app/runs/page";
 import { matchCatalog, SupplementSearch } from "@/components/scan/supplement-search";
 import { ingredientCatalog } from "@/lib/analyze/catalog";
 import type { ManualScanInput } from "@/lib/analyze/scan";
@@ -292,7 +290,7 @@ describe("SupplementSearch combobox", () => {
   });
 });
 
-describe("/ vs /scan vs /runs", () => {
+describe("/ vs /scan", () => {
   it("the waitlist page offers no scanner and no search", () => {
     const html = renderToStaticMarkup(createElement(HomePage));
     expect(html).toContain('class="waitlist-input');
@@ -363,15 +361,5 @@ describe("/ vs /scan vs /runs", () => {
       closeBtn?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     expect(container.querySelector('[role="dialog"]')).toBeNull();
-  });
-
-  it("the run archive lists runs and carries no scanner, search or waitlist", () => {
-    const html = renderToStaticMarkup(createElement(RunsPage));
-    expect(html).toContain("Evidence runs");
-    expect(html).toContain('data-testid="run-card"');
-    expect(html).not.toContain('type="file"');
-    expect(html).not.toContain('role="combobox"');
-    expect(html).not.toContain("waitlist-input");
-    expect(html).not.toContain("scan-page");
   });
 });

@@ -2,10 +2,14 @@
 
 /*
  * THE SCAN. Photograph a label with a LIVE camera viewfinder -- or upload a
- * photo, or search for the supplement by name -- and get the product's full
- * analysis: the evidence verdicts with their four arcs, dose effectiveness,
- * form and ingredient compatibility, and the company's background -- every
- * block stamped with the BASIS it rests on.
+ * photo, or search for the supplement by name -- and get what can be said
+ * about the product today: what the label says, an unverified orientation on
+ * the literature, form and ingredient compatibility, and the company's
+ * background -- every block stamped with the BASIS it rests on.
+ *
+ * EVIDENCE GRADING IS NOT ACTIVE (2026-10-15): the v14 score and the Evidence
+ * Ledger were removed and evidence method v2 is not connected until it is
+ * validated. <GradingNotice> says so on the landing screen and on every result.
  *
  * Design: docs/SYSTEM_DESIGN.md §11 (full history in
  * docs/history/2026-09-16-scan-design-log.md). The page is a state machine
@@ -15,9 +19,9 @@
  *
  *   - landing / staged / loading: ./capture-views.tsx.
  *   - result / error: the capture chrome is GONE. A compact header sits at the
- *     top, the Evidence Ledger card (./ledger-tabs.tsx) and the report
- *     sections (./report-sections.tsx) follow, and focus + scroll move to it
- *     (instant under prefers-reduced-motion).
+ *     top, the grading notice and the report sections (./report-sections.tsx)
+ *     follow, and focus + scroll move to it (instant under
+ *     prefers-reduced-motion).
  *
  * The `capture="environment"` and plain file inputs stay mounted at all times
  * as the fallback when getUserMedia is unavailable; `useSupabaseSession` gates
@@ -26,23 +30,17 @@
  *
  * Rules this component keeps, all from CLAUDE.md:
  *
- * 1. INVARIANT 8: no branch renders a composite without its arcs. A gated row is
- *    an em dash with its arcs still drawn, never a zero, so `0.00 @ 0%` and
- *    `-0.70 @ 100%` can never look alike.
- * 2. "not scored" is not "scores badly": an unscored product renders a distinct
- *    non-numeric state.
+ * 1. No grade is shown: nothing here renders a score, a letter or a verdict.
+ * 2. "not graded" is not "graded badly": the notice says no product is graded.
  * 3. A model-prior sentence is never typeset like a measurement. Every block
  *    carries a basis badge; model knowledge is the one dashed, amber badge and
  *    its text says "unverified".
- * 4. The validity stamp is not decoration: it is the first line inside the
- *    result card, above every number.
- * 5. TYPED IS NOT READ. A manual entry renders under "What you entered" with
+ * 4. TYPED IS NOT READ. A manual entry renders under "What you entered" with
  *    the `user_input` badge; it never shows a read confidence, quoted spans or a
  *    vision model, because none exist. The server says which path ran
  *    (`source`) and the UI keys off that, not off which button was pressed.
- * 6. Sign-in never gates the SCORE: the composite, arcs and dose bands are
- *    computed and held in state identically whether or not the result is
- *    currently visible.
+ * 5. Sign-in never gates what is computed: the result is held in state
+ *    identically whether or not it is currently visible.
  */
 
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
@@ -57,19 +55,16 @@ import { LandingView, LoadingPanel, StagedView } from "./capture-views";
 import { MANUAL_STAGES, MAX_BYTES, PHOTO_STAGES, flowReducer, initialFlowState, receivedAction } from "./flow-state";
 import { mg, words } from "./format";
 import { SaveResultCard } from "./google-sign-in";
-import { GradeCard } from "./grade-card";
-import { LabTabs, LabValidity, LabWarnings, auditConcernNotices } from "./ledger-tabs";
-import type { Basis } from "./primitives";
 import {
   CompanySection,
   CompatibilitySection,
-  DoseSection,
   EntryDetails,
+  GradingNotice,
   PriorSection,
   SourceLegend,
   TechnicalDetails,
   WarningNotices,
-  type ScanEvidence,
+  Warnings,
 } from "./report-sections";
 import { SearchSheet } from "./search-sheet";
 import { SupplementSearch } from "./supplement-search";
@@ -176,15 +171,9 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
   const entry = data?.input;
   const typed = data?.source === "manual";
   const product = data?.product;
-  const ledgerAudit = data?.ledger_audit ?? null;
-  const gradesV2 = data?.evidence_v2?.status === "graded" ? data.evidence_v2 : null;
-  const evidence = data?.evidence as ScanEvidence | undefined;
-  const rows = evidence?.rows ?? [];
   const prior = data?.evidence_prior;
-  const dose = data?.dose_effectiveness;
   const compat = data?.compatibility;
   const company = data?.company;
-  const factsBasis: Basis = typed ? "user_input" : "label";
 
   // Sign-in gate. `locked` only ever becomes true once we know for sure
   // sign-in is configured AND we have finished checking for an existing
@@ -239,16 +228,18 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
 
   const disclosures = data ? literatureDisclosures(data.literature_warnings?.data) : [];
   const mlm = company?.profile.status === "ok" ? businessModelDisclosure(company.profile.data?.business_model) : null;
-  const auditWarnings = auditConcernNotices(ledgerAudit);
-  const warningCount = (data?.caveats?.length ?? 0) + disclosures.length + (mlm ? 1 : 0) + auditWarnings.length;
-  const warnings = <WarningNotices caveats={data?.caveats} disclosures={disclosures} mlm={mlm} brand={company?.brand} auditWarnings={auditWarnings} />;
+  const warningCount = (data?.caveats?.length ?? 0) + disclosures.length + (mlm ? 1 : 0);
+  const warnings = <WarningNotices caveats={data?.caveats} disclosures={disclosures} mlm={mlm} brand={company?.brand} />;
 
   return (
     <section className="la scan sc" aria-label="Scan a supplement">
       {!busy && !showingResult ? (
-        <button type="button" className="sc-search-cta" onClick={() => setSearchOpen(true)}>
-          Search your supplement
-        </button>
+        <>
+          <GradingNotice />
+          <button type="button" className="sc-search-cta" onClick={() => setSearchOpen(true)}>
+            Search your supplement
+          </button>
+        </>
       ) : null}
 
       {/* Two inputs, one difference: `capture` hands off to the platform
@@ -364,42 +355,20 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
                   </div>
                 ) : null}
 
-                {/* The validity stamp and disclosures live inside the lab card,
-                    immediately before its first score. */}
-                {/* Evidence method v2: when a retained run carries pooled
-                    grades for this ingredient, they replace the ledger card
-                    (keep-then-retire, docs/EVIDENCE_METHOD.md §6). */}
-                {product && gradesV2 ? (
-                  <GradeCard grades={gradesV2} warnings={<LabWarnings count={warningCount}>{warnings}</LabWarnings>} />
-                ) : null}
-                {product && !gradesV2 ? (
-                  <LabTabs
-                    audit={ledgerAudit}
-                    unmatchedRows={ledgerAudit ? undefined : rows}
-                    population={evidence?.population ?? null}
-                    emptyState={{ title: evidence?.status === "form_not_scored" ? "That form has not been run." : "No evidence run exists for this ingredient.", description: evidence?.status === "form_not_scored" ? "Evidence about a different form is not evidence about yours, so no number is shown." : "This is not a low score — it is no data." }}
-                    validity={evidence?.validity}
-                    warningCount={warningCount}
-                    warnings={warnings}
-                  />
-                ) : null}
-                {/* Only when it has something to hold: with no product, no validity
-                    and no warnings (analyzer_unavailable) this drew an empty card. */}
-                {!product && (ledgerAudit || evidence?.validity || warningCount > 0) ? (
+                {data.status !== "analyzer_unavailable" && data.status !== "not_a_supplement_label" ? <GradingNotice /> : null}
+                {warningCount > 0 ? (
                   <section className="ab-card scan-lab-card">
-                    <LabValidity audit={ledgerAudit} validity={evidence?.validity} />
-                    <LabWarnings count={warningCount}>{warnings}</LabWarnings>
+                    <Warnings count={warningCount}>{warnings}</Warnings>
                   </section>
                 ) : null}
 
                 <EntryDetails typed={typed} entry={entry} label={label} product={product} legend={legend} summaryParts={summaryParts} />
-                {/* Evidence orientation, only when no run exists. */}
+                {/* Evidence orientation: the model's recollection, unverified. */}
                 {prior ? <PriorSection prior={prior} legend={legend} /> : null}
-                {dose ? <DoseSection dose={dose} legend={legend} factsBasis={factsBasis} /> : null}
                 {compat ? <CompatibilitySection compat={compat} legend={legend} typed={typed} /> : null}
                 {company ? <CompanySection company={company} legend={legend} typed={typed} mlm={mlm} /> : null}
                 <SourceLegend legend={legend} />
-                <TechnicalDetails data={data} evidence={evidence} ledgerAudit={ledgerAudit} typed={typed} />
+                <TechnicalDetails data={data} typed={typed} />
               </div>
             </div>
           ) : null}

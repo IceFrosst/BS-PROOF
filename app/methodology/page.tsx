@@ -3,149 +3,48 @@ import Link from "next/link";
 
 export const metadata: Metadata = { title: "Methodology" };
 
-const arcs = [
-  ["01", "Effect", "Direction and magnitude retained for the outcome."],
-  ["02", "Form", "How closely the studied supplement form matches the product form."],
-  ["03", "Dose", "How closely the studied exposure matches the target dose context."],
-  ["04", "Evidence", "Evidence quantity or confidence coverage, kept distinct from effect direction."],
-];
-
+/* The method is being validated (2026-10-15): this page says what the grade
+ * will be and that no product carries one yet. The full method is
+ * docs/EVIDENCE_METHOD.md; the retired v14 score is docs/history/v14-scoring-model.md. */
 export default function MethodologyPage() {
   return (
     <main id="main-content" tabIndex={-1}>
       <div className="shell article-hero">
-        {/* "Runs", not "Home", until 2026-08-28 -- but "/" stopped being the run
-            archive on 2026-08-25 and is now the waitlist, so the crumb promised
-            an archive and delivered an email field. The archive lives at
-            /runs, which this page cannot link to (unlisted is the whole
-            mechanism), so the crumb says where it actually goes. */}
         <nav className="breadcrumbs" aria-label="Breadcrumb"><Link href="/">Home</Link><span aria-hidden="true">/</span><span>Methodology</span></nav>
         <p className="eyebrow">Reader’s guide</p>
-        <h1>A score with its<br /><em>working visible.</em></h1>
-        <p className="article-lede">The dashboard is an inspection layer over retained pipeline outputs. It does not recompute scores, fill missing values, or promote historical runs into product claims.</p>
+        <h1>How we will grade<br /><em>the evidence.</em></h1>
+        <p className="article-lede">Evidence grades are not active yet. We are checking our method against published meta-analyses before any product gets a grade.</p>
       </div>
 
-      <div className="shell methodology-layout">
-        <aside className="methodology-index" aria-label="On this page">
-          <a href="#how">How a score is computed</a><a href="#score">Composite</a><a href="#arcs">Four arcs</a><a href="#gating">Evidence gate</a><a href="#validity">Validity</a><a href="#limits">Display limits</a>
-        </aside>
+      <div className="shell">
         <article className="methodology-article">
-          <section id="how">
-            <p className="eyebrow">Plain language</p>
-            <h2>How a score is computed</h2>
+          <section>
+            <h2>The method</h2>
             <p>
-              Every number on this site is built the same way, in five steps.
-              Nothing below is a metaphor — each step names the real rule the
-              pipeline runs, with the constants it actually uses.
+              We follow the way a systematic review works, automated and per product. For each outcome a supplement
+              claims to help — strength, sleep, mood — we:
             </p>
-
-            <h3>1. Every study casts one vote, between −1 and +1</h3>
+            <ol>
+              <li>find the randomised trials that tested the ingredient against a real control;</li>
+              <li>read the numbers each trial reports, and check every number against the sentence or table it came from;</li>
+              <li>combine the trials into one estimate of the effect, with its uncertainty (a random-effects meta-analysis);</li>
+              <li>rate how sure that estimate is (GRADE: study quality, consistency, precision, and how well the trials match your product’s form and dose);</li>
+              <li>give a letter that combines how big the benefit is with how sure we are, always shown with those parts.</li>
+            </ol>
+            <p>A language model only reads the papers. Every judgement above is fixed, published arithmetic.</p>
+          </section>
+          <section>
+            <h2>Why there is no grade yet</h2>
             <p>
-              +1 means &ldquo;this trial is strong evidence the ingredient
-              delivers a benefit big enough to matter&rdquo;; −1 means strong
-              evidence of harm; around −0.35 means &ldquo;a well-run trial
-              looked and found nothing worth buying.&rdquo; A study never votes
-              twice: a trial that measured six versions of the same endpoint is
-              still one vote.
-            </p>
-
-            <h3>2. The vote comes from the measured effect when the paper gives one</h3>
-            <p>
-              If the paper reports a usable effect size, the vote is that
-              number placed on a &ldquo;big enough to matter&rdquo; scale: an
-              effect below 0.2 standard deviations (or under a 2% relative
-              change) is smaller than anyone would notice, so it counts
-              <em> against</em>; around 0.5 is solidly useful; 0.8 or more is a
-              full +1. The scale is centred on &ldquo;worth buying&rdquo;, not
-              on zero — a trial that measured exactly nothing votes about
-              −0.33, almost the same as a plain null, which is deliberate.
+              Before a grade means anything, our combined estimates have to agree with the published meta-analyses on
+              the same question. That check does not pass yet for enough outcomes, so no product is graded today.
+              Until it does, a scan shows what the label says and background clearly marked as unverified.
             </p>
             <div className="method-example">
-              <strong>Example — the fix that motivated this scale.</strong>{" "}
-              A trial finds creatine improved strength by 0.43 standard
-              deviations, but with too few participants to reach statistical
-              significance. The old rule filed it as a null: −0.35, evidence{" "}
-              <em>against</em>. The measured rule reads the size: +0.38,
-              evidence <em>for</em>. Same paper, opposite vote — and the
-              published meta-analyses agree with the second reading.
-            </div>
-            <div className="method-example">
-              <strong>Same label, opposite votes.</strong> Two trials both
-              report &ldquo;no significant difference.&rdquo; One measured a
-              6.1% improvement (p&nbsp;=&nbsp;0.09): it votes <em>+0.68</em>.
-              The other measured 0.3% (p&nbsp;=&nbsp;0.81): it votes{" "}
-              <em>−0.28</em>, because a difference nobody would notice is
-              evidence against a meaningful effect. When a paper prints no
-              usable number, the direction label decides instead (benefit
-              +1 or +0.3, null −0.35, harm −1). The &ldquo;More info&rdquo;
-              panel on every outcome shows which basis each study used.
-            </div>
-
-            <h3>3. Votes are weighted by how much the study can be trusted</h3>
-            <p>
-              Design (a randomised trial outweighs a case report ~250:1), risk
-              of bias, size, funding independence, and whether we read the full
-              text or only the abstract. A large, independent, low-bias RCT
-              read in full carries roughly forty times the weight of a tiny
-              abstract-only trial. The weighted average of all votes, times
-              100, is the <strong>signed score</strong> (−100…+100); strong
-              disagreement between studies trims it further.
-            </p>
-
-            <h3>4. Confidence is how much evidence exists — it multiplies, never averages</h3>
-            <p>
-              One weak trial gives confidence near zero; around thirty solid
-              full-text studies approach certainty. It multiplies the final
-              number because if we barely know anything, nothing else should
-              matter: a perfect-looking result from one small trial must not
-              score like a replicated literature.
-            </p>
-
-            <h3>5. The displayed 0–100 is the verdict, re-priced for your bottle</h3>
-            <p>
-              The signed verdict (−100…+100) is rescaled so that 50 means
-              &ldquo;the evidence points nowhere&rdquo;. A <em>positive</em>{" "}
-              verdict is then pulled back toward 50 by how much of that evidence
-              is actually about your product: <strong>was your form tested?</strong>{" "}
-              (the best three non-negative studies in your exact form, ranked by
-              evidence hierarchy: an umbrella review in your form scores 1.0, an
-              RCT 0.8, an animal study 0.1) and{" "}
-              <strong>is your dose in the range that worked?</strong> (how close
-              your dose sits to the doses at which trials actually found
-              benefit). The mean of those two is the applicability, 0–1. A
-              negative verdict is never softened: an untested form is no reason
-              to read &ldquo;does not work&rdquo; as &ldquo;unclear&rdquo;.
-            </p>
-            <div className="method-example">
-              <strong>Worked example.</strong> An outcome where the evidence
-              leans mildly positive (+0.30) with good confidence (0.80) has a
-              signed verdict of +24. With solid RCT backing in your form (0.80)
-              and a dose just under the range that worked (closeness 0.85),
-              applicability is 0.83 and the score is <em>60 / 100</em>. Identical
-              evidence but a dose far below where benefits occurred (closeness
-              0.10) gives applicability 0.45 and <em>55</em> — the same science,
-              honestly re-priced for <em>your</em> bottle. Creatine power is the
-              live case: benefits were shown at 20 g loading doses, so a 4.4 g
-              product is scored against that fact rather than credited for it.
-            </div>
-            <div className="method-example">
-              <strong>What the number means.</strong> 50 means &ldquo;the
-              evidence points nowhere&rdquo;, not &ldquo;half good&rdquo; — and
-              it is where both a neutral literature and a barely-studied one
-              land. The evidence ring tells those two apart: full ring, no
-              effect found; empty ring, nobody has looked. Below 45 the evidence
-              itself leans against the product; below 30 it is clearly against.
-              Labels follow the signed bands exactly: 65 and up &ldquo;works&rdquo;,
-              55–64 &ldquo;probably works&rdquo;, 45–54 &ldquo;unclear&rdquo;,
-              30–44 &ldquo;probably does not work&rdquo;, under 30 &ldquo;does
-              not work&rdquo;.
+              <strong>What “unverified” means.</strong> Sections with that badge are what a language model recalls from
+              its training. They are shown for orientation only and never become a grade.
             </div>
           </section>
-          <section id="score"><p className="eyebrow">Composite</p><h2>The displayed score</h2><p>The 0–100 composite is the run’s retained display field. The signed internal score is preserved separately for audit. This site never derives one from the other and never averages discrepancies.</p></section>
-          <section id="arcs"><p className="eyebrow">Four-ring model</p><h2>Every score carries four arcs</h2><div className="arc-method-grid">{arcs.map(([number, name, description]) => <div key={number}><span>{number}</span><h3>{name}</h3><p>{description}</p></div>)}</div><p>Exact verdict and coverage values appear beside the graphic. A blank verdict remains an em dash; zero coverage is shown only when the artifact explicitly records zero.</p></section>
-          <section id="gating"><p className="eyebrow">Evidence gate</p><h2>Unavailable is not zero</h2><p>When the pipeline’s evidence gate fires, the dashboard shows an em dash instead of a score. That means “not scored under this run’s rules,” not “no effect.”</p></section>
-          <section id="validity"><p className="eyebrow">Validity registry</p><h2>Status travels with the run</h2><p>Validated, experimental, and invalid are run-level states. Invalid historical artifacts remain useful for extraction audits, but their scores must not be used as product claims. A reconciliation check compares dashboard-critical values with the retained lab context when both are present.</p></section>
-          <section id="limits"><p className="eyebrow">Display limits</p><h2>What we deliberately do not imply</h2><ul><li>The corpus is run-level unless the artifact explicitly retains per-outcome attribution.</li><li>No forest plot is constructed without study-level effect sizes and uncertainty.</li><li>No dose-response curve is inferred from categorical dose applicability.</li><li>Missing telemetry is labeled unavailable. A recorded $0 subscription marginal spend remains $0, while absent API-equivalent cost and token counts remain unavailable.</li><li>These reports are evidence-system outputs, not medical advice.</li></ul></section>
         </article>
       </div>
     </main>

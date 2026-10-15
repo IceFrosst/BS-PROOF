@@ -325,7 +325,6 @@ export function SupplementSearch({
             {ingredient.forms.map((f) => (
               <option key={f.id} value={f.id}>
                 {f.label}
-                {f.scored ? " (has an evidence run)" : ""}
               </option>
             ))}
           </select>

@@ -10,13 +10,38 @@
  *
  * The pool includes every form of the ingredient: form and dose are GRADE
  * indirectness, never study weight, so one run grades any form -- with less
- * certainty when the trials did not test it. Shadow until the Phase 4 switch
- * (docs/EVIDENCE_METHOD.md §8); a run without the block answers "not_assessed".
+ * certainty when the trials did not test it. A run without the block answers
+ * "not_assessed".
+ *
+ * NOT CONNECTED (2026-10-15): /scan does not call this until v2 is validated
+ * (the benchmark passes and the known v2 problems are fixed). It stays built
+ * and parity-pinned so connecting it is one call in lib/analyze/scan.ts.
  */
 import fs from "node:fs";
 import path from "node:path";
 
-import { doseMatchFor } from "./scoring";
+export interface DoseBand {
+  low: number | null;
+  high: number | null;
+}
+
+/** pipeline/dose.py dose_match_for: the product's dose against one trial's
+ * dose, on SPEC §8's tiers. An interval straddling a tier is "unspecified",
+ * never rounded. Pinned by tests/vocab-parity.test.ts. */
+export function doseMatchFor(productLow: number | null, productHigh: number | null, band: DoseBand): string {
+  if (band.low === null || band.high === null || productLow === null || productHigh === null) return "unspecified";
+  const lo = band.low;
+  const hi = band.high;
+  const tier = (dose: number): string => {
+    if (dose < 0.5 * lo) return "below_50";
+    if (dose < lo) return "low_50_99";
+    if (dose > 2 * hi) return "above_200";
+    return "in_band";
+  };
+  const tLow = tier(productLow);
+  const tHigh = tier(productHigh);
+  return tLow === tHigh ? tLow : "unspecified";
+}
 
 /** pipeline/grade.py LEVELS. */
 export const LEVELS: Record<number, string> = { 4: "High", 3: "Moderate", 2: "Low", 1: "Very low" };
@@ -196,11 +221,11 @@ const PREVIEW_DIR = process.env.NODE_ENV !== "production" ? process.env.EVIDENCE
 const RETAINED_RUNS = path.join(process.cwd(), "reports", "runs");
 const RUNS_DIR = PREVIEW_DIR ? path.resolve(PREVIEW_DIR) : RETAINED_RUNS;
 
-/** Newest retained artifact for this ingredient that carries an evidence_v2 block. */
+/** Newest retained run context (`*_context.json`) for this ingredient that carries an evidence_v2 block. */
 export function evidenceBlockFor(ingredient: string, runsDir = RUNS_DIR): { runId: string; block: Record<string, unknown> } | null {
   let names: string[] = [];
   try {
-    names = fs.readdirSync(runsDir).filter((n) => n.endsWith("_dashboard.json")).sort().reverse();
+    names = fs.readdirSync(runsDir).filter((n) => n.endsWith("_context.json")).sort().reverse();
   } catch {
     return null;
   }
@@ -212,7 +237,7 @@ export function evidenceBlockFor(ingredient: string, runsDir = RUNS_DIR): { runI
       if (String(product.ingredient) !== ingredient || !block || block.method !== "evidence-v2") continue;
       if (/demo/i.test(name)) continue;
       if (/preview/i.test(name) && path.resolve(runsDir) === RETAINED_RUNS) continue;   // a preview is never a retained run
-      return { runId: String(((art.run ?? {}) as Record<string, unknown>).id ?? name), block };
+      return { runId: name.replace(/_context\.json$/, ""), block };
     } catch {
       continue;
     }

@@ -7,7 +7,7 @@
  * against fakes. What is pinned:
  *
  *   - every section carries a basis, and model output is basis model_prior
- *   - a failing model call degrades ONE section, never the evidence score
+ *   - a failing model call degrades ONE section, never the others
  *   - the curated table is cited and only references real form ids
  *   - openFDA parsing, including its 404-means-no-matches convention
  *   - the daily-dose rule (per serving x servings/day) for the scored dose
@@ -27,14 +27,11 @@ import {
   resolveActives,
   uncoveredPairs,
 } from "@/lib/analyze/compatibility";
-import { doseEffectivenessSection, scoredDose } from "@/lib/analyze/dose-effectiveness";
 import { readPriorDose, type PriorOutcome } from "@/lib/analyze/evidence-prior";
 import { ModelCallError, extractJson, validateAgainstSchema, type ChatJsonFn } from "@/lib/analyze/llm";
-import { analyzeScan, type ScanDeps } from "@/lib/analyze/scan";
-import { scoreProduct } from "@/lib/analyze/product-score";
+import { analyzeScan, scoredDose, type ScanDeps } from "@/lib/analyze/scan";
 import { validateLabel, type LabelRead } from "@/lib/analyze/vision";
 
-type Json = Record<string, unknown>;
 
 const ROOT = process.cwd();
 
@@ -177,7 +174,6 @@ function deps(overrides: Partial<ScanDeps> = {}): ScanDeps {
       "literature warnings": literatureWarningsFixture,
     }),
     fetch: fakeFetch({}),
-    scoreProduct,
     budgetMs: 55_000,
     now: () => (t += 10),
     ...overrides,
@@ -284,34 +280,11 @@ describe("company background", () => {
   });
 });
 
-describe("dose effectiveness", () => {
-  it("scores the daily dose when servings per day are printed, per serving otherwise", () => {
-    expect(scoredDose(3000, 2)).toEqual({ dose: 6000, basis: "daily", daily: 6000 });
-    expect(scoredDose(3000, null)).toEqual({ dose: 3000, basis: "per_serving", daily: null });
-    expect(scoredDose(null, 2)).toEqual({ dose: null, basis: "none", daily: null });
-  });
-
-  it("reads a row into plain language with its tone", () => {
-    const section = doseEffectivenessSection({
-      perServingElementalMg: 2000,
-      servingsPerDay: 1,
-      conversionBasis: "converted",
-      rows: [
-        {
-          outcome: "muscle_power",
-          outcome_label: "Power",
-          composite: 54,
-          verdict: "unclear",
-          arcs: { dose: { closeness: 0.1, product_match: "below_50", coverage: 0.22 } },
-          benefit_dose_range_mg: { low: 17584, high: 17824, basis: "observed_benefit_doses" },
-          null_dose_range_mg: { low: 17584, high: 19729 },
-        },
-      ],
-    });
-    expect(section.status).toBe("ok");
-    expect(section.outcomes[0].tone).toBe("below");
-    expect(section.outcomes[0].reading).toContain("below the range");
-    expect(section.basis).toBe("evidence_run");
+describe("scored dose", () => {
+  it("uses the daily dose when servings per day are printed, per serving otherwise", () => {
+    expect(scoredDose(3000, 2)).toEqual({ dose: 6000, basis: "daily" });
+    expect(scoredDose(3000, null)).toEqual({ dose: 3000, basis: "per_serving" });
+    expect(scoredDose(null, 2)).toEqual({ dose: null, basis: "none" });
   });
 });
 
@@ -348,12 +321,12 @@ describe("model boundary helpers", () => {
 });
 
 describe("analyzeScan end to end (fakes only)", () => {
-  it("returns every section with its basis and never lets a model failure touch the score", async () => {
+  it("returns every section with its basis, and a model failure costs only its own section", async () => {
     const ok = await analyzeScan("aW1n", "image/png", deps());
     expect(ok.schema_version).toBe("ScanAnalysisV1");
     expect(ok.label?.brand).toBe("Testbrand");
+    expect(ok.status).toBe("not_graded");
     expect(ok.product?.scored_dose_basis).toBe("daily");
-    expect(ok.dose_effectiveness?.basis).toBe("evidence_run");
     expect(ok.compatibility?.status).toBe("single_active");
     expect(ok.company?.profile.status).toBe("ok");
     expect(ok.company?.profile.basis).toBe("model_prior");
@@ -375,14 +348,11 @@ describe("analyzeScan end to end (fakes only)", () => {
       }),
     );
     expect(broken.status).toBe(ok.status);
-    expect((broken.evidence as Json).status).toBe((ok.evidence as Json).status);
     expect(broken.company?.profile.status).toBe("unavailable");
     expect(broken.literature_warnings?.status).toBe("unavailable");
     // A broken literature-warnings call costs only that section -- the
     // deterministic blocks are untouched.
     expect(broken.product).toEqual(ok.product);
-    expect(broken.evidence).toEqual(ok.evidence);
-    expect(broken.dose_effectiveness).toEqual(ok.dose_effectiveness);
   });
 
   it("skips the text model calls when the label read consumed the time budget", async () => {
@@ -418,7 +388,6 @@ describe("analyzeScan end to end (fakes only)", () => {
     // The whole point of stage 2b: no run, but still an answer.
     expect(out.evidence_prior?.status).toBe("ok");
     expect(out.evidence_prior?.basis).toBe("model_prior");
-    expect(out.evidence).toBeUndefined();
     expect(out.supported_ingredients).toContain("creatine");
     // The literature disclosures run even for an ingredient outside the
     // vocabulary -- it still has a literature (founder 2026-09-08's rule).
@@ -426,7 +395,7 @@ describe("analyzeScan end to end (fakes only)", () => {
     expect(out.literature_warnings?.basis).toBe("model_prior");
   });
 
-  it("an in-vocabulary ingredient with no run gets the orientation, with dose placed against the recalled range", async () => {
+  it("a supported ingredient gets the orientation, with dose placed against the recalled range", async () => {
     const out = await analyzeScan(
       "aW1n",
       "image/png",
@@ -442,7 +411,7 @@ describe("analyzeScan end to end (fakes only)", () => {
           }),
       }),
     );
-    expect(out.status).toBe("not_scored");
+    expect(out.status).toBe("not_graded");
     expect(out.evidence_prior?.status).toBe("ok");
     const sleep = out.evidence_prior?.data?.outcomes[0];
     // The dose the model is asked about, and placed against, is ELEMENTAL:
@@ -450,100 +419,24 @@ describe("analyzeScan end to end (fakes only)", () => {
     // 200-400 mg range. Comparing the printed 2000 mg would have read as
     // wildly above it -- the salt-mass error the conversion exists to stop.
     expect(out.evidence_prior?.scored_dose_mg).toBeCloseTo(282.1, 0);
-    expect(sleep?.dose_closeness).toBe(1);
+    expect(sleep?.dose_in_range).toBe(true);
     expect(sleep?.dose_reading).toMatch(/inside the range/);
     // An outcome with no recalled range gets no comparison rather than a guess.
-    expect(out.evidence_prior?.data?.outcomes[1].dose_closeness).toBeNull();
+    expect(out.evidence_prior?.data?.outcomes[1].dose_in_range).toBeNull();
     expect(out.meta.prompt_versions.evidence_prior).toBe("evidence-prior-v1.1");
     expect(out.literature_warnings?.status).toBe("ok");
   });
 
-  it("a scored ingredient never gets the model orientation", async () => {
+  it("grading is not active: a supported product carries no score, rows or grade", async () => {
     const out = await analyzeScan("aW1n", "image/png", deps());
-    expect(out.status).toBe("scored");
-    expect(out.evidence_prior).toBeUndefined();
-    // ...but it still gets the literature disclosures -- those run for EVERY
-    // scan, scored or not (founder 2026-09-16).
+    expect(out.status).toBe("not_graded");
+    for (const key of ["evidence", "evidence_v2", "ledger_audit", "dose_effectiveness"]) expect(key in out, key).toBe(false);
+    // Every product now gets the model orientation and the literature disclosures.
+    expect(out.evidence_prior?.status).toBe("ok");
     expect(out.literature_warnings?.status).toBe("ok");
   });
 
-  it("matches only when the sole label active agrees with the top-level printed dose", async () => {
-    const exact = await analyzeScan(
-      "aW1n",
-      "image/png",
-      deps({
-        readLabel: async () => label({
-          compound_dose_mg: 4000,
-          actives: [{ name: "Creatine Monohydrate", compound_dose_mg: 4000, dose_unit_as_printed: "4 g", form_text: "monohydrate" }],
-        }),
-      }),
-    );
-    expect(exact.ledger_audit).toBeDefined();
-
-    const contradictoryDose = await analyzeScan(
-      "aW1n",
-      "image/png",
-      deps({
-        readLabel: async () => label({
-          compound_dose_mg: 4000,
-          actives: [{ name: "Creatine Monohydrate", compound_dose_mg: 5000, dose_unit_as_printed: "5 g", form_text: "monohydrate" }],
-        }),
-      }),
-    );
-    expect(contradictoryDose.ledger_audit).toBeUndefined();
-
-    const missingDose = await analyzeScan(
-      "aW1n",
-      "image/png",
-      deps({
-        readLabel: async () => label({
-          compound_dose_mg: 4000,
-          actives: [{ name: "Creatine Monohydrate", compound_dose_mg: null, dose_unit_as_printed: null, form_text: "monohydrate" }],
-        }),
-      }),
-    );
-    expect(missingDose.ledger_audit).toBeUndefined();
-
-    const ambiguousDose = await analyzeScan(
-      "aW1n",
-      "image/png",
-      deps({ readLabel: async () => label({ compound_dose_mg: 4000, actives: [] }) }),
-    );
-    expect(ambiguousDose.ledger_audit).toBeUndefined();
-  });
-
-  it("keeps multi-active labels out of the retained matcher", async () => {
-    const otherActive = await analyzeScan(
-      "aW1n",
-      "image/png",
-      deps({
-        readLabel: async () => label({
-          compound_dose_mg: 4000,
-          actives: [{ name: "Creatine Monohydrate", compound_dose_mg: 4000, dose_unit_as_printed: "4 g", form_text: "monohydrate" }],
-          other_actives: ["Vitamin D3"],
-        }),
-      }),
-    );
-    expect(otherActive.ledger_audit).toBeUndefined();
-
-    const multipleActives = await analyzeScan(
-      "aW1n",
-      "image/png",
-      deps({
-        readLabel: async () => label({
-          compound_dose_mg: 4000,
-          is_multi_ingredient: false,
-          actives: [
-            { name: "Creatine Monohydrate", compound_dose_mg: 4000, dose_unit_as_printed: "4 g", form_text: "monohydrate" },
-            { name: "Vitamin D3", compound_dose_mg: 0.05, dose_unit_as_printed: "0.05 mg", form_text: null },
-          ],
-        }),
-      }),
-    );
-    expect(multipleActives.ledger_audit).toBeUndefined();
-  });
-
-  it("places a dose against a recalled range with the same ramp as the scored path", () => {
+  it("places a dose against a recalled range in words, never as a number", () => {
     const row = (low: number | null, high: number | null): PriorOutcome => ({
       outcome: "x",
       direction: "benefit",
@@ -555,14 +448,14 @@ describe("analyzeScan end to end (fakes only)", () => {
       note: null,
       confidence: "medium",
     });
-    expect(readPriorDose(row(200, 400), 300).closeness).toBe(1);
+    expect(readPriorDose(row(200, 400), 300).inRange).toBe(true);
     expect(readPriorDose(row(200, 400), 300).reading).toMatch(/inside the range/);
-    expect(readPriorDose(row(200, 400), 50).closeness).toBe(0.1);
+    expect(readPriorDose(row(200, 400), 50).inRange).toBe(false);
     expect(readPriorDose(row(200, 400), 900).reading).toMatch(/above the range/);
-    // A one-sided recall is a floor, not a refusal.
-    expect(readPriorDose(row(200, null), 300).closeness).not.toBeNull();
-    expect(readPriorDose(row(null, null), 300).closeness).toBeNull();
-    expect(readPriorDose(row(200, 400), null).closeness).toBeNull();
+    // A one-sided recall is compared, not refused.
+    expect(readPriorDose(row(200, null), 300).inRange).not.toBeNull();
+    expect(readPriorDose(row(null, null), 300).inRange).toBeNull();
+    expect(readPriorDose(row(200, 400), null).inRange).toBeNull();
   });
 
   it("a non-label image stops after the read", async () => {

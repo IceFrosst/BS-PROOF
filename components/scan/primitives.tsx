@@ -42,7 +42,7 @@ export function Section({
   );
 }
 
-/* One "before you read the score" row: a one-line summary, the full text
+/* One warning row: a one-line summary, the full text
  * inside a native <details>. The wrapper keeps the `la-alert la-alert-warn`
  * class every disclosure on this page has always carried (tests key on it). */
 export function Notice({
@@ -64,11 +64,6 @@ export function Notice({
       <p>{body}</p>
     </details>
   );
-}
-
-/* A line of expanded detail, shared by retained and unmatched cards. */
-export function DetailLine({ term, children }: { term: string; children: ReactNode }) {
-  return <p><b>{term}</b> {children}</p>;
 }
 
 export function Facts({ rows }: { rows: Array<[string, ReactNode]> }) {

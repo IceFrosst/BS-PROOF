@@ -1,0 +1,190 @@
+{
+ "elemental": [
+  {
+   "args": [
+    "creatine",
+    "creatine_monohydrate",
+    4400
+   ],
+   "expect": {
+    "low": 3868.534,
+    "high": 3868.534,
+    "basis": "converted"
+   }
+  },
+  {
+   "args": [
+    "creatine",
+    "creatine_monohydrate",
+    null
+   ],
+   "expect": {
+    "low": null,
+    "high": null,
+    "basis": "unstated"
+   }
+  },
+  {
+   "args": [
+    "creatine",
+    "creatine_buffered",
+    3000
+   ],
+   "expect": {
+    "low": null,
+    "high": null,
+    "basis": "compound_only"
+   }
+  },
+  {
+   "args": [
+    "magnesium",
+    "magnesium_glycinate",
+    2000
+   ],
+   "expect": {
+    "low": 281.921,
+    "high": 281.921,
+    "basis": "converted"
+   }
+  },
+  {
+   "args": [
+    "magnesium",
+    "magnesium_chloride",
+    1000
+   ],
+   "expect": {
+    "low": 119.552,
+    "high": 255.275,
+    "basis": "bounded"
+   }
+  },
+  {
+   "args": [
+    "magnesium",
+    "magnesium_citrate",
+    1000
+   ],
+   "expect": {
+    "low": 118.9,
+    "high": 161.633,
+    "basis": "bounded"
+   }
+  },
+  {
+   "args": [
+    "creatine",
+    null,
+    4400
+   ],
+   "expect": {
+    "low": null,
+    "high": null,
+    "basis": "compound_only"
+   }
+  },
+  {
+   "args": [
+    "creatine",
+    "no_such_form",
+    4400
+   ],
+   "expect": {
+    "low": null,
+    "high": null,
+    "basis": "compound_only"
+   }
+  }
+ ],
+ "dose_match": [
+  {
+   "args": [
+    1000,
+    1000,
+    {
+     "low": 5000.0,
+     "high": 20000.0
+    }
+   ],
+   "expect": "below_50"
+  },
+  {
+   "args": [
+    3000,
+    3000,
+    {
+     "low": 5000.0,
+     "high": 20000.0
+    }
+   ],
+   "expect": "low_50_99"
+  },
+  {
+   "args": [
+    5000,
+    5000,
+    {
+     "low": 5000.0,
+     "high": 20000.0
+    }
+   ],
+   "expect": "in_band"
+  },
+  {
+   "args": [
+    20000,
+    20000,
+    {
+     "low": 5000.0,
+     "high": 20000.0
+    }
+   ],
+   "expect": "in_band"
+  },
+  {
+   "args": [
+    39000,
+    39000,
+    {
+     "low": 5000.0,
+     "high": 20000.0
+    }
+   ],
+   "expect": "in_band"
+  },
+  {
+   "args": [
+    41000,
+    41000,
+    {
+     "low": 5000.0,
+     "high": 20000.0
+    }
+   ],
+   "expect": "above_200"
+  },
+  {
+   "args": [
+    null,
+    null,
+    {
+     "low": 5000.0,
+     "high": 20000.0
+    }
+   ],
+   "expect": "unspecified"
+  },
+  {
+   "args": [
+    3000,
+    6000,
+    {
+     "low": 5000.0,
+     "high": 20000.0
+    }
+   ],
+   "expect": "unspecified"
+  }
+ ]
+}

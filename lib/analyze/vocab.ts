@@ -2,7 +2,7 @@
  * Read vocab/form.json and do the compound -> elemental (active-moiety) dose
  * conversion. TypeScript port of pipeline/vocab.py elemental_dose_mg /
  * elemental_dose_range_mg, pinned to the Python originals by
- * tests/analyze-parity.test.ts (golden values computed by Python).
+ * tests/vocab-parity.test.ts (golden values computed by Python).
  *
  * The conversion REFUSES rather than guesses: an unknown form, a missing molar
  * mass, or a hydrate whose stoichiometry is routinely unstated returns
@@ -114,9 +114,8 @@ export function elementalDoseRangeMg(
 }
 
 /**
- * The allowed-ids block for the label prompt — same rendering as Python
- * label_adapter._vocab_block, so both backends put identical vocabulary in
- * front of the model and a label reads the same either way.
+ * The allowed-ids block for the label prompt: every ingredient and its form
+ * ids, so the model can only answer with a vocabulary id.
  */
 export function vocabBlock(): string {
   const lines: string[] = [];

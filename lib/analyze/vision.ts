@@ -5,11 +5,9 @@
  * read; the transport lives in ./llm.ts, the one TypeScript model boundary.
  * Nothing here reads a key or names an endpoint.
  *
- * Two backends, ONE brain: the prompt is prompts/label.md — the same file
- * bsproof/label_adapter.py renders, with the same {VOCAB} block — so a label reads
- * identically on the CLI backend and on the API backend, and invariant 3 has
- * one prompt to version. `LABEL_PROMPT_VERSION` mirrors
- * label_adapter.LABEL_PROMPT_VERSION and both must move together.
+ * The prompt is prompts/label.md with its {VOCAB} block filled in, so
+ * invariant 3 has one prompt to version: `LABEL_PROMPT_VERSION`. (A Python CLI
+ * reader, bsproof/label_adapter.py, shared it until 2026-10-15.)
  *
  * The prompt travels as the leading TEXT PART of the one user message, not as
  * a system message: some vision endpoints (DeepSeek's, verified in its docs)
@@ -38,7 +36,7 @@ import { vocabBlock } from "./vocab";
 
 const ROOT = process.cwd();
 
-/** Bump together with prompts/label.md and label_adapter.LABEL_PROMPT_VERSION. */
+/** Bump together with prompts/label.md. */
 /* label-v1.3 (2026-09-22): the prompt now states every list/length limit in
  * schemas/label.json. A real busy-panel scan returned 13+ evidence_spans and the
  * whole read failed "must NOT have more than 12 items" because the prompt never
@@ -124,7 +122,7 @@ const OPTIONAL_DEFAULTS: Record<string, unknown> = {
   unreadable_reason: null,
 };
 
-/** Normalise then validate — mirrors label_adapter._validate. */
+/** Normalise then validate a label read. */
 export function validateLabel(obj: Record<string, unknown>): LabelRead {
   for (const [key, value] of Object.entries(OPTIONAL_DEFAULTS)) {
     if (obj[key] === null || obj[key] === undefined) obj[key] = value;

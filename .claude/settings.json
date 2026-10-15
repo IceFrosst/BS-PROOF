@@ -3,10 +3,8 @@
     "allow": [
       "Bash(python3 -m pipeline.selftest)",
       "Bash(python3 -m pipeline.invariants)",
-      "Bash(python3 -m pipeline.calibration)",
       "Bash(python3 scripts/verify_helpers.py)",
       "Bash(python3 scripts/verify_helpers.py --accept)",
-      "Bash(./.venv/bin/python -m unittest scripts.test_dashboard_artifact)",
       "Bash(npm run typecheck)",
       "Bash(npm run lint)",
       "Bash(npm run test:unit)",

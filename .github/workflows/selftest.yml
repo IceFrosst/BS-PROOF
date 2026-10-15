@@ -1,8 +1,8 @@
 name: selftest
 
 # Only paths that can change a deterministic Python result. The TypeScript
-# ports are pinned to Python goldens by tests/analyze-parity.test.ts, which runs
-# in dashboard.yml.
+# ports are pinned to Python goldens (tests/grade-v2-parity.test.ts,
+# tests/vocab-parity.test.ts), which run in dashboard.yml.
 on:
   push:
     paths:
@@ -14,8 +14,6 @@ on:
       - "schemas/**"
       - "scripts/**/*.py"
       - "tests/**/*.py"
-      - "tests/fixtures/dashboard/**"
-      - "reports/run_statuses.json"
       - "*.py"
       - "requirements.txt"
       - ".github/workflows/selftest.yml"
@@ -29,8 +27,6 @@ on:
       - "schemas/**"
       - "scripts/**/*.py"
       - "tests/**/*.py"
-      - "tests/fixtures/dashboard/**"
-      - "reports/run_statuses.json"
       - "*.py"
       - "requirements.txt"
       - ".github/workflows/selftest.yml"
@@ -67,9 +63,8 @@ jobs:
         run: |
           set -o pipefail
           python -m pipeline.selftest 2>&1 | tee selftest-log.txt
-      # The unittest suites in tests/*.py (dashboard artifact writer, SR wiring,
-      # universal-negative repair, S7 drift guard). Never run in CI before
-      # 2026-10-03; jsonschema from requirements.txt is what they need.
+      # The Python tests in tests/*.py; jsonschema from requirements.txt is what
+      # they need.
       - name: Python tests
         run: python -m pytest -q tests/
       # Non-blocking dead-code report. At confidence 80 only certain findings

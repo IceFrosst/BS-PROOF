@@ -19,8 +19,6 @@ const nextConfig: NextConfig = {
   // runtime. Static pages read the same files at BUILD time and need no tracing.
   outputFileTracingIncludes: {
     "/api/scan": [
-      "./reports/runs/*_dashboard.json",
-      "./reports/run_statuses.json",
       "./vocab/form.json",
       "./vocab/compatibility.json",
       "./prompts/label.md",
@@ -33,8 +31,6 @@ const nextConfig: NextConfig = {
       "./schemas/compatibility.json",
       "./schemas/evidence_prior.json",
       "./schemas/literature_warnings.json",
-      "./lib/evidence-ledger/audits/*.json",
-      "./lib/evidence-ledger/audits/plain/*.json",
     ],
   },
 };

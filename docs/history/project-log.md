@@ -10,6 +10,32 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-15 — simplification E/F/G: dashboard dropped, grading switched off in the app
+
+Branch `simplify/app-v2-off` (on `simplify/v2-only`), not merged.
+
+- E: `/runs` and `/runs/<id>` pages, `lib/dashboard`, the run components,
+  `scripts/dashboard_artifact.py`, `schemas/dashboard_run_v1.schema.json`,
+  `reports/run_statuses.json`, every `*_dashboard.json`, `archive_reports.py`
+  and the v14 run `20260904_185830` deleted. Runs now write summary, full and
+  context only; `benchmark_v2.py compare` and `grade-v2.ts` read `_context.json`.
+  Report push is opt-in (`SP_AUTO_PUSH=1`).
+- F: v14 TS ports (`scoring.ts`, `product-score.ts`, `dose-effectiveness.ts`),
+  the Evidence Ledger (`lib/evidence-ledger`, its card, audits, research
+  prompts/schemas), `/design-lab`, `/tests/supplements` and the grade card
+  removed. `/scan` answers `not_graded` for every supported product and shows
+  "Evidence grades are not active yet" on the landing screen and every result.
+  The model orientation (evidence prior) now runs for every product; its dose
+  reading is words only (the v14 closeness ramp is gone). `grade-v2.ts` kept,
+  not connected. `/methodology` rewritten as a short "how we will grade" page.
+- G: e2e routes reduced to `/`, `/scan`, `/methodology`, 404; the app CI
+  workflow no longer re-runs the Python selftest and triggers on app paths
+  only; `score-tracer` agent deleted, `run-triage` rewritten for v2; unused
+  deps (marked, sanitize-html, zod, @testing-library/dom) removed; vocab dose
+  conversion re-pinned to Python goldens (`golden_vocab_parity.json`).
+- Gates: invariants, selftest, 157 Python tests, typecheck, lint, 212 vitest,
+  knip clean, production build (8 routes, was 226), 14 Playwright/axe tests.
+
 ## 2026-10-15 — simplification: evidence method v2 only
 
 Founder decision: commit to v2; retire v14. Branches `simplify/a-dead-weight`

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-After every live extraction: write BOTH reports and push reports/ to GitHub.
+After every live extraction: write the run's reports (and, opt-in, push them).
 
   1) Summary  → reports/runs/*_summary.md
   2) Full     → reports/runs/*_full.md
@@ -12,7 +12,9 @@ with other ingredients (no creatine rows inside a magnesium report).
 
 Called automatically from run_pipeline.py — no extra steps for the founder.
 
-Env: SP_AUTO_PUSH=0 skips git push (still writes both reports locally).
+Pushing is OPT-IN since 2026-10-15: SP_AUTO_PUSH=1 commits reports/ on the
+CURRENT branch and pushes it. A push to `main` deploys, so the default only
+writes the files locally.
 """
 from __future__ import annotations
 
@@ -390,7 +392,7 @@ def _update_index(rows: list[tuple[str, dict]]) -> None:
 
 def write_report(ingredient: str, form: str, mode: str,
                  run_context: dict | None = None) -> list[Path]:
-    """Write summary, full and DashboardRunV1 for this immutable run."""
+    """Write summary, full and context JSON for this immutable run."""
     REPORTS.mkdir(parents=True, exist_ok=True)
     RUNS.mkdir(parents=True, exist_ok=True)
     stamp = _stamp()
@@ -445,14 +447,11 @@ def write_report(ingredient: str, form: str, mode: str,
 
     # THE MARKDOWN REPORTS ARE NOW ON DISK AND MUST STAY THERE.
     #
-    # Everything below is derived: a JSON copy of the context and the deployable
-    # dashboard artifact. Both can fail on data the reports themselves render
-    # fine -- a non-serialisable object in the context, a telemetry
-    # inconsistency the artifact contract refuses, a run id that already has an
-    # immutable artifact. A multi-hour extraction must not lose its INDEX entry
-    # and its push because a derived file could not be built, so each derived
-    # write degrades on its own and says so loudly. Nothing here is swallowed
-    # silently: the reason is printed with the name of what failed.
+    # Everything below is derived: a JSON copy of the context (it carries the
+    # `evidence_v2` block the benchmark and the app read). It can fail on data
+    # the reports render fine -- a non-serialisable object -- and a multi-hour
+    # extraction must not lose its INDEX entry because of it, so it degrades on
+    # its own and says so loudly.
     written = [path_sum, path_full]
 
     # Machine-readable run context for later tooling
@@ -466,30 +465,6 @@ def write_report(ingredient: str, form: str, mode: str,
         print("!! The markdown reports above are complete; only the machine-"
               "readable copy is missing.")
 
-    # Deployable data contract. It is deliberately produced from the in-memory
-    # full ECU rows, not reconstructed later from the lossy SQLite projection.
-    dashboard_path = None
-    try:
-        from scripts.dashboard_artifact import write_dashboard_artifact
-        dashboard_path = write_dashboard_artifact(
-            ctx,
-            run_id=base,
-            mode=mode,
-            source_commit=ctx.get("source_commit"),
-            reports={
-                "summary": f"reports/runs/{path_sum.name}",
-                "full": f"reports/runs/{path_full.name}",
-                "context": f"reports/runs/{ctx_path.name}",
-                "dashboard": f"reports/runs/{base}_dashboard.json",
-            },
-        )
-        written.append(dashboard_path)
-    except Exception as exc:
-        print(f"!! WARNING: dashboard artifact {base}_dashboard.json NOT "
-              f"written: {type(exc).__name__}: {exc}")
-        print("!! This run cannot be deployed to the dashboard until that is "
-              "fixed. The markdown reports above are complete and unaffected.")
-
     meta_base = {"when": _now(), "mode": mode,
                  "ingredient": ingredient, "form": form}
     _update_index([
@@ -498,14 +473,12 @@ def write_report(ingredient: str, form: str, mode: str,
     ])
     print(f"Wrote reports/runs/{path_sum.name}")
     print(f"Wrote reports/runs/{path_full.name}")
-    if dashboard_path is not None:
-        print(f"Wrote reports/runs/{dashboard_path.name}")
     return written
 
 
 def git_push_reports() -> int:
-    if os.environ.get("SP_AUTO_PUSH", "1") in ("0", "false", "no"):
-        print("SP_AUTO_PUSH disabled — reports local only.")
+    if os.environ.get("SP_AUTO_PUSH", "0") != "1":
+        print("Reports written locally (set SP_AUTO_PUSH=1 to commit and push them).")
         return 0
     try:
         subprocess.run(["git", "-C", str(ROOT), "add", "reports"], check=True)

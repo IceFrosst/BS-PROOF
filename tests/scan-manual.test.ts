@@ -31,7 +31,6 @@ import {
   MAX_SERVINGS_PER_DAY,
   maxManualDoseInUnit,
 } from "@/lib/analyze/manual-dose";
-import { availableProducts, scoreProduct } from "@/lib/analyze/product-score";
 import { analyzeManual, analyzeScan, validateManualInput, type ScanDeps } from "@/lib/analyze/scan";
 import type { LabelRead } from "@/lib/analyze/vision";
 import { elementalDoseRangeMg } from "@/lib/analyze/vocab";
@@ -53,7 +52,6 @@ function offlineDeps(overrides: Partial<ScanDeps> = {}): ScanDeps {
     },
     chatJson: null,
     fetch: (async () => new Response(JSON.stringify({ hitCount: 7 }), { status: 200 })) as typeof fetch,
-    scoreProduct,
     budgetMs: 55_000,
     now: () => (t += 10),
     ...overrides,
@@ -123,13 +121,6 @@ describe("ingredient catalog", () => {
     expect(catalogForm("creatine", "creatine_monohydrate")?.dose_conversion).toBe("exact");
     expect(catalogForm("magnesium", "magnesium_chloride")?.dose_conversion).toBe("bounded");
     expect(catalogForm("ashwagandha", "ashwagandha_ksm66")?.dose_conversion).toBe("refused");
-  });
-
-  it("marks exactly the retained, usable products as scored", () => {
-    const scored = new Set(availableProducts().map((p) => `${p.ingredient}|${p.form}`));
-    const flagged = catalog.flatMap((i) => i.forms.filter((f) => f.scored).map((f) => `${i.id}|${f.id}`));
-    expect(new Set(flagged)).toEqual(scored);
-    expect(scored.has("creatine|creatine_monohydrate")).toBe(true);
   });
 
   it("derives display names from the vocabulary's own labels", () => {
@@ -245,24 +236,22 @@ describe("validateManualInput", () => {
 });
 
 describe("analyzeManual (offline, zero model calls)", () => {
-  it("scores a typed creatine monohydrate entry through the same stages as a photo", async () => {
+  it("runs a typed creatine monohydrate entry through the same stages as a photo", async () => {
     const typed = await analyzeManual(
       { ingredient: "creatine", form: "creatine_monohydrate", dose: { value: 5, unit: "g" }, servings_per_day: 1 },
       offlineDeps(),
     );
     const photo = await analyzeScan("aW1n", "image/png", offlineDeps({ readLabel: async () => photoLabel() }));
 
-    expect(typed.status).toBe("scored");
+    expect(typed.status).toBe("not_graded");
     expect(typed.source).toBe("manual");
     expect(typed.input?.basis).toBe("user_input");
     expect(typed.input?.dose_per_serving).toEqual({ value: 5, unit: "g", mg: 5000 });
     expect(typed.label).toBeUndefined();
     expect(typed.product?.compound_dose_mg).toBe(5000);
     expect(typed.product?.scored_dose_basis).toBe("daily");
-    // Same tub typed and photographed -> identical product facts and rows.
+    // Same tub typed and photographed -> identical product facts.
     expect(typed.product).toEqual(photo.product);
-    expect(typed.evidence).toEqual(photo.evidence);
-    expect(typed.dose_effectiveness).toEqual(photo.dose_effectiveness);
     // No vision anywhere on the typed path: no model, no prompt, and no label
     // stage timing at all (null, not 0 -- the stage never ran).
     expect(typed.meta.models.vision).toBeNull();
@@ -290,25 +279,25 @@ describe("analyzeManual (offline, zero model calls)", () => {
 
   it("without a dose the dose axis is unavailable and the caveat says it was not entered", async () => {
     const out = await analyzeManual({ ingredient: "creatine", form: "creatine_monohydrate", dose: null, servings_per_day: null }, offlineDeps());
-    expect(out.status).toBe("scored");
+    expect(out.status).toBe("not_graded");
     expect(out.product?.scored_dose_basis).toBe("none");
     const caveat = out.caveats?.find((c) => c.code === "dose_not_convertible");
     expect(caveat?.text).toMatch(/No per-serving dose was entered/);
     expect(caveat?.text).not.toMatch(/label prints no per-serving amount/);
   });
 
-  it("a typed per-serving dose without servings is scored per serving, worded for typing", async () => {
+  it("a typed per-serving dose without servings is used per serving, worded for typing", async () => {
     const out = await analyzeManual({ ingredient: "creatine", form: "creatine_monohydrate", dose: { value: 3000, unit: "mg" } }, offlineDeps());
     expect(out.product?.scored_dose_basis).toBe("per_serving");
     expect(out.caveats?.find((c) => c.code === "servings_not_stated")?.text).toMatch(/You did not enter how many servings/);
   });
 
-  it("an unscored typed product degrades its model sections and still returns the census", async () => {
+  it("without a model provider the model sections degrade and the census still returns", async () => {
     const out = await analyzeManual(
       { ingredient: "magnesium", form: "magnesium_glycinate", dose: { value: 2000, unit: "mg" }, servings_per_day: 1 },
       offlineDeps(),
     );
-    expect(out.status).toBe("not_scored");
+    expect(out.status).toBe("not_graded");
     expect(out.source).toBe("manual");
     // 2000 mg bisglycinate -> ~282 mg elemental, converted exactly as on the photo path.
     expect(out.product?.elemental_dose_mg.low).toBeCloseTo(282.1, 0);
@@ -352,7 +341,7 @@ describe("POST /api/scan with a JSON body", () => {
     expect(res.headers.get("cache-control")).toBe("no-store");
     const body = (await res.json()) as { source: string; status: string; input: { basis: string }; label?: unknown; meta: { provider_configured: boolean } };
     expect(body.source).toBe("manual");
-    expect(body.status).toBe("scored");
+    expect(body.status).toBe("not_graded");
     expect(body.input.basis).toBe("user_input");
     expect(body.label).toBeUndefined();
     expect(body.meta.provider_configured).toBe(false);
