@@ -11,7 +11,7 @@ rather than picking a rank it cannot justify -- an unjustified rank is worse
 than an unresolved one, because design weight is the single largest term in
 w_study (rank 4 = 1.00, rank 12 = 0.004, a 250x spread).
 
-Ranks are SPEC section 7 / prompts/s1_design.md. The two files must agree.
+Ranks are SPEC section 7 (the old S1 prompt, removed 2026-10-15, used the same rules).
 """
 from __future__ import annotations
 
@@ -23,8 +23,6 @@ RANK_LABEL = {
     10: "case series", 11: "case report", 12: "animal study",
     13: "in vitro study", 14: "expert opinion / narrative review",
 }
-
-SYNTHESIS_RANKS = frozenset({1, 2, 3})
 
 
 def _low(items) -> list[str]:
@@ -38,7 +36,7 @@ def classify(rec: dict) -> dict:
     Returns {design_rank, design_label, needs_model, basis}. `design_rank` is
     None exactly when needs_model is True.
 
-    Rules are applied in the order given in prompts/s1_design.md, because the
+    Rules are applied in a fixed order (SPEC section 7), because the
     order is load-bearing: non-human subjects override design quality, so a
     randomised blinded placebo-controlled rat study is rank 12, not rank 4.
     """

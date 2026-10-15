@@ -79,6 +79,7 @@ class Block(unittest.TestCase):
         from scripts.dashboard_artifact import build_dashboard_run
         ctx_path = next((ROOT / "reports" / "runs").glob("*_context.json"))
         ctx = json.loads(ctx_path.read_text())
+        ctx.pop("ecu_rows", None)        # a v2 run carries no v14 rows
         registry = {"muscle_strength": {"registered": 9, "in_corpus": 2, "unpublished": ["NCT1"],
                                         "upper_bound": True}}
         ctx["evidence_v2"] = summarise(ITEMS, product(dose=5000), registry)

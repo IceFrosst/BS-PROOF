@@ -24,7 +24,6 @@ ROOT = Path(__file__).resolve().parents[1]
 
 # (schema, JSON path, length the prompt asks for or the old hard cap)
 TARGETS = [
-    ("s1_design.json", ".rationale", 300),
     ("s3_study.json", ".arms[].intervention_text", 200),
     ("s3_study.json", ".arms[].evidenced_arm_text", 300),
     ("s3_study.json", ".population_text", 300),
@@ -34,7 +33,6 @@ TARGETS = [
     ("s5_conclusion.json", ".claims[].evidence_span", 200),
     ("s5_conclusion.json", ".claims[].statistic_provenance", 200),
     ("s5_conclusion.json", ".claims[].effect_unit", 40),
-    ("s6_outcome.json", ".rationale", 300),
     ("s6b_outcome_batch.json", ".mappings[].rationale", 300),
     ("s7_form.json", ".arms[].evidence_span", 200),
 ]

@@ -79,110 +79,6 @@ class AgentTelemetryReconciliationTests(unittest.TestCase):
 
 
 class DashboardArtifactTests(unittest.TestCase):
-    def test_default_is_experimental_and_full_ecu_is_safe(self) -> None:
-        context = {
-            "ingredient": "magnesium",
-            "form": "magnesium_glycinate",
-            "scope": "intervention",
-            "ecu_rows": [{
-                "ecu_key": "magnesium|magnesium_glycinate|unbanded|sleep_quality|general_adult",
-                "ingredient": "magnesium",
-                "form_vocab_id": "magnesium_glycinate",
-                "outcome_vocab_id": "sleep_quality",
-                "score": 8,
-                "composite": 12,
-                "band": "inconclusive",
-                "components": {"c": 0.2, "d": 1.0, "E": 0.7},
-                "arcs": {
-                    "effect": {"verdict": 1.0, "coverage": 1.0},
-                    "form": {"verdict": None, "coverage": 0.0},
-                    "dose": {"verdict": None, "coverage": 0.0},
-                    "evidence": {"verdict": None, "coverage": 0.2,
-                                 "is_quantity": True},
-                },
-                "dose": {"low": 200, "high": 400, "basis": "benefit_trials"},
-                "evidence": {"n_primaries": 3, "study_ids": ["doi:one"]},
-                "applicability": {"form": {"match": 0.0, "assessable": 1.0}},
-                "raw_prompt": "DO-NOT-EXPORT-PROMPT",
-                "cache_key": "DO-NOT-EXPORT-CACHE-KEY",
-            }],
-        }
-        artifact = build_dashboard_run(
-            context,
-            run_id="20990101_000000_magnesium_magnesium-glycinate_claude",
-            mode="claude",
-        )
-        row = artifact["ecu_rows"][0]
-        self.assertEqual("experimental", artifact["validity"]["status"])
-        self.assertFalse(artifact["validity"]["public_claims_allowed"])
-        self.assertEqual("unavailable", artifact["usage"]["telemetry_status"])
-        self.assertIsNone(artifact["usage"]["tokens"]["total"])
-        self.assertEqual("works, but not tested for your product", row["verdict"])
-        self.assertEqual(200, row["dose"]["low"])
-        self.assertEqual(["doi:one"], row["evidence"]["study_ids"])
-        payload = json.dumps(artifact)
-        self.assertNotIn("DO-NOT-EXPORT-PROMPT", payload)
-        self.assertNotIn("DO-NOT-EXPORT-CACHE-KEY", payload)
-
-    def test_contributions_survive_with_effect_route_and_nothing_else(self) -> None:
-        """effect_route is how a v8+ score is audited for measured-vs-label share.
-
-        It was silently dropped by the evidence allowlist until 2026-08-12, so
-        the dashboard could not show the one number that says how much of a
-        score rests on measured effects. The allowlist must now carry the fixed
-        contribution keys -- and ONLY those: an evidence span or any unknown key
-        smuggled into a contribution row must not reach the artifact.
-        """
-        context = {
-            "ingredient": "creatine",
-            "form": "creatine_monohydrate",
-            "scope": "intervention",
-            "ecu_rows": [{
-                "ecu_key": "creatine|creatine_monohydrate|unbanded|muscle_strength|general_adult",
-                "ingredient": "creatine",
-                "form_vocab_id": "creatine_monohydrate",
-                "outcome_vocab_id": "muscle_strength",
-                "score": -10, "composite": 40, "band": "inconclusive",
-                "components": {"c": 0.9, "d": -0.1, "E": 4.0},
-                "arcs": {
-                    "effect": {"verdict": -0.1, "coverage": 1.0},
-                    "form": {"verdict": None, "coverage": 0.0},
-                    "dose": {"verdict": None, "coverage": 0.0},
-                    "evidence": {"verdict": None, "coverage": 0.9,
-                                 "is_quantity": True},
-                },
-                "dose": {"low": None, "high": None, "basis": "no_dosed_benefit_trial"},
-                "evidence": {
-                    "n_primaries": 2, "study_ids": ["doi:a", "doi:b"],
-                    "contributions": [
-                        {"id": "doi:a", "w": 0.8, "s": 0.383, "design_rank": 4,
-                         "direction": "null_effect", "form_match": "exact",
-                         "d_share": 0.6, "points": 5.1,
-                         "effect_route": "smd", "effect_s": 0.383,
-                         "evidence_span": "DO-NOT-EXPORT-SPAN"},
-                        {"id": "doi:b", "w": 0.2, "s": -0.35, "design_rank": 4,
-                         "direction": "null_effect", "form_match": "exact",
-                         "d_share": -0.1, "points": -0.9,
-                         "effect_route": "no_effect_size", "effect_s": None},
-                    ],
-                },
-                "applicability": {"form": {"match": 1.0, "assessable": 1.0}},
-            }],
-        }
-        artifact = build_dashboard_run(
-            context,
-            run_id="20990101_000001_creatine_creatine-monohydrate_claude",
-            mode="claude",
-        )
-        rows = artifact["ecu_rows"][0]["evidence"]["contributions"]
-        self.assertEqual(2, len(rows))
-        self.assertEqual("smd", rows[0]["effect_route"])
-        self.assertEqual(0.383, rows[0]["effect_s"])
-        self.assertEqual("no_effect_size", rows[1]["effect_route"])
-        self.assertIsNone(rows[1]["effect_s"])
-        self.assertNotIn("evidence_span", rows[0])
-        self.assertNotIn("DO-NOT-EXPORT-SPAN", json.dumps(artifact))
-
     def test_study_extraction_exports_spans_but_never_meta(self) -> None:
         """Reviewer detail (founder decision 2026-08-12): evidence spans ARE
         exported now -- the dashboard is an internal calibration instrument and
@@ -250,38 +146,6 @@ class DashboardArtifactTests(unittest.TestCase):
         self.assertNotIn("DO-NOT-EXPORT", payload)
         self.assertNotIn("cache_key", json.dumps(ext))
 
-    def test_dose_closeness_and_product_factor_survive_when_present(self) -> None:
-        """SCORING_MODEL v12: closeness is the composite's dose term, so a
-        reviewer must see it. Absent on old rows -- absent, never null-filled."""
-        row = {
-            "ecu_key": "creatine|creatine_monohydrate|unbanded|muscle_power|general_adult",
-            "ingredient": "creatine", "form_vocab_id": "creatine_monohydrate",
-            "outcome_vocab_id": "muscle_power",
-            "score": 9, "composite": 44, "band": "inconclusive",
-            "components": {"c": 0.9, "d": 0.06, "E": 4.0},
-            "arcs": {
-                "effect": {"verdict": 0.06, "coverage": 1.0},
-                "form": {"verdict": None, "coverage": 0.0},
-                "dose": {"verdict": -0.35, "coverage": 0.027, "closeness": 0.1},
-                "evidence": {"verdict": None, "coverage": 0.9, "is_quantity": True},
-            },
-            "dose": {"low": 20000, "high": 21227, "basis": "observed_benefit_doses",
-                     "product_match": "below_50", "product_factor": 0.1},
-            "evidence": {"n_primaries": 3, "study_ids": ["doi:a"]},
-            "applicability": {"form": {"match": 1.0, "assessable": 1.0}},
-        }
-        context = {"ingredient": "creatine", "form": "creatine_monohydrate",
-                   "scope": "intervention", "ecu_rows": [row]}
-        artifact = build_dashboard_run(
-            context,
-            run_id="20990101_000003_creatine_creatine-monohydrate_claude",
-            mode="claude",
-        )
-        out = artifact["ecu_rows"][0]
-        self.assertEqual(0.1, out["arcs"]["dose"]["closeness"])
-        self.assertEqual(0.1, out["dose"]["product_factor"])
-        self.assertNotIn("closeness", out["arcs"]["effect"])
-
     def test_legacy_usage_normalizes_without_zero_filling_unknowns(self) -> None:
         usage = normalize_usage({
             "calls": 3,
@@ -342,49 +206,6 @@ class DashboardArtifactTests(unittest.TestCase):
         safe = json.dumps(usage["raw_structured_usage"])
         self.assertNotIn("DO-NOT-EXPORT-RICH-PROMPT", safe)
         self.assertNotIn("DO-NOT-EXPORT-RICH-CACHE", safe)
-
-    def test_historical_creatine_truth_and_invalid_override(self) -> None:
-        path = ROOT / "tests" / "fixtures" / "dashboard" / f"{HISTORICAL_RUN}_context.json"
-        context = json.loads(path.read_text(encoding="utf-8"))
-        artifact = build_dashboard_run(
-            context,
-            run_id=HISTORICAL_RUN,
-            mode="grok-sr-ft-per_o",
-            source_commit=HISTORICAL_COMMIT,
-        )
-        self.assertEqual("DashboardRunV1", artifact["schema_version"])
-        self.assertEqual("invalid", artifact["validity"]["status"])
-        self.assertFalse(artifact["validity"]["public_claims_allowed"])
-        self.assertEqual(HISTORICAL_COMMIT, artifact["run"]["source_commit"])
-        self.assertEqual(80, artifact["corpus"]["study_count"])
-        self.assertEqual(80, artifact["stats"]["studies"]["targeted"])
-        self.assertEqual(
-            {"total": 30, "scored": 19, "gated": 11},
-            artifact["stats"]["ecus"],
-        )
-        usage = artifact["usage"]
-        self.assertEqual("partial", usage["telemetry_status"])
-        self.assertEqual(797, usage["live_calls"])
-        self.assertEqual(711, usage["operations"]["successful_calls"])
-        self.assertEqual(86, usage["operations"]["failed_calls"])
-        self.assertEqual(6, usage["cache_hits"])
-        self.assertEqual(5, usage["operations"]["timeouts"])
-        self.assertEqual(0, usage["operations"]["auth_failures"])
-        self.assertEqual(113.6, usage["latency"]["average_s"])
-        self.assertEqual(146.9, usage["latency"]["p95_s"])
-        self.assertEqual(43, usage["latency"]["peak_concurrency"])
-        self.assertIsNone(usage["tokens"]["total"])
-        self.assertAlmostEqual(9.9625,
-                               usage["efficiency"]["per_successful_study"]["calls"])
-        self.assertAlmostEqual(26.5667,
-                               usage["efficiency"]["per_outcome"]["calls"])
-        self.assertEqual("grok-4.3", usage["model_routing"][0]["configured_model"])
-        self.assertFalse(usage["model_routing"][0]["aggregate_complete"])
-        self.assertTrue(artifact["validity"]["limitations"])
-        self.assertEqual(
-            f"reports/runs/{HISTORICAL_RUN}_full.md",
-            artifact["reports"]["full"],
-        )
 
     def test_writer_is_idempotent_but_refuses_changed_overwrite(self) -> None:
         context = {"ingredient": "x", "form": "x", "ecu_rows": []}

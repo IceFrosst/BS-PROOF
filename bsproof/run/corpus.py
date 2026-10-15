@@ -21,11 +21,6 @@ _OA_RANK = {
 }
 
 
-def _grok_db(ingredient: str, scope: str):
-    suffix = "" if scope == "broad" else f"_{scope[:4]}"
-    return DEFAULT_DB.parent / f"grok_{ingredient}{suffix}.sqlite"
-
-
 def _sections(record: dict) -> dict:
     """
     Parsed sections for per-agent routing. fetch_xml is disk-cached, so this
@@ -123,12 +118,8 @@ def stratify_targets(primaries: list[dict], outcomes: list[str],
 
 
 def store_path(opts):
-    """Each backend writes its own store (invariant 9: never blend backends)."""
-    if opts.wiring:
-        return WIRING_DB
-    if opts.grok:
-        return _grok_db(opts.ingredient, opts.scope)
-    return DEFAULT_DB
+    """Synthetic (--wiring) runs never share the production store."""
+    return WIRING_DB if opts.wiring else DEFAULT_DB
 
 
 def load_corpus(store, opts, db, outcome_allowlist, run_context) -> tuple[list[dict], int]:
@@ -143,7 +134,7 @@ def load_corpus(store, opts, db, outcome_allowlist, run_context) -> tuple[list[d
     #
     # Two defects, both in this expression:
     #
-    # 1. `grok and ...` meant that on the PRODUCTION CLAUDE PATH retrieval
+    # 1. `grok and ...` (the old Grok backend) meant that on the PRODUCTION CLAUDE PATH retrieval
     #    fired only when the store was COMPLETELY EMPTY. So the corpus never
     #    grew and never refreshed. Second-order effect, which is the one that
     #    actually hurt: rows written before `resultType=core` was added left

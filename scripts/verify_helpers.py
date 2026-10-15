@@ -40,37 +40,29 @@ LAST_VERIFIED = ROOT / "docs" / "last_verified"
 
 # Paths where an unreviewed change is expensive, and why. Ordered most to least.
 CRITICAL = {
-    "pipeline/scoring.py": "the score formula and every constant in it",
-    "pipeline/arcs.py": "the four arcs; invariant 8",
-    "pipeline/dose.py": "derived dose bands",
-    "pipeline/assemble.py": "worker JSON -> Study objects -> scored rows",
-    "pipeline/eligibility.py": "the invariant-7 null refusals",
-    "pipeline/claim_arms.py": "the invariant-7 counterfactual firewall",
-    "pipeline/effect_s.py": "effect size -> signed contribution s",
-    "pipeline/synthesis.py": "the invariant-6 SR refusals",
-    "pipeline/synthesis_bridge.py": "SR batching and polarity resolution",
-    "docs/anchors.csv": "the calibration harness itself",
+    "pipeline/grade.py": "GRADE certainty and the letter table; every rule is a constant",
+    "pipeline/pool.py": "per-outcome pooling, study selection, population policy",
+    "pipeline/effect_size.py": "numbers -> signed effect and variance",
+    "pipeline/span_check.py": "every extracted number checked against its quote",
+    "pipeline/review.py": "the second reviewer's disagreement rule",
+    "pipeline/eligibility.py": "the invariant-7 scope refusals",
+    "pipeline/dose.py": "the tested arm's dose",
+    "pipeline/meta_effects.py": "Hedges' g, REML, Hartung-Knapp",
+    "pipeline/benchmark.py": "the pass rule against published meta-analyses",
     "bsproof/claude_adapter.py": "model boundary, tiers, PROMPT_VERSION",
-    "bsproof/grok_adapter.py": "model boundary; verify ids with `grok models`",
     "prompts/": "extraction contract -- needs a PROMPT_VERSION bump",
     "schemas/": "extraction contract -- needs a PROMPT_VERSION bump",
-    "vocab/": "outcome/form vocabulary and polarity",
+    "vocab/": "outcome/form vocabulary, polarity and MCIDs",
 }
 
-# Constants whose value must never move without a founder decision (invariant 4).
-WATCHED_CONSTANTS = (
-    "S_VALUE", "K", "LAMBDA", "H_PENALTY", "H_NORM", "GATE_MIN_HUMAN_WD",
-    "DESIGN_W", "ROB_FACTOR", "FUNDING_FACTOR", "FORM_FACTOR", "DOSE_FACTOR",
-    "POP_FACTOR", "OA_FACTOR", "SCORING_MODEL",
-    "APPLY_FORM_IN_WEIGHT", "APPLY_DOSE_IN_WEIGHT", "APPLY_POP_IN_WEIGHT",
-    # The effect-size scale (founder decision 2026-08-11, SCORING_MODEL v8).
-    # These reprice every score the same way S_VALUE does, and MID is doubly
-    # load-bearing: it is also the "trivial" threshold in
-    # prompts/s5_conclusion.md, so prompt and scoring must move together or they
-    # silently disagree about what counts as a meaningful effect.
-    "EFFECT_MID_SMD", "EFFECT_FULL_SMD", "EFFECT_MID_PCT", "EFFECT_FULL_PCT",
-)
-CONSTANTS_FILE = "pipeline/scoring.py"
+# Constants whose value must never move without a founder decision (invariant 4),
+# by file. (The v14 ones lived in pipeline/scoring.py until 2026-10-15.)
+WATCHED_CONSTANTS = {
+    "pipeline/grade.py": ("RULES", "LEVELS", "OFF_DOSE", "TABLE", "VARIANTS"),
+    "pipeline/review.py": ("RULES",),
+    "pipeline/pool.py": ("ROUTE_RANK", "CONFIDENCE"),
+    "pipeline/benchmark.py": ("RULES",),
+}
 
 
 def _git(*args: str) -> str:
@@ -122,32 +114,32 @@ def critical_touches(files: list[str]) -> list[tuple[str, str]]:
 
 def constant_drift(sha: str | None) -> list[str]:
     """
-    Named constants in pipeline/scoring.py whose VALUE differs from `sha`.
+    Watched constants whose VALUE differs from `sha`.
 
     Reuses pipeline.invariants.literal_module_assign, so it reads the AST of each
     revision rather than diffing text -- a reformat, a moved comment or a
-    reordered dict is not a change, and `K = 3.0` -> `K = 2.5` is, even if the
-    line moved 40 lines down.
+    reordered dict is not a change, and a moved threshold is, even if the line
+    moved 40 lines down.
     """
     if not sha:
         return []
     sys.path.insert(0, str(ROOT))
     from pipeline.invariants import literal_module_assign
 
-    old_src = _git("show", f"{sha}:{CONSTANTS_FILE}")
-    if not old_src:
-        return []
-    new_src = (ROOT / CONSTANTS_FILE).read_text(encoding="utf-8")
-
     out = []
-    for name in WATCHED_CONSTANTS:
-        try:
-            was = literal_module_assign(old_src, name, CONSTANTS_FILE)
-            now = literal_module_assign(new_src, name, CONSTANTS_FILE)
-        except (SyntaxError, ValueError):
+    for path, names in WATCHED_CONSTANTS.items():
+        old_src = _git("show", f"{sha}:{path}")
+        if not old_src:
             continue
-        if was != now:
-            out.append(f"{name}: {was!r} -> {now!r}")
+        new_src = (ROOT / path).read_text(encoding="utf-8")
+        for name in names:
+            try:
+                was = literal_module_assign(old_src, name, path)
+                now = literal_module_assign(new_src, name, path)
+            except (SyntaxError, ValueError):
+                continue
+            if was != now:
+                out.append(f"{path} {name}: {was!r} -> {now!r}")
     return out
 
 
@@ -202,7 +194,7 @@ def main(argv: list[str]) -> int:
             print(f"           ! {f} -- {why}")
 
     drift = constant_drift(sha)
-    print("\nconstant drift in " + CONSTANTS_FILE + ":")
+    print("\nconstant drift in " + ", ".join(WATCHED_CONSTANTS) + ":")
     if drift:
         for d in drift:
             print(f"  CHANGED  {d}")

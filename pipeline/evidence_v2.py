@@ -14,7 +14,7 @@ outcome is stored ONCE:
              (lib/analyze/grade-v2.ts) and add indirectness
   run_grade  the letter for the run's own product (form, dose), for reports
 
-The run's population variant is fixed (the stored v14 policy, variant B):
+The run's population variant is fixed (variant B, as v14 stored it):
 "different" populations are left out of the pool, "adjacent" ones are noted.
 """
 from __future__ import annotations

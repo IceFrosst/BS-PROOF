@@ -1,16 +1,12 @@
 """
-Extraction stage: synthetic (--wiring), Grok or Claude production, then the
-optional SR-table inheritance (--with-sr). The model is reached only through
-the adapter `call` injected here (CLAUDE.md invariant 1). Moved out of
-run_pipeline.py on 2026-10-03 (helpers verbatim); tests/test_sr_wiring.py pins
-this file's backend branches by AST.
+Extraction stage: synthetic (--wiring) or Claude production. The model is
+reached only through the adapter `call` injected here (CLAUDE.md invariant 1).
+Moved out of run_pipeline.py on 2026-10-03.
 """
 from __future__ import annotations
 
 import json
 import os
-from collections import Counter as _Counter
-
 from pathlib import Path
 
 from pipeline import vocab
@@ -19,10 +15,6 @@ from bsproof.run.corpus import _best_text, _sections, stratify_targets
 
 DEFAULT_WIRING_SCORE_CAP = 40
 SYNTHETIC_VERSION = "SYNTHETIC-NOT-REAL"
-GROK_STUDIES_IN_FLIGHT = int(os.environ.get("SP_GROK_STUDIES_IN_FLIGHT", "32"))
-# A CEILING, not a budget: extraction stops itself when reviews stop naming
-# trials we have not seen (synthesis_bridge marginal-yield stopping).
-MAX_SRS = int(os.environ.get("SP_MAX_SRS", "60"))
 CHECKPOINTS = Path(__file__).resolve().parents[2] / "out" / "checkpoints"
 # Exit code of a run that stopped on the subscription limit before writing any
 # report: re-run the same command to resume.
@@ -237,14 +229,9 @@ def _studies_list(raw: list[dict]) -> list[dict]:
 
 
 def extract_stage(store, opts, primaries, pv, outcome_allowlist, run_context):
-    """Return (extractions, prompt_version, tag, syntheses_for_score, sr_derived),
-    or an int exit code when the run cannot continue."""
-    wiring, grok, limit, scope = opts.wiring, opts.grok, opts.limit, opts.scope
-    ingredient, with_sr = opts.ingredient, opts.with_sr
-    call_fn = None
-    raw: list[dict] = []
-    syntheses_for_score: list = []
-    sr_derived: list[dict] = []
+    """Return the extractions ([{record, extraction, registry}]), or an int exit
+    code when the run cannot continue."""
+    wiring, limit, scope, ingredient = opts.wiring, opts.limit, opts.scope, opts.ingredient
 
     if wiring:
         axes = {a: pv[a] for a in vocab.AXES}
@@ -254,218 +241,104 @@ def extract_stage(store, opts, primaries, pv, outcome_allowlist, run_context):
                         if p.get("registration_id") else None,
             "extraction": synthetic_extraction(p, axes),
         } for p in primaries[:DEFAULT_WIRING_SCORE_CAP]]
-        prompt_version = SYNTHETIC_VERSION
-        tag = "SYNTHETIC "
+        run_context["prompt_version"] = SYNTHETIC_VERSION
         run_context["studies_targeted"] = len(extractions)
         run_context["studies_ok"] = len(extractions)
+        return extractions
+
+    from bsproof import claude_adapter as ca
+    from bsproof import workers
+    if not primaries:
+        print("No RCTs left after relevance / OA filters.")
+        return 1
+    run_context["concurrency"] = ca.MAX_CONCURRENCY
+    run_context["studies_in_flight"] = ca.MAX_CONCURRENCY
+
+    if limit is None:
+        targets = primaries
+    elif scope == "per_outcome" and outcome_allowlist:
+        targets = stratify_targets(primaries, outcome_allowlist, limit)
+        _tagged = sum(1 for t in targets if t.get("retrieved_for"))
+        print(f"  stratified selection: {_tagged}/{len(targets)} carry "
+              f"retrieved_for tags (round-robin across "
+              f"{len(outcome_allowlist)} outcomes)")
     else:
-        from bsproof import workers
-        if grok:
-            from bsproof import grok_adapter as ga
-            ga.reset_stats()
-            if not ga.preflight():
-                return 1
-            if not primaries:
-                print("No RCTs left after relevance / OA filters.")
-                return 1
-            effective = len(primaries) if limit is None else min(limit, len(primaries))
-            print("\n" + "-" * 68)
-            print("GROK MODE")
-            print(f"  scope: {scope}")
-            print(f"  studies in flight: {GROK_STUDIES_IN_FLIGHT}")
-            print(f"  concurrent grok CLI: {ga.MAX_CONCURRENCY}")
-            print(f"  batch size (extract): {effective}"
-                  + ("  (FULL corpus)" if limit is None else ""))
-            if outcome_allowlist:
-                print(f"  showcase top-{len(outcome_allowlist)} by RCT count: "
-                      + ", ".join(outcome_allowlist))
-            else:
-                print("  showcase: OFF (full outcome vocabulary)")
-            print("-" * 68)
-            call_fn = ga.call
-            prompt_version = f"{ga.PROMPT_VERSION}+{ga.PROVENANCE}"
-            tag = "GROK "
-            in_flight = GROK_STUDIES_IN_FLIGHT
-            # Do NOT collapse limit to a number here: None is what tells
-            # the run (and the report) that this was the FULL corpus and
-            # not a sample, which changes how the score may be read.
-            run_context["concurrency"] = ga.MAX_CONCURRENCY
-            run_context["studies_in_flight"] = in_flight
-        else:
-            # PRODUCTION. This branch used to live below in an `else:` of
-            # its own, and it was a wiring-shaped stub rather than an
-            # implementation: it passed `text_for=lambda r: title`, so every
-            # subagent read the TITLE of the paper and nothing else. S5 was
-            # asked what a trial concluded from its title, and correctly
-            # answered {"claims": []}. It also ignored --limit, used
-            # DEFAULT_WIRING_SCORE_CAP, and set none of the run_context keys
-            # the report renders -- which is why production reports came out
-            # empty and every run said "no scored outcomes".
-            #
-            # The pilot/grok path was the only real implementation. There is
-            # no reason for a second one: the backends differ ONLY in which
-            # `call` they inject, which is exactly what call_fn is for.
-            # Merged 2026-08-09.
-            from bsproof import claude_adapter as ca
-            if not ca.preflight():
-                return 1
-            # EXPLICIT, not None. workers.extract_study defaults a None
-            # call to claude_adapter.call, so for extraction the two are
-            # identical
-            # -- but the SR block below gates on `call_fn is not None`, so
-            # None silently skipped SR inheritance on the one production
-            # backend while the report still said `-sr`. Measured
-            # 2026-08-25: two full --with-sr production runs reported
-            # requested: 0, s2_ok: 0, resolved: 0 under an `sr` mode label,
-            # and neither artifact could be retained.
-            call_fn = ca.call
-            prompt_version = ca.PROMPT_VERSION
-            tag = ""
-            in_flight = ca.MAX_CONCURRENCY
-            ga = None
-            run_context["concurrency"] = ca.MAX_CONCURRENCY
-            run_context["studies_in_flight"] = in_flight
+        targets = primaries[:limit]
+    # Say what this will cost BEFORE spending it: S3, S4, S5, S7, S8, S6B and
+    # S5N, about 7 model calls per study.
+    print(f"\n  EXTRACTING {len(targets)} studies"
+          + ("  (FULL corpus — no --limit)" if limit is None
+             else f" of {len(primaries)} available  (--limit {limit})")
+          + f"\n  ~{len(targets) * 7} model calls at ~7/study")
+    if limit is None and len(targets) > 200:
+        print(f"  NOTE: {len(targets)} studies is a large run. "
+              f"Cap it with --limit N if this is a smoke test.")
+    run_context["studies_targeted"] = len(targets)
+    checkpoint = CHECKPOINTS / f"{ingredient}_{opts.form}.json"
+    if checkpoint.exists():
+        try:
+            prev = json.loads(checkpoint.read_text(encoding="utf-8"))
+            print(f"  previous attempt ({prev.get('updated')}): "
+                  f"{prev.get('studies_finished')}/{prev.get('studies_total')} studies finished "
+                  f"{prev.get('by_status')} -- their model calls replay from cache")
+        except (OSError, ValueError):
+            pass
+    raw = workers.extract_corpus(
+        [{**p, "_canonical": p["canonical_id"], "ingredient": ingredient}
+         for p in targets],
+        text_for=lambda r: _best_text(r),
+        sections_for=lambda r: _sections(r),
+        registry_for=lambda r: store.registry_facts(r["registration_id"])
+                               if r.get("registration_id") else None,
+        call=ca.call,
+        max_studies_in_flight=ca.MAX_CONCURRENCY,
+        outcome_allowlist=outcome_allowlist,
+        checkpoint=checkpoint,
+    )
+    _report_failures(raw)
+    cut = _incomplete_quota(raw)
+    if cut and os.environ.get("SP_ALLOW_INCOMPLETE") != "1":
+        # A run truncated by the limit must never reach reports/: failed calls
+        # hide refusals and bias the result (CLAUDE.md "Extraction backends").
+        # Nothing is lost -- finished calls are cached.
+        print("\n" + "=" * 74 + f"\nINCOMPLETE: {len(cut)} studies still hit the usage limit "
+              "after the pause budget.\nNo report was written. Re-run the SAME command after "
+              "the limit resets to resume\n(finished calls replay from cache). "
+              f"Progress: {checkpoint}\n" + "=" * 74)
+        return EXIT_INCOMPLETE
+    run_context["studies_skipped"] = sum(
+        1 for r in raw if r["extraction"].get("_skipped"))
+    run_context["studies_failed_partial"] = sum(
+        1 for r in raw if r["extraction"].get("_failed"))
+    run_context["studies_ok"] = len(raw) - run_context["studies_skipped"]
+    run_context["agent_stats"] = _agent_stats(raw)
+    run_context["studies_list"] = _studies_list(raw)
+    extractions = [{
+        "record": r["record"],
+        "extraction": r["extraction"],
+        "registry": store.registry_facts(r["record"].get("registration_id"))
+                    if r["record"].get("registration_id") else None,
+    } for r in raw if not r["extraction"].get("_skipped")]
+    if not extractions:
+        print("No study passed relevance + text checks.")
+        return 1
 
-        if limit is None:
-            targets = primaries
-        elif scope == "per_outcome" and outcome_allowlist:
-            targets = stratify_targets(primaries, outcome_allowlist, limit)
-            _tagged = sum(1 for t in targets if t.get("retrieved_for"))
-            print(f"  stratified selection: {_tagged}/{len(targets)} carry "
-                  f"retrieved_for tags (round-robin across "
-                  f"{len(outcome_allowlist)} outcomes)")
-        else:
-            targets = primaries[:limit]
-        # Say what this will cost BEFORE spending it. ~10 model calls per
-        # study, and about half are S6, which fires once per extracted claim.
-        _calls = len(targets) * 10
-        print(f"\n  EXTRACTING {len(targets)} studies"
-              + ("  (FULL corpus — no --limit)" if limit is None
-                 else f" of {len(primaries)} available  (--limit {limit})")
-              + f"\n  ~{_calls} model calls at ~10/study; "
-                f"S6 is about half of them (once per claim).")
-        if limit is None and len(targets) > 200:
-            print(f"  NOTE: {len(targets)} studies is a large run. "
-                  f"Cap it with --limit N if this is a smoke test.")
-        run_context["studies_targeted"] = len(targets)
-        print(f"extracting {len(targets)} studies "
-              f"(from {len(primaries)} relevance-filtered RCTs)...")
-        checkpoint = CHECKPOINTS / f"{ingredient}_{opts.form}.json"
-        if checkpoint.exists():
-            try:
-                prev = json.loads(checkpoint.read_text(encoding="utf-8"))
-                print(f"  previous attempt ({prev.get('updated')}): "
-                      f"{prev.get('studies_finished')}/{prev.get('studies_total')} studies finished "
-                      f"{prev.get('by_status')} -- their model calls replay from cache")
-            except (OSError, ValueError):
-                pass
-        raw = workers.extract_corpus(
-            [{**p, "_canonical": p["canonical_id"], "ingredient": ingredient}
-             for p in targets],
-            text_for=lambda r: _best_text(r),
-            sections_for=lambda r: _sections(r),
-            registry_for=lambda r: store.registry_facts(r["registration_id"])
-                                   if r.get("registration_id") else None,
-            call=call_fn,
-            max_studies_in_flight=in_flight,
-            outcome_allowlist=outcome_allowlist,
-            checkpoint=checkpoint,
-        )
-        _report_failures(raw)
-        cut = _incomplete_quota(raw)
-        if cut and os.environ.get("SP_ALLOW_INCOMPLETE") != "1":
-            # A run truncated by the limit must never reach reports/: S5
-            # failures hide nulls and bias scores up (CLAUDE.md "Extraction
-            # backends"). Nothing is lost -- finished calls are cached.
-            print("\n" + "=" * 74 + f"\nINCOMPLETE: {len(cut)} studies still hit the usage limit "
-                  "after the pause budget.\nNo report was written. Re-run the SAME command after "
-                  "the limit resets to resume\n(finished calls replay from cache). "
-                  f"Progress: {checkpoint}\n" + "=" * 74)
-            return EXIT_INCOMPLETE
-        run_context["studies_skipped"] = sum(
-            1 for r in raw if r["extraction"].get("_skipped"))
-        run_context["studies_failed_partial"] = sum(
-            1 for r in raw if r["extraction"].get("_failed"))
-        run_context["studies_ok"] = (
-            len(raw) - run_context["studies_skipped"]
-        )
-        run_context["agent_stats"] = _agent_stats(raw)
-        run_context["studies_list"] = _studies_list(raw)
-        if grok:
-            speed = ga.speed_report()
-            print(speed)
-            run_context["speed_report"] = speed
-        extractions = [{
-            "record": r["record"],
-            "extraction": r["extraction"],
-            "registry": store.registry_facts(r["record"].get("registration_id"))
-                        if r["record"].get("registration_id") else None,
-        } for r in raw if not r["extraction"].get("_skipped")]
-        if not extractions:
-            print("No study passed relevance + text checks.")
-            return 1
+    # The whole extraction, for auditing a result claim by claim. Off by
+    # default; written where asked, not into reports/.
+    _dump = os.environ.get("SP_DUMP_EXTRACTIONS")
+    if _dump:
+        try:
+            with open(_dump, "w") as fh:
+                json.dump(extractions, fh, indent=1, default=str)
+            print(f"  extractions dumped -> {_dump}")
+        except Exception as e:
+            print(f"  extraction dump failed: {e}")
 
-        # Claim-level audit trail. The run report carries scores; it does not
-        # carry the claims those scores were computed from, and "why is this
-        # ECU negative" is unanswerable without them -- anchor #1 took a
-        # re-run to diagnose for exactly this reason. Off by default; the
-        # dump is the whole extraction, so it is written where asked, not
-        # into reports/.
-        _dump = os.environ.get("SP_DUMP_EXTRACTIONS")
-        if _dump:
-            try:
-                with open(_dump, "w") as fh:
-                    json.dump(extractions, fh, indent=1, default=str)
-                print(f"  extractions dumped -> {_dump}")
-            except Exception as e:
-                print(f"  extraction dump failed: {e}")
-
-        if with_sr and call_fn is not None:
-            from pipeline.synthesis_bridge import build_syntheses_for_scoring
-            run_context["sr"]["requested"] = MAX_SRS
-            syntheses_for_score, _s2_batch, _all_rows = (
-                build_syntheses_for_scoring(
-                    store, call=call_fn, max_srs=MAX_SRS,
-                    max_workers=min(6, GROK_STUDIES_IN_FLIGHT)))
-            # Invariant 6 as amended 2026-08-08: the review adds no mass,
-            # the trials it describes add themselves, once each, at
-            # oa='sr_table'. This is the largest source of evidence we were
-            # discarding -- trials whose own full text we cannot reach.
-            from pipeline.synthesis_bridge import build_sr_derived
-            sr_derived, sr_stats = build_sr_derived(
-                _s2_batch, _all_rows, call=call_fn,
-                outcome_allowlist=outcome_allowlist)
-            run_context["sr"]["derived"] = sr_stats
-            run_context["sr"]["s2_ok"] = sum(
-                1 for s in syntheses_for_score if s)
-            run_context["sr"]["resolved"] = sum(
-                1 for s in syntheses_for_score if s.get("resolved"))
-            # q_s now comes from a checklist about the REVIEW, so record the
-            # checklist. A quality number with no visible basis is exactly
-            # the kind of thing this pipeline exists to refuse.
-            run_context["sr"]["review_bands"] = _Counter(
-                (s.get("_review") or {}).get("band") for s in syntheses_for_score
-                if s.get("resolved"))
-            run_context["sr"]["overlap"] = [
-                {"listed": (s.get("_resolution") or {}).get("n_listed"),
-                 "in_corpus": (s.get("_resolution") or {}).get("n_resolved"),
-                 "q_s": s.get("q_s")}
-                for s in syntheses_for_score if s.get("resolved")]
-    run_context["prompt_version"] = prompt_version
-
+    run_context["prompt_version"] = ca.PROMPT_VERSION
     # Token + cost accounting for the run report. On a subscription the
     # per-call spend is 0, so what the adapter reports is the API-EQUIVALENT
-    # price of the same work -- the number that tells a reader what this
-    # pipeline would cost metered. Both are carried; neither is called
-    # "spent". Backends other than Claude leave this absent rather than
-    # reporting a zero that looks measured.
-    if not wiring and not grok:
-        try:
-            from bsproof import claude_adapter as _ca
-            run_context["usage"] = _ca.USAGE.as_dict()
-            run_context["models"] = dict(_ca.TIER_MODEL)
-            run_context["agent_tiers"] = {a: t for a, (t, _s, _p)
-                                          in _ca.AGENTS.items()}
-        except Exception:
-            pass
-    return extractions, prompt_version, tag, syntheses_for_score, sr_derived
+    # price of the same work. Both are carried; neither is called "spent".
+    run_context["usage"] = ca.USAGE.as_dict()
+    run_context["models"] = dict(ca.TIER_MODEL)
+    run_context["agent_tiers"] = {a: t for a, (t, _s, _p) in ca.AGENTS.items()}
+    return extractions

@@ -23,7 +23,7 @@ linking it, and a trial in our corpus without a stated NCT id is not matched.
 That is why it is REPORTED BESIDE the grade and does not downgrade it yet: the
 rule turning the count into a downgrade is a founder decision
 (docs/REVIEW_PENDING.md #0), and SPEC §12 ("shown, never scored") still governs
-production v14.
+it.
 """
 from __future__ import annotations
 

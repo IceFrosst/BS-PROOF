@@ -1,15 +1,12 @@
-"""Selftest group: Storage, per-agent section routing, cache keys, one study = one vote, batched S6, prompt fitting, per-outcome dose bands, search terms, store concurrency.
-
-Moved verbatim out of the single pipeline/selftest.py main() on 2026-10-03;
-run order is preserved by pipeline/selftest/__init__.py."""
+"""Selftest group: storage, per-agent section routing, cache keys, batched S6, prompt fitting, the tested arm's dose, search terms, store concurrency."""
 import sys, os, pathlib  # noqa: F401  (sections use them)
-from pipeline.selftest._common import Study, score_ecu, band_for, S_VALUE, standardise_effect, dedup, canonical_id, registry_id, vocab, ROB_CLEAN, rcts, _reasonless_probe  # noqa: F401
+from pipeline.selftest._common import dedup, canonical_id, registry_id, vocab, _reasonless_probe  # noqa: F401
 
 
 def run(check):
     print("\nSTORAGE (SQLite on a Postgres-shaped schema)")
     import tempfile
-    from pipeline.storage import Store, now_iso
+    from pipeline.storage import Store
     with Store(os.path.join(tempfile.mkdtemp(), "t.sqlite")) as st_db:
         st_db.upsert_studies([
             {"_canonical": "registry:nct01234567", "pmid": "1", "is_synthesis": False,
@@ -21,7 +18,7 @@ def run(check):
              "oa": "abstract_only", "source": "europepmc"}])
         c = st_db.counts()
         check("studies persisted", c["studies"] == 3 and c["syntheses"] == 1)
-        check("unclassified queryable as the S1 budget",
+        check("unclassified records are queryable",
               [r["canonical_id"] for r in st_db.unclassified()] == ["pmid:99"])
 
         try:
@@ -31,35 +28,6 @@ def run(check):
             ok = True
         check("refuses records that skipped dedup", ok,
               "no _canonical -> one trial would land four times")
-
-        key = vocab.ecu_key("magnesium", "magnesium_glycinate", None,
-                            "sleep_onset", "general_adult")
-        pv = vocab.population_variants()[0]
-        row = {"ecu_key": key, "ingredient": "magnesium",
-               "form_vocab_id": "magnesium_glycinate", "dose_band": None,
-               "band_version": 0, "outcome_vocab_id": "sleep_onset",
-               "population": {"id": pv["id"], **{a: pv[a] for a in vocab.AXES}},
-               "score": 71, "band": "strong support", "gate_fired": False,
-               "components": {"d": 0.9, "c": 0.85, "H": 0.1, "E": 4.2,
-                              "E_prime": 4.8, "coverage": 0.6},
-               "evidence": {"n_primaries": 5, "n_syntheses": 2, "study_ids": []},
-               "flags": ["brand_funded"],
-               "provenance": {"prompt_version": "v1.1",
-                              "vocab_versions": vocab.versions(),
-                              "computed_at": now_iso()}}
-        st_db.upsert_ecu(row, evidence=[
-            {"canonical_id": "registry:nct01234567", "role": "primary",
-             "w_study": 0.8, "s_value": 1.0, "transfer_factor": 1.0}])
-        check("ECU round-trips", st_db.ecu(key)["score"] == 71)
-        check("audit trail links study to ECU",
-              st_db.evidence_for(key)[0]["canonical_id"] == "registry:nct01234567",
-              "every published number must be reconstructible")
-        check("band_version bump invalidates cached ECUs",
-              st_db.stale_bands(1) == [key],
-              "SPEC section 5 complexity flag, made queryable")
-        st_db.upsert_ecu({**row, "score": 42})
-        check("re-scoring updates in place, no duplicate row",
-              st_db.counts()["ecus"] == 1 and st_db.ecu(key)["score"] == 42)
 
     # Each agent gets the section it needs. S8 was handed METHODS ++ RESULTS,
     # which cannot state who paid: 0/7 real texts contained a funding word.
@@ -117,251 +85,6 @@ def run(check):
           all(e in _ca.VALID_EFFORT for e in _ca.TIER_EFFORT.values() if e),
           f"TIER_EFFORT={_ca.TIER_EFFORT}")
 
-    # ONE STUDY = ONE VOTE. Until 2026-08-10 build_ecus appended one Study per
-    # CLAIM, so a trial S5 sliced into 20 rows voted 20 times: E, c, H and the
-    # human-evidence gate were all set by the model's choice of granularity.
-    print("\nONE STUDY = ONE VOTE")
-    from pipeline.assemble import build_ecus as _b2, _one_study_one_vote
-    _pr = {"ingredient": "creatine", "form_vocab_id": "creatine_monohydrate",
-           "population": {"id": "general_adult",
-                          **{a: vocab.population_variants()[0][a] for a in vocab.AXES}}}
-
-    def _ext(canonical, claims):
-        return {"record": {"_canonical": canonical, "ingredient": "creatine",
-                           "design_rank": 4, "oa": "full_text"},
-                "extraction": {"S3": {"extraction_version": "legacy-v1.23",
-                                      "n_randomised": 40},
-                               "S5": {"extraction_version": "legacy-v1.23"},
-                               "S7": {"extraction_version": "legacy-v1.23",
-                                      "form_vocab_id": "creatine_monohydrate"},
-                               "outcomes": [
-                                   {"outcome_vocab_id": "muscle_strength",
-                                    "claim": {"direction": d, "magnitude": m}}
-                                   for d, m in claims]}}
-
-    one = _b2([_ext("doi:10.1/a", [("benefit", "meaningful")])],
-              _pr, ignore_population=True)
-    # Same finding, sliced into 6 (the sex x timepoint x region grid pattern).
-    six = _b2([_ext("doi:10.1/a", [("benefit", "meaningful")] * 6)],
-              _pr, ignore_population=True)
-    check("one trial sliced 6 ways scores the same as sliced once",
-          one and six and one[0]["score"] == six[0]["score"],
-          f"{one[0]['score'] if one else None} vs {six[0]['score'] if six else None}")
-    check("evidence mass E is unchanged by the split",
-          one[0]["components"]["E"] == six[0]["components"]["E"],
-          f"E {one[0]['components']['E']} vs {six[0]['components']['E']}")
-    check("n_primaries reports trials, not claims",
-          six[0]["evidence"]["n_primaries"] == 1,
-          str(six[0]["evidence"]["n_primaries"]))
-    check("study_ids lists each trial once",
-          six[0]["evidence"]["study_ids"] == ["doi:10.1/a"],
-          str(six[0]["evidence"]["study_ids"]))
-    check("a study is never heterogeneous with itself",
-          six[0]["components"]["H"] == 0,
-          f"H={six[0]['components']['H']}")
-
-    # Invariant 7: a null is evidence AGAINST, and collapsing must never let a
-    # benefit simply overwrite one. A 1-1 tie with no primary is not a win for
-    # either -- it reads as `unclear`, s = 0.0. Verified 2026-08-10 against
-    # PMC6534934, where the old conservative tiebreak filed a significant
-    # +17.9% between-group power benefit as evidence against creatine.
-    mixed = _b2([_ext("doi:10.1/a", [("benefit", "meaningful"), ("null_effect", None)])],
-                _pr, ignore_population=True)
-    only_null = _b2([_ext("doi:10.1/a", [("null_effect", None)])],
-                    _pr, ignore_population=True)
-    only_ben = _b2([_ext("doi:10.1/a", [("benefit", "meaningful")])],
-                   _pr, ignore_population=True)
-    check("a benefit/null tie is neither side's win",
-          mixed[0]["components"]["d"] == 0.0
-          and mixed[0]["score"] == only_null[0]["score"] == 0,
-          f"null={only_null[0]['score']} tie={mixed[0]['score']} benefit={only_ben[0]['score']}")
-    check("a benefit/null tie adds no evidence in either direction",
-          mixed[0]["components"]["d"] == 0.0,
-          f"d={mixed[0]['components']['d']}")
-
-    # ...AND STILL NOT WHEN THE SURVIVING CLAIM CARRIES A NUMBER. The pin above
-    # passed either way, because its fixture sets no effect_size -- so it stopped
-    # testing the property the moment s_value started preferring a measured
-    # effect over the label. `_collapse` must clear effect_s alongside direction,
-    # or a tie silently picks a side.
-    def _ext_sized(canonical, claims):
-        return {"record": {"_canonical": canonical, "ingredient": "creatine",
-                           "design_rank": 4, "oa": "full_text"},
-                "extraction": {"S3": {"extraction_version": "legacy-v1.23",
-                                      "n_randomised": 40},
-                               "S5": {"extraction_version": "legacy-v1.23"},
-                               "S7": {"extraction_version": "legacy-v1.23",
-                                      "form_vocab_id": "creatine_monohydrate"},
-                               "outcomes": [
-                                   {"outcome_vocab_id": "muscle_strength",
-                                    "claim": {"direction": d, "magnitude": m,
-                                              "effect_size": 0.75,
-                                              "effect_unit": "cohen's d",
-                                              "effect_favours": "ingredient"}}
-                                   for d, m in claims]}}
-    _tie_sized = _b2([_ext_sized("doi:10.1/t",
-                                 [("benefit", "meaningful"), ("null_effect", None)])],
-                     _pr, ignore_population=True)
-    check("a SIZED benefit/null tie still adds no evidence in either direction",
-          _tie_sized[0]["components"]["d"] == 0.0,
-          f"d={_tie_sized[0]['components']['d']} -- if this is non-zero, the tie "
-          f"rule is being overridden by a number it was supposed to set aside")
-
-    # ELIGIBILITY (2026-08-10). A trial with no ingredient-free arm, or one its
-    # own authors call a pilot, cannot vote on whether the ingredient works.
-    def _flagged(canonical, direction, **s3):
-        e = _ext(canonical, [(direction, "meaningful" if direction == "benefit" else None)])
-        e["extraction"]["S3"].update(s3)
-        return e
-    _base = _b2([_flagged("doi:10.1/e1", "null_effect"),
-                 _flagged("doi:10.1/e2", "null_effect")], _pr, ignore_population=True)
-    _st = {}
-    _gated = _b2([_flagged("doi:10.1/e1", "null_effect"),
-                  _flagged("doi:10.1/e2", "null_effect",
-                           comparator="all_arms_get_ingredient")],
-                 _pr, ignore_population=True, stats=_st)
-    check("a trial where every arm gets the ingredient does not vote",
-          _gated[0]["evidence"]["n_primaries"] == 1
-          and _base[0]["evidence"]["n_primaries"] == 2
-          and _st["ineligible_by_reason"] == {"no_ingredient_free_arm": 1},
-          f"n={_gated[0]['evidence']['n_primaries']} stats={_st}")
-
-    _st2 = {}
-    _pilot = _b2([_flagged("doi:10.1/e1", "null_effect"),
-                  _flagged("doi:10.1/e2", "null_effect",
-                           self_declared_underpowered=True)],
-                 _pr, ignore_population=True, stats=_st2)
-    check("a self-declared pilot's null does not vote",
-          _pilot[0]["evidence"]["n_primaries"] == 1
-          and _st2["ineligible_by_reason"] == {"self_declared_underpowered": 1})
-
-    # ...and SYMMETRICALLY: a pilot's BENEFIT is dropped too. Keeping pilot
-    # benefits while dropping pilot nulls is the one-way handling of uncertainty
-    # this gate exists to remove.
-    _st3 = {}
-    _pb = _b2([_flagged("doi:10.1/e1", "benefit"),
-               _flagged("doi:10.1/e2", "benefit", self_declared_underpowered=True)],
-              _pr, ignore_population=True, stats=_st3)
-    check("a self-declared pilot's BENEFIT is dropped too",
-          _pb[0]["evidence"]["n_primaries"] == 1 and _st3["ineligible_total"] == 1,
-          "the gate must not be a one-way ratchet")
-
-    # THIRD REFUSAL (2026-08-10, decision delegated by the founder): a trial
-    # whose every ingredient arm co-administers another active tests a
-    # COMBINATION. 21/143 audited studies were this shape with a genuine
-    # placebo, so the all_arms refusal correctly never fired on them.
-    _st4 = {}
-    _combo = _b2([_flagged("doi:10.1/e1", "null_effect"),
-                  _flagged("doi:10.1/e2", "null_effect", ingredient_isolated="no")],
-                 _pr, ignore_population=True, stats=_st4)
-    check("a combination-only trial does not vote",
-          _combo[0]["evidence"]["n_primaries"] == 1
-          and _st4["ineligible_by_reason"] == {"no_isolated_ingredient_arm": 1},
-          f"stats={_st4}")
-    _st5 = {}
-    _combo_b = _b2([_flagged("doi:10.1/e1", "benefit"),
-                    _flagged("doi:10.1/e2", "benefit", ingredient_isolated="no")],
-                   _pr, ignore_population=True, stats=_st5)
-    check("a combination's BENEFIT is dropped too (symmetric)",
-          _combo_b[0]["evidence"]["n_primaries"] == 1 and _st5["ineligible_total"] == 1,
-          "creatine+HMB improving strength is not evidence about creatine alone")
-    import json as _json, pathlib as _pl
-    _s3schema = _json.load(open(_pl.Path(__file__).parent.parent.parent / "schemas" / "s3_study.json"))
-    _iso = (_s3schema.get("properties") or {}).get("ingredient_isolated") or {}
-    check("ingredient_isolated is in the S3 schema with 'no' in its enum",
-          "no" in (_iso.get("enum") or []),
-          "rename the enum and _ineligible silently never fires -- the "
-          "schema-drift trap invariant 7 already fell into once")
-
-    # A silent or hesitant extractor must never cost us a study.
-    for _val in ({}, {"comparator": None}, {"comparator": "unknown"},
-                 {"self_declared_underpowered": None}, {"self_declared_underpowered": False},
-                 {"ingredient_isolated": None}, {"ingredient_isolated": "unknown"},
-                 {"ingredient_isolated": "yes"}):
-        _keep = _b2([_flagged("doi:10.1/e1", "null_effect"),
-                     _flagged("doi:10.1/e2", "null_effect", **_val)],
-                    _pr, ignore_population=True)
-        check(f"eligibility defaults to KEEP for {_val or 'a missing field'}",
-              _keep[0]["evidence"]["n_primaries"] == 2,
-              f"n={_keep[0]['evidence']['n_primaries']}")
-
-    # Two DIFFERENT trials must still both count -- the fix must not over-collapse.
-    two = _b2([_ext("doi:10.1/a", [("benefit", "meaningful")]),
-               _ext("doi:10.1/b", [("benefit", "meaningful")])],
-              _pr, ignore_population=True)
-    check("two distinct trials still contribute two votes",
-          two[0]["evidence"]["n_primaries"] == 2
-          and two[0]["components"]["E"] > one[0]["components"]["E"],
-          f"n={two[0]['evidence']['n_primaries']} E={two[0]['components']['E']}")
-
-    # The gate was defeatable by granularity: DESIGN_W[6]=0.30 is below
-    # GATE_MIN_HUMAN_WD=0.5 alone, but two copies of the same study summed to
-    # 0.60 and passed "not enough human evidence".
-    def _weak(canonical, n_claims):
-        e = _ext(canonical, [("benefit", "meaningful")] * n_claims)
-        e["record"]["design_rank"] = 6
-        return e
-    weak1 = _b2([_weak("doi:10.1/w", 1)], _pr, ignore_population=True)
-    weak2 = _b2([_weak("doi:10.1/w", 2)], _pr, ignore_population=True)
-    check("the human-evidence gate cannot be passed by splitting one study",
-          weak1[0]["gate_fired"] and weak2[0]["gate_fired"],
-          f"1 claim gate={weak1[0]['gate_fired']}, 2 claims gate={weak2[0]['gate_fired']}")
-
-    _s = lambda i, d: Study(id=i, design_rank=4, n=40, direction=d,
-                            magnitude="meaningful" if d == "benefit" else None)
-    # No primary declared -> MAJORITY wins; a benefit/null tie reads `unclear`.
-    _kept, _n = _one_study_one_vote([
-        (_s("a", "benefit"), {"outcome_id": "o"}),
-        (_s("a", "null_effect"), {"outcome_id": "o"}),
-        (_s("b", "benefit"), {"outcome_id": "o"}),
-    ])
-    check("no primary + 1-1 tie reads as unclear, not as a null",
-          [s.id for s, _ in _kept] == ["a", "b"]
-          and _kept[0][0].direction == "unclear" and _n == 1,
-          f"{[(s.id, s.direction) for s, _ in _kept]} collapsed={_n}")
-
-    # ...but a harm signal is never averaged away by a tie.
-    _keptH, _ = _one_study_one_vote([
-        (_s("a", "harm"), {"outcome_id": "o"}),
-        (_s("a", "benefit"), {"outcome_id": "o"}),
-    ])
-    check("harm wins any tie it is in", _keptH[0][0].direction == "harm",
-          "a safety signal must not be averaged away")
-    _keptH2, _ = _one_study_one_vote([
-        (_s("a", "harm"), {"outcome_id": "o"}),
-        (_s("a", "null_effect"), {"outcome_id": "o"}),
-    ])
-    check("harm beats a tied null too", _keptH2[0][0].direction == "harm")
-
-    # THE FIX: the trial's own primary endpoint outranks a secondary null.
-    _kept2, _ = _one_study_one_vote([
-        (_s("a", "null_effect"), {"outcome_id": "o", "is_primary": False}),
-        (_s("a", "benefit"), {"outcome_id": "o", "is_primary": True}),
-    ])
-    check("a PRIMARY benefit is not overruled by a secondary null",
-          _kept2[0][0].direction == "benefit",
-          "measured: 28 of 87 trials had their primary benefit filed as null/harm")
-
-    # ...but a primary NULL still wins over a secondary benefit. Invariant 7.
-    _kept3, _ = _one_study_one_vote([
-        (_s("a", "benefit"), {"outcome_id": "o", "is_primary": False}),
-        (_s("a", "null_effect"), {"outcome_id": "o", "is_primary": True}),
-    ])
-    check("a PRIMARY null is not overruled by a secondary benefit",
-          _kept3[0][0].direction == "null_effect",
-          "the fix must not become 'any benefit wins'")
-
-    # Majority: 3 nulls vs 1 benefit, no primary -> null. Resists cherry-picking.
-    _kept4, _ = _one_study_one_vote([
-        (_s("a", "benefit"), {"outcome_id": "o"}),
-        (_s("a", "null_effect"), {"outcome_id": "o"}),
-        (_s("a", "null_effect"), {"outcome_id": "o"}),
-        (_s("a", "null_effect"), {"outcome_id": "o"}),
-    ])
-    check("one positive among many nulls does not win without a primary",
-          _kept4[0][0].direction == "null_effect",
-          "multiple-comparisons guard")
-
     # Batched S6 matches results back BY INDEX. If it ever matched by position,
     # a reordered or short array would shift every mapping onto the wrong claim
     # -- silently filing evidence about one outcome under another, which is the
@@ -390,39 +113,34 @@ def run(check):
             return {}, {}
         return _c
 
-    _saved = _wk.S6_BATCH
-    _wk.S6_BATCH = True
-    try:
-        out = _wk.extract_study(_rec, "x" * 500, call=_fake_call(shuffled=True))
-        got = [(o["claim"]["outcome_raw"], o["outcome_vocab_id"])
-               for o in out["outcomes"]]
-        check("a REORDERED batch response still lands on the right claim",
-              got == [("hand grip strength", "muscle_strength"),
-                      ("leg press 1-RM", "muscle_strength"),
-                      ("serum creatinine", None)],
-              str(got))
-        out2 = _wk.extract_study(_rec, "x" * 500, call=_fake_call(False, drop=(1,)))
-        got2 = [(o["claim"]["outcome_raw"], o["outcome_vocab_id"])
-                for o in out2["outcomes"]]
-        check("a MISSING index is discarded, never shifted onto its neighbour",
-              got2 == [("hand grip strength", "muscle_strength"),
-                       ("leg press 1-RM", None),
-                       ("serum creatinine", None)],
-              str(got2))
-        check("every claim still yields exactly one outcome row",
-              len(out["outcomes"]) == len(_claims))
-    finally:
-        _wk.S6_BATCH = _saved
+    out = _wk.extract_study(_rec, "x" * 500, call=_fake_call(shuffled=True))
+    got = [(o["claim"]["outcome_raw"], o["outcome_vocab_id"])
+           for o in out["outcomes"]]
+    check("a REORDERED batch response still lands on the right claim",
+          got == [("hand grip strength", "muscle_strength"),
+                  ("leg press 1-RM", "muscle_strength"),
+                  ("serum creatinine", None)],
+          str(got))
+    out2 = _wk.extract_study(_rec, "x" * 500, call=_fake_call(False, drop=(1,)))
+    got2 = [(o["claim"]["outcome_raw"], o["outcome_vocab_id"])
+            for o in out2["outcomes"]]
+    check("a MISSING index is discarded, never shifted onto its neighbour",
+          got2 == [("hand grip strength", "muscle_strength"),
+                   ("leg press 1-RM", None),
+                   ("serum creatinine", None)],
+          str(got2))
+    check("every claim still yields exactly one outcome row",
+          len(out["outcomes"]) == len(_claims))
 
     # The single defect that zeroed every score: a head-only text trim deleted
     # the Results section, so S5 truthfully reported no claims.
     print("\nPROMPT TEXT FITTING")
     from bsproof import workers as _w
-    # The workers module carries its own offline contract checks (shadow
-    # wiring, S7 envelope walls, table shipping). They had ZERO callers, so
+    # The workers module carries its own offline contract checks (S7
+    # envelope walls, table shipping). They had ZERO callers, so
     # "the selftest passes" said nothing about them -- reviewed 2026-08-25,
     # the S7 envelope check was failing while every gate printed green.
-    _w._self_check_table_route_wiring()
+    _w._self_check_payload_contracts()
     check("workers' embedded contract checks actually ran", True,
           "zero-caller self-checks rot silently; this line keeps them wired")
     _body = ("METHODS " + "m" * 30000 + " RESULTS the group improved, p = 0.001 "
@@ -517,75 +235,21 @@ def run(check):
     # build_ecus read `outcome_id` inside the argument list of the generator that
     # BINDS it. Crashed outright when nothing mapped; silently reused the last
     # outcome's dose band for every study when something did.
-    print("\nDOSE BAND IS PER OUTCOME")
-    from pipeline.assemble import build_ecus as _build, to_studies as _to_studies
-    _prod = {"ingredient": "creatine", "form_vocab_id": "creatine_monohydrate",
-             "dose_low_mg": 3000, "dose_high_mg": 3000,
-             "population": {"id": "general_adult",
-                            **{a: vocab.population_variants()[0][a] for a in vocab.AXES}}}
-
-    def _extraction(outcome_id, direction, dose_mg):
-        return {"record": {"_canonical": f"doi:10.1/{outcome_id}{dose_mg}",
-                           "ingredient": "creatine", "design_rank": 4,
-                           "oa": "full_text"},
-                "extraction": {
-                    "S3": {"extraction_version": "legacy-v1.23", "n_randomised": 40},
-                    "S5": {"extraction_version": "legacy-v1.23"},
-                    "S7": {"extraction_version": "legacy-v1.23",
-                           "form_vocab_id": "creatine_monohydrate",
-                           "elemental_dose_mg": dose_mg},
-                    "outcomes": [{"outcome_vocab_id": outcome_id,
-                                  "claim": {"direction": direction,
-                                            "magnitude": "moderate"}}]}}
-
-    # The exact shape that crashed: no outcome ever mapped, so the loop variable
-    # was never bound at all.
-    no_outcomes = [{"record": {"_canonical": "doi:10.1/none", "ingredient": "creatine",
-                               "design_rank": 4, "oa": "full_text"},
-                    "extraction": {"S3": {"extraction_version": "legacy-v1.23",
-                                              "n_randomised": 40},
-                                   "S5": {"extraction_version": "legacy-v1.23"},
-                                   "S7": {"extraction_version": "legacy-v1.23"},
-                                   "outcomes": []}}]
-    try:
-        _build(no_outcomes, _prod, ignore_population=True)
-        crashed = False
-    except UnboundLocalError:
-        crashed = True
-    check("a corpus where nothing mapped does not crash the scorer", not crashed,
-          "UnboundLocalError: local variable 'outcome_id' referenced before assignment")
-
-    # DOSE_MATCH IS STUDY-vs-PRODUCT (2026-08-12). It used to be product-vs-
-    # derived-band, which is one value per outcome stamped onto every study --
-    # so the dose arc was degenerate: a clone of the effect arc when the product
-    # was in band, and EMPTY ("not tested") when it was not. Measured on the
-    # v1.18 run: a 4.4 g product against a 4.8-5.0 g lean-mass band rendered
-    # "not tested" instead of "your dose is BELOW where trials found benefit".
-    # These pins guard the same hazards the old ones did, restated per study.
-    mixed = [_extraction("muscle_strength", "benefit", 3000),
-             _extraction("muscle_strength", "benefit", 3000),
-             _extraction("cognitive_function", "benefit", 20000)]
-    per_study_match = {}
-    for item in mixed:
-        for oid, st, _d, _p in _to_studies(
-                item["record"], item["extraction"], _prod, None,
-                ignore_population=True,
-                dose_bands={"muscle_strength": {"low": 3000, "high": 3000},
-                            "cognitive_function": {"low": 20000, "high": 20000}}):
-            per_study_match[(oid, item["extraction"]["S7"]["elemental_dose_mg"])] = st.dose_match
-    check("a study dosed AT the product's dose is in the dose arc",
-          per_study_match.get(("muscle_strength", 3000)) == "in_band",
-          f"{per_study_match} — product is dosed 3000mg")
-    check("a loading-dose trial is NOT evidence at a maintenance product's dose",
-          per_study_match.get(("cognitive_function", 20000)) == "above_200",
-          "20 g against a 3 g product is above_200; the old product-vs-band rule "
-          "put loading trials in the arc whenever the DERIVED band was loading-"
-          "sized, which is how muscle_power's arc came to describe 20 g protocols "
-          "while the product held 4.4 g")
+    print("\nTESTED ARM'S DOSE (pipeline/dose.py)")
+    from pipeline import dose as dosemod
+    band = {"low": 200, "high": 300}
+    check("dose inside the band", dosemod.dose_match_for(250, 250, band) == "in_band")
+    check("just under the low end", dosemod.dose_match_for(150, 150, band) == "low_50_99")
+    check("far under", dosemod.dose_match_for(40, 40, band) == "below_50")
+    check("far over", dosemod.dose_match_for(700, 700, band) == "above_200")
+    check("an interval straddling a tier is unspecified, never rounded",
+          dosemod.dose_match_for(150, 250, band) == "unspecified")
+    check("a missing band end is unspecified",
+          dosemod.dose_match_for(200, 200, {"low": None}) == "unspecified")
     # PER-KG DOSING (v1.19). 25 of 76 dose-less extractions were "0.3 g/kg/day"
     # shapes. The multiplication is deterministic and happens only when BOTH
     # numbers are the paper's own.
-    from pipeline.assemble import study_dose as _sd
+    from pipeline.dose import study_dose as _sd
     _pk = _sd("creatine", {"dose_per_kg_mg": 300, "mean_body_mass_kg": 80})
     check("a per-kg dose with a STATED mean mass becomes a daily total",
           _pk["dose_low_mg"] == 24000 and _pk["dose_basis"] == "per_kg_x_stated_mass",
@@ -633,27 +297,6 @@ def run(check):
     check("dose snippets are capped and deduplicated",
           len(_ds("5 g/day. " * 100)) <= 5 and len(_ds("")) == 0)
 
-    check("a study with NO extracted dose is unassessable, never in_band",
-          _to_studies(
-              [{"record": {"_canonical": "doi:10.1/nodose", "ingredient": "creatine",
-                           "design_rank": 4, "oa": "full_text"},
-                "extraction": {"S3": {"extraction_version": "legacy-v1.23",
-                                      "n_randomised": 40},
-                               "S5": {"extraction_version": "legacy-v1.23"},
-                               "S7": {"extraction_version": "legacy-v1.23"},
-                               "outcomes": [{"outcome_vocab_id": "muscle_strength",
-                                             "claim": {"direction": "benefit",
-                                                       "magnitude": "meaningful"}}]}}][0]["record"],
-              {"S3": {"extraction_version": "legacy-v1.23", "n_randomised": 40},
-               "S5": {"extraction_version": "legacy-v1.23"},
-               "S7": {"extraction_version": "legacy-v1.23"},
-               "outcomes": [{"outcome_vocab_id": "muscle_strength",
-                             "claim": {"direction": "benefit",
-                                       "magnitude": "meaningful"}}]},
-              _prod, None, ignore_population=True, dose_bands={})[0][1].dose_match
-          == "unspecified",
-          "in_band here read +1.00 @ 100% exactly where nothing was known -- the "
-          "2026-08-09 lesson, unchanged; only WHOSE dose is unknown changed")
 
     # A vocab ID is not a search term. 7 of 19 ingredients carry an underscore
     # and were silently unretrievable until 2026-08-09; the symptom was
@@ -719,4 +362,3 @@ def run(check):
     # The predatory check had ZERO coverage until 2026-08-09, in the one feature
     # where a false positive is a defamation-shaped error. Every case below is a
     # real string that a real run produced.
-    return {"_b2": _b2, "_ext": _ext, "_pr": _pr}

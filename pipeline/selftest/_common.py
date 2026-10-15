@@ -1,19 +1,8 @@
-"""Shared fixtures and imports for the selftest groups."""
-import sys, os, pathlib
+"""Shared imports and helpers for the selftest groups."""
+import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from pipeline.scoring import (Study, score_ecu, band_for, S_VALUE,
-                             standardise_effect)
-from pipeline.dedup import dedup, canonical_id, registry_id
-from pipeline import vocab
-
-ROB_CLEAN = {f"i{i}": 1 for i in range(1, 7)}
-def rcts(n, **kw):
-    base = dict(design_rank=4, n=120, rob_items=ROB_CLEAN, funding="independent",
-                oa="full_text", form_match="exact", dose_match="in_band",
-                pop_match="exact", direction="benefit", magnitude="meaningful")
-    base.update(kw)
-    return [Study(id=f"p{i}", **base) for i in range(n)]
-
+from pipeline.dedup import dedup, canonical_id, registry_id  # noqa: E402,F401
+from pipeline import vocab  # noqa: E402,F401
 
 
 def _reasonless_probe(_inv):

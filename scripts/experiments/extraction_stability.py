@@ -4,7 +4,7 @@ Evidence method v2, Phase 1b: does extraction REPRODUCE?
 (docs/EVIDENCE_METHOD.md §8.) The same studies are extracted twice by the
 production Claude backend, each run with its OWN EMPTY cache (a shared cache
 would replay run A into run B and measure nothing), then compared field by field
-and score by score.
+and grade by grade.
 
     # 1. two independent runs (live model calls: run SOLO, see below)
     .venv/bin/python scripts/experiments/extraction_stability.py run --label A
@@ -289,28 +289,28 @@ def compare_runs(a: dict, b: dict) -> dict:
             "same_effect_within_0.05": sum(1 for a, b in both if abs(a[1] - b[1]) <= 0.05),
             "max_abs_difference": round(max((abs(a[1] - b[1]) for a, b in both), default=0.0), 3),
         },
-        # Scores only from studies where every agent succeeded in BOTH runs, so a
-        # score difference is extraction disagreement, not one run missing data.
+        # Grades only from studies where every agent succeeded in BOTH runs, so a
+        # grade difference is extraction disagreement, not one run missing data.
         "scores": _score_both(a, b, scorable),
     }
 
 
 def _score_both(a: dict, b: dict, ids: list[str]) -> dict:
-    """Score each run's extractions with the production scorer; compare per outcome."""
+    """Grade each run's extractions with evidence method v2; compare per outcome."""
     from pipeline import vocab
-    from pipeline.assemble import build_ecus
+    from pipeline.evidence_v2 import summarise
     pv = vocab.population_variants()[0]
     product = {"ingredient": "creatine", "form_vocab_id": "creatine_monohydrate",
                "population": {"id": pv["id"], **{k: pv[k] for k in vocab.AXES}},
                "dose_low_mg": None, "dose_high_mg": None}
 
-    def rows(run: dict) -> dict:
-        exts = [{"record": run[c]["record"], "extraction": run[c]["extraction"], "registry": None} for c in ids]
-        out = build_ecus(exts, product, exclude_offtarget_population=True, searched_outcomes=SHOWCASE)
-        return {r["outcome_vocab_id"]: {"composite": r.get("composite"),
-                                        "n": (r.get("evidence") or {}).get("n_primaries")} for r in out}
-    ra, rb = rows(a), rows(b)
-    return {oid: {"A": ra.get(oid), "B": rb.get(oid)} for oid in SHOWCASE}
+    def grades(run: dict) -> dict:
+        items = [{"id": c, "record": run[c]["record"], "extraction": run[c]["extraction"]} for c in ids]
+        return {o["outcome"]: {"letter": o["run_grade"]["letter"], "k": o["k"],
+                               "smd": (o["smd"] or {}).get("estimate")}
+                for o in summarise(items, product)["outcomes"]}
+    ga, gb = grades(a), grades(b)
+    return {oid: {"A": ga.get(oid), "B": gb.get(oid)} for oid in SHOWCASE}
 
 
 def numbers_report(run: dict) -> dict:

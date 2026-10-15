@@ -485,17 +485,13 @@ _slots = threading.Semaphore(MAX_CONCURRENCY)
 # S-id -> (tier, schema file, prompt file)
 # S7 raised to B: form + elemental-dose extraction is high-stakes (5x dose errors).
 AGENTS = {
-    "S1": ("A", "s1_design.json",     "s1_design.md"),
-    "S2": ("B", "s2_synthesis.json",  "s2_synthesis.md"),
     "S3": ("B", "s3_study.json",      "s3_study.md"),
     "S4": ("B", "s4_rob.json",        "s4_rob.md"),
     "S5": ("B", "s5_conclusion.json", "s5_conclusion.md"),
-    "S5T": ("A", "s5_table_selector.json", "s5_table_selector.md"),
-    "S6": ("C", "s6_outcome.json",    "s6_outcome.md"),
-    # Batched S6: same rules, whole study in one call. Opt in with SP_S6_BATCH=1.
-    # S6 fires once per CLAIM, so the ~1 300-token fixed overhead (shared rules
+    # Batched outcome mapping, the whole study in one call. The per-claim S6 it
+    # replaced fired once per CLAIM, so the ~1 300-token fixed overhead (shared rules
     # + S6 rules + schema + vocabulary) is paid ~8.8x per study while the
-    # variable part is one short string. See workers._map_outcomes.
+    # variable part is one short string. See workers.extract_study.
     "S6B": ("C", "s6b_outcome_batch.json", "s6b_outcome_batch.md"),
     "S7": ("B", "s7_form.json",       "s7_form.md"),
     "S8": ("A", "s8_funding.json",    "s8_funding.md"),

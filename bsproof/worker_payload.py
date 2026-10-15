@@ -110,10 +110,10 @@ def _dose_snippets(text: str, cap: int = 5, width: int = 220,
 
 
 def _tables_structured(record: dict, max_rows_per_table: int = 40) -> list[dict]:
-    """Structured tables for the SHADOW harvester only (never model payloads).
+    """Structured tables for the v2 span check only (never model payloads).
 
-    Returns effect_harvest-coercible mappings with colspan-expanded, merged
-    multi-row headers.  Deterministic, disk-cached XML, no model calls.
+    Colspan-expanded, merged multi-row headers. Deterministic, disk-cached XML,
+    no model calls.
     """
     pmcid = record.get("pmcid")
     if not pmcid:
@@ -298,8 +298,6 @@ def _payload(agent: str, record: dict, text: str, registry: dict | None,
               + len((SCHEMAS / _schema_f).read_text()) + 400)
     text = _agent_text(agent, text, sections)
     base = {"title": record.get("title"), "text": _fit_text(agent, text, _fixed)}
-    if agent == "S1":
-        return base
     if agent == "S3":
         # Population vocabulary is NOT sent. S3's prompt lists the four axes and
         # allowed values; shipping the JSON duplicated ~1.9k and pushed S3 over

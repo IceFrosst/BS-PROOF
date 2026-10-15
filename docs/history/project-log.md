@@ -10,6 +10,37 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-15 — simplification: evidence method v2 only
+
+Founder decision: commit to v2; retire v14. Branches `simplify/a-dead-weight`
+(section A) and `simplify/v2-only` (B–D), not merged to `main`.
+
+- A: 7 closed history docs (audits, demo plan, handoff, design notes) and the
+  dead `oa.referenced_dois` alias deleted.
+- v14 recorded in `docs/history/v14-scoring-model.md`; local tag `v14-final`
+  (`967f997`) holds the last tree with v14 intact.
+- Removed: v14 scoring (`scoring`, `arcs`, `donut`, `calibration`, `preview`,
+  `effect_s`, `assemble`, `product_score`, `claim_arms`; v14 dose bands), the
+  SR route (`synthesis`, `synthesis_bridge`, S2, `--with-sr`), the table route
+  (S1, S5T, `worker_shadow`, `effect_harvest`), per-claim S6 (S6B was the only
+  path used), Grok (`grok_adapter`, `--grok`), the CLI label scorer
+  (`label_adapter`, `scripts/analyze_label.py`), `--demo`, the v14 score stage,
+  ECU storage tables, `rescore_run.py`, `golden_parity.py`, six v14
+  experiments. `_s7_for_claim` / `study_dose` moved to `pipeline/dose.py`
+  unchanged; the arm-label helpers into `eligibility.py`.
+- Report: the summary now prints the v2 grade table and refusal reasons
+  (it never showed v2 before); `scoring_model:` stamps `evidence-v2`.
+  Invariant-4 watcher and hook now watch the v2 rules.
+- Verified: a cache-only replay of the v1.36 creatine run (model calls
+  blocked; 955 cache hits) gives byte-identical `evidence_v2` and extractions
+  before and after the removal. Gates: invariants, selftest (179 checks), 171
+  Python tests, affected vitest suites, v2 goldens unchanged.
+- Found while verifying (for the v2 algorithm pass): the replay grades
+  strength k = 9 C- where the stored `20261014_185045` says k = 7 I — two
+  trials' table numbers failed to verify in the original run (live table fetch
+  at span-check time). A single trial can earn an A (muscle soreness, sleep
+  quality: k = 1). v14's claim-level arm firewall never ran in v2.
+
 ## 2026-10-13 — repo cleanup (founder-approved list)
 
 - Deleted: 3 superseded runs (20261005_080012, 20261005_224647,

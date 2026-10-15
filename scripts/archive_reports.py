@@ -13,7 +13,7 @@ folder holding runs from before and after looks like a time series and is not
 one: the same corpus would produce +30 under one model and 46/100 under the
 next.
 
-So reports/runs/ holds only `scoring.SCORING_MODEL` runs. Anything else is swept
+So reports/runs/ holds only runs of the current method (`evidence_v2.METHOD`). Anything else is swept
 to reports/archive/<model>/, which is a record, not a graveyard -- archived runs
 stay readable and stay indexed, they are just fenced off from side-by-side
 comparison.
@@ -34,7 +34,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from pipeline.scoring import SCORING_MODEL, SCORING_MODEL_HISTORY  # noqa: E402
+from pipeline.evidence_v2 import METHOD as SCORING_MODEL  # noqa: E402
 
 REPORTS = Path(__file__).resolve().parent.parent / "reports"
 RUNS = REPORTS / "runs"
@@ -78,7 +78,8 @@ def _write_archive_readme(model: str) -> None:
     d.mkdir(parents=True, exist_ok=True)
     (d / "README.md").write_text(
         f"# Archived runs — scoring model `{model}`\n\n"
-        f"{SCORING_MODEL_HISTORY.get(model, 'Model predates the SCORING_MODEL stamp.')}\n\n"
+        "What each model meant: docs/history/v14-scoring-model.md (v14) and\n"
+        "docs/history/spec-changelog.md (earlier models).\n\n"
         "**Do not compare these numbers with runs under a different model.** The\n"
         "same corpus produces different scores under each, because the formula\n"
         "changed — not because the evidence did.\n\n"

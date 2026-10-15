@@ -1,7 +1,6 @@
 """
 Evidence method v2, stages 6-7: GRADE certainty and the letter grade, per
-outcome, on top of a shadow pool (pipeline/pool.py). NO MODEL MAY ENTER THIS
-FILE. SHADOW ONLY until the Phase 4 switch (docs/EVIDENCE_METHOD.md §8).
+outcome, on top of the pool (pipeline/pool.py). NO MODEL MAY ENTER THIS FILE.
 
   certainty  GRADE: start High for randomised trials (Low otherwise), then
              downgrade 0/1/2 levels per domain -- risk of bias, inconsistency,
@@ -15,8 +14,7 @@ FILE. SHADOW ONLY until the Phase 4 switch (docs/EVIDENCE_METHOD.md §8).
              threshold-sensitive when the letter moves (§5 policy).
 
 THE THRESHOLDS IN `RULES` ARE CONSTANTS (invariant 4). They are the usual GRADE
-handbook rules of thumb, chosen for the shadow pipeline and listed for founder
-review in docs/REVIEW_PENDING.md; none feeds a production score.
+handbook rules of thumb, listed for founder review in docs/REVIEW_PENDING.md.
 
 The meaningful-change threshold comes from `vocab/outcome.json` ("mcid" with
 {"smd": value, "source": ..., "approved": true}) once the founder approves it;

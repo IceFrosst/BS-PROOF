@@ -1,19 +1,15 @@
 #!/usr/bin/env python3
 """
-End-to-end v1 run.
+End-to-end run: retrieve -> extract -> pool + GRADE (evidence method v2) -> report.
 
-  python run_pipeline.py magnesium --form magnesium_glycinate --grok --limit 20
-  python run_pipeline.py --help
+  .venv/bin/python run_pipeline.py creatine --form creatine_monohydrate --intervention-scope --all-outcomes
+  .venv/bin/python run_pipeline.py --help
 
-Scores the FULL available corpus by default. `--limit N` opts into a sample,
-and a sampled run prints a projection saying so (pipeline/preview.py).
+Grades the FULL available corpus by default; `--limit N` opts into a sample.
+Showcase top-N outcomes are chosen by Europe PMC RCT hit counts (most-studied
+first), not a fixed marketing list; `--all-outcomes` grades every outcome.
 
-Default scope is **broad** on Claude and **intervention** on Grok: ingredient
-in TITLE/ABSTRACT as the thing being tested. Showcase top-N outcomes are chosen
-by Europe PMC RCT hit counts (most-studied first), not a fixed marketing list.
-
-This file only wires the stages together; each stage lives in bsproof/run/
-(options, corpus, extract, score, evidence, report) since 2026-10-03.
+This file only wires the stages together; each stage lives in bsproof/run/.
 """
 from __future__ import annotations
 
@@ -29,7 +25,6 @@ from bsproof.run.evidence import evidence_stage
 from bsproof.run.extract import extract_stage
 from bsproof.run.options import RunOptions, parse_args
 from bsproof.run.report import finish
-from bsproof.run.score import score_stage
 
 
 def _new_run_context(opts: RunOptions, product: dict, outcome_allowlist,
@@ -48,10 +43,8 @@ def _new_run_context(opts: RunOptions, product: dict, outcome_allowlist,
         "studies_failed_partial": 0,
         "predatory": {},
         "studies_list": [],
-        "sr": {"requested": 0, "s2_ok": 0, "resolved": 0},
         "agent_stats": {},
         "speed_report": "",
-        "ecu_rows": [],
         "prompt_version": "",
         "concurrency": None,
         "studies_in_flight": None,
@@ -61,12 +54,9 @@ def _new_run_context(opts: RunOptions, product: dict, outcome_allowlist,
 def main(argv: list[str]) -> int:
     run_started = time.monotonic()
     opts = parse_args(argv)
-    if isinstance(opts, str):
-        print(opts)
-        return 1
     ingredient, form, dose_mg = opts.ingredient, opts.form, opts.dose_mg
 
-    if not opts.wiring and not opts.grok:
+    if not opts.wiring:
         # Imported here, not at module scope: a --wiring run must not load the
         # model boundary at all. preflight() checks the subscription is signed
         # in, which is the whole configuration story now.
@@ -93,18 +83,15 @@ def main(argv: list[str]) -> int:
                "population": {"id": pv["id"], **{a: pv[a] for a in vocab.AXES}},
                "dose_low_mg": dose_mg, "dose_high_mg": dose_mg}
     if dose_mg is None:
-        print("\nNOTE: no --dose given, so the dose arc will read 'not tested'.")
-        print("      Pass --dose <mg elemental> to judge the dose axis.")
+        print("\nNOTE: no --dose given, so the run's own letters cannot judge dose.")
     db = store_path(opts)
     run_context = _new_run_context(opts, product, outcome_allowlist, showcase_counts)
 
     with Store(db) as store:
-        primaries, n_available = load_corpus(store, opts, db, outcome_allowlist, run_context)
+        primaries, _n_available = load_corpus(store, opts, db, outcome_allowlist, run_context)
         extracted = extract_stage(store, opts, primaries, pv, outcome_allowlist, run_context)
         if isinstance(extracted, int):
             return extracted
-        score_stage(store, opts, product, db, extracted, outcome_allowlist,
-                    run_context, n_available)
         evidence_stage(opts, product, extracted, run_context)
 
     finish(opts, outcome_allowlist, run_context, run_started)

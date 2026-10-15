@@ -2,10 +2,10 @@
 """Build the public, immutable dashboard projection for one BS-PROOF run.
 
 The pipeline's ``*_context.json`` is an internal report-writing payload.  It is
-not a stable API: older contexts contain abbreviated ECU rows, while current
-runs can carry the complete ``pipeline.assemble.build_ecus`` result.  This
-module turns either shape into ``DashboardRunV1`` without copying model prompts,
-adapter error output, secrets, or cache keys into a deployable artifact.
+not a stable API: v14 contexts carry ECU rows, evidence-method-v2 contexts carry
+an ``evidence_v2`` block and no ECU rows.  This module turns either shape into
+``DashboardRunV1`` without copying model prompts, adapter error output, secrets,
+or cache keys into a deployable artifact.
 
 Run validity is governance data, not a model output.  It comes only from
 ``reports/run_statuses.json``.  A run without an explicit entry is always
@@ -25,9 +25,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from pipeline import arcs as arcsmod
 from pipeline import vocab
-from pipeline.scoring import SCORING_MODEL
+from pipeline.evidence_v2 import METHOD as SCORING_MODEL
 
 REPORTS = ROOT / "reports"
 RUNS = REPORTS / "runs"
@@ -835,17 +834,9 @@ def _dashboard_ecu(raw: Any) -> dict:
     arcs = _safe_arcs(raw.get("arcs"))
     components = _safe_components(raw.get("components"))
     composite = _integer(raw.get("composite"))
-    effect = (arcs.get("effect") or {}).get("verdict")
-    applicability_limited = any(
-        (arcs.get(axis) or {}).get("verdict") is None for axis in ("form", "dose")
-    )
-    verdict = arcsmod.label(
-        composite,
-        components.get("c"),
-        effect_verdict=effect,
-        applicability_limited=applicability_limited,
-        applicability_score=components.get("applicability"),
-    )
+    # A v14 row's verdict label was computed by the retired pipeline/arcs.py;
+    # only a row that already carries one can show it.
+    verdict = raw.get("verdict") if isinstance(raw.get("verdict"), str) else None
 
     evidence = _safe_evidence(raw.get("evidence"))
     legacy_n = _integer(raw.get("n_primaries"))

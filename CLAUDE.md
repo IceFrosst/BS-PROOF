@@ -13,19 +13,24 @@ entry, is `docs/history/2026-10-02-claude-md-archive.md`).
 ## What this is
 
 Evidence grading for dietary supplements. Every competitor scores
-*ingredients*; this scores the **ECU** —
-`(ingredient, form, dose_band, outcome, population)` — and discounts evidence
-that doesn't match the specific product. Two parts:
+*ingredients*; this grades the **ECU** —
+`(ingredient, form, dose, outcome, population)` — and treats evidence that
+doesn't match the specific product as weaker (GRADE indirectness). Two parts:
 
 1. **Evidence pipeline** (Python, offline): retrieve papers → extract facts with
-   model "subagents" S1–S8 → deterministic scoring → immutable run artifacts in
-   `reports/runs/`. Design: `docs/SPEC.md` (method), `docs/PIPELINE.md` (how to run).
+   model "subagents" → deterministic **evidence method v2** (random-effects
+   meta-analysis + GRADE + a letter per outcome) → immutable run artifacts in
+   `reports/runs/`. Method: `docs/EVIDENCE_METHOD.md`; how to run: `docs/PIPELINE.md`.
 2. **App** (Next.js 16 on Vercel): `/scan` reads a supplement label (photo or
-   typed) and scores the product against the retained runs. Design:
+   typed) and grades the product against the retained runs. Design:
    `docs/SYSTEM_DESIGN.md`.
 
-Scores are signed −100…+100 internally, displayed 0–100, and always carry four
-arcs (effect / form / dose / evidence), each a verdict plus its coverage.
+v2 replaced the v14 scoring model on 2026-10-15 (founder decision). v14 is
+recorded in `docs/history/v14-scoring-model.md`; its code is at tag `v14-final`.
+**Transitional:** the app's TS ports (`lib/analyze/{scoring,vocab,product-score}.ts`)
+and the live site (`main`) still show the v14 run; moving the app is section F of
+the 2026-10-15 simplification plan. `SPEC.md`, `PIPELINE.md`, `SYSTEM_DESIGN.md`
+still describe v14 in places until the docs pass.
 
 ---
 
@@ -36,129 +41,135 @@ arcs (effect / form / dose / evidence), each a verdict plus its coverage.
 | File | Role |
 |---|---|
 | `bsproof/claude_adapter.py` | Claude production extraction (subscription + `--safe-mode`) |
-| `bsproof/grok_adapter.py` | Grok extraction (separate backend, separate store) |
-| `bsproof/label_adapter.py` | Local CLI read of a label image |
 | `lib/analyze/llm.ts` | **The app's one model transport.** Label vision read (`vision.ts`), compatibility, company profile, literature warnings, evidence prior. DeepSeek by default (`DEEPSEEK_API_KEY`); `MODEL_API_URL` / `LABEL_MODEL` / `TEXT_MODEL` swap provider without code changes |
 
 `python3 -m pipeline.invariants` enforces this (AST for Python, a text scan for
 TS). Everything in `pipeline/`, `sources/` and the rest of `lib/analyze/` is
-deterministic. If you find yourself importing an adapter into `scoring.py` or
-`dedup.py`, stop.
+deterministic. If you find yourself importing the adapter into `pipeline/`, stop.
 
-**Model text in the app never enters a score.** Model-written sections render
+**Model text in the app never enters a grade.** Model-written sections render
 under a "model knowledge — unverified" badge; only an evidence run produces a
-number.
+grade.
 
 ### 2. Subagents are pure functions
 
 One shot, no tools, no loop, temperature 0, JSON in → schema-valid JSON out. If
 a subagent needs a second turn, the **prompt** is wrong — do not raise turn
-limits. The single exemption is `label_adapter` (needs the `Read` tool to see an
-image; `--max-turns 3`, one tool, scoped dir). Do not cite it for an extractor.
+limits.
 
 ### 3. Bump the prompt version when you edit a prompt
 
 | prompts | constant |
 |---|---|
-| S1–S8 (`prompts/s*.md`, `_shared.md`) | `PROMPT_VERSION` in `bsproof/claude_adapter.py` (shared with Grok) |
-| `prompts/label.md` | `LABEL_PROMPT_VERSION` in **both** `lib/analyze/vision.ts` and `bsproof/label_adapter.py` |
+| S3–S8, S5N, S5R, S6B (`prompts/s*.md`, `_shared.md`) | `PROMPT_VERSION` in `bsproof/claude_adapter.py` |
+| `prompts/label.md` | `LABEL_PROMPT_VERSION` in `lib/analyze/vision.ts` |
 | compatibility / company / literature_warnings / evidence_prior | their own `*_PROMPT_VERSION` in `lib/analyze/` |
 | research_audit / effect_research (design lab only) | version stamped in the prompt / `lib/evidence-ledger/effect-contract.ts` |
 
 Separate cache domains on purpose: bumping `PROMPT_VERSION` invalidates ~1000
-cached extractions. A hook warns when a prompt or schema changes without a bump.
+cached extractions (the cache key is version + model + effort + payload, not the
+prompt text — so an edit without a bump silently serves stale answers). A hook
+warns when a prompt or schema changes without a bump.
 
 ### 4. Never invent or move a constant
 
-`k`, transfer factors, RoB thresholds, `S_VALUE`, `H_PENALTY`, `H_NORM`, OA
-penalty, dose ramp knots, effect-size `MID`/`FULL` — founder calls. Propose in
-`docs/REVIEW_PENDING.md` and SPEC §13. A hook warns when one in `scoring.py`
-moves.
+The GRADE rules and letter table (`grade.RULES`, `TABLE`, `LEVELS`,
+`OFF_DOSE`, `VARIANTS`), the second-reviewer tolerances (`review.RULES`), study
+selection (`pool.ROUTE_RANK`, `CONFIDENCE`), the benchmark pass rule
+(`benchmark.RULES`) and every per-outcome MCID in `vocab/outcome.json` —
+founder calls. Propose in `docs/REVIEW_PENDING.md`. A hook warns when a watched
+one moves (`scripts/verify_helpers.WATCHED_CONSTANTS`).
 
 ### 5. `null` is a valid answer everywhere
 
 Never infer a field you cannot see. "Unknown" must never silently become a value
 (e.g. IU is refused as a mass; unstated hydration refuses the dose conversion).
 
-### 6. A synthesis document adds no evidence mass
+### 6. A review is never a study
 
-A meta-analysis is not another study; dedup by canonical id and `score_ecu`
-takes the **max** review `cov` (multiplier ≤ 1.30). Trials read out of a
-review's tables do count, once, at the `sr_table` tier (0.72 of a directly read
-trial), and only if they pass five refusals in `synthesis.derived_studies`: no
-direction, `unclear`, no design, already in corpus, reviews disagree → discard.
-Never distribute a pooled estimate back onto trials.
+A systematic review / meta-analysis is never pooled as if it were a trial, and a
+pooled estimate is never distributed back onto trials. Published meta-analyses
+enter only as the **benchmark** (`vocab/benchmarks.json`, `pipeline/benchmark.py`):
+our CI must overlap theirs. (v14's SR-table route was removed with v14.)
 
-### 7. Nulls count against — only well-run nulls against a real control
+### 7. Only a real contrast against a real control
 
-`pipeline.assemble._ineligible` refuses, symmetrically (benefits too):
-all arms get the ingredient; authors declare it underpowered; ingredient not
-isolated (combination arm). Unknown/absent always defaults to KEEP. A
-nonsignificant result without a usable signed estimate is
-`inconclusive_unquantified` (s = 0), not evidence against. Never infer these
-fields from the numbers.
+`pipeline.eligibility._ineligible` refuses a study, symmetrically (benefits
+too): all arms get the ingredient; ingredient not isolated (combination arm —
+except a matched add-on pair, `matched_addon_claim`). v2 drops v14's
+"self-declared underpowered" refusal: pooling already gives a tiny trial a tiny
+weight. Unknown/absent always defaults to KEEP. Never infer these fields from
+the numbers. A null is not "evidence against" by label: it enters the pool as
+its measured effect with its variance, and an effect that cannot be computed is
+refused and **counted with its reason**, never silently dropped.
 
-### 8. The centre number never travels without its arcs
+### 8. A letter never travels without its parts
 
-Form, dose and population are **not** in the study weight
-(`w = design × RoB × size × funding × OA`), so two products differing only in
-form/dose share a centre number; the arcs carry the difference. No ranked table,
-API field or headline without arcs. `0.00 @ 0%` ("untested") and `−0.70 @ 100%`
-("tested and failed") must never render alike.
+Form, dose and population are **not** study weight (weight = inverse variance);
+a mismatch is GRADE indirectness. So a letter is always shown with its pooled
+estimate, CI, k and certainty, and "no data" (`I`, k = 0) must never render like
+"tested and found nothing". (The v14 rule — the centre number never travels
+without its four arcs — still binds the app until it moves to v2.)
 
-### 9. Dual backends: never silent-merge
+### 9. One extraction backend; never silent-merge
 
-Claude and Grok extractions run, store and report separately
-(`claude` / `grok`). On disagreement: discard or human review,
-never average or pick the higher.
+Claude is the only extraction backend (Grok was removed 2026-10-15). Any second
+reader — the S5R reviewer, or a future backend — is stored separately and on
+disagreement the claim is refused for human review, never averaged or "pick the
+higher" (`pipeline/review.py`).
 
 ---
 
-## Scoring in one screen (`SCORING_MODEL = v14-applicability-discount`)
+## Grading in one screen (evidence method v2, `docs/EVIDENCE_METHOD.md`)
 
 ```
-d = Σwᵢsᵢ / Σwᵢ       c = 1 − e^(−E′/k)       H = weighted var(sᵢ)
-signed    (−100…+100) = 100 × d × c × (1 − 0.4H)
-A         (0…1)       = mean(form strength, dose closeness)
-composite (0…100)     = 50 + signed/2 × (A if signed > 0 else 1)
+per trial, per outcome   ONE effect, chosen by a fixed order (measure hierarchy,
+                         primary outcome, route), from numbers verified against
+                         their quoted span → Hedges' g + variance   (effect_size, span_check)
+per outcome              REML random effects, Hartung–Knapp CI (k ≥ 3),
+                         prediction interval, leave-one-out          (pool, meta_effects)
+certainty                GRADE: High for RCTs, downgraded for RoB, inconsistency,
+                         imprecision, indirectness (form/dose/population) (grade)
+letter                   benefit size vs the outcome's MCID × certainty (grade.TABLE)
 ```
 
 Things that look simplifiable and are not:
 
-- **`sᵢ` comes from the reported effect size, recentred on the meaningful
-  threshold** (`s = clamp((effect − 0.20)/(0.80 − 0.20))`), so a measured zero is
-  negative and a sub-threshold positive is not a win. The number is used only
-  when S5 names the favoured arm; an unsigned magnitude is refused. Centring on
-  zero instead is the obvious wrong fix.
-- **Applicability discounts benefit only.** A null or harm is never softened by
-  an untested form.
-- **Dose term = closeness to the dose range where benefit was found**
-  (`pipeline/dose.py`), flat inside the range, linear ramps outside. Label doses
-  are converted compound → elemental before comparison, never copied.
-- **Population variant B is stored** (`pop_match == "different"` excluded);
-  variant A is printed beside it, never blended.
-- **Python is canonical.** `lib/analyze/{scoring,vocab,product-score}.ts` are
-  ports pinned by `tests/analyze-parity.test.ts` to Python-computed goldens
-  (`scripts/golden_parity.py`). Change Python first, then re-sync.
+- **The threshold is the MCID, not zero.** Benefit size is judged against the
+  outcome's meaningful-change threshold (default 0.2 SD, flagged), at M, M/2
+  and 2M so a reader sees how sensitive the letter is.
+- **One effect per trial per outcome**, by a fixed order. Pooling two endpoints
+  of one trial counts it twice; run-to-run differences came from *which* measure
+  was picked (measured 2026-10-03).
+- **Population variant B is stored**: off-target populations (`pop_match ==
+  "different"`) are refused, "adjacent" is noted.
+- **Python is canonical.** `lib/analyze/grade-v2.ts` is a port pinned by
+  `tests/grade-v2-parity.test.ts` to `scripts/golden_grade_v2.py` goldens.
+  Change Python first, then re-sync. (The v14 ports' goldens are frozen; their
+  generator was removed with v14.)
+- **Status is `shadow`** (`evidence_v2.STATUS`) until the benchmark passes;
+  until then the app labels the grade card "preview, not validated".
 
 ---
 
-## Extraction backends
+## Extraction
 
 | Path | Auth | Public claims? |
 |---|---|---|
-| `claude_adapter` (production) | Claude subscription + `--safe-mode` | Yes |
-| `grok_adapter` | Grok CLI, signed in | Only after anchor eval |
+| `claude_adapter` (production) | Claude subscription + `--safe-mode` | Only after the benchmark passes |
+
+Per study: S3 (design, arms) first, then S4 (RoB), S5 (claims), S7 (form +
+dose), S8 (funding) in parallel, then S6B (outcome mapping, one call per study)
+and S5N (the numbers v2 pools). S5R (second reviewer, Opus) is opt-in
+(`SP_SECOND_REVIEWER=1`). About 7 calls per study.
 
 Extraction has no metered spend; the limit is subscription **throughput**.
 Never run agent teams, workflows or other heavy sessions alongside an
-extraction — it truncates the run (S5 failures hide nulls and bias scores up).
-Retrying a rate-limit error does not help.
+extraction — it truncates the run (failed calls hide refusals and bias the
+result). Retrying a rate-limit error does not help.
 
 Claude tiers: `claude_adapter.TIER_MODEL` / `TIER_EFFORT` (A haiku-4.5,
-B/C sonnet-5; `SP_MODEL_A/B/C` override). Grok tiers: `grok_adapter.TIER_MODEL`.
-**Verify any Grok model id with `grok models` before setting it** (`grok-4.3`
-is not a valid CLI id and failed a run 0/80).
+B/C sonnet-5, R opus-5; `SP_MODEL_A/B/C/R` override).
 
 ---
 
@@ -166,47 +177,39 @@ is not a valid CLI id and failed a run 0/80).
 
 ```
 bsproof/                the extraction layer (may call a model; pipeline/ may not import it)
-  claude_adapter.py grok_adapter.py label_adapter.py   the model boundaries
+  claude_adapter.py     the model boundary: AGENTS, tiers, cache, PROMPT_VERSION
   workers.py            per-study fan-out (extract_study / extract_corpus); call= injectable
   worker_payload.py     what each agent is sent, fitted to the input budget
-  worker_shadow.py      table route (S1 + S5T; off unless SP_NUMERIC_TABLES=1, retires with v14)
   worker_quota.py       subscription-limit detection
-  run/                  run_pipeline stages: options, corpus, extract, score, report
-run_pipeline.py         one ingredient end to end (--wiring / --grok / --with-sr; --help)
+  run/                  run_pipeline stages: options, corpus, extract, evidence, report
+run_pipeline.py         one ingredient end to end (--wiring for no model; --help)
 
 pipeline/   deterministic, NO MODEL, unit-tested
-  scoring.py arcs.py donut.py      formula, arcs, rendering
-  assemble.py                      worker JSON → Study → scored ECU rows; eligibility firewall
-  dedup.py classify.py relevance.py retrieve.py predatory.py
-  synthesis.py synthesis_bridge.py SR resolution, SR-derived trials
-  dose.py product_score.py         dose bands; product lookup behind the app
-  span_check.py effect_size.py     v2: verify extracted numbers; numbers -> signed effect + variance
-  meta_effects.py                  v2: Hedges' g, REML random-effects, Hartung-Knapp CIs
-  pool.py                          v2 SHADOW: per-outcome pooling of verified effects (not read by v14)
-  grade.py                         v2 SHADOW: GRADE certainty + the §4 letter table
-  review.py registry_bias.py       v2 SHADOW: second-reviewer disagreement rule; registered-but-unpublished trials
-  evidence_v2.py                   v2 SHADOW: pool + GRADE per outcome -> run artifact `evidence_v2` (bsproof/run/evidence.py)
-  claim_arms.py eligibility.py     invariant-7 counterfactual firewall and scope refusals
-  effect_s.py                      reported effect -> signed contribution s
-  calibration.py                   anchor harness
-  effect_harvest.py                deterministic table candidates for the S5T table route
-  storage.py vocab.py preview.py showcase.py
-  invariants.py selftest/          the two gates (selftest is a package; run with -m)
-sources/    deterministic HTTP layer: europepmc, clinicaltrials, oa, fulltext
+  retrieve.py classify.py dedup.py relevance.py predatory.py storage.py showcase.py   retrieval
+  span_check.py effect_size.py   verify extracted numbers; numbers -> signed effect + variance
+  meta_effects.py                Hedges' g, REML random effects, Hartung-Knapp CIs
+  pool.py                        per-outcome study selection and pooling
+  grade.py                       GRADE certainty + the letter table
+  review.py registry_bias.py     second-reviewer rule; registered-but-unpublished trials
+  eligibility.py dose.py         invariant-7 scope refusals; the tested arm's dose
+  evidence_v2.py                 pool + GRADE per outcome -> run artifact `evidence_v2`
+  benchmark.py                   our pooled estimates vs published meta-analyses
+  vocab.py                       vocabularies, dose conversion, form/population matching
+  invariants.py selftest/        the two gates (selftest is a package; run with -m)
+sources/    deterministic HTTP layer: europepmc, clinicaltrials, oa, fulltext, crossref
 
 app/        Next.js routes: /scan (product), /api/scan, /runs (run archive) and
             /runs/<id>, /tests/supplements, /methodology, /design-lab (dev only,
-            404 in production), / (waitlist). /tester + /api/analyze-label retired 2026-10-03
+            404 in production), / (waitlist)
 components/ scan/ (the /scan UI), evidence-ledger/ (lab card), run/dashboard components
-lib/analyze/        the scan: llm.ts (model transport), vision.ts, scan.ts, TS scoring ports, grade-v2.ts (v2 letter per product)
+lib/analyze/        the scan: llm.ts (model transport), vision.ts, scan.ts, grade-v2.ts, v14 TS ports
 lib/evidence-ledger/  rubric + retained audits used by /scan for exact matches
 lib/scan-history/ lib/auth/   optional Supabase history + Google sign-in
 
 prompts/*.md  schemas/*.json  vocab/*.json
-reports/runs/          immutable run archive (current SCORING_MODEL only)
-reports/archive/<model>/  runs from superseded scoring models
-docs/                  SPEC (method), PIPELINE (running it), SYSTEM_DESIGN (app), ANCHORS, history/
-scripts/               report/artifact writers, rescoring, experiments
+reports/runs/          immutable run archive
+docs/                  EVIDENCE_METHOD (method), SPEC (v14-era spec), PIPELINE, SYSTEM_DESIGN, history/
+scripts/               report/artifact writers, benchmark, goldens, experiments/
 tests/                 vitest (TS) + Python tests; tests/e2e/ Playwright
 ```
 
@@ -215,13 +218,14 @@ tests/                 vitest (TS) + Python tests; tests/e2e/ Playwright
 ```bash
 # Python gates — run after ANY change to pipeline/, sources/ or vocab/
 python3 -m pipeline.invariants
-python3 -m pipeline.selftest          # ~510 checks, offline, ~0.5 s
+python3 -m pipeline.selftest          # ~180 checks, offline, ~0.5 s
 
 # Pipeline (needs the .venv interpreter — bare python3 lacks httpx; a hook blocks it)
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt   # once
 .venv/bin/python run_pipeline.py creatine --form creatine_monohydrate --wiring   # no model
-.venv/bin/python run_pipeline.py creatine --form creatine_monohydrate            # Claude production
-.venv/bin/python -m bsproof.grok_adapter                                         # Grok preflight
+.venv/bin/python run_pipeline.py creatine --form creatine_monohydrate \
+    --full-text-only --intervention-scope --all-outcomes                         # Claude production
+.venv/bin/python scripts/benchmark_v2.py compare reports/runs/<id>_dashboard.json
 
 # App
 npm ci && cp .env.example .env.local   # set DEEPSEEK_API_KEY for photo reads
@@ -241,89 +245,66 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
   Vercel `bs-proof-dashboard`). Work on a branch/worktree, get all gates green,
   then merge. Non-`main` branches do not build on Vercel (`vercel.json`
   `ignoreCommand`).
-- **Ownership:** Claude Code owns every file; Grok and Codex may write anything,
-  and Claude verifies their commits afterwards (`python3 scripts/verify_helpers.py`).
+- **Ownership:** Claude Code owns every file; other agents (e.g. Codex) may write
+  anything, and Claude verifies their commits afterwards (`python3 scripts/verify_helpers.py`).
   Shared agent rules: `AGENTS.md`.
 - **Do not delete a comment recording a MEASUREMENT.** Move it if inconvenient.
 - **Reports:** every human-facing run goes under `reports/runs/` with a row in `INDEX.md`,
-  stamped with `scoring_model:` and the provider. Never overwrite an
-  old run. After changing `SCORING_MODEL`, run
-  `python3 scripts/archive_reports.py --apply`.
+  stamped with `scoring_model:` (now `evidence-v2`) and the provider. Never
+  overwrite an old run. **A finished run auto-commits and pushes `reports/`
+  on the current branch** (`SP_AUTO_PUSH=0` to keep it local) — never run one
+  while `main` is checked out. `scripts/archive_reports.py --apply` would move
+  the v14 `.md` reports to `reports/archive/`; not done yet (section E).
 - **Claude Code helper agents** (`.claude/agents/`: run-triage, node-gates,
   paper-verifier, score-tracer, spec-drift) are read-only and cost ~30k tokens
   each — use them only when they read far more than they report. Don't delegate
   deterministic gates; hooks in `.claude/settings.json` already run them.
   `score-tracer` and `spec-drift` are unsafe as agent-team teammates.
+  **`score-tracer`, `run-triage` and `paper-verifier` were written for v14** and
+  need revising before use.
 
 ---
 
-## Current state (snapshot, 2026-10-13)
+## Current state (snapshot, 2026-10-15)
 
-- **Method:** evidence method v2 (`docs/EVIDENCE_METHOD.md`, adopted
-  2026-10-03): random-effects meta-analysis + GRADE + per-outcome letter
-  grades, replacing v14. Built end to end and running in **shadow** beside v14:
-  numbers extractor S5N + second reviewer S5R (Opus), span check, effect sizes
-  (SD from SE / CI), consistency guard, pooling, GRADE (RoB, imprecision,
-  inconsistency, registry publication bias), letters, `evidence_v2` run block,
-  `/scan` grade card, benchmark (`vocab/benchmarks.json`, 10 creatine
-  meta-analyses; pass rule in `pipeline/benchmark.RULES`). **Production still
-  scores v14.** Founder decisions: `docs/REVIEW_PENDING.md` #0; open: 0b
-  (off-target populations, excluded for now).
-- **Evidence:** live site uses `20260904_185830` (v14). Latest v2 run
-  `20261013_072633` (branch `Jans_attempt`, intervention scope, all outcomes,
-  139 studies): creatine strength k=9 SMD +0.31 [+0.06, +0.55] **C+**, lean
-  mass k=7 **D+**, power k=8 **I**, other outcomes mostly k <= 3 (I). Benchmark:
-  strength not testable (coverage 38 % < 50 %). Merging a new run to `main`
-  changes the live v14 creatine score -- deliberately not done yet. Every run
-  is `public_claims_allowed: false`.
+- **Method:** evidence method v2 is the pipeline's only method (branch
+  `simplify/v2-only`, 2026-10-15); v14 retired (`docs/history/v14-scoring-model.md`,
+  tag `v14-final`). `evidence_v2.STATUS = "shadow"` until the benchmark passes.
+  `main` and the live site still run v14 (`20260904_185830`).
+- **Latest v2 run** `20261014_185045` (v1.36, 138/139 studies). A cache-only
+  replay of the same extraction on 2026-10-15 gives strength **k = 9, C-**
+  (+0.17 [+0.02, +0.32]) where the stored run says k = 7, I: two trials' table
+  numbers failed to verify in the original run (a network fetch at span-check
+  time), so a fetch hiccup moves a letter. Lean mass k = 10 D+ **passes** the
+  benchmark; strength coverage 29–38 % (< 50 %, not testable).
+- **Known v2 problems** (the algorithm pass): a single trial can earn an **A**
+  (muscle soreness, sleep quality: k = 1, "Moderate"); span-check verification
+  depends on live table fetches; 64 refusals are "no verified effect estimate";
+  v14's claim-level arm firewall (`_resolve_claim_arms`) never ran in v2.
 - **Binding limit:** readable open-access full text (295/386 creatine RCTs are
   abstract-only), then off-target populations and figure-only results.
-- **App:** `/scan` is the product surface. Photo (live camera via
-  `getUserMedia`, with a `capture="environment"` file-input fallback) or typed
-  ingredient + form + dose → `POST /api/scan`. Exact single-ingredient matches
-  to three retained audits (creatine monohydrate 4000 mg/day, vitamin D3
-  2000 IU/day, magnesium glycinate 300 mg/day) show the Evidence Ledger card;
-  a retained run with an `evidence_v2` block shows the v2 grade card instead;
-  everything else shows "Not assessed". Model-written sections (compatibility,
-  company + MLM disclosure, funding/publication-bias disclosures, evidence
-  prior for unscored ingredients) are badged unverified.
-- **Label reads** run on DeepSeek with thinking mode disabled
-  (`ChatRequest.disableThinking`, DeepSeek only); prompt `label-v1.3` states
-  the schema's list limits.
-- **Optional infra, unverified against real projects:** Supabase scan history
-  (`docs/scan-history.sql`, `SCAN_HISTORY_REQUIRED`), Google sign-in
-  (`NEXT_PUBLIC_SUPABASE_*`, `NEXT_PUBLIC_GOOGLE_CLIENT_ID`).
-- **PWA:** installable, starts at `/scan/`, no offline cache.
+- **App:** `/scan` is the product surface (photo or typed → `POST /api/scan`).
+  Exact matches to three retained audits show the Evidence Ledger card; a
+  retained run with an `evidence_v2` block shows the v2 grade card; everything
+  else "Not assessed". Model-written sections are badged unverified. Label
+  reads: DeepSeek, thinking disabled, prompt `label-v1.3`.
+- **Optional infra, unverified:** Supabase scan history, Google sign-in. PWA
+  installable, no offline cache.
 
-## Next
+## Next (the 2026-10-15 simplification plan)
 
-0. **Evidence method v2** (`docs/EVIDENCE_METHOD.md` §8; history in
-   `docs/history/project-log.md` and `2026-10-03-phase1-measurements.md`).
-   a. Full creatine re-extraction under **v1.36** (S4 full text, glued-decimal
-      span check, registry population filter, S5 matched add-on pairs; the
-      table route is now off by default). The bump invalidates every agent's
-      cache. Then re-check letters and the benchmark.
-   b. Founder: per-outcome meaningful-change thresholds (MCID) for the newly
-      graded outcomes (they use the flagged 0.2 SD default); kidney / renal
-      outcome (parked); off-target populations (REVIEW_PENDING 0b).
-   c. After the re-run: delete the table route (S1, S5T,
-      `worker_shadow.py`, `effect_harvest.py`) if v2 is unchanged.
-   d. Phase 4 switch once the benchmark passes: v2 live, v14 archived,
-      vitamin D / magnesium / vitamin C runs, Evidence Ledger retired.
-1. Verify on a real phone: live camera, a busy label read after the
-   thinking-mode fix, PWA install.
-2. Check whether the text calls (`deepseek-chat`) also need thinking disabled
-   (`literature_warnings` at 1024 max tokens may degrade to `unavailable`).
-3. Set up Supabase (run `docs/scan-history.sql`) and Google credentials, then
-   verify history and sign-in end to end.
-4. Measure extraction stability (same corpus, same prompt, twice) before any
-   anchor calibration; outcome mapping moves ±2 trials per outcome between
-   runs.
-5. Right-size dashboard CI (path filters; full Playwright matrix only for UI
-   changes).
+Done on `simplify/a-dead-weight` → `simplify/v2-only`: A (dead weight), B/C/D
+(v2 only: v14 scoring, table route, SR route, Grok, label CLI removed; replay of
+the v1.36 run gives byte-identical `evidence_v2`).
 
-Later: Grok/Claude agreement table, Grok telemetry capture, dose bands at scale,
-venue factor (needs a SPEC §13 constant first).
+- **E** Run archive / dashboard (`/runs`, `lib/dashboard`, `dashboard_artifact.py`,
+  `auto_report_push.py`): keep, shrink or drop; auto-push policy; archive the v14 reports.
+- **F** App: move `/scan` to v2 only (retire v14 TS ports, Evidence Ledger,
+  design lab); decide each model-written section; scan history / auth.
+- **G** Tests, hooks, CI right-sized to what is left; revise the v14-era helper agents.
+- **H** Docs: SPEC / EVIDENCE_METHOD / PIPELINE / SYSTEM_DESIGN / AGENTS.md / README.
+- **v2 algorithm pass:** the known problems above, then MCIDs (REVIEW_PENDING
+  0b), the benchmark, and a stability measurement (same corpus twice).
 
 ## Conventions
 

@@ -8,9 +8,8 @@ data, and every operation over them is arithmetic or a table lookup:
   - elemental / active-moiety conversion   (the 5x dose trap)
   - salt-family -> form transfer tier
   - four-axis population -> pop_match tier
-  - ECU key construction
 
-Putting a model in any of these loops means the same bottle scores differently
+Putting a model in any of these loops means the same bottle grades differently
 next Tuesday. Implements SPEC sections 5 and 8.
 """
 from __future__ import annotations
@@ -51,11 +50,6 @@ def outcome(vocab_id: str) -> dict | None:
     return next((o for o in load("outcome")["outcomes"] if o["id"] == vocab_id), None)
 
 
-def outcome_kind(vocab_id: str) -> str | None:
-    o = outcome(vocab_id)
-    return o["kind"] if o else None
-
-
 # ---------------------------------------------------------------- form
 
 def ingredients() -> list[str]:
@@ -75,50 +69,6 @@ def unspecified_form_id(ingredient: str) -> str | None:
     """The id S7 must use rather than guess a salt. Exactly one per ingredient."""
     ids = [f["id"] for f in forms_for(ingredient) if f["salt_family"] is None]
     return ids[0] if len(ids) == 1 else None
-
-
-def outcome_polarity(outcome_vocab_id: str) -> str | None:
-    """
-    'lower_better' | 'higher_better' | None, for one outcome.
-
-    Which way the measured NUMBER moves when the product works. This is a
-    DEFINITION, not a calibration constant -- lower sleep-onset latency is
-    better because that is what the outcome means, and no Tier-3 study will
-    revise it.
-
-    None where the direction is genuinely claim-dependent: cortisol (low
-    cortisol is itself pathological), testosterone, blood_pressure (lowering it
-    in a normotensive is not a benefit), glycaemic_control (HbA1c is
-    lower-better, insulin sensitivity higher-better). Those must keep refusing.
-    """
-    o = outcome(outcome_vocab_id)
-    return (o or {}).get("polarity")
-
-
-def form_id_for_text(ingredient: str, text: str | None) -> str | None:
-    """
-    Free-text form ("magnesium bisglycinate") -> form id, or the unspecified id.
-
-    Deterministic label/alias matching. Exists because an SR's characteristics
-    table gives form as PROSE, where S7 gives a vocabulary id -- and a trial we
-    can only reach through a table still has to land on the right form arc.
-
-    REFUSES on ambiguity: text matching two forms returns the unspecified id,
-    not the longer match. "magnesium citrate malate" contains "magnesium
-    citrate", and silently resolving it would put a different salt's evidence on
-    the user's form arc, which is precisely the claim this product must not make.
-    """
-    if not text:
-        return unspecified_form_id(ingredient)
-    t = " ".join(str(text).lower().split())
-    hits = set()
-    for f in forms_for(ingredient):
-        if f.get("salt_family") is None:
-            continue                       # the unspecified entry is not a match
-        for name in [f["label"], f["id"].replace("_", " "), *(f.get("aliases") or [])]:
-            if str(name).lower() in t:
-                hits.add(f["id"])
-    return hits.pop() if len(hits) == 1 else unspecified_form_id(ingredient)
 
 
 def elemental_dose_mg(ingredient: str, form_vocab_id: str,
@@ -281,24 +231,6 @@ def pop_match(study_pop: dict, product_pop: dict) -> str:
 def population_variants() -> list[dict]:
     """The four precomputed rows. The delta between them is the product feature."""
     return load("population")["precomputed_variants"]
-
-
-# ---------------------------------------------------------------- ECU key
-
-UNBANDED = "unbanded"
-
-
-def ecu_key(ingredient: str, form_vocab_id: str, dose_band: str | None,
-            outcome_vocab_id: str, population_id: str) -> str:
-    """
-    The 5-tuple, flattened. Exact-key lookup on a btree index -- this is why the
-    store is a relational DB and not a vector DB.
-
-    dose_band is None until bands are derived from observed doses; 'unbanded'
-    keeps the key well-formed in the meantime rather than inventing a band.
-    """
-    return "|".join([ingredient, form_vocab_id, dose_band or UNBANDED,
-                     outcome_vocab_id, population_id])
 
 
 # ---------------------------------------------------------------- validation

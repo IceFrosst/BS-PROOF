@@ -1,7 +1,6 @@
 """
 Evidence method v2, stage 5: pool the verified effect sizes per outcome.
-NO MODEL MAY ENTER THIS FILE. SHADOW ONLY: nothing in production scoring
-(v14) reads it until the Phase 4 switch (docs/EVIDENCE_METHOD.md §8).
+NO MODEL MAY ENTER THIS FILE.
 
 Per outcome:
 
@@ -9,7 +8,7 @@ Per outcome:
      combination arms, no administered arm) EXCEPT "self-declared
      underpowered" -- v2 drops that refusal, because pooling already gives a
      tiny trial a tiny weight (§3 stage 2).
-  2. Population: the stored v14 policy (variant B) -- a study whose population
+  2. Population: variant B (as v14 stored it) -- a study whose population
      is "different" from the product's (e.g. a disease trial for a
      healthy-adult product) answers a different question and is left out.
   3. ONE effect per study per outcome, chosen by a FIXED order so two
@@ -42,8 +41,7 @@ from dataclasses import dataclass, field
 
 from pipeline import meta_effects as me
 from pipeline import vocab
-from pipeline.assemble import _s7_for_claim, study_dose
-from pipeline.dose import dose_match_for
+from pipeline.dose import _s7_for_claim, dose_match_for, study_dose
 from pipeline.effect_size import Effect, effect_from_claim
 from pipeline.eligibility import _ineligible, matched_addon_claim
 from pipeline.span_check import fill_arm_n
@@ -97,8 +95,8 @@ def study_form(s7: dict | None, claim: dict) -> str | None:
 
 
 def trial_dose(ingredient: str, s7: dict | None, s3: dict | None, claim: dict) -> dict:
-    """The tested arm's daily elemental dose interval (assemble.study_dose),
-    joined by label (assemble._s7_for_claim), never by position."""
+    """The tested arm's daily elemental dose interval (dose.study_dose),
+    joined by label (dose._s7_for_claim), never by position."""
     modern = (s7 or {}).get("extraction_version") == "v1.24"
     return study_dose(ingredient, _s7_for_claim(s7, claim, s3, modern=modern))
 
@@ -106,11 +104,11 @@ def trial_dose(ingredient: str, s7: dict | None, s3: dict | None, claim: dict) -
 def dose_match_tier(ingredient: str, s7: dict | None, s3: dict | None, claim: dict,
                     product: dict) -> str | None:
     """The product's dose against THIS trial's dose, on SPEC §8's tiers with the
-    trial's own daily elemental dose as the band (pipeline/dose.dose_match_for):
+    trial's own daily elemental dose as the band (dose.dose_match_for):
     in_band (1-2x the trial dose) | low_50_99 | below_50 | above_200 |
     unspecified (trial dose unknown or an interval straddling a tier). None when
     the product carries no dose. The tested arm's dose is joined by label
-    (assemble._s7_for_claim), never by position."""
+    (dose._s7_for_claim), never by position."""
     lo, hi = product.get("dose_low_mg"), product.get("dose_high_mg")
     if lo is None or hi is None:
         return None

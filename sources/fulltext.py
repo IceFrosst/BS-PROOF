@@ -260,8 +260,8 @@ def _expand_grid(trs) -> list[list[str]]:
 def extract_tables_structured(xml: str | None) -> list[dict]:
     """Colspan/rowspan-expanded tables with merged multi-row headers.
 
-    SHADOW-ONLY consumer: pipeline/effect_harvest table candidates via
-    workers._tables_structured.  This function must NOT feed any model
+    Consumer: the v2 span check via workers._tables_structured (and
+    scripts/benchmark_v2.py).  This function must NOT feed any model
     payload -- S5 keeps extract_tables/_tables_text unchanged so the LLM
     cache keys are stable.
 

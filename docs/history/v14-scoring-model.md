@@ -160,6 +160,21 @@ Features that existed only for v14:
 | Unstable extraction | Re-wording one prompt field moved a score 15 points |
 | Composite history | v13's `100 × c × mean(effect, form, dose)` made applicability a peer of direction: d = +0.04 read 38, while d = 0.00 with full form and dose read 77. v14 fixed the display, not the underlying number |
 
+### Measurements recorded in code that went with v14
+
+- **One study, one vote** (`eligibility._one_study_one_vote`, 2026-08-10): one
+  S5 output expanded one finding over a sex × phase × body-region grid into 20
+  claims, so E, c, H and the human-evidence gate were set by how finely the
+  model sliced the paper. Keeping the LOWEST s per trial contradicted the
+  trial's own primary outcome in 31 of 87 trials that declared one (28 that
+  found an effect on their primary endpoint were filed as evidence against),
+  and drove an 80-study creatine corpus to d = −0.265 for strength. Final rule:
+  the primary-outcome claim wins; else the majority direction; a benefit/null
+  tie is `unclear` (s = 0); harm wins any tie it is in. v2's counterpart is
+  `pool.selection_key` (one effect per trial per outcome, fixed order).
+- **Tier-C model** (still in `claude_adapter.TIER_MODEL`), **effort levels**
+  and **S6 batching** (`workers.py`) keep their measurements in place.
+
 ## 7. Last v14 result (creatine monohydrate, run `20260904_185830`, prompt v1.26)
 
 156 studies targeted, 155 usable, 54 SR extractions (47 resolved).

@@ -97,14 +97,6 @@ def outcomes_for(ingredient: str, *,
     return ids
 
 
-def filter_ecu_rows(rows: list[dict], allowed: list[str] | None) -> list[dict]:
-    """Keep showcase outcomes; order follows `allowed` (study-count rank)."""
-    if not allowed:
-        return rows
-    by_id = {r.get("outcome_vocab_id"): r for r in rows}
-    return [by_id[oid] for oid in allowed if oid in by_id]
-
-
 def restrict_outcome_vocab(full_outcomes: list[dict],
                            allowed: list[str] | None) -> list[dict]:
     """Shrink the S6 vocabulary so the model cannot map into the tail."""

@@ -31,7 +31,7 @@ sys.path.insert(0, str(ROOT))
 
 REPORTS = ROOT / "reports"
 RUNS = REPORTS / "runs"
-from pipeline.scoring import SCORING_MODEL as _SCORING_MODEL
+from pipeline.evidence_v2 import METHOD as _SCORING_MODEL
 
 OUT = ROOT / "out"
 
@@ -61,39 +61,23 @@ def _slug(s: str) -> str:
 
 
 def _formula() -> str:
-    return """## How the score is built
+    return """## How the grade is built
 
-Deterministic (`pipeline/scoring.py`). Models extract fields only.
+Evidence method v2 (`docs/EVIDENCE_METHOD.md`). Models extract fields only;
+everything below is deterministic.
 
 ```text
-1. weight w = design × RoB × size × funding × OA        (study QUALITY only)
-   form / dose / population are NOT in the weight — they are arcs
-2. E = Σw ; E' adds a capped synthesis lift (ceiling 1.30)
-3. d = Σ(w·s)/Σw      direction, −1…+1
-   H = weighted var(s)/1.5
-   c = 1 − e^(−E'/k)  confidence, k = 3
-4. signed  = clamp(round(100 × d × c × (1 − 0.4 × H)), −100, +100)   [internal]
-5. FOUR ARCS, each carrying a verdict AND its coverage:
-     effect    d over ALL evidence
-     form      d over trials using YOUR form      + share of evidence
-     dose      d over trials in YOUR dose band    + share of evidence
-     evidence  c (pure quantity, no direction)
-6. composite = 50 + signed/2 × (A if signed > 0 else 1)   [the 0–100 shown]
-   A = mean(form strength, dose closeness) — applicability to YOUR product;
-   a MISSING axis is priced at its transfer tier, never dropped
-7. Gate if almost no human clinical weight → no number at all
+1. per trial, per outcome: ONE verified effect (numbers checked against their
+   quoted span), Hedges' g with its variance       pipeline/effect_size.py
+2. per outcome: REML random-effects pool, Hartung-Knapp CI (k >= 3),
+   prediction interval, leave-one-out range        pipeline/pool.py
+3. GRADE certainty: start High for RCTs, downgrade for risk of bias,
+   inconsistency, imprecision, indirectness (form / dose / population)
+                                                   pipeline/grade.py
+4. letter = benefit size (vs the meaningful-change threshold M) x certainty
 ```
 
-4-arc donut — every arc carries a VERDICT and the COVERAGE behind it:
-- **effect** — what all the evidence says
-- **form** — what trials using *your* form found, and how many there were
-- **dose** — what trials in *your* dose band found, and how many
-- **evidence** — how much trustworthy evidence exists at all (c)
-
-Centre = the 0–100 composite. A low number with a full evidence arc means
-"does not work"; a low number with an empty one means "barely studied".
-
-SRs (`--with-sr`) only raise confidence E′, never invent patients.
+Every refused trial is counted with its reason; nothing is silently dropped.
 Predatory list: https://www.predatoryjournals.org/the-list/publishers
 """
 
@@ -253,16 +237,6 @@ def _section_studies(ctx: dict) -> str:
     return "\n".join(lines)
 
 
-def _section_sr(ctx: dict) -> str:
-    sr = ctx.get("sr") or {}
-    lines = ["## Systematic reviews / meta-analyses (S2)\n"]
-    lines.append(f"- Requested (cap): **{sr.get('requested', 0)}**")
-    lines.append(f"- S2 extractions ok: **{sr.get('s2_ok', 0)}**")
-    lines.append(f"- Resolved for multiplier: **{sr.get('resolved', 0)}**")
-    lines.append("_SRs never add patients; only a capped confidence boost (≤ +30%)._\n")
-    return "\n".join(lines)
-
-
 def reconcile_agent_views(by_agent: dict | None, agent_stats: dict | None) -> list[str]:
     """
     Problems between the two per-agent views of one run. Empty means consistent.
@@ -354,146 +328,37 @@ def _section_agents(ctx: dict) -> str:
     return "\n".join(lines)
 
 
-def _section_speed(ctx: dict) -> str:
-    text = ctx.get("speed_report") or ""
-    if not text:
-        return "## SPEED REPORT\n_Not available._\n"
-    return f"## SPEED REPORT\n\n```text\n{text.strip()}\n```\n"
-
-
-def _section_ecu_this_run(ctx: dict) -> str:
-    rows = ctx.get("ecu_rows") or []
-    lines = ["## ECU scores — this run only\n"]
-    if not rows:
-        lines.append("_No ECU rows from this run._\n")
+def _section_evidence_v2(ctx: dict) -> str:
+    ev = ctx.get("evidence_v2") or {}
+    outcomes = ev.get("outcomes") or []
+    lines = [f"## Evidence grades — this run (`{ev.get('method', '?')}`, status "
+             f"`{ev.get('status', '?')}`)\n"]
+    if not outcomes:
+        lines.append("_No outcome was graded in this run._\n")
         return "\n".join(lines)
     lines += [
-        "| Outcome | 0–100 | Verdict | effect | in your form | at your dose | evidence | n |",
-        "|---|---:|---|---|---|---|---|---:|",
+        f"Population: `{ev.get('population')}` · registry checked: "
+        f"**{'yes' if ev.get('registry_checked') else 'no'}**\n",
+        "| Outcome | Grade | Benefit | Certainty | k | SMD [95% CI] | I² | refused |",
+        "|---|---|---|---|--:|---|--:|--:|",
     ]
-
-    def arc(row, key):
-        """verdict @ coverage, or an explicit 'not tested' -- never a blank."""
-        a = (row.get("arcs") or {}).get(key) or {}
-        v, cov = a.get("verdict"), a.get("coverage")
-        if a.get("is_quantity"):
-            return f"{cov:.0%}" if cov is not None else "—"
-        # FORM shows the ladder STRENGTH -- the number the composite uses since
-        # v5 -- with the signed verdict kept beside it as the caveat. Printing
-        # only the verdict made the table disagree with its own headline.
-        if key == "form" and "strength" in a:
-            st = a.get("strength") or 0.0
-            basis = a.get("basis")
-            if basis == "untested_in_form":
-                return "not tested in your form"
-            if basis == "all_negative_in_form":
-                return f"all negative ({v:+.2f} @ {cov:.0%})" if v is not None else "all negative"
-            tail = f" (pooled {v:+.2f} @ {cov:.0%})" if v is not None and cov is not None else ""
-            return f"{st:.2f}{tail}"
-        if v is None:
-            return "not tested"
-        return f"{v:+.2f} @ {cov:.0%}" if cov is not None else f"{v:+.2f}"
-
-    from pipeline import arcs as _arcs
-    for r in sorted(rows, key=lambda x: -(x.get("composite")
-                                          if x.get("composite") is not None else -999)):
-        comp = r.get("composite")
-        shown = "gated" if comp is None else comp
-        verdict = _arcs.label(
-            comp, ((r.get("components") or {}).get("c")),
-            effect_verdict=((r.get("arcs") or {}).get("effect") or {}).get("verdict"),
-            applicability_limited=any(
-                ((r.get("arcs") or {}).get(k) or {}).get("verdict") is None
-                for k in ("form", "dose")),
-            applicability_score=(r.get("components") or {}).get("applicability"))
-        lines.append(
-            f"| {r.get('outcome_vocab_id')} | {shown} | {verdict} | "
-            f"{arc(r, 'effect')} | {arc(r, 'form')} | {arc(r, 'dose')} | "
-            f"{arc(r, 'evidence')} | "
-            f"{r.get('n_primaries', r.get('evidence_n', (r.get('evidence') or {}).get('n_primaries', '?')))} |"
-        )
+    for o in sorted(outcomes, key=lambda x: -(x.get("k") or 0)):
+        g, smd = o.get("run_grade") or {}, o.get("smd")
+        est = (f"{smd['estimate']:+.2f} [{smd['ci'][0]:+.2f}, {smd['ci'][1]:+.2f}]"
+               if smd else "—")
+        i2 = f"{smd['i2']:.0%}" if smd and smd.get("i2") is not None else "—"
+        lines.append(f"| {o.get('outcome')} | **{g.get('letter', '?')}** | {g.get('benefit', '—')} | "
+                     f"{g.get('label', '—')} | {o.get('k', 0)} | {est} | {i2} | "
+                     f"{sum((o.get('refused') or {}).values())} |")
     lines.append("")
-    lines.append("_0–100 = 50 + signed/2, with a positive signal discounted by "
-                 "applicability A = mean(form strength, dose closeness); a negative "
-                 "signal is never softened. 50 means the evidence points nowhere. "
-                 "Each arc shows its verdict and the share of evidence behind it; a "
-                 "number near 50 with a FULL evidence arc means 'no effect found', "
-                 "with an EMPTY one it means 'barely studied'._\n")
-    lines.append("")
-    lines.append("_Old rows from previous runs are not shown here._\n")
-
-    # WHICH STUDIES MADE THE NUMBER. Exact decomposition, not an attribution
-    # guess: signed = 100 x d x c x (1 - 0.4H) and d = sum(w_i x s_i)/E, so each
-    # study owns `100 x c x (1-0.4H) x w_i x s_i / E` points and the column sums
-    # to the signed score. Founder ask 2026-08-11.
-    lines.append("## Which studies made each number\n")
-    any_contrib = False
-    for r in sorted(rows, key=lambda x: -(x.get("composite")
-                                          if x.get("composite") is not None else -999)):
-        cons = ((r.get("evidence") or {}).get("contributions")) or []
-        if not cons:
-            continue
-        any_contrib = True
-        signed = r.get("score")
-        lines.append(f"### {r.get('outcome_vocab_id')} — signed {signed:+d}"
-                     if isinstance(signed, int) else
-                     f"### {r.get('outcome_vocab_id')}")
+    refused: dict[str, int] = {}
+    for o in outcomes:
+        for why, n in (o.get("refused") or {}).items():
+            refused[why] = refused.get(why, 0) + n
+    if refused:
+        lines.append("Why trials were refused (all outcomes):\n")
+        lines += [f"- {n} × {why}" for why, n in sorted(refused.items(), key=lambda x: -x[1])]
         lines.append("")
-        lines.append("| Study | points | w (quality) | s (direction) | rank | form |")
-        lines.append("|---|--:|--:|--:|--:|---|")
-        for csx in cons[:15]:
-            lines.append(f"| `{csx.get('id','?')}` | {csx.get('points'):+.2f} | "
-                         f"{csx.get('w')} | {csx.get('s')} | "
-                         f"{csx.get('design_rank')} | {csx.get('form_match')} |")
-        tot = sum(c.get("points") or 0 for c in cons)
-        lines.append(f"| **sum of all {len(cons)}** | **{tot:+.2f}** | | | | |")
-        lines.append("")
-    if not any_contrib:
-        lines.append("_No scored ECU had attributable contributions._\n")
-    lines.append("_`points` sum to the signed score. NEGATIVE points mean that "
-                 "study pushed the score down. `w` is quality (design × RoB × size "
-                 "× funding × OA); `s` is what it found (+1.0 meaningful benefit, "
-                 "+0.3 trivial/unsized, −0.7 null, −1.0 harm). The two are separate "
-                 "on purpose: how good a study is and what it found are different "
-                 "facts._\n")
-    return "\n".join(lines)
-
-
-def _section_db_snapshot(ingredient: str, form: str) -> str:
-    """Only the matching grok/pilot DB for this ingredient — never other ingredients."""
-    from pipeline.storage import Store
-
-    lines = [f"## Database snapshot (`{ingredient}`)\n"]
-    if not OUT.exists():
-        lines.append("_No out/ directory._\n")
-        return "\n".join(lines)
-
-    patterns = [
-        f"grok_{ingredient}*.sqlite",
-        f"pilot_{ingredient}*.sqlite",
-    ]
-    found = []
-    for pat in patterns:
-        found.extend(sorted(OUT.glob(pat)))
-
-    # Never include other ingredients or the shared cache in the human report.
-    found = [p for p in found if "cache" not in p.name and ingredient in p.name]
-
-    if not found:
-        lines.append(f"_No `{ingredient}` database files found._\n")
-        return "\n".join(lines)
-
-    for db in found:
-        lines.append(f"### `{db.name}`\n")
-        try:
-            with Store(db) as store:
-                c = store.counts()
-                lines.append(
-                    f"Studies stored (corpus): **{c['studies']}** · "
-                    f"ECUs: **{c['ecus']}** · syntheses: **{c['syntheses']}\n"
-                )
-        except Exception as e:
-            lines.append(f"**Error reading {db.name}:** `{e}`\n")
     return "\n".join(lines)
 
 
@@ -533,10 +398,7 @@ def write_report(ingredient: str, form: str, mode: str,
     # Copy so report-only provenance does not mutate the caller's live object.
     ctx = dict(run_context or {})
     ctx.setdefault("mode", mode)
-    ctx.setdefault("provider", (
-        "grok" if "grok" in mode else
-        "claude" if "claude" in mode else None
-    ))
+    ctx.setdefault("provider", "claude" if "claude" in mode else None)
     ctx.setdefault("scoring_model", _SCORING_MODEL)
     ctx.setdefault("source_commit", _source_commit())
 
@@ -550,9 +412,7 @@ def write_report(ingredient: str, form: str, mode: str,
         _section_run_stats(ctx),
         _section_cost(ctx),
         _section_predatory(ctx),
-        _section_sr(ctx),
-        _section_ecu_this_run(ctx),
-        _section_db_snapshot(ingredient, form),
+        _section_evidence_v2(ctx),
     ]
 
     full_parts = [
@@ -566,17 +426,12 @@ def write_report(ingredient: str, form: str, mode: str,
         _section_run_stats(ctx),
         _section_cost(ctx),
         _section_predatory(ctx),
-        _section_sr(ctx),
         _section_agents(ctx),
-        _section_speed(ctx),
         _section_studies(ctx),
-        _section_ecu_this_run(ctx),
-        _section_db_snapshot(ingredient, form),
+        _section_evidence_v2(ctx),
         "## Notes\n",
-        "- Claude and Grok scores are **never merged**.\n",
-        "- Form does **not** penalize the center score; it is the form arc only.\n",
-        "- Predatory venues: flagged + counted; weight zero is OFF for now.\n",
-        "- Inconclusive + low n is often the confidence ceiling (SPEC 13), not a bug.\n",
+        "- Form, dose and population never weight a trial; they are GRADE indirectness.\n",
+        "- Predatory venues: flagged + counted, never weighted.\n",
         "- This report is **this run only** — other ingredients are not mixed in.\n",
     ]
 
@@ -701,7 +556,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--ingredient", required=True)
     ap.add_argument("--form", required=True)
-    ap.add_argument("--mode", default="grok")
+    ap.add_argument("--mode", default="claude")
     ap.add_argument("--no-push", action="store_true")
     ap.add_argument("--context-json", default=None,
                     help="Optional path to run_context JSON")

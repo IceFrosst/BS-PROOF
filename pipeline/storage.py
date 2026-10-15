@@ -5,9 +5,9 @@ Everything goes through here so the move from SQLite to Postgres/Supabase is a
 connection change, not a rewrite. That means no SQLite-specific SQL in this file
 and none in schemas/storage.sql -- see the header there for the constraints.
 
-Storage is not a cache. A stored ECU is a published claim about a named brand,
-so every row carries the prompt version, vocabulary versions and timestamp that
-produced it. If a score changes, provenance says which input moved.
+It holds the retrieved corpus (studies, registry facts). The graded result of a
+run lives in its immutable artifacts under reports/runs/, not here. (The v14
+`ecu` tables are no longer written; an old database may still carry them.)
 """
 from __future__ import annotations
 import json
@@ -90,12 +90,6 @@ class Store:
                          ("retrieved_for",
                           "ALTER TABLE study ADD COLUMN retrieved_for TEXT")):
             if col not in have:
-                self.conn.execute(ddl)
-        # ECU gained the 0-100 composite and the per-arc detail on 2026-08-07.
-        ecu_have = {r[1] for r in self.conn.execute("PRAGMA table_info(ecu)")}
-        for col, ddl in (("composite", "ALTER TABLE ecu ADD COLUMN composite INTEGER"),
-                         ("arcs", "ALTER TABLE ecu ADD COLUMN arcs TEXT")):
-            if col not in ecu_have:
                 self.conn.execute(ddl)
 
     def close(self):
@@ -206,90 +200,6 @@ class Store:
                               (nct_id.upper(),)).fetchone()
         return dict(r) if r else None
 
-    # ----------------------------------------------------------------- ECU
-
-    def upsert_ecu(self, ecu: dict, evidence: list[dict] | None = None) -> str:
-        """
-        Write one scored row plus its audit trail. `ecu` matches schemas/ecu.json.
-        """
-        pop = ecu["population"]
-        comp = ecu.get("components") or {}
-        dose = ecu.get("dose_range_mg") or {}
-        prov = ecu["provenance"]
-        self.conn.execute(
-            "INSERT INTO ecu (ecu_key, ingredient, form_vocab_id, dose_band,"
-            " band_version, outcome_vocab_id, population_id, age_band, sex,"
-            " deficiency_status, pregnancy, score, band, gate_fired, d, c, h, e,"
-            " e_prime, coverage, composite, arcs, n_primaries, n_syntheses, dose_low_mg,"
-            " dose_high_mg, dose_basis, flags, prompt_version, vocab_versions,"
-            " scorer_version, computed_at)"
-            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
-            " ON CONFLICT(ecu_key) DO UPDATE SET"
-            "   score=excluded.score, band=excluded.band,"
-            "   gate_fired=excluded.gate_fired, d=excluded.d, c=excluded.c,"
-            "   h=excluded.h, e=excluded.e, e_prime=excluded.e_prime,"
-            "   coverage=excluded.coverage, n_primaries=excluded.n_primaries,"
-            "   n_syntheses=excluded.n_syntheses, flags=excluded.flags,"
-            "   composite=excluded.composite, arcs=excluded.arcs,"
-            "   prompt_version=excluded.prompt_version,"
-            "   vocab_versions=excluded.vocab_versions,"
-            "   band_version=excluded.band_version, computed_at=excluded.computed_at",
-            (ecu["ecu_key"], ecu["ingredient"], ecu["form_vocab_id"],
-             ecu.get("dose_band"), ecu.get("band_version", 0),
-             ecu["outcome_vocab_id"], pop["id"], pop["age_band"], pop["sex"],
-             pop["deficiency_status"], pop["pregnancy"],
-             ecu.get("score"), ecu["band"], 1 if ecu.get("gate_fired") else 0,
-             comp.get("d"), comp.get("c"), comp.get("H"), comp.get("E"),
-             comp.get("E_prime"), comp.get("coverage"),
-             ecu.get("composite"), json.dumps(ecu.get("arcs") or {}),
-             ecu["evidence"]["n_primaries"], ecu["evidence"]["n_syntheses"],
-             dose.get("low"), dose.get("high"), dose.get("basis"),
-             json.dumps(ecu.get("flags") or []), prov["prompt_version"],
-             json.dumps(prov["vocab_versions"]), prov.get("scorer_version"),
-             prov["computed_at"]))
-
-        for e in (evidence or []):
-            self.conn.execute(
-                "INSERT INTO ecu_evidence (ecu_key, canonical_id, role, w_study,"
-                " s_value, transfer_factor, form_match, dose_match, pop_match)"
-                " VALUES (?,?,?,?,?,?,?,?,?)"
-                " ON CONFLICT(ecu_key, canonical_id) DO UPDATE SET"
-                "   w_study=excluded.w_study, s_value=excluded.s_value,"
-                "   transfer_factor=excluded.transfer_factor",
-                (ecu["ecu_key"], e["canonical_id"], e.get("role", "primary"),
-                 e.get("w_study"), e.get("s_value"), e.get("transfer_factor"),
-                 e.get("form_match"), e.get("dose_match"), e.get("pop_match")))
-        self.conn.commit()
-        return ecu["ecu_key"]
-
-    def ecu(self, ecu_key: str) -> dict | None:
-        r = self.conn.execute("SELECT * FROM ecu WHERE ecu_key = ?", (ecu_key,)).fetchone()
-        return dict(r) if r else None
-
-    def ecus_for(self, ingredient: str) -> list[dict]:
-        """
-        Every scored row for an ingredient, heaviest evidence first. This is the
-        canonical outcome set the product displays -- one row per outcome, the
-        label claim merely highlights one of them.
-        """
-        return [dict(r) for r in self.conn.execute(
-            "SELECT * FROM ecu WHERE ingredient = ?"
-            " ORDER BY n_primaries DESC, e DESC", (ingredient,))]
-
-    def evidence_for(self, ecu_key: str) -> list[dict]:
-        return [dict(r) for r in self.conn.execute(
-            "SELECT * FROM ecu_evidence WHERE ecu_key = ?"
-            " ORDER BY w_study DESC", (ecu_key,))]
-
-    def stale_bands(self, current_band_version: int) -> list[str]:
-        """
-        ECU keys computed under an older band_version. Dose bands shift when new
-        trials land, and every ECU carrying an older version is invalid -- SPEC
-        section 5's complexity flag, made queryable.
-        """
-        return [r["ecu_key"] for r in self.conn.execute(
-            "SELECT ecu_key FROM ecu WHERE band_version < ?", (current_band_version,))]
-
     def counts(self) -> dict:
         def one(sql):
             return self.conn.execute(sql).fetchone()[0]
@@ -298,5 +208,4 @@ class Store:
             "syntheses": one("SELECT COUNT(*) FROM study WHERE is_synthesis = 1"),
             "unclassified": one("SELECT COUNT(*) FROM study WHERE design_rank IS NULL"),
             "registry_facts": one("SELECT COUNT(*) FROM registry_facts"),
-            "ecus": one("SELECT COUNT(*) FROM ecu"),
         }

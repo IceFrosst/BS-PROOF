@@ -5,8 +5,6 @@ One trial = one evidence unit. Implements SPEC.md section 6.
 2026-08-05 audit fixes (Grok) — reviewed 2026-08-06 (Claude), see REVIEW.md:
 - Registry regex tightened for ChiCTR / CTRI / UMIN / EudraCT full IDs.
   AMENDED: extract-not-validate, so surrounding text no longer defeats the match.
-- synthesis_contribution_cap no longer a no-op; still not applied in score_ecu
-  (under-count is the safe direction until wired deliberately).
 """
 from __future__ import annotations
 import re, unicodedata
@@ -91,18 +89,3 @@ def dedup(records: list[dict]):
              "by_kind": {k: sum(1 for kk in kinds.values() if kk == k)
                          for k in set(kinds.values())}}
     return unique, id_map, stats
-
-
-def synthesis_contribution_cap(syntheses: list[dict], median_primary_w: float) -> float:
-    """
-    Unresolved syntheses ALL TOGETHER cap at one median primary study weight.
-    Fail toward under-counting. SPEC.md section 6.
-
-    NOT YET APPLIED in score_ecu — score_ecu ignores unresolved syntheses
-    entirely (even more conservative). Wire deliberately when retrieval exists;
-    do not call this from scoring without a SPEC update + selftest.
-    """
-    unresolved = [s for s in syntheses if not s.get("resolved")]
-    if not unresolved:
-        return 0.0
-    return float(median_primary_w)

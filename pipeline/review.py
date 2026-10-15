@@ -1,6 +1,6 @@
 """
 Evidence method v2, stage 3: the second reviewer's disagreement rule.
-NO MODEL MAY ENTER THIS FILE. SHADOW ONLY until the Phase 4 switch.
+NO MODEL MAY ENTER THIS FILE.
 
 Systematic reviews extract every number twice, independently, and only numbers
 both extractors agree on are analysed. Here reviewer 1 is S5N, the per-claim
