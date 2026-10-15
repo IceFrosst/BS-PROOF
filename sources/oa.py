@@ -84,11 +84,6 @@ def referenced_work_ids(work: dict | None, *, limit: int = 200) -> list[str]:
     return [r for r in (work.get("referenced_works") or [])][:limit]
 
 
-# Old name kept so nothing breaks mid-refactor. It is a lie about the return
-# type; new callers must use referenced_work_ids.
-referenced_dois = referenced_work_ids
-
-
 # ----------------------------------------------------------------- Unpaywall
 
 def unpaywall(doi: str) -> dict | None:

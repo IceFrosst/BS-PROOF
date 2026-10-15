@@ -26,5 +26,5 @@ Also here since the 2026-10-02 docs consolidation: the old dated design notes
 and research (formerly `docs/design/` and `docs/research/`; same file names,
 so a citation of `docs/design/<name>` means `docs/history/<name>`), the full
 `/scan` design log (`2026-09-16-scan-design-log.md`), the original Evidence
-Ledger rubric note, the conference demo plan, the 2026-09-11 handoff, and the
+Ledger rubric note and the
 SPEC changelog (`spec-changelog.md`).
