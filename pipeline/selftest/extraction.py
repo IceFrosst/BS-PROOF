@@ -321,8 +321,8 @@ def run(check):
           "the fix must not make the gate permissive")
 
     check("no underscore survives into a query",
-          "vitamin_d" not in _ep._query("vitamin_d", syntheses=False, scope="intervention")
-          and 'TITLE:"vitamin d"' in _ep._query("vitamin_d", syntheses=False,
+          "vitamin_d" not in _ep._query("vitamin_d", scope="intervention")
+          and 'TITLE:"vitamin d"' in _ep._query("vitamin_d",
                                                 scope="intervention"),
           'TITLE:"vitamin_d" matched ~nothing; PUB_TYPE is a field name, not a term')
     check("per-outcome queries are fixed too",

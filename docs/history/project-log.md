@@ -10,6 +10,25 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-15 — simplification: systematic reviews no longer retrieved; merged into Jans_attempt
+
+Branch `simplify/no-sr-retrieval` (on `simplify/css`), then the whole
+`simplify/*` chain fast-forwarded into `Jans_attempt`.
+
+- Retrieval stopped searching for systematic reviews (up to 200 per
+  ingredient, classified, deduplicated, publisher-looked-up and stored, but
+  read by nothing since S2 was removed). A review record the trial search
+  returns is now dropped after classification. Removed with it:
+  `europepmc.hit_count` (unused), the review mode of `europepmc._query`,
+  `SP_RETRIEVE_MAX_SYNTHESES`. If forest-plot reading is built later, it gets a
+  targeted fetch of its own.
+- Verified: a fresh retrieval of creatine (intervention scope) into separate
+  databases before and after stores the same 390 trials with every field
+  identical (only the 74 review rows are gone); the cache-only replay of the
+  v1.36 run gives byte-identical `evidence_v2` and extractions. Invariants,
+  selftest, 156 Python tests.
+- The simplification (A–H, CSS, reviews) is complete.
+
 ## 2026-10-15 — simplification: dead CSS removed; baseline is Jans_attempt
 
 Branch `simplify/css` (on `simplify/docs`).

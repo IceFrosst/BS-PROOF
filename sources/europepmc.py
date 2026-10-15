@@ -5,11 +5,9 @@ This is the discovery layer. It answers "which papers exist for this ingredient"
 and "is the full text reachable", and it emits records in the shape
 `pipeline.dedup.canonical_id` expects.
 
-RETRIEVAL PRIORITY IS INVERTED ON PURPOSE: syntheses are fetched before
-primaries. One open-access systematic review carries characteristics-of-included
--studies and a RoB table for ~15 primaries that cannot be read directly, so an
-SR is worth an order of magnitude more than a primary at fetch time. It still
-is never pooled as a study (invariant 6). docs/METHOD.md §3.
+Only trials are searched for (docs/METHOD.md §3). Systematic reviews are not
+retrieved since 2026-10-15: v2 never reads them; published meta-analyses enter
+only as the hand-checked benchmark (METHOD §16).
 """
 from __future__ import annotations
 import re
@@ -29,10 +27,6 @@ CLINICAL_EXCLUSIONS = (
     "OR postoperative OR preoperative OR ketamine"
 )
 
-SYNTHESIS_KINDS = (
-    'PUB_TYPE:"Meta-Analysis" OR PUB_TYPE:"Systematic Review" '
-    'OR TITLE:"umbrella review" OR TITLE:"overview of reviews"'
-)
 
 SUPPLEMENT_CONTEXT = (
     'supplementation OR "dietary supplement" OR "oral supplement" OR oral'
@@ -88,7 +82,7 @@ def search_term(ingredient: str) -> str:
     return " ".join(ingredient.strip().split("_")).strip()
 
 
-def _query(ingredient: str, *, syntheses: bool, scope: str = "broad") -> str:
+def _query(ingredient: str, *, scope: str = "broad") -> str:
     """
     scope 'broad'        ingredient anywhere + design. Legacy measurement baseline.
     scope 'supplement'   + supplement terms, NOT clinical drug contexts.
@@ -104,8 +98,7 @@ def _query(ingredient: str, *, syntheses: bool, scope: str = "broad") -> str:
     # when a record happened to be tagged SR/MA as well. An umbrella review is a
     # review OF reviews: the densest included-studies table available, and the
     # single most valuable document for inheritance. Ask for it by title.
-    kinds = (SYNTHESIS_KINDS if syntheses
-             else 'PUB_TYPE:"Randomized Controlled Trial"')
+    kinds = 'PUB_TYPE:"Randomized Controlled Trial"'
     ing = search_term(ingredient)
 
     if scope == "intervention":
@@ -171,7 +164,7 @@ def outcome_query(ingredient: str, outcome_id: str) -> str:
     """
     terms = outcome_terms(outcome_id)
     if not terms:
-        return _query(ingredient, syntheses=False, scope="intervention")
+        return _query(ingredient, scope="intervention")
     ing = search_term(ingredient)
     outcome_clause = " OR ".join(f'"{t}"' for t in terms)
     return (f'(TITLE:"{ing}" OR ABSTRACT:"{ing} supplementation" '
@@ -185,15 +178,11 @@ def outcome_hit_count(ingredient: str, outcome_id: str) -> int:
     How many RCTs Europe PMC indexes for this ingredient + outcome.
     pageSize=1 — we only need hitCount. Used to pick showcase top-N.
 
-    Deliberately NOT refactored to share code with `hit_count` below, which
-    takes (ingredient, *, syntheses, scope) and builds its own query. An attempt
-    on 2026-08-21 to add a general `hit_count(query)` beside it defined the name
-    twice in this module: Python kept the LAST definition, so the new one was
-    dead and this function silently began calling the other signature -- passing
-    a query string as `ingredient` and omitting a required keyword. That breaks
-    showcase-outcome selection in every run, and it fails at call time rather
-    than import time, so nothing catches it until a run is already going. Two
-    functions, two query builders, two names.
+    Measured 2026-08-21: a second, general `hit_count(query)` added beside an
+    older `hit_count(ingredient, ...)` defined the name twice; Python kept the
+    LAST definition and this function silently called the wrong signature,
+    breaking showcase-outcome selection at call time. Never give two functions
+    in this module the same name. (The older `hit_count` was removed 2026-10-15.)
     """
     page = get_json(SEARCH, {
         "query": outcome_query(ingredient, outcome_id),
@@ -238,12 +227,6 @@ def search(query: str, *, page_size: int = 100, max_records: int = 1000) -> list
             break
         cursor = nxt
     return out[:max_records]
-
-
-def hit_count(ingredient: str, *, syntheses: bool, scope: str = "broad") -> int:
-    page = get_json(SEARCH, {"query": _query(ingredient, syntheses=syntheses, scope=scope),
-                             "format": "json", "pageSize": 1})
-    return int(page.get("hitCount") or 0)
 
 
 def is_synthesis(rec: dict) -> bool:
@@ -323,10 +306,7 @@ def normalise(rec: dict) -> dict:
     }
 
 
-def discover(ingredient: str, *, max_syntheses: int = 200,
-             max_primaries: int = 800, scope: str = "broad") -> dict:
-    syn = [normalise(r) for r in search(_query(ingredient, syntheses=True, scope=scope),
-                                        max_records=max_syntheses)]
-    pri = [normalise(r) for r in search(_query(ingredient, syntheses=False, scope=scope),
-                                        max_records=max_primaries)]
-    return {"syntheses": syn, "primaries": pri}
+def discover(ingredient: str, *, max_primaries: int = 800, scope: str = "broad") -> list[dict]:
+    """Trial records for the ingredient (reviews are excluded by the query)."""
+    return [normalise(r) for r in search(_query(ingredient, scope=scope),
+                                         max_records=max_primaries)]

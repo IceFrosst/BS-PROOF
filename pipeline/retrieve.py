@@ -7,10 +7,11 @@ with zero model calls and produces the corpus that per-study workers consume.
 
 Order matters and is not arbitrary:
 
-  1. DISCOVER syntheses and primaries. Syntheses are classified, deduplicated
-     and stored, but since 2026-10-15 nothing reads them (v14's SR-table route
-     was removed); whether to drop their retrieval is an open item
-     (docs/history/project-log.md, 2026-10-15 H). Primaries feed docs/METHOD.md §3.
+  1. DISCOVER primaries (docs/METHOD.md §3). Systematic reviews are not
+     retrieved since 2026-10-15: v2 never reads them (published meta-analyses
+     enter only as the hand-checked benchmark, METHOD §16), and v14's
+     review-table route that did was removed. A review record the trial search
+     returns anyway is classified out and dropped.
   2. CLASSIFY from PubMed tags before anything else touches the records, so the
      non-human override fires early -- a randomised blinded rat study is rank 12,
      and letting it through as rank 4 is a 250x weight error.
@@ -37,7 +38,7 @@ from sources import oa
 from sources.http import SourceError
 
 
-def retrieve(ingredient: str, store: Store, *, max_syntheses: int = 200,
+def retrieve(ingredient: str, store: Store, *,
              max_primaries: int = 800, registry_lookups: int = 50,
              scope: str = "broad", oa_lookups: int = 250,
              publisher_lookups: int = 400,
@@ -84,24 +85,18 @@ def retrieve(ingredient: str, store: Store, *, max_syntheses: int = 200,
         if thin:
             log(f"    thin (<5 trials): {', '.join(thin[:8])}"
                 + (" ..." if len(thin) > 8 else ""))
-        syn = ep.discover(ingredient, max_syntheses=max_syntheses,
-                          max_primaries=1, scope="intervention")["syntheses"]
-        found = {"syntheses": syn, "primaries": pri}
     else:
-        found = ep.discover(ingredient, max_syntheses=max_syntheses,
-                            max_primaries=max_primaries, scope=scope)
-    syn, pri = found["syntheses"], found["primaries"]
-    log(f"  discovered  {len(syn)} syntheses, {len(pri)} primaries")
+        pri = ep.discover(ingredient, max_primaries=max_primaries, scope=scope)
+    log(f"  discovered  {len(pri)} records")
 
-    classified, cstats = classify_all(syn + pri)
+    classified, cstats = classify_all(pri)
     log(f"  classified  {cstats['deterministic_pct']}% from tags, "
         f"{cstats['needs_model']} need S1")
 
-    # Syntheses are separated here and are NEVER pooled as studies (invariant 6).
-    # They are kept because they are the highest-value fetch target, not because
-    # they count.
-    syntheses = [r for r in classified if r["is_synthesis"]]
+    # A review the trial search returned anyway is dropped here: never a study
+    # (invariant 6), and nothing downstream reads reviews.
     primaries = [r for r in classified if not r["is_synthesis"]]
+    n_reviews = len(classified) - len(primaries)
 
     unique_pri, _, dstats = dedup(primaries)
     # One trial legitimately arrives via several outcome queries; the unique
@@ -117,9 +112,9 @@ def retrieve(ingredient: str, store: Store, *, max_syntheses: int = 200,
         _os = _byc.get(_u.get("_canonical") or "")
         if _os:
             _u["retrieved_for"] = ",".join(sorted(_os))
-    unique_syn, _, sstats = dedup(syntheses)
     log(f"  deduped     {dstats['in']} -> {dstats['out']} primary units "
-        f"({dstats['collapsed']} collapsed, by kind {dstats['by_kind']})")
+        f"({dstats['collapsed']} collapsed, by kind {dstats['by_kind']}; "
+        f"{n_reviews} review records dropped)")
 
     # GREEN OA RESOLUTION. sources/oa.py was built and then never called by the
     # pipeline -- it was only used by run_coverage.py, so `oa` reflected PubMed
@@ -150,7 +145,7 @@ def retrieve(ingredient: str, store: Store, *, max_syntheses: int = 200,
     # match against -- see sources/crossref.py and vocab/README_PREDATORY.md.
     if publisher_lookups:
         from sources import crossref
-        with_doi = [r for r in unique_pri + unique_syn
+        with_doi = [r for r in unique_pri
                     if r.get("doi") and not r.get("publisher")]
         n_pub = 0
         for rec in with_doi[:publisher_lookups]:
@@ -164,7 +159,7 @@ def retrieve(ingredient: str, store: Store, *, max_syntheses: int = 200,
         log(f"  publisher   {n_pub}/{min(len(with_doi), publisher_lookups)} "
             f"records resolved via Crossref (feeds the predatory venue check)")
 
-    stored = store.upsert_studies(unique_pri + unique_syn)
+    stored = store.upsert_studies(unique_pri)
     log(f"  stored      {stored} unique records")
 
     # Registry facts for the units that carry an NCT. Bounded per run: this is a
@@ -193,12 +188,12 @@ def retrieve(ingredient: str, store: Store, *, max_syntheses: int = 200,
         + (f", {unreachable} unreachable" if unreachable else ""))
     log(f"    RoB item 3: {prospective} prospective, {retro} retrospective, "
         f"{unknown} unverifiable")
-    log(f"    unpublished-trial flags: {flagged}  (shown, never scored)")
+    log(f"    unpublished-trial flags: {flagged}")
 
     return {
         "ingredient": ingredient,
-        "discovered_syntheses": len(syn), "discovered_primaries": len(pri),
-        "unique_primaries": dstats["out"], "unique_syntheses": sstats["out"],
+        "discovered": len(pri), "review_records_dropped": n_reviews,
+        "unique_primaries": dstats["out"],
         "collapsed": dstats["collapsed"], "by_kind": dstats["by_kind"],
         "needs_s1": cstats["needs_model"],
         "deterministic_pct": cstats["deterministic_pct"],
@@ -213,12 +208,12 @@ def main(ingredients: list[str]) -> int:
     with Store() as store:
         results = [retrieve(i, store) for i in ingredients]
         print("\n" + "=" * 66)
-        print(f"{'ingredient':<14}{'uniq':>6}{'syn':>6}{'collapsed':>11}"
+        print(f"{'ingredient':<14}{'uniq':>6}{'reviews':>8}{'collapsed':>11}"
               f"{'needsS1':>9}{'prospctv':>10}{'flags':>7}")
         print("-" * 66)
         for r in results:
             print(f"{r['ingredient']:<14}{r['unique_primaries']:>6}"
-                  f"{r['unique_syntheses']:>6}{r['collapsed']:>11}"
+                  f"{r['review_records_dropped']:>8}{r['collapsed']:>11}"
                   f"{r['needs_s1']:>9}{r['item3_prospective']:>10}"
                   f"{r['unpublished_flags']:>7}")
         print("-" * 66)

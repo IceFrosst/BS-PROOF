@@ -61,6 +61,10 @@ Per ingredient, from free sources only, all disk-cached so a run is replayable
 | OpenAlex + Unpaywall (`sources/oa.py`) | Green open-access copies of paywalled papers |
 | Crossref (`sources/crossref.py`) | Publisher of each DOI (predatory-venue flag, §15) |
 
+- **Trials only.** The search asks Europe PMC for randomised controlled trials;
+  systematic reviews are not retrieved (v2 never reads them: published
+  meta-analyses enter only as the hand-checked benchmark, §16). A review record
+  the search returns anyway is classified out (§6) and dropped.
 - **Scope** (`--broad-scope` / `--supplement-scope` / `--intervention-scope` /
   `--per-outcome`): how tightly the ingredient must be the tested intervention.
   Intervention scope is what v2 runs have used.
@@ -114,8 +118,9 @@ order, because the order is load-bearing: a non-human subject overrides design,
 so a randomised blinded rat study is not an RCT. Ranks: 1–3 umbrella / SR+MA /
 SR, 4 RCT, 5 non-randomised trial, 6–9 observational, 10–11 case series / report,
 12 animal, 13 in vitro, 14 opinion. A record the tags cannot settle stays
-unclassified, never guessed. Only RCT-rank primaries are extracted. Systematic
-reviews are never pooled as studies (CLAUDE.md invariant 6).
+unclassified, never guessed. Only RCT-rank primaries are extracted; a review
+(ranks 1–3) is dropped at retrieval and never pooled as a study (CLAUDE.md
+invariant 6).
 
 ## 7. Extraction
 

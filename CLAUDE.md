@@ -300,13 +300,8 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
 
 ## Next
 
-1. **Finish the 2026-10-15 simplification and merge it.** Done on stacked local
-   branches `simplify/a-dead-weight` → `simplify/v2-only` → `simplify/app-v2-off`
-   → `simplify/docs`: A (dead weight), B/C/D (v2 only; byte-identical
-   `evidence_v2` on replay), E (`/runs` dashboard and v14 runs dropped, push
-   opt-in), F (v14 and the Evidence Ledger out of the app, grading notice),
-   G (tests, CI, agents), H (docs). What is left is listed in
-   `docs/history/project-log.md` (2026-10-15, H).
+1. The 2026-10-15 simplification is complete and merged into `Jans_attempt`
+   (`docs/history/project-log.md`, 2026-10-15 entries).
 2. **v2 work list** (`docs/DECISIONS.md`), then connect `grade-v2.ts` in
    `lib/analyze/scan.ts`, build the grade card and remove the notice.
 3. Verify on a real phone (live camera, busy-label read, PWA install) and

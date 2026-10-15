@@ -13,7 +13,6 @@ from pipeline.storage import DEFAULT_DB
 
 WIRING_DB = DEFAULT_DB.parent / "wiring_demo.sqlite"
 RETRIEVE_MAX_PRIMARIES = int(os.environ.get("SP_RETRIEVE_MAX_PRIMARIES", "600"))
-RETRIEVE_MAX_SYNTHESES = int(os.environ.get("SP_RETRIEVE_MAX_SYNTHESES", "400"))
 
 _OA_RANK = {
     "full_text": 0, "fulltext": 0, "green_oa": 1, "hybrid": 2,
@@ -169,16 +168,13 @@ def load_corpus(store, opts, db, outcome_allowlist, run_context) -> tuple[list[d
         print(f"retrieving / expanding corpus in {db.name} "
               f"(scope={scope}, max primaries={RETRIEVE_MAX_PRIMARIES})...")
         retrieve(ingredient, store,
-                 max_syntheses=RETRIEVE_MAX_SYNTHESES,
                  max_primaries=RETRIEVE_MAX_PRIMARIES,
                  outcome_ids=outcome_allowlist,
                  scope=scope)
 
     all_rows = store.studies(syntheses=False)
-    syn_rows = store.studies(syntheses=True)
 
     pred_summary = pred.flag_records(all_rows)
-    pred.flag_records(syn_rows)
     print(pred.format_summary(pred_summary))
     run_context["predatory"] = pred_summary
 
@@ -199,7 +195,7 @@ def load_corpus(store, opts, db, outcome_allowlist, run_context) -> tuple[list[d
             relevant.append(s)
         else:
             rejected += 1
-    print(f"\nstore: {len(all_rows)} primaries, {len(syn_rows)} syntheses; "
+    print(f"\nstore: {len(all_rows)} primaries; "
           f"{len(primaries)} RCT-rank after OA filters; "
           f"{len(relevant)} after relevance gate "
           f"(dropped {rejected} noise)")
