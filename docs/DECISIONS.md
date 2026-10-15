@@ -36,8 +36,8 @@ Last swept: 2026-10-15 (v14 retired; its open items were closed with it).
 
 ## v2 work list (agreed 2026-10-15, after the simplification)
 
-Ordered by how much each distorts the grade. Items 4, 5 and 9 also need the
-decisions above.
+Ordered by how much each distorts the grade (10 is clean-up, not accuracy).
+Items 1, 5 and 7 need the open decisions above.
 
 | # | Problem | Proposed fix |
 |---|---|---|
@@ -50,6 +50,7 @@ decisions above.
 | 7 | Every pooled number is single-read | Open decision 3 |
 | 8 | Run-to-run stability never measured (outcome mapping moves ±2 trials per outcome) | `scripts/experiments/extraction_stability.py`, run solo |
 | 9 | The benchmark has no negative controls | Each new ingredient adds a "does not work" or "harms" row (METHOD §16) |
+| 10 | The extraction prompts still carry v14 wording and ask for fields only v14 read (e.g. S5's direction / magnitude labels and effect-size fields now superseded by S5N; "form arc" in `s7_form.md`) | Trim them in ONE `PROMPT_VERSION` bump, bundled with the next full re-extraction (a bump re-extracts everything, ~1000 calls for creatine); check with a replay that nothing v2 reads changes |
 
 When v2 validates (METHOD §16): connect `lib/analyze/grade-v2.ts` in
 `lib/analyze/scan.ts`, build a grade card, remove the "not active yet" notice

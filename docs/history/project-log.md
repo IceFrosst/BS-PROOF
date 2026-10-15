@@ -10,6 +10,22 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-15 — simplification: dead CSS removed; baseline is Jans_attempt
+
+Branch `simplify/css` (on `simplify/docs`).
+
+- Removed every CSS rule that could no longer match (~165 class selectors left
+  by the Ledger, the dashboard, the v14 dose bars and outcome tabs), 17 unused
+  custom properties and the comments describing deleted rules; stylesheets
+  1190 -> 722 lines. `scan-ledger-result.css` renamed `scan-result.css`.
+- Verified: the computed style and box of every element in 44 page states
+  (`/`, `/methodology`, 404 and every `/scan` state incl. opened details, at 390
+  and 1280 px) recorded before and after — byte-identical. Typecheck, lint, 212
+  vitest, knip, build, 14 Playwright / axe tests.
+- Founder: work as if `origin/main` did not exist; `Jans_attempt` is the
+  baseline until the big merge. Prompt clean-up (left item 4 below) moved to
+  the v2 work list (`docs/DECISIONS.md` #10).
+
 ## 2026-10-15 — simplification H: docs consolidated; what is left before merging
 
 Branch `simplify/docs` (on `simplify/app-v2-off`), not merged.

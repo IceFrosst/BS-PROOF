@@ -230,7 +230,7 @@ lib/scan-history/, lib/auth/, lib/camera/, lib/waitlist/
 components/scan/               scan-flow (state machine in flow-state.ts), capture-views,
                                scan-camera, search-sheet, supplement-search, report-sections,
                                google-sign-in, primitives, format
-app/styles/                    base, ab (card primitives), scan, scan-ledger-result, article, front-door
+app/styles/                    base, ab (card primitives), scan, scan-result, article, front-door
 prompts/{label,company,compatibility,evidence_prior,literature_warnings}.md + schemas/
 vocab/compatibility.json, docs/scan-history.sql, docs/waitlist.sql
 ```
@@ -245,7 +245,7 @@ aisle by a buyer sceptical of marketing.
 ground; `--sp-tint` the one grey tint; `--sp-line` every 1 px rule; `--sp-mute`
 secondary text (6.3:1); `--sp-ink` text; `--sp-measured` (`#0b6b5a`) measured
 things only; `--sp-unverified` (`#885a00`) model-recalled things only;
-`--sp-danger` errors. Type: system stack, 13 / 15 / 17 / 22 / 28 / 40 px,
+`--sp-danger` errors. Type: system stack, 13 / 15 / 17 / 22 px,
 sentence case, `tabular-nums` in columns, prose ≤ 62ch. One radius (12 px; the
 viewfinder 24 px), rules not boxes, targets ≥ 44 px, no shadows on the report.
 

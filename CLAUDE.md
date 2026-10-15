@@ -283,12 +283,12 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
 - **Known v2 problems:** the work list in `docs/DECISIONS.md` (a single small
   trial can earn an A; fetch-dependent verification; the largest refusal reason;
   coverage; no negative-control benchmarks; stability unmeasured).
-- **`origin/main` has diverged.** Since the branch point (`d9cedc4`,
-  2026-09-22) `main` gained 68 commits (~52k lines: live research worker, live
-  result card, research-jobs SQL, scan-history UI, localisation) that
-  `Jans_attempt` and the `simplify/*` branches do not contain, and that partly
-  build on what they removed. How the two lines combine is a founder / team
-  decision; do not merge or resolve conflicts without it.
+- **Working baseline: `Jans_attempt`, not `main`** (founder, 2026-10-15).
+  `origin/main` has diverged (68 commits since `d9cedc4`, 2026-09-22: live
+  research worker, live result card, research-jobs SQL, scan-history UI,
+  localisation) and conflicts with this line. Until the founder schedules the
+  "big merge", treat `Jans_attempt` as main: branch from it, merge into it,
+  never merge to or from `origin/main`, never resolve those conflicts.
 - **Binding limit:** readable open-access full text (295/386 creatine RCTs are
   abstract-only), then off-target populations and figure-only results.
 - **App:** `/scan` answers `not_graded` for every supported product and says

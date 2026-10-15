@@ -102,7 +102,7 @@ describe("/scan result state", () => {
   it("uses shared A/B styling once and the real photo hero with a fallback jar", () => {
     const globals = readFileSync(join(process.cwd(), "app", "globals.css"), "utf8");
     expect(globals).toContain('@import "./styles/ab.css"');
-    expect(readFileSync(join(process.cwd(), "app", "styles", "scan-ledger-result.css"), "utf8")).not.toContain(".ab-photo-hero{");
+    expect(readFileSync(join(process.cwd(), "app", "styles", "scan-result.css"), "utf8")).not.toContain(".ab-photo-hero{");
   });
 
   it("replaces a failed photo element with the exact jar fallback", async () => {

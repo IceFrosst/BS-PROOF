@@ -1,6 +1,5 @@
-/* Production composition for /scan. The card, tabs, hero and row primitives are
-   imported from ./ab.css; this file only places those primitives in
-   the real page and keeps the old capture/error state untouched. */
+/* The /scan result page: places the card, hero and warning primitives of
+   ./ab.css in the real page; the capture and error states are untouched. */
 body:has(.scan-lab-result) { background: #f6f3ea; }
 .scan-page:has(.scan-lab-result) .scan-hero,
 .scan-page:has(.scan-lab-result) .la.scan { padding-top: 0; min-height: 0; }
@@ -27,19 +26,9 @@ body:has(.scan-lab-result) > .site-header, body:has(.scan-lab-result) > .site-fo
 .scan-lab-hero .ab-jar { height: auto; min-height: 196px; padding-bottom: 14px; }
 .scan-lab-hero .ab-jar > div:last-child { gap: 8px; min-width: 0; }
 .scan-lab-hero .ab-jar > div:last-child b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; }
-.scan-lab-result .ab-tabs { margin-bottom: 0; }
-.scan-lab-result .ab-tabs button[role="tab"] { min-height: 44px; }
+
 .scan-lab-result .ab-card { flex: none; overflow: visible; min-width: 0; min-height: 0; padding: 14px; border-radius: 22px; }
-.scan-lab-result .ab-card > [role="tabpanel"] { min-width: 0; }
-/* The outcome headline is tinted from the SAME score ramp the bars and the
-   General tile use (one ramp, mixed at the same 13%), so a benefit and a
-   failure cannot present as the same neutral block. `muted` is the
-   no-number case and stays deliberately colourless. */
-.scan-lab-result .ab-headline { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 14px; background: color-mix(in srgb, var(--ab-score-color, var(--ab-accent)) 13%, var(--ab-surface)); }
-.scan-lab-result .ab-headline.muted { background: #ecece4; }
-.scan-lab-result .ab-headline > .ab-bars { grid-column: 1 / -1; width: 100%; }
-.scan-lab-result .ab-headline h2 { font-size: 22px; }
-.scan-lab-result .ab-bars { margin-top: 10px; }
+
 /* Same object as the reference card's warning row: one hairline box on paper.
    The `.la-alert` class it also carries would otherwise re-apply the old
    report's gold left rule and its one-sided radius. */
@@ -63,8 +52,8 @@ body:has(.scan-lab-result) > .site-header, body:has(.scan-lab-result) > .site-fo
 .scan-lab-result .ab-warning-row > summary strong { min-width: 0; overflow-wrap: anywhere; }
 .scan-lab-result .ab-warning-row > summary span { display: none; }
 .scan-lab-result .ab-warning-row > p { margin: 0 0 10px; color: var(--ab-muted); font-size: 12px; line-height: 1.45; }
-.scan-lab-result .scan-lab-validity { margin: 0 0 8px; }
-.scan-lab-details, .scan-lab-disclosure { margin-top: 10px; padding: 0 2px; border-bottom: 1px solid var(--ab-line); }
+
+.scan-lab-disclosure { margin-top: 10px; padding: 0 2px; border-bottom: 1px solid var(--ab-line); }
 /* Title and chevron share line 1; the source badges wrap onto their own line
    underneath instead of stacking into a ragged right-hand column. */
 .scan-lab-disclosure > summary { min-height: 48px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 10px; row-gap: 8px; padding: 6px 0; cursor: pointer; list-style: none; }
@@ -84,7 +73,7 @@ body:has(.scan-lab-result) > .site-header, body:has(.scan-lab-result) > .site-fo
 .scan-lab-result .sc-facts { font-size: 13px; }
 .scan-lab-result .sc-details { border-color: var(--ab-line); }
 .scan-lab-result .scan-legend, .scan-lab-result .sc-technical { margin-top: 12px; }
-.scan-lab-result .ab-general-name { font-size: 17px; }
+
 /* No narrow-width shrink of the card itself: the reference card is drawn at
    390 with 14px padding and a 22px radius, and 360 gets the same object. */
 @media (max-width: 600px) {
@@ -93,21 +82,3 @@ body:has(.scan-lab-result) > .site-header, body:has(.scan-lab-result) > .site-fo
 @media (prefers-reduced-motion: reduce) {
   .scan-lab-result * { transition: none !important; animation: none !important; }
 }
-
-/* Evidence method v2 grade card (components/scan/grade-card.tsx): a letter
-   badge per outcome on the same row primitive as the ledger card. Colours
-   follow the card's own palette; "I" is neutral, never the failing colour,
-   because it means "not enough evidence", not a low mark. */
-.gv2-list li > button { grid-template-columns: 46px minmax(0, 1fr) 20px; grid-template-rows: auto; align-items: center; min-height: 58px; }
-.gv2-list .ab-bar-name { display: flex; flex-direction: column; gap: 3px; font-weight: 650; }
-.gv2-list .ab-bar-name small { font-weight: 400; font-size: 12px; color: var(--ab-muted); line-height: 1.35; }
-.gv2-letter { display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; border-radius: 12px; font-size: 17px; font-weight: 750; letter-spacing: -0.02em; border: 1px solid transparent; }
-.gv2-a { background: #e1ecdb; color: var(--ab-r1); border-color: #b9d0b0; }
-.gv2-b { background: #eaf0dc; color: #4f7a49; border-color: #cbd9b4; }
-.gv2-c { background: #f3f0da; color: #7a6a1f; border-color: #e0d7a8; }
-.gv2-d { background: #f8eadb; color: var(--ab-r4); border-color: #ecd0ac; }
-.gv2-f { background: var(--ab-warn-bg); color: var(--ab-warn); border-color: #ecc3ad; }
-.gv2-insufficient { background: #ecece4; color: var(--ab-muted); border-color: var(--ab-line); }
-.gv2-reasons { margin: 4px 0 8px; padding-left: 18px; font-size: 12px; line-height: 1.5; color: var(--ab-muted); }
-.gv2-reasons b { color: var(--ab-ink); font-weight: 650; }
-.gv2-legend { margin-top: 10px; font-size: 11px; }
