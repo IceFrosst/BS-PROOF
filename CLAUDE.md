@@ -270,7 +270,7 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
 
 ---
 
-## Current state (snapshot, 2026-10-15)
+## Current state (snapshot, 2026-10-16)
 
 - **Method:** evidence method v2 is the pipeline's only method; v14 retired.
   `evidence_v2.STATUS = "shadow"` until validation passes. `main` and the live
