@@ -32,10 +32,11 @@ MIN_TEXT_CHARS = 200
 
 
 def _second_reviewer_enabled() -> bool:
-    """Evidence method v2 dual extraction (S5R, pipeline/review.py). OFF by
-    default: it adds one call per study with poolable numbers, on a different
-    and heavier model. SP_SECOND_REVIEWER=1 turns it on."""
-    return os.environ.get("SP_SECOND_REVIEWER", "0") == "1"
+    """Evidence method v2 dual extraction (S5R, pipeline/review.py). ON by
+    default since 2026-10-16 (founder decision, docs/DECISIONS.md): one call per
+    study with poolable numbers on a different, heavier model (~25-35 Opus calls
+    for creatine). SP_SECOND_REVIEWER=0 turns it off."""
+    return os.environ.get("SP_SECOND_REVIEWER", "1") == "1"
 
 
 def _numbers_extractor_enabled() -> bool:

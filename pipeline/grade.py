@@ -34,7 +34,14 @@ RULES = {
     "rob_high_weight_serious": 0.5,   # > half the weight from high-RoB trials: -2
     "i2_serious": 0.50,               # I² above this: -1 ...
     "i2_very_serious": 0.75,          # ... above this: -2
-    "ois_participants": 400,          # optimal information size, continuous outcomes
+    "ois_participants": 400,          # optimal information size, continuous outcomes: -1 below
+    # Founder decision 2026-10-16 (docs/DECISIONS.md): far below the OIS is
+    # "very serious" (-2) and, as GRADE's 2021 imprecision guidance allows,
+    # "extremely serious" (-3). Measured on the replayed creatine run: one
+    # 14-participant trial graded A (muscle soreness, sleep quality); with these
+    # it grades I, and no other creatine letter changes.
+    "ois_very_serious": 200,          # total participants below this: -2
+    "ois_extremely_serious": 100,     # total participants below this: -3
     "indirect_weight_serious": 0.5,   # > half the weight not matching the product: -1 per axis
     "egger_min_k": 10,                # funnel asymmetry is not testable below this
     "egger_alpha": 0.10,              # two-sided, the conventional Egger level
@@ -161,6 +168,10 @@ def base_domains(pool, threshold: float) -> tuple[int, dict, list[str]]:
     if total_n < RULES["ois_participants"]:
         why.append(f"{total_n} participants < {RULES['ois_participants']} (optimal information size)")
         imp = max(imp, 1)
+        if total_n < RULES["ois_extremely_serious"]:
+            imp = 3
+        elif total_n < RULES["ois_very_serious"]:
+            imp = max(imp, 2)
     if imp:
         down["imprecision"] = (imp, "; ".join(why))
 

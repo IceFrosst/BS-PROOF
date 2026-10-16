@@ -12,7 +12,7 @@ run_pipeline.py <ingredient> --form <form id> [flags]
   │
   ├─ corpus     bsproof/run/corpus.py    retrieve into out/bsproof.sqlite (if needed),
   │                                      dedup, classify, OA ordering, relevance gate   METHOD §3–§6
-  ├─ extract    bsproof/run/extract.py   per study: S3 → S4 S5 S7 S8 → S6B → S5N (→ S5R)
+  ├─ extract    bsproof/run/extract.py   per study: S3 → S4 S5 S7 S8 → S6B → S5N → S5R
   │                                      through bsproof/claude_adapter.py               METHOD §7
   ├─ evidence   bsproof/run/evidence.py  span-checked effects → pool → GRADE → letter,
   │                                      plus the ClinicalTrials.gov registry check      METHOD §8–§13
@@ -70,7 +70,7 @@ biases the result.
 
 | Variable | Default | Effect |
 |---|---|---|
-| `SP_SECOND_REVIEWER` | `0` | `1` adds S5R, a blind second read of the poolable numbers on a different model |
+| `SP_SECOND_REVIEWER` | `1` | S5R, a blind second read of the poolable numbers on a different model; `0` turns it off |
 | `SP_NUMBERS_EXTRACTOR` | `1` | `0` falls back to S5's own numbers (v2 has almost nothing to pool without S5N) |
 | `SP_MODEL_A/B/C/R`, `SP_EFFORT_A/B/C/R` | `claude_adapter.TIER_MODEL` / `TIER_EFFORT` | Model and effort per tier (pinned full ids) |
 | `SP_MAX_CONCURRENCY` | `40` | Parallel model calls |

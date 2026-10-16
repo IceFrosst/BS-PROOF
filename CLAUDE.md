@@ -168,8 +168,8 @@ Things that look simplifiable and are not:
 
 Per study: S3 (design, arms) first, then S4 (RoB), S5 (claims), S7 (form +
 dose), S8 (funding) in parallel, then S6B (outcome mapping, one call per study)
-and S5N (the numbers v2 pools). S5R (second reviewer, Opus) is opt-in
-(`SP_SECOND_REVIEWER=1`). About 7 calls per study.
+and S5N (the numbers v2 pools), then S5R (second reviewer, Opus; on by
+default, `SP_SECOND_REVIEWER=0` turns it off). About 7–8 calls per study.
 
 Extraction has no metered spend; the limit is subscription **throughput**.
 Never run agent teams, workflows or other heavy sessions alongside an
@@ -280,10 +280,10 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
   [+0.03, +0.31]), lean mass k = 11 D+ **passes** the benchmark (coverage
   65 %); strength coverage 42 % (not testable, needs ≥ 50 %). The stored
   run's own numbers (strength k = 7, I) predate the fetch-failure fix.
-- **Known v2 problems:** the work list in `docs/DECISIONS.md`. Items 2, 3
-  (offline part) and 6 are done; open: a single small trial can earn an A,
-  coverage, missing SDs (prompt), second reviewer, populations, stability,
-  no negative-control benchmarks.
+- **Known v2 problems:** the work list in `docs/DECISIONS.md`. Done: items
+  1 (imprecision scales with information size), 2, 3 (offline part), 6;
+  decided: 5 (healthy adults only), 7 (second reviewer on). Open: coverage,
+  missing SDs (prompt), stability, negative-control benchmarks.
 - **Working baseline: `Jans_attempt`, not `main`** (founder, 2026-10-15).
   `origin/main` has diverged (68 commits since `d9cedc4`, 2026-09-22: live
   research worker, live result card, research-jobs SQL, scan-history UI,

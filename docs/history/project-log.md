@@ -10,6 +10,24 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-16 — v2 step 2: founder decisions on imprecision, populations, second reviewer
+
+Branch `v2/step2-decisions`, merged into `Jans_attempt`.
+
+- **Imprecision** (decision, work item 1): `grade.RULES` gains
+  `ois_very_serious` = 200 (−2) and `ois_extremely_serious` = 100 (−3, GRADE
+  2021 "extremely serious"). Replayed creatine run: muscle soreness and sleep
+  quality (one 14-participant trial each) A → I; cognitive function, sleep
+  duration, sleep onset Low → Very low (already I); no estimate or k changed.
+  TS goldens regenerated (`scripts/golden_grade_v2.py`), parity tests pass.
+- **Populations** (work item 5): keep excluding off-target populations for a
+  healthy-adult product; separate population grades later.
+- **Second reviewer** (work item 7): S5R on by default (`SP_SECOND_REVIEWER=0`
+  turns it off); the run context records `second_reviewer`. The cache replay
+  defaults it off, because runs before today did not have it.
+- Open decisions are now: MCIDs for the remaining outcomes, effects from an
+  exact p-value.
+
 ## 2026-10-16 — v2 step 1 (offline): items 2, 3, 6
 
 Branch `v2/step1-offline`, merged into `Jans_attempt`. No model calls.

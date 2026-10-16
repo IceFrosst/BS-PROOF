@@ -116,7 +116,7 @@ class WorkerWiring(unittest.TestCase):
     def run_study(self, reviews, flag="1"):
         from bsproof import workers
         call, calls = self.fake(reviews)
-        env = {"SP_SECOND_REVIEWER": flag, "SP_NUMERIC_TABLES": "0"}
+        env = {"SP_SECOND_REVIEWER": flag}
         with mock.patch.dict(os.environ, env):
             out = workers.extract_study(self.REC, "x" * 500 + self.SPAN, call=call)
         return out, calls

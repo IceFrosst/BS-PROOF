@@ -61,6 +61,14 @@ class CertaintyDomains(unittest.TestCase):
         small_n = certainty(make_pool([st(n=40) for _ in range(3)]), 0.2)
         self.assertIn("optimal information size", small_n.downgrades["imprecision"][1])
 
+    def test_imprecision_scales_with_how_far_below_the_information_size(self):
+        level = lambda n: certainty(make_pool([st(n=n)]), 0.2).downgrades["imprecision"][0]
+        self.assertEqual(level(300), 1)       # below 400
+        self.assertEqual(level(150), 2)       # below 200: very serious
+        self.assertEqual(level(14), 3)        # below 100: extremely serious
+        one_small_trial = grade(make_pool([st(n=14)], estimate=1.0, ci=(0.2, 1.8)))
+        self.assertEqual(one_small_trial.letter, "I")
+
     def test_indirectness_and_non_randomised_start(self):
         other_form = certainty(make_pool([st(form="different") for _ in range(3)]), 0.2)
         self.assertEqual(other_form.downgrades["indirectness"][0], 1)

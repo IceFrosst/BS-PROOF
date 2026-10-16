@@ -9,42 +9,19 @@ the founder decides. When an item is decided, move it to "Decided" with its
 date; delete anything that no longer applies. Dated history goes to
 `docs/history/project-log.md`, not here.
 
-Last swept: 2026-10-15 (v14 retired; its open items were closed with it).
+Last swept: 2026-10-16.
 
 ---
 
 ## Open
 
-1. **Off-target populations** (from 2026-10-13). Trials in a `different`
-   population (patients, clinical groups, children) are refused for a
-   healthy-adult product; `adjacent` ones are reported, not downgraded
-   (METHOD §8). Options: keep excluding; count `adjacent` as GRADE indirectness;
-   grade other populations as their own ECU. Weight of the question (run
-   20261013_072633): creatine strength lost 9 trials, lean mass 6.
-   *Measured 2026-10-16 (replayed v1.36 run): including them adds only 5
-   poolable trials and lowers the grades — strength C− → D+ (+0.17 → +0.12),
-   lean mass D+ → I; most off-target trials have no usable numbers anyway.*
-2. **MCIDs for the remaining outcomes.** 5 of 31 outcomes have an approved
+1. **MCIDs for the remaining outcomes.** 5 of 31 outcomes have an approved
    threshold (METHOD §14); every other graded outcome uses the flagged 0.2 SD
    default. Needs a sourced table per outcome before those grades mean
    "noticeable". *Today no creatine letter depends on it: every outcome
    without an approved MCID grades I at M/2, M and 2M alike. It matters for
    the next ingredient.*
-3. **Second reviewer on by default?** S5R is opt-in, so every pooled number is
-   read once (METHOD §7). Turning it on adds one Opus call per study whose
-   numbers get pooled — about 25–35 calls for creatine (49 pooled effects
-   from 23 studies).
-4. **Imprecision for tiny evidence.** A single 14-participant trial grades **A**
-   today (muscle soreness, sleep quality): the 400-participant
-   optimal-information-size rule costs only one level (METHOD §12). Proposal:
-   −2 when far below it (e.g. under half), or at most "Low" certainty at k = 1.
-   This changes `grade.RULES`. *Simulated 2026-10-16 on the replayed creatine
-   run:* −2 below 200 participants, or −2 at k = 1, both turn those A's into
-   **B** (a large effect at Low certainty is still B in the table); GRADE's
-   "extremely serious" imprecision (−3 below 100 participants, 2021 guidance)
-   turns them into **I**. No other creatine letter changes under any option.
-
-5. **Effects from an exact p-value.** 5 creatine trial–outcome pairs report
+2. **Effects from an exact p-value.** 5 creatine trial–outcome pairs report
    only the between-group p-value with the arm sizes. Cochrane's handbook
    (§6.5.2.3) derives a standardised effect from an exact p and n (sign from
    the favoured arm). Adding that route is a method change; small gain today.
@@ -52,17 +29,17 @@ Last swept: 2026-10-15 (v14 retired; its open items were closed with it).
 ## v2 work list (agreed 2026-10-15, after the simplification)
 
 Ordered by how much each distorts the grade (10 is clean-up, not accuracy).
-Items 1, 5 and 7 need the open decisions above.
+Items 1, 5 and 7 were decided 2026-10-16 (below).
 
 | # | Problem | Proposed fix |
 |---|---|---|
-| 1 | One small trial earns an A | Open decision 4 |
+| 1 | One small trial earns an A | **Done 2026-10-16:** imprecision −2 below 200 participants, −3 below 100 (decided below) |
 | 2 | A failed table fetch during the span check silently refuses a trial: the stored creatine run says strength k = 7 "I", a cache-only replay of the same extraction k = 9 "C−" | **Done 2026-10-16:** fetches retried; a failure is marked `table_fetch_failed` with its own refusal reason; no report while one is unresolved |
-| 3 | The largest refusal is "no verified effect estimate and incomplete arm statistics" (64 trial–outcome pairs in the replayed v1.36 creatine run) | **Done 2026-10-16 (offline part).** Breakdown: 40 have no outcome values in the text read (figures / untabled text — not recoverable from text), 12 post values without an SD, 5 only a p-value, 5 numbers not verified, 2 other. Fixed: tables whose outcome label is a section-header row (4 trials recovered; strength coverage 38 → 42 %, lean mass 59 → 65 %). The refusal now names the specific gap. Left: the missing SDs (item 10's prompt bump) and open decision 5 |
+| 3 | The largest refusal is "no verified effect estimate and incomplete arm statistics" (64 trial–outcome pairs in the replayed v1.36 creatine run) | **Done 2026-10-16 (offline part).** Breakdown: 40 have no outcome values in the text read (figures / untabled text — not recoverable from text), 12 post values without an SD, 5 only a p-value, 5 numbers not verified, 2 other. Fixed: tables whose outcome label is a section-header row (4 trials recovered; strength coverage 38 → 42 %, lean mass 59 → 65 %). The refusal now names the specific gap. Left: the missing SDs (item 10's prompt bump) and open decision 2 |
 | 4 | Benchmark coverage too low (strength 29–38 %): v2 runs use `--full-text-only`, so 295 of 386 creatine RCTs (abstract-only) are never read | An abstract-inclusive run with abstract span checks and a risk-of-bias downgrade; later, per-trial effects from reviews' forest plots |
-| 5 | Off-target populations excluded (41 refusals) | Open decision 1 |
+| 5 | Off-target populations excluded (41 refusals) | **Decided 2026-10-16: keep excluding** for healthy-adult products; revisit later as separate populations |
 | 6 | v14's claim-level arm check (`_resolve_claim_arms`) never ran in v2 | **Done 2026-10-16: not ported.** It would refuse 9 of 49 pooled effects, all computed from both arms' own statistics against an ingredient-free control; its objections concern the test the paper reported (within-group, time main effect, omnibus) or a bookkeeping field v2 does not use. Porting it would drop 6 effects that point against creatine |
-| 7 | Every pooled number is single-read | Open decision 3 |
+| 7 | Every pooled number is single-read | **Decided 2026-10-16:** S5R on by default; takes effect at the next extraction run (step 3) |
 | 8 | Run-to-run stability never measured (outcome mapping moves ±2 trials per outcome) | `scripts/experiments/extraction_stability.py`, run solo |
 | 9 | The benchmark has no negative controls | Each new ingredient adds a "does not work" or "harms" row (METHOD §16) |
 | 10 | The extraction prompts still carry v14 wording and ask for fields only v14 read (e.g. S5's direction / magnitude labels and effect-size fields now superseded by S5N; "form arc" in `s7_form.md`); and S5N leaves the arm SD empty when it reads endpoint / post values (9–12 refusals in the creatine run) | Trim them in ONE `PROMPT_VERSION` bump, bundled with the next full re-extraction (a bump re-extracts everything, ~1000 calls for creatine); check with a replay that nothing v2 reads changes |
@@ -77,6 +54,9 @@ All accepted by the founder **"for now, may revisit"** unless stated.
 
 | Date | Decision |
 |---|---|
+| 2026-10-16 | **Imprecision scales with information size:** −1 below 400 participants, −2 below 200, −3 below 100 (`grade.RULES` `ois_*`). Measured: the single 14-participant trials that graded A now grade I; no other creatine letter changed. |
+| 2026-10-16 | **Populations:** only healthy-adult trials are graded for a healthy-adult product; other populations stay excluded (measured: including them adds 5 trials and lowers strength C− → D+). Separate population grades are for later. |
+| 2026-10-16 | **Second reviewer (S5R) on by default** (~25–35 Opus calls per creatine run). |
 | 2026-10-15 | **v2 is the method; v14 retired** (`docs/history/v14-scoring-model.md`). The app shows no grade until v2 validates. Grok backend, SR-table route, table route and the Evidence Ledger removed. |
 | 2026-10-13 | Off-target populations excluded for now (open decision 1). |
 | 2026-10-12 | Risk of bias read with S4's own meanings: HIGH only when blinding/placebo is missing; an undescribed randomisation method or incomplete attrition reporting is "some concerns" (METHOD §12). |

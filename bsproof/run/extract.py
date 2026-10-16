@@ -273,11 +273,11 @@ def extract_stage(store, opts, primaries, pv, outcome_allowlist, run_context):
     else:
         targets = primaries[:limit]
     # Say what this will cost BEFORE spending it: S3, S4, S5, S7, S8, S6B and
-    # S5N, about 7 model calls per study.
+    # S5N, plus S5R for studies with poolable numbers: about 7-8 model calls per study.
     print(f"\n  EXTRACTING {len(targets)} studies"
           + ("  (FULL corpus — no --limit)" if limit is None
              else f" of {len(primaries)} available  (--limit {limit})")
-          + f"\n  ~{len(targets) * 7} model calls at ~7/study")
+          + f"\n  ~{len(targets) * 8} model calls at ~7-8/study")
     if limit is None and len(targets) > 200:
         print(f"  NOTE: {len(targets)} studies is a large run. "
               f"Cap it with --limit N if this is a smoke test.")
@@ -354,6 +354,7 @@ def extract_stage(store, opts, primaries, pv, outcome_allowlist, run_context):
             print(f"  extraction dump failed: {e}")
 
     run_context["prompt_version"] = ca.PROMPT_VERSION
+    run_context["second_reviewer"] = workers._second_reviewer_enabled()
     # Token + cost accounting for the run report. On a subscription the
     # per-call spend is 0, so what the adapter reports is the API-EQUIVALENT
     # price of the same work. Both are carried; neither is called "spent".

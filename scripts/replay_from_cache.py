@@ -50,6 +50,11 @@ def replay(out: Path, args: list[str]) -> int:
     out.mkdir(parents=True, exist_ok=True)
     os.environ["SP_DUMP_EXTRACTIONS"] = str(out / "extractions.json")
     os.environ["SP_AUTO_PUSH"] = "0"
+    # The second reviewer is on by default since 2026-10-16; runs made before
+    # that had it off, and its calls would be cache misses. Replay a run made
+    # with it on by passing SP_SECOND_REVIEWER=1 (its context records
+    # "second_reviewer").
+    os.environ.setdefault("SP_SECOND_REVIEWER", "0")
     from bsproof import claude_adapter as ca
 
     class _Blocked:

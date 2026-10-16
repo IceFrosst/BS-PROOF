@@ -215,7 +215,7 @@
        "benefit": "harm",
        "downgrades": {
         "imprecision": [
-         1,
+         2,
          "120 participants < 400 (optimal information size)"
         ]
        },
@@ -231,7 +231,7 @@
        "benefit": "harm",
        "downgrades": {
         "imprecision": [
-         1,
+         2,
          "120 participants < 400 (optimal information size)"
         ]
        },
@@ -247,7 +247,7 @@
        "benefit": "harm",
        "downgrades": {
         "imprecision": [
-         1,
+         2,
          "120 participants < 400 (optimal information size)"
         ]
        },
@@ -266,18 +266,18 @@
      "benefit": "harm",
      "downgrades": {
       "imprecision": [
-       1,
+       2,
        "120 participants < 400 (optimal information size)"
       ]
      },
      "harm": true,
-     "label": "Moderate",
-     "letter": "F",
+     "label": "Low",
+     "letter": "D-",
      "letters_at": {
-      "double": "F",
-      "half": "F"
+      "double": "D-",
+      "half": "D-"
      },
-     "level": 3,
+     "level": 2,
      "not_assessed": [
       "inconsistency (fewer than 3 trials)",
       "publication bias: Egger needs 10+ trials",
@@ -588,14 +588,14 @@
     "muscle_power": {
      "benefit": "harm",
      "downgrade_points": {
-      "imprecision": 1
+      "imprecision": 2
      },
-     "letter": "F",
+     "letter": "D-",
      "letters_at": {
-      "double": "F",
-      "half": "F"
+      "double": "D-",
+      "half": "D-"
      },
-     "level": 3
+     "level": 2
     },
     "muscle_strength": {
      "benefit": "large",
@@ -630,14 +630,14 @@
     "muscle_power": {
      "benefit": "harm",
      "downgrade_points": {
-      "imprecision": 1
+      "imprecision": 2
      },
-     "letter": "F",
+     "letter": "D-",
      "letters_at": {
-      "double": "F",
-      "half": "F"
+      "double": "D-",
+      "half": "D-"
      },
-     "level": 3
+     "level": 2
     },
     "muscle_strength": {
      "benefit": "large",
@@ -673,15 +673,15 @@
     "muscle_power": {
      "benefit": "harm",
      "downgrade_points": {
-      "imprecision": 1,
+      "imprecision": 2,
       "indirectness": 1
      },
-     "letter": "D-",
+     "letter": "I",
      "letters_at": {
-      "double": "D-",
-      "half": "D-"
+      "double": "I",
+      "half": "I"
      },
-     "level": 2
+     "level": 1
     },
     "muscle_strength": {
      "benefit": "large",
@@ -718,15 +718,15 @@
     "muscle_power": {
      "benefit": "harm",
      "downgrade_points": {
-      "imprecision": 1,
+      "imprecision": 2,
       "indirectness": 1
      },
-     "letter": "D-",
+     "letter": "I",
      "letters_at": {
-      "double": "D-",
-      "half": "D-"
+      "double": "I",
+      "half": "I"
      },
-     "level": 2
+     "level": 1
     },
     "muscle_strength": {
      "benefit": "large",
@@ -763,7 +763,7 @@
     "muscle_power": {
      "benefit": "harm",
      "downgrade_points": {
-      "imprecision": 1,
+      "imprecision": 2,
       "indirectness": 2
      },
      "letter": "I",
@@ -808,15 +808,15 @@
     "muscle_power": {
      "benefit": "harm",
      "downgrade_points": {
-      "imprecision": 1,
+      "imprecision": 2,
       "indirectness": 1
      },
-     "letter": "D-",
+     "letter": "I",
      "letters_at": {
-      "double": "D-",
-      "half": "D-"
+      "double": "I",
+      "half": "I"
      },
-     "level": 2
+     "level": 1
     },
     "muscle_strength": {
      "benefit": "large",
@@ -853,15 +853,15 @@
     "muscle_power": {
      "benefit": "harm",
      "downgrade_points": {
-      "imprecision": 1,
+      "imprecision": 2,
       "indirectness": 1
      },
-     "letter": "D-",
+     "letter": "I",
      "letters_at": {
-      "double": "D-",
-      "half": "D-"
+      "double": "I",
+      "half": "I"
      },
-     "level": 2
+     "level": 1
     },
     "muscle_strength": {
      "benefit": "large",

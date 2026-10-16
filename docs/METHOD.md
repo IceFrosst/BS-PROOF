@@ -137,10 +137,10 @@ Per study, `bsproof/workers.py`, through the one model boundary
 | S8 funding | funding + COI statements | funding class, funders (extracted; not graded yet) |
 | S6B outcome mapping | S5's outcome strings | one vocabulary id per claim, or `null` = discard |
 | S5N numbers | the mapped claims | per arm mean, SD, n, SE, CI, p, pre/post values, as printed |
-| S5R second reviewer (opt-in, `SP_SECOND_REVIEWER=1`) | the same claims, blind | the same numbers, read by a different model (Opus) |
+| S5R second reviewer (on by default; `SP_SECOND_REVIEWER=0` off) | the same claims, blind | the same numbers, read by a different model (Opus) |
 
 S3 runs first (S5 and S7 need its arms); S4, S5, S7, S8 in parallel; then S6B,
-S5N and, if on, S5R. Every output carries evidence spans. A schema violation is
+S5N and S5R. Every output carries evidence spans. A schema violation is
 retried twice, then `null`, never repaired.
 
 **Span check** (`pipeline/span_check.py`). A model may only copy numbers. Every
@@ -153,8 +153,9 @@ report until a re-run fetches it (`docs/PIPELINE.md` §4).
 
 **Second reviewer** (`pipeline/review.py`). When S5R is on, two readings must
 agree within 1 % relative or 0.005 absolute; any conflict refuses the claim for
-human adjudication; reviewer 2 cannot add numbers. With S5R off, every pooled
-effect is single-read and the grade says so.
+human adjudication; reviewer 2 cannot add numbers. Only claims whose numbers
+make an effect are sent. With S5R off (or a failed call), the effect is
+single-read and the grade says so.
 
 ## 8. Eligibility
 
@@ -251,7 +252,7 @@ each downgrade with its reason:
 |---|---|
 | Risk of bias | none if ≥ 50 % of the weight is low-risk; −2 if > 50 % is high-risk; else −1. A trial is HIGH risk only when blinding/placebo is missing (S4 item 2); an undescribed randomisation method or incomplete attrition reporting is "some concerns" (as in RoB 2) |
 | Inconsistency | −1 at I² > 50 %, −2 at > 75 %; not assessed below 3 trials |
-| Imprecision | −1 if the CI crosses 0 or the threshold, or fewer than 400 participants in total (optimal information size); −2 if the CI spans both ±threshold |
+| Imprecision | −1 if the CI crosses 0 or the threshold, or fewer than 400 participants in total (optimal information size); −2 if the CI spans both ±threshold or fewer than 200 participants; −3 below 100 participants (GRADE's "extremely serious", 2021 guidance) |
 | Indirectness | −1 per axis when > 50 % of the weight is not the product's exact form, or off-dose (§9); form + dose cap at −2. Populations: refused if `different`, reported if `adjacent` (§8) |
 | Publication bias | Egger's test (α = 0.10) at ≥ 10 trials; and −1 when registered, completed, unpublished trials for the outcome are at least as many as the trials pooled (`pipeline/registry_bias.py`; an upper bound). Not stacked |
 

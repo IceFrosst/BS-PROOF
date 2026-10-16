@@ -495,7 +495,7 @@ AGENTS = {
     "S7": ("B", "s7_form.json",       "s7_form.md"),
     "S8": ("A", "s8_funding.json",    "s8_funding.md"),
     # Evidence method v2 second reviewer: re-reads S5's poolable numbers blind
-    # (pipeline/review.py). Off unless SP_SECOND_REVIEWER=1 (workers.py).
+    # (pipeline/review.py). On by default; SP_SECOND_REVIEWER=0 turns it off (workers.py).
     "S5R": ("R", "s5_review.json",    "s5_review.md"),
     # Evidence method v2 reviewer 1 for numbers: reads the per-arm numbers of
     # every MAPPED S5 claim (workers._extract_numbers). Tier B (sonnet, low
