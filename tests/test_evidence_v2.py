@@ -1,6 +1,5 @@
 """Evidence method v2 run block (pipeline/evidence_v2.py): the grade the app
-recomputes from the stored record equals the Python grade, and the block
-survives the dashboard artifact writer and its schema."""
+recomputes from the stored record equals the Python grade."""
 import json
 import unittest
 from pathlib import Path
@@ -24,14 +23,18 @@ def study(sid, mean_i, *, form="creatine_monohydrate", dose_mg=5000, n=40, raw="
     verified = {"mean_ingredient": mean_i, "mean_control": 80.0, "sd_ingredient": 10.0,
                 "sd_control": 10.0, "n_ingredient": n, "n_control": n}
     claim = {"contrast": "vs_ingredient_free", "design_kind": "parallel", "estimand": "endpoint",
-             "effect_unit": "kg", "outcome_raw": raw, "is_primary_outcome": True}
+             "effect_unit": "kg", "outcome_raw": raw, "is_primary_outcome": True,
+             "ingredient_arm": "CR", "control_arm": "PL"}
     return {"id": sid, "record": {"ingredient": "creatine", "design_rank": 4},
             "extraction": {
                 "S3": {"population_axes": dict(POP), "comparator": "ingredient_free",
-                       "ingredient_isolated": "yes", "registration_id": f"NCT0000{sid[-1]}"},
+                       "ingredient_isolated": "yes", "registration_id": f"NCT0000{sid[-1]}",
+                       "arms": [{"label": "CR", "role": "administered", "target_ingredient_presence": "yes"},
+                                {"label": "PL", "role": "administered", "target_ingredient_presence": "no"}]},
                 "S4": {"item1_randomisation_method": 1, "item2_double_blind_placebo": 1,
                        "item5_attrition_ok": 1},
-                "S7": {"form_vocab_id": form, "elemental_dose_mg": dose_mg, "dose_basis": "elemental_stated"},
+                "S7": {"arms": [{"label": "CR", "form_vocab_id": form, "elemental_dose_mg": dose_mg,
+                                 "dose_basis": "elemental_stated"}]},
                 "outcomes": [{"outcome_vocab_id": "muscle_strength", "discarded": False, "claim": claim,
                               "numbers_v2": {"verified": verified, "abs_only": []}}]}}
 

@@ -1,6 +1,6 @@
 ---
 name: paper-verifier
-description: Read one study's stored full text and answer the eligibility questions about it — was there an ingredient-free control arm, did the authors declare it underpowered, what direction did they report — returning one JSON verdict row. Use when auditing whether specific null verdicts are real evidence against an ingredient, or when spot-checking an extracted fact against the actual paper. Spawn one per study, in parallel. Do NOT use to change prompts, schemas or pipeline code, and do NOT summarize a whole run.
+description: Read one study's stored full text and answer the eligibility questions about it — was there an ingredient-free control arm, is the ingredient ever tested alone, what direction did they report — returning one JSON verdict row. Use when auditing whether specific null verdicts are real evidence against an ingredient, or when spot-checking an extracted fact against the actual paper. Spawn one per study, in parallel. Do NOT use to change prompts, schemas or pipeline code, and do NOT summarize a whole run.
 tools: Read, Grep, Glob, Bash
 model: sonnet
 color: yellow
@@ -34,7 +34,7 @@ what the methods section would have said.
 | field | values | meaning |
 |---|---|---|
 | `comparator` | `real_control` / `all_arms_get_ingredient` / `unknown` | was there an arm that did NOT receive the ingredient? |
-| `self_declared_underpowered` | `true` / `false` / `unknown` | did the AUTHORS say the trial could not answer the question? |
+| `ingredient_isolated` | `yes` / `no` / `unknown` | does at least one arm get the ingredient WITHOUT another active co-ingested substance? |
 | `direction` | `benefit` / `harm` / `null_effect` / `unclear` | what did they report for the primary endpoint? |
 | `design` | the design as stated | RCT, crossover, non-randomised, … |
 
@@ -50,16 +50,17 @@ toward exclusion.
    ingredient-free.* **HMB + creatine vs creatine + placebo** is placebo-controlled
    and has no creatine-free arm. One paper in this corpus states outright that "a
    control group that did not consume the Cr supplement was not considered
-   necessary", and 1RM rose in **both** creatine arms — and we scored it −0.7
+   necessary", and 1RM rose in **both** creatine arms — and v14 scored it −0.7
    against creatine.
-2. *A small trial is not automatically underpowered.* Only the authors saying so
-   counts: a CONSORT pilot/feasibility design, no power calculation, or a stated a
-   priori target the trial missed (33 of 42, 28 of 48, 22 of 34). n=20 with a met
-   power calculation is **not** underpowered.
+2. *A blend is not the ingredient.* Creatine + four electrolytes vs placebo tests
+   the blend (`no`); placebo | creatine | creatine + caffeine has a creatine-alone
+   arm (`yes`). Training shared by all arms, the carrier and flavouring do not
+   count. (A third v14-era refusal, "self-declared underpowered", was dropped in
+   evidence method v2: pooling gives a small trial a small weight.)
 
-**The underpowered refusal is symmetric.** If a pilot showed a *benefit*, it is
-dropped too. Reporting a pilot's benefit while refusing a pilot's null is the
-one-way handling of uncertainty this audit exists to find.
+**Every refusal is symmetric.** If a combination arm showed a *benefit*, it is
+dropped too. Keeping one direction while refusing the other is the one-way
+handling of uncertainty this audit exists to find.
 
 **Every non-`unknown` answer needs an `evidence_span`** — a literal quote from the
 paper. No quote, no answer.
@@ -72,10 +73,10 @@ Exactly one JSON object, no prose before or after:
 {
   "canonical_id": "...",
   "comparator": "real_control|all_arms_get_ingredient|unknown",
-  "self_declared_underpowered": true,
+  "ingredient_isolated": "yes|no|unknown",
   "direction": "benefit|harm|null_effect|unclear",
   "design": "...",
-  "evidence_spans": {"comparator": "quoted text", "self_declared_underpowered": "quoted text"},
+  "evidence_spans": {"comparator": "quoted text", "ingredient_isolated": "quoted text"},
   "notes": "one line, only if something does not fit the schema"
 }
 ```

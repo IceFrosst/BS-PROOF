@@ -25,7 +25,7 @@ class Checkpoint(unittest.TestCase):
                 {**REC, "_canonical": "doi:10.1/c", "canonical_id": "doi:10.1/c", "abstract": "iv infusion"}]
         texts = {"doi:10.1/a": TEXT, "doi:10.1/b": "", "doi:10.1/c": TEXT}
         with tempfile.TemporaryDirectory() as d, \
-                mock.patch.dict(os.environ, {"SP_NUMBERS_EXTRACTOR": "0"}):
+                mock.patch.dict(os.environ, {}):
             cp = Path(d) / "sub" / "creatine_x.json"
             workers.extract_corpus(recs, text_for=lambda r: texts[r["canonical_id"]],
                                    call=fake, checkpoint=cp)
@@ -38,7 +38,7 @@ class Checkpoint(unittest.TestCase):
     def test_no_checkpoint_by_default(self):
         from bsproof import workers
         with mock.patch.object(workers, "_write_checkpoint") as w, \
-                mock.patch.dict(os.environ, {"SP_NUMBERS_EXTRACTOR": "0"}):
+                mock.patch.dict(os.environ, {}):
             workers.extract_corpus([REC], text_for=lambda r: TEXT, call=fake)
         w.assert_not_called()
 

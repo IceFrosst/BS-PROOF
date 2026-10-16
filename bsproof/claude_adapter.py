@@ -365,7 +365,18 @@ def _claude_bin() -> str:
 #   (PLA / GAA / GAA + CrM) carried only GAA + CrM vs PLA, a combination
 #   contrast, and was refused whole. Same run of changes: S4 gets the full text
 #   (payload change, re-runs S4 without a prompt edit).
-PROMPT_VERSION = "v1.36"
+# v1.37 (2026-10-16): the extraction prompts trimmed to what evidence method v2
+#   reads (docs/DECISIONS.md item 10). S5 (s5_conclusion -> s5_outcomes) lists
+#   outcomes only -- identity, no numbers -- since S5N reads every number (S5's
+#   numbers fed no pooled effect in the replayed v1.36 run). S5N / S5R: endpoint
+#   means are the post values, with the SD printed beside them (measured on the
+#   v1.36 creatine run: 35 claims had post_* filled and mean_* / sd_* empty, 12
+#   refused for it). S3 drops self_declared_underpowered (a v14 refusal),
+#   intervention_text / is_control (superseded) and the top-level
+#   deficiency_status (duplicated population_axes); S7 returns arm rows only;
+#   S4 drops unverifiable_items, S6B confidence, S8 v14 wording. No more
+#   extraction_version contract tag (every v1.24+ output was arm-keyed).
+PROMPT_VERSION = "v1.37"
 
 # Tier -> model. FULL IDs, NOT ALIASES.
 #
@@ -486,7 +497,7 @@ _slots = threading.Semaphore(MAX_CONCURRENCY)
 AGENTS = {
     "S3": ("B", "s3_study.json",      "s3_study.md"),
     "S4": ("B", "s4_rob.json",        "s4_rob.md"),
-    "S5": ("B", "s5_conclusion.json", "s5_conclusion.md"),
+    "S5": ("B", "s5_outcomes.json",   "s5_outcomes.md"),
     # Batched outcome mapping, the whole study in one call. The per-claim S6 it
     # replaced fired once per CLAIM, so the ~1 300-token fixed overhead (shared rules
     # + S6 rules + schema + vocabulary) is paid ~8.8x per study while the

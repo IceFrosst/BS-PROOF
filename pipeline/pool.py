@@ -76,10 +76,10 @@ class StudyEffect:
 
 
 def study_form(s7: dict | None, claim: dict) -> str | None:
-    """The form the TESTED arm took. S7 is arm-keyed since v1.24 and its top-level
-    form is usually null (measured 2026-10-03 on run A): use the S7 arm whose
-    label is the claim's ingredient_arm, else the one form recorded across arms,
-    else the top-level value. Never guessed."""
+    """The form the TESTED arm took: the S7 arm whose label is the claim's
+    ingredient_arm, else the one form recorded across arms, else None. Never
+    guessed. (S7's top-level form, usually null since v1.24 -- measured
+    2026-10-03 on run A -- was removed in v1.37.)"""
     s7 = s7 or {}
     norm = lambda v: re.sub(r"\s+", " ", str(v or "")).strip().lower()
     arms = [a for a in s7.get("arms") or [] if isinstance(a, dict)]
@@ -91,14 +91,13 @@ def study_form(s7: dict | None, claim: dict) -> str | None:
     forms = {a.get("form_vocab_id") for a in arms if a.get("form_vocab_id")}
     if len(forms) == 1:
         return next(iter(forms))
-    return s7.get("form_vocab_id")
+    return None
 
 
 def trial_dose(ingredient: str, s7: dict | None, s3: dict | None, claim: dict) -> dict:
     """The tested arm's daily elemental dose interval (dose.study_dose),
     joined by label (dose._s7_for_claim), never by position."""
-    modern = (s7 or {}).get("extraction_version") == "v1.24"
-    return study_dose(ingredient, _s7_for_claim(s7, claim, s3, modern=modern))
+    return study_dose(ingredient, _s7_for_claim(s7, claim, s3))
 
 
 def dose_match_tier(ingredient: str, s7: dict | None, s3: dict | None, claim: dict,
@@ -218,7 +217,7 @@ def _study_effects(item: dict, product: dict, polarity: dict,
     ext, record = item["extraction"], item.get("record") or {}
     refusals: dict[str, str] = {}
     s3 = ext.get("S3") if isinstance(ext.get("S3"), dict) else {}
-    scope = _ineligible({"S3": {**s3, "self_declared_underpowered": None}, "record": record})
+    scope = _ineligible({"S3": s3, "record": record})
     pop = vocab.pop_match(s3.get("population_axes") or {}, product.get("population") or {})
     best: dict[str, StudyEffect] = {}
     for i, o in enumerate(ext.get("outcomes") or []):
@@ -226,6 +225,11 @@ def _study_effects(item: dict, product: dict, polarity: dict,
         if not oid or o.get("discarded"):
             continue
         nums = o.get("numbers_v2") or {}
+        if nums.get("not_read"):
+            # S5N's call failed or skipped the claim: nothing was read, which is
+            # not "the paper prints no numbers" (bsproof/workers._extract_numbers).
+            refusals.setdefault(oid, "numbers not read (S5N call failed; re-run)")
+            continue
         # S5N's claim when it read the numbers (pipeline/review.numbers_claim).
         claim = nums.get("claim") or o.get("claim") or {}
         if scope and not (scope == "no_isolated_ingredient_arm" and matched_addon_claim(claim, s3)):

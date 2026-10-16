@@ -23,30 +23,20 @@ from pipeline import vocab
 from pipeline.eligibility import _arm_norm
 
 
-def _s7_for_claim(s7: dict | None, claim: dict, s3: dict | None,
-                   *, modern: bool = False) -> dict | None:
+def _s7_for_claim(s7: dict | None, claim: dict, s3: dict | None) -> dict | None:
     """Select S7 facts only from S5/S3's administered target arm.
 
     Arm-keyed S7 facts must be joined by an evidenced label, never by array
     position.  In particular, a one-row S7 response may be the control arm, so
     its length does not make it safe to project onto the ingredient claim.
-    Legacy top-level S7 envelopes remain usable unchanged.
+    S7 is arm-keyed only since v1.37 (its top-level fields, a pre-v1.24
+    contract, were removed); an envelope without arm rows gives no dose rather
+    than a positional one.
     """
     if not isinstance(s7, dict):
         return None
     arm_rows = s7.get("arms")
     if not isinstance(arm_rows, list) or not arm_rows:
-        # Top-level S7 facts are an explicitly legacy contract only. A modern
-        # envelope with omitted arm rows must not silently fall back to the
-        # historical positional/top-level dose.
-        return None if modern else s7
-    if modern and any(not isinstance(row, dict) or
-                      any(key not in row for key in (
-                          "label", "form_vocab_id", "form_raw", "compound_dose_mg",
-                          "elemental_dose_mg", "dose_per_kg_mg",
-                          "mean_body_mass_kg", "dose_basis",
-                          "dose_frequency_per_day", "evidence_span"))
-                      for row in arm_rows):
         return None
     s3_arms = s3.get("arms") if isinstance(s3, dict) else None
     if not isinstance(s3_arms, list) or not s3_arms:

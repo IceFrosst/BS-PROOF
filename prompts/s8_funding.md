@@ -29,9 +29,14 @@ is boilerplate. It does not change the classification. Record the funder and
 classify on who paid, not on their assurances.
 
 undisclosed vs independent: only classify independent when the paper positively
-states its funding. Silence is undisclosed. These carry different penalties
-because absence of a statement is itself weak evidence about the source.
+states its funding. Silence is undisclosed: absence of a statement is not
+evidence of independence.
 
-funder_names: list every named funder and sponsor verbatim. The pipeline
-cross-references these against a manufacturer list, so completeness matters
-more than your judgement about which ones are relevant.
+funder_names: list every named funder and sponsor verbatim. Completeness
+matters more than your judgement about which ones are relevant; a reader
+checks them.
+
+author_coi: the conflict-of-interest statement, quoted briefly; null when
+there is none. evidence_span: the funding sentence your class rests on.
+
+Funding is reported beside the grade, never used to compute it.

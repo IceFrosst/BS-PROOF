@@ -9,11 +9,8 @@
   "population_axes",
   "population_text",
   "registration_id",
-  "extraction_version",
   "comparator",
-  "self_declared_underpowered",
-  "ingredient_isolated",
-  "deficiency_status"
+  "ingredient_isolated"
  ],
  "additionalProperties": false,
  "properties": {
@@ -36,8 +33,6 @@
     "required": [
      "label",
      "n",
-     "intervention_text",
-     "is_control",
      "target_ingredient_presence",
      "active_cointerventions",
      "evidenced_arm_text",
@@ -52,19 +47,6 @@
      "n": {
       "type": [
        "integer",
-       "null"
-      ]
-     },
-     "intervention_text": {
-      "type": [
-       "string",
-       "null"
-      ],
-      "maxLength": 300
-     },
-     "is_control": {
-      "type": [
-       "boolean",
        "null"
       ]
      },
@@ -133,25 +115,12 @@
     null
    ]
   },
-  "self_declared_underpowered": {
-   "type": [
-    "boolean",
-    "null"
-   ]
-  },
   "population_text": {
    "type": [
     "string",
     "null"
    ],
    "maxLength": 500
-  },
-  "deficiency_status": {
-   "type": [
-    "string",
-    "null"
-   ],
-   "maxLength": 40
   },
   "registration_id": {
    "type": [
@@ -239,15 +208,6 @@
     null
    ],
    "description": "Does at least one treatment arm receive the ingredient WITHOUT another active co-ingested ingredient? Training programs shared by all arms, carriers and flavouring do not count as co-ingestants. Answer 'no' ONLY when every ingredient arm co-administers another active. Unknown keeps the study."
-  },
-  "extraction_version": {
-   "type": "string",
-   "enum": [
-    "v1.24",
-    "legacy-v1.23",
-    "legacy-v1.22",
-    "legacy-v1.21"
-   ]
   }
  }
 }

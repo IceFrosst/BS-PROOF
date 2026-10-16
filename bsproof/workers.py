@@ -39,14 +39,6 @@ def _second_reviewer_enabled() -> bool:
     return os.environ.get("SP_SECOND_REVIEWER", "1") == "1"
 
 
-def _numbers_extractor_enabled() -> bool:
-    """Evidence method v2 reviewer 1 for numbers (S5N). ON by default: v2 has
-    no poolable numbers without it (RSMOKE3, v1.31: 0/13 mapped S5 claims made
-    an effect). One call per S5N_CHUNK mapped claims.
-    SP_NUMBERS_EXTRACTOR=0 falls back to S5's own numbers."""
-    return os.environ.get("SP_NUMBERS_EXTRACTOR", "1") == "1"
-
-
 # Mapped claims per S5N call. Coverage first, cost second (founder 2026-10-03):
 # a long claim list in one call risks silently skipped claims, so a study with
 # many claims is split; the chunks run one after another so every call after
@@ -56,24 +48,24 @@ _S5N_IDENTITY = ("outcome_raw", "measure", "timepoint", "ingredient_arm", "contr
 
 
 def _claim_for_numbers(o: dict) -> dict:
-    """The claim the v2 effect reads: S5N's when it read the numbers, else S5's."""
+    """The claim the v2 effect reads: S5N's (S5's identity + S5N's numbers),
+    else S5's identity alone."""
     return (o.get("numbers_v2") or {}).get("claim") or o.get("claim") or {}
 
 
 def _extract_numbers(out: dict, record: dict, text: str, sections: dict | None,
                      s3_facts: dict, call) -> None:
-    """S5N reads the numbers of every MAPPED claim (not only the ones S5 already
-    gave numbers: those are the misses this agent exists for), told only each
-    claim's identity -- never S5's numbers or estimand. Each answer becomes the
-    claim's numbers_v2: pipeline.review.numbers_claim + the span check. A claim
-    S5N gave no entry for (call failed, omitted) keeps S5's own numbers_v2,
-    marked reader "S5", so the run says which reader every number came from."""
+    """S5N reads the numbers of every MAPPED claim, told only each claim's
+    identity (S5 lists outcomes and reads no numbers since v1.37; measured on
+    RSMOKE3, v1.31: 0/13 mapped claims made an effect from S5's own numbers,
+    which is why S5N exists). Each answer
+    becomes the claim's numbers_v2: pipeline.review.numbers_claim + the span
+    check. A claim S5N gave no entry for (call failed, entry omitted) gets
+    numbers_v2 = {"not_read": <why>}, and the pool refuses it with that reason
+    rather than as a data gap."""
     from pipeline.review import numbers_claim
     outcomes = out.get("outcomes") or []
     todo = [i for i, o in enumerate(outcomes) if not o.get("discarded")]
-    for o in outcomes:
-        if isinstance(o.get("numbers_v2"), dict):
-            o["numbers_v2"]["reader"] = "S5"
     if not todo:
         return
     base = _payload("S5N", record, text, None, sections, s3_facts=s3_facts)
@@ -107,6 +99,9 @@ def _extract_numbers(out: dict, record: dict, text: str, sections: dict | None,
         "error": errors[0] if errors else None,
         "cached": all(isinstance(m, dict) and m.get("cached") for m in metas),
         "calls": len(metas), "chunks": metas}
+    for i in todo:
+        if i not in entries:
+            outcomes[i]["numbers_v2"] = {"not_read": errors[0] if errors else "S5N gave no entry"}
     merged = {i: numbers_claim(outcomes[i]["claim"], e) for i, e in entries.items()}
     checked = _verify_numbers(out, record, [merged[i] for i in sorted(merged)])
     for i, nums in zip(sorted(merged), checked):
@@ -162,15 +157,12 @@ def _second_review(out: dict, record: dict, text: str, sections: dict | None,
                         "adjudication": reconcile_study(outcomes, reviews, sent, polarity, s3_arms)}
 
 
-def _verify_numbers(out: dict, record: dict, claims: list[dict] | None = None) -> list[dict]:
-    """Span-check every S5 claim's numbers (pipeline/span_check.py), by claim
-    index -- or the given claims (S5N's). Deterministic; tables are fetched only
-    when a claim cites one, and through the worker_payload MODULE so tests that
-    patch it stay offline."""
+def _verify_numbers(out: dict, record: dict, claims: list[dict]) -> list[dict]:
+    """Span-check the given claims' numbers (S5N's, pipeline/span_check.py).
+    Deterministic; tables are fetched only when a claim cites one, and through
+    the worker_payload MODULE so tests that patch it stay offline."""
     from pipeline.span_check import verify_claim_numbers
     from bsproof import worker_payload as _wp
-    if claims is None:
-        claims = ((out.get("S5") or {}).get("claims")) or []
     s3_arms = (out.get("S3") or {}).get("arms") if isinstance(out.get("S3"), dict) else None
     tables, fetch_error = None, None
     if any(isinstance(c, dict) and c.get("table_provenance") for c in claims):
@@ -258,7 +250,7 @@ def _self_check_payload_contracts() -> None:
     # Realistic maximal S3 arm overhead: the bugged total-wall arithmetic
     # omitted this entire serialized field (plus form vocabulary and JSON
     # encoding), undercounting a measured envelope by ~2.2k chars.
-    s7_s3 = {"extraction_version": "v1.24", "arms": [
+    s7_s3 = {"arms": [
         {"label": f"Arm {i}", "role": "administered",
          "target_ingredient_presence": "yes" if i == 0 else "no",
          "evidenced_arm_text": "reported intervention arm " + "x" * 120,
@@ -367,10 +359,6 @@ def extract_study(record: dict, text: str, registry: dict | None = None, *,
             except Exception as exc:
                 store(agent, (None, {"error": str(exc)}))
 
-    # Evidence method v2: which numbers are actually printed where the claim
-    # says. Attached to out["outcomes"][i] below.
-    numbers = _verify_numbers(out, record)
-
     # S6B runs after S5 because it consumes S5's raw outcome strings.
     #
     # Showcase mode: shrink the S6 vocabulary to the top-N outcomes for this
@@ -414,10 +402,9 @@ def extract_study(record: dict, text: str, registry: dict | None = None, *,
                 "outcome_vocab_id": vid,
                 "discarded": vid is None,
                 "rationale": (result or {}).get("rationale"),
-                "numbers_v2": numbers[i] if i < len(numbers) else None,
+                "numbers_v2": None,
             })
-    if _numbers_extractor_enabled():
-        _extract_numbers(out, record, text, sections, s3_facts, call)
+    _extract_numbers(out, record, text, sections, s3_facts, call)
     if _second_reviewer_enabled():
         _second_review(out, record, text, sections, s3_facts, call)
     return out

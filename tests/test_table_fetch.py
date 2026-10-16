@@ -30,7 +30,7 @@ PRODUCT = {"ingredient": "creatine", "form_vocab_id": "creatine_monohydrate",
 def _verify(fetch):
     out = {"S3": S3, "S5": {"claims": [CLAIM]}}
     with patch.object(worker_payload, "_tables_structured", fetch):
-        return out, workers._verify_numbers(out, RECORD)
+        return out, workers._verify_numbers(out, RECORD, [CLAIM])
 
 
 class TableFetch(unittest.TestCase):

@@ -56,9 +56,9 @@ describe("the plain-language rule is in the prompts themselves", () => {
   });
 
   it("is NOT pasted into the extraction prompts, which nobody reads as prose", () => {
-    // _shared.md feeds S1-S8 only; their output is numbers, enums and verbatim
+    // _shared.md feeds the extraction agents only; their output is numbers, enums and verbatim
     // spans, so a "write 2 to 4 sentences" rule there would be wrong.
-    for (const f of ["_shared.md", "label.md", "s3_study.md", "s5_conclusion.md", "s8_funding.md"]) {
+    for (const f of ["_shared.md", "label.md", "s3_study.md", "s5_outcomes.md", "s8_funding.md"]) {
       expect(read(f), f).not.toContain(HEADING);
     }
   });

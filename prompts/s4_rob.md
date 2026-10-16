@@ -6,8 +6,9 @@ ClinicalTrials.gov record. Score six binary items. Each is 1, 0, or null.
 null means YOU CANNOT VERIFY IT FROM WHAT YOU WERE GIVEN.
 0 means you can see that it was NOT done.
 These are different and must not be conflated. Abstract-only inputs will
-legitimately produce many nulls -- that is expected and the pipeline penalises
-it separately. Do not score 0 just because information is absent.
+legitimately produce many nulls -- that is expected: downstream an unverifiable
+item never counts as low risk of bias. Do not score 0 just because
+information is absent.
 
 ITEM 1 randomisation method described
 1 if a method is named: computer-generated sequence, random number table,
@@ -43,5 +44,4 @@ ITEM 6 intention to treat
 justifies a modified ITT). Per-protocol only -> 0. Silent on analysis
 population -> null.
 
-unverifiable_items: list the item numbers you set to null. The pipeline uses
-this to decide whether to trust the aggregate.
+evidence_spans: quote the sentence behind each item you score 1 or 0.

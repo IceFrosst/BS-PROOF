@@ -24,15 +24,12 @@ ROOT = Path(__file__).resolve().parents[1]
 
 # (schema, JSON path, length the prompt asks for or the old hard cap)
 TARGETS = [
-    ("s3_study.json", ".arms[].intervention_text", 200),
     ("s3_study.json", ".arms[].evidenced_arm_text", 300),
     ("s3_study.json", ".population_text", 300),
     ("s3_study.json", ".evidence_spans[]", 200),
-    ("s5_conclusion.json", ".claims[].outcome_raw", 120),
-    ("s5_conclusion.json", ".claims[].measure", 80),
-    ("s5_conclusion.json", ".claims[].evidence_span", 200),
-    ("s5_conclusion.json", ".claims[].statistic_provenance", 200),
-    ("s5_conclusion.json", ".claims[].effect_unit", 40),
+    ("s5_outcomes.json", ".claims[].outcome_raw", 120),
+    ("s5_outcomes.json", ".claims[].measure", 80),
+    ("s5_outcomes.json", ".claims[].evidence_span", 200),
     ("s6b_outcome_batch.json", ".mappings[].rationale", 300),
     ("s7_form.json", ".arms[].evidence_span", 200),
 ]
@@ -68,22 +65,22 @@ class SchemaHeadroom(unittest.TestCase):
         # schema comfortably allows; raising the prompt number to the cap would
         # bring the failure back.
         caps = {(s, p): limits(json.loads((ROOT / "schemas" / s).read_text()))[p] for s, p, _ in TARGETS}
-        s5 = (ROOT / "prompts" / "s5_conclusion.md").read_text()
-        stated = int(re.search(r"clause with the number in it, (\d+) characters maximum", s5).group(1))
-        self.assertLess(stated, caps[("s5_conclusion.json", ".claims[].evidence_span")])
+        s5 = (ROOT / "prompts" / "s5_outcomes.md").read_text()
+        stated = int(re.search(r"values\. (\d+) characters maximum", s5).group(1))
+        self.assertLess(stated, caps[("s5_outcomes.json", ".claims[].evidence_span")])
 
 
 class S7ArmFields(unittest.TestCase):
-    def test_an_arm_may_carry_the_top_level_confidence_and_salt_family(self):
+    def test_an_arm_carries_only_its_own_fields(self):
+        # v1.37 removed S7's top-level confidence / salt_family, which the
+        # measured 2026-10-03 failures copied onto arms; nothing asks for them now.
         from jsonschema import Draft7Validator
         schema = json.loads((ROOT / "schemas" / "s7_form.json").read_text())
         arm = {"label": "CR", "form_vocab_id": None, "form_raw": None, "compound_dose_mg": None,
                "elemental_dose_mg": None, "dose_per_kg_mg": None, "mean_body_mass_kg": None,
                "dose_basis": None, "dose_frequency_per_day": None, "evidence_span": None}
         item = Draft7Validator(schema["properties"]["arms"]["items"])
-        self.assertTrue(item.is_valid({**arm, "confidence": 0.6, "salt_family": None}))
-        self.assertTrue(item.is_valid(arm))                       # still optional
-        self.assertFalse(item.is_valid({**arm, "confidence": 1.5}))
+        self.assertTrue(item.is_valid(arm))
         self.assertFalse(item.is_valid({**arm, "note": "x"}))     # nothing else is allowed
 
 

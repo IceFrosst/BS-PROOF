@@ -37,10 +37,20 @@ Last swept: 2026-10-16.
      if an ingredient has many such trials; if adopted, only an exact p from a
      two-group test of a parallel trial, flagged as its own route.
 
+2. **S4 risk-of-bias items 3, 4 and 6 are extracted but unused.** The
+   risk-of-bias rule (METHOD §12) reads items 1 (randomisation method), 2
+   (blinding / placebo) and 5 (attrition). Items 3 (prospective registration),
+   4 (reported primary outcome matches the registry) and 6 (intention to treat)
+   are extracted and exported, never graded. Item 4 is RoB 2's selective-
+   reporting signal (domain 5) and the most informative of the three. Options:
+   use item 4 (and 3) as "some concerns" in the rule, or keep them reported
+   only. Kept in the v1.37 prompts so deciding later needs no re-extraction.
+
 ## v2 work list (agreed 2026-10-15, after the simplification)
 
 Ordered by how much each distorts the grade (10 is clean-up, not accuracy).
-Items 1, 5 and 7 were decided 2026-10-16 (below).
+Items 1, 5 and 7 were decided 2026-10-16 (below); 2, 3 (offline part), 6
+and 10 are done.
 
 | # | Problem | Proposed fix |
 |---|---|---|
@@ -53,7 +63,7 @@ Items 1, 5 and 7 were decided 2026-10-16 (below).
 | 7 | Every pooled number is single-read | **Decided 2026-10-16:** S5R on by default; takes effect at the next extraction run (step 3) |
 | 8 | Run-to-run stability never measured (outcome mapping moves ±2 trials per outcome) | `scripts/experiments/extraction_stability.py`, run solo |
 | 9 | The benchmark has no negative controls | Each new ingredient adds a "does not work" or "harms" row (METHOD §16) |
-| 10 | The extraction prompts still carry v14 wording and ask for fields only v14 read (e.g. S5's direction / magnitude labels and effect-size fields now superseded by S5N; "form arc" in `s7_form.md`); and S5N leaves the arm SD empty when it reads endpoint / post values (9–12 refusals in the creatine run) | Trim them in ONE `PROMPT_VERSION` bump, bundled with the next full re-extraction (a bump re-extracts everything, ~1000 calls for creatine); check with a replay that nothing v2 reads changes |
+| 10 | The extraction prompts still carry v14 wording and ask for fields only v14 read; S5N leaves the arm SD empty when it reads endpoint / post values | **Done 2026-10-16 (prompt v1.37), takes effect at the next extraction run.** S5 lists outcomes only (identity, no numbers: 440 → 108 prompt lines; the extraction prompts 1 091 → 739 lines in all); S5N is the only number reader and is told that endpoint means are the post values with the SD beside them (measured: 35 claims had post values and no mean/SD, 12 refused); S3 drops `self_declared_underpowered`, two legacy arm fields and a duplicate deficiency field; S7 is per arm only; S4, S6B, S8 lose unused fields and v14 wording. Re-pooling the stored v1.36 extractions with the new code: evidence block byte-identical |
 
 When v2 validates (METHOD §16): connect `lib/analyze/grade-v2.ts` in
 `lib/analyze/scan.ts`, build a grade card, remove the "not active yet" notice

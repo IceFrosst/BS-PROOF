@@ -7,8 +7,10 @@ from unittest import mock
 
 from pipeline.review import numbers_claim
 
-# What S5 does on the RSMOKE3 papers: the claim framed as a change score, numbers
-# it computed (printed nowhere) or none at all.
+# An S5 claim as v1.36 and earlier wrote it (RSMOKE3 papers): framed as a change
+# score, numbers it computed (printed nowhere). Since v1.37 S5 lists identity
+# only, but cached and replayed extractions still carry these fields, so the
+# merge must never let one through.
 S5_CLAIM = {"outcome_raw": "bench press 1-RM", "measure": "kg", "timepoint": "week 8",
             "ingredient_arm": "CR", "control_arm": "PL", "estimand": "change_from_baseline",
             "contrast": "vs_ingredient_free", "design_kind": "parallel", "effect_favours": "ingredient",
@@ -60,7 +62,7 @@ class Wiring(unittest.TestCase):
                 return {"claims": [dict(S5_CLAIM) for _ in range(n_claims)]}, {}
             if agent == "S6B":
                 return {"mappings": [{"index": i, "outcome_vocab_id": "muscle_strength",
-                                      "confidence": 0.9, "rationale": "1rm"} for i in range(n_claims)]}, {}
+                                      "rationale": "1rm"} for i in range(n_claims)]}, {}
             if agent == "S5N":
                 if s5n_fails:
                     return None, {"error": "boom"}
@@ -75,8 +77,7 @@ class Wiring(unittest.TestCase):
     def run_study(self, env=None, **kw):
         from bsproof import workers
         call, calls = self.fake(**kw)
-        base = {"SP_SECOND_REVIEWER": "0",
-                "SP_NUMBERS_EXTRACTOR": "1"}
+        base = {"SP_SECOND_REVIEWER": "0"}
         with mock.patch.dict(os.environ, {**base, **(env or {})}):
             out = workers.extract_study(REC, "x" * 500 + SPAN, call=call)
         return out, calls
@@ -115,28 +116,33 @@ class Wiring(unittest.TestCase):
         self.assertEqual(asked, [[0, 1, 2], [3, 4, 5], [6]])
         self.assertEqual(out["numbers_extraction_v2"]["returned"], 7)
 
-    def test_an_omitted_or_foreign_index_falls_back_to_s5(self):
+    def test_an_omitted_or_foreign_index_is_not_read(self):
         # Claim 1 omitted; an entry for an index never asked (5) is ignored.
         out, _ = self.run_study(n_claims=2, numbers=lambda asked: [{"index": 0, **ENTRY},
                                                                    {"index": 5, **ENTRY}])
-        self.assertEqual([o["numbers_v2"]["reader"] for o in out["outcomes"]], ["S5N", "S5"])
+        self.assertEqual(out["outcomes"][0]["numbers_v2"]["reader"], "S5N")
+        self.assertEqual(out["outcomes"][1]["numbers_v2"], {"not_read": "S5N gave no entry"})
         self.assertEqual(out["numbers_extraction_v2"]["returned"], 1)
 
-    def test_a_failed_call_is_recorded_and_keeps_s5_numbers(self):
+    def test_a_failed_call_is_recorded_and_the_pool_names_it(self):
+        from pipeline import vocab
+        from pipeline.pool import pool_outcomes
         out, _ = self.run_study(s5n_fails=True)
-        self.assertEqual(out["outcomes"][0]["numbers_v2"]["reader"], "S5")
+        self.assertEqual(out["outcomes"][0]["numbers_v2"], {"not_read": "boom"})
         self.assertIn("S5N", [f["agent"] for f in out["_failed"]])
+        pv = vocab.population_variants()[0]
+        product = {"ingredient": "creatine", "form_vocab_id": "creatine_monohydrate",
+                   "population": {"id": pv["id"], **{a: pv[a] for a in vocab.AXES}}}
+        out["S3"] = {"population_axes": {a: pv[a] for a in vocab.AXES},
+                     "comparator": "ingredient_free", "ingredient_isolated": "yes"}
+        p = pool_outcomes([{"id": "n", "record": REC, "extraction": out}], product)["muscle_strength"]
+        self.assertEqual(p.refused, {"numbers not read (S5N call failed; re-run)": 1})
 
     def test_a_number_not_in_the_span_is_refused(self):
         out, _ = self.run_study(numbers=lambda asked: [{"index": 0, **ENTRY, "sd_control": 3.2}])
         nums = out["outcomes"][0]["numbers_v2"]
         self.assertIn("sd_control", nums["rejected"])
         self.assertNotIn("sd_control", nums["verified"])
-
-    def test_off_switch(self):
-        out, calls = self.run_study(env={"SP_NUMBERS_EXTRACTOR": "0"})
-        self.assertNotIn("S5N", [a for a, _ in calls])
-        self.assertNotIn("numbers_extraction_v2", out)
 
     def test_the_reviewer_reads_s5n_estimand_and_the_pool_uses_s5n_numbers(self):
         from pipeline import vocab

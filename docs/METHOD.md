@@ -131,17 +131,19 @@ Per study, `bsproof/workers.py`, through the one model boundary
 | Agent | Reads | Returns |
 |---|---|---|
 | S3 study | full text | design, arms (label, n, role, ingredient presence, co-interventions), population axes, comparator, isolation, registration |
-| S4 risk of bias | full text + registry | six RoB items (randomisation method, blinding/placebo, prospective registration, outcome matches registry, attrition, ITT) |
-| S5 conclusion | results + tables | one claim per (outcome, measure, timepoint, contrast), naming its arms |
+| S4 risk of bias | full text + registry | six RoB items (randomisation method, blinding/placebo, prospective registration, outcome matches registry, attrition, ITT); §12 grades with items 1, 2 and 5 |
+| S5 outcomes | results + tables, S3 arms | one claim per separately reported measure: outcome, measure, timepoint, the arm pair, primary flag (no numbers) |
 | S7 form & dose | methods + tables, S3 arms | per arm: form id, compound / elemental / per-kg dose, body mass, frequency |
-| S8 funding | funding + COI statements | funding class, funders (extracted; not graded yet) |
+| S8 funding | funding + COI statements | funding class, funders (reported, never graded; §15) |
 | S6B outcome mapping | S5's outcome strings | one vocabulary id per claim, or `null` = discard |
-| S5N numbers | the mapped claims | per arm mean, SD, n, SE, CI, p, pre/post values, as printed |
+| S5N numbers | the mapped claims' identity | per arm mean, SD, n, SE, CI, p, pre/post values, as printed; estimand, contrast, design |
 | S5R second reviewer (on by default; `SP_SECOND_REVIEWER=0` off) | the same claims, blind | the same numbers, read by a different model (Opus) |
 
 S3 runs first (S5 and S7 need its arms); S4, S5, S7, S8 in parallel; then S6B,
-S5N and S5R. Every output carries evidence spans. A schema violation is
-retried twice, then `null`, never repaired.
+S5N and S5R. S5N is the only reader of numbers (since prompt v1.37): a claim it
+gave no entry for is refused as "numbers not read", never as a data gap. Every
+output carries evidence spans. A schema violation is retried twice, then
+`null`, never repaired.
 
 **Span check** (`pipeline/span_check.py`). A model may only copy numbers. Every
 numeric field is verified against its source — the claim's quoted span, the

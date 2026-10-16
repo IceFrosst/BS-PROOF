@@ -100,14 +100,18 @@ class WorkerWiring(unittest.TestCase):
         def _c(agent, payload):
             calls.append((agent, payload))
             if agent == "S5":
-                return {"claims": [{**CLAIM, **VERIFIED, "outcome_raw": "bench press 1-RM",
-                                    "measure": "kg", "timepoint": "week 8", "evidence_span": self.SPAN,
+                return {"claims": [{"outcome_raw": "bench press 1-RM", "measure": "kg",
+                                    "timepoint": "week 8", "evidence_span": self.SPAN,
                                     "ingredient_arm": "CR", "control_arm": "PL",
-                                    "effect_size": None, "ci_low": None, "ci_high": None,
-                                    "p_value": None, "table_provenance": None}]}, {}
+                                    "is_primary_outcome": True}]}, {}
             if agent == "S6B":
                 return {"mappings": [{"index": 0, "outcome_vocab_id": "muscle_strength",
-                                      "confidence": 0.9, "rationale": "1rm"}]}, {}
+                                      "rationale": "1rm"}]}, {}
+            if agent == "S5N":
+                return {"numbers": [{"index": 0, "found": True, **CLAIM, **VERIFIED,
+                                     "evidence_span": self.SPAN, "table_provenance": None,
+                                     "effect_size": None, "ci_low": None, "ci_high": None,
+                                     "p_value": None}]}, {}
             if agent == "S5R":
                 return ({"reviews": reviews} if reviews is not None else None), {"error": "boom"}
             return {}, {}

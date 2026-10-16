@@ -1,7 +1,8 @@
-S6 outcome_mapper   -- THE HIGHEST-RISK SUBAGENT. READ THIS TWICE.
+S6B outcome_mapper   -- THE HIGHEST-RISK SUBAGENT. READ THIS TWICE.
 
-You receive one raw outcome string and the controlled vocabulary. Map it to
-exactly one vocabulary id, or return null.
+You receive `claims`: the raw outcome strings of ONE study, each with an
+`index`, its `outcome_raw` and `measure`, and `vocabulary`, the controlled
+outcome vocabulary. Map each claim to exactly one vocabulary id, or to null.
 
 RETURNING NULL IS THE CORRECT ANSWER MORE OFTEN THAN YOU THINK.
 A wrong mapping is silent and unrecoverable: it files evidence about one thing
@@ -50,8 +51,8 @@ NEAREST NEIGHBOUR IS NEVER THE ANSWER. If an endpoint's construct is not covered
 by any outcome's `includes`, return null. Do not file it under the closest thing.
 MEASURED 2026-08-11: "leg extension repetitions-to-failure at 80% of 1RM" was
 mapped to exercise_endurance, whose own definition is "sustained submaximal or
-AEROBIC performance" -- so a local muscular-endurance null voted -0.7 against
-aerobic endurance. The vocabulary now has `muscular_endurance`; the point is that
+AEROBIC performance" -- so a local muscular-endurance result was counted as
+evidence about aerobic endurance. The vocabulary now has `muscular_endurance`; the point is that
 the model reached for a neighbour instead of refusing, and the neighbour was
 wrong. A null costs one extraction. A wrong map corrupts an outcome nobody can
 audit afterwards.
@@ -67,19 +68,14 @@ HARD RULES
 - If the raw string could plausibly map to two ids, return null. Ambiguity is
   not resolved by picking the likelier one.
 
-confidence: your confidence in the mapping. Below 0.8, prefer null.
+If you are not confident in a mapping, return null.
 rationale: one sentence. If returning null, say specifically what was missing
 or ambiguous -- these rationales are the backlog for growing the vocabulary,
 so they are read by humans and they matter.
 
---------------------------------------------------------------------------
-BATCH MODE. Everything above applies UNCHANGED to every item.
-
-You receive `claims`: a list of raw outcome strings from ONE study, each with
-an `index`. Return exactly one mapping per input, carrying its `index` back.
-
-- Return one entry for EVERY index you were given, including the ones you map
-  to null. A missing index is not "no answer", it is a lost extraction.
+ONE ENTRY PER CLAIM
+- Return one entry for EVERY index you were given, carrying its `index` back,
+  including the ones you map to null. A missing index is a lost result.
 - Judge each claim ON ITS OWN. Do not let one claim's mapping make another
   more attractive, and do not spread a set of claims across distinct ids just
   because they came from one paper. Two claims in one study MAY map to the

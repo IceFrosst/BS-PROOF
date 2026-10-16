@@ -1,0 +1,28 @@
+{
+ "$schema": "http://json-schema.org/draft-07/schema#",
+ "type": "object",
+ "required": ["claims"],
+ "additionalProperties": false,
+ "properties": {
+  "claims": {
+   "type": "array",
+   "maxItems": 20,
+   "items": {
+    "type": "object",
+    "required": ["outcome_raw", "measure", "timepoint", "ingredient_arm", "control_arm",
+                 "is_primary_outcome", "evidence_span"],
+    "additionalProperties": false,
+    "properties": {
+     "outcome_raw": {"type": "string", "maxLength": 200},
+     "measure": {"type": ["string", "null"], "maxLength": 120},
+     "timepoint": {"type": ["string", "null"], "maxLength": 200,
+                   "description": "Verbatim reported assessment timepoint."},
+     "ingredient_arm": {"type": ["string", "null"], "maxLength": 120},
+     "control_arm": {"type": ["string", "null"], "maxLength": 120},
+     "is_primary_outcome": {"type": "boolean"},
+     "evidence_span": {"type": "string", "maxLength": 300}
+    }
+   }
+  }
+ }
+}

@@ -31,7 +31,7 @@ def study(sid, outcomes, **s3):
 class Pool(unittest.TestCase):
     def test_study_form_comes_from_the_tested_arm(self):
         from pipeline.pool import study_form
-        s7 = {"form_vocab_id": None, "arms": [{"label": "CrM", "form_vocab_id": "creatine_monohydrate"},
+        s7 = {"arms": [{"label": "CrM", "form_vocab_id": "creatine_monohydrate"},
                                                {"label": "CON", "form_vocab_id": None}]}
         self.assertEqual(study_form(s7, {"ingredient_arm": "CrM"}), "creatine_monohydrate")
         self.assertEqual(study_form(s7, {}), "creatine_monohydrate")       # the only form recorded
@@ -51,6 +51,8 @@ class Pool(unittest.TestCase):
         self.assertEqual(p.md["unit"], "kg")
 
     def test_underpowered_is_kept_but_combinations_are_refused(self):
+        # A pre-v1.37 extraction may still carry S3's self_declared_underpowered;
+        # v2 never refuses on it.
         items = [study("pilot", [outcome(90, 80)], self_declared_underpowered=True),
                  study("combo", [outcome(90, 80)], ingredient_isolated="no")]
         p = pool_outcomes(items, PRODUCT)["muscle_strength"]
@@ -106,13 +108,18 @@ class Pool(unittest.TestCase):
 
     def test_dose_is_matched_against_each_trial(self):
         from pipeline.pool import dose_match_tier
-        s7 = lambda mg: {"form_vocab_id": "creatine_monohydrate", "elemental_dose_mg": mg,
-                         "dose_basis": "elemental_stated"}
+        s7 = lambda mg: {"arms": [{"label": "CR", "form_vocab_id": "creatine_monohydrate",
+                                   "elemental_dose_mg": mg, "dose_basis": "elemental_stated"}]}
+        s3 = {"arms": [{"label": "CR", "role": "administered", "target_ingredient_presence": "yes"},
+                       {"label": "PL", "role": "administered", "target_ingredient_presence": "no"}]}
+        claim = {"ingredient_arm": "CR"}
         five_g = {"dose_low_mg": 5000, "dose_high_mg": 5000}
-        self.assertEqual(dose_match_tier("creatine", s7(5000), {}, {}, five_g), "in_band")
-        self.assertEqual(dose_match_tier("creatine", s7(20000), {}, {}, five_g), "below_50")   # a loading dose
-        self.assertEqual(dose_match_tier("creatine", None, {}, {}, five_g), "unspecified")
-        self.assertIsNone(dose_match_tier("creatine", s7(5000), {}, {}, {}))                  # no product dose
+        self.assertEqual(dose_match_tier("creatine", s7(5000), s3, claim, five_g), "in_band")
+        self.assertEqual(dose_match_tier("creatine", s7(20000), s3, claim, five_g), "below_50")  # a loading dose
+        self.assertEqual(dose_match_tier("creatine", None, s3, claim, five_g), "unspecified")
+        self.assertEqual(dose_match_tier("creatine", {"elemental_dose_mg": 5000}, s3, claim, five_g),
+                         "unspecified")                                   # pre-v1.37 top-level S7
+        self.assertIsNone(dose_match_tier("creatine", s7(5000), s3, claim, {}))                # no product dose
 
     def test_estimand_mix_is_reported(self):
         items = [study("a", [outcome(90, 80)]), study("b", [outcome(5, 2, estimand="change_from_baseline")])]

@@ -4,9 +4,8 @@ NO MODEL MAY ENTER THIS FILE.
 
 Systematic reviews extract every number twice, independently, and only numbers
 both extractors agree on are analysed. Here reviewer 1 is S5N, the per-claim
-numbers extractor (`numbers_claim`; S5's own numbers + the S5T table route when
-S5N is off or returned nothing), then the deterministic span check; reviewer 2
-is S5R: a DIFFERENT
+numbers extractor (`numbers_claim`), then the deterministic span check;
+reviewer 2 is S5R: a DIFFERENT
 Claude model that is shown the same paper and the claim's identity (outcome,
 timepoint, arm labels) but NOT reviewer 1's numbers, and extracts them again.
 (docs/DECISIONS.md, 2026-10-03: a second Claude model for now; a
@@ -99,11 +98,11 @@ S5N_FIELDS = ("evidence_span", "table_provenance", "n_ingredient", "n_control",
 
 
 def numbers_claim(claim: dict, entry: dict | None) -> dict | None:
-    """The claim the v2 effect is computed from when S5N read its numbers: S5's
-    identity (outcome, arms, timepoint, primary flag, ...) with EVERY number and
-    every field an effect route reads taken from S5N alone. S5's own numbers are
-    cleared first, never mixed in: a union of two extractions is not one
-    extraction. None when S5N gave no entry for the claim."""
+    """The claim the v2 effect is computed from: S5's identity (outcome, arms,
+    timepoint, primary flag) with EVERY number and every field an effect route
+    reads taken from S5N alone. Any number on the S5 claim (S5 read numbers
+    before v1.37) is cleared first, never mixed in: a union of two extractions
+    is not one extraction. None when S5N gave no entry for the claim."""
     from pipeline.span_check import NUMERIC_FIELDS
     if not isinstance(entry, dict):
         return None

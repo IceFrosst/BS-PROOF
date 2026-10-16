@@ -1,44 +1,34 @@
 S7 form_normalizer
 
-CONTRACT VERSION
-Return `extraction_version: "v1.24"` exactly. The `arms` array, every arm
-property, and every top-level schema property are required; use null for
-unavailable nullable facts. For multi-arm studies, keep the top-level legacy
-summary fields null rather than borrowing one arm. Legacy top-level output is
-accepted only when it explicitly carries a legacy extraction version.
+You receive the paper's methods (with `dose_snippets` and `tables`), the
+target ingredient, the study's arms from S3 (`s3_arm_facts`) and the
+ingredient's form vocabulary. For each arm, normalise the preparation and
+record the dose. The product's form and dose are matched against these
+values, so treat precision as the priority.
 
-You receive an intervention description and the ingredient's form vocabulary.
-Normalise the preparation and compute the dose. This subagent is the mechanism
-behind the product's core differentiator -- treat precision as the priority.
-
-ARM KEYING (load-bearing): the payload includes `target_ingredient` and the
-authoritative `s3_arm_facts`; use those exact labels and do not re-infer roles.
-When the paper has multiple arms, return an `arms`
-array with one entry per arm, keyed by the exact S3 arm label. Put form and dose
-facts in that named arm's entry only. Never copy the treatment form/dose onto a
-placebo, biomarker, measurement-only, or other active arm. The legacy top-level
-fields may be retained only for a single clearly administered target arm; if the
-named arm cannot be resolved, leave the arm entry unknown rather than borrowing
-another arm's facts.
+ARMS (load-bearing). Return `arms`: one entry per S3 arm, keyed by its exact
+S3 `label`; do not re-infer roles. Put form and dose facts in the entry of the
+arm that received them only. Never copy the ingredient arm's form or dose onto
+a placebo, measurement-only, biomarker or other active arm. An arm with no
+target ingredient gets null form and dose fields. If an arm's facts cannot be
+resolved, leave its fields null rather than borrowing another arm's.
 
 FORM
-Map to a vocabulary id. Record salt_family so the pipeline can apply a partial
-transfer credit between related forms (e.g. organic magnesium salts).
-If the text names only the element or botanical with no preparation
+Map to a vocabulary id (`form_vocab_id`), with the paper's wording in
+`form_raw`. If the text names only the element or botanical with no preparation
 ("magnesium", "ashwagandha"), set form_vocab_id to the unspecified variant and
 form_raw to what was said. DO NOT GUESS THE SALT. A wrongly-guessed specific
 form is worse than an honest unspecified one.
 
 `unspecified` MEANS "THE PAPER NEVER SAYS", AND NOTHING ELSE. Two failures
-measured 2026-08-11, both of which cost the form arc real credit:
+measured 2026-08-11:
 
   * AN ABBREVIATION DEFINED ONCE IS A STATED FORM. A paper that writes "creatine
     monohydrate (CrM)" in its first sentence and "CrM" thereafter has stated the
-    form. One such trial -- the single largest score contributor in the audited
-    corpus at -15.7 points -- was recorded `unspecified`, so a real result in the
-    product's own form was transferred at a discount instead of counted. Search
-    the title, abstract, methods AND the intervention description, not just the
-    arm label.
+    form. One such trial, the most influential in the audited corpus, was
+    recorded `unspecified`, so a result in the product's own form was treated
+    as indirect evidence. Search the title, abstract, methods AND the
+    intervention description, not just the arm label.
   * A FORM YOU CANNOT FIND IN THE VOCABULARY IS NOT UNSPECIFIED. "Polyethylene
     glycosylated creatine (PEG-creatine)" is a specific, named preparation that
     simply has no vocabulary id. Recording it as `unspecified` tells the pipeline
@@ -110,8 +100,7 @@ rules, same evidence_span duty.
 
 THE TABLES ARE WHERE THE MISSING DOSES LIVE. The payload may include `tables`:
 the paper's tables serialised row by row. MEASURED 2026-08-24 on the creatine
-corpus: the dose axis for muscle strength rested on ONE dosed benefit trial,
-and 25 per-kg trials had no usable dose for want of a mean body mass -- while
+corpus: 25 per-kg trials had no usable dose for want of a mean body mass -- while
 the protocol table printed the dosing schedule and Table 1 printed the body
 mass. Read from tables exactly what you read from prose, same rules, same
 evidence_span duty (quote the cell or its row):
@@ -126,7 +115,4 @@ guess elemental vs compound from a bare table number (a bare figure in a dose
 column is `compound_only` or `unstated` by the same rules as prose), and a
 dose that appears only for a NON-ingredient arm is not this ingredient's dose.
 
-confidence below 0.7 whenever form or dose basis is uncertain. The top-level
-fields remain required for compatibility, but modern multi-arm facts must be
-read from the exact S3-labelled arm row; never provide a top-level fallback when
-that target row cannot be resolved.
+evidence_span: per arm, the quote your form and dose rest on.

@@ -71,7 +71,6 @@ biases the result.
 | Variable | Default | Effect |
 |---|---|---|
 | `SP_SECOND_REVIEWER` | `1` | S5R, a blind second read of the poolable numbers on a different model; `0` turns it off |
-| `SP_NUMBERS_EXTRACTOR` | `1` | `0` falls back to S5's own numbers (v2 has almost nothing to pool without S5N) |
 | `SP_MODEL_A/B/C/R`, `SP_EFFORT_A/B/C/R` | `claude_adapter.TIER_MODEL` / `TIER_EFFORT` | Model and effort per tier (pinned full ids) |
 | `SP_MAX_CONCURRENCY` | `40` | Parallel model calls |
 | `SP_MAX_BUDGET_USD` | `0.50` | Per-call ceiling the CLI enforces |
@@ -115,6 +114,12 @@ the next run re-extracts everything.
 .venv/bin/python scripts/replay_from_cache.py out/replay/after  -- <the run's args>
 .venv/bin/python scripts/replay_from_cache.py --compare out/replay/before out/replay/after
 ```
+
+A replay only hits the cache of its own `PROMPT_VERSION` and payloads: a run
+made before a prompt bump, or before a change to what an agent is sent, cannot
+be replayed. Its dumped extractions can still be re-pooled offline with
+`pipeline.evidence_v2.summarise`, which is how the v1.37 prompt clean-up was
+checked (2026-10-16, `docs/history/project-log.md`).
 
 The `run-triage` helper agent (`.claude/agents/run-triage.md`) summarises a run's
 context without loading the whole file.

@@ -10,6 +10,34 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-16 — v2 work item 10: extraction prompts trimmed (PROMPT_VERSION v1.37)
+
+Branch `v2/prompt-cleanup`, merged into `Jans_attempt`. Takes effect at the
+next extraction run (the bump re-extracts everything).
+
+- **S5** (`s5_conclusion` → `s5_outcomes`) lists outcomes only: outcome,
+  measure, timepoint, arm pair, primary flag, span. 440 → 108 lines. Its
+  numbers fed no pooled effect in the replayed v1.36 run (S5N read 381 of 386
+  mapped claims; the other 5 made no effect), so S5N is now the only number
+  reader: `SP_NUMBERS_EXTRACTOR` and the S5 fallback are gone, and a claim S5N
+  did not read is refused as "numbers not read (S5N call failed; re-run)".
+- **S5N / S5R**: endpoint means are the post values, with the SD printed
+  beside them. Measured on the v1.36 run: 35 claims had post_* filled and
+  mean_* / sd_* empty (12 refused for it).
+- **S3** drops `self_declared_underpowered` (and `eligibility._ineligible`
+  its v14 refusal), `intervention_text`, `is_control` and the top-level
+  `deficiency_status`; **S7** is arm rows only (the legacy top-level path in
+  `dose._s7_for_claim` / `pool.study_form` removed); **S4** drops
+  `unverifiable_items`, **S6B** `confidence`, **S8** two false v14 claims; the
+  `extraction_version` contract tag is gone.
+- Extraction prompts 1 091 → 739 lines. Also fixed: the stability experiment
+  pointed at the deleted v14 run and compared S5 fields that no longer exist;
+  `paper-verifier` asked the dropped underpowered question.
+- **Verified:** re-pooling the dumped v1.36 extractions (`out/replay/step2`)
+  with the new code gives a byte-identical `evidence_v2` block. Invariants,
+  selftest, 167 Python tests, the prompt vitest pass.
+- New open decision: S4 items 3, 4, 6 are extracted but unused (DECISIONS).
+
 ## 2026-10-16 — v2: MCIDs per ingredient; p-value effects deferred
 
 Branch `v2/decisions-mcid-pvalue`, merged into `Jans_attempt`. Docs only.

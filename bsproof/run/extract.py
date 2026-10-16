@@ -45,9 +45,9 @@ def synthetic_extraction(record: dict, axes: dict) -> dict:
         "S7": {"form_vocab_id": None},
         "S8": {"funding_class": "undisclosed"},
         "outcomes": [
-            {"claim": {"direction": "benefit", "magnitude": None},
+            {"claim": {"outcome_raw": "sleep onset latency"},
              "outcome_vocab_id": "sleep_onset", "discarded": False},
-            {"claim": {"direction": "null_effect", "magnitude": None},
+            {"claim": {"outcome_raw": "anxiety score"},
              "outcome_vocab_id": "anxiety", "discarded": False},
         ],
     }
@@ -112,18 +112,16 @@ def _spans(v, n: int = 8, cap: int = 240) -> list[str]:
 
 def _study_extraction(ext: dict) -> dict | None:
     """
-    The per-study extraction payload the dashboard shows to REVIEWERS.
+    The per-study extraction a run exports in its _context.json, for REVIEWERS.
 
-    FOUNDER DECISION 2026-08-12: verbatim evidence spans are now exported. The
-    dashboard is an internal calibration instrument behind Vercel auth, and the
+    FOUNDER DECISION 2026-08-12: verbatim evidence spans are exported: the
     quote each subagent extracted its answer from is the single most useful
-    field for a scientist verifying extraction against the paper. This
-    deliberately amends the earlier "no raw extraction text" allowlist policy;
-    what stays out is unchanged -- prompts, cache keys, model envelopes, and the
-    private `_meta`/`_failed` bookkeeping.
+    field for a scientist verifying extraction against the paper. What stays
+    out: prompts, cache keys, model envelopes, and the private `_meta` /
+    `_failed` bookkeeping.
 
     ALLOWLIST, not passthrough: every exported key is named here, so a new
-    extraction field never leaks to the site by default.
+    extraction field never leaks by default.
     """
     if not ext or ext.get("_skipped"):
         return None
@@ -136,31 +134,13 @@ def _study_extraction(ext: dict) -> dict | None:
             "discarded": bool(o.get("discarded")),
             "outcome_raw": _span(cl.get("outcome_raw"), 120),
             "measure": _span(cl.get("measure"), 80),
-            "direction": cl.get("direction"),
-            "magnitude": cl.get("magnitude"),
-            "effect_size": cl.get("effect_size"),
-            "effect_unit": _span(cl.get("effect_unit"), 60),
-            "effect_favours": cl.get("effect_favours"),
-            "effect_sd": cl.get("effect_sd"),
-            "effect_sd_basis": cl.get("effect_sd_basis"),
-            "ci_low": cl.get("ci_low"),
-            "ci_high": cl.get("ci_high"),
-            "p_value": cl.get("p_value"),
             "is_primary_outcome": cl.get("is_primary_outcome"),
-            "contrast": cl.get("contrast"),
             "evidence_span": _span(cl.get("evidence_span")),
-            # Evidence method v2 (2026-10-03): the arm-level facts pooling needs.
-            # Until then this projection dropped them, so a retained run could
-            # not be re-pooled without re-extraction.
-            **{k: cl.get(k) for k in (
-                "estimate_kind", "estimate_basis", "estimand", "design_kind",
-                "n_ingredient", "n_control", "mean_ingredient", "mean_control",
-                "sd_ingredient", "sd_control", "standard_error", "ci_level",
-                "p_value_kind", "p_operator")},
             "timepoint": _span(cl.get("timepoint"), 120),
             "ingredient_arm": _span(cl.get("ingredient_arm"), 120),
             "control_arm": _span(cl.get("control_arm"), 120),
-            "table_provenance": cl.get("table_provenance"),
+            # S5 lists outcomes; every number, with its span, is S5N's
+            # (numbers_v2.claim) since v1.37.
             "numbers_v2": o.get("numbers_v2"),
         })
     return {
@@ -172,12 +152,9 @@ def _study_extraction(ext: dict) -> dict | None:
             "duration_days": s3.get("duration_days"),
             "comparator": s3.get("comparator"),
             "ingredient_isolated": s3.get("ingredient_isolated"),
-            "self_declared_underpowered": s3.get("self_declared_underpowered"),
-            "deficiency_status": s3.get("deficiency_status"),
             "registration_id": _span(s3.get("registration_id"), 60),
             "evidence_spans": _spans(s3.get("evidence_spans")),
             "arms": [{"label": _span(a.get("label"), 120), "n": a.get("n"),
-                      "is_control": a.get("is_control"),
                       "target_ingredient_presence": a.get("target_ingredient_presence")}
                      for a in (s3.get("arms") or []) if isinstance(a, dict)],
         },
@@ -186,22 +163,16 @@ def _study_extraction(ext: dict) -> dict | None:
                 (1, "randomisation_method"), (2, "double_blind_placebo"),
                 (3, "prospective_registration"), (4, "outcome_matches_registry"),
                 (5, "attrition_ok"), (6, "itt"))},
-            "unverifiable_items": s4.get("unverifiable_items"),
             "evidence_spans": _spans(s4.get("evidence_spans")),
         },
         "s5_claims": claims,
         "s7": None if not s7 else {
-            "form_vocab_id": s7.get("form_vocab_id"),
-            "form_raw": _span(s7.get("form_raw"), 120),
-            "salt_family": s7.get("salt_family"),
-            "elemental_dose_mg": s7.get("elemental_dose_mg"),
-            "compound_dose_mg": s7.get("compound_dose_mg"),
-            "dose_per_kg_mg": s7.get("dose_per_kg_mg"),
-            "mean_body_mass_kg": s7.get("mean_body_mass_kg"),
-            "dose_basis": s7.get("dose_basis"),
-            "dose_frequency_per_day": s7.get("dose_frequency_per_day"),
-            "confidence": s7.get("confidence"),
-            "evidence_span": _span(s7.get("evidence_span")),
+            "arms": [{k: (_span(a.get(k), 120) if k in ("label", "form_raw") else
+                          _span(a.get(k)) if k == "evidence_span" else a.get(k))
+                      for k in ("label", "form_vocab_id", "form_raw", "elemental_dose_mg",
+                                "compound_dose_mg", "dose_per_kg_mg", "mean_body_mass_kg",
+                                "dose_basis", "dose_frequency_per_day", "evidence_span")}
+                     for a in (s7.get("arms") or []) if isinstance(a, dict)],
         },
         "s8": None if not s8 else {
             "funding_class": s8.get("funding_class"),

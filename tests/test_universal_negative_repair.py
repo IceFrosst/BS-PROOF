@@ -39,9 +39,9 @@ class UniversalNegativeRepairTests(unittest.TestCase):
         s7 = {"arms": [{"label": "Creatine", "compound_dose_mg": 5000}]}
         self.assertIsNone(_s7_for_claim(s7, {"ingredient_arm": "Creatine"}, s3))
 
-    def test_modern_top_level_s7_refuses(self):
-        modern_s7 = {"extraction_version": "v1.24", "compound_dose_mg": 5000}
-        self.assertIsNone(_s7_for_claim(modern_s7, {"ingredient_arm": "Creatine"}, self.s3, modern=True))
+    def test_top_level_s7_without_arms_gives_no_dose(self):
+        old = {"extraction_version": "v1.24", "compound_dose_mg": 5000}     # pre-v1.37 shape
+        self.assertIsNone(_s7_for_claim(old, {"ingredient_arm": "Creatine"}, self.s3))
 
     def test_matched_factorial_background_is_isolated(self):
         factorial = {"arms": [
@@ -173,29 +173,22 @@ class UniversalNegativeRepairTests(unittest.TestCase):
             claude_adapter._CONN = original_conn
             conn.close()
 
-    def test_v124_schemas_require_contract_and_nullable_fields(self):
+    def test_extraction_schemas_require_their_fields(self):
         try:
             from jsonschema import Draft7Validator
         except ImportError:
             self.skipTest("jsonschema unavailable")
-        schemas = {}
-        for name in ("s3_study.json", "s5_conclusion.json", "s7_form.json"):
-            schema = json.loads((Path(__file__).parents[1] / "schemas" / name).read_text())
-            schemas[name] = schema
-            self.assertIn("extraction_version", schema["required"])
-            self.assertIn("v1.24", schema["properties"]["extraction_version"]["enum"])
+        schemas = {name: json.loads((Path(__file__).parents[1] / "schemas" / name).read_text())
+                   for name in ("s3_study.json", "s5_outcomes.json", "s7_form.json")}
         self.assertIn("n_analysed", schemas["s3_study.json"]["required"])
-        self.assertIn("claims", schemas["s5_conclusion.json"]["required"])
-        self.assertTrue(Draft7Validator(schemas["s5_conclusion.json"]).is_valid(
-            {"extraction_version": "v1.24", "claims": []}))
-        self.assertFalse(Draft7Validator(schemas["s5_conclusion.json"]).is_valid(
-            {"extraction_version": "v1.24"}))
-        self.assertFalse(Draft7Validator(schemas["s3_study.json"]).is_valid(
-            {"extraction_version": "v1.24", "arms": []}))
+        self.assertTrue(Draft7Validator(schemas["s5_outcomes.json"]).is_valid({"claims": []}))
+        self.assertFalse(Draft7Validator(schemas["s5_outcomes.json"]).is_valid({}))
+        self.assertFalse(Draft7Validator(schemas["s3_study.json"]).is_valid({"arms": []}))
+        self.assertTrue(Draft7Validator(schemas["s7_form.json"]).is_valid({"arms": []}))
         self.assertFalse(Draft7Validator(schemas["s7_form.json"]).is_valid(
-            {"extraction_version": "v1.24", "arms": []}))
+            {"arms": [], "form_vocab_id": "x"}))                  # no top-level facts since v1.37
         from bsproof import claude_adapter
-        self.assertEqual(claude_adapter.PROMPT_VERSION, "v1.36")
+        self.assertEqual(claude_adapter.PROMPT_VERSION, "v1.37")
         shared = (Path(__file__).parents[1] / "prompts" / "_shared.md").read_text()
         self.assertIn("schema object directly", shared)
         self.assertIn("Never stringify", shared)

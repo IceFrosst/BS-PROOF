@@ -32,12 +32,21 @@ then the results text. Figures are not readable: an outcome shown only in a
 figure is `found: true` with null numbers.
 
 CHOOSE THE ESTIMAND THE PAPER PRINTS IN FULL, and say which in `estimand`:
-  1. The paper prints each arm's CHANGE from baseline with its SD
-     -> change_from_baseline, copy the changes and their SDs.
+  1. The paper prints each arm's CHANGE from baseline WITH its SD (or SE / CI)
+     -> change_from_baseline: copy the changes into mean_* and their spread.
   2. Otherwise, the paper prints each arm's value at the timepoint (the post /
-     final / week-N column) with its SD -> endpoint, copy those values and SDs.
+     final / week-N column) with its SD (or SE / CI) -> endpoint: copy those
+     values into mean_* AND post_*, and their spread into sd_* (or se_* /
+     ci_*). A change printed WITHOUT its SD ("+9.4 %") is not printed in full:
+     use the endpoint values.
   3. Otherwise copy what IS printed for the better-covered estimand and leave
      the rest null.
+`mean_*` and its spread are the numbers the meta-analysis pools; `pre_*` and
+`post_*` only check them. MEASURED 2026-10-16 (v1.36 creatine run): 35
+results had their post values copied into post_* with mean_* and sd_* left
+empty, although the paper printed "post 71.06 ± 8.75" -- the SD sat beside
+the number -- and 12 trial results were refused for it.
+
 Never compute a change by subtracting baseline from post, and never compute an
 SD. A computed number is printed nowhere, so the check rejects it and the trial
 is lost; the printed post values would have been used.
@@ -60,8 +69,10 @@ outcome, these two arms and this timepoint. null is always a valid answer; a
 wrong number is not.
 
   n_ingredient, n_control       participants ANALYSED in each arm for this outcome
-  mean_ingredient, mean_control each arm's mean for the chosen estimand
-  sd_ingredient, sd_control     each arm's STANDARD DEVIATION, only when the
+  mean_ingredient, mean_control each arm's mean for the chosen estimand (for
+                                endpoint: the post value, also copied to post_*)
+  sd_ingredient, sd_control     each arm's STANDARD DEVIATION of that mean
+                                ("71.06 ± 8.75" -> 8.75), only when the
                                 paper says (or does not contradict) that the
                                 spread is an SD. Check the table footnote and
                                 the statistics section: values given as

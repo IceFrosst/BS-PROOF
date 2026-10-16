@@ -67,11 +67,11 @@ def matched_addon_claim(claim: dict, s3: dict | None) -> bool:
 
 def _ineligible(ext: dict) -> str | None:
     """
-    Why this trial cannot vote on whether the ingredient works. None = it can.
+    Why this trial cannot answer whether the ingredient works. None = it can.
 
-    Both refusals are SCOPE rules, not discounts, and both are the same shape as
-    invariant 6's five refusals: the trial is answering a different question, so
-    down-weighting it would still be counting the wrong answer, just quietly.
+    Every refusal is a SCOPE rule, not a discount: the trial is answering a
+    different question, so down-weighting it would still be counting the wrong
+    answer, just quietly.
 
     MEASURED 2026-08-10, 80-study creatine corpus. Of the 23 null verdicts
     driving muscle_strength and muscle_power negative, 5 verifiers reading the
@@ -85,19 +85,18 @@ def _ineligible(ext: dict) -> str | None:
                                    necessary given the high level of scientific
                                    evidence that exists on how Cr improves
                                    performance." Its 1RM rose in BOTH creatine
-                                   arms. We scored it -0.7 against creatine.
+                                   arms. v14 scored it -0.7 against creatine.
       self-declared underpowered 6  CONSORT pilot/feasibility designs (n=8 per
                                    arm, no power calculation) and trials that
                                    state they missed their own a priori target
                                    -- 33 of 42, 28 of 48, 22 of 34.
 
-    The underpowered rule is applied SYMMETRICALLY -- a pilot's benefit is
-    dropped too. Keeping pilot benefits while dropping pilot nulls would be the
-    same one-way handling of uncertainty that this investigation was opened to
-    find. If the authors say the trial could not answer the question, it does
-    not answer it in either direction.
+    The second row was a v14 refusal. Evidence method v2 dropped it (pooling
+    already gives a small trial a small weight) and S3 stopped extracting
+    `self_declared_underpowered` in v1.37.
 
-    Both fields default to "keep": `unknown`/None/absent never excludes. S3 is
+    Every refusal is SYMMETRIC (a benefit is dropped too) and defaults to
+    "keep": `unknown`/None/absent never excludes. S3 is
     told to answer `unknown` when unsure, so a hesitant extractor loses no
     evidence -- it only fails to gain the refusal.
     """
@@ -114,9 +113,7 @@ def _ineligible(ext: dict) -> str | None:
             return "no_ingredient_free_arm"
     if s3.get("comparator") == "all_arms_get_ingredient":
         return "no_ingredient_free_arm"
-    if s3.get("self_declared_underpowered") is True:
-        return "self_declared_underpowered"
-    # Third refusal, 2026-08-10 (decision delegated by the founder the same day;
+    # Combination refusal, 2026-08-10 (decision delegated by the founder the same day;
     # measured basis in the v14-era REVIEW_PENDING #4, at tag v14-final). A trial whose every treatment
     # arm co-administers another active ingredient tests a COMBINATION --
     # creatine+HMB vs placebo says nothing about creatine alone, in either

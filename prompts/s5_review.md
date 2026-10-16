@@ -36,9 +36,12 @@ exactly this outcome, these two arms and this timepoint. null is always a valid
 answer; a wrong number is not.
 
   n_ingredient, n_control       participants ANALYSED in each arm for this outcome
-  mean_ingredient, mean_control each arm's mean at the timepoint (or its mean
-                                change, if the paper reports change scores)
-  sd_ingredient, sd_control     each arm's STANDARD DEVIATION. If the paper prints
+  mean_ingredient, mean_control each arm's mean for the named estimand: for
+                                endpoint, the value at the timepoint (the post
+                                value, also copied to post_*); for
+                                change_from_baseline, the mean change
+  sd_ingredient, sd_control     each arm's STANDARD DEVIATION of that mean
+                                ("71.06 ± 8.75" -> 8.75). If the paper prints
                                 a standard error or a CI per arm, leave the SD
                                 null -- never convert. Values given as
                                 "mean ± SE" (or SEM) are not SDs.

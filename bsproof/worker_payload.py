@@ -316,26 +316,16 @@ def _payload(agent: str, record: dict, text: str, registry: dict | None,
                     "n_started": (registry or {}).get("n_started"),
                     "n_completed": (registry or {}).get("n_completed"),
                     "dropout_rate": (registry or {}).get("dropout_rate")}}
-    if agent == "S5":
-        # Tables ride along (v1.21): endpoint means +/- SD live there, and the
-        # SD is what standardises a raw-unit difference (see _tables_text).
-        #
-        # The cap is FLAT, not budget-derived, because the budget arithmetic is
-        # dead for S5 under the Claude backend and pretending otherwise would
-        # ship zero tables. MEASURED 2026-08-12: S5's system prompt + schema is
-        # 22 204 chars against a 12 000-char total budget, so _fit_text's room
-        # has been negative -- and its room<=0 branch returns the FULL text --
-        # since the v1.15-v1.20 prompt growth. Every recent production S5 call
-        # already sent the whole paper and succeeded 149/149; the ~16k wall in
-        # PROMPT_BUDGET_CHARS was measured on the GROK CLI, not Claude. If the
-        # Grok backend is revived, this is the first thing to revisit.
-        return {**base, "tables": _tables_text(record),
-                "target_ingredient": record.get("ingredient"),
-                "s3_arm_facts": (s3_facts or {}).get("arms", []),
-                "s3_extraction_version": (s3_facts or {}).get("extraction_version")}
-    if agent in ("S5R", "S5N"):
-        # Both number readers get the SAME paper and tables as S5 but never any
-        # reviewer's numbers -- only which claims to read (workers.py adds them).
+    if agent in ("S5", "S5R", "S5N"):
+        # Tables ride along: many outcomes are reported only in a table. The
+        # cap is FLAT, not budget-derived. MEASURED 2026-08-12: S5's system
+        # prompt + schema was 22 204 chars against a 12 000-char total budget,
+        # so _fit_text's room<=0 branch returned the FULL text, and every
+        # production S5 call sent the whole paper and succeeded 149/149 (the
+        # ~16k wall in PROMPT_BUDGET_CHARS was measured on the Grok CLI, removed
+        # 2026-10-15). The number readers (S5N, S5R) get the SAME paper and
+        # tables but never any reader's numbers -- only which claims to read
+        # (workers.py adds them).
         return {**base, "tables": _tables_text(record),
                 "target_ingredient": record.get("ingredient"),
                 "s3_arm_facts": (s3_facts or {}).get("arms", [])}
@@ -379,10 +369,8 @@ def _payload(agent: str, record: dict, text: str, registry: dict | None,
         fitted = _fit_text(agent, text, _fixed + snip_chars)
         payload = {**base,
                    "text": fitted,
-                   "ingredient": ingredient,
                    "target_ingredient": ingredient,
                    "s3_arm_facts": (s3_facts or {}).get("arms", []),
-                   "s3_extraction_version": (s3_facts or {}).get("extraction_version"),
                    "form_vocabulary": vocab.forms_for(ingredient),
                    "unspecified_form_id": vocab.unspecified_form_id(ingredient),
                    "dose_snippets": snippets,

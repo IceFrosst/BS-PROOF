@@ -39,17 +39,20 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-RUN = ROOT / "reports" / "runs" / "20260904_185830_creatine_creatine-monohydrate_claude-sr-ft-top5-suppl_context.json"
+# The study pool to sample from: the latest v2 creatine run (the v14 run this
+# used until 2026-10-15 was removed with v14).
+RUN = ROOT / "reports" / "runs" / "20261014_185045_creatine_creatine-monohydrate_claude-sr-ft-inter_context.json"
 OUT = ROOT / "out" / "stability"
 SHOWCASE = ["muscle_strength", "muscle_power", "lean_body_mass", "exercise_endurance", "energy_levels"]
 
-S3_FIELDS = ("comparator", "ingredient_isolated", "self_declared_underpowered", "n_randomised",
-             "n_analysed", "duration_days", "deficiency_status")
+S3_FIELDS = ("comparator", "ingredient_isolated", "n_randomised", "n_analysed", "duration_days")
 S4_FIELDS = ("item1_randomisation_method", "item2_double_blind_placebo", "item3_prospective_registration",
              "item4_outcome_matches_registry", "item5_attrition_ok", "item6_itt")
 S7_FIELDS = ("form_vocab_id", "elemental_dose_mg", "compound_dose_mg", "dose_per_kg_mg", "dose_basis")
 S8_FIELDS = ("funding_class",)
-CLAIM_FIELDS = ("direction", "effect_favours", "effect_size", "ci_low", "ci_high", "p_value", "contrast")
+# The numbers claim (S5's identity + S5N's numbers, pipeline/review.numbers_claim).
+CLAIM_FIELDS = ("estimand", "effect_favours", "contrast", "mean_ingredient", "mean_control",
+                "sd_ingredient", "sd_control")
 
 
 # ----------------------------------------------------------------- selection
@@ -63,7 +66,7 @@ def select_studies(n: int) -> list[dict]:
             continue
         mapped = [c.get("outcome_vocab_id") for c in (s.get("extraction") or {}).get("s5_claims") or []
                   if not c.get("discarded") and c.get("outcome_vocab_id") in SHOWCASE
-                  and c.get("contrast") == "vs_ingredient_free"]
+                  and ((c.get("numbers_v2") or {}).get("claim") or c).get("contrast") == "vs_ingredient_free"]
         if mapped:
             buckets[mapped[0]].append(s)
     picked, seen = [], set()
@@ -189,13 +192,19 @@ def _field_stats(pairs: list[tuple]) -> dict:
 
 
 def _claims_by_outcome(ext: dict) -> dict[str, dict]:
-    """First non-discarded claim per mapped outcome (the scoring path's view)."""
+    """First non-discarded claim per mapped outcome, as the numbers claim."""
     out = {}
     for o in ext.get("outcomes") or []:
         oid = o.get("outcome_vocab_id")
         if oid and not o.get("discarded") and oid not in out:
-            out[oid] = o.get("claim") or {}
+            out[oid] = (o.get("numbers_v2") or {}).get("claim") or o.get("claim") or {}
     return out
+
+
+def _s7_view(s7: dict) -> dict:
+    """S7 is arm-keyed: each field as the sorted values across arms."""
+    arms = [a for a in (s7 or {}).get("arms") or [] if isinstance(a, dict)]
+    return {f: tuple(sorted(str(a.get(f)) for a in arms)) or None for f in S7_FIELDS}
 
 
 def _effects_by_outcome(ext: dict) -> dict[str, tuple]:
@@ -215,7 +224,7 @@ def _effects_by_outcome(ext: dict) -> dict[str, tuple]:
         nums = o.get("numbers_v2")
         if not oid or o.get("discarded") or not isinstance(nums, dict):
             continue
-        claim = nums.get("claim") or o.get("claim") or {}   # S5N's claim when it read the numbers
+        claim = nums.get("claim") or o.get("claim") or {}   # S5N's claim
         eff, why = effect_from_claim(claim, nums.get("verified") or {},
                                      polarity=polarity.get(oid), abs_only=nums.get("abs_only") or ())
         if eff is None:
@@ -259,6 +268,8 @@ def compare_runs(a: dict, b: dict) -> dict:
             if agent in fa or agent in fb:
                 continue
             ra, rb = ea.get(agent) or {}, eb.get(agent) or {}
+            if agent == "S7":
+                ra, rb = _s7_view(ra), _s7_view(rb)
             for f in fields:
                 pairs[f"{agent}.{f}"].append((ra.get(f), rb.get(f)))
         if "S5" in fa or "S5" in fb:
@@ -314,7 +325,7 @@ def _score_both(a: dict, b: dict, ids: list[str]) -> dict:
 
 
 def numbers_report(run: dict) -> dict:
-    """Per mapped claim: who read its numbers (S5 / S5N), the effect route they
+    """Per mapped claim: who read its numbers (S5N; S5 before v1.37), the effect route they
     make (pipeline/effect_size.py) or the refusal, and the second review."""
     from pipeline import vocab
     from pipeline.effect_size import effect_from_claim
@@ -332,7 +343,7 @@ def numbers_report(run: dict) -> dict:
                                          polarity=polarity.get(o["outcome_vocab_id"]),
                                          abs_only=nums.get("abs_only") or ())
             totals["mapped"] += 1
-            totals[f"reader_{nums.get('reader') or 'S5'}"] += 1
+            totals[f"reader_{nums.get('reader') or 'none'}"] += 1
             totals["found_false"] += nums.get("found") is False
             totals["effect"] += eff is not None
             totals[f"review_{review.get('status') or 'none'}"] += 1

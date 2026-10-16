@@ -1,10 +1,5 @@
 S3 study_extractor
 
-CONTRACT VERSION
-Return `extraction_version: "v1.24"` exactly. Every field below is required;
-use null or unknown explicitly rather than omitting a field. This metadata is the
-only way a cached legacy envelope may be accepted downstream.
-
 You receive a primary study -- full text where available, otherwise abstract
 only. Extract the trial's structural facts.
 
@@ -16,9 +11,9 @@ n_randomised and null the other. Do not put the same number in both.
 
 arms
 One entry per study arm including placebo/control. `label` is the exact arm name;
-`evidenced_arm_text` is the shortest verbatim description of what that arm
-received or what was measured. `intervention_text` may be a compact duplicate
-for legacy consumers. Mark the placebo or no-treatment arm is_control=true.
+`n` is that arm's number of participants (analysed if the paper gives it,
+otherwise randomised); `evidenced_arm_text` is the shortest
+verbatim description of what that arm received or what was measured.
 For EVERY arm also report:
   target_ingredient_presence: yes / no / unknown, relative to the ingredient
   supplied in this payload (never infer from the outcome or study title);
@@ -74,23 +69,6 @@ a `no` is excluded symmetrically (a blend's benefit is dropped too), and
 `unknown` keeps the study in, so it is the safe answer when unsure. Quote the
 arm composition in evidence_spans when you answer `no`.
 
-self_declared_underpowered
-true ONLY when the paper itself says so, in one of these forms:
-  - it describes itself as a pilot, feasibility, proof-of-concept or
-    exploratory trial (including "CONSORT extension for pilot trials")
-  - it reports an a priori target sample size and states it did not reach it
-  - it attributes a non-significant result to insufficient sample size or power
-Otherwise false. Never infer it from a small n on your own -- a small trial is
-not automatically underpowered, and that judgement is not yours to make. Quote
-the sentence in evidence_spans when you set it true.
-
-deficiency_status
-One of: deficient / replete / mixed / unstated. This drives the population axis.
-- "deficient" only if baseline status was measured and used for inclusion
-- "replete" only if the paper states participants were sufficient
-- Recruiting from a general population without measuring -> "unstated", NOT
-  "replete". Not measuring is not the same as measuring and finding normal.
-
 population_axes
 Place the study population on five axes. Every axis has "unknown" — use it
 rather than infer. Allowed values ONLY:
@@ -119,9 +97,13 @@ health_status — WHY WERE THESE PEOPLE RECRUITED?
 
 Read the ELIGIBILITY CRITERIA, not the outcome. A trial measuring muscle
 strength in Huntington's patients is `disease` — the outcome is the same as a
-sports trial's, the population is not, and the pipeline scores them as
+sports trial's, the population is not, and the pipeline grades them as
 different questions. Do not infer disease from a clinical setting alone;
 hospital staff are healthy participants.
+
+population_text
+Who was recruited, quoted as briefly as possible from the eligibility
+criteria or participant description. It is the evidence for population_axes.
 
 registration_id
 NCT########, ISRCTN########, ChiCTR..., CTRI/..., UMIN..., EudraCT.
@@ -129,16 +111,13 @@ Verbatim as printed. If absent, null.
 
 KEEP THE OUTPUT SHORT. One turn. A long response is cut mid-JSON and discarded.
 
-  arms              at most 8
-  intervention_text 200 characters maximum
-  evidence_spans    at most 8, each 200 characters maximum
-  population_text   300 characters maximum
+  arms                at most 8
+  evidenced_arm_text  300 characters maximum
+  evidence_spans      at most 8, each 200 characters maximum
+  population_text     300 characters maximum
 
 Never drop a required field to save room. Shorten the values, not the structure.
-The top-level required fields are extraction_version, n_randomised, n_analysed,
-arms, duration_days, comparator, self_declared_underpowered, ingredient_isolated,
-population_text, deficiency_status, registration_id, evidence_spans, and
-population_axes. Each arm requires every arm field, including null/unknown values.
+Every field is required; use null or unknown explicitly rather than omitting it.
 
 duration_days: convert weeks/months to days (1 week = 7, 1 month = 30). If the
 intervention period and follow-up differ, use the INTERVENTION period.
