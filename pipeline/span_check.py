@@ -103,10 +103,23 @@ def _caption_key(text) -> str:
     return " ".join(re.findall(r"[a-z0-9]+", str(text or "").lower()))
 
 
+def _is_section_header(row: list[str]) -> bool:
+    """A row that only names a section: every cell is the same label (a
+    colspan-expanded "Peak Torque (N·m)" spanning the table)."""
+    cells = {_norm(c) for c in row if _norm(c)}
+    return len(cells) == 1 and len(row) > 1
+
+
 def table_rows(provenance: dict | None, tables: list[dict] | None) -> list[list[str]]:
     """Every row of the cited table carrying the cited row label. Tables that
     put each ARM in its own row repeat the label ("SJ (cm) | CrM | ...",
-    "SJ (cm) | CON | ..."), so there can be several."""
+    "SJ (cm) | CON | ..."), so there can be several.
+
+    When the label row is a SECTION HEADER (the label spans the whole row and
+    the numbers sit in one row per group underneath, up to the next header),
+    the rows of that block are returned instead. Measured 2026-10-16: 4 of the
+    64 "incomplete arm statistics" refusals in the v1.36 creatine run were
+    tables of this shape, whose header row holds no number at all."""
     if not isinstance(provenance, dict) or not tables:
         return []
     caption, row_label = _caption_key(provenance.get("caption")), _norm(provenance.get("row"))
@@ -118,8 +131,18 @@ def table_rows(provenance: dict | None, tables: list[dict] | None) -> list[list[
         tcap = _caption_key(table.get("caption"))
         if caption and caption not in tcap and tcap not in caption:
             continue
-        rows = [[str(c) for c in row] for row in table.get("rows") or []
-                if any(_norm(c) == row_label for c in row)]
+        all_rows = [[str(c) for c in row] for row in table.get("rows") or []]
+        hits = [i for i, row in enumerate(all_rows) if any(_norm(c) == row_label for c in row)]
+        if hits and all(_is_section_header(all_rows[i]) for i in hits):
+            block = []
+            for i in hits:
+                for row in all_rows[i + 1:]:
+                    if _is_section_header(row):
+                        break
+                    block.append(row)
+            if block:
+                return block
+        rows = [all_rows[i] for i in hits]
         if rows:
             return rows
     return []
@@ -135,6 +158,15 @@ _ARM_OF_FIELD = {"mean_ingredient": "ingredient_arm", "sd_ingredient": "ingredie
                  "pre_control": "control_arm", "post_control": "control_arm"}
 
 
+def _label_is(cell, label: str) -> bool:
+    """A row-label cell names this arm: equal after normalisation, also once a
+    trailing parenthetical ("Placebo Group (n = 10)") is dropped."""
+    if not label:
+        return False
+    c = _norm(cell)
+    return c == label or _norm(re.sub(r"\s*\([^()]*\)\s*$", "", str(cell or ""))) == label
+
+
 def _row_text_for(field: str, claim: dict, rows: list[list[str]]) -> str | None:
     """The table text a field may be verified against. An arm-specific field in
     an arm-per-row table is checked ONLY against its own arm's row, so a control
@@ -143,10 +175,10 @@ def _row_text_for(field: str, claim: dict, rows: list[list[str]]) -> str | None:
         return None
     arm = _norm(claim.get(_ARM_OF_FIELD.get(field, ""), ""))
     if arm:
-        own = [r for r in rows if any(_norm(c) == arm for c in r)]
+        own = [r for r in rows if any(_label_is(c, arm) for c in r)]
         if own:
             return " | ".join(own[0]) if len(own) == 1 else None
-        if any(any(_norm(c) == _norm(claim.get(k)) for c in r)
+        if any(any(_label_is(c, _norm(claim.get(k))) for c in r)
                for r in rows for k in ("ingredient_arm", "control_arm") if claim.get(k)):
             return None  # arm-per-row table, but this arm's row is absent
     return " | ".join(" | ".join(r) for r in rows)

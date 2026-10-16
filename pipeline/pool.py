@@ -131,6 +131,32 @@ def selection_key(effect: "StudyEffect") -> tuple:
     return (effect.measure_rank, not effect.primary, ROUTE_RANK.get(effect.route, 9), effect.claim_index)
 
 
+GENERIC_UNPOOLABLE = "no verified effect estimate and incomplete arm statistics"
+_ARM_KEYS = tuple(f"{k}_{a}" for a in ("ingredient", "control") for k in ("mean", "sd", "n"))
+
+
+def unpoolable_detail(claim: dict, nums: dict, verified: dict) -> str:
+    """Which part of the arm statistics a claim lacked, for the generic
+    "no verified effect estimate" refusal (docs/DECISIONS.md item 3). Measured
+    2026-10-16 on the v1.36 creatine run, 64 refusals: 61 % had no outcome
+    values in the text the reader got (figures or untabled text), 19 % post
+    values without an SD. Each is a different fix, so the report names it."""
+    from pipeline.span_check import NUMERIC_FIELDS
+    values = {f for f in NUMERIC_FIELDS if claim.get(f) is not None}
+    outcome_values = values - {"n_ingredient", "n_control"}
+    rejected = nums.get("rejected") or {}
+    if not outcome_values:
+        return "no outcome values in the text read (figure-only or not reported)"
+    if outcome_values <= {"p_value"}:
+        return "only a p-value reported (no means, SDs or effect estimate)"
+    if any(f in rejected for f in outcome_values):
+        return "numbers read but not found in the paper (span check)"
+    if (all(f"mean_{a}" in verified or f"post_{a}" in verified for a in ("ingredient", "control"))
+            and not all(f"sd_{a}" in verified for a in ("ingredient", "control"))):
+        return "arm values without an SD, SE or CI"
+    return GENERIC_UNPOOLABLE
+
+
 def rob_status(s4: dict | None) -> str:
     """Study-level risk of bias from the S4 items, read with S4's OWN meanings
     (prompts/s4_rob.md), not as "1 adequate / 0 inadequate":
@@ -219,8 +245,11 @@ def _study_effects(item: dict, product: dict, polarity: dict,
         if eff is None:
             # A table that could not be FETCHED is not a number that is not
             # printed: say so, so the refusal is never read as a data gap.
-            refusals.setdefault(oid, "cited table could not be fetched (re-run)"
-                                if nums.get("table_fetch_failed") else why)
+            if nums.get("table_fetch_failed"):
+                why = "cited table could not be fetched (re-run)"
+            elif why == GENERIC_UNPOOLABLE:
+                why = unpoolable_detail(claim, nums, verified)
+            refusals.setdefault(oid, why)
             continue
         if n_flags:
             eff = dataclasses.replace(eff, flags=eff.flags + n_flags)

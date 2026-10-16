@@ -85,3 +85,58 @@ class TableFetch(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SectionHeaderTables(unittest.TestCase):
+    """Tables whose outcome label spans a whole row, with one row per group
+    underneath (measured 2026-10-16: PMC8427883 Table 4, PMC7019716 Table 2)."""
+    from pipeline import span_check as sc
+    TABLE = [{"caption": "Table 4 — Mean ± SD of peak torque",
+              "columns": ["Group", "Pre", "Post", "p"],
+              "rows": [["Peak Torque (N·m)"] * 4,
+                       ["Creatine Group (n = 12)", "99.95 ± 22.50", "111.97 ± 24.50*", "0.009"],
+                       ["Placebo Group (n = 10)", "99.82 ± 36.51", "107.52 ± 44.11", "0.112"],
+                       ["Average Power (Watts)"] * 4,
+                       ["Creatine Group", "143.42 ± 33.84", "159.78 ± 31.20*", "0.021"],
+                       ["Placebo Group", "141.94 ± 51.92", "150.79 ± 64.30", "0.279"]]}]
+    PROV = {"caption": "Table 4 Mean ± SD of peak torque", "row": "Peak Torque (N·m)"}
+
+    def claim(self, **kw):
+        return {"table_provenance": self.PROV, "ingredient_arm": "Creatine Group", "control_arm": "Placebo Group",
+                "evidence_span": "", **kw}
+
+    def test_the_block_under_a_header_is_the_cited_row(self):
+        rows = self.sc.table_rows(self.PROV, self.TABLE)
+        self.assertEqual([r[0] for r in rows], ["Creatine Group (n = 12)", "Placebo Group (n = 10)"])
+
+    def test_values_verify_against_their_own_arm_row_only(self):
+        res = self.sc.verify_claim_numbers(self.claim(mean_ingredient=111.97, sd_ingredient=24.5,
+                                                      mean_control=107.52, sd_control=44.11),
+                                           tables=self.TABLE)
+        self.assertEqual(sorted(res["verified"]), ["mean_control", "mean_ingredient", "sd_control", "sd_ingredient"])
+        swapped = self.sc.verify_claim_numbers(self.claim(mean_ingredient=107.52), tables=self.TABLE)
+        self.assertNotIn("mean_ingredient", swapped["verified"])     # the control row cannot verify it
+
+    def test_the_next_section_is_never_borrowed(self):
+        res = self.sc.verify_claim_numbers(self.claim(mean_ingredient=159.78), tables=self.TABLE)
+        self.assertNotIn("mean_ingredient", res["verified"])
+
+    def test_a_normal_label_row_is_unchanged(self):
+        table = [{"caption": "Table 2", "columns": ["Outcome", "CR", "PL"],
+                  "rows": [["1RM bench (kg)", "82.1 (5.2)", "79.9 (4.8)"]]}]
+        rows = self.sc.table_rows({"caption": "Table 2", "row": "1RM bench (kg)"}, table)
+        self.assertEqual(rows, [["1RM bench (kg)", "82.1 (5.2)", "79.9 (4.8)"]])
+
+
+class UnpoolableDetail(unittest.TestCase):
+    """The generic "no verified effect estimate" refusal names what was missing
+    (docs/DECISIONS.md item 3)."""
+    from pipeline.pool import unpoolable_detail as d
+
+    def test_each_gap_is_named(self):
+        d = UnpoolableDetail.d
+        self.assertIn("no outcome values", d({"n_ingredient": 10, "n_control": 9}, {}, {}))
+        self.assertIn("only a p-value", d({"p_value": 0.03, "n_ingredient": 10}, {}, {}))
+        self.assertIn("not found in the paper", d({"mean_ingredient": 5.1}, {"rejected": {"mean_ingredient": "x"}}, {}))
+        self.assertIn("without an SD", d({"post_ingredient": 5.1, "post_control": 4.0},
+                                         {}, {"post_ingredient": 5.1, "post_control": 4.0}))

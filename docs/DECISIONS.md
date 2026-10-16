@@ -34,6 +34,11 @@ Last swept: 2026-10-15 (v14 retired; its open items were closed with it).
    −2 when far below it (e.g. under half), or at most "Low" certainty at k = 1.
    This changes `grade.RULES`.
 
+5. **Effects from an exact p-value.** 5 creatine trial–outcome pairs report
+   only the between-group p-value with the arm sizes. Cochrane's handbook
+   (§6.5.2.3) derives a standardised effect from an exact p and n (sign from
+   the favoured arm). Adding that route is a method change; small gain today.
+
 ## v2 work list (agreed 2026-10-15, after the simplification)
 
 Ordered by how much each distorts the grade (10 is clean-up, not accuracy).
@@ -43,14 +48,14 @@ Items 1, 5 and 7 need the open decisions above.
 |---|---|---|
 | 1 | One small trial earns an A | Open decision 4 |
 | 2 | A failed table fetch during the span check silently refuses a trial: the stored creatine run says strength k = 7 "I", a cache-only replay of the same extraction k = 9 "C−" | **Done 2026-10-16:** fetches retried; a failure is marked `table_fetch_failed` with its own refusal reason; no report while one is unresolved |
-| 3 | The largest refusal is "no verified effect estimate and incomplete arm statistics" (68 trial–outcome pairs in the stored v1.36 creatine run) | A deterministic breakdown of causes first, then targeted fixes |
+| 3 | The largest refusal is "no verified effect estimate and incomplete arm statistics" (64 trial–outcome pairs in the replayed v1.36 creatine run) | **Done 2026-10-16 (offline part).** Breakdown: 40 have no outcome values in the text read (figures / untabled text — not recoverable from text), 12 post values without an SD, 5 only a p-value, 5 numbers not verified, 2 other. Fixed: tables whose outcome label is a section-header row (4 trials recovered; strength coverage 38 → 42 %, lean mass 59 → 65 %). The refusal now names the specific gap. Left: the missing SDs (item 10's prompt bump) and open decision 5 |
 | 4 | Benchmark coverage too low (strength 29–38 %): v2 runs use `--full-text-only`, so 295 of 386 creatine RCTs (abstract-only) are never read | An abstract-inclusive run with abstract span checks and a risk-of-bias downgrade; later, per-trial effects from reviews' forest plots |
 | 5 | Off-target populations excluded (41 refusals) | Open decision 1 |
-| 6 | v14's claim-level arm check (`_resolve_claim_arms`) never ran in v2 | Measure offline how many pooled claims it would refuse; port it if any |
+| 6 | v14's claim-level arm check (`_resolve_claim_arms`) never ran in v2 | **Done 2026-10-16: not ported.** It would refuse 9 of 49 pooled effects, all computed from both arms' own statistics against an ingredient-free control; its objections concern the test the paper reported (within-group, time main effect, omnibus) or a bookkeeping field v2 does not use. Porting it would drop 6 effects that point against creatine |
 | 7 | Every pooled number is single-read | Open decision 3 |
 | 8 | Run-to-run stability never measured (outcome mapping moves ±2 trials per outcome) | `scripts/experiments/extraction_stability.py`, run solo |
 | 9 | The benchmark has no negative controls | Each new ingredient adds a "does not work" or "harms" row (METHOD §16) |
-| 10 | The extraction prompts still carry v14 wording and ask for fields only v14 read (e.g. S5's direction / magnitude labels and effect-size fields now superseded by S5N; "form arc" in `s7_form.md`) | Trim them in ONE `PROMPT_VERSION` bump, bundled with the next full re-extraction (a bump re-extracts everything, ~1000 calls for creatine); check with a replay that nothing v2 reads changes |
+| 10 | The extraction prompts still carry v14 wording and ask for fields only v14 read (e.g. S5's direction / magnitude labels and effect-size fields now superseded by S5N; "form arc" in `s7_form.md`); and S5N leaves the arm SD empty when it reads endpoint / post values (9–12 refusals in the creatine run) | Trim them in ONE `PROMPT_VERSION` bump, bundled with the next full re-extraction (a bump re-extracts everything, ~1000 calls for creatine); check with a replay that nothing v2 reads changes |
 
 When v2 validates (METHOD §16): connect `lib/analyze/grade-v2.ts` in
 `lib/analyze/scan.ts`, build a grade card, remove the "not active yet" notice

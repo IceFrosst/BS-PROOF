@@ -10,6 +10,36 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-16 — v2 step 1 (offline): items 2, 3, 6
+
+Branch `v2/step1-offline`, merged into `Jans_attempt`. No model calls.
+
+- **Item 2 (fetch failures):** `fulltext.fetch_xml` retries transport errors,
+  429 and 5xx; a cited table that still cannot be fetched marks its claims
+  `table_fetch_failed`, the pool refusal says so, and the run writes no report
+  until a re-run fetches it (exit 3, like the usage-limit guard). While
+  measuring item 3, 7 of 39 papers failed to fetch on the first try even with
+  retries — the failure is common, not rare.
+- **Item 3 (largest refusal), measured on the replayed v1.36 creatine run:**
+  of 64 "no verified effect estimate and incomplete arm statistics": 40 have
+  no outcome values in the text the reader got (20 checked to be figure- or
+  text-only, 11 from non-PMC PDF/HTML copies, 7 unfetchable now, 1 in a
+  table the reader missed), 12 post values without an SD, 5 only a p-value,
+  5 numbers not verified. The span check now reads tables whose outcome label
+  is a section-header row with one row per group underneath (4 trials
+  recovered: strength k 9 → 10, power 9 → 10, lean mass 10 → 11, endurance
+  1 → 2; letters unchanged; benchmark coverage strength 38 → 42 %, lean mass
+  59 → 65 %, still PASS). The refusal now names the specific gap
+  (`pool.unpoolable_detail`).
+- **Item 6 (v14 claim-arm check):** not ported. It would refuse 9 of 49
+  pooled effects, all valid between-arm contrasts computed from both arms'
+  statistics; its objections concern the reported test. 6 of the 9 point
+  against creatine, so porting it would bias grades upward.
+- New open decision 5 (effects from an exact p-value). Item 10 now includes
+  S5N leaving the SD empty for endpoint / post values.
+- Gates: invariants, selftest, 166 Python tests; cache-only replay used as
+  the regression check (baselines under `out/replay/`).
+
 ## 2026-10-15 — simplification: systematic reviews no longer retrieved; merged into Jans_attempt
 
 Branch `simplify/no-sr-retrieval` (on `simplify/css`), then the whole

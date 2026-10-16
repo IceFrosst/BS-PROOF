@@ -275,14 +275,15 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
 - **Method:** evidence method v2 is the pipeline's only method; v14 retired.
   `evidence_v2.STATUS = "shadow"` until validation passes. `main` and the live
   site still run v14 until the simplification branches merge.
-- **Latest v2 run** `20261014_185045` (v1.36, 138/139 studies). A cache-only
-  replay of the same extraction gives strength **k = 9, C−** (+0.17
-  [+0.02, +0.32]) where the stored run says k = 7, I: two trials' table numbers
-  failed to verify in the original run (a network fetch). Lean mass k = 10 D+
-  **passes** the benchmark; strength coverage 29–38 % (not testable).
-- **Known v2 problems:** the work list in `docs/DECISIONS.md` (a single small
-  trial can earn an A; fetch-dependent verification; the largest refusal reason;
-  coverage; no negative-control benchmarks; stability unmeasured).
+- **Latest v2 run** `20261014_185045` (v1.36, 138/139 studies). Replayed from
+  cache with the 2026-10-16 fixes: strength **k = 10, C−** (+0.17
+  [+0.03, +0.31]), lean mass k = 11 D+ **passes** the benchmark (coverage
+  65 %); strength coverage 42 % (not testable, needs ≥ 50 %). The stored
+  run's own numbers (strength k = 7, I) predate the fetch-failure fix.
+- **Known v2 problems:** the work list in `docs/DECISIONS.md`. Items 2, 3
+  (offline part) and 6 are done; open: a single small trial can earn an A,
+  coverage, missing SDs (prompt), second reviewer, populations, stability,
+  no negative-control benchmarks.
 - **Working baseline: `Jans_attempt`, not `main`** (founder, 2026-10-15).
   `origin/main` has diverged (68 commits since `d9cedc4`, 2026-09-22: live
   research worker, live result card, research-jobs SQL, scan-history UI,

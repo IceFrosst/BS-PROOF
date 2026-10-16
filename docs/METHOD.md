@@ -233,7 +233,9 @@ Per outcome (`pipeline/pool.py`):
 2. **REML random effects** on Hedges' g; **Hartung–Knapp** CI when k ≥ 3, a
    normal CI at k = 2; a prediction interval when k ≥ 3; a leave-one-out range.
 3. A **mean-difference pool** in natural units only when every MD shares one unit.
-4. **Every refusal is counted with its reason**; the estimand mix (change scores
+4. **Every refusal is counted with its reason** — and a trial without usable
+   numbers says which part was missing (no outcome values in the text, no SD,
+   only a p-value, numbers not found in the paper: `pool.unpoolable_detail`); the estimand mix (change scores
    vs final values) is reported, never silently mixed.
 
 Weight is inverse variance. Study quality never weights a trial; it lowers
