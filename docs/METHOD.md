@@ -338,11 +338,14 @@ What must hold before grades are shown to users:
 - **Benchmark** (`vocab/benchmarks.json`, `pipeline/benchmark.py`,
   `scripts/benchmark_v2.py`): our pooled estimates against published Cochrane /
   umbrella meta-analyses, each row with a quoted, re-checkable source. Pass rule
-  per (outcome, scale), all three: coverage (pooled / eligible trials) ≥ 50 %;
-  our CI no wider than 2× the median published width; our CI overlaps more than
-  half of theirs. Failing coverage or precision is "not testable", never pass or
-  fail. Today: 19 rows from 10 creatine meta-analyses; lean mass passes, strength is not testable
-  (coverage 29–38 %).
+  per (outcome, scale), all three: coverage ≥ 50 %; our CI no wider than 2× the
+  median published width; our CI overlaps more than half of theirs. Coverage
+  counts only trials the run READ: pooled / (pooled + refused for a data
+  reason), so a trial we could not read, or refused as out of scope, is in
+  neither number. It guards against grading a lucky, poolable subset of the
+  trials we have. Failing coverage or precision is "not testable", never pass
+  or fail. Today: 19 rows from 10 creatine meta-analyses; lean mass passes
+  (coverage 65 %), strength is not testable (42 %).
 - **Negative controls.** Every row today is a creatine success, so a pipeline
   that called everything effective would pass. Each new ingredient adds at least
   one "does not work" or "harms" row (`docs/history/v14-anchors.csv` lists

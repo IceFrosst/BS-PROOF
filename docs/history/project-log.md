@@ -10,6 +10,21 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-17 — coverage: what it counts; no abstracts, no outside sources
+
+Branch `v2/coverage-decision`, merged into `Jans_attempt`. Docs only.
+
+- Correction: benchmark coverage (`benchmark.coverage`) is pooled / (pooled +
+  data-reason refusals) among trials the run READ. Abstract-only trials were
+  never in it; DECISIONS item 4 and METHOD §16 had implied they lowered it.
+- Count (replayed v1.36 run): strength 10 / 24 = 42 % — refused 7 figure-only,
+  4 arm values without an SD, 2 incomplete statistics, 1 not a placebo
+  contrast (12 more out of scope). 3 of the 4 no-SD trials are the S5N gap
+  v1.37 targets; if they pool, 13 / 24 = 54 % (testable). Power 10 / 30 = 33 %
+  (13 figure-only). Lean mass 11 / 17 = 65 %.
+- Founder decision: no abstract-only extraction and no outside sources; the
+  coverage rule stays.
+
 ## 2026-10-16 — v2 work item 10: extraction prompts trimmed (PROMPT_VERSION v1.37)
 
 Branch `v2/prompt-cleanup`, merged into `Jans_attempt`. Takes effect at the
