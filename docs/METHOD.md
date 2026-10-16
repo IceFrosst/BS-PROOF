@@ -174,8 +174,8 @@ dropped: pooling already gives a tiny trial a tiny weight.
 **Population (variant B).** The run's population is fixed (general adults by
 default). A trial whose population is `different` (e.g. a disease population for
 a healthy-adult product) is refused as off-target; `adjacent` is reported, not
-downgraded. Whether to grade off-target populations instead is an open decision
-(`docs/DECISIONS.md`).
+downgraded. Kept so by founder decision (2026-10-16); grading other populations
+separately is for later (`docs/DECISIONS.md`).
 
 ## 9. Dose and form matching
 
@@ -310,6 +310,11 @@ The smallest change a person would notice, per outcome, on that scale. Policy
 Approved so far: muscle strength, power, muscular endurance, exercise endurance
 (0.2 SD, Hopkins 2004 "smallest worthwhile change"), lean body mass (0.2 SD,
 convention). Every other outcome uses the flagged default.
+
+Values are sourced **per ingredient, as it is added** (2026-10-16): before an
+ingredient's run, its graded outcomes without an approved value get a sourced
+table for the founder to approve. A value stated in natural units (days,
+minutes, mmHg) keeps that unit alongside its SD conversion.
 
 ## 15. Shown, never graded
 

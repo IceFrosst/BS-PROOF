@@ -15,16 +15,27 @@ Last swept: 2026-10-16.
 
 ## Open
 
-1. **MCIDs for the remaining outcomes.** 5 of 31 outcomes have an approved
-   threshold (METHOD §14); every other graded outcome uses the flagged 0.2 SD
-   default. Needs a sourced table per outcome before those grades mean
-   "noticeable". *Today no creatine letter depends on it: every outcome
-   without an approved MCID grades I at M/2, M and 2M alike. It matters for
-   the next ingredient.*
-2. **Effects from an exact p-value.** 5 creatine trial–outcome pairs report
-   only the between-group p-value with the arm sizes. Cochrane's handbook
-   (§6.5.2.3) derives a standardised effect from an exact p and n (sign from
-   the favoured arm). Adding that route is a method change; small gain today.
+1. **Effects from an exact p-value** (deferred 2026-10-16: the founder will
+   decide later; nothing changes until then). 5 creatine trial–outcome pairs
+   (endurance 2, power 1, attention 1, one other; none strength or lean mass)
+   report only the between-group p-value with the arm sizes, so they are
+   refused (`pool.unpoolable_detail`: "only a p-value"). Cochrane's handbook
+   (§6.5.2.3) derives a standardised effect from an exact p and n: p → t →
+   SMD and its variance, sign from the arm the paper says did better.
+   - *Keep refusing (today).* Every pooled number comes from printed group
+     statistics, no assumptions. Cost: those trials are lost, and papers that
+     report only a p are often the significant ones, so estimates may lean
+     slightly low (negligible at 5 pairs).
+   - *Add the conversion.* A standard, published route; the variance honestly
+     reflects the small samples. Cost: valid only when the p comes from a
+     simple two-group test (t-test of final values or of changes). A p from
+     repeated-measures ANOVA, ANCOVA or a non-parametric test gives a wrong,
+     often inflated effect, so the route depends on the extracted test type
+     and must refuse everything else; rounded p ("p = 0.03") adds noise;
+     "p < 0.05" is unusable; the direction comes from words, not numbers.
+   - *Recommendation:* not now (no creatine benchmark outcome gains). Revisit
+     if an ingredient has many such trials; if adopted, only an exact p from a
+     two-group test of a parallel trial, flagged as its own route.
 
 ## v2 work list (agreed 2026-10-15, after the simplification)
 
@@ -35,7 +46,7 @@ Items 1, 5 and 7 were decided 2026-10-16 (below).
 |---|---|---|
 | 1 | One small trial earns an A | **Done 2026-10-16:** imprecision −2 below 200 participants, −3 below 100 (decided below) |
 | 2 | A failed table fetch during the span check silently refuses a trial: the stored creatine run says strength k = 7 "I", a cache-only replay of the same extraction k = 9 "C−" | **Done 2026-10-16:** fetches retried; a failure is marked `table_fetch_failed` with its own refusal reason; no report while one is unresolved |
-| 3 | The largest refusal is "no verified effect estimate and incomplete arm statistics" (64 trial–outcome pairs in the replayed v1.36 creatine run) | **Done 2026-10-16 (offline part).** Breakdown: 40 have no outcome values in the text read (figures / untabled text — not recoverable from text), 12 post values without an SD, 5 only a p-value, 5 numbers not verified, 2 other. Fixed: tables whose outcome label is a section-header row (4 trials recovered; strength coverage 38 → 42 %, lean mass 59 → 65 %). The refusal now names the specific gap. Left: the missing SDs (item 10's prompt bump) and open decision 2 |
+| 3 | The largest refusal is "no verified effect estimate and incomplete arm statistics" (64 trial–outcome pairs in the replayed v1.36 creatine run) | **Done 2026-10-16 (offline part).** Breakdown: 40 have no outcome values in the text read (figures / untabled text — not recoverable from text), 12 post values without an SD, 5 only a p-value, 5 numbers not verified, 2 other. Fixed: tables whose outcome label is a section-header row (4 trials recovered; strength coverage 38 → 42 %, lean mass 59 → 65 %). The refusal now names the specific gap. Left: the missing SDs (item 10's prompt bump) and open decision 1 (p-value effects) |
 | 4 | Benchmark coverage too low (strength 29–38 %): v2 runs use `--full-text-only`, so 295 of 386 creatine RCTs (abstract-only) are never read | An abstract-inclusive run with abstract span checks and a risk-of-bias downgrade; later, per-trial effects from reviews' forest plots |
 | 5 | Off-target populations excluded (41 refusals) | **Decided 2026-10-16: keep excluding** for healthy-adult products; revisit later as separate populations |
 | 6 | v14's claim-level arm check (`_resolve_claim_arms`) never ran in v2 | **Done 2026-10-16: not ported.** It would refuse 9 of 49 pooled effects, all computed from both arms' own statistics against an ingredient-free control; its objections concern the test the paper reported (within-group, time main effect, omnibus) or a bookkeeping field v2 does not use. Porting it would drop 6 effects that point against creatine |
@@ -56,9 +67,10 @@ All accepted by the founder **"for now, may revisit"** unless stated.
 |---|---|
 | 2026-10-16 | **Imprecision scales with information size:** −1 below 400 participants, −2 below 200, −3 below 100 (`grade.RULES` `ois_*`). Measured: the single 14-participant trials that graded A now grade I; no other creatine letter changed. |
 | 2026-10-16 | **Populations:** only healthy-adult trials are graded for a healthy-adult product; other populations stay excluded (measured: including them adds 5 trials and lowers strength C− → D+). Separate population grades are for later. |
+| 2026-10-16 | **MCIDs are sourced per ingredient, as it is added** (METHOD §14): before an ingredient's run, its graded outcomes without an approved MCID get a sourced, quoted table for the founder to approve; until then the flagged 0.2 SD default stands. Natural-unit MCIDs also keep their own unit so a result can be read in it. First: vitamin C. |
 | 2026-10-16 | **Second reviewer (S5R) on by default** (~25–35 Opus calls per creatine run). |
 | 2026-10-15 | **v2 is the method; v14 retired** (`docs/history/v14-scoring-model.md`). The app shows no grade until v2 validates. Grok backend, SR-table route, table route and the Evidence Ledger removed. |
-| 2026-10-13 | Off-target populations excluded for now (open decision 1). |
+| 2026-10-13 | Off-target populations excluded for now (confirmed 2026-10-16, above). |
 | 2026-10-12 | Risk of bias read with S4's own meanings: HIGH only when blinding/placebo is missing; an undescribed randomisation method or incomplete attrition reporting is "some concerns" (METHOD §12). |
 | 2026-10-05 | Two poolability fixes: an arm's missing n taken from S3's arm with the same label (flagged, variance only); matched add-on pairs kept (METHOD §8). |
 | 2026-10-04 | Benchmark pass rule (`benchmark.RULES`, METHOD §16): coverage ≥ 50 %, CI width ≤ 2× the published median, overlap > half; failing coverage or precision is "not testable". Claims the two reviewers disagree on are refused, not adjudicated. |

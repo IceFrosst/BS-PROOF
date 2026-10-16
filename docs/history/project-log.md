@@ -10,6 +10,18 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-16 — v2: MCIDs per ingredient; p-value effects deferred
+
+Branch `v2/decisions-mcid-pvalue`, merged into `Jans_attempt`. Docs only.
+
+- **MCIDs** (decided): sourced per ingredient as it is added, founder-approved;
+  the flagged 0.2 SD default stands until then; natural-unit values keep their
+  unit. First: vitamin C (METHOD §14, DECISIONS).
+- **Effects from an exact p-value**: deferred by the founder; the dilemma
+  (5 creatine pairs, pros/cons, recommendation "not now") is written out as
+  open decision 1 in `docs/DECISIONS.md`.
+- METHOD §8's population note updated to the 2026-10-16 decision.
+
 ## 2026-10-16 — v2 step 2: founder decisions on imprecision, populations, second reviewer
 
 Branch `v2/step2-decisions`, merged into `Jans_attempt`.
