@@ -60,14 +60,20 @@ _FUNDING_ELEMENTS = ("funding-group", "funding-statement", "ack",
                      "conflict", "author-notes")
 
 
-def fetch_xml(pmcid: str, *, timeout: int = 60, use_cache: bool = True) -> str | None:
+def fetch_xml(pmcid: str, *, timeout: int = 60, use_cache: bool = True,
+              retries: int = 3) -> str | None:
     """
     JATS XML for a PMC id, or None if this record has no open full text.
 
     Returns None ONLY on 404 -- "not open access" is an answer. Any other
     failure raises, because "we could not fetch it" must never be recorded as
-    "no full text exists": the first is transient, the second changes the OA
-    factor and therefore the score.
+    "no full text exists": the first is transient, the second changes what is
+    read and verified.
+
+    Transport errors, 429 and 5xx are retried with backoff (like
+    sources/http.get_json) before raising. Measured 2026-10-15: one failed fetch
+    during the span check silently refused two creatine trials' table numbers
+    and moved strength from k = 9 C- to k = 7 I (docs/DECISIONS.md, item 2).
     """
     if not pmcid:
         return None
@@ -84,12 +90,24 @@ def fetch_xml(pmcid: str, *, timeout: int = 60, use_cache: bool = True) -> str |
     # be testable without httpx installed. See the note in sources/http.py.
     import httpx
 
-    throttle(url)
-    try:
-        r = httpx.get(url, headers=_headers(url), timeout=timeout,
-                      follow_redirects=True)
-    except httpx.HTTPError as e:
-        raise SourceError(f"fulltext transport error for {pmcid}: {e}") from e
+    import time
+    r, last = None, None
+    for attempt in range(max(1, retries)):
+        throttle(url)
+        try:
+            r = httpx.get(url, headers=_headers(url), timeout=timeout,
+                          follow_redirects=True)
+        except httpx.HTTPError as e:
+            last, r = SourceError(f"fulltext transport error for {pmcid}: {e}"), None
+            time.sleep(2 ** attempt)
+            continue
+        if r.status_code == 429 or r.status_code >= 500:
+            last = SourceError(f"http {r.status_code} for {pmcid}", status=r.status_code)
+            time.sleep(2 ** attempt * 2)
+            continue
+        break
+    if r is None or r.status_code == 429 or r.status_code >= 500:
+        raise last
 
     if r.status_code == 404:
         return None

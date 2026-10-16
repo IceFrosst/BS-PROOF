@@ -217,7 +217,10 @@ def _study_effects(item: dict, product: dict, polarity: dict,
                                      abs_only=nums.get("abs_only") or (),
                                      checks=nums.get("verified") or {})
         if eff is None:
-            refusals.setdefault(oid, why)
+            # A table that could not be FETCHED is not a number that is not
+            # printed: say so, so the refusal is never read as a data gap.
+            refusals.setdefault(oid, "cited table could not be fetched (re-run)"
+                                if nums.get("table_fetch_failed") else why)
             continue
         if n_flags:
             eff = dataclasses.replace(eff, flags=eff.flags + n_flags)

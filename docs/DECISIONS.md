@@ -42,7 +42,7 @@ Items 1, 5 and 7 need the open decisions above.
 | # | Problem | Proposed fix |
 |---|---|---|
 | 1 | One small trial earns an A | Open decision 4 |
-| 2 | A failed table fetch during the span check silently refuses a trial: the stored creatine run says strength k = 7 "I", a cache-only replay of the same extraction k = 9 "C−" | Its own refusal reason, retried; no report while any verification fetch is unresolved (like the usage-limit guard) |
+| 2 | A failed table fetch during the span check silently refuses a trial: the stored creatine run says strength k = 7 "I", a cache-only replay of the same extraction k = 9 "C−" | **Done 2026-10-16:** fetches retried; a failure is marked `table_fetch_failed` with its own refusal reason; no report while one is unresolved |
 | 3 | The largest refusal is "no verified effect estimate and incomplete arm statistics" (68 trial–outcome pairs in the stored v1.36 creatine run) | A deterministic breakdown of causes first, then targeted fixes |
 | 4 | Benchmark coverage too low (strength 29–38 %): v2 runs use `--full-text-only`, so 295 of 386 creatine RCTs (abstract-only) are never read | An abstract-inclusive run with abstract span checks and a risk-of-bias downgrade; later, per-trial effects from reviews' forest plots |
 | 5 | Off-target populations excluded (41 refusals) | Open decision 1 |

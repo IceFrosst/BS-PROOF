@@ -76,7 +76,7 @@ biases the result.
 | `SP_MAX_CONCURRENCY` | `40` | Parallel model calls |
 | `SP_MAX_BUDGET_USD` | `0.50` | Per-call ceiling the CLI enforces |
 | `SP_QUOTA_WAIT_S` / `SP_QUOTA_MAX_WAIT_S` | 15 min / 8 h | Pause-and-probe on a usage limit |
-| `SP_ALLOW_INCOMPLETE` | `0` | `1` writes a report even when studies still carry a usage-limit failure |
+| `SP_ALLOW_INCOMPLETE` | `0` | `1` writes a report even when studies still carry a usage-limit failure or an unfetched table |
 | `SP_DUMP_EXTRACTIONS` | unset | Path to dump the full extractions (for auditing) |
 | `SP_AUTO_PUSH` | `0` | `1` commits and pushes `reports/` on the current branch — never with `main` checked out (a push to `main` deploys) |
 | `SP_DB`, `SP_LLM_CACHE` | `out/bsproof.sqlite`, `out/llm_cache.sqlite` | Store and model-cache paths |
@@ -90,6 +90,9 @@ model, effort and payload) and every fetched paper is cached under
 - *Usage limit:* the run pauses and probes, requeueing the affected studies. If
   studies still carry a limit failure after the wait budget, it stops before
   grading and writes **no report** (exit code 3, an INCOMPLETE banner).
+- *A cited table could not be fetched* for the number check (after retries):
+  same exit 3 and no report, because those trials' numbers would be refused
+  for a network reason. Re-run the same command; only the fetches retry.
 - *Killed:* re-run the same command. Progress is in
   `out/checkpoints/<ingredient>_<form>.json`.
 - Long runs: start them from your own terminal (`... 2>&1 | tee out/run.log`).

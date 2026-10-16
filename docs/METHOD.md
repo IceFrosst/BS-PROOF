@@ -146,7 +146,10 @@ retried twice, then `null`, never repaired.
 **Span check** (`pipeline/span_check.py`). A model may only copy numbers. Every
 numeric field is verified against its source — the claim's quoted span, the
 named table row, or (arm sizes only) the S3 arm record — at the number's printed
-precision. A number that is not found is **refused**, never repaired.
+precision. A number that is not found is **refused**, never repaired. A cited
+table that cannot be *fetched* (after retries) is a different thing: its claims
+are marked `table_fetch_failed`, the refusal says so, and the run writes no
+report until a re-run fetches it (`docs/PIPELINE.md` §4).
 
 **Second reviewer** (`pipeline/review.py`). When S5R is on, two readings must
 agree within 1 % relative or 0.005 absolute; any conflict refuses the claim for

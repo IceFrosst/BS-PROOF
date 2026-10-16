@@ -113,14 +113,16 @@ def _tables_structured(record: dict, max_rows_per_table: int = 40) -> list[dict]
     """Structured tables for the v2 span check only (never model payloads).
 
     Colspan-expanded, merged multi-row headers. Deterministic, disk-cached XML,
-    no model calls.
+    no model calls. A FETCH failure raises sources.http.SourceError (after
+    fetch_xml's retries): the caller must record "could not fetch", never
+    treat it as "the paper has no such table".
     """
     pmcid = record.get("pmcid")
     if not pmcid:
         return []
+    from sources import fulltext
+    xml = fulltext.fetch_xml(pmcid, use_cache=True)
     try:
-        from sources import fulltext
-        xml = fulltext.fetch_xml(pmcid, use_cache=True)
         tables = fulltext.extract_tables_structured(xml) if xml else []
     except Exception:
         return []

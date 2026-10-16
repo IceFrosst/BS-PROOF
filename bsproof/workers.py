@@ -171,15 +171,28 @@ def _verify_numbers(out: dict, record: dict, claims: list[dict] | None = None) -
     if claims is None:
         claims = ((out.get("S5") or {}).get("claims")) or []
     s3_arms = (out.get("S3") or {}).get("arms") if isinstance(out.get("S3"), dict) else None
-    tables = None
+    tables, fetch_error = None, None
     if any(isinstance(c, dict) and c.get("table_provenance") for c in claims):
+        from sources.http import SourceError
         try:
             tables = _wp._tables_structured(record)
+        except SourceError as exc:
+            # Could not FETCH the paper (after retries): its table numbers are
+            # refused, but marked as a fetch failure -- never as "not printed" --
+            # and the run will not write a report until a re-run fetches them
+            # (bsproof/run/extract.py, docs/DECISIONS.md item 2).
+            fetch_error = str(exc)
+            out["_table_fetch_failed"] = fetch_error
         except Exception:
             tables = None  # an unreadable table refuses its numbers; it never passes them
-    return [verify_claim_numbers(c, tables=tables, s3_arms=s3_arms) if isinstance(c, dict)
-            else {"verified": {}, "source": {}, "abs_only": [], "rejected": {"claim": "malformed"}}
-            for c in claims]
+    results = [verify_claim_numbers(c, tables=tables, s3_arms=s3_arms) if isinstance(c, dict)
+               else {"verified": {}, "source": {}, "abs_only": [], "rejected": {"claim": "malformed"}}
+               for c in claims]
+    if fetch_error:
+        for c, res in zip(claims, results):
+            if isinstance(c, dict) and c.get("table_provenance"):
+                res["table_fetch_failed"] = fetch_error
+    return results
 
 # Batched outcome mapping (S6B): one call per STUDY instead of one per claim.
 #

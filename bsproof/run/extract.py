@@ -21,6 +21,14 @@ CHECKPOINTS = Path(__file__).resolve().parents[2] / "out" / "checkpoints"
 EXIT_INCOMPLETE = 3
 
 
+def _table_fetch_failed(raw: list[dict]) -> list[str]:
+    """Studies whose span check could not fetch a cited table (after retries).
+    Their table numbers are refused as unverified, so a report written now
+    would grade on a network accident (docs/DECISIONS.md item 2)."""
+    return [str(r["record"].get("canonical_id")) for r in raw
+            if (r.get("extraction") or {}).get("_table_fetch_failed")]
+
+
 def _incomplete_quota(raw: list[dict]) -> list[str]:
     """Studies whose extraction still carries a subscription-limit failure
     after the corpus loop's own pause budget (SP_QUOTA_MAX_WAIT_S) ran out."""
@@ -305,6 +313,17 @@ def extract_stage(store, opts, primaries, pv, outcome_allowlist, run_context):
               "after the pause budget.\nNo report was written. Re-run the SAME command after "
               "the limit resets to resume\n(finished calls replay from cache). "
               f"Progress: {checkpoint}\n" + "=" * 74)
+        return EXIT_INCOMPLETE
+    unfetched = _table_fetch_failed(raw)
+    run_context["table_fetch_failed"] = unfetched
+    if unfetched and os.environ.get("SP_ALLOW_INCOMPLETE") != "1":
+        # Same discipline as the usage-limit guard above: the model calls are
+        # cached, so re-running the same command only retries the fetches.
+        print("\n" + "=" * 74 + f"\nINCOMPLETE: {len(unfetched)} studies cite a table that could not be "
+              "fetched for the number check:\n  " + ", ".join(unfetched[:10])
+              + ("  ..." if len(unfetched) > 10 else "")
+              + "\nNo report was written. Re-run the SAME command (model calls replay from "
+              "cache; only the fetches retry).\n" + "=" * 74)
         return EXIT_INCOMPLETE
     run_context["studies_skipped"] = sum(
         1 for r in raw if r["extraction"].get("_skipped"))
