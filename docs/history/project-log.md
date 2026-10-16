@@ -10,6 +10,17 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-17 — v1.37 smoke test: S5 schema failures fixed (PROMPT_VERSION v1.38)
+
+A 2-study live smoke run of v1.37 lost S5 on one study (`isrctn68542582`,
+PLA / GAA / GAA + CrM) to `max_turns` on all 3 attempts: twice the claims
+array arrived as `{"claims": {"claims": [...]}}` (S5N did the same once and
+passed on retry), once a claim carried an invented `control_arm_note`. Fixes:
+`claude_adapter._recover_max_turns_wrapper` now flattens that exact redundant
+container for any one array field (it did so only for S7 `arms`), then
+schema-checks in full; S5 names its seven fields and forbids any other
+(v1.38). The smoke run's report files were not kept.
+
 ## 2026-10-17 — coverage: what it counts; no abstracts, no outside sources
 
 Branch `v2/coverage-decision`, merged into `Jans_attempt`. Docs only.

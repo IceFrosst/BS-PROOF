@@ -282,7 +282,7 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
   run's own numbers (strength k = 7, I) predate the fetch-failure fix.
 - **Known v2 problems:** the work list in `docs/DECISIONS.md`. Done: items
   1 (imprecision scales with information size), 2, 3 (offline part), 6, 10
-  (prompts trimmed, `PROMPT_VERSION` v1.37, not yet run); decided: 5 (healthy
+  (prompts trimmed, `PROMPT_VERSION` v1.38, re-run in progress); decided: 5 (healthy
   adults only), 7 (second reviewer on). Open: coverage, stability,
   negative-control benchmarks.
 - **Working baseline: `Jans_attempt`, not `main`** (founder, 2026-10-15).

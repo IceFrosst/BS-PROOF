@@ -102,6 +102,11 @@ evidence_span: the SHORTEST quote showing this outcome was reported for these
 arms -- normally the between-group sentence, or the table row label with its
 values. 200 characters maximum. Not a whole paragraph or table.
 
+EACH CLAIM HAS EXACTLY SEVEN FIELDS: outcome_raw, measure, timepoint,
+ingredient_arm, control_arm, is_primary_outcome, evidence_span. Nothing else
+-- no note, no comment, no contrast. A caveat about an arm or a subgroup goes
+inside evidence_span, or nowhere.
+
 KEEP THE OUTPUT SHORT: outcome_raw at most 120 characters, measure at most 80.
 List at most 20 claims. If a paper reports more, list every PRIMARY outcome
 first, then the secondary outcomes in the order the paper reports them. Never

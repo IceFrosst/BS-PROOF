@@ -82,6 +82,17 @@ class UniversalNegativeRepairTests(unittest.TestCase):
         self.assertEqual(
             claude_adapter._recover_max_turns_wrapper(nested_arms, arms_schema),
             ({"arms": [1, 2]}, 0.25))
+        # Same redundant container on S5 `claims` / S5N `numbers` (v1.37 smoke
+        # run, 2026-10-17); the schema still checks every item afterwards.
+        claims_schema = json.dumps({
+            "type": "object", "required": ["claims"], "additionalProperties": False,
+            "properties": {"claims": {"type": "array", "items": {
+                "type": "object", "required": ["a"], "additionalProperties": False,
+                "properties": {"a": {"type": "integer"}}}}}})
+        self.assertEqual(claude_adapter._recover_max_turns_wrapper(
+            stream([{"claims": {"claims": [{"a": 1}]}}]), claims_schema), ({"claims": [{"a": 1}]}, 0.25))
+        self.assertIsNone(claude_adapter._recover_max_turns_wrapper(
+            stream([{"claims": {"claims": [{"a": 1, "a_note": "x"}]}}]), claims_schema)[0])
         refused_streams = (
             stream([{"x": 7}]),                         # direct is not recovery
             stream([{"arms": {"other": [1, 2]}}]),
@@ -188,7 +199,7 @@ class UniversalNegativeRepairTests(unittest.TestCase):
         self.assertFalse(Draft7Validator(schemas["s7_form.json"]).is_valid(
             {"arms": [], "form_vocab_id": "x"}))                  # no top-level facts since v1.37
         from bsproof import claude_adapter
-        self.assertEqual(claude_adapter.PROMPT_VERSION, "v1.37")
+        self.assertEqual(claude_adapter.PROMPT_VERSION, "v1.38")
         shared = (Path(__file__).parents[1] / "prompts" / "_shared.md").read_text()
         self.assertIn("schema object directly", shared)
         self.assertIn("Never stringify", shared)

@@ -376,7 +376,11 @@ def _claude_bin() -> str:
 #   deficiency_status (duplicated population_axes); S7 returns arm rows only;
 #   S4 drops unverifiable_items, S6B confidence, S8 v14 wording. No more
 #   extraction_version contract tag (every v1.24+ output was arm-keyed).
-PROMPT_VERSION = "v1.37"
+# v1.38 (2026-10-17): S5 names its seven claim fields and forbids any other.
+#   Measured on the v1.37 2-study smoke run: one S5 attempt on a three-arm
+#   trial (PLA / GAA / GAA + CrM) added `control_arm_note` and failed the
+#   schema. Only the smoke run's cache is invalidated.
+PROMPT_VERSION = "v1.38"
 
 # Tier -> model. FULL IDs, NOT ALIASES.
 #
@@ -1090,16 +1094,18 @@ def _recover_max_turns_wrapper(raw: str, schema_text: str):
             parsed = json.loads(nested)
         except json.JSONDecodeError:
             return None, 0.0
-    elif (isinstance(tool_input.get("arms"), dict)
-          and set(tool_input["arms"]) == {"arms"}
-          and isinstance(tool_input["arms"]["arms"], list)):
-        # Observed S7 transport shape: every schema field was direct except the
-        # array argument arrived as arms={arms:[...]}. Flatten that one exact
-        # redundant container, then require the complete original schema. No
-        # arm, dose, form, label, or value is inferred or altered.
-        parsed = {**tool_input, "arms": tool_input["arms"]["arms"]}
     else:
-        return None, 0.0
+        # Observed transport shape: every schema field was direct except one
+        # array argument arrived inside a redundant container of its own name,
+        # K={K:[...]} -- S7 `arms` (2026-08), S5 `claims` and S5N `numbers`
+        # (v1.37 smoke run, 2026-10-17: 2 of 3 S5 attempts on one study).
+        # Flatten that one exact container, then require the complete original
+        # schema. No claim, arm, number or label is inferred or altered.
+        wrapped = [k for k, v in tool_input.items()
+                   if isinstance(v, dict) and set(v) == {k} and isinstance(v[k], list)]
+        if len(wrapped) != 1:
+            return None, 0.0
+        parsed = {**tool_input, wrapped[0]: tool_input[wrapped[0]][wrapped[0]]}
     checked = _schema_checked(parsed, schema_text)
     if checked is None:
         return None, 0.0
