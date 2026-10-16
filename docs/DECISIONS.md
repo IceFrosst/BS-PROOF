@@ -21,18 +21,28 @@ Last swept: 2026-10-15 (v14 retired; its open items were closed with it).
    (METHOD §8). Options: keep excluding; count `adjacent` as GRADE indirectness;
    grade other populations as their own ECU. Weight of the question (run
    20261013_072633): creatine strength lost 9 trials, lean mass 6.
+   *Measured 2026-10-16 (replayed v1.36 run): including them adds only 5
+   poolable trials and lowers the grades — strength C− → D+ (+0.17 → +0.12),
+   lean mass D+ → I; most off-target trials have no usable numbers anyway.*
 2. **MCIDs for the remaining outcomes.** 5 of 31 outcomes have an approved
    threshold (METHOD §14); every other graded outcome uses the flagged 0.2 SD
    default. Needs a sourced table per outcome before those grades mean
-   "noticeable".
+   "noticeable". *Today no creatine letter depends on it: every outcome
+   without an approved MCID grades I at M/2, M and 2M alike. It matters for
+   the next ingredient.*
 3. **Second reviewer on by default?** S5R is opt-in, so every pooled number is
    read once (METHOD §7). Turning it on adds one Opus call per study whose
-   numbers get pooled.
+   numbers get pooled — about 25–35 calls for creatine (49 pooled effects
+   from 23 studies).
 4. **Imprecision for tiny evidence.** A single 14-participant trial grades **A**
    today (muscle soreness, sleep quality): the 400-participant
    optimal-information-size rule costs only one level (METHOD §12). Proposal:
    −2 when far below it (e.g. under half), or at most "Low" certainty at k = 1.
-   This changes `grade.RULES`.
+   This changes `grade.RULES`. *Simulated 2026-10-16 on the replayed creatine
+   run:* −2 below 200 participants, or −2 at k = 1, both turn those A's into
+   **B** (a large effect at Low certainty is still B in the table); GRADE's
+   "extremely serious" imprecision (−3 below 100 participants, 2021 guidance)
+   turns them into **I**. No other creatine letter changes under any option.
 
 5. **Effects from an exact p-value.** 5 creatine trial–outcome pairs report
    only the between-group p-value with the arm sizes. Cochrane's handbook
