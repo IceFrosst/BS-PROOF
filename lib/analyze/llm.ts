@@ -119,6 +119,14 @@ export function supportsThinkingToggle(url: string = endpoint()): boolean {
   }
 }
 
+function isGemini(url: string): boolean {
+  try {
+    return new URL(url).hostname === "generativelanguage.googleapis.com";
+  } catch {
+    return false;
+  }
+}
+
 export function backendHost(): string {
   try {
     return new URL(endpoint()).hostname;
@@ -239,6 +247,9 @@ export async function chat(request: ChatRequest): Promise<ChatResult> {
   };
   if (request.jsonMode) body.response_format = { type: "json_object" };
   if (request.disableThinking && supportsThinkingToggle(url)) body.thinking = { type: "disabled" };
+  // Gemini's compat endpoint: thinking tokens count against max_tokens and cut
+  // the JSON mid-array (evidence prior failed 3 of 3 on gemini-3.5-flash).
+  if (isGemini(url)) body.reasoning_effort = "low";
 
   let res = await post(url, key, body, timeoutMs, request.purpose);
   if (res.status === 400 && (body.response_format || body.thinking)) {
@@ -247,6 +258,7 @@ export async function chat(request: ChatRequest): Promise<ChatResult> {
     // without the optional parameters.
     delete body.response_format;
     delete body.thinking;
+    delete body.reasoning_effort;
     res = await post(url, key, body, timeoutMs, request.purpose);
   }
 
