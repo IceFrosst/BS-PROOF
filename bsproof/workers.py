@@ -82,7 +82,7 @@ def _extract_numbers(out: dict, record: dict, text: str, sections: dict | None,
         metas.append(meta)
         if result is None:
             err = str((meta or {}).get("error") or "")
-            if any(k in err.lower() for k in ("session limit", "usage limit", "rate limit")):
+            if _quota_signal(err):
                 out["_quota_exhausted"] = err
             out.setdefault("_failed", []).append({"agent": "S5N", "error": err})
             continue
@@ -148,7 +148,7 @@ def _second_review(out: dict, record: dict, text: str, sections: dict | None,
             # A failed review leaves every claim single-extracted; it never
             # passes as an agreement.
             err = str((meta or {}).get("error") or "")
-            if any(k in err.lower() for k in ("session limit", "usage limit", "rate limit")):
+            if _quota_signal(err):
                 out["_quota_exhausted"] = err
             out.setdefault("_failed", []).append({"agent": "S5R", "error": err})
             sent = set()
@@ -337,7 +337,7 @@ def extract_study(record: dict, text: str, registry: dict | None = None, *,
         out.setdefault("_meta", {})[agent] = meta
         if result is None:
             err = str((meta or {}).get("error") or "").lower()
-            if any(k in err for k in ("session limit", "usage limit", "rate limit")):
+            if _quota_signal(err):
                 out["_quota_exhausted"] = (meta or {}).get("error")
             out.setdefault("_failed", []).append(
                 {"agent": agent, "error": (meta or {}).get("error")})
@@ -381,12 +381,25 @@ def extract_study(record: dict, text: str, registry: dict | None = None, *,
         # returned array: a model that reorders or omits an entry must not
         # silently shift every mapping onto the wrong claim. A claim with no
         # returned index keeps result None and is discarded.
-        res, _meta = call("S6B", {
-            "claims": [{"index": i,
-                        "outcome_raw": cl.get("outcome_raw"),
-                        "measure": cl.get("measure")}
-                       for i, cl in enumerate(claims)],
-            "vocabulary": vocabulary})
+        try:
+            res, _meta = call("S6B", {
+                "claims": [{"index": i,
+                            "outcome_raw": cl.get("outcome_raw"),
+                            "measure": cl.get("measure")}
+                           for i, cl in enumerate(claims)],
+                "vocabulary": vocabulary})
+        except Exception as exc:
+            res, _meta = None, {"error": str(exc)}
+        out.setdefault("_meta", {})["S6B"] = _meta
+        if res is None:
+            # A failed mapping call discards every claim of the study, so it
+            # must be a recorded failure (and a quota hit must requeue the
+            # study), never a silent "nothing mapped". Measured 2026-10-17:
+            # 21 S6B calls failed on the weekly limit and left no trace.
+            err = str((_meta or {}).get("error") or "")
+            if _quota_signal(err):
+                out["_quota_exhausted"] = err
+            out.setdefault("_failed", []).append({"agent": "S6B", "error": err})
         by_index = {m.get("index"): m
                     for m in ((res or {}).get("mappings") or [])
                     if isinstance(m, dict)}

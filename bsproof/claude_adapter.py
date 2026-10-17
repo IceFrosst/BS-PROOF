@@ -977,16 +977,17 @@ def _envelope_error(raw: str) -> str:
 # Failures no amount of retrying will fix. Fail loudly on the first attempt
 # rather than burning 3 backoffs per call across a whole extraction run.
 _FATAL = ("not logged in", "please run /login", "invalid api key",
-          "authentication_error", "credit balance", "max-budget",
-          # Subscription throughput ceiling. Measured 2026-08-06: a 10-study
-          # creatine batch burned 43 calls against it. Retrying cannot help --
-          # the limit is time-based -- and every retry is a wasted minute.
-          "session limit", "usage limit", "rate limit", "rate_limit")
+          "authentication_error", "credit balance", "max-budget")
 
 
 def _is_fatal(detail: str) -> bool:
+    # Plus the subscription throughput ceiling (bsproof.worker_quota, the one
+    # limit detector). Measured 2026-08-06: a 10-study creatine batch burned 43
+    # calls against it. Retrying cannot help -- the limit is time-based -- and
+    # every retry is a wasted minute.
+    from bsproof.worker_quota import _quota_signal
     d = (detail or "").lower()
-    return any(f in d for f in _FATAL)
+    return any(f in d for f in _FATAL) or _quota_signal(d)
 
 
 def _envelope_tokens(raw: str) -> dict:

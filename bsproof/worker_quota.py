@@ -17,23 +17,27 @@ import re as _re
 # nearly free -- the CLI fails fast with no tokens spent.
 QUOTA_WAIT_S = int(os.environ.get("SP_QUOTA_WAIT_S", "900"))          # 15 min
 QUOTA_MAX_WAIT_S = int(os.environ.get("SP_QUOTA_MAX_WAIT_S", "28800"))  # 8 h
-_QUOTA_STRINGS = ("session limit", "usage limit", "rate limit", "rate_limit")
+_QUOTA_STRINGS = ("session limit", "usage limit", "rate limit", "rate_limit",
+                  # Measured 2026-10-17: the subscription's WEEKLY ceiling reads
+                  # "You've hit your weekly limit · resets 6am" with api_error
+                  # "usage_limit_reached". Neither matched the strings above, so
+                  # every call was retried 3x and the run never paused: ~900
+                  # failed calls across all 154 studies of the v1.38 creatine run.
+                  "weekly limit", "usage_limit")
+_QUOTA_RE = _re.compile(r"\b(?:session|usage|rate|weekly|daily|monthly|hourly|\d+[ -]?hour)"
+                        r"[ _-]?(?:limit|limited)\b")
 
 
 def _quota_signal(value) -> bool:
-    """Return whether an adapter value identifies a retryable quota failure."""
+    """Whether an adapter error is a subscription / rate limit: time-based, so
+    retrying the call is useless and the run must pause. The ONE detector --
+    claude_adapter._is_fatal and the corpus loop both use it."""
     text = str(value or "").lower()
-    return (any(marker in text for marker in _QUOTA_STRINGS)
-            or bool(_re.search(
-                r"\b(?:session|usage|rate)[ _-]?(?:limit|limited)\b", text)))
+    return any(marker in text for marker in _QUOTA_STRINGS) or bool(_QUOTA_RE.search(text))
 
 
 def _hit_quota(extraction: dict) -> bool:
     """True when this study's failures include a subscription-limit hit."""
     if extraction.get("_quota_exhausted"):
         return True
-    for f in extraction.get("_failed") or []:
-        err = str(f.get("error") or "").lower()
-        if any(k in err for k in _QUOTA_STRINGS):
-            return True
-    return False
+    return any(_quota_signal(f.get("error")) for f in extraction.get("_failed") or [])

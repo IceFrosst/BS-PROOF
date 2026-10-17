@@ -62,3 +62,35 @@ class IncompleteGuard(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class WeeklyLimit(unittest.TestCase):
+    """Measured 2026-10-17: the weekly ceiling's wording matched no quota string,
+    so calls were retried and the run never paused (~900 failed calls)."""
+    MSG = "exit 1: You've hit your weekly limit · resets 6am (Europe/Vilnius)"
+
+    def test_every_limit_wording_is_a_quota_hit_and_fatal(self):
+        from bsproof.claude_adapter import _is_fatal
+        from bsproof.worker_quota import _hit_quota, _quota_signal
+        for msg in (self.MSG, "api_error: usage_limit_reached", "Claude AI usage limit reached",
+                    "5-hour limit reached", "session limit", "rate_limit_error"):
+            with self.subTest(msg=msg):
+                self.assertTrue(_quota_signal(msg))
+                self.assertTrue(_is_fatal(msg))
+        self.assertTrue(_hit_quota({"_failed": [{"agent": "S7", "error": self.MSG}]}))
+        self.assertFalse(_quota_signal("exit 1: max_turns"))
+        self.assertFalse(_quota_signal("the dose limit was 5 g"))
+
+    def test_a_failed_mapping_call_is_recorded_and_requeues_on_quota(self):
+        from bsproof import workers
+
+        def call(agent, payload):
+            if agent == "S5":
+                return {"claims": [{"outcome_raw": "1RM", "measure": "kg"}]}, {}
+            if agent == "S6B":
+                return None, {"error": self.MSG}
+            return {}, {}
+        with mock.patch.dict(os.environ, {"SP_SECOND_REVIEWER": "0"}):
+            out = workers.extract_study(REC, TEXT, call=call)
+        self.assertIn({"agent": "S6B", "error": self.MSG}, out["_failed"])
+        self.assertEqual(out["_quota_exhausted"], self.MSG)

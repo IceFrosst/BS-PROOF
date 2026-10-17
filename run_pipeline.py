@@ -99,4 +99,8 @@ def main(argv: list[str]) -> int:
 
 
 if __name__ == "__main__":
+    # Line-buffered even when piped to a log: a long run that is stopped must
+    # leave its progress in the log (2026-10-17: a killed run left out/run.log
+    # empty, hiding a usage-limit storm).
+    sys.stdout.reconfigure(line_buffering=True)
     sys.exit(main(sys.argv[1:]))

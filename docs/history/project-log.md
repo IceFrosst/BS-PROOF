@@ -10,6 +10,20 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-17 — v1.38 run stopped: weekly limit not recognised as a quota hit
+
+The first full v1.38 creatine run was stopped by the founder after ~900
+failed calls (every agent, ~150 of 154 studies). Cause: the subscription's
+weekly limit ("You've hit your weekly limit · resets 6am", api_error
+`usage_limit_reached`) matched none of the quota strings, so each call was
+retried 3x and the corpus loop never paused or requeued; 21 failed S6B calls
+also left no trace and silently discarded their studies' claims. Fixes:
+`worker_quota._quota_signal` is the one limit detector (adds "weekly limit",
+`usage_limit`, any "<period> limit") and `claude_adapter._is_fatal` uses it;
+a failed S6B is a recorded failure and a quota hit; `run_pipeline.py` logs
+line-buffered. Failed calls are never cached, so nothing from the stopped run
+needs cleaning; the re-run resumes from the smoke run's cache.
+
 ## 2026-10-17 — v1.37 smoke test: S5 schema failures fixed (PROMPT_VERSION v1.38)
 
 A 2-study live smoke run of v1.37 lost S5 on one study (`isrctn68542582`,
