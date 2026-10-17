@@ -212,3 +212,17 @@ body:has(.scan-page) .site-header { display: none; }
 .scan-page .sc-icon-btn.sc-search-cta:hover { background: none; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .rs .rs-bar.sc-scanned { display: flex; padding: 0; border: 0; margin: 0; }
+
+/* ------------------------------------------------------------ AI evidence summary (any product) */
+.es-mark { font-size: 20px; }
+.gc-h .gc-letter { background: #fbe7e2; color: #a2361f; }
+.scan-page .es-verdict { margin: 2px 0 0; font-size: 13px; font-weight: 700; color: var(--sp-ink); }
+.gc-b .es-verdict { color: #3f7a16; }
+.gc-d .es-verdict, .gc-h .es-verdict { color: #a2361f; }
+.gc-i .es-verdict { color: var(--sp-mute); }
+.scan-page .es-dose { display: inline-block; margin: 8px 0 0; padding: 4px 9px; border-radius: 8px; font-size: 12px; font-weight: 600; }
+.es-dose.is-hit { background: #e3f3ea; color: #0d6b45; }
+.es-dose.is-miss { background: #fbf1dc; color: #8a5a00; }
+.scan-page .es .gc-note { padding-top: 12px; border-top: 1px solid var(--sp-line); margin-top: 14px; }
+.scan-page .sc-capture .dm-kicker { margin-top: 18px !important; }
+.scan-page .es-summary { margin: -4px 0 12px; color: #2b3631; font-size: 14px; line-height: 1.5; max-width: none; }

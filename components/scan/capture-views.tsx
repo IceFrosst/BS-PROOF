@@ -67,7 +67,7 @@ export function StagedView({ preview, onScan, onRetake }: { preview: string | nu
 const UPLOAD_ICON = <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="3" /><circle cx="9" cy="10" r="1.8" /><path d="m21 16-5-5-9 9" /></svg>;
 const SEARCH_ICON = <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="6.5" /><path d="m20 20-4.2-4.2" /></svg>;
 
-export function Intro() {
+function Intro() {
   return (
     <div className="sc-intro">
       <h1 id="scan-title" className="sc-headline">Does your Supplement actually work?</h1>
@@ -93,12 +93,11 @@ export function LandingView({ active, disabled, cameraUnavailable, onCapture, on
   );
 }
 
-/* /demo: the same headline over sample labels with recorded answers. */
+/* /demo: under the camera, sample labels with recorded answers (no network). */
 export function DemoLanding({ products, onPick }: { products: DemoProduct[]; onPick: (p: DemoProduct) => void }) {
   return (
     <>
-      <Intro />
-      <p className="dm-kicker">Try a sample label</p>
+      <p className="dm-kicker">No supplement at hand? Try a sample</p>
       <ul className="dm-list">
         {products.map((p) => (
           <li key={p.id}>

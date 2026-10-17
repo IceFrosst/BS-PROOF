@@ -55,6 +55,7 @@ import type { DemoProduct } from "@/lib/demo/products";
 import { DemoLanding, LandingView, LoadingPanel, StagedView } from "./capture-views";
 import { MANUAL_STAGES, MAX_BYTES, PHOTO_STAGES, flowReducer, initialFlowState, receivedAction } from "./flow-state";
 import { mg, words } from "./format";
+import { EvidenceSummary } from "./evidence-summary";
 import { GradeCard } from "./grade-card";
 import { SaveResultCard } from "./google-sign-in";
 import {
@@ -91,9 +92,9 @@ export function ScanFlow({ catalog, demo }: { catalog: CatalogIngredient[]; demo
 
   useEffect(() => {
     if (!busy) return;
-    const id = setInterval(() => dispatch({ type: "tick" }), demo ? 1300 : 6000);
+    const id = setInterval(() => dispatch({ type: "tick" }), demoPick ? 1300 : 3000);
     return () => clearInterval(id);
-  }, [busy, demo]);
+  }, [busy, demoPick]);
 
   // A replaced or cleared preview URL is revoked here, the one place it can be.
   useEffect(() => () => {
@@ -148,10 +149,10 @@ export function ScanFlow({ catalog, demo }: { catalog: CatalogIngredient[]; demo
   const reset = useCallback(() => dispatch({ type: "reset" }), []);
 
   const post = useCallback(async (init: RequestInit) => {
-    if (demo) {
-      // ponytail: the wait is theatre so the stages read on stage; one tick per stage.
+    if (demo && demoPick) {
+      // A sample label replays its recorded answer; the wait lets the stages read on stage.
       await new Promise((r) => setTimeout(r, PHOTO_STAGES.length * 1300));
-      dispatch(demoPick ? { type: "received", data: { ...demoPick.analysis, analyzed_at: new Date().toISOString() }, error: null } : { type: "failed", error: "Pick a sample label first." });
+      dispatch({ type: "received", data: { ...demoPick.analysis, analyzed_at: new Date().toISOString() }, error: null });
       dispatch({ type: "done" });
       return;
     }
@@ -295,13 +296,14 @@ export function ScanFlow({ catalog, demo }: { catalog: CatalogIngredient[]; demo
               <LoadingPanel preview={preview} stages={stages} stage={stage} showSaveCard={showSaveCard} />
             ) : staged ? (
               <StagedView preview={preview} onScan={() => void submitPhoto()} onRetake={clearFile} />
-            ) : demo ? (
-              <DemoLanding products={demo} onPick={(p) => void pickDemo(p)} />
             ) : (
-              <LandingView active={!file} disabled={busy} cameraUnavailable={cameraUnavailable} onCapture={stageFile} onUnavailable={() => setCameraUnavailable(true)} onSearch={() => setSearchOpen(true)} />
+              <>
+                <LandingView active={!file} disabled={busy} cameraUnavailable={cameraUnavailable} onCapture={stageFile} onUnavailable={() => setCameraUnavailable(true)} onSearch={() => setSearchOpen(true)} />
+                {demo ? <DemoLanding products={demo} onPick={(p) => void pickDemo(p)} /> : null}
+              </>
             )}
           </div>
-          {!busy && !staged && !demo ? <GradingNotice /> : null}
+          {!busy && !staged ? <GradingNotice /> : null}
         </>
       ) : null}
 
@@ -389,12 +391,14 @@ export function ScanFlow({ catalog, demo }: { catalog: CatalogIngredient[]; demo
 
                 {demoPick?.grades.length ? (
                   <GradeCard grades={demoPick.grades} context={demoPick.context} illustrative />
+                ) : prior?.status === "ok" && prior.data?.outcomes.length ? (
+                  <EvidenceSummary prior={prior} />
                 ) : data.status !== "analyzer_unavailable" && data.status !== "not_a_supplement_label" ? <GradingNotice /> : null}
 
                 {warningCount > 0 ? <Warnings count={warningCount}>{warnings}</Warnings> : null}
 
                 <div className="rs-more">
-                  <p className="rs-more-title">Behind the grade</p>
+                  <p className="rs-more-title">Details and sources</p>
                   <EntryDetails typed={typed} entry={entry} label={label} product={product} legend={legend} summaryParts={summaryParts} />
                   {prior ? <PriorSection prior={prior} legend={legend} /> : null}
                   {compat ? <CompatibilitySection compat={compat} legend={legend} typed={typed} /> : null}
