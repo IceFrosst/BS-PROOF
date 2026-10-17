@@ -270,19 +270,18 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
 
 ---
 
-## Current state (snapshot, 2026-10-16)
+## Current state (snapshot, 2026-10-18)
 
 - **Method:** evidence method v2 is the pipeline's only method; v14 retired.
   `evidence_v2.STATUS = "shadow"` until validation passes. `main` and the live
   site still run v14 until the simplification branches merge.
-- **Latest v2 run** `20261014_185045` (v1.36, 138/139 studies). Replayed from
-  cache with the 2026-10-16 fixes: strength **k = 10, C−** (+0.17
-  [+0.03, +0.31]), lean mass k = 11 D+ **passes** the benchmark (coverage
-  65 %); strength coverage 42 % (not testable, needs ≥ 50 %). The stored
-  run's own numbers (strength k = 7, I) predate the fetch-failure fix.
+- **Latest v2 run** `20261017_222637` (v1.38, 138/139 studies): strength
+  **k = 12, C+** (+0.29 [+0.07, +0.50]) and lean mass k = 9 D+ both **pass**
+  the benchmark (coverage 57 % / 69 %). Not the baseline: its S5 saw a
+  2,225-char text slice (fixed 2026-10-18, `FULL_TEXT_AGENTS`); re-run pending.
 - **Known v2 problems:** the work list in `docs/DECISIONS.md`. Done: items
   1 (imprecision scales with information size), 2, 3 (offline part), 6, 10
-  (prompts trimmed, `PROMPT_VERSION` v1.38, re-run in progress); decided: 5 (healthy
+  (prompts trimmed, `PROMPT_VERSION` v1.38); decided: 5 (healthy
   adults only), 7 (second reviewer on). Open: coverage, stability,
   negative-control benchmarks.
 - **Working baseline: `Jans_attempt`, not `main`** (founder, 2026-10-15).

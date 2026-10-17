@@ -145,7 +145,8 @@ def run(check):
           "zero-caller self-checks rot silently; this line keeps them wired")
     _body = ("METHODS " + "m" * 30000 + " RESULTS the group improved, p = 0.001 "
              + "CONCLUSION creatine increased strength.")
-    _fitted = _w._fit_text("S5", _body, 2000)
+    # S8 is a budget-trimmed agent; S4 and S5 are never trimmed (FULL_TEXT_AGENTS).
+    _fitted = _w._fit_text("S8", _body, 2000)
     check("long text is trimmed at all", len(_fitted) < len(_body))
     check("the RESULTS tail survives the trim",
           "p = 0.001" in _fitted and "CONCLUSION" in _fitted,
@@ -157,7 +158,10 @@ def run(check):
           _w.ELISION.strip() in _fitted,
           "a model must not read a truncation as a finished sentence")
     check("short text is passed through untouched",
-          _w._fit_text("S5", "short study text", 2000) == "short study text")
+          _w._fit_text("S8", "short study text", 2000) == "short study text")
+    check("S5 (the outcome lister) always gets the full text",
+          _w._fit_text("S5", _body, 2000) == _body,
+          "v1.37: a 2,225-char slice made S5 miss outcomes v1.36 listed")
     _retry_seen = []
     def _prompt_retry_call(agent, payload):
         if agent == "S3":

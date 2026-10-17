@@ -10,6 +10,33 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-18 — v1.38 creatine run 20261017_222637; S5 text-trim bug found
+
+The run finished 138/139 studies (1 skipped for no text, 1 study with one failed
+S5N call, `doi:101002acr22747`), ~3.6 h with 130 quota requeues. Benchmark:
+**strength k = 12, C+** (+0.29 [+0.07, +0.50]) and **lean mass k = 9, D+**
+(+0.17 [-0.14, +0.47]) both **PASS** (coverage 57 % / 69 %, 6/6 and 2/2
+overlaps). Against the v1.36 replay: strength 10 → 12 (gained 4, including 2
+of the 3 trials refused for the S5N SD gap; lost 2), lean mass 11 → 9 (lost 2),
+power 10 → 12.
+
+Every lost trial traces to one bug that v1.37 introduced: shortening the S5
+prompt brought its prompt + schema to 9,775 chars, under the 12,000-char
+`PROMPT_BUDGET_CHARS`, so `_fit_text` started trimming. S5 got 2,225 chars of
+paper plus the tables, where v1.36 had sent the whole paper only because its
+prompt exceeded the budget. It then missed outcomes it had listed before (hack
+squat and bench 1RM in `doi:101249mss0000000000003202`, LBM in
+`doi:10124901mss000024700232589ef`, muscle mass in `doi:103390nu12010193`, every
+claim in `doi:1015191533428720030170026csaieo20co2`). Fix: S5 joins S4 in
+`worker_payload.FULL_TEXT_AGENTS`; the selftest pins it. These grades are
+therefore not the v1.38 baseline. A re-run re-extracts S5 (the payload is in the
+cache key) and whatever follows from its claims; S3, S4, S7 and S8 are served
+from cache.
+
+S4 items 3 / 4 / 6 (open decision 2) across the 22 trials pooled for strength,
+lean mass or power: item 4 is null in 22/22, item 3 null in 21/22 (1 yes), item 6
+null 16, no 5, yes 1.
+
 ## 2026-10-17 — v1.38 run stopped: weekly limit not recognised as a quota hit
 
 The first full v1.38 creatine run was stopped by the founder after ~900

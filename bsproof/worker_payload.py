@@ -179,11 +179,17 @@ def _tables_text(record: dict, cap_chars: int = 4000,
 # head + tail slice removed. Measured 2026-10-13 on run 20261013_072633: S4 got
 # 6,248 of 11,456-50,296 chars for 8 of 9 pooled strength trials; "blind" never
 # reached it in 4, items 1 and 2 came back null in 5 / 5, so no trial could be
-# rated low risk of bias. Full text is also the text S5 already gets (its
-# prompt exceeds the budget), so S4 now SHARES S5's prompt cache instead of
-# writing its own. workers.run_agent still retries a "prompt is too long" call
-# with a middle elision.
-FULL_TEXT_AGENTS = frozenset({"S4"})
+# rated low risk of bias. S4 SHARES S5's prompt cache instead of writing its
+# own. workers.run_agent still retries a "prompt is too long" call with a
+# middle elision.
+#
+# S5 (the outcome lister) is listed explicitly. Until v1.36 it got the full
+# text only because its prompt exceeded the budget (_fit_text's room <= 0
+# branch). MEASURED 2026-10-18 on run 20261017_222637: the v1.37 trim brought
+# S5's prompt + schema to 9,775 chars, leaving 2,225 chars of paper, and S5
+# missed outcomes that v1.36 had listed (strength 1RMs, whole-body lean mass),
+# so 2 strength and 2 lean-mass trials dropped out of the pool.
+FULL_TEXT_AGENTS = frozenset({"S4", "S5"})
 
 
 def _fit_text(agent: str, text: str, fixed_chars: int) -> str:
