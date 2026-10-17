@@ -322,10 +322,10 @@ describe("/ vs /scan", () => {
     expect(html).toMatch(/<h1[^>]*id="scan-title"[^>]*>Does your Supplement actually work\?<\/h1>/);
     expect(html).toContain("Scan and see.");
     expect((html.match(/<h1[^>]*>/g) ?? []).length).toBe(1);
-    // "Search your supplement" is a button ABOVE the capture block, opening a
-    // dialog (not the 2026-09-15 inline expand/collapse panel) -- order in
-    // the first viewport: search cta, then the capture controls.
-    const order = ["Search your supplement", "sc-viewfinder", "Upload a photo"].map((s) => html.indexOf(s));
+    // 2026-10-03 layout (main PR #3): the camera block, then one control row
+    // of Upload / shutter / Search; Search opens a dialog (not the 2026-09-15
+    // inline expand/collapse panel).
+    const order = ["sc-viewfinder", "Upload a photo", "Search your supplement"].map((s) => html.indexOf(s));
     expect(order.every((i) => i >= 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
     // No inline expand/collapse toggle or "or" divider survive the redesign.

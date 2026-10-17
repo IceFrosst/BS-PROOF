@@ -93,7 +93,7 @@ describe("/scan result state", () => {
     const el = await mount(); await photo(el);
     const warnings = el.querySelector(".ab-warnings");
     expect(warnings).not.toBeNull();
-    expect(warnings?.closest(".ab-card")).not.toBeNull();
+    expect(warnings?.closest(".rs-body")).not.toBeNull();
     for (const title of ["Multi ingredient product", "Funding & independence", "Publication bias", "MLM / direct-selling business model"]) expect(el.textContent).toContain(title);
     const technical = el.querySelector(".sc-technical") as HTMLDetailsElement;
     expect(technical).not.toBeNull(); expect(technical.textContent).toContain("Text model");
@@ -107,10 +107,11 @@ describe("/scan result state", () => {
 
   it("replaces a failed photo element with the exact jar fallback", async () => {
     const el = await mount(); await photo(el);
-    const image = el.querySelector<HTMLImageElement>(".scan-lab-photo")!;
+    // 2026-10-17 result header: the label thumbnail falls back to a plain tile.
+    const image = el.querySelector<HTMLImageElement>("img.rs-photo")!;
     await act(async () => image.dispatchEvent(new Event("error")));
-    expect(el.querySelector(".scan-lab-photo")).toBeNull();
-    expect(el.querySelector(".ab-photo-hero > .ab-jar")).not.toBeNull();
+    expect(el.querySelector("img.rs-photo")).toBeNull();
+    expect(el.querySelector(".rs-product > .rs-photo-empty")).not.toBeNull();
   });
 
 

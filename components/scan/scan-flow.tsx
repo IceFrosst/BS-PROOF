@@ -52,7 +52,7 @@ import type { ManualScanInput, ScanAnalysis } from "@/lib/analyze/scan";
 import { useSupabaseSession } from "@/lib/auth/use-supabase-session";
 import type { DemoProduct } from "@/lib/demo/products";
 
-import { LandingView, LoadingPanel, StagedView } from "./capture-views";
+import { DemoLanding, LandingView, LoadingPanel, StagedView } from "./capture-views";
 import { MANUAL_STAGES, MAX_BYTES, PHOTO_STAGES, flowReducer, initialFlowState, receivedAction } from "./flow-state";
 import { mg, words } from "./format";
 import { GradeCard } from "./grade-card";
@@ -252,35 +252,18 @@ export function ScanFlow({ catalog, demo }: { catalog: CatalogIngredient[]; demo
   const warningCount = (data?.caveats?.length ?? 0) + disclosures.length + (mlm ? 1 : 0);
   const warnings = <WarningNotices caveats={data?.caveats} disclosures={disclosures} mlm={mlm} brand={company?.brand} />;
 
+  // The header shows only what is printed or typed; converted doses stay in Label details.
+  const cap = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
+  const perDay = (n: number | null | undefined) => (n ? [`${n} serving${n === 1 ? "" : "s"} a day`] : []);
+  const chips: string[] = typed && entry
+    ? [entry.form_label, ...(entry.dose_per_serving ? [`${entry.dose_per_serving.value} ${entry.dose_per_serving.unit} per serving`] : []), ...perDay(entry.servings_per_day)]
+    : label
+      ? [...(label.form_vocab_id ? [cap(words(label.form_vocab_id))] : []), ...(label.compound_dose_mg !== null ? [`${mg(label.compound_dose_mg)} per serving`] : []), ...perDay(label.servings_per_day)]
+      : [];
+  const brand = typed ? null : label?.brand ?? company?.brand ?? null;
+
   return (
     <section className="la scan sc" aria-label="Scan a supplement">
-      {!busy && !showingResult && demo && !staged ? (
-        <div className="dm-pick">
-          <p className="dm-kicker">Demo</p>
-          <h1 className="dm-title" id="scan-title">Pick a supplement to scan</h1>
-          <ul className="dm-list">
-            {demo.map((p) => (
-              <li key={p.id}>
-                <button type="button" className="dm-card" onClick={() => void pickDemo(p)}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={p.image} alt="" />
-                  <span><strong>{p.name}</strong><small>{p.detail}</small></span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
-      {!busy && !showingResult && !demo ? (
-        <>
-          <GradingNotice />
-          <button type="button" className="sc-search-cta" onClick={() => setSearchOpen(true)}>
-            Search your supplement
-          </button>
-        </>
-      ) : null}
-
       {/* Two inputs, one difference: `capture` hands off to the platform
           camera. Kept mounted at all times -- this is the fallback path
           that must remain when getUserMedia is unavailable/denied/an
@@ -288,28 +271,38 @@ export function ScanFlow({ catalog, demo }: { catalog: CatalogIngredient[]; demo
       <input type="file" accept="image/*" capture="environment" className="la-input" id="scan-capture" aria-label="Photograph the label with the camera" disabled={busy} onChange={(e) => pick(e.target.files)} />
       <input type="file" accept={ACCEPTED_TYPES} className="la-input" id="scan-file" aria-label="Choose an image of the label" disabled={busy} onChange={(e) => pick(e.target.files)} />
 
-      {!showingResult && (!demo || busy || staged) ? (
-        <div
-          className={`sc-capture${dragging ? " is-dragging" : ""}`}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDragging(true);
-          }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={(e) => {
-            e.preventDefault();
-            setDragging(false);
-            if (!busy) pick(e.dataTransfer.files);
-          }}
-        >
-          {busy ? (
-            <LoadingPanel preview={preview} stages={stages} stage={stage} showSaveCard={showSaveCard} />
-          ) : staged ? (
-            <StagedView preview={preview} onScan={() => void submitPhoto()} onRetake={clearFile} />
-          ) : (
-            <LandingView active={!file} disabled={busy} cameraUnavailable={cameraUnavailable} onCapture={stageFile} onUnavailable={() => setCameraUnavailable(true)} />
-          )}
-        </div>
+      {!showingResult ? (
+        <>
+          <div className="sc-topbar">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="sc-lockup" src="/bsproof-lockup.svg" alt="BS-PROOF" width={130} height={26} />
+            {demo ? <span className="sc-demo-tag">Demo</span> : null}
+          </div>
+          <div
+            className={`sc-capture${dragging ? " is-dragging" : ""}`}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragging(true);
+            }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragging(false);
+              if (!busy) pick(e.dataTransfer.files);
+            }}
+          >
+            {busy ? (
+              <LoadingPanel preview={preview} stages={stages} stage={stage} showSaveCard={showSaveCard} />
+            ) : staged ? (
+              <StagedView preview={preview} onScan={() => void submitPhoto()} onRetake={clearFile} />
+            ) : demo ? (
+              <DemoLanding products={demo} onPick={(p) => void pickDemo(p)} />
+            ) : (
+              <LandingView active={!file} disabled={busy} cameraUnavailable={cameraUnavailable} onCapture={stageFile} onUnavailable={() => setCameraUnavailable(true)} onSearch={() => setSearchOpen(true)} />
+            )}
+          </div>
+          {!busy && !staged && !demo ? <GradingNotice /> : null}
+        </>
       ) : null}
 
       <SearchSheet open={searchOpen} onClose={() => setSearchOpen(false)} titleId="scan-search-title" title="Search your supplement">
@@ -321,45 +314,45 @@ export function ScanFlow({ catalog, demo }: { catalog: CatalogIngredient[]; demo
       </SearchSheet>
 
       {showingResult ? (
-        <div className={`sc-result-wrap${labResult ? " scan-success" : ""}`}>
-          {!labResult ? (
-            <div className="sc-scanned" ref={resultTopRef} tabIndex={-1}>
-              <span className="sc-thumb sc-thumb-typed" aria-hidden="true">!</span>
-              <div className="sc-scanned-main">
-                <p className="sc-scanned-kicker">{headerKicker}</p>
-                <h2 className="sc-scanned-name">{headerName}</h2>
-              </div>
-              <button type="button" className="sc-again" onClick={reset}>Scan another</button>
+        <div className="rs">
+          <div className="rs-bar sc-scanned" ref={resultTopRef} tabIndex={-1}>
+            <button type="button" className="rs-back sc-again" aria-label="Scan another" onClick={reset}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+            </button>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="sc-lockup" src="/bsproof-lockup.svg" alt="BS-PROOF" width={110} height={22} />
+          </div>
+
+          <header className="rs-product">
+            {preview && !typed && heroImage !== "error" ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img className="rs-photo" src={preview} alt="The label you scanned" onLoad={(event) => dispatch({ type: "hero", value: event.currentTarget.naturalWidth > 0 ? "loaded" : "error" })} onError={() => dispatch({ type: "hero", value: "error" })} />
+            ) : (
+              <span className="rs-photo rs-photo-empty" aria-hidden="true">{error ? "!" : "Aa"}</span>
+            )}
+            <div className="rs-id">
+              <p className="rs-kicker">{headerKicker}</p>
+              <h2 className="rs-name">{headerName}</h2>
+              {brand ? <p className="rs-brand">{brand}</p> : null}
+              {labResult && chips.length ? <ul className="rs-chips">{chips.map((c) => <li key={c}>{c}</li>)}</ul> : null}
             </div>
-          ) : null}
+          </header>
+
           {error ? (
             <div className="la-alert la-alert-bad sc-error" role="alert">
               <strong>Could not scan that.</strong>
               <span>{error}</span>
             </div>
           ) : null}
-          {/* Successful results switch to the field-notebook primitive. */}
-          {labResult && data && legend ? (
-            <div className="scan-lab-result">
-              <header className="ab-top scan-lab-top sc-scanned" ref={resultTopRef} tabIndex={-1}>
-                <button type="button" className="ab-back" aria-label="Scan another" onClick={reset}>‹</button>
-                <div className="ab-title"><strong>{headerName}</strong><small>{typed ? "What you entered · source supplied by you" : `What the label says${label?.brand ? ` · ${label.brand}` : ""}`}</small></div>
-              </header>
-              <div className="ab-photo-hero scan-lab-hero">
-                {preview && !typed && heroImage !== "error" ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img className={`scan-lab-photo${heroImage === "loaded" ? " is-loaded" : ""}`} src={preview} alt="The label you scanned" onLoad={(event) => dispatch({ type: "hero", value: event.currentTarget.naturalWidth > 0 ? "loaded" : "error" })} onError={() => dispatch({ type: "hero", value: "error" })} />
-                ) : (
-                  <div className="ab-jar"><div className="ab-jar-lid" /><span>FIELD NOTES / 001</span><strong>{(headerName || "product").split(" ").slice(0, 3).join(" ")}</strong><i>{typed ? "Typed product entry" : "Photo preview unavailable"}</i><div>FORM <b>{entry?.form_label ?? "—"}</b></div></div>
-                )}
-              </div>
 
+          {labResult && data && legend ? (
+            <>
               {locked ? <SaveResultCard /> : null}
 
-              {/* The la-result content is ALWAYS computed and held in state; when
-                  sign-in is required and not yet present it is only blurred and
-                  made inert, never re-fetched once a session appears. */}
-              <div className={`la-result scan-result${locked ? " sc-locked" : ""}`} aria-hidden={locked} inert={locked}>
+              {/* The result is ALWAYS computed and held in state; when sign-in
+                  is required and not yet present it is only blurred and made
+                  inert, never re-fetched once a session appears. */}
+              <div className={`la-result scan-result rs-body${locked ? " sc-locked" : ""}`} aria-hidden={locked} inert={locked}>
                 {auth.configured && auth.email ? (
                   <p className="sc-signed-in-line">
                     Signed in as <strong>{auth.email}</strong>
@@ -397,24 +390,23 @@ export function ScanFlow({ catalog, demo }: { catalog: CatalogIngredient[]; demo
                 {demoPick?.grades.length ? (
                   <GradeCard grades={demoPick.grades} context={demoPick.context} illustrative />
                 ) : data.status !== "analyzer_unavailable" && data.status !== "not_a_supplement_label" ? <GradingNotice /> : null}
-                {warningCount > 0 ? (
-                  <section className="ab-card scan-lab-card">
-                    <Warnings count={warningCount}>{warnings}</Warnings>
-                  </section>
-                ) : null}
 
-                <EntryDetails typed={typed} entry={entry} label={label} product={product} legend={legend} summaryParts={summaryParts} />
-                {/* Evidence orientation: the model's recollection, unverified. */}
-                {prior ? <PriorSection prior={prior} legend={legend} /> : null}
-                {compat ? <CompatibilitySection compat={compat} legend={legend} typed={typed} /> : null}
-                {company ? <CompanySection company={company} legend={legend} typed={typed} mlm={mlm} /> : null}
-                <SourceLegend legend={legend} />
-                <TechnicalDetails data={data} typed={typed} />
+                {warningCount > 0 ? <Warnings count={warningCount}>{warnings}</Warnings> : null}
+
+                <div className="rs-more">
+                  <p className="rs-more-title">Behind the grade</p>
+                  <EntryDetails typed={typed} entry={entry} label={label} product={product} legend={legend} summaryParts={summaryParts} />
+                  {prior ? <PriorSection prior={prior} legend={legend} /> : null}
+                  {compat ? <CompatibilitySection compat={compat} legend={legend} typed={typed} /> : null}
+                  {company ? <CompanySection company={company} legend={legend} typed={typed} mlm={mlm} /> : null}
+                  <SourceLegend legend={legend} />
+                  <TechnicalDetails data={data} typed={typed} />
+                </div>
               </div>
-            </div>
+            </>
           ) : null}
 
-          <button type="button" className="button button-dark sc-primary sc-again-bottom" onClick={reset}>
+          <button type="button" className="button button-dark sc-primary rs-again" onClick={reset}>
             Scan another
           </button>
         </div>
