@@ -50,10 +50,12 @@ import type { CatalogIngredient } from "@/lib/analyze/catalog";
 import { literatureDisclosures } from "@/lib/analyze/literature-disclosures";
 import type { ManualScanInput, ScanAnalysis } from "@/lib/analyze/scan";
 import { useSupabaseSession } from "@/lib/auth/use-supabase-session";
+import type { DemoProduct } from "@/lib/demo/products";
 
 import { LandingView, LoadingPanel, StagedView } from "./capture-views";
 import { MANUAL_STAGES, MAX_BYTES, PHOTO_STAGES, flowReducer, initialFlowState, receivedAction } from "./flow-state";
 import { mg, words } from "./format";
+import { GradeCard } from "./grade-card";
 import { SaveResultCard } from "./google-sign-in";
 import {
   CompanySection,
@@ -71,7 +73,11 @@ import { SupplementSearch } from "./supplement-search";
 
 const ACCEPTED_TYPES = "image/png,image/jpeg,image/webp,image/gif";
 
-export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
+/**
+ * `demo` (the /demo route): pick a sample label instead of the camera; the scan
+ * replays its recorded analysis after a staged wait. No request, no sign-in.
+ */
+export function ScanFlow({ catalog, demo }: { catalog: CatalogIngredient[]; demo?: DemoProduct[] }) {
   const [state, dispatch] = useReducer(flowReducer, initialFlowState);
   const { file, preview, busy, stage, stages, data, error, heroImage } = state;
   const [dragging, setDragging] = useState(false);
@@ -81,12 +87,13 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
   const auth = useSupabaseSession();
   const claimedRuns = useRef<Set<string>>(new Set());
   const resultTopRef = useRef<HTMLDivElement | null>(null);
+  const [demoPick, setDemoPick] = useState<DemoProduct | null>(null);
 
   useEffect(() => {
     if (!busy) return;
-    const id = setInterval(() => dispatch({ type: "tick" }), 6000);
+    const id = setInterval(() => dispatch({ type: "tick" }), demo ? 1300 : 6000);
     return () => clearInterval(id);
-  }, [busy]);
+  }, [busy, demo]);
 
   // A replaced or cleared preview URL is revoked here, the one place it can be.
   useEffect(() => () => {
@@ -133,13 +140,21 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
 
   const pick = useCallback((files: FileList | null) => {
     const picked = files?.[0];
+    if (demo) setDemoPick(null); // an own photo never gets a sample's recorded answer
     if (picked) stageFile(picked);
-  }, [stageFile]);
+  }, [stageFile, demo]);
 
   const clearFile = useCallback(() => dispatch({ type: "clear" }), []);
   const reset = useCallback(() => dispatch({ type: "reset" }), []);
 
   const post = useCallback(async (init: RequestInit) => {
+    if (demo) {
+      // ponytail: the wait is theatre so the stages read on stage; one tick per stage.
+      await new Promise((r) => setTimeout(r, PHOTO_STAGES.length * 1300));
+      dispatch(demoPick ? { type: "received", data: { ...demoPick.analysis, analyzed_at: new Date().toISOString() }, error: null } : { type: "failed", error: "Pick a sample label first." });
+      dispatch({ type: "done" });
+      return;
+    }
     try {
       const res = await fetch("/api/scan", { method: "POST", ...init });
       const json = (await res.json()) as ScanAnalysis & { error?: string };
@@ -149,7 +164,13 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
     } finally {
       dispatch({ type: "done" });
     }
-  }, []);
+  }, [demo, demoPick]);
+
+  const pickDemo = useCallback(async (p: DemoProduct) => {
+    const blob = await (await fetch(p.image)).blob();
+    setDemoPick(p);
+    stageFile(new File([blob], `${p.id}.jpg`, { type: blob.type || "image/jpeg" }));
+  }, [stageFile]);
 
   const submitPhoto = useCallback(async () => {
     if (!file || busy) return;
@@ -179,8 +200,8 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
   // sign-in is configured AND we have finished checking for an existing
   // session AND there is none -- never during the brief `loading` window,
   // so a returning signed-in visitor never sees a flash of the lock.
-  const locked = auth.configured && !auth.loading && !auth.email;
-  const showSaveCard = auth.configured && !auth.loading && !auth.email;
+  const locked = !demo && auth.configured && !auth.loading && !auth.email;
+  const showSaveCard = locked;
 
   const showingResult = finished;
   const staged = Boolean(file && preview);
@@ -233,7 +254,25 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
 
   return (
     <section className="la scan sc" aria-label="Scan a supplement">
-      {!busy && !showingResult ? (
+      {!busy && !showingResult && demo && !staged ? (
+        <div className="dm-pick">
+          <p className="dm-kicker">Demo</p>
+          <h1 className="dm-title" id="scan-title">Pick a supplement to scan</h1>
+          <ul className="dm-list">
+            {demo.map((p) => (
+              <li key={p.id}>
+                <button type="button" className="dm-card" onClick={() => void pickDemo(p)}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={p.image} alt="" />
+                  <span><strong>{p.name}</strong><small>{p.detail}</small></span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {!busy && !showingResult && !demo ? (
         <>
           <GradingNotice />
           <button type="button" className="sc-search-cta" onClick={() => setSearchOpen(true)}>
@@ -249,7 +288,7 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
       <input type="file" accept="image/*" capture="environment" className="la-input" id="scan-capture" aria-label="Photograph the label with the camera" disabled={busy} onChange={(e) => pick(e.target.files)} />
       <input type="file" accept={ACCEPTED_TYPES} className="la-input" id="scan-file" aria-label="Choose an image of the label" disabled={busy} onChange={(e) => pick(e.target.files)} />
 
-      {!showingResult ? (
+      {!showingResult && (!demo || busy || staged) ? (
         <div
           className={`sc-capture${dragging ? " is-dragging" : ""}`}
           onDragOver={(e) => {
@@ -355,7 +394,9 @@ export function ScanFlow({ catalog }: { catalog: CatalogIngredient[] }) {
                   </div>
                 ) : null}
 
-                {data.status !== "analyzer_unavailable" && data.status !== "not_a_supplement_label" ? <GradingNotice /> : null}
+                {demoPick?.grades.length ? (
+                  <GradeCard grades={demoPick.grades} context={demoPick.context} illustrative />
+                ) : data.status !== "analyzer_unavailable" && data.status !== "not_a_supplement_label" ? <GradingNotice /> : null}
                 {warningCount > 0 ? (
                   <section className="ab-card scan-lab-card">
                     <Warnings count={warningCount}>{warnings}</Warnings>

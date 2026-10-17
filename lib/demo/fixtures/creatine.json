@@ -1,0 +1,346 @@
+{
+  "schema_version": "ScanAnalysisV1",
+  "analyzed_at": "2026-10-17T07:56:33Z",
+  "source": "photo",
+  "status": "not_graded",
+  "basis_legend": {
+    "evidence_run": {
+      "label": "Evidence run",
+      "means": "Graded from extracted trials with quoted provenance. Not active yet: no product is graded today.",
+      "rank": 1
+    },
+    "registry": {
+      "label": "Public registry",
+      "means": "A dated public record (FDA enforcement reports via openFDA).",
+      "rank": 2
+    },
+    "curated_table": {
+      "label": "Curated & cited",
+      "means": "A maintained table where every entry cites a regulator fact sheet or a position stand.",
+      "rank": 3
+    },
+    "label": {
+      "label": "As printed",
+      "means": "Read off the label. A claim the product makes about itself, not a verification.",
+      "rank": 4
+    },
+    "user_input": {
+      "label": "Typed by you",
+      "means": "Entered by hand, not read from a label. Nothing here checked that the product contains what was typed.",
+      "rank": 5
+    },
+    "model_prior": {
+      "label": "Model knowledge",
+      "means": "What the model recalls from training data. Unverified; shown for orientation only and never scored.",
+      "rank": 6
+    }
+  },
+  "meta": {
+    "timing_s": 9.9,
+    "stages": {
+      "label": 3.21,
+      "evidence_prior": 4.6,
+      "compatibility": 0.01,
+      "company": 2.88,
+      "literature_warnings": 2.65
+    },
+    "provider_configured": true,
+    "models": {
+      "vision": "gemini-3.5-flash",
+      "text": "gemini-3.5-flash"
+    },
+    "prompt_versions": {
+      "label": "label-v1.3",
+      "evidence_prior": "evidence-prior-v1.1",
+      "compatibility": "compat-v1.1",
+      "company": "company-v1.2",
+      "literature_warnings": "literature-warnings-v1.1"
+    }
+  },
+  "label": {
+    "ingredient_vocab_id": "creatine",
+    "ingredient_label_text": "Creatine Monohydrate",
+    "form_vocab_id": "creatine_monohydrate",
+    "compound_dose_mg": 5000,
+    "dose_unit_as_printed": "g",
+    "servings_per_day": null,
+    "is_multi_ingredient": false,
+    "other_actives": [],
+    "actives": [
+      {
+        "name": "Creatine Monohydrate",
+        "compound_dose_mg": 5000,
+        "dose_unit_as_printed": null,
+        "form_text": null
+      }
+    ],
+    "certifications": [],
+    "manufacturer": "THORNE RESEARCH, INC.",
+    "country_of_origin": "USA",
+    "warnings_printed": [],
+    "claims_printed": [],
+    "brand": "THORNE",
+    "product_name": null,
+    "is_supplement_label": true,
+    "confidence": "high",
+    "unreadable_reason": null,
+    "evidence_spans": [
+      "Creatine Monohydrate 5 g",
+      "Serving Size: One Scoop (5 g)",
+      "manufactured in the USA using US & imported ingredients for:",
+      "THORNE RESEARCH, INC., 1-800-228-1966"
+    ],
+    "_meta": {
+      "model": "gemini-3.5-flash",
+      "prompt_version": "label-v1.3",
+      "elapsed_s": 3.16,
+      "backend": "generativelanguage.googleapis.com",
+      "input_tokens": 4467,
+      "output_tokens": 332
+    }
+  },
+  "product": {
+    "ingredient": "creatine",
+    "form": "creatine_monohydrate",
+    "compound_dose_mg": 5000,
+    "elemental_dose_mg": {
+      "low": 4396.062,
+      "high": 4396.062,
+      "basis": "converted"
+    },
+    "servings_per_day": null,
+    "scored_dose_mg": 4396.062,
+    "scored_dose_basis": "per_serving",
+    "is_multi_ingredient": false,
+    "other_actives": []
+  },
+  "compatibility": {
+    "status": "single_active",
+    "basis_used": [
+      "curated_table"
+    ],
+    "actives": [
+      {
+        "printed": "Creatine Monohydrate",
+        "canonical": "creatine",
+        "compound_dose_mg": 5000,
+        "form_text": null
+      }
+    ],
+    "evidence_form_fit": {
+      "status": "ingredient_not_scored",
+      "scored_forms": [],
+      "form_strength": null,
+      "form_basis": null
+    },
+    "form_notes": [
+      {
+        "active": "Creatine monohydrate",
+        "note": "Monohydrate is the form used in the large majority of trials and the reference against which other creatine forms are compared; no other form has shown superior uptake or effect.",
+        "basis": "curated_table",
+        "confidence": "high",
+        "source": {
+          "title": "Kreider RB et al. ISSN position stand: safety and efficacy of creatine supplementation. JISSN 2017;14:18",
+          "url": "https://doi.org/10.1186/s12970-017-0173-z"
+        }
+      }
+    ],
+    "interactions": [],
+    "model": {
+      "status": "skipped_no_uncovered_pairs",
+      "reason": null,
+      "overall": null,
+      "prompt_version": "compat-v1.1",
+      "model": null,
+      "elapsed_s": null
+    }
+  },
+  "company": {
+    "status": "ok",
+    "basis_used": [
+      "label",
+      "model_prior"
+    ],
+    "brand": "THORNE",
+    "manufacturer": "THORNE RESEARCH, INC.",
+    "country_of_origin": "USA",
+    "certifications_printed": [],
+    "registry": {
+      "status": "no_matches",
+      "queried": [
+        "THORNE",
+        "THORNE RESEARCH, INC."
+      ],
+      "recalls": [],
+      "reason": null,
+      "source": "openFDA food enforcement reports",
+      "note": "Dietary supplements are regulated as food, so recalls appear in FDA's food enforcement reports. No match means no recall is on file under this exact firm name — not that the company has a clean history."
+    },
+    "profile": {
+      "status": "ok",
+      "reason": null,
+      "data": {
+        "brand": "THORNE",
+        "known": true,
+        "summary": "Thorne is an American health and wellness company that manufactures dietary supplements and health tests. It focuses on science-backed formulas and sells directly to consumers, health practitioners, and professional sports teams.",
+        "founded_year": 1984,
+        "headquarters_country": "United States",
+        "parent_company": null,
+        "ownership_type": "public",
+        "third_party_testing": {
+          "program": "NSF Certified for Sport",
+          "status": "documented"
+        },
+        "transparency": {
+          "coa_published": "unknown"
+        },
+        "regulatory_history": [],
+        "reputation_notes": [
+          "Partnered with multiple United States national sports governing bodies.",
+          "Went public on the NASDAQ stock exchange in 2021.",
+          "Acquired by L Catterton and taken private in 2023."
+        ],
+        "business_model": {
+          "status": "no_evidence",
+          "basis": "Sells products directly through its website, authorized online retailers, and medical practitioner channels without distributor recruitment.",
+          "confidence": "high"
+        },
+        "confidence": "high",
+        "caveats": [
+          "Public batch-level certificates of analysis availability was not confirmed."
+        ]
+      },
+      "basis": "model_prior",
+      "prompt_version": "company-v1.2",
+      "model": "gemini-3.5-flash",
+      "elapsed_s": 2.85
+    }
+  },
+  "literature_warnings": {
+    "status": "ok",
+    "basis": "model_prior",
+    "reason": null,
+    "data": {
+      "funding_independence": {
+        "status": "concern",
+        "basis": "A significant portion of clinical research on creatine monohydrate is sponsored or supported by commercial ingredient manufacturers and distributors.",
+        "confidence": "medium",
+        "notable_funders": [
+          "AlzChem (Creapure)",
+          "Industry-sponsored academic grants"
+        ]
+      },
+      "publication_bias": {
+        "status": "concern",
+        "basis": "Meta-analyses have noted potential publication bias due to a high volume of small, positive performance trials and relatively few published negative trials.",
+        "confidence": "medium",
+        "signals": [
+          "Asymmetry in funnel plots for small athletic performance trials",
+          "Over-representation of small positive studies in literature"
+        ]
+      },
+      "caveats": [
+        "Many trials receive independent university support alongside industry grants",
+        "Extensive long-term independent safety data exists alongside commercial trials"
+      ]
+    },
+    "prompt_version": "literature-warnings-v1.1",
+    "model": "gemini-3.5-flash",
+    "elapsed_s": 2.63
+  },
+  "evidence_prior": {
+    "status": "ok",
+    "basis": "model_prior",
+    "reason": null,
+    "data": {
+      "ingredient": "Creatine Monohydrate",
+      "recognised": true,
+      "summary": "Creatine monohydrate is a widely researched dietary supplement used primarily to increase muscle strength, power output, and lean body mass. Hundreds of human clinical trials support its effectiveness for high-intensity exercise performance. It is one of the most thoroughly studied athletic performance supplements available.",
+      "evidence_landscape": {
+        "syntheses_exist": "many",
+        "note": "Extensive literature includes dozens of systematic reviews and meta-analyses covering performance, body composition, and therapeutic uses."
+      },
+      "outcomes": [
+        {
+          "outcome": "muscle strength",
+          "direction": "benefit",
+          "evidence_strength": "strong",
+          "effective_daily_dose_low_mg": 3000,
+          "effective_daily_dose_high_mg": 5000,
+          "pooled_effect_recalled": "SMD 0.42 [0.26, 0.58]",
+          "population": "Healthy adults and athletes undergoing resistance training",
+          "note": "Supported by numerous meta-analyses of randomized controlled trials showing consistent gains in maximal strength.",
+          "confidence": "high",
+          "dose_in_range": true,
+          "dose_reading": "4.4 g/day sits inside the range the model recalls as effective (3 g–5 g)."
+        },
+        {
+          "outcome": "muscle mass",
+          "direction": "benefit",
+          "evidence_strength": "strong",
+          "effective_daily_dose_low_mg": 3000,
+          "effective_daily_dose_high_mg": 5000,
+          "pooled_effect_recalled": null,
+          "population": "Adults engaged in resistance training",
+          "note": "Consistently demonstrates modest increases in lean body mass compared to placebo when combined with training.",
+          "confidence": "high",
+          "dose_in_range": true,
+          "dose_reading": "4.4 g/day sits inside the range the model recalls as effective (3 g–5 g)."
+        },
+        {
+          "outcome": "cognitive function",
+          "direction": "benefit",
+          "evidence_strength": "limited",
+          "effective_daily_dose_low_mg": 3000,
+          "effective_daily_dose_high_mg": 5000,
+          "pooled_effect_recalled": null,
+          "population": "Stressed adults, vegetarians, and older adults",
+          "note": "Meta-analyses show potential benefits for memory and tasks during sleep deprivation, though findings in healthy unstressed adults are mixed.",
+          "confidence": "medium",
+          "dose_in_range": true,
+          "dose_reading": "4.4 g/day sits inside the range the model recalls as effective (3 g–5 g)."
+        }
+      ],
+      "form_assessment": {
+        "form": "creatine monohydrate",
+        "verdict": "well_absorbed",
+        "note": "Creatine monohydrate has nearly 100% oral bioavailability (the amount that reaches the bloodstream) and remains the gold standard form in research."
+      },
+      "safety_notes": [
+        "Mild gastrointestinal distress or cramping can occur if taken with insufficient water.",
+        "Causes transient water retention, leading to minor weight gain.",
+        "Safe for long-term use in healthy individuals at standard daily doses of 3 to 5 grams."
+      ],
+      "confidence": "high",
+      "caveats": [
+        "Exact pooled effect sizes vary depending on the specific meta-analysis and subgroup analyzed.",
+        "Non-responders exist, as individuals with high baseline muscle creatine stores experience smaller benefits."
+      ]
+    },
+    "scored_dose_mg": 4396.062,
+    "prompt_version": "evidence-prior-v1.1",
+    "model": "gemini-3.5-flash",
+    "elapsed_s": 4.57,
+    "disclaimer": "This section is the model's own recollection of the literature — not trials we read, checked and can quote. Treat it as orientation. It carries no grade, because a grade means 'computed from extracted trials', and the two must not look alike."
+  },
+  "census": {
+    "available": true,
+    "rcts_indexed": 1236,
+    "syntheses_indexed": 322,
+    "source": "Europe PMC",
+    "scope": "supplement",
+    "is_a_score": false,
+    "means": "How many trials EXIST. Not what they found — direction and quality require extraction, which has not been run for this product."
+  },
+  "queue": {
+    "queued": true,
+    "durable": true,
+    "note": "recorded for a future run; nothing runs automatically"
+  },
+  "caveats": [
+    {
+      "code": "servings_not_stated",
+      "text": "The label does not say how many servings are taken a day, so the dose in one serving was used. Your daily dose may be higher."
+    }
+  ]
+}

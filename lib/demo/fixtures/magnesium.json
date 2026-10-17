@@ -1,0 +1,288 @@
+{
+  "schema_version": "ScanAnalysisV1",
+  "analyzed_at": "2026-10-17T07:56:34Z",
+  "source": "photo",
+  "status": "not_graded",
+  "basis_legend": {
+    "evidence_run": {
+      "label": "Evidence run",
+      "means": "Graded from extracted trials with quoted provenance. Not active yet: no product is graded today.",
+      "rank": 1
+    },
+    "registry": {
+      "label": "Public registry",
+      "means": "A dated public record (FDA enforcement reports via openFDA).",
+      "rank": 2
+    },
+    "curated_table": {
+      "label": "Curated & cited",
+      "means": "A maintained table where every entry cites a regulator fact sheet or a position stand.",
+      "rank": 3
+    },
+    "label": {
+      "label": "As printed",
+      "means": "Read off the label. A claim the product makes about itself, not a verification.",
+      "rank": 4
+    },
+    "user_input": {
+      "label": "Typed by you",
+      "means": "Entered by hand, not read from a label. Nothing here checked that the product contains what was typed.",
+      "rank": 5
+    },
+    "model_prior": {
+      "label": "Model knowledge",
+      "means": "What the model recalls from training data. Unverified; shown for orientation only and never scored.",
+      "rank": 6
+    }
+  },
+  "meta": {
+    "timing_s": 11.97,
+    "stages": {
+      "label": 4.2,
+      "evidence_prior": 4.5,
+      "compatibility": 0.01,
+      "company": 0.01,
+      "literature_warnings": 5.39
+    },
+    "provider_configured": true,
+    "models": {
+      "vision": "gemini-3.5-flash",
+      "text": "gemini-3.5-flash"
+    },
+    "prompt_versions": {
+      "label": "label-v1.3",
+      "evidence_prior": "evidence-prior-v1.1",
+      "compatibility": "compat-v1.1",
+      "company": "company-v1.2",
+      "literature_warnings": "literature-warnings-v1.1"
+    }
+  },
+  "label": {
+    "ingredient_vocab_id": "magnesium",
+    "ingredient_label_text": "Magnesium",
+    "form_vocab_id": "magnesium_glycinate",
+    "compound_dose_mg": 200,
+    "dose_unit_as_printed": "mg",
+    "servings_per_day": null,
+    "is_multi_ingredient": false,
+    "other_actives": [],
+    "actives": [
+      {
+        "name": "Magnesium",
+        "compound_dose_mg": 200,
+        "dose_unit_as_printed": null,
+        "form_text": "as Magnesium Bisglycinate"
+      }
+    ],
+    "certifications": [],
+    "manufacturer": null,
+    "country_of_origin": null,
+    "warnings_printed": [],
+    "claims_printed": [],
+    "brand": null,
+    "product_name": null,
+    "is_supplement_label": true,
+    "confidence": "high",
+    "unreadable_reason": null,
+    "evidence_spans": [
+      "Magnesium (as Magnesium Bisglycinate) 200 mg 48%",
+      "Serving Size: One Scoop (3.11 g)",
+      "Servings Per Container: 60"
+    ],
+    "_meta": {
+      "model": "gemini-3.5-flash",
+      "prompt_version": "label-v1.3",
+      "elapsed_s": 4.14,
+      "backend": "generativelanguage.googleapis.com",
+      "input_tokens": 4467,
+      "output_tokens": 305
+    }
+  },
+  "product": {
+    "ingredient": "magnesium",
+    "form": "magnesium_glycinate",
+    "compound_dose_mg": 200,
+    "elemental_dose_mg": {
+      "low": 28.192,
+      "high": 28.192,
+      "basis": "converted"
+    },
+    "servings_per_day": null,
+    "scored_dose_mg": 28.192,
+    "scored_dose_basis": "per_serving",
+    "is_multi_ingredient": false,
+    "other_actives": []
+  },
+  "compatibility": {
+    "status": "single_active",
+    "basis_used": [],
+    "actives": [
+      {
+        "printed": "Magnesium",
+        "canonical": "magnesium",
+        "compound_dose_mg": 200,
+        "form_text": "as Magnesium Bisglycinate"
+      }
+    ],
+    "evidence_form_fit": {
+      "status": "ingredient_not_scored",
+      "scored_forms": [],
+      "form_strength": null,
+      "form_basis": null
+    },
+    "form_notes": [],
+    "interactions": [],
+    "model": {
+      "status": "skipped_no_uncovered_pairs",
+      "reason": null,
+      "overall": null,
+      "prompt_version": "compat-v1.1",
+      "model": null,
+      "elapsed_s": null
+    }
+  },
+  "company": {
+    "status": "no_brand_on_label",
+    "basis_used": [],
+    "brand": null,
+    "manufacturer": null,
+    "country_of_origin": null,
+    "certifications_printed": [],
+    "registry": {
+      "status": "skipped_no_brand",
+      "queried": [],
+      "recalls": [],
+      "reason": null,
+      "source": "openFDA food enforcement reports",
+      "note": ""
+    },
+    "profile": {
+      "status": "skipped",
+      "reason": "no brand printed on the label",
+      "data": null,
+      "basis": "model_prior",
+      "prompt_version": "company-v1.2",
+      "model": null,
+      "elapsed_s": null
+    }
+  },
+  "literature_warnings": {
+    "status": "ok",
+    "basis": "model_prior",
+    "reason": null,
+    "data": {
+      "funding_independence": {
+        "status": "unknown",
+        "basis": "Specific funding trends for clinical trials on magnesium glycinate are not distinctly documented in meta-analyses.",
+        "confidence": "medium",
+        "notable_funders": []
+      },
+      "publication_bias": {
+        "status": "unknown",
+        "basis": "Systematic evaluations of publication bias specifically targeting magnesium glycinate trials are not widely established.",
+        "confidence": "medium",
+        "signals": []
+      },
+      "caveats": [
+        "Most published magnesium trials test other chemical forms such as magnesium oxide or magnesium citrate."
+      ]
+    },
+    "prompt_version": "literature-warnings-v1.1",
+    "model": "gemini-3.5-flash",
+    "elapsed_s": 5.37
+  },
+  "evidence_prior": {
+    "status": "ok",
+    "basis": "model_prior",
+    "reason": null,
+    "data": {
+      "ingredient": "Magnesium",
+      "recognised": true,
+      "summary": "Magnesium is an essential mineral involved in hundreds of biochemical reactions in the body. People often supplement it to improve sleep, reduce anxiety, or prevent muscle cramps. While clinical evidence supports its use for correcting deficiencies, general trials in broad populations show mixed or modest results.",
+      "evidence_landscape": {
+        "syntheses_exist": "many",
+        "note": "Numerous systematic reviews and meta-analyses evaluate magnesium for various health conditions, though quality varies."
+      },
+      "outcomes": [
+        {
+          "outcome": "sleep quality",
+          "direction": "benefit",
+          "evidence_strength": "limited",
+          "effective_daily_dose_low_mg": 250,
+          "effective_daily_dose_high_mg": 500,
+          "pooled_effect_recalled": null,
+          "population": "older adults and people with insomnia",
+          "note": "Rest on a small number of small trials, primarily in older adults. Results show modest improvements in sleep latency.",
+          "confidence": "medium",
+          "dose_in_range": false,
+          "dose_reading": "28 mg/day is below the range the model recalls as effective (250 mg–500 mg)."
+        },
+        {
+          "outcome": "muscle cramps",
+          "direction": "no_effect",
+          "evidence_strength": "moderate",
+          "effective_daily_dose_low_mg": null,
+          "effective_daily_dose_high_mg": null,
+          "pooled_effect_recalled": null,
+          "population": "older adults with night cramps",
+          "note": "Cochrane reviews show magnesium is unlikely to provide clinically meaningful reduction in muscle cramps in older adults.",
+          "confidence": "high",
+          "dose_in_range": null,
+          "dose_reading": "No effective dose range was recalled for this outcome, so there is nothing to compare against."
+        },
+        {
+          "outcome": "anxiety symptoms",
+          "direction": "insufficient",
+          "evidence_strength": "none",
+          "effective_daily_dose_low_mg": null,
+          "effective_daily_dose_high_mg": null,
+          "pooled_effect_recalled": null,
+          "population": "adults with mild anxiety",
+          "note": "Studies are small, mostly of poor methodological quality, and show high risk of bias.",
+          "confidence": "medium",
+          "dose_in_range": null,
+          "dose_reading": "No effective dose range was recalled for this outcome, so there is nothing to compare against."
+        }
+      ],
+      "form_assessment": {
+        "form": "magnesium glycinate",
+        "verdict": "well_absorbed",
+        "note": "Magnesium bound to glycine is generally well tolerated and considered to have better bioavailability and fewer laxative effects than inorganic forms like oxide."
+      },
+      "safety_notes": [
+        "Tolerable Upper Intake Level for supplemental magnesium is 350 mg per day for adults in many guidelines.",
+        "Doses above the upper limit frequently cause diarrhea, abdominal cramping, and soft stools."
+      ],
+      "confidence": "high",
+      "caveats": [
+        "The label dose of 28 mg elemental magnesium is very low compared to standard trial doses of 200 to 400 mg.",
+        "Individual response depends heavily on baseline dietary magnesium intake."
+      ]
+    },
+    "scored_dose_mg": 28.192,
+    "prompt_version": "evidence-prior-v1.1",
+    "model": "gemini-3.5-flash",
+    "elapsed_s": 4.48,
+    "disclaimer": "This section is the model's own recollection of the literature — not trials we read, checked and can quote. Treat it as orientation. It carries no grade, because a grade means 'computed from extracted trials', and the two must not look alike."
+  },
+  "census": {
+    "available": true,
+    "rcts_indexed": 1203,
+    "syntheses_indexed": 352,
+    "source": "Europe PMC",
+    "scope": "supplement",
+    "is_a_score": false,
+    "means": "How many trials EXIST. Not what they found — direction and quality require extraction, which has not been run for this product."
+  },
+  "queue": {
+    "queued": true,
+    "durable": true,
+    "note": "recorded for a future run; nothing runs automatically"
+  },
+  "caveats": [
+    {
+      "code": "servings_not_stated",
+      "text": "The label does not say how many servings are taken a day, so the dose in one serving was used. Your daily dose may be higher."
+    }
+  ]
+}
