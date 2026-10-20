@@ -30,7 +30,12 @@ from pipeline import meta_effects as me
 
 RULES = {
     "default_mcid_smd": 0.2,          # Cohen's "small" -- convention, flagged when used
-    "rob_low_weight_ok": 0.5,         # >= half the weight from low-RoB trials: no downgrade
+    # Founder 2026-10-20: only a REPORTED flaw downgrades (pool.rob_status
+    # "high" or "concerns"); "unclear" (method undescribed, item unknown) does
+    # not. Measured on 20261017_222637: no pooled strength trial was "low",
+    # 9 of 12 were "unclear" only, and the old rule (>= half the weight from
+    # LOW trials) took a level off for that alone.
+    "rob_no_flaw_weight_ok": 0.5,     # >= half the weight from trials with no reported flaw: no downgrade
     "rob_high_weight_serious": 0.5,   # > half the weight from high-RoB trials: -2
     "i2_serious": 0.50,               # I² above this: -1 ...
     "i2_very_serious": 0.75,          # ... above this: -2
@@ -138,14 +143,15 @@ def base_domains(pool, threshold: float) -> tuple[int, dict, list[str]]:
     start = 4 if randomised else 2
 
     # 1. Risk of bias
-    low = _share(studies, w, lambda s: s.get("rob") == "low")
+    no_flaw = _share(studies, w, lambda s: s.get("rob") in ("low", "unclear"))
     high = _share(studies, w, lambda s: s.get("rob") == "high")
-    if low >= RULES["rob_low_weight_ok"]:
+    if no_flaw >= RULES["rob_no_flaw_weight_ok"]:
         pass
     elif high > RULES["rob_high_weight_serious"]:
         down["risk_of_bias"] = (2, f"{high:.0%} of the weight from high-risk-of-bias trials")
     else:
-        down["risk_of_bias"] = (1, f"only {low:.0%} of the weight from low-risk-of-bias trials")
+        down["risk_of_bias"] = (1, f"{1 - no_flaw:.0%} of the weight from trials with a reported flaw "
+                                   "(no blinding/placebo, incomplete attrition, baseline imbalance)")
 
     # 2. Inconsistency
     i2 = smd.get("i2")

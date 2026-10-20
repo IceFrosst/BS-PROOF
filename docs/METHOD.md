@@ -252,7 +252,7 @@ each downgrade with its reason:
 
 | Domain | Rule |
 |---|---|
-| Risk of bias | none if ≥ 50 % of the weight is low-risk; −2 if > 50 % is high-risk; else −1. A trial is HIGH risk only when blinding/placebo is missing (S4 item 2); an undescribed randomisation method or incomplete attrition reporting is "some concerns" (as in RoB 2) |
+| Risk of bias | Only a REPORTED flaw downgrades (founder 2026-10-20): none if ≥ 50 % of the weight is from trials with no reported flaw (low or unclear); −2 if > 50 % is high-risk; else −1. A trial is HIGH risk when blinding/placebo is missing (S4 item 2); CONCERNS when attrition reporting is incomplete (item 5) or its arms were imbalanced at baseline; UNCLEAR when nothing wrong is reported but something is undescribed (randomisation method not named, an item unknown), which does not downgrade |
 | Inconsistency | −1 at I² > 50 %, −2 at > 75 %; not assessed below 3 trials |
 | Imprecision | −1 if the CI crosses 0 or the threshold, or fewer than 400 participants in total (optimal information size); −2 if the CI spans both ±threshold or fewer than 200 participants; −3 below 100 participants (GRADE's "extremely serious", 2021 guidance) |
 | Indirectness | −1 per axis when > 50 % of the weight is not the product's exact form, or off-dose (§9); form + dose cap at −2. Populations: refused if `different`, reported if `adjacent` (§8) |
@@ -344,15 +344,23 @@ What must hold before grades are shown to users:
   reason), so a trial we could not read, or refused as out of scope, is in
   neither number. It guards against grading a lucky, poolable subset of the
   trials we have. Failing coverage or precision is "not testable", never pass
-  or fail. Today: 19 rows from 10 creatine meta-analyses; lean mass passes
-  (coverage 65 %), strength is not testable (42 %).
+  or fail. Today: 19 rows from 10 creatine meta-analyses; on run 20261019_235728 lean mass
+  passes (coverage 61 %), strength is not testable (38 %).
 - **Negative controls.** Every row today is a creatine success, so a pipeline
   that called everything effective would pass. Each new ingredient adds at least
   one "does not work" or "harms" row (`docs/history/v14-anchors.csv` lists
   candidates: vitamin E and cardiovascular events, beta-carotene and lung cancer
   in smokers, selenium and prostate cancer).
 - **Stability**: the same studies extracted twice must give the same grades
-  (`scripts/experiments/extraction_stability.py`). Not yet measured.
+  (`scripts/experiments/extraction_stability.py`). Not yet measured cleanly;
+  two creatine runs whose S5 input differed (text slice vs full text) moved
+  strength from C+ to D+ through S5 claim splitting alone (project log,
+  2026-10-20).
+- **Spot audit** (founder 2026-10-20): a fixed-seed sample of 20 pooled effects
+  (`scripts/experiments/spot_audit.py`) checked against the papers' full text:
+  measure, arms, numbers and risk-of-bias items. The benchmark sees only the
+  pooled average, where extraction errors can cancel. Pass: no single kind of
+  error in more than 2 of the 20 (proposed, founder to confirm).
 
 The measurements behind the method's design are in
 `docs/history/2026-10-03-phase1-measurements.md`.

@@ -9,7 +9,7 @@ class Rob(unittest.TestCase):
     def test_undescribed_method_is_some_concerns_not_high(self):
         self.assertEqual(rob_status({"item1_randomisation_method": 0, "item2_double_blind_placebo": 1}), "unclear")
         self.assertEqual(rob_status({"item1_randomisation_method": 1, "item2_double_blind_placebo": 1,
-                                     "item5_attrition_ok": 0}), "unclear")
+                                     "item5_attrition_ok": 0}), "concerns")
 
     def test_missing_blinding_is_high_and_full_marks_low(self):
         self.assertEqual(rob_status({"item1_randomisation_method": 1, "item2_double_blind_placebo": 0}), "high")

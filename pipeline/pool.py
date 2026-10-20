@@ -60,7 +60,7 @@ class StudyEffect:
     claim_index: int
     # Facts GRADE needs (pipeline/grade.py); None = not reported.
     n: int | None = None
-    rob: str = "unclear"              # low | unclear | high (rob_status)
+    rob: str = "unclear"              # low | unclear | concerns | high (rob_status)
     form_match: str | None = None     # vocab.form_match tier vs the product
     pop_match: str | None = None      # vocab.pop_match tier vs the product
     design_rank: int | None = None
@@ -166,19 +166,24 @@ def rob_status(s4: dict | None) -> str:
               open-label or no placebo -- a real design flaw
       item 5  0 = attrition reporting incomplete -- not "attrition too high"
 
-    HIGH only when item 2 is 0. LOW when item 1 = 1, item 2 = 1 and item 5 is
-    not 0. Otherwise UNCLEAR ("some concerns", Cochrane RoB 2: an undescribed
-    method is not an inadequate one). Unknown never counts as low.
+    HIGH when item 2 is 0. CONCERNS when item 5 is 0 (a reported flaw short of
+    a missing placebo). LOW when item 1 = 1, item 2 = 1 and item 5 is not 0.
+    Otherwise UNCLEAR: nothing wrong is reported, but something is undescribed
+    or unknown (an undescribed method is not an inadequate one, Cochrane RoB 2).
+    Unknown never counts as low.
 
     Founder 2026-10-12. Measured on 20261012_102130: the previous rule read any
     0 as "inadequate" and rated 79/139 studies' "randomised, method not named"
-    as HIGH risk of bias."""
+    as HIGH risk of bias. Founder 2026-10-20: GRADE downgrades only for the
+    reported flaws (HIGH, CONCERNS), never for UNCLEAR (grade.base_domains)."""
     s4 = s4 or {}
     rand, blind, attrition = (s4.get("item1_randomisation_method"),
                               s4.get("item2_double_blind_placebo"), s4.get("item5_attrition_ok"))
     if blind == 0:
         return "high"
-    if rand == 1 and blind == 1 and attrition != 0:
+    if attrition == 0:
+        return "concerns"
+    if rand == 1 and blind == 1:
         return "low"
     return "unclear"
 
@@ -265,11 +270,12 @@ def _study_effects(item: dict, product: dict, polarity: dict,
         else:
             n = sum(arm_n)
         rob = rob_status(ext.get("S4") if isinstance(ext.get("S4"), dict) else None)
-        if "baseline_imbalance" in eff.flags and rob == "low":
+        if "baseline_imbalance" in eff.flags and rob in ("low", "unclear"):
             # Founder 2026-10-03: downgrade, never refuse. A trial whose arms
             # started further apart than the endpoint difference cannot count
             # as low risk of bias (RoB 2 domain 1); GRADE's rule does the rest.
-            rob = "unclear"
+            # A reported flaw, so CONCERNS (founder 2026-10-20).
+            rob = "concerns"
         s7 = ext.get("S7") if isinstance(ext.get("S7"), dict) else {}
         form_id = study_form(s7, claim)
         dose = trial_dose(product.get("ingredient") or "", s7, s3, claim)

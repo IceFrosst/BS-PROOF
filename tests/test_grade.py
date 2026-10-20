@@ -41,8 +41,11 @@ class CertaintyDomains(unittest.TestCase):
         self.assertEqual((c.level, c.downgrades), (4, {}))
 
     def test_risk_of_bias(self):
+        # Founder 2026-10-20: undescribed is not a flaw; a reported flaw is.
         unclear = certainty(make_pool([st(rob="unclear") for _ in range(3)]), 0.2)
-        self.assertEqual(unclear.downgrades["risk_of_bias"][0], 1)
+        self.assertNotIn("risk_of_bias", unclear.downgrades)
+        concerns = certainty(make_pool([st(rob="concerns") for _ in range(3)]), 0.2)
+        self.assertEqual(concerns.downgrades["risk_of_bias"][0], 1)
         high = certainty(make_pool([st(rob="high") for _ in range(3)]), 0.2)
         self.assertEqual(high.downgrades["risk_of_bias"][0], 2)
 

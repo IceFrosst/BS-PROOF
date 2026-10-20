@@ -270,18 +270,20 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
 
 ---
 
-## Current state (snapshot, 2026-10-18)
+## Current state (snapshot, 2026-10-20)
 
 - **Method:** evidence method v2 is the pipeline's only method; v14 retired.
   `evidence_v2.STATUS = "shadow"` until validation passes. `main` and the live
   site still run v14 until the simplification branches merge.
-- **Latest v2 run** `20261017_222637` (v1.38, 138/139 studies): strength
-  **k = 12, C+** (+0.29 [+0.07, +0.50]) and lean mass k = 9 D+ both **pass**
-  the benchmark (coverage 57 % / 69 %). Not the baseline: its S5 saw a
-  2,225-char text slice (fixed 2026-10-18, `FULL_TEXT_AGENTS`); re-run pending.
+- **Latest v2 run** `20261019_235728` (v1.38, 138/139 studies, S5 on the
+  full text): strength k = 11 D+, coverage 38 % (not testable); lean mass
+  k = 11 I, passes (61 %). Replayed with the 2026-10-20 risk-of-bias rule:
+  strength **C, Moderate** (+0.18 [+0.04, +0.31]). Letters move with how S5
+  splits outcomes (project log 2026-10-20). Next extraction is `PROMPT_VERSION`
+  v1.39 (S4 item 1), a full re-extraction.
 - **Known v2 problems:** the work list in `docs/DECISIONS.md`. Done: items
   1 (imprecision scales with information size), 2, 3 (offline part), 6, 10
-  (prompts trimmed, `PROMPT_VERSION` v1.38); decided: 5 (healthy
+  (prompts trimmed); decided: 5 (healthy
   adults only), 7 (second reviewer on). Open: coverage, stability,
   negative-control benchmarks.
 - **Working baseline: `Jans_attempt`, not `main`** (founder, 2026-10-15).

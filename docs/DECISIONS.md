@@ -9,7 +9,7 @@ the founder decides. When an item is decided, move it to "Decided" with its
 date; delete anything that no longer applies. Dated history goes to
 `docs/history/project-log.md`, not here.
 
-Last swept: 2026-10-16.
+Last swept: 2026-10-20.
 
 ---
 
@@ -45,6 +45,23 @@ Last swept: 2026-10-16.
    reporting signal (domain 5) and the most informative of the three. Options:
    use item 4 (and 3) as "some concerns" in the rule, or keep them reported
    only. Kept in the v1.37 prompts so deciding later needs no re-extraction.
+   Postponed again 2026-10-20. Measured on run 20261017_222637 (22 trials
+   pooled for strength, lean mass or power): item 4 unknown in 22, item 3
+   unknown in 21, so either option changes no creatine grade today.
+
+3. **Lean-mass threshold** (from decision "MCIDs per ingredient", 2026-10-17).
+   Searched 2026-10-20: no anchor-based MCID for lean or fat-free mass exists
+   (it is a surrogate that people do not feel, so the anchor method does not
+   apply); only DXA precision (least significant change about 1.1 kg for one
+   person's repeat scan, not a group-mean threshold). The 0.2 SD default is
+   itself the standard distribution-based "smallest worthwhile change", and the
+   creatine benchmark rows sit around it (+0.11 to +0.24 SD). *Recommendation:*
+   keep 0.2 SD for lean mass and say so in its `threshold_source`; no
+   constant moves.
+
+4. **Spot-audit pass rule** (METHOD §16): no single kind of error (wrong arm,
+   measure, number or risk-of-bias item) in more than 2 of 20 sampled pooled
+   effects. Proposed 2026-10-20.
 
 ## v2 work list (agreed 2026-10-15, after the simplification)
 
@@ -75,6 +92,9 @@ All accepted by the founder **"for now, may revisit"** unless stated.
 
 | Date | Decision |
 |---|---|
+| 2026-10-20 | **Risk of bias downgrades only for a reported flaw** (no blinding/placebo, incomplete attrition reporting, baseline imbalance), never for an undescribed method or an unknown item (`grade.RULES["rob_no_flaw_weight_ok"]`, `pool.rob_status` "concerns"). Replayed run 20261019_235728: strength D+ (Low) → C (Moderate), k = 12, +0.18 [+0.04, +0.31]; lean mass and power unchanged (I). |
+| 2026-10-20 | **Spot audit is a validation check** (METHOD §16); pass rule open (decision 4). |
+| 2026-10-20 | **S4 item 1 counts any named randomisation tool or procedure** (`PROMPT_VERSION` v1.39). Measured: 7 of 86 item-1 zeros quoted one. |
 | 2026-10-16 | **Imprecision scales with information size:** −1 below 400 participants, −2 below 200, −3 below 100 (`grade.RULES` `ois_*`). Measured: the single 14-participant trials that graded A now grade I; no other creatine letter changed. |
 | 2026-10-16 | **Populations:** only healthy-adult trials are graded for a healthy-adult product; other populations stay excluded (measured: including them adds 5 trials and lowers strength C− → D+). Separate population grades are for later. |
 | 2026-10-17 | **Data comes only from the trial papers' own full text:** no abstract-only extraction, no outside sources (other databases, reviews' forest plots); the coverage rule is unchanged. Revisit only for a reliable way to read data from the studies themselves. |

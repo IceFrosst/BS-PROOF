@@ -380,7 +380,11 @@ def _claude_bin() -> str:
 #   Measured on the v1.37 2-study smoke run: one S5 attempt on a three-arm
 #   trial (PLA / GAA / GAA + CrM) added `control_arm_note` and failed the
 #   schema. Only the smoke run's cache is invalidated.
-PROMPT_VERSION = "v1.38"
+# v1.39 (2026-10-20): S4 item 1 counts any named sequence-generation procedure
+#   or tool (random.org, Excel, block randomisation, ...). Measured on run
+#   20261017_222637: 7 of 86 item-1 zeros quoted such a method in their own
+#   evidence spans.
+PROMPT_VERSION = "v1.39"
 
 # Tier -> model. FULL IDs, NOT ALIASES.
 #

@@ -10,6 +10,38 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-20 — v1.38 re-run 20261019_235728 (S5 full text); RoB rule; S4 item 1
+
+The re-run (S5 on the full paper, cb54488) finished 138/139 (1 no text; one S5N
+call failed again on `doi:101002acr22747`). Strength went **down**: C+ (k = 12,
++0.29) → **D+** (k = 11, +0.17 [-0.04, +0.38]), coverage 57 % → 38 %, not
+testable; lean mass k = 9 → 11, +0.22 [-0.06, +0.50], I, still PASS (61 %);
+power I. Against 20261017_222637, strength lost 5 trials and gained 3, almost
+all through how S5 split or named outcomes, not through numbers:
+left / right sides the paper reports separately were merged into one claim no
+number could be read for (`doi:1010801550278320262633251`,
+`doi:1010801550278320232193556`); a combined "leg press and chest press" claim
+replaced the two 1RMs (`doi:103390nu12061880`); MVC named "before the time
+trial" was mapped to recovery (`doi:101111sms14629`); and a 1RM measured only at
+baseline (to set loads), which the slice run had wrongly pooled, was correctly
+dropped (`doi:103390nu16091324`). Two same-measure effects also moved through
+S5N re-reads (`doi:103390nu13072303` SQ-1RM g 1.21 → 0.57). The two runs' S5
+inputs differed, so this is not a clean stability measurement, but it shows the
+letter is fragile to claim splitting.
+
+Founder decisions (DECISIONS "Decided"): risk of bias downgrades only for a
+reported flaw (`pool.rob_status` adds "concerns" for incomplete attrition and
+baseline imbalance; `grade.RULES["rob_no_flaw_weight_ok"]` replaces
+`rob_low_weight_ok`). Cache-only replay of 20261019_235728 with the rule
+(`out/replay/rob_v1020`, 4 cache misses): strength **C, Moderate**, k = 12,
++0.18 [+0.04, +0.31]; lean mass and power unchanged. S4 item 1 now counts any
+named randomisation tool (`PROMPT_VERSION` v1.39; 7 of 86 zeros quoted one).
+Decision 2 (S4 items 3 / 4) postponed. The spot audit joins METHOD §16
+(`scripts/experiments/spot_audit.py`); its first sample already shows an S4
+item 2 misread (`doi:103390nu14061140`: "double-blind" with a glucose placebo
+scored 0, so rated high risk). Lean-mass MCID searched: none anchor-based
+exists; recommendation to keep 0.2 SD (DECISIONS open 3).
+
 ## 2026-10-18 — v1.38 creatine run 20261017_222637; S5 text-trim bug found
 
 The run finished 138/139 studies (1 skipped for no text, 1 study with one failed

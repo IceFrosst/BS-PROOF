@@ -11,10 +11,15 @@ item never counts as low risk of bias. Do not score 0 just because
 information is absent.
 
 ITEM 1 randomisation method described
-1 if a method is named: computer-generated sequence, random number table,
-permuted blocks, minimisation. 0 if the paper says only "randomised" or
-"randomly assigned" with no method. 0 for alternation or date-of-birth
-allocation (those are not random).
+1 if the paper names HOW the sequence was generated -- any named procedure or
+tool counts: computer-generated sequence, random number table, permuted or
+block randomisation, stratified randomisation, minimisation, a named website
+or program (random.org, randomizer.org, sealedenvelope.com, Excel, SPSS, an
+online randomisation tool), drawing lots, coin toss. 0 if the paper says only
+"randomised" or "randomly assigned", or gives only an allocation ratio
+("1:1") or a matching variable, with no method. 0 for alternation or
+date-of-birth allocation (those are not random). MEASURED 2026-10-20: 7 of 86
+item-1 zeros quoted a named tool or block randomisation in their own evidence.
 
 ITEM 2 double-blind + placebo controlled
 1 requires BOTH: an indistinguishable placebo/comparator, AND blinding of

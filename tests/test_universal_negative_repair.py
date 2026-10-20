@@ -199,7 +199,7 @@ class UniversalNegativeRepairTests(unittest.TestCase):
         self.assertFalse(Draft7Validator(schemas["s7_form.json"]).is_valid(
             {"arms": [], "form_vocab_id": "x"}))                  # no top-level facts since v1.37
         from bsproof import claude_adapter
-        self.assertEqual(claude_adapter.PROMPT_VERSION, "v1.38")
+        self.assertEqual(claude_adapter.PROMPT_VERSION, "v1.39")
         shared = (Path(__file__).parents[1] / "prompts" / "_shared.md").read_text()
         self.assertIn("schema object directly", shared)
         self.assertIn("Never stringify", shared)

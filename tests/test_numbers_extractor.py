@@ -337,7 +337,7 @@ class BaselineImbalance(unittest.TestCase):
                 "outcomes": [{"claim": claim, "outcome_vocab_id": "lean_body_mass", "discarded": False,
                               "numbers_v2": {"verified": v, "claim": claim}}]}}
         flagged = pool_outcomes([item(FFM)], product)["lean_body_mass"].studies[0]
-        self.assertEqual((flagged["rob"], "baseline_imbalance" in flagged["flags"]), ("unclear", True))
+        self.assertEqual((flagged["rob"], "baseline_imbalance" in flagged["flags"]), ("concerns", True))
         clean = pool_outcomes([item({**FFM, "pre_control": 64.0})], product)["lean_body_mass"].studies[0]
         self.assertEqual(clean["rob"], "low")
 
