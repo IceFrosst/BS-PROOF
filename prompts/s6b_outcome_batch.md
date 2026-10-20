@@ -37,6 +37,10 @@ RECOVERY, not the strength:
   "soreness 48h post-exercise"             -> muscle_soreness     NOT muscle_strength
   "1RM gain after 8 weeks of training"     -> muscle_strength     YES — this one IS
                                               the strength construct
+  "MVC measured fresh at the start of a     -> muscle_strength     YES — a fresh test
+   test session, before a time trial"                              is the capacity
+                                                                   (measured 2026-10-20:
+                                                                   filed as recovery)
 The tell is the study clock: an endpoint measured hours-to-days around one
 damaging bout is about recovery; an endpoint measured across a training program
 is about the capacity itself.

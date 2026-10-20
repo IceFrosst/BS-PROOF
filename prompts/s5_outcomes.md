@@ -21,6 +21,18 @@ COLLAPSE the grid around ONE measure into one claim:
                                                   randomised sample)
   lean mass in arm, leg, trunk and total       -> ONE claim (use the total)
 
+COLLAPSE ONLY ONTO A VALUE THE PAPER PRINTS. A collapsed claim must name a
+result the paper reports with its own numbers -- the total, the whole sample,
+the primary visit. When the paper prints NO combined value, do not make one up:
+  knee extension left and right, no combined value  -> TWO claims, one per side
+  leg press 1-RM and chest press 1-RM               -> TWO claims, never "total
+                                                       body strength (leg press
+                                                       and chest press combined)"
+A composite score is a claim only when the paper reports the composite itself
+with its own numbers; then list the composite AND each test it reports
+separately. MEASURED 2026-10-20: left/right and two 1-RMs merged into claims
+no number could be read for; three strength trials left the pool.
+
 SPLIT different tests: each test or instrument with its OWN reported result is
 its own claim:
   leg press 1-RM and bench press 1-RM          -> TWO claims
@@ -82,8 +94,21 @@ Comparisons where both arms received the ingredient (dose A vs dose B, timing
 A vs timing B, ingredient + X vs ingredient) may be listed with their arms
 named; downstream refuses them as evidence about the ingredient.
 
+BASELINE-ONLY MEASURES ARE NOT OUTCOMES. A test the paper reports only before
+the intervention (a 1-RM measured to set training loads, a screening value) has
+no result for the arms to differ on: do not list it.
+
+NAME THE TEST, NOT ITS PLACE IN THE SESSION. outcome_raw names what was
+measured ("maximal voluntary contraction"), not when within a test session it
+was taken. A test taken FRESH at the start of a session (before a time trial,
+before a fatiguing protocol) is the plain test. A repeat of it AFTER the
+fatiguing task in the same session is a separate claim, named as such ("MVC
+after the 6-min time trial"). MEASURED 2026-10-20: "MVC before 6-min time
+trial" was filed under recovery instead of strength.
+
 TIMEPOINT. The assessment visit this claim's result is reported at, as
-written ("8 weeks", "day 28", "post-supplementation"). A trial that
+written ("8 weeks", "day 28", "post-supplementation") -- the visit, never the
+position within the session. A trial that
 supplements for one stated duration and measures at its end has that duration
 as its timepoint: copying the stated duration IS reading, not inference.
 MEASURED 2026-08-24: 45 otherwise usable results were lost for a missing

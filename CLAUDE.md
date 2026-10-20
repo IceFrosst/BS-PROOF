@@ -280,7 +280,8 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
   k = 11 I, passes (61 %). Replayed with the 2026-10-20 risk-of-bias rule:
   strength **C, Moderate** (+0.18 [+0.04, +0.31]). Letters move with how S5
   splits outcomes (project log 2026-10-20). Next extraction is `PROMPT_VERSION`
-  v1.39 (S4 item 1), a full re-extraction.
+  v1.39 (S4 item 1; S5 splitting and naming; one S6B example), a full
+  re-extraction.
 - **Known v2 problems:** the work list in `docs/DECISIONS.md`. Done: items
   1 (imprecision scales with information size), 2, 3 (offline part), 6, 10
   (prompts trimmed); decided: 5 (healthy

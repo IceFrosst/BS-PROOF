@@ -42,6 +42,14 @@ item 2 misread (`doi:103390nu14061140`: "double-blind" with a glucose placebo
 scored 0, so rated high risk). Lean-mass MCID searched: none anchor-based
 exists; recommendation to keep 0.2 SD (DECISIONS open 3).
 
+Same day, also in v1.39 (founder: "make the changes to S5"): S5 collapses a
+grid only onto a value the paper prints (left / right and separate tests stay
+separate claims; a composite only when printed, and then with its parts), drops
+baseline-only measures, and names the test, not its place in the session; S6B
+gains the "fresh MVC before a time trial is muscle_strength" example. S5's
+prompt + schema is 11,392 chars; it is in `FULL_TEXT_AGENTS`, so it still gets
+the whole paper.
+
 ## 2026-10-18 — v1.38 creatine run 20261017_222637; S5 text-trim bug found
 
 The run finished 138/139 studies (1 skipped for no text, 1 study with one failed

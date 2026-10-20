@@ -383,7 +383,11 @@ def _claude_bin() -> str:
 # v1.39 (2026-10-20): S4 item 1 counts any named sequence-generation procedure
 #   or tool (random.org, Excel, block randomisation, ...). Measured on run
 #   20261017_222637: 7 of 86 item-1 zeros quoted such a method in their own
-#   evidence spans.
+#   evidence spans. Same version, S5: collapse only onto a value the paper
+#   prints (no invented left+right or multi-test composites), no baseline-only
+#   measures, name the test not its place in the session; S6B: a fresh test
+#   before a time trial is the capacity, not recovery. Measured on run
+#   20261019_235728: strength lost 5 trials and gained 3 through S5 splitting.
 PROMPT_VERSION = "v1.39"
 
 # Tier -> model. FULL IDs, NOT ALIASES.
