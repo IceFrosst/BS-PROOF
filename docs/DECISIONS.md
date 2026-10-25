@@ -59,6 +59,15 @@ Last swept: 2026-10-20.
    keep 0.2 SD for lean mass and say so in its `threshold_source`; no
    constant moves.
 
+5. **S4 item 5 (attrition) as a flaw** (raised 2026-10-25). Item 5 is 0 when
+   any of dropout < 20 %, per-arm numbers or stated reasons is missing, so a
+   reporting gap and a real attrition problem look alike; the 2026-10-20 rule
+   counts every 0 as a flaw. Run 20261023_190836: 59 % of the strength weight
+   and 95 % of lean mass carry a 0. Options: (a) keep (strength C+, lean mass
+   D+); (b) read 0 as "unclear" now, offline (strength B+, lean mass D, both
+   Moderate); (c) split item 5 in S4 into "dropout >= 20 % or unbalanced"
+   (a flaw) and "reporting incomplete" (unclear), at the next prompt change.
+
 4. **Spot-audit pass rule** (METHOD §16): no single kind of error (wrong arm,
    measure, number or risk-of-bias item) in more than 2 of 20 sampled pooled
    effects. Proposed 2026-10-20.

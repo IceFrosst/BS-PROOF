@@ -10,6 +10,31 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-25 — v1.39 creatine run 20261023_190836
+
+Full re-extraction under v1.39 (S4 item 1, S5 splitting and naming, S6B example),
+three sittings over 2026-10-20..23 (quota pauses; founder stop at 97/139 and
+resume). 138/139 (1 no text; the usual S5N failure on `doi:101002acr22747`).
+**Strength C+, Low**, k = 12, +0.22 [+0.04, +0.41], coverage 44 % (not testable,
+6/6 overlaps); **lean mass D+, Low**, k = 11, +0.18 [-0.05, +0.40], PASS (69 %,
+width x0.9); power I, k = 10. The S5 fixes recovered the left/right and fresh-MVC
+trials (`doi:1010801550278320262633251`, `doi:1010801550278320232193556`,
+`doi:101111sms14629`); two others left strength.
+
+Risk of bias is now the swing domain. Under the 2026-10-20 rule, S4 item 5 = 0
+is a reported flaw ("concerns"), and 59 % of the strength weight, 95 % of lean
+mass, carries one. Item 5 is 0 when ANY of dropout < 20 %, per-arm numbers or
+stated reasons is missing, so "4 of 36 withdrew for personal reasons" scores the
+same as 30 % dropout. Offline re-pool of `out/run_v139_extractions.json`
+(reproduces the run exactly) with item 5 = 0 read as "unclear": strength **B+,
+Moderate**; lean mass **D, Moderate**; power unchanged. Founder call, raised
+2026-10-25. S4 run-to-run (v1.38 vs v1.39 on the same 139 papers; only item 1's
+prompt changed): item 2 changed on 15 studies, item 5 on 19.
+
+Strength across the four recent runs: +0.29, +0.17, +0.18 (replay), +0.22; the
+letter flips between "small" and "meaningful" because the estimate sits on the
+0.2 SD threshold (`threshold_sensitive`).
+
 ## 2026-10-20 — v1.38 re-run 20261019_235728 (S5 full text); RoB rule; S4 item 1
 
 The re-run (S5 on the full paper, cb54488) finished 138/139 (1 no text; one S5N

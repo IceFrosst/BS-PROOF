@@ -270,18 +270,16 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
 
 ---
 
-## Current state (snapshot, 2026-10-20)
+## Current state (snapshot, 2026-10-25)
 
 - **Method:** evidence method v2 is the pipeline's only method; v14 retired.
   `evidence_v2.STATUS = "shadow"` until validation passes. `main` and the live
   site still run v14 until the simplification branches merge.
-- **Latest v2 run** `20261019_235728` (v1.38, 138/139 studies, S5 on the
-  full text): strength k = 11 D+, coverage 38 % (not testable); lean mass
-  k = 11 I, passes (61 %). Replayed with the 2026-10-20 risk-of-bias rule:
-  strength **C, Moderate** (+0.18 [+0.04, +0.31]). Letters move with how S5
-  splits outcomes (project log 2026-10-20). Next extraction is `PROMPT_VERSION`
-  v1.39 (S4 item 1; S5 splitting and naming; one S6B example), a full
-  re-extraction.
+- **Latest v2 run** `20261023_190836` (v1.39, 138/139 studies): strength
+  **k = 12, C+** (+0.22 [+0.04, +0.41]), coverage 44 % (not testable); lean
+  mass k = 11 D+, passes (69 %). Risk of bias is the swing domain: read S4
+  item 5 = 0 as "unclear" and strength is B+ (project log 2026-10-25; founder
+  call open in `docs/DECISIONS.md`).
 - **Known v2 problems:** the work list in `docs/DECISIONS.md`. Done: items
   1 (imprecision scales with information size), 2, 3 (offline part), 6, 10
   (prompts trimmed); decided: 5 (healthy
