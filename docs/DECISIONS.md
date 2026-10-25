@@ -37,28 +37,6 @@ Last swept: 2026-10-25.
      if an ingredient has many such trials; if adopted, only an exact p from a
      two-group test of a parallel trial, flagged as its own route.
 
-2. **S4 risk-of-bias items 3, 4 and 6 are extracted but unused.** The
-   risk-of-bias rule (METHOD §12) reads items 1 (randomisation method), 2
-   (blinding / placebo) and 5 (attrition). Items 3 (prospective registration),
-   4 (reported primary outcome matches the registry) and 6 (intention to treat)
-   are extracted and exported, never graded. Item 4 is RoB 2's selective-
-   reporting signal (domain 5) and the most informative of the three. Options:
-   use item 4 (and 3) as "some concerns" in the rule, or keep them reported
-   only. Kept in the v1.37 prompts so deciding later needs no re-extraction.
-   Postponed again 2026-10-20. Measured on run 20261017_222637 (22 trials
-   pooled for strength, lean mass or power): item 4 unknown in 22, item 3
-   unknown in 21, so either option changes no creatine grade today.
-
-3. **Lean-mass threshold** (from decision "MCIDs per ingredient", 2026-10-17).
-   Searched 2026-10-20: no anchor-based MCID for lean or fat-free mass exists
-   (it is a surrogate that people do not feel, so the anchor method does not
-   apply); only DXA precision (least significant change about 1.1 kg for one
-   person's repeat scan, not a group-mean threshold). The 0.2 SD default is
-   itself the standard distribution-based "smallest worthwhile change", and the
-   creatine benchmark rows sit around it (+0.11 to +0.24 SD). *Recommendation:*
-   keep 0.2 SD for lean mass and say so in its `threshold_source`; no
-   constant moves.
-
 4. **Spot-audit pass rule** (METHOD §16): no single kind of error (wrong arm,
    measure, number or risk-of-bias item) in more than 2 of 20 sampled pooled
    effects. Proposed 2026-10-20.
@@ -92,6 +70,8 @@ All accepted by the founder **"for now, may revisit"** unless stated.
 
 | Date | Decision |
 |---|---|
+| 2026-10-25 | **S4 items 3, 4 and 6 stay reported only**, not graded. Measured: items 3 / 4 unknown for 21-22 of the 22 trials pooled for strength, lean mass or power, so grading them would change no creatine letter; revisit for an ingredient with registered trials. |
+| 2026-10-25 | **Lean mass keeps the 0.2 SD threshold.** Searched 2026-10-20: no anchor-based MCID exists for lean or fat-free mass (a surrogate people do not feel); 0.2 SD is the standard distribution-based smallest worthwhile change, and the creatine benchmark rows sit around it (+0.11 to +0.24 SD). |
 | 2026-10-25 | **Attrition: reporting gaps are not a flaw; a real attrition problem is.** S4 item 5 = 0 (per-arm numbers or reasons missing) is "unclear"; the new S4 item 7 (dropout ≥ 20 %, differing between arms, or caused by the intervention) is "concerns" (S4 v1.40). Re-pooled run 20261023_190836 before item 7 exists: strength C+ (Low) → **B+ (Moderate)**, lean mass D+ (Low) → **D (Moderate)**. |
 | 2026-10-25 | **Per-agent prompt versions** (`claude_adapter.AGENT_PROMPT_VERSION`): a one-agent prompt change re-runs that agent only (CLAUDE.md invariant 3). |
 | 2026-10-20 | **Risk of bias downgrades only for a reported flaw** (no blinding/placebo, incomplete attrition reporting, baseline imbalance), never for an undescribed method or an unknown item (`grade.RULES["rob_no_flaw_weight_ok"]`, `pool.rob_status` "concerns"). Replayed run 20261019_235728: strength D+ (Low) → C (Moderate), k = 12, +0.18 [+0.04, +0.31]; lean mass and power unchanged (I). |
