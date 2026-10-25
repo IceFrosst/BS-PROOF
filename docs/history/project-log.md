@@ -10,6 +10,19 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-25 — decisions: attrition split (S4 v1.40), per-agent prompt versions
+
+Founder: item 5 option "b plus c", and per-agent versions. `pool.rob_status`:
+item 5 = 0 is "unclear"; item 7 (new, `item7_attrition_problem`) = 1 is
+"concerns". S4 prompt and schema gain item 7 and item 5 becomes reporting-only;
+`AGENT_PROMPT_VERSION = {"S4": "v1.40"}`, `prompt_version(agent)` in the cache key
+and provenance; the invariant-3 hook accepts either bump. Unbumped agents keep
+their keys, so the v1.39 cache still serves S3, S5-S8 (tests/test_agent_prompt_version.py).
+Offline re-pool of 20261023_190836 under the rule (no item 7 in that run):
+strength B+ Moderate, lean mass D Moderate, power I. Also found: the TS-parity
+golden generator still built the pre-v1.37 top-level S7 shape, so regenerating
+it silently dropped form and dose; fixed to arm rows, goldens byte-identical.
+
 ## 2026-10-25 — v1.39 creatine run 20261023_190836
 
 Full re-extraction under v1.39 (S4 item 1, S5 splitting and naming, S6B example),

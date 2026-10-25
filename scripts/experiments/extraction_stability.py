@@ -47,7 +47,8 @@ SHOWCASE = ["muscle_strength", "muscle_power", "lean_body_mass", "exercise_endur
 
 S3_FIELDS = ("comparator", "ingredient_isolated", "n_randomised", "n_analysed", "duration_days")
 S4_FIELDS = ("item1_randomisation_method", "item2_double_blind_placebo", "item3_prospective_registration",
-             "item4_outcome_matches_registry", "item5_attrition_ok", "item6_itt")
+             "item4_outcome_matches_registry", "item5_attrition_ok", "item6_itt",
+             "item7_attrition_problem")
 S7_FIELDS = ("form_vocab_id", "elemental_dose_mg", "compound_dose_mg", "dose_per_kg_mg", "dose_basis")
 S8_FIELDS = ("funding_class",)
 # The numbers claim (S5's identity + S5N's numbers, pipeline/review.numbers_claim).

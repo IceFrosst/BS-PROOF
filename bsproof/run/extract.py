@@ -325,6 +325,7 @@ def extract_stage(store, opts, primaries, pv, outcome_allowlist, run_context):
             print(f"  extraction dump failed: {e}")
 
     run_context["prompt_version"] = ca.PROMPT_VERSION
+    run_context["agent_prompt_versions"] = {a: ca.prompt_version(a) for a in ca.AGENTS}
     run_context["second_reviewer"] = workers._second_reviewer_enabled()
     # Token + cost accounting for the run report. On a subscription the
     # per-call spend is 0, so what the adapter reports is the API-EQUIVALENT

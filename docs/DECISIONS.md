@@ -9,7 +9,7 @@ the founder decides. When an item is decided, move it to "Decided" with its
 date; delete anything that no longer applies. Dated history goes to
 `docs/history/project-log.md`, not here.
 
-Last swept: 2026-10-20.
+Last swept: 2026-10-25.
 
 ---
 
@@ -63,15 +63,6 @@ Last swept: 2026-10-20.
    measure, number or risk-of-bias item) in more than 2 of 20 sampled pooled
    effects. Proposed 2026-10-20.
 
-5. **S4 item 5 (attrition) as a flaw** (raised 2026-10-25). Item 5 is 0 when
-   any of dropout < 20 %, per-arm numbers or stated reasons is missing, so a
-   reporting gap and a real attrition problem look alike; the 2026-10-20 rule
-   counts every 0 as a flaw. Run 20261023_190836: 59 % of the strength weight
-   and 95 % of lean mass carry a 0. Options: (a) keep (strength C+, lean mass
-   D+); (b) read 0 as "unclear" now, offline (strength B+, lean mass D, both
-   Moderate); (c) split item 5 in S4 into "dropout >= 20 % or unbalanced"
-   (a flaw) and "reporting incomplete" (unclear), at the next prompt change.
-
 ## v2 work list (agreed 2026-10-15, after the simplification)
 
 Ordered by how much each distorts the grade (10 is clean-up, not accuracy).
@@ -101,6 +92,8 @@ All accepted by the founder **"for now, may revisit"** unless stated.
 
 | Date | Decision |
 |---|---|
+| 2026-10-25 | **Attrition: reporting gaps are not a flaw; a real attrition problem is.** S4 item 5 = 0 (per-arm numbers or reasons missing) is "unclear"; the new S4 item 7 (dropout ≥ 20 %, differing between arms, or caused by the intervention) is "concerns" (S4 v1.40). Re-pooled run 20261023_190836 before item 7 exists: strength C+ (Low) → **B+ (Moderate)**, lean mass D+ (Low) → **D (Moderate)**. |
+| 2026-10-25 | **Per-agent prompt versions** (`claude_adapter.AGENT_PROMPT_VERSION`): a one-agent prompt change re-runs that agent only (CLAUDE.md invariant 3). |
 | 2026-10-20 | **Risk of bias downgrades only for a reported flaw** (no blinding/placebo, incomplete attrition reporting, baseline imbalance), never for an undescribed method or an unknown item (`grade.RULES["rob_no_flaw_weight_ok"]`, `pool.rob_status` "concerns"). Replayed run 20261019_235728: strength D+ (Low) → C (Moderate), k = 12, +0.18 [+0.04, +0.31]; lean mass and power unchanged (I). |
 | 2026-10-20 | **Spot audit is a validation check** (METHOD §16); pass rule open (decision 4). |
 | 2026-10-20 | **S4 item 1 counts any named randomisation tool or procedure** (`PROMPT_VERSION` v1.39). Measured: 7 of 86 item-1 zeros quoted one. |

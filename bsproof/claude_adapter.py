@@ -390,6 +390,27 @@ def _claude_bin() -> str:
 #   20261019_235728: strength lost 5 trials and gained 3 through S5 splitting.
 PROMPT_VERSION = "v1.39"
 
+# PER-AGENT VERSIONS (founder 2026-10-25). An edit to ONE agent's prompt or
+# schema bumps only that agent here, so only its calls re-run; an edit to
+# _shared.md or to what every agent sees bumps PROMPT_VERSION (all agents).
+# Downstream agents need no bump of their own: their payload carries the
+# upstream output (s3_arm_facts, S5's claims), and the payload is in the key.
+# Measured: the v1.39 prompt change re-ran all ~1,100 calls over four days of
+# subscription quota (2026-10-20..23) for edits to three agents.
+#   S4 v1.40 (2026-10-25): item 5 is attrition REPORTING only (per-arm numbers
+#   and reasons); the new item 7 is a real attrition PROBLEM (overall dropout
+#   >= 20 %, or reported as differing between arms or caused by the
+#   intervention). Measured on run 20261023_190836: item 5 = 0 lumped "4 of 36
+#   withdrew, reasons given, not per arm" with high dropout, and flagged 59 % of
+#   the strength weight.
+AGENT_PROMPT_VERSION: dict[str, str] = {"S4": "v1.40"}
+
+
+def prompt_version(agent: str) -> str:
+    """The version in `agent`'s cache key and provenance (AGENT_PROMPT_VERSION
+    over the release-wide PROMPT_VERSION)."""
+    return AGENT_PROMPT_VERSION.get(agent, PROMPT_VERSION)
+
 # Tier -> model. FULL IDs, NOT ALIASES.
 #
 # An alias like "sonnet" resolves to "the latest model" and the alias STRING is
@@ -588,7 +609,7 @@ class Usage:
             self._records.append({
                 "agent": agent, "tier": tier, "provider": "anthropic",
                 "model": model, "reasoning_effort": effort,
-                "prompt_version": PROMPT_VERSION, "cached": True,
+                "prompt_version": prompt_version(agent), "cached": True,
                 "outcome": "cache_hit", "latency_s": None,
                 "api_equivalent_cost": 0.0, "tokens": None,
             })
@@ -637,7 +658,7 @@ class Usage:
             self._records.append({
                 "agent": agent, "tier": tier, "provider": "anthropic",
                 "model": model, "reasoning_effort": effort,
-                "prompt_version": PROMPT_VERSION, "cached": False,
+                "prompt_version": prompt_version(agent), "cached": False,
                 "outcome": outcome or ("failed" if failed else "success"),
                 "latency_s": round(latency, 4),
                 "api_equivalent_cost": (
@@ -803,7 +824,7 @@ class Usage:
                 row["cache_hits"] = row["hits"]
                 row["failures"] = row["fail"]
                 row["reasoning_effort"] = row.get("effort")
-                row["prompt_version"] = PROMPT_VERSION
+                row["prompt_version"] = prompt_version(agent)
                 row["provider"] = "anthropic"
                 if missing_tokens_by_agent.get(agent):
                     row["tokens"] = {
@@ -915,7 +936,7 @@ def _key(agent: str, model: str, payload: str, effort: str | None = None) -> str
     # instead of a prompt. Added 2026-08-09 with TIER_EFFORT.
     h = hashlib.sha256()
     h.update(agent.encode()); h.update(b"\0")
-    h.update(PROMPT_VERSION.encode()); h.update(b"\0")
+    h.update(prompt_version(agent).encode()); h.update(b"\0")
     h.update(model.encode()); h.update(b"\0")
     h.update((effort or "").encode()); h.update(b"\0")
     h.update(payload.encode())
@@ -1209,7 +1230,7 @@ def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
         USAGE.add_cache_hit(agent, model=model, tier=tier, effort=effort)
         return json.loads(row[0]), {
             "cached": True, "provider": "anthropic", "model": model,
-            "tier": tier, "effort": effort, "prompt_version": PROMPT_VERSION,
+            "tier": tier, "effort": effort, "prompt_version": prompt_version(agent),
         }
 
     cmd = [
@@ -1293,7 +1314,7 @@ def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
                 return recovered, {
                     "cached": False, "provider": "anthropic", "model": model,
                     "tier": tier, "cost": recovered_cost, "effort": effort,
-                    "prompt_version": PROMPT_VERSION,
+                    "prompt_version": prompt_version(agent),
                     "transport_recovered": True,
                     "latency_s": round(max(0.0, time.perf_counter() - started), 4),
                     "tokens": {"fresh_input": toks.get("input", 0),
@@ -1339,7 +1360,7 @@ def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
         return result, {
             "cached": False, "provider": "anthropic", "model": model,
             "tier": tier, "cost": cost, "effort": effort,
-            "prompt_version": PROMPT_VERSION,
+            "prompt_version": prompt_version(agent),
             "latency_s": round(max(0.0, time.perf_counter() - started), 4),
             "tokens": {
                 "fresh_input": toks.get("input", 0),
@@ -1353,7 +1374,7 @@ def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
         agent, model=model, tier=tier, effort=effort)
     return None, {
         "error": last_err, "provider": "anthropic", "model": model,
-        "tier": tier, "effort": effort, "prompt_version": PROMPT_VERSION,
+        "tier": tier, "effort": effort, "prompt_version": prompt_version(agent),
         "flagged": True,
         # Shape of the LAST failed attempt (never used to accept an answer).
         **({"failure_shape": failure} if failure else {}),
@@ -1421,7 +1442,8 @@ def preflight() -> bool:
     if any("-" not in m for m in TIER_MODEL.values()):
         print("  WARNING: a tier looks like an ALIAS. Aliases float to the latest")
         print("  model while the cache key does not change -- see TIER_MODEL.")
-    print(f"PROMPT_VERSION={PROMPT_VERSION}  shared_rules={'yes' if SHARED_PROMPT.exists() else 'NO'}")
+    print(f"PROMPT_VERSION={PROMPT_VERSION}  shared_rules={'yes' if SHARED_PROMPT.exists() else 'NO'}"
+          + (f"  per-agent: {AGENT_PROMPT_VERSION}" if AGENT_PROMPT_VERSION else ""))
     print(f"budget/call=${MAX_BUDGET_USD}  max_concurrency={MAX_CONCURRENCY}")
     return True
 

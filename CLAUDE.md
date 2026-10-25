@@ -70,14 +70,17 @@ limits.
 
 | prompts | constant |
 |---|---|
-| S3–S8, S5N, S5R, S6B (`prompts/s*.md`, `_shared.md`) | `PROMPT_VERSION` in `bsproof/claude_adapter.py` |
+| one agent's `prompts/s*.md` or `schemas/s*.json` (S3–S8, S5N, S5R, S6B) | that agent's entry in `AGENT_PROMPT_VERSION` (`bsproof/claude_adapter.py`) |
+| `prompts/_shared.md`, or anything every agent sees | `PROMPT_VERSION` (all agents) |
 | `prompts/label.md` | `LABEL_PROMPT_VERSION` in `lib/analyze/vision.ts` |
 | compatibility / company / literature_warnings / evidence_prior | their own `*_PROMPT_VERSION` in `lib/analyze/` |
 
-Separate cache domains on purpose: bumping `PROMPT_VERSION` invalidates ~1000
-cached extractions (the cache key is version + model + effort + payload, not the
-prompt text — so an edit without a bump silently serves stale answers). A hook
-warns when a prompt or schema changes without a bump.
+Separate cache domains on purpose: the cache key is the agent's version + model
++ effort + payload, not the prompt text, so an edit without a bump silently
+serves stale answers. An agent bump re-runs that agent (and, by payload content,
+whatever reads its output); a `PROMPT_VERSION` bump invalidates all ~1,100
+cached creatine calls. A hook warns when a prompt or schema changes without a
+bump.
 
 ### 4. Never invent or move a constant
 
@@ -185,7 +188,7 @@ B/C sonnet-5, R opus-5; `SP_MODEL_A/B/C/R` override).
 
 ```
 bsproof/                the extraction layer (may call a model; pipeline/ may not import it)
-  claude_adapter.py     the model boundary: AGENTS, tiers, cache, PROMPT_VERSION
+  claude_adapter.py     the model boundary: AGENTS, tiers, cache, prompt versions
   workers.py            per-study fan-out (extract_study / extract_corpus); call= injectable
   worker_payload.py     what each agent is sent, fitted to the input budget
   worker_quota.py       subscription-limit detection
@@ -275,11 +278,12 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
 - **Method:** evidence method v2 is the pipeline's only method; v14 retired.
   `evidence_v2.STATUS = "shadow"` until validation passes. `main` and the live
   site still run v14 until the simplification branches merge.
-- **Latest v2 run** `20261023_190836` (v1.39, 138/139 studies): strength
-  **k = 12, C+** (+0.22 [+0.04, +0.41]), coverage 44 % (not testable); lean
-  mass k = 11 D+, passes (69 %). Risk of bias is the swing domain: read S4
-  item 5 = 0 as "unclear" and strength is B+ (project log 2026-10-25; founder
-  call open in `docs/DECISIONS.md`).
+- **Latest v2 run** `20261023_190836` (v1.39, 138/139 studies). Re-pooled
+  under the 2026-10-25 risk-of-bias rule (attrition reporting gaps are
+  "unclear"): strength **k = 12, B+, Moderate** (+0.22 [+0.04, +0.41]),
+  coverage 44 % (not testable); lean mass k = 11 **D, Moderate**, passes (69 %).
+  The stored report says C+ / D+ (the earlier rule). Next extraction: S4 only
+  (`AGENT_PROMPT_VERSION` S4 v1.40, the new item 7), about 140 calls.
 - **Known v2 problems:** the work list in `docs/DECISIONS.md`. Done: items
   1 (imprecision scales with information size), 2, 3 (offline part), 6, 10
   (prompts trimmed); decided: 5 (healthy

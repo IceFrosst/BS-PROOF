@@ -7,6 +7,7 @@
   "item4_outcome_matches_registry",
   "item5_attrition_ok",
   "item6_itt",
+  "item7_attrition_problem",
   "evidence_spans"
  ],
  "additionalProperties": false,
@@ -42,6 +43,12 @@
    ]
   },
   "item6_itt": {
+   "type": [
+    "integer",
+    "null"
+   ]
+  },
+  "item7_attrition_problem": {
    "type": [
     "integer",
     "null"

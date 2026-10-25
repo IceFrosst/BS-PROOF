@@ -151,7 +151,7 @@ def base_domains(pool, threshold: float) -> tuple[int, dict, list[str]]:
         down["risk_of_bias"] = (2, f"{high:.0%} of the weight from high-risk-of-bias trials")
     else:
         down["risk_of_bias"] = (1, f"{1 - no_flaw:.0%} of the weight from trials with a reported flaw "
-                                   "(no blinding/placebo, incomplete attrition, baseline imbalance)")
+                                   "(no blinding/placebo, an attrition problem, baseline imbalance)")
 
     # 2. Inconsistency
     i2 = smd.get("i2")

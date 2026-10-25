@@ -164,26 +164,33 @@ def rob_status(s4: dict | None) -> str:
               said (or alternation, which S4 cannot tell apart) -- NOT DESCRIBED
       item 2  1 = double-blind AND an indistinguishable placebo; 0 = single-blind,
               open-label or no placebo -- a real design flaw
-      item 5  0 = attrition reporting incomplete -- not "attrition too high"
+      item 5  0 = attrition REPORTING incomplete (per-arm numbers or reasons
+              missing) -- not "attrition too high"
+      item 7  1 = a real attrition problem: dropout >= 20 %, differing between
+              arms, or caused by the intervention (S4 v1.40; absent before)
 
-    HIGH when item 2 is 0. CONCERNS when item 5 is 0 (a reported flaw short of
-    a missing placebo). LOW when item 1 = 1, item 2 = 1 and item 5 is not 0.
-    Otherwise UNCLEAR: nothing wrong is reported, but something is undescribed
-    or unknown (an undescribed method is not an inadequate one, Cochrane RoB 2).
-    Unknown never counts as low.
+    HIGH when item 2 is 0. CONCERNS when item 7 is 1 (a reported flaw short of
+    a missing placebo). LOW when item 1 = 1, item 2 = 1, item 5 is not 0 and
+    item 7 is not 1. Otherwise UNCLEAR: nothing wrong is reported, but something
+    is undescribed or unknown (an undescribed method is not an inadequate one,
+    Cochrane RoB 2), including item 5 = 0. Unknown never counts as low.
 
     Founder 2026-10-12. Measured on 20261012_102130: the previous rule read any
     0 as "inadequate" and rated 79/139 studies' "randomised, method not named"
     as HIGH risk of bias. Founder 2026-10-20: GRADE downgrades only for the
-    reported flaws (HIGH, CONCERNS), never for UNCLEAR (grade.base_domains)."""
+    reported flaws (HIGH, CONCERNS), never for UNCLEAR (grade.base_domains).
+    Founder 2026-10-25: item 5 = 0 is UNCLEAR, not CONCERNS; a real attrition
+    problem is item 7. Measured on 20261023_190836 (no item 7 yet): strength
+    C+ (Low) -> B+ (Moderate), lean mass D+ (Low) -> D (Moderate)."""
     s4 = s4 or {}
-    rand, blind, attrition = (s4.get("item1_randomisation_method"),
-                              s4.get("item2_double_blind_placebo"), s4.get("item5_attrition_ok"))
+    rand, blind, reported, problem = (s4.get("item1_randomisation_method"),
+                                      s4.get("item2_double_blind_placebo"),
+                                      s4.get("item5_attrition_ok"), s4.get("item7_attrition_problem"))
     if blind == 0:
         return "high"
-    if attrition == 0:
+    if problem == 1:
         return "concerns"
-    if rand == 1 and blind == 1:
+    if rand == 1 and blind == 1 and reported != 0:
         return "low"
     return "unclear"
 

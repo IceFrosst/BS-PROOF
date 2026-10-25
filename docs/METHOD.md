@@ -126,12 +126,12 @@ invariant 6).
 
 Per study, `bsproof/workers.py`, through the one model boundary
 `bsproof/claude_adapter.py` (Claude subscription, `--safe-mode`, cached by
-`PROMPT_VERSION` + model + effort + payload):
+the agent's prompt version + model + effort + payload):
 
 | Agent | Reads | Returns |
 |---|---|---|
 | S3 study | full text | design, arms (label, n, role, ingredient presence, co-interventions), population axes, comparator, isolation, registration |
-| S4 risk of bias | full text + registry | six RoB items (randomisation method, blinding/placebo, prospective registration, outcome matches registry, attrition, ITT); §12 grades with items 1, 2 and 5 |
+| S4 risk of bias | full text + registry | seven RoB items (randomisation method, blinding/placebo, prospective registration, outcome matches registry, attrition reported, ITT, attrition problem); §12 grades with items 1, 2, 5 and 7 |
 | S5 outcomes | results + tables, S3 arms | one claim per separately reported measure: outcome, measure, timepoint, the arm pair, primary flag (no numbers) |
 | S7 form & dose | methods + tables, S3 arms | per arm: form id, compound / elemental / per-kg dose, body mass, frequency |
 | S8 funding | funding + COI statements | funding class, funders (reported, never graded; §15) |
@@ -252,7 +252,7 @@ each downgrade with its reason:
 
 | Domain | Rule |
 |---|---|
-| Risk of bias | Only a REPORTED flaw downgrades (founder 2026-10-20): none if ≥ 50 % of the weight is from trials with no reported flaw (low or unclear); −2 if > 50 % is high-risk; else −1. A trial is HIGH risk when blinding/placebo is missing (S4 item 2); CONCERNS when attrition reporting is incomplete (item 5) or its arms were imbalanced at baseline; UNCLEAR when nothing wrong is reported but something is undescribed (randomisation method not named, an item unknown), which does not downgrade |
+| Risk of bias | Only a REPORTED flaw downgrades (founder 2026-10-20): none if ≥ 50 % of the weight is from trials with no reported flaw (low or unclear); −2 if > 50 % is high-risk; else −1. A trial is HIGH risk when blinding/placebo is missing (S4 item 2); CONCERNS when it has an attrition problem (item 7: dropout ≥ 20 %, differing between arms, or caused by the intervention) or its arms were imbalanced at baseline; UNCLEAR when nothing wrong is reported but something is undescribed (randomisation method not named, attrition reporting incomplete (item 5), an item unknown), which does not downgrade (founder 2026-10-25) |
 | Inconsistency | −1 at I² > 50 %, −2 at > 75 %; not assessed below 3 trials |
 | Imprecision | −1 if the CI crosses 0 or the threshold, or fewer than 400 participants in total (optimal information size); −2 if the CI spans both ±threshold or fewer than 200 participants; −3 below 100 participants (GRADE's "extremely serious", 2021 guidance) |
 | Indirectness | −1 per axis when > 50 % of the weight is not the product's exact form, or off-dose (§9); form + dose cap at −2. Populations: refused if `different`, reported if `adjacent` (§8) |

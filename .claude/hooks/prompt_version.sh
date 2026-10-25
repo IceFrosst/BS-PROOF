@@ -31,11 +31,14 @@ for n in ast.parse(open('bsproof/claude_adapter.py').read()).body:
         print(ast.literal_eval(n.value)); break
 " 2>/dev/null)
 
-if git diff HEAD -- bsproof/claude_adapter.py 2>/dev/null | grep -q "^[+-].*PROMPT_VERSION"; then
+# Either the release-wide PROMPT_VERSION or the agent's own entry in
+# AGENT_PROMPT_VERSION (founder 2026-10-25) counts as a bump.
+if git diff HEAD -- bsproof/claude_adapter.py 2>/dev/null | grep -qE "^[+-].*(PROMPT_VERSION|\"S[0-9][A-Z0-9]*\": \"v)"; then
   exit 0   # already bumped in this working tree
 fi
 
-echo "invariant 3: you edited $(basename "$FILE") but PROMPT_VERSION is still ${CUR:-unknown}." >&2
-echo "Bump it in bsproof/claude_adapter.py or the response cache will serve pre-edit" >&2
-echo "extractions under the same key while stamping rows with the new prompt." >&2
+echo "invariant 3: you edited $(basename "$FILE") but neither PROMPT_VERSION (${CUR:-unknown})" >&2
+echo "nor that agent's AGENT_PROMPT_VERSION entry changed. Bump the agent's entry in" >&2
+echo "bsproof/claude_adapter.py (or PROMPT_VERSION for _shared.md) or the cache will serve" >&2
+echo "pre-edit extractions under the same key while stamping rows with the new prompt." >&2
 exit 2

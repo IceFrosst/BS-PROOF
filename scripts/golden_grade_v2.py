@@ -56,14 +56,21 @@ def items() -> list[dict]:
     for sid, oid, raw, mi, mc, sd, n, form, mg, (r1, r2, r5) in TRIALS:
         it = out.setdefault(sid, {"id": sid, "record": {"ingredient": "creatine", "design_rank": 4},
                                   "extraction": {"S3": {"population_axes": dict(POP), "comparator": "ingredient_free",
-                                                        "ingredient_isolated": "yes"},
+                                                        "ingredient_isolated": "yes",
+                                                        "arms": [{"label": "Creatine", "role": "administered",
+                                                                  "target_ingredient_presence": "yes"},
+                                                                 {"label": "Placebo", "role": "administered",
+                                                                  "target_ingredient_presence": "no"}]},
                                                  "S4": {"item1_randomisation_method": r1,
                                                         "item2_double_blind_placebo": r2, "item5_attrition_ok": r5},
-                                                 "S7": {"form_vocab_id": form, "elemental_dose_mg": mg,
-                                                        "dose_basis": "elemental_stated" if mg else None},
+                                                 # S7 is arm-keyed only since v1.37 (dose._s7_for_claim).
+                                                 "S7": {"arms": [{"label": "Creatine", "form_vocab_id": form,
+                                                                  "elemental_dose_mg": mg,
+                                                                  "dose_basis": "elemental_stated" if mg else None}]},
                                                  "outcomes": []}})
         claim = {"contrast": "vs_ingredient_free", "design_kind": "parallel", "estimand": "endpoint",
-                 "effect_unit": "kg", "outcome_raw": raw, "is_primary_outcome": True}
+                 "effect_unit": "kg", "outcome_raw": raw, "is_primary_outcome": True,
+                 "ingredient_arm": "Creatine", "control_arm": "Placebo"}
         it["extraction"]["outcomes"].append({
             "outcome_vocab_id": oid, "discarded": False, "claim": claim,
             "numbers_v2": {"verified": {"mean_ingredient": mi, "mean_control": mc, "sd_ingredient": sd,

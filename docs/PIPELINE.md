@@ -82,8 +82,8 @@ biases the result.
 
 ## 4. Interrupted runs
 
-Every successful model call is cached as it returns (keyed by `PROMPT_VERSION`,
-model, effort and payload) and every fetched paper is cached under
+Every successful model call is cached as it returns (keyed by the agent's prompt
+version, model, effort and payload) and every fetched paper is cached under
 `out/http_cache/`, so **re-running the same command resumes for free**.
 
 - *Usage limit:* the run pauses and probes, requeueing the affected studies. If
@@ -96,8 +96,12 @@ model, effort and payload) and every fetched paper is cached under
   `out/checkpoints/<ingredient>_<form>.json`.
 - Long runs: start them from your own terminal (`... 2>&1 | tee out/run.log`).
 
-A `PROMPT_VERSION` bump invalidates the whole cache (~1000 calls for creatine):
-the next run re-extracts everything.
+Prompt versions are per agent (`claude_adapter.AGENT_PROMPT_VERSION`, over the
+release-wide `PROMPT_VERSION`). Bumping one agent re-runs that agent's calls and
+whatever its output feeds (downstream payloads carry it, so their keys change by
+content); bumping `PROMPT_VERSION` (an edit to `_shared.md`) re-extracts
+everything (~1,100 calls for creatine, about four days of subscription quota on
+2026-10-20..23).
 
 ## 5. Check a run
 
@@ -115,7 +119,7 @@ the next run re-extracts everything.
 .venv/bin/python scripts/replay_from_cache.py --compare out/replay/before out/replay/after
 ```
 
-A replay only hits the cache of its own `PROMPT_VERSION` and payloads: a run
+A replay only hits the cache of its own prompt versions and payloads: a run
 made before a prompt bump, or before a change to what an agent is sent, cannot
 be replayed. Its dumped extractions can still be re-pooled offline with
 `pipeline.evidence_v2.summarise`, which is how the v1.37 prompt clean-up was

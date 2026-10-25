@@ -8,8 +8,14 @@ from pipeline.registry_bias import registry_check
 class Rob(unittest.TestCase):
     def test_undescribed_method_is_some_concerns_not_high(self):
         self.assertEqual(rob_status({"item1_randomisation_method": 0, "item2_double_blind_placebo": 1}), "unclear")
+        # Founder 2026-10-25: incomplete attrition REPORTING is unclear; a real
+        # attrition problem (item 7) is a flaw.
         self.assertEqual(rob_status({"item1_randomisation_method": 1, "item2_double_blind_placebo": 1,
-                                     "item5_attrition_ok": 0}), "concerns")
+                                     "item5_attrition_ok": 0}), "unclear")
+        self.assertEqual(rob_status({"item1_randomisation_method": 1, "item2_double_blind_placebo": 1,
+                                     "item5_attrition_ok": 1, "item7_attrition_problem": 1}), "concerns")
+        self.assertEqual(rob_status({"item1_randomisation_method": 1, "item2_double_blind_placebo": 1,
+                                     "item5_attrition_ok": 1, "item7_attrition_problem": 0}), "low")
 
     def test_missing_blinding_is_high_and_full_marks_low(self):
         self.assertEqual(rob_status({"item1_randomisation_method": 1, "item2_double_blind_placebo": 0}), "high")
