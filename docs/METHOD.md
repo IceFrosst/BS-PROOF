@@ -345,8 +345,8 @@ What must hold before grades are shown to users:
   reason), so a trial we could not read, or refused as out of scope, is in
   neither number. It guards against grading a lucky, poolable subset of the
   trials we have. Failing coverage or precision is "not testable", never pass
-  or fail. Today: 19 rows from 10 creatine meta-analyses; on run 20261019_235728 lean mass
-  passes (coverage 61 %), strength is not testable (38 %).
+  or fail. Today: 19 rows from 10 creatine meta-analyses; on run 20261025_101638 lean mass
+  passes (coverage 69 %), strength is not testable (44 %).
 - **Negative controls.** Every row today is a creatine success, so a pipeline
   that called everything effective would pass. Each new ingredient adds at least
   one "does not work" or "harms" row (`docs/history/v14-anchors.csv` lists

@@ -278,13 +278,12 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
 - **Method:** evidence method v2 is the pipeline's only method; v14 retired.
   `evidence_v2.STATUS = "shadow"` until validation passes. `main` and the live
   site still run v14 until the simplification branches merge.
-- **Latest v2 run** `20261023_190836` (v1.39, 138/139 studies). Re-pooled
-  under the 2026-10-25 risk-of-bias rule (attrition reporting gaps are
-  "unclear"): strength **k = 12, B+, Moderate** (+0.22 [+0.04, +0.41]),
+- **Latest v2 run** `20261025_101638` (S4 v1.40, the rest v1.39 from cache;
+  138/139 studies): strength **k = 12, B+, Moderate** (+0.22 [+0.04, +0.41]),
   coverage 44 % (not testable); lean mass k = 11 **D, Moderate**, passes (69 %).
-  The stored report says C+ / D+ (the earlier rule). Next extraction: S4,
-  S5N, S5R only (`AGENT_PROMPT_VERSION` v1.40: S4 item 7, the p-value test
-  for the new `smd_from_p` route), about 400 calls.
+  Both clear the risk-of-bias rule narrowly (52.7 % / 50.6 % of the weight with
+  no reported flaw). Next extraction: S5N and S5R only (v1.40, the p-value test
+  for the new `smd_from_p` route), 2-study smoke test first.
 - **Known v2 problems:** the work list in `docs/DECISIONS.md`. Done: items
   1 (imprecision scales with information size), 2, 3 (offline part), 6, 10
   (prompts trimmed); decided: 5 (healthy

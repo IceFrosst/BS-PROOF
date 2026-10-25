@@ -10,6 +10,31 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-25 — S4 v1.40 creatine run 20261025_101638
+
+Re-ran S4 only (item 7, attrition problem); everything else replayed from the
+v1.39 cache, 710 s. Started after a09f109 and before e8974bb, so S5N / S5R are
+still v1.39 and the `smd_from_p` route had nothing to read. 137 ok / 1 skipped
+(no text) / 1 partial. **Strength B+, Moderate**, k = 12, +0.22 [+0.04, +0.41],
+NOT TESTABLE (coverage 44 %, 6/6 overlaps); **lean mass D, Moderate**, k = 11,
++0.18 [-0.05, +0.40], PASS (69 %, width x0.9, 2/2); power I, k = 10. This is
+the offline re-pool's result from the item-5 decision.
+
+Item 7 across 138 studies: 1 (problem) 21, 0 54, null 63. Both Moderate letters
+clear the risk-of-bias rule (≥ 50 % of the weight with no reported flaw) by a
+small margin: strength 52.7 %, lean mass 50.6 %. Of strength's 4 "concerns"
+trials, `doi:103390nu12061880` carries 28 % of the weight on item 7 = 1 alone,
+so one more small trial flagged would drop strength to C+ (Low). It goes in the
+spot audit.
+
+The failed call is the usual S5N on `doi:101002acr22747` (rheumatoid arthritis
+patients). Attempts 0 and 1 broke the schema with `se = 0` (schema: > 0);
+attempt 2 returned `numbers` as a JSON string. It does not touch any grade: S3
+reads `health_status: disease`, which is `different` from the healthy-adult
+target, so the trial is refused as off-target anyway. It would matter for a
+future disease-population grade. Also found: `tests/test_universal_negative_repair.py`
+writes fake S8 failure files into the real `out/claude_failures/`.
+
 ## 2026-10-25 — p-value route, pass rules, display (founder)
 
 Founder: decision 1 "make the change now", audit and stability pass rules
