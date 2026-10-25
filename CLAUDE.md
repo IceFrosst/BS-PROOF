@@ -282,8 +282,9 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
   under the 2026-10-25 risk-of-bias rule (attrition reporting gaps are
   "unclear"): strength **k = 12, B+, Moderate** (+0.22 [+0.04, +0.41]),
   coverage 44 % (not testable); lean mass k = 11 **D, Moderate**, passes (69 %).
-  The stored report says C+ / D+ (the earlier rule). Next extraction: S4 only
-  (`AGENT_PROMPT_VERSION` S4 v1.40, the new item 7), about 140 calls.
+  The stored report says C+ / D+ (the earlier rule). Next extraction: S4,
+  S5N, S5R only (`AGENT_PROMPT_VERSION` v1.40: S4 item 7, the p-value test
+  for the new `smd_from_p` route), about 400 calls.
 - **Known v2 problems:** the work list in `docs/DECISIONS.md`. Done: items
   1 (imprecision scales with information size), 2, 3 (offline part), 6, 10
   (prompts trimmed); decided: 5 (healthy

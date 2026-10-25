@@ -212,6 +212,7 @@ always means benefit, after the outcome's polarity. Routes, best first:
 | `reported_smd_p` | a reported SMD + an exact p |
 | `reported_smd_n` | a reported SMD + both arm sizes |
 | `reported_md_ci` | a reported mean difference + CI (natural units only) |
+| `smd_from_p` | no estimate and no arm statistics: an exact two-sided p from a two-group test of these two arms (t-test, Welch, two-arm one-way ANOVA; S5N's `p_test`) on endpoint values or changes, both arm sizes and the favoured arm → t → Hedges' g (Cochrane Handbook §6.5.2.3). Parallel trials only; any other test is refused with its reason. Founder 2026-10-25. Every outcome that uses it also reports its estimate and letter without it (`sensitivity`) |
 
 - **Crossover trials**: arm statistics analysed as if parallel (Handbook
   §23.2.6, conservative), flagged; a paired MD with CI kept; a crossover SMD
@@ -352,15 +353,23 @@ What must hold before grades are shown to users:
   candidates: vitamin E and cardiovascular events, beta-carotene and lung cancer
   in smokers, selenium and prostate cancer).
 - **Stability**: the same studies extracted twice must give the same grades
-  (`scripts/experiments/extraction_stability.py`). Not yet measured cleanly;
+  (`scripts/experiments/extraction_stability.py`). Pass (founder 2026-10-25):
+  every outcome with k ≥ 3 in both runs has the same letter (one step allowed
+  only where the letter is threshold-sensitive), pooled estimates within
+  0.1 SD, and ≥ 90 % agreement on each fact that feeds a grade (arms, numbers
+  read, outcome mapping, S4 items 1, 2, 5, 7). A fact below 90 % does not fail
+  the method; it names the next prompt to fix. Not yet measured cleanly;
   two creatine runs whose S5 input differed (text slice vs full text) moved
   strength from C+ to D+ through S5 claim splitting alone (project log,
   2026-10-20).
 - **Spot audit** (founder 2026-10-20): a fixed-seed sample of 20 pooled effects
   (`scripts/experiments/spot_audit.py`) checked against the papers' full text:
   measure, arms, numbers and risk-of-bias items. The benchmark sees only the
-  pooled average, where extraction errors can cancel. Pass: no single kind of
-  error in more than 2 of the 20 (proposed, founder to confirm).
+  pooled average, where extraction errors can cancel. Counted: CONSEQUENTIAL
+  errors only (a wrong number, arm, measure or a flipped risk-of-bias rating).
+  Pass (founder 2026-10-25): 0-1 in 20; 2-3 sample 20 more and pass if the 40
+  hold at most 3; 4 or more fail (fix the prompt behind the most common error,
+  re-audit). A reversed direction (benefit read as harm or back) fails alone.
 
 The measurements behind the method's design are in
 `docs/history/2026-10-03-phase1-measurements.md`.

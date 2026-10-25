@@ -21,6 +21,18 @@ Routes, best first (the first that applies wins; each is recorded):
   reported_md_ci   a reported mean difference + CI       -> mean difference only
   reported_smd_p   a reported SMD + an EXACT p           -> SE from the p
   reported_smd_n   a reported SMD + both arm sizes       -> variance from n
+  smd_from_p       NO estimate and no arm statistics, only an EXACT
+                   between-arm p, both arm sizes and the favoured arm, from a
+                   test S5N names as a two-group comparison of these two arms
+                   (t-test / Welch / two-arm one-way ANOVA) on endpoint values
+                   or on changes. Cochrane Handbook §6.5.2.3: p -> t (Student t,
+                   n1 + n2 - 2 df) -> d = t sqrt(1/n1 + 1/n2) -> Hedges' g.
+                   Parallel trials only. Founder 2026-10-25; ranked last, flagged
+                   `smd_from_t_p`, and every outcome also reports its pooled
+                   estimate and letter WITHOUT this route (evidence_v2
+                   "sensitivity"). A p from repeated-measures / mixed ANOVA,
+                   ANCOVA or a non-parametric test would give a wrong, often
+                   inflated, effect: refused with its reason.
 
 Crossover trials (added 2026-10-03, Cochrane Handbook ch. 23):
 
@@ -218,6 +230,8 @@ def effect_from_claim(claim: dict, verified: dict, *, polarity: str | None,
     # --- reported estimates: magnitude from the paper, sign from the favoured arm
     sign = _favoured_sign(claim.get("effect_favours"))
     if "effect_size" not in v:
+        if "p_value" in v and "n_ingredient" in v and "n_control" in v:
+            return _smd_from_p(claim, v, sign, crossover, flags)
         return None, "no verified effect estimate and incomplete arm statistics"
     if sign is None:
         return None, f"favoured arm is {claim.get('effect_favours') or 'unstated'}; sign unknown"
@@ -266,3 +280,31 @@ def effect_from_claim(claim: dict, verified: dict, *, polarity: str | None,
         return Effect("reported_md_ci", None, None, signed, se * se,
                       claim.get("effect_unit") or claim.get("measure"), estimand, flags), "reported_md_ci"
     return None, "reported mean difference has no verified CI with a stated level"
+
+
+P_TESTS = {"two_group_endpoint": "endpoint", "two_group_change": "change_from_baseline"}
+
+
+def _smd_from_p(claim: dict, v: dict, sign: int | None, crossover: bool,
+                flags: tuple[str, ...]) -> tuple[Effect | None, str]:
+    """The smd_from_p route (module docstring): only an exact two-sided p from a
+    two-group test of these two arms, with both arm sizes and the favoured arm."""
+    test = claim.get("p_test")
+    if test not in P_TESTS:
+        why = ("the test behind it is not stated" if test is None
+               else "from a test that does not convert (repeated-measures, ANCOVA, non-parametric, multi-arm or one-sided)")
+        return None, f"only a p-value reported, {why}"
+    if crossover:
+        return None, "only a p-value reported, from a crossover (needs the within-person correlation)"
+    if sign is None:
+        return None, f"only a p-value reported; favoured arm is {claim.get('effect_favours') or 'unstated'}, sign unknown"
+    p, n1, n2 = v["p_value"], v["n_ingredient"], v["n_control"]
+    try:
+        df = n1 + n2 - 2
+        t = 0.0 if p >= 1 else me.student_t_ppf(1 - p / 2, df)
+        g = (1.0 - 3.0 / (4.0 * df - 1.0)) * t * (1 / n1 + 1 / n2) ** 0.5
+        var = me.sampling_variance_g(g, n1, n2)
+    except (ValueError, ZeroDivisionError, TypeError) as exc:
+        return None, f"p is not usable: {exc}"
+    return Effect("smd_from_p", sign * g, var, estimand=P_TESTS[test],
+                  flags=flags + ("smd_from_t_p",)), "smd_from_p"

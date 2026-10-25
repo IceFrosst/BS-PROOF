@@ -238,6 +238,18 @@
             "minimum": 0,
             "maximum": 1
           },
+          "p_test": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "two_group_endpoint",
+              "two_group_change",
+              "other",
+              null
+            ]
+          },
           "estimand": {
             "type": [
               "string",
@@ -304,6 +316,7 @@
           "ci_high",
           "ci_level",
           "p_value",
+          "p_test",
           "estimand",
           "design_kind",
           "contrast"

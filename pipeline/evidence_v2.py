@@ -19,9 +19,11 @@ The run's population variant is fixed (variant B, as v14 stored it):
 """
 from __future__ import annotations
 
+import dataclasses
+
 from pipeline import vocab
 from pipeline.grade import grade_record, letter_from_record, study_weights
-from pipeline.pool import pool_outcomes
+from pipeline.pool import _pool, pool_outcomes
 
 METHOD = "evidence-v2"
 STATUS = "shadow"          # until the validation passes (docs/METHOD.md §16)
@@ -41,6 +43,28 @@ def corpus_ncts(items: list[dict]) -> set[str]:
 
 def _round(x, n=4):
     return round(x, n) if isinstance(x, (int, float)) else x
+
+
+def _without_route(pool, meta: dict, registry: dict | None, oid: str, route: str) -> dict | None:
+    """The outcome re-pooled and re-graded WITHOUT one effect route, when the
+    pool used it (founder 2026-10-25: p-derived effects are always shown with
+    and without). None when no pooled trial took the route."""
+    if not any(s["route"] == route for s in pool.studies):
+        return None
+    kept = [s for s in pool.studies if s["route"] != route]
+    smd = [s for s in kept if s.get("g_variance") is not None]
+    reduced = dataclasses.replace(pool, studies=kept, k=len(smd),
+                                  smd=_pool([s["g"] for s in smd], [s["g_variance"] for s in smd]) if smd else None,
+                                  leave_one_out=None)
+    rec = grade_record(reduced, meta.get("mcid"), (registry or {}).get(oid))
+    weights = study_weights(reduced)
+    pooled = [{**s, "weight": w} for s, w in zip([s for s in kept if s.get("g_variance") is not None], weights)]
+    grade = letter_from_record(rec, pooled, [s["weight"] for s in pooled])
+    return {f"without_{route}": {
+        "k": reduced.k, "dropped": len(pool.studies) - len(kept),
+        "smd": reduced.smd and {"estimate": _round(reduced.smd["estimate"]),
+                                "ci": [_round(x) for x in reduced.smd["ci"]]},
+        "letter": grade["letter"], "label": grade["label"]}}
 
 
 def summarise(items: list[dict], product: dict, registry: dict | None = None) -> dict:
@@ -78,6 +102,7 @@ def summarise(items: list[dict], product: dict, registry: dict | None = None) ->
         md = pool.md and {"estimate": _round(pool.md["estimate"]), "ci": [_round(x) for x in pool.md["ci"]],
                           "unit": pool.md["unit"], "method": pool.md["method"]}
         out.append({
+            "sensitivity": _without_route(pool, meta, registry, oid, "smd_from_p"),
             "outcome": oid, "label": meta.get("label") or oid, "polarity": meta.get("polarity"),
             "k": pool.k, "smd": smd, "md": md, "estimand_mix": pool.estimand_mix,
             "leave_one_out": pool.leave_one_out and [_round(x) for x in pool.leave_one_out],

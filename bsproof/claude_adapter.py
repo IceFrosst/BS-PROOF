@@ -403,7 +403,11 @@ PROMPT_VERSION = "v1.39"
 #   intervention). Measured on run 20261023_190836: item 5 = 0 lumped "4 of 36
 #   withdrew, reasons given, not per arm" with high dropout, and flagged 59 % of
 #   the strength weight.
-AGENT_PROMPT_VERSION: dict[str, str] = {"S4": "v1.40"}
+#   S5N, S5R v1.40 (2026-10-25): both name the test behind an exact p
+#   (`p_test`), so effect_size's smd_from_p route can convert a p-only result
+#   from a two-group test and refuse every other test. Measured on run
+#   20261023_190836: 8 trial-outcomes refused as "only a p-value".
+AGENT_PROMPT_VERSION: dict[str, str] = {"S4": "v1.40", "S5N": "v1.40", "S5R": "v1.40"}
 
 
 def prompt_version(agent: str) -> str:

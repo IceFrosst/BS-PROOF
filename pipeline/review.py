@@ -76,11 +76,15 @@ ROUTE_FIELDS = {
     "reported_md_ci": (("effect_size", "ci_low", "ci_high"), _REPORTED_CATS),
     "reported_smd_p": (("effect_size", "p_value"), _REPORTED_CATS),
     "reported_smd_n": (("effect_size", "n_ingredient", "n_control"), _REPORTED_CATS),
+    # The test decides whether the p converts at all, so reviewer 2 must name
+    # the same one (MUST_CONFIRM). Founder 2026-10-25.
+    "smd_from_p": (("p_value", "n_ingredient", "n_control"),
+                   ("effect_favours", "design_kind", "contrast", "p_test")),
 }
 # The sign of a reported estimate comes from this field alone, so reviewer 2
 # must CONFIRM it; for the other categorical facts a null from reviewer 2 is
 # "not stated", not a conflict.
-MUST_CONFIRM = ("effect_favours",)
+MUST_CONFIRM = ("effect_favours", "p_test")
 # Signs of reported estimates come from `effect_favours`, not the printed sign,
 # so these are compared by magnitude (pipeline/effect_size.py).
 _ABS_COMPARED = ("effect_size",)
@@ -94,7 +98,7 @@ S5N_FIELDS = ("evidence_span", "table_provenance", "n_ingredient", "n_control",
               "ci_control_low", "ci_control_high", "arm_ci_level",
               "pre_ingredient", "pre_control", "post_ingredient", "post_control",
               "effect_size", "effect_unit", "effect_favours", "estimate_kind",
-              "ci_low", "ci_high", "ci_level", "p_value", "estimand", "design_kind", "contrast")
+              "ci_low", "ci_high", "ci_level", "p_value", "p_test", "estimand", "design_kind", "contrast")
 
 
 def numbers_claim(claim: dict, entry: dict | None) -> dict | None:

@@ -112,6 +112,19 @@ wrong number is not.
   p_value                       the EXACT between-arm p for this outcome. A
                                 threshold ("p < 0.05", "NS") is not exact: null.
                                 A time or within-group p is not between-arm: null.
+  p_test                        the test the p_value comes from, ONLY when the
+                                paper says so: two_group_endpoint (a t-test,
+                                Welch test, or one-way ANOVA of THESE TWO ARMS
+                                ONLY, on the values at the timepoint) |
+                                two_group_change (the same, on each arm's
+                                change from baseline) | other (repeated-measures
+                                or mixed ANOVA, a time x group interaction,
+                                ANCOVA, a non-parametric test, an ANOVA across
+                                more than two arms, a one-sided p) | null (no
+                                p_value, or the paper does not say which test).
+                                A general "data were analysed by ..." sentence
+                                in the methods counts only when it plainly
+                                covers this comparison.
   estimand                      endpoint | change_from_baseline -- the estimand
                                 of the means and SDs you copied (see above)
   design_kind                   parallel | crossover | cluster

@@ -128,7 +128,8 @@ it validates (`docs/METHOD.md` §16, `docs/DECISIONS.md`).
   and **not called**.
 - **To switch on:** call `gradeProductV2` in `analyzeFromLabel` stage 2, build a
   grade card that shows each letter with its estimate, CI, k and certainty
-  (CLAUDE.md invariant 8), remove the notice, and trace the run files into the
+  (CLAUDE.md invariant 8) -- the letter at the outcome's threshold M only, with
+  a "borderline" marker when the M/2 or 2M letter differs (founder 2026-10-25), remove the notice, and trace the run files into the
   `/api/scan` bundle (`next.config.ts` `outputFileTracingIncludes`).
 
 ## 5. The model boundary

@@ -15,31 +15,7 @@ Last swept: 2026-10-25.
 
 ## Open
 
-1. **Effects from an exact p-value** (deferred 2026-10-16: the founder will
-   decide later; nothing changes until then). 5 creatine trial–outcome pairs
-   (endurance 2, power 1, attention 1, one other; none strength or lean mass)
-   report only the between-group p-value with the arm sizes, so they are
-   refused (`pool.unpoolable_detail`: "only a p-value"). Cochrane's handbook
-   (§6.5.2.3) derives a standardised effect from an exact p and n: p → t →
-   SMD and its variance, sign from the arm the paper says did better.
-   - *Keep refusing (today).* Every pooled number comes from printed group
-     statistics, no assumptions. Cost: those trials are lost, and papers that
-     report only a p are often the significant ones, so estimates may lean
-     slightly low (negligible at 5 pairs).
-   - *Add the conversion.* A standard, published route; the variance honestly
-     reflects the small samples. Cost: valid only when the p comes from a
-     simple two-group test (t-test of final values or of changes). A p from
-     repeated-measures ANOVA, ANCOVA or a non-parametric test gives a wrong,
-     often inflated effect, so the route depends on the extracted test type
-     and must refuse everything else; rounded p ("p = 0.03") adds noise;
-     "p < 0.05" is unusable; the direction comes from words, not numbers.
-   - *Recommendation:* not now (no creatine benchmark outcome gains). Revisit
-     if an ingredient has many such trials; if adopted, only an exact p from a
-     two-group test of a parallel trial, flagged as its own route.
-
-4. **Spot-audit pass rule** (METHOD §16): no single kind of error (wrong arm,
-   measure, number or risk-of-bias item) in more than 2 of 20 sampled pooled
-   effects. Proposed 2026-10-20.
+None today.
 
 ## v2 work list (agreed 2026-10-15, after the simplification)
 
@@ -70,6 +46,10 @@ All accepted by the founder **"for now, may revisit"** unless stated.
 
 | Date | Decision |
 |---|---|
+| 2026-10-25 | **Effects from an exact p-value: built** (`effect_size` route `smd_from_p`, ranked last). Only an exact two-sided p from a two-group test of the two arms (S5N / S5R `p_test`, which both readers must agree on), on endpoint values or changes, in a parallel trial with both arm sizes and a stated favoured arm; every other test refused with its reason; each outcome that uses it also reports estimate and letter without it. Measured: 8 creatine trial-outcomes refused as "only a p-value" on run 20261023_190836. |
+| 2026-10-25 | **Spot-audit pass rule:** consequential errors only; 0-1 of 20 pass, 2-3 extend to 40 (pass at ≤ 3), ≥ 4 fail; one reversed direction fails (METHOD §16). |
+| 2026-10-25 | **Stability pass rule:** same letters for outcomes with k ≥ 3 (one step only where threshold-sensitive), estimates within 0.1 SD, ≥ 90 % agreement per grade-feeding fact (METHOD §16). |
+| 2026-10-25 | **Grade card shows the letter at the threshold only**, with a "borderline" marker when the M/2 or 2M letter differs (APP §4). |
 | 2026-10-25 | **S4 items 3, 4 and 6 stay reported only**, not graded. Measured: items 3 / 4 unknown for 21-22 of the 22 trials pooled for strength, lean mass or power, so grading them would change no creatine letter; revisit for an ingredient with registered trials. |
 | 2026-10-25 | **Lean mass keeps the 0.2 SD threshold.** Searched 2026-10-20: no anchor-based MCID exists for lean or fat-free mass (a surrogate people do not feel); 0.2 SD is the standard distribution-based smallest worthwhile change, and the creatine benchmark rows sit around it (+0.11 to +0.24 SD). |
 | 2026-10-25 | **Attrition: reporting gaps are not a flaw; a real attrition problem is.** S4 item 5 = 0 (per-arm numbers or reasons missing) is "unclear"; the new S4 item 7 (dropout ≥ 20 %, differing between arms, or caused by the intervention) is "concerns" (S4 v1.40). Re-pooled run 20261023_190836 before item 7 exists: strength C+ (Low) → **B+ (Moderate)**, lean mass D+ (Low) → **D (Moderate)**. |

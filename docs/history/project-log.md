@@ -10,6 +10,20 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-25 — p-value route, pass rules, display (founder)
+
+Founder: decision 1 "make the change now", audit and stability pass rules
+accepted, grade card shows the main letter. Built `effect_size._smd_from_p`
+(route `smd_from_p`, `pool.ROUTE_RANK` 6, last): exact p + arm sizes + favoured
+arm from a test S5N names `two_group_endpoint` / `two_group_change` (new
+`p_test` field in S5N and S5R schemas; S5N, S5R v1.40 in AGENT_PROMPT_VERSION);
+p -> t (n1 + n2 - 2 df) -> d -> Hedges' g, `sampling_variance_g`. Refused:
+another or unstated test, crossover, unknown sign. `review.ROUTE_FIELDS` adds the
+route, `p_test` joins MUST_CONFIRM. `evidence_v2` outcomes carry `sensitivity`
+(estimate and letter without the route) when it is used.
+tests/test_smd_from_p.py pins a hand-computed value (n = 20 + 20, p = 0.05:
+g = 0.627). Next extraction re-runs S4, S5N and S5R only (about 400 calls).
+
 ## 2026-10-25 — decisions: attrition split (S4 v1.40), per-agent prompt versions
 
 Founder: item 5 option "b plus c", and per-agent versions. `pool.rob_status`:

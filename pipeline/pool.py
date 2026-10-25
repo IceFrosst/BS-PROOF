@@ -46,8 +46,9 @@ from pipeline.effect_size import Effect, effect_from_claim
 from pipeline.eligibility import _ineligible, matched_addon_claim
 from pipeline.span_check import fill_arm_n
 
+# smd_from_p: founder 2026-10-25, ranked last (the least direct route).
 ROUTE_RANK = {"arm_stats": 0, "arm_stats_derived": 1, "reported_smd_ci": 2, "reported_smd_p": 3,
-              "reported_smd_n": 4, "reported_md_ci": 5}
+              "reported_smd_n": 4, "reported_md_ci": 5, "smd_from_p": 6}
 CONFIDENCE = 0.95
 
 
