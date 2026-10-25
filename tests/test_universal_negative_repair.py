@@ -152,6 +152,10 @@ class UniversalNegativeRepairTests(unittest.TestCase):
         conn = sqlite3.connect(":memory:", check_same_thread=False)
         conn.execute("CREATE TABLE c (k TEXT PRIMARY KEY, v TEXT, cost REAL)")
         claude_adapter._CONN = conn
+        # The fatal calls dump their streams; keep them out of the real
+        # out/claude_failures/, where they read as failures of a real run.
+        no_dump = patch.object(claude_adapter, "_save_failure", return_value=None)
+        no_dump.start()
         try:
             proc = SimpleNamespace(returncode=1, stdout=stream(), stderr="")
             with patch.object(claude_adapter.subprocess, "run", return_value=proc) as run:
@@ -181,6 +185,7 @@ class UniversalNegativeRepairTests(unittest.TestCase):
             self.assertTrue(meta["flagged"])
             self.assertEqual(conn.execute("SELECT count(*) FROM c").fetchone()[0], 1)
         finally:
+            no_dump.stop()
             claude_adapter._CONN = original_conn
             conn.close()
 
