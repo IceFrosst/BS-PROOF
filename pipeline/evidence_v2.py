@@ -82,7 +82,8 @@ def summarise(items: list[dict], product: dict, registry: dict | None = None) ->
         for s in pool.studies:
             w = next(weights) if s.get("g_variance") is not None else None
             studies.append({
-                "study": s["study"], "measure": s.get("measure"), "route": s["route"],
+                "study": s["study"], "measure": s.get("measure"), "claim_index": s.get("claim_index"),
+                "route": s["route"],
                 "g": _round(s.get("g")), "g_variance": _round(s.get("g_variance"), 6),
                 "weight": _round(w, 6), "md": _round(s.get("md")), "unit": s.get("unit"),
                 "n": s.get("n"), "rob": s.get("rob"), "pop_match": s.get("pop_match"),

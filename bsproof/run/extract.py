@@ -155,14 +155,16 @@ def _study_extraction(ext: dict) -> dict | None:
             "registration_id": _span(s3.get("registration_id"), 60),
             "evidence_spans": _spans(s3.get("evidence_spans")),
             "arms": [{"label": _span(a.get("label"), 120), "n": a.get("n"),
-                      "target_ingredient_presence": a.get("target_ingredient_presence")}
+                      "role": a.get("role"),
+                      "target_ingredient_presence": a.get("target_ingredient_presence"),
+                      "active_cointerventions": a.get("active_cointerventions")}
                      for a in (s3.get("arms") or []) if isinstance(a, dict)],
         },
         "s4": None if not s4 else {
             **{f"item{i}_{n}": s4.get(f"item{i}_{n}") for i, n in (
                 (1, "randomisation_method"), (2, "double_blind_placebo"),
                 (3, "prospective_registration"), (4, "outcome_matches_registry"),
-                (5, "attrition_ok"), (6, "itt"))},
+                (5, "attrition_ok"), (6, "itt"), (7, "attrition_problem"))},
             "evidence_spans": _spans(s4.get("evidence_spans")),
         },
         "s5_claims": claims,

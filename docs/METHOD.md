@@ -168,6 +168,12 @@ CLAUDE.md invariant 7):
 - the ingredient is not isolated (a combination arm) — **except** a claim whose
   two arms are an explicitly matched add-on pair (same co-interventions, the
   ingredient in one arm only: `matched_addon_claim`);
+- **per claim**, the two arms are known to differ in more than the ingredient
+  (both arms' co-interventions listed, and the lists differ:
+  `unmatched_claim_arms`, founder 2026-10-26). The study-level rule above reads
+  S3's `ingredient_isolated`, which is "yes" when any pair isolates the
+  ingredient, so this catches the other pairs of a multi-arm trial
+  (A + X + ingredient vs no treatment beside A + X + ingredient vs A + X);
 - the claim is not a contrast against an ingredient-free control (§10).
 
 Unknown always means keep. v14's "authors declare it underpowered" refusal is

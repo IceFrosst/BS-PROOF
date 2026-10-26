@@ -107,7 +107,8 @@ our CI must overlap theirs. (v14's SR-table route was removed with v14.)
 
 `pipeline.eligibility._ineligible` refuses a study, symmetrically (benefits
 too): all arms get the ingredient; ingredient not isolated (combination arm —
-except a matched add-on pair, `matched_addon_claim`). v2 drops v14's
+except a matched add-on pair, `matched_addon_claim`); and, per claim, arms whose
+known co-interventions differ (`unmatched_claim_arms`). v2 drops v14's
 "self-declared underpowered" refusal: pooling already gives a tiny trial a tiny
 weight. Unknown/absent always defaults to KEEP. Never infer these fields from
 the numbers. A null is not "evidence against" by label: it enters the pool as
@@ -278,12 +279,12 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
 - **Method:** evidence method v2 is the pipeline's only method; v14 retired.
   `evidence_v2.STATUS = "shadow"` until validation passes. `main` and the live
   site still run v14 until the simplification branches merge.
-- **Latest v2 run** `20261025_101638` (S4 v1.40, the rest v1.39 from cache;
-  138/139 studies): strength **k = 12, B+, Moderate** (+0.22 [+0.04, +0.41]),
-  coverage 44 % (not testable); lean mass k = 11 **D, Moderate**, passes (69 %).
-  Both clear the risk-of-bias rule narrowly (52.7 % / 50.6 % of the weight with
-  no reported flaw). Next extraction: S5N and S5R only (v1.40, the p-value test
-  for the new `smd_from_p` route), 2-study smoke test first.
+- **Latest v2 run** `20261026_034529` (S4, S5N, S5R v1.40; 138/139 studies).
+  Re-pooled under the 2026-10-26 claim-level arm check: strength **k = 11, B+,
+  Moderate** (+0.21 [+0.02, +0.41]), coverage 44 % (not testable); lean mass
+  k = 10 **D+, Low**. The stored report says B+ / D Moderate (before the check).
+  Next: the spot audit on this run, then one S5N / S5R v1.41 re-extraction
+  (contrast wording, plus whatever the audit finds), then the stability test.
 - **Known v2 problems:** the work list in `docs/DECISIONS.md`. Done: items
   1 (imprecision scales with information size), 2, 3 (offline part), 6, 10
   (prompts trimmed); decided: 5 (healthy

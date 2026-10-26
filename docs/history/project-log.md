@@ -10,6 +10,38 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-26 — S5N / S5R v1.40 run 20261026_034529; claim-level arm check
+
+Re-ran S5N and S5R only (v1.40, `p_test`; smoke test 20261025_223659 clean),
+everything else from cache; 180 quota requeues, ~5.1 h. 137 ok / 1 skipped
+(`doi:101159000518499`, GAA + creatine pilot, abstract only, the same each run)
+/ 1 partial (the usual S5N on `doi:101002acr22747`, off-target anyway). All 52
+pooled effects double-read and agreed; reviewer disagreements 1 -> 3. Strength
+**B+, Moderate**, k = 12, +0.24 [+0.04, +0.44], NOT TESTABLE (44 %); lean mass
+**D, Moderate**, k = 11, +0.18 [-0.05, +0.41], PASS; power I, k = 10.
+
+`smd_from_p` recovered none of the 8 "only a p-value" trial-outcomes: with the
+test named, 7 are tests that do not convert (repeated-measures, ANCOVA, ...), 2
+name no test, 1 has no favoured arm. No outcome used the route.
+
+Found: S5N labelled the matched pair CS-RT + CrM vs CS-RT of
+`doi:103390nu13072303` `vs_ingredient_arm`, so it was refused and the pool took
+CS-RT + CrM vs the no-training control instead (strength g 0.57 -> 1.21, power
+0.38 -> 1.27, lean mass 0.92 -> 1.09; the numbers were identical in both runs).
+The study-level isolation rule kept that contrast because S3's
+`ingredient_isolated` is "yes" for the trial. The mislabel is general: 21
+add-on-control claims at v1.40, 8 at v1.39. Founder: (a) claim-level check
+`eligibility.unmatched_claim_arms`, built (DECISIONS); re-pooled: strength B+
+(k = 11, +0.21 [+0.02, +0.41]), lean mass **D+, Low** (k = 10, +0.14 [-0.09,
++0.38]; risk of bias now -1), power I. (b) S5N / S5R wording fix v1.41, bundled
+with the post-audit re-extraction.
+
+Tooling: the run context now exports S4 item 7 and each arm's role and
+co-interventions (both missing since item 7 was added), and every pooled study
+records its `claim_index`. `spot_audit.py` shows item 7, the contrast label and
+co-interventions, picks the exact claim, can re-pool a dump with the current
+code (`--extractions`), and states the decided pass rule.
+
 ## 2026-10-25 — S4 v1.40 creatine run 20261025_101638
 
 Re-ran S4 only (item 7, attrition problem); everything else replayed from the

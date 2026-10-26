@@ -43,7 +43,7 @@ from pipeline import meta_effects as me
 from pipeline import vocab
 from pipeline.dose import _s7_for_claim, dose_match_for, study_dose
 from pipeline.effect_size import Effect, effect_from_claim
-from pipeline.eligibility import _ineligible, matched_addon_claim
+from pipeline.eligibility import _ineligible, matched_addon_claim, unmatched_claim_arms
 from pipeline.span_check import fill_arm_n
 
 # smd_from_p: founder 2026-10-25, ranked last (the least direct route).
@@ -248,6 +248,9 @@ def _study_effects(item: dict, product: dict, polarity: dict,
         if scope and not (scope == "no_isolated_ingredient_arm" and matched_addon_claim(claim, s3)):
             refusals[oid] = f"study: {scope}"
             continue
+        if unmatched_claim_arms(claim, s3):
+            refusals.setdefault(oid, "arms differ in more than the ingredient (co-interventions not matched)")
+            continue
         if pop == "different":
             refusals[oid] = "study: off-target population"
             continue
@@ -334,7 +337,7 @@ def pool_outcomes(items: list[dict], product: dict) -> dict[str, OutcomePool]:
                          "flags": list(s.effect.flags), "n": s.n, "rob": s.rob,
                          "form_match": s.form_match, "pop_match": s.pop_match,
                          "design_rank": s.design_rank, "reviewed": s.reviewed,
-                         "dose_match": s.dose_match, "measure": s.measure,
+                         "dose_match": s.dose_match, "measure": s.measure, "claim_index": s.claim_index,
                          "measure_rank": s.measure_rank, "form_id": s.form_id,
                          "dose_low_mg": s.dose_low_mg, "dose_high_mg": s.dose_high_mg} for s in studies]
         smd = [s for s in studies if s.effect.smd_variance is not None]

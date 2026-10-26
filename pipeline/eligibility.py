@@ -39,6 +39,21 @@ def _matched_factorial_background(s3: dict | None, ingredient: str) -> bool:
     return target_co is not None and control_co is not None and target_co == control_co
 
 
+def _claim_arm_pair(claim: dict, s3: dict | None) -> tuple[dict | None, dict | None]:
+    """The claim's ingredient and control arms as administered S3 arms, each
+    by exact, unique label; (None, None) when either does not resolve."""
+    arms = [a for a in (s3 or {}).get("arms") or [] if isinstance(a, dict)
+            and a.get("role", "administered") == "administered"]
+
+    def one(label):
+        hits = [a for a in arms if _arm_norm(a.get("label")) == _arm_norm(label)]
+        return hits[0] if _arm_norm(label) and len(hits) == 1 else None
+    target, control = one(claim.get("ingredient_arm")), one(claim.get("control_arm"))
+    if not target or not control or target is control:
+        return None, None
+    return target, control
+
+
 def matched_addon_claim(claim: dict, s3: dict | None) -> bool:
     """True when THIS claim's two arms are an explicitly matched add-on pair:
     the claim's ingredient arm and control arm each resolve (exact label,
@@ -49,20 +64,33 @@ def matched_addon_claim(claim: dict, s3: dict | None) -> bool:
     trial. Unknown co-interventions (None) never match. Evidence method v2 only
     (pipeline/pool.py); founder 2026-10-05, measured on isrctn68542582 (PLA /
     GAA / GAA + CrM, refused whole although GAA + CrM vs GAA isolates creatine)."""
-    arms = [a for a in (s3 or {}).get("arms") or [] if isinstance(a, dict)
-            and a.get("role", "administered") == "administered"]
-
-    def one(label):
-        hits = [a for a in arms if _arm_norm(a.get("label")) == _arm_norm(label)]
-        return hits[0] if _arm_norm(label) and len(hits) == 1 else None
-    target, control = one(claim.get("ingredient_arm")), one(claim.get("control_arm"))
-    if not target or not control or target is control:
+    target, control = _claim_arm_pair(claim, s3)
+    if not target:
         return False
     if target.get("target_ingredient_presence") != "yes" or control.get("target_ingredient_presence") != "no":
         return False
     t_co = _normalise_cointerventions(target.get("active_cointerventions"))
     c_co = _normalise_cointerventions(control.get("active_cointerventions"))
     return t_co is not None and c_co is not None and t_co == c_co
+
+
+def unmatched_claim_arms(claim: dict, s3: dict | None) -> bool:
+    """True when THIS claim's two arms are known to differ in more than the
+    ingredient: both resolve (exact label, unique) to administered S3 arms and
+    both list their co-interventions, and the lists differ. The study-level
+    rule in `_ineligible` reads S3's `ingredient_isolated`, which is "yes" when
+    ANY pair isolates the ingredient, so the other pairs of a multi-arm trial
+    were kept. Unknown (an arm that does not resolve, a list that is None)
+    keeps the claim. Founder 2026-10-26; measured on doi:103390nu13072303
+    (CS-RT+CrM / CS-RT / no-training control): CS-RT+CrM vs the control was
+    pooled for strength, power and lean mass (g 1.21, 1.27, 1.09) once S5N
+    mislabelled the matched CS-RT pair."""
+    target, control = _claim_arm_pair(claim, s3)
+    if not target:
+        return False
+    t_co = _normalise_cointerventions(target.get("active_cointerventions"))
+    c_co = _normalise_cointerventions(control.get("active_cointerventions"))
+    return t_co is not None and c_co is not None and t_co != c_co
 
 
 def _ineligible(ext: dict) -> str | None:
