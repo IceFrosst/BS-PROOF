@@ -283,8 +283,9 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
   Re-pooled under the 2026-10-26 claim-level arm check: strength **k = 11, B+,
   Moderate** (+0.21 [+0.02, +0.41]), coverage 44 % (not testable); lean mass
   k = 10 **D+, Low**. The stored report says B+ / D Moderate (before the check).
-  Next: the spot audit on this run, then one S5N / S5R v1.41 re-extraction
-  (contrast wording, plus whatever the audit finds), then the stability test.
+  The first spot audit on it FAILED (2026-10-26: one reversed direction from
+  `energy_levels` polarity; S4 misread item 7 and item 2 once each) and found
+  11 studies read from broken text; open decisions 1-4 in `docs/DECISIONS.md`.
 - **Known v2 problems:** the work list in `docs/DECISIONS.md`. Done: items
   1 (imprecision scales with information size), 2, 3 (offline part), 6, 10
   (prompts trimmed); decided: 5 (healthy

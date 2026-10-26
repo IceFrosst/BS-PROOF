@@ -9,13 +9,40 @@ the founder decides. When an item is decided, move it to "Decided" with its
 date; delete anything that no longer applies. Dated history goes to
 `docs/history/project-log.md`, not here.
 
-Last swept: 2026-10-25.
+Last swept: 2026-10-26.
 
 ---
 
 ## Open
 
-None today.
+From the first spot audit (run 20261026_034529, 2026-10-26; project log).
+Ordered by how much each moves a grade.
+
+1. **Endpoint values when the arms' baselines differ.** 11 of the 34 pooled
+   endpoint effects with verified pre and post values point the other way from
+   their change from baseline, all flagged `baseline_imbalance` (which today only
+   caps risk of bias); 9 of the 11 turn a creatine gain into a loss. Lean mass:
+   5 of its 10 pooled trials. Options: (a) use the change from baseline when the
+   paper prints its SD (no imputation); (b) also impute the change SD from pre /
+   post SDs with a correlation (Cochrane Handbook §6.5.2.8; the correlation is a
+   new constant); (c) keep endpoints, report the count. Measure (a) and (b)
+   offline before deciding.
+2. **Polarity is per outcome, not per measure.** `energy_levels` ("fatigue or
+   energy", `higher_better`) pools a fatigue score as if higher were better:
+   the Hooper fatigue effect of `doi:103390nu17243831` enters reversed (g -0.17
+   for less fatigue). Today it is the only pooled effect affected (a check of all
+   49 against S5N's `effect_favours` and measure names), but sprint times
+   (`muscle_power`) and time-trial times (`exercise_endurance`) are in scope too.
+   Options: split the outcome by direction; or a per-measure `lower_better`
+   pattern in `vocab/outcome.json`, matched like the measure hierarchy.
+3. **No timepoint rule.** `doi:103390nu17061081` was pooled at its 7-day
+   creatine-only wash-in (the authors attribute the LBM change to water), not
+   after the 12-week intervention, because that claim came first. Proposal: the
+   latest timepoint of the randomised comparison.
+4. **A reported interaction effect size taken as an SMD.** `reported_smd_p` took
+   "d = 0.95" from a group x time interaction (`doi:103390nu12061880`, leg press
+   endurance) and its interaction p. Proposal: accept a reported SMD only when it
+   is a between-arm contrast, else refuse with its reason.
 
 ## v2 work list (agreed 2026-10-15, after the simplification)
 

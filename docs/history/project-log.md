@@ -10,6 +10,42 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-26 — first spot audit (run 20261026_034529)
+
+`spot_audit.py --extractions out/run_v140b_extractions.json` (seed 1, the pool
+under the claim-level arm check), 20 effects from 15 papers, each checked
+against the stored full text (JATS, one green-OA PDF). Every number checked
+matched its paper; arms and measures were right.
+
+Consequential extraction errors, all S4:
+- `doi:1010801550278320232193556` (items 8 and 13): item 7 = 1 from "Thirteen
+  participants (72% of the dance program) completed", a share of the program,
+  not a completion rate; no dropout is reported. Flips unclear -> concerns.
+- `doi:103390ijerph19137992` (item 20): item 2 = 0 with a placebo described and
+  blinding never mentioned; S4's own rule makes that null. Flips unclear -> high.
+And one reversed direction, from the vocabulary, not the reader: item 3, the
+Hooper fatigue score pooled under `energy_levels` (`higher_better`).
+By the pass rule (METHOD §16) the audit FAILS: a reversed direction fails alone,
+and 3 of 20 sampled effects carry an S4 error (2 distinct misreadings). Without
+the vocabulary reversal it would be 2-3, extend to 40.
+
+Not errors, method gaps (DECISIONS open 1-4): endpoint values under baseline
+imbalance (items 1, 2, 4, 19; 11 of 34 pooled endpoint effects reverse against
+their change), polarity per outcome (item 3), no timepoint rule (item 18), an
+interaction effect size taken as an SMD (item 17). Also seen: one paper's
+Table 1 contradicts its own text on which arm is which (`doi:103390nu13030826`;
+the extraction follows the text). Item 15 confirms `doi:103390nu12061880`'s
+item 7 = 1 (all 4 withdrawals from placebo, 31 %), the flag strength's
+risk-of-bias margin rests on.
+
+Found while checking item 10 (all-null S4): 11 studies were read from broken
+text in every run. `sources.fulltext.SECTION_PATTERNS` has no pattern for
+"Experimental Section", so 3 MDPI papers (`doi:103390nu10111640`,
+`doi:103390nu9111169`, `doi:103390nu8030143`) were sent results and discussion
+only, no methods; 7 green-OA PDFs were sent as raw `%PDF` bytes, and
+`registry:nct00412984` got an unrelated NSAID abstract. 7 of the 11 produced
+no claims and passed as "ok".
+
 ## 2026-10-26 — S5N / S5R v1.40 run 20261026_034529; claim-level arm check
 
 Re-ran S5N and S5R only (v1.40, `p_test`; smoke test 20261025_223659 clean),
