@@ -127,6 +127,22 @@ def measure_rank(claim: dict, hierarchy: list[dict] | None) -> int:
     return len(hierarchy or [])
 
 
+def measure_polarity(claim: dict, polarity: str | None,
+                     direction: list[dict] | None) -> tuple[str | None, dict | None]:
+    """(polarity, rule) for one claim: the first `measure_direction` rule of its
+    outcome whose `match` (and not `exclude`) fits the claim's outcome_raw +
+    measure, else the outcome's own polarity and None. A rule's polarity of None
+    means the measure's direction is unclear (the claim is refused). Founder
+    2026-10-26 (DECISIONS): measured, the Hooper fatigue score of
+    doi:103390nu17243831 was pooled under energy_levels' `higher_better`, so
+    less fatigue counted against creatine."""
+    text = f"{claim.get('outcome_raw') or ''} || {claim.get('measure') or ''}".lower()
+    for rule in direction or []:
+        if re.search(rule["match"], text) and not (rule.get("exclude") and re.search(rule["exclude"], text)):
+            return rule.get("polarity"), rule
+    return polarity, None
+
+
 def selection_key(effect: "StudyEffect") -> tuple:
     return (effect.measure_rank, not effect.primary, ROUTE_RANK.get(effect.route, 9), effect.claim_index)
 
@@ -225,7 +241,8 @@ def _pool(effects: list[float], variances: list[float]) -> dict:
 
 
 def _study_effects(item: dict, product: dict, polarity: dict,
-                   hierarchy: dict | None = None) -> tuple[dict[str, StudyEffect], dict]:
+                   hierarchy: dict | None = None,
+                   direction: dict | None = None) -> tuple[dict[str, StudyEffect], dict]:
     """Best effect per outcome for one study, plus per-outcome refusal reasons."""
     ext, record = item["extraction"], item.get("record") or {}
     refusals: dict[str, str] = {}
@@ -258,8 +275,14 @@ def _study_effects(item: dict, product: dict, polarity: dict,
         if review["status"] == "disagreed":
             refusals.setdefault(oid, "reviewers disagree (human adjudication)")
             continue
+        pol, rule = measure_polarity(claim, polarity.get(oid), (direction or {}).get(oid))
+        if rule and pol is None:
+            refusals.setdefault(oid, f"direction of this measure is unclear ({rule.get('note')})")
+            continue
+        n_rule = (f"polarity_from_measure:{pol}",) if rule else ()
         verified, n_flags = fill_arm_n(claim, review["verified"], s3.get("arms"))
-        eff, why = effect_from_claim(claim, verified, polarity=polarity.get(oid),
+        n_flags = tuple(n_flags) + n_rule
+        eff, why = effect_from_claim(claim, verified, polarity=pol,
                                      abs_only=nums.get("abs_only") or (),
                                      checks=nums.get("verified") or {})
         if eff is None:
@@ -314,13 +337,14 @@ def pool_outcomes(items: list[dict], product: dict) -> dict[str, OutcomePool]:
     outcomes = vocab.load("outcome")["outcomes"]
     polarity = {o["id"]: o.get("polarity") for o in outcomes}
     hierarchy = {o["id"]: o.get("measure_hierarchy") for o in outcomes}
+    direction = {o["id"]: o.get("measure_direction") for o in outcomes}
     per_outcome: dict[str, list[StudyEffect]] = collections.defaultdict(list)
     refused: dict[str, collections.Counter] = collections.defaultdict(collections.Counter)
     for item in items:
         ext = item.get("extraction") or {}
         if ext.get("_skipped"):
             continue
-        best, refusals = _study_effects(item, product, polarity, hierarchy)
+        best, refusals = _study_effects(item, product, polarity, hierarchy, direction)
         for oid, se in best.items():
             per_outcome[oid].append(se)
         for oid, why in refusals.items():

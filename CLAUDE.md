@@ -286,8 +286,8 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
   report says B+ / D Moderate (before both).
   The first spot audit on it FAILED (2026-10-26: one reversed direction from
   `energy_levels` polarity; S4 misread item 7 and item 2 once each) and found
-  11 studies read from broken text (fixed 2026-10-26); open decisions 1-3 in
-  `docs/DECISIONS.md`.
+  11 studies read from broken text (fixed 2026-10-26). Polarity per measure
+  built; timepoint and SMD-basis rules wait for the v1.41 prompts.
 - **Known v2 problems:** the work list in `docs/DECISIONS.md`. Done: items
   1 (imprecision scales with information size), 2, 3 (offline part), 6, 10
   (prompts trimmed); decided: 5 (healthy

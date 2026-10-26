@@ -10,6 +10,16 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-26 — polarity per measure built (founder: approve 2-4)
+
+`vocab/outcome.json` gains `measure_direction` for 11 outcomes, matched by
+`pool.measure_polarity` on outcome_raw + measure (designed against every claim
+name in the run; "OMBT distance ... PAP time" needed a distance exclusion).
+`effect_size` flags `sign_disagrees_with_reader`. Run 20261026_034529
+re-pooled: energy_levels' Hooper fatigue -0.17 → +0.17, 2 mixed claims refused
+as unclear, every graded letter unchanged; one sign disagreement left (a CMJ,
+g -0.05). tests/test_measure_direction.py.
+
 ## 2026-10-26 — ANCOVA adjustment built (founder: "ANCOVA and r = 0.5")
 
 `effect_size`: every endpoint arm-statistics effect of a parallel trial with

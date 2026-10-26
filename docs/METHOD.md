@@ -98,8 +98,15 @@ vocabulary is discarded, never guessed.
 
 - **Outcomes** (`vocab/outcome.json`, 31): label, definition, includes/excludes,
   search terms, **polarity** (which direction is benefit; no polarity → the
-  outcome cannot be graded), optional **measure hierarchy** (which measure wins
-  when a trial reports several, §11) and **MCID** (§14).
+  outcome cannot be graded), optional **measure direction** (founder
+  2026-10-26: patterns on the claim's measure name and unit that override the
+  polarity for one measure, e.g. a fatigue score or a sprint time is
+  `lower_better`; a mixed measure such as accuracy-and-reaction-time has no
+  direction and is refused; `pool.measure_polarity`), optional **measure
+  hierarchy** (which measure wins when a trial reports several, §11) and
+  **MCID** (§14). An arm-statistics effect whose sign disagrees with the arm
+  S5N says the result favours is flagged `sign_disagrees_with_reader`, never
+  refused.
 - **Forms** (`vocab/form.json`): per ingredient, with a salt family and molar
   masses. Form match is `exact` / `salt_family` / `different` / `unspecified`.
 - **Dose conversion**: the label's compound dose → elemental / active-moiety mg

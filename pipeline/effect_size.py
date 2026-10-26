@@ -255,6 +255,13 @@ def effect_from_claim(claim: dict, verified: dict, *, polarity: str | None,
             flags = flags + ("crossover_as_parallel",)
         if endpoint_gap is not None and abs(endpoint_gap) > abs(md):
             flags = flags + ("baseline_imbalance",)
+        reader = _favoured_sign(claim.get("effect_favours"))
+        if reader is not None and g and (g > 0) != (reader > 0):
+            # S5N's reading of which arm did better disagrees with the sign
+            # the polarity gives the arm means: a reversed scale, or a reader
+            # judging by within-group change. Flagged, never refused
+            # (founder 2026-10-26; audit items 19, 20 disagree legitimately).
+            flags = flags + ("sign_disagrees_with_reader",)
         if baseline_gap is not None:
             flags = flags + ("ancova_adjusted",)
             md, md_var = md - RULES["ancova_r"] * baseline_gap, md_var * (1 - RULES["ancova_r"] ** 2)

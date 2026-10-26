@@ -57,6 +57,7 @@
     "sleep"
    ],
    "polarity": "higher_better",
+   "measure_direction": [{"polarity": null, "match": "sleepiness", "note": "sleepiness at bedtime has no settled direction"}, {"polarity": "lower_better", "match": "psqi|pittsburgh|hooper", "note": "PSQI and Hooper score poor sleep high"}],
    "polarity_note": "SCALE-DEPENDENT: PSQI global score is LOWER-better while most 0-10 'sleep quality' ratings are HIGHER-better. polarity here describes the CONCEPT; a PSQI number must not be read against it without checking the instrument."
   },
   {
@@ -180,7 +181,8 @@
     "cognition",
     "cognitive function"
    ],
-   "polarity": "higher_better"
+   "polarity": "higher_better",
+   "measure_direction": [{"polarity": "lower_better", "match": "reaction time|\\bms\\b|\\berrors?\\b|incorrect|trail making|\\btmt\\b|stroop.*time", "note": "times and errors"}]
   },
   {
    "id": "attention_focus",
@@ -200,7 +202,8 @@
     "vigilance",
     "reaction time"
    ],
-   "polarity": "higher_better"
+   "polarity": "higher_better",
+   "measure_direction": [{"polarity": null, "match": "(correct|accuracy).*(reaction|decision) time|(reaction|decision) time.*(\\bcorrect|accuracy)", "note": "accuracy and speed in one claim: direction unclear"}, {"polarity": "lower_better", "match": "reaction time|decision time|move(ment)? time|\\bms\\b|incorrect|\\berrors?\\b|lapses|dispersion|variability", "note": "times, errors, lapses, variability"}]
   },
   {
    "id": "memory",
@@ -220,7 +223,8 @@
     "memory",
     "recall"
    ],
-   "polarity": "higher_better"
+   "polarity": "higher_better",
+   "measure_direction": [{"polarity": "lower_better", "match": "reaction time|\\bms\\b|\\berrors?\\b|incorrect", "note": "times and errors"}]
   },
   {
    "id": "energy_levels",
@@ -242,7 +246,8 @@
     "energy",
     "vitality"
    ],
-   "polarity": "higher_better"
+   "polarity": "higher_better",
+   "measure_direction": [{"polarity": null, "match": "vigou?r and fatigue|fatigue and vigou?r", "note": "a combined vigour-fatigue score: direction unclear"}, {"polarity": "lower_better", "match": "fatigue|tired|exhaust", "exclude": "facit|pedsql|inverted|vigou?r|vitality|energy", "note": "fatigue scored as a symptom (higher = more tired); FACIT-F and PedsQL are scored the other way"}]
   },
   {
    "id": "muscle_strength",
@@ -288,6 +293,7 @@
     "vertical jump"
    ],
    "polarity": "higher_better",
+   "measure_direction": [{"polarity": "lower_better", "match": "\\bsec(onds?)?\\b|\\btime\\b|fatigue index|decrement", "exclude": "speed|velocity|m/s|km/h|power|watt|distance|height|throw|jump", "note": "sprint and repeated-sprint times; fatigue index"}],
    "mcid": {"smd": 0.2, "tier": 3, "basis": "distribution-based smallest worthwhile change", "source": "Hopkins WG. How to Interpret Changes in an Athletic Performance Test. Sportscience 8, 1-7, 2004 (sportsci.org/jour/04/wghtests.htm)", "quote": "an appropriate default for the smallest change in test performance is one-fifth of the between-athlete standard deviation (a standardized or Cohen effect size of 0.20)", "population": "athletes (team sports); the convention used across sports-science trials", "approved": true, "approved_on": "2026-10-03 (founder: ok for now, may revisit)"},
    "measure_hierarchy": [{"tier": "cycle sprint peak power (Wingate)", "match": "wingate|peak power|ppo|cycle sprint|anaerobic power"}, {"tier": "countermovement jump", "match": "countermovement|\\bcmj\\b"}, {"tier": "squat jump", "match": "squat jump|\\bsj\\b"}, {"tier": "other jumps", "match": "jump|abalakov|vertical"}, {"tier": "sprint", "match": "sprint|dash|\\b\\d+\\s?m\\b"}]
   },
@@ -315,6 +321,7 @@
     "time trial"
    ],
    "polarity": "higher_better",
+   "measure_direction": [{"polarity": "lower_better", "match": "time trial.*\\|\\|.*(sec|min)|finishing time|completion time", "exclude": "exhaustion|task failure|\\btte\\b|\\bttf\\b|power|watt|eswt|walking", "note": "time to complete a fixed distance"}],
    "mcid": {"smd": 0.2, "tier": 3, "basis": "distribution-based smallest worthwhile change", "source": "Hopkins WG. How to Interpret Changes in an Athletic Performance Test. Sportscience 8, 1-7, 2004 (sportsci.org/jour/04/wghtests.htm)", "quote": "an appropriate default for the smallest change in test performance is one-fifth of the between-athlete standard deviation (a standardized or Cohen effect size of 0.20)", "population": "athletes (team sports); the convention used across sports-science trials", "approved": true, "approved_on": "2026-10-03 (founder: ok for now, may revisit)"},
    "measure_hierarchy": [{"tier": "time to exhaustion / time trial", "match": "exhaustion|time trial|\\btte\\b|time.to"}, {"tier": "maximal oxygen uptake", "match": "vo2|oxygen uptake|aerobic capacity"}]
   },
@@ -344,6 +351,7 @@
     "reps to failure"
    ],
    "polarity": "higher_better",
+   "measure_direction": [{"polarity": "lower_better", "match": "fatigue index|decrement|decline", "note": "a fatigue index falls when endurance improves"}],
    "mcid": {"smd": 0.2, "tier": 3, "basis": "distribution-based smallest worthwhile change", "source": "Hopkins WG. How to Interpret Changes in an Athletic Performance Test. Sportscience 8, 1-7, 2004 (sportsci.org/jour/04/wghtests.htm)", "quote": "an appropriate default for the smallest change in test performance is one-fifth of the between-athlete standard deviation (a standardized or Cohen effect size of 0.20)", "population": "athletes (team sports); the convention used across sports-science trials", "approved": true, "approved_on": "2026-10-03 (founder: ok for now, may revisit)"},
    "measure_hierarchy": [{"tier": "repetitions to failure", "match": "repetition|reps|to failure"}, {"tier": "training volume", "match": "volume|total work"}]
   },
@@ -364,7 +372,8 @@
     "exercise recovery",
     "recovery"
    ],
-   "polarity": "higher_better"
+   "polarity": "higher_better",
+   "measure_direction": [{"polarity": "lower_better", "match": "\\bsec(onds?)?\\b|\\btime\\b|fatigue index|reduction|decrement|decline|\\bloss\\b", "exclude": "speed|velocity|power|force|watt|distance|height|jump", "note": "losses, fatigue indices and times"}]
   },
   {
    "id": "muscle_soreness",
@@ -383,7 +392,8 @@
     "muscle soreness",
     "DOMS"
    ],
-   "polarity": "lower_better"
+   "polarity": "lower_better",
+   "measure_direction": [{"polarity": "higher_better", "match": "pressure pain threshold|\\bppt\\b", "note": "a pain threshold rises as soreness falls"}]
   },
   {
    "id": "muscle_cramps",
@@ -507,7 +517,8 @@
     "bowel habit",
     "irritable bowel"
    ],
-   "polarity": "higher_better"
+   "polarity": "higher_better",
+   "measure_direction": [{"polarity": "lower_better", "match": "severity|symptom score|\\bibs\\b|constipation|bloating|pain", "note": "symptom scores"}]
   },
   {
    "id": "serum_magnesium",
