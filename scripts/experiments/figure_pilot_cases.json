@@ -1,0 +1,764 @@
+{
+ "about": "Figure pilot cases (founder 2026-10-26). Each panel's truth is a number the SAME paper prints in a table or the text; see truth_source. Curated by hand from scripts/experiments/figure_pilot.py candidates; papers whose figure and table disagree were dropped (PMC5234097).",
+ "cases": [
+  {
+   "id": "ffm_3arm",
+   "pmcid": "PMC8308441",
+   "fig_id": "nutrients-13-02303-f003",
+   "image": "nutrients-13-02303-g003a.jpg",
+   "caption": "Estimation plots showing pre- and post-intervention values on analyzed variables. Paired data from CS-RT+CrM (left), CS-RT (middle), and control (right) groups are shown as small circles joined by blue lines. The differences between the initial (Week 0) and final (Week 8) means are plotted on a floating difference axis whose zero is aligned with the pre-test mean. The filled pink triangle marks the difference on that axis and the 95% CI on that difference is displayed. The differences are shown as open triangles on the difference axis. FFM and LL-FFM were corrected for fat-free adipose tissue. BMI, body mass index; CI, confidence interval; CMJ, countermovement jump; CrM, creatine monohydrate; CS-RT, cluster-set resistance training; FFAT, fat-free adipose tissue; FFM, fat-free mass; FM, fat mass; LL-FFAT; lower-limb fat-free adipose tissue; LL-FFM; lower-limb fat-free mass; LL-FM; lower-limb fat mass; LL-mass, lower-limb mass; SQ-1RM, 1 repetition maximum for the back squat.",
+   "panel": "row 'FFM - FFAT (kg)', the black mean +/- SD markers",
+   "arms": [
+    "CS-RT+CrM",
+    "CS-RT",
+    "Control"
+   ],
+   "timepoints": [
+    "Week 0",
+    "Week 8"
+   ],
+   "read": "means",
+   "quantity": "plotted value",
+   "truth": {
+    "CS-RT+CrM": {
+     "Week 0": {
+      "mean": 60.06,
+      "sd": null
+     },
+     "Week 8": {
+      "mean": 63.01,
+      "sd": null
+     }
+    },
+    "CS-RT": {
+     "Week 0": {
+      "mean": 60.24,
+      "sd": null
+     },
+     "Week 8": {
+      "mean": 61.81,
+      "sd": null
+     }
+    },
+    "Control": {
+     "Week 0": {
+      "mean": 61.04,
+      "sd": null
+     },
+     "Week 8": {
+      "mean": 61.92,
+      "sd": null
+     }
+    }
+   },
+   "truth_source": "Table (S5N-verified pre/post, run 20261026_034529, doi:103390nu13072303)",
+   "contrast": [
+    "CS-RT+CrM",
+    "CS-RT"
+   ]
+  },
+  {
+   "id": "jump_sj",
+   "pmcid": "PMC9364731",
+   "fig_id": "f0004",
+   "image": "RSSN_A_2108683_F0004_B.jpg",
+   "caption": "Results of the change (posttest – pretest) of the jump variables of the Creatine (CrM) and Control (Con) Groups. Both groups are plotted on the left axes; the mean difference is plotted on a floating axes on the right as a bootstrap sampling distribution. The mean difference is depicted as a dot; the 95% confidence interval is indicated by the ends of the vertical error bar. SJ, jump squat; CMJ, countermovement jump, DP, drop jump, ABK, Abalakov jump.",
+   "panel": "panel SJ (squat jump): each group's mean change, the horizontal line drawn from the group's points",
+   "arms": [
+    "CrM",
+    "Con"
+   ],
+   "timepoints": [
+    "change"
+   ],
+   "read": "means",
+   "quantity": "mean change",
+   "truth": {
+    "CrM": {
+     "change": {
+      "mean": 4.5,
+      "sd": 3.0
+     }
+    },
+    "Con": {
+     "change": {
+      "mean": 3.7,
+      "sd": 2.1
+     }
+    }
+   },
+   "truth_source": "Table (change mean +/- SD; CMJ and DJ values swapped in the stored extraction, corrected from pre/post)",
+   "contrast": [
+    "CrM",
+    "Con"
+   ]
+  },
+  {
+   "id": "jump_cmj",
+   "pmcid": "PMC9364731",
+   "fig_id": "f0004",
+   "image": "RSSN_A_2108683_F0004_B.jpg",
+   "caption": "Results of the change (posttest – pretest) of the jump variables of the Creatine (CrM) and Control (Con) Groups. Both groups are plotted on the left axes; the mean difference is plotted on a floating axes on the right as a bootstrap sampling distribution. The mean difference is depicted as a dot; the 95% confidence interval is indicated by the ends of the vertical error bar. SJ, jump squat; CMJ, countermovement jump, DP, drop jump, ABK, Abalakov jump.",
+   "panel": "panel CMJ (countermovement jump): each group's mean change, the horizontal line drawn from the group's points",
+   "arms": [
+    "CrM",
+    "Con"
+   ],
+   "timepoints": [
+    "change"
+   ],
+   "read": "means",
+   "quantity": "mean change",
+   "truth": {
+    "CrM": {
+     "change": {
+      "mean": 4.1,
+      "sd": 2.4
+     }
+    },
+    "Con": {
+     "change": {
+      "mean": 3.1,
+      "sd": 1.9
+     }
+    }
+   },
+   "truth_source": "Table (change mean +/- SD; CMJ and DJ values swapped in the stored extraction, corrected from pre/post)",
+   "contrast": [
+    "CrM",
+    "Con"
+   ]
+  },
+  {
+   "id": "jump_dj",
+   "pmcid": "PMC9364731",
+   "fig_id": "f0004",
+   "image": "RSSN_A_2108683_F0004_B.jpg",
+   "caption": "Results of the change (posttest – pretest) of the jump variables of the Creatine (CrM) and Control (Con) Groups. Both groups are plotted on the left axes; the mean difference is plotted on a floating axes on the right as a bootstrap sampling distribution. The mean difference is depicted as a dot; the 95% confidence interval is indicated by the ends of the vertical error bar. SJ, jump squat; CMJ, countermovement jump, DP, drop jump, ABK, Abalakov jump.",
+   "panel": "panel DJ (drop jump): each group's mean change, the horizontal line drawn from the group's points",
+   "arms": [
+    "CrM",
+    "Con"
+   ],
+   "timepoints": [
+    "change"
+   ],
+   "read": "means",
+   "quantity": "mean change",
+   "truth": {
+    "CrM": {
+     "change": {
+      "mean": 0.5,
+      "sd": 0.4
+     }
+    },
+    "Con": {
+     "change": {
+      "mean": 0.3,
+      "sd": 0.2
+     }
+    }
+   },
+   "truth_source": "Table (change mean +/- SD; CMJ and DJ values swapped in the stored extraction, corrected from pre/post)",
+   "contrast": [
+    "CrM",
+    "Con"
+   ]
+  },
+  {
+   "id": "jump_abk",
+   "pmcid": "PMC9364731",
+   "fig_id": "f0004",
+   "image": "RSSN_A_2108683_F0004_B.jpg",
+   "caption": "Results of the change (posttest – pretest) of the jump variables of the Creatine (CrM) and Control (Con) Groups. Both groups are plotted on the left axes; the mean difference is plotted on a floating axes on the right as a bootstrap sampling distribution. The mean difference is depicted as a dot; the 95% confidence interval is indicated by the ends of the vertical error bar. SJ, jump squat; CMJ, countermovement jump, DP, drop jump, ABK, Abalakov jump.",
+   "panel": "panel ABK (Abalakov jump): each group's mean change, the horizontal line drawn from the group's points",
+   "arms": [
+    "CrM",
+    "Con"
+   ],
+   "timepoints": [
+    "change"
+   ],
+   "read": "means",
+   "quantity": "mean change",
+   "truth": {
+    "CrM": {
+     "change": {
+      "mean": 4.1,
+      "sd": 2.1
+     }
+    },
+    "Con": {
+     "change": {
+      "mean": 1.6,
+      "sd": 1.4
+     }
+    }
+   },
+   "truth_source": "Table (change mean +/- SD; CMJ and DJ values swapped in the stored extraction, corrected from pre/post)",
+   "contrast": [
+    "CrM",
+    "Con"
+   ]
+  },
+  {
+   "id": "bench_reps_delta",
+   "pmcid": "PMC10974193",
+   "fig_id": "nutrients-16-00766-f003",
+   "image": "nutrients-16-00766-g003.jpg",
+   "caption": "The mean change (with a 95% confidence interval) in the number of bench press repetitions to failure at 70% of 1RM from the initial measurement. Statistically significant findings (p < 0.05) are indicated by confidence intervals that do not cross zero. * denotes a significant difference (p < 0.05) compared to the baseline. We use the following notation to indicate statistical differences between treatments: (a) a significant difference compared to PL (p = 0.04).",
+   "panel": "Bench Press Endurance, delta repetitions",
+   "arms": [
+    "PL",
+    "CN"
+   ],
+   "timepoints": [
+    "change"
+   ],
+   "read": "means",
+   "quantity": "mean change",
+   "truth": {
+    "PL": {
+     "change": {
+      "mean": 0.4,
+      "sd": null
+     }
+    },
+    "CN": {
+     "change": {
+      "mean": 1.4,
+      "sd": null
+     }
+    }
+   },
+   "truth_source": "Table post - pre (10.7-10.3, 11.9-10.5)",
+   "contrast": [
+    "CN",
+    "PL"
+   ]
+  },
+  {
+   "id": "tt_time",
+   "pmcid": "PMC5748809",
+   "fig_id": "nutrients-09-01359-f006",
+   "image": "nutrients-09-01359-g006.jpg",
+   "caption": "Change in 4 km cycling time trial performance from day 1 to day 6 for the placebo (PLA), low dose creatine nitrate (CNL), and high dose creatine nitrate (CNH) treatments. Data are mean changes (95% CI). Confidence intervals not crossing zero are statistically significant (p < 0.05).",
+   "panel": "TT Time (sec), change from Day 1 at Day 6",
+   "arms": [
+    "PLA",
+    "CNL",
+    "CNH"
+   ],
+   "timepoints": [
+    "Day 6"
+   ],
+   "read": "means",
+   "quantity": "mean change",
+   "truth": {
+    "PLA": {
+     "Day 6": {
+      "mean": -8,
+      "sd": null
+     }
+    },
+    "CNL": {
+     "Day 6": {
+      "mean": 4,
+      "sd": null
+     }
+    },
+    "CNH": {
+     "Day 6": {
+      "mean": -9,
+      "sd": null
+     }
+    }
+   },
+   "truth_source": "Table post - pre (263-271, 286-282, 262-271)",
+   "contrast": [
+    "CNH",
+    "PLA"
+   ]
+  },
+  {
+   "id": "bench_1rm_d5",
+   "pmcid": "PMC5748809",
+   "fig_id": "nutrients-09-01359-f005",
+   "image": "nutrients-09-01359-g005a.jpg",
+   "caption": "Bench press one repetition maximum (1 RM) (A), bench press endurance (B), leg press 1 RM (C) and leg press endurance (D) changes from baseline values for the placebo (PLA), low dose creatine nitrate (CNL), and high dose creatine nitrate (CNH) treatments. Data are mean changes (95% CI). Confidence intervals not crossing zero are statistically significant (p < 0.05). a Represents p < 0.05 difference from PLA. b Represents p < 0.05 difference from CNL. † Represents p > 0.05 to p < 0.05 effect.",
+   "panel": "panel A Bench Press 1RM, change from baseline at 'Pre-Supplement Day 5'",
+   "arms": [
+    "PLA",
+    "CNL",
+    "CNH"
+   ],
+   "timepoints": [
+    "Pre-Supplement Day 5"
+   ],
+   "read": "means",
+   "quantity": "mean change",
+   "truth": {
+    "PLA": {
+     "Pre-Supplement Day 5": {
+      "mean": 0.7,
+      "sd": null
+     }
+    },
+    "CNL": {
+     "Pre-Supplement Day 5": {
+      "mean": 2.0,
+      "sd": null
+     }
+    },
+    "CNH": {
+     "Pre-Supplement Day 5": {
+      "mean": 6.1,
+      "sd": null
+     }
+    }
+   },
+   "truth_source": "Text (S5N-verified change)",
+   "contrast": [
+    "CNH",
+    "PLA"
+   ]
+  },
+  {
+   "id": "lbm_washin",
+   "pmcid": "PMC11944689",
+   "fig_id": "nutrients-17-01081-f004",
+   "image": "nutrients-17-01081-g004.jpg",
+   "caption": "Absolute change (mean ± SD) in lean body mass (kg), LBM = lean body mass, RT = resistance training; * denotes p < 0.05.",
+   "panel": "the 'Baseline to Wash-in' bars, mean LBM change +/- SD",
+   "arms": [
+    "Control",
+    "Supplement"
+   ],
+   "timepoints": [
+    "Baseline to Wash-in"
+   ],
+   "read": "means",
+   "quantity": "mean change",
+   "truth": {
+    "Control": {
+     "Baseline to Wash-in": {
+      "mean": 0,
+      "sd": 1.2
+     }
+    },
+    "Supplement": {
+     "Baseline to Wash-in": {
+      "mean": 0.51,
+      "sd": 1.26
+     }
+    }
+   },
+   "truth_source": "Text (S5N-verified change +/- SD)",
+   "note": "the text's analysis set may differ from the figure's (n = 28 / 26 in the later phases)",
+   "contrast": [
+    "Supplement",
+    "Control"
+   ]
+  },
+  {
+   "id": "lbm_rt",
+   "pmcid": "PMC11944689",
+   "fig_id": "nutrients-17-01081-f004",
+   "image": "nutrients-17-01081-g004.jpg",
+   "caption": "Absolute change (mean ± SD) in lean body mass (kg), LBM = lean body mass, RT = resistance training; * denotes p < 0.05.",
+   "panel": "the 'Wash-in to Post RT' bars, mean LBM change +/- SD",
+   "arms": [
+    "Control",
+    "Supplement"
+   ],
+   "timepoints": [
+    "Wash-in to Post RT"
+   ],
+   "read": "means",
+   "quantity": "mean change",
+   "truth": {
+    "Control": {
+     "Wash-in to Post RT": {
+      "mean": 2.11,
+      "sd": 1.71
+     }
+    },
+    "Supplement": {
+     "Wash-in to Post RT": {
+      "mean": 2.24,
+      "sd": 1.79
+     }
+    }
+   },
+   "truth_source": "Text (S5N-verified change +/- SD)",
+   "note": "the text's analysis set may differ from the figure's (n = 28 / 26 in the later phases)",
+   "contrast": [
+    "Supplement",
+    "Control"
+   ]
+  },
+  {
+   "id": "lbm_total",
+   "pmcid": "PMC11944689",
+   "fig_id": "nutrients-17-01081-f004",
+   "image": "nutrients-17-01081-g004.jpg",
+   "caption": "Absolute change (mean ± SD) in lean body mass (kg), LBM = lean body mass, RT = resistance training; * denotes p < 0.05.",
+   "panel": "the 'Baseline to Post-RT' bars, mean LBM change +/- SD",
+   "arms": [
+    "Control",
+    "Supplement"
+   ],
+   "timepoints": [
+    "Baseline to Post-RT"
+   ],
+   "read": "means",
+   "quantity": "mean change",
+   "truth": {
+    "Control": {
+     "Baseline to Post-RT": {
+      "mean": 2.04,
+      "sd": 2.7
+     }
+    },
+    "Supplement": {
+     "Baseline to Post-RT": {
+      "mean": 2.78,
+      "sd": 1.89
+     }
+    }
+   },
+   "truth_source": "Text (S5N-verified change +/- SD)",
+   "note": "the text's analysis set may differ from the figure's (n = 28 / 26 in the later phases)",
+   "contrast": [
+    "Supplement",
+    "Control"
+   ]
+  },
+  {
+   "id": "squat_1rm",
+   "pmcid": "PMC6534934",
+   "fig_id": "Fig1",
+   "image": "12970_2019_291_Fig1_HTML.jpg",
+   "caption": "Back Squat 1RM (kg) for the placebo and MIPS groups, pre- and post-supplementation (mean ± SD)",
+   "panel": "Back Squat 1RM, pre and post",
+   "arms": [
+    "MIPS",
+    "Placebo"
+   ],
+   "timepoints": [
+    "Pre-Test",
+    "Post-Test"
+   ],
+   "read": "means",
+   "quantity": "change from two reads",
+   "truth": {
+    "MIPS": {
+     "change": {
+      "mean": 13.4,
+      "sd": null
+     }
+    },
+    "Placebo": {
+     "change": {
+      "mean": -0.2,
+      "sd": null
+     }
+    }
+   },
+   "truth_source": "Text (S5N-verified change); scored as the post - pre of the two read means",
+   "contrast": [
+    "MIPS",
+    "Placebo"
+   ]
+  },
+  {
+   "id": "bench_1rm",
+   "pmcid": "PMC6534934",
+   "fig_id": "Fig2",
+   "image": "12970_2019_291_Fig2_HTML.jpg",
+   "caption": "Bench Press 1RM (kg) for the placebo and MIPS groups, pre- and post-supplementation (mean ± SD)",
+   "panel": "Bench Press 1RM, pre and post",
+   "arms": [
+    "MIPS",
+    "Placebo"
+   ],
+   "timepoints": [
+    "Pre-Test",
+    "Post-Test"
+   ],
+   "read": "means",
+   "quantity": "change from two reads",
+   "truth": {
+    "MIPS": {
+     "change": {
+      "mean": 5.9,
+      "sd": null
+     }
+    },
+    "Placebo": {
+     "change": {
+      "mean": 0.7,
+      "sd": null
+     }
+    }
+   },
+   "truth_source": "Text (S5N-verified change); scored as the post - pre of the two read means",
+   "contrast": [
+    "MIPS",
+    "Placebo"
+   ]
+  },
+  {
+   "id": "sprint_peak",
+   "pmcid": "PMC5930494",
+   "fig_id": "Fig1",
+   "image": "12970_2018_226_Fig1_HTML.jpg",
+   "caption": "Overall peak and mean power output (W) during the five 15-s sprints in the CE and P groups, pre- and post-supplementation. * Indicates significant improvement in sprint performance from pre- to post-testing (p < 0.05)",
+   "panel": "panel 'Peak' power output, pre and post bars",
+   "arms": [
+    "Creatine-Electrolyte",
+    "Placebo"
+   ],
+   "timepoints": [
+    "Pre",
+    "Post"
+   ],
+   "read": "means",
+   "quantity": "plotted value",
+   "truth": {
+    "Creatine-Electrolyte": {
+     "Pre": {
+      "mean": 734,
+      "sd": null
+     },
+     "Post": {
+      "mean": 765,
+      "sd": null
+     }
+    },
+    "Placebo": {
+     "Pre": {
+      "mean": 768,
+      "sd": null
+     },
+     "Post": {
+      "mean": 772,
+      "sd": null
+     }
+    }
+   },
+   "truth_source": "Text (S5N-verified pre/post)",
+   "contrast": [
+    "Creatine-Electrolyte",
+    "Placebo"
+   ]
+  },
+  {
+   "id": "sprint_mean",
+   "pmcid": "PMC5930494",
+   "fig_id": "Fig1",
+   "image": "12970_2018_226_Fig1_HTML.jpg",
+   "caption": "Overall peak and mean power output (W) during the five 15-s sprints in the CE and P groups, pre- and post-supplementation. * Indicates significant improvement in sprint performance from pre- to post-testing (p < 0.05)",
+   "panel": "panel 'Mean' power output, pre and post bars",
+   "arms": [
+    "Creatine-Electrolyte",
+    "Placebo"
+   ],
+   "timepoints": [
+    "Pre",
+    "Post"
+   ],
+   "read": "means",
+   "quantity": "plotted value",
+   "truth": {
+    "Creatine-Electrolyte": {
+     "Pre": {
+      "mean": 586,
+      "sd": null
+     },
+     "Post": {
+      "mean": 615,
+      "sd": null
+     }
+    },
+    "Placebo": {
+     "Pre": {
+      "mean": 638,
+      "sd": null
+     },
+     "Post": {
+      "mean": 643,
+      "sd": null
+     }
+    }
+   },
+   "truth_source": "Text (S5N-verified pre/post)",
+   "contrast": [
+    "Creatine-Electrolyte",
+    "Placebo"
+   ]
+  },
+  {
+   "id": "lm_points",
+   "pmcid": "PMC10044149",
+   "fig_id": "f0002",
+   "image": "RSSN_A_2193556_F0002_B.jpg",
+   "caption": "Individual data for total body water (a), lean mass (b), and lower appendicular lean mass (c) from pre- to post-testing Kg=kilograms.",
+   "panel": "panel b (lean mass), individual participants (Creatine: triangles, dotted; Placebo: circles, solid)",
+   "arms": [
+    "Creatine",
+    "Placebo"
+   ],
+   "timepoints": [
+    "Pre-testing",
+    "Post-testing"
+   ],
+   "read": "points",
+   "quantity": "mean and SD computed from the read points",
+   "truth": {
+    "Creatine": {
+     "Pre-testing": {
+      "mean": 39.8,
+      "sd": null
+     },
+     "Post-testing": {
+      "mean": 41.5,
+      "sd": 4.5
+     }
+    },
+    "Placebo": {
+     "Pre-testing": {
+      "mean": 39.8,
+      "sd": null
+     },
+     "Post-testing": {
+      "mean": 39.9,
+      "sd": 3.6
+     }
+    }
+   },
+   "truth_source": "Table (S5N-verified; n = 7 creatine, 6 placebo)",
+   "contrast": [
+    "Creatine",
+    "Placebo"
+   ]
+  },
+  {
+   "id": "lalm_points",
+   "pmcid": "PMC10044149",
+   "fig_id": "f0002",
+   "image": "RSSN_A_2193556_F0002_B.jpg",
+   "caption": "Individual data for total body water (a), lean mass (b), and lower appendicular lean mass (c) from pre- to post-testing Kg=kilograms.",
+   "panel": "panel c (lower appendicular lean mass), individual participants (Creatine: triangles, dotted; Placebo: circles, solid)",
+   "arms": [
+    "Creatine",
+    "Placebo"
+   ],
+   "timepoints": [
+    "Pre-testing",
+    "Post-testing"
+   ],
+   "read": "points",
+   "quantity": "mean and SD computed from the read points",
+   "truth": {
+    "Creatine": {
+     "Pre-testing": {
+      "mean": 13.6,
+      "sd": null
+     },
+     "Post-testing": {
+      "mean": 14.1,
+      "sd": 1.5
+     }
+    },
+    "Placebo": {
+     "Pre-testing": {
+      "mean": 13.5,
+      "sd": null
+     },
+     "Post-testing": {
+      "mean": 13.5,
+      "sd": 1.0
+     }
+    }
+   },
+   "truth_source": "Table (S5N-verified; n = 7 creatine, 6 placebo)",
+   "contrast": [
+    "Creatine",
+    "Placebo"
+   ]
+  },
+  {
+   "id": "pct_1rm",
+   "pmcid": "PMC8001551",
+   "fig_id": "nutrients-13-00826-f002",
+   "image": "nutrients-13-00826-g002.jpg",
+   "caption": "(a) Changes in maximal strength (one repetition maximum, 1RM) after a 7-day ingestion of creatine or placebo supplement. (b) Changes in number of repetitions performed in the repetitions-to-failure test (RFT) test after a 7-day loading of creatine or placebo.",
+   "panel": "panel a, delta % 1RM",
+   "arms": [
+    "Creatine",
+    "Placebo"
+   ],
+   "timepoints": [
+    "change"
+   ],
+   "read": "means",
+   "quantity": "mean % change",
+   "truth": {
+    "Creatine": {
+     "change": {
+      "mean": 1.6,
+      "sd": 3.2
+     }
+    },
+    "Placebo": {
+     "change": {
+      "mean": 0.8,
+      "sd": 3.6
+     }
+    }
+   },
+   "truth_source": "Text (+1.6 +/- 3.2 %, +0.8 +/- 3.6 %; +16.8 +/- 32.8 %, +8.2 +/- 47.2 %)",
+   "contrast": [
+    "Creatine",
+    "Placebo"
+   ]
+  },
+  {
+   "id": "pct_rft",
+   "pmcid": "PMC8001551",
+   "fig_id": "nutrients-13-00826-f002",
+   "image": "nutrients-13-00826-g002.jpg",
+   "caption": "(a) Changes in maximal strength (one repetition maximum, 1RM) after a 7-day ingestion of creatine or placebo supplement. (b) Changes in number of repetitions performed in the repetitions-to-failure test (RFT) test after a 7-day loading of creatine or placebo.",
+   "panel": "panel b, delta % repetitions to failure",
+   "arms": [
+    "Creatine",
+    "Placebo"
+   ],
+   "timepoints": [
+    "change"
+   ],
+   "read": "means",
+   "quantity": "mean % change",
+   "truth": {
+    "Creatine": {
+     "change": {
+      "mean": 16.8,
+      "sd": 32.8
+     }
+    },
+    "Placebo": {
+     "change": {
+      "mean": 8.2,
+      "sd": 47.2
+     }
+    }
+   },
+   "truth_source": "Text (+1.6 +/- 3.2 %, +0.8 +/- 3.6 %; +16.8 +/- 32.8 %, +8.2 +/- 47.2 %)",
+   "contrast": [
+    "Creatine",
+    "Placebo"
+   ]
+  }
+ ]
+}

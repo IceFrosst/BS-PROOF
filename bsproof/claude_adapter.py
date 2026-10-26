@@ -65,7 +65,7 @@ retryable.
 """
 
 from __future__ import annotations
-import subprocess, json, hashlib, os, time, sqlite3, threading
+import base64, subprocess, json, hashlib, os, time, sqlite3, threading
 from pathlib import Path
 from dataclasses import dataclass, field
 
@@ -413,7 +413,9 @@ PROMPT_VERSION = "v1.39"
 #   baseline SDs (`sd_pre_*`, for the ANCOVA adjustment) and an smd's basis
 #   (`smd_basis`), and are told only the target ingredient decides `contrast`
 #   (21 add-on controls were labelled vs_ingredient_arm at v1.40).
-AGENT_PROMPT_VERSION: dict[str, str] = {"S4": "v1.41", "S5": "v1.41", "S5N": "v1.41", "S5R": "v1.41"}
+AGENT_PROMPT_VERSION: dict[str, str] = {"S4": "v1.41", "S5": "v1.41", "S5N": "v1.41", "S5R": "v1.41",
+                                        # the figure pilot's own reader (not production)
+                                        "S5F": "pilot-v0.3", "S5FR": "pilot-v0.3"}
 
 
 def prompt_version(agent: str) -> str:
@@ -555,6 +557,12 @@ AGENTS = {
     # every MAPPED S5 claim (workers._extract_numbers). Tier B (sonnet, low
     # effort) so it is cheap AND a different model from S5R's opus.
     "S5N": ("B", "s5_numbers.json",   "s5_numbers.md"),
+    # FIGURE PILOT (founder 2026-10-26, scripts/experiments/figure_pilot.py):
+    # one figure image in, the plotted per-arm values out. Two readers on two
+    # models, like S5N / S5R. Not wired into workers.py: no pooled number comes
+    # from a figure until the pilot's accuracy is measured and decided.
+    "S5F": ("B", "s5_figure.json",    "s5_figure.md"),
+    "S5FR": ("R", "s5_figure.json",   "s5_figure.md"),
 }
 
 
@@ -1205,9 +1213,14 @@ def _save_failure(agent: str, key: str, attempt: int, raw: str) -> str | None:
         return None
 
 
-def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
+def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2,
+         images: list[tuple[str, bytes]] | None = None):
     """
     Run one subagent. Returns (result_dict | None, meta).
+
+    `images` ([(media_type, bytes)], the figure pilot only): sent with the
+    payload as ONE stream-json user message, still one shot with no tools.
+    Their SHA-256 joins the payload, so the cache key covers the pixels.
 
     Contract (docs/METHOD.md §7):
       - schema violation -> retry x2 -> None + flag. NEVER repair by inference.
@@ -1231,6 +1244,8 @@ def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
 
     schema = (SCHEMAS / schema_f).read_text()
     system = _claude_system_prompt(prompt_f)
+    if images:
+        payload = {**payload, "image_sha256": [hashlib.sha256(b).hexdigest() for _, b in images]}
     body = json.dumps(payload, ensure_ascii=False, sort_keys=True)
 
     k = _key(agent, model, body, effort)
@@ -1263,6 +1278,14 @@ def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
     ]
     if effort:
         cmd += ["--effort", effort]
+    stdin = body
+    if images:
+        cmd += ["--input-format", "stream-json"]
+        stdin = json.dumps({"type": "user", "message": {"role": "user", "content": [
+            {"type": "text", "text": body},
+            *({"type": "image", "source": {"type": "base64", "media_type": mt,
+                                            "data": base64.b64encode(b).decode()}}
+              for mt, b in images)]}}) + "\n"
 
     last_err, timeouts, failure = None, 0, None
     for attempt in range(retries + 1):
@@ -1271,7 +1294,7 @@ def call(agent: str, payload: dict, timeout: int = 180, retries: int = 2):
                 agent, model=model, tier=tier, effort=effort, retry=attempt > 0)
             attempt_error = None
             try:
-                proc = subprocess.run(cmd, input=body, capture_output=True,
+                proc = subprocess.run(cmd, input=stdin, capture_output=True,
                                       text=True, timeout=timeout)
             except subprocess.TimeoutExpired:
                 USAGE.finish_attempt(
