@@ -22,11 +22,25 @@ Ordered by how much each moves a grade.
    endpoint effects with verified pre and post values point the other way from
    their change from baseline, all flagged `baseline_imbalance` (which today only
    caps risk of bias); 9 of the 11 turn a creatine gain into a loss. Lean mass:
-   5 of its 10 pooled trials. Options: (a) use the change from baseline when the
-   paper prints its SD (no imputation); (b) also impute the change SD from pre /
-   post SDs with a correlation (Cochrane Handbook §6.5.2.8; the correlation is a
-   new constant); (c) keep endpoints, report the count. Measure (a) and (b)
-   offline before deciding.
+   5 of its 10 pooled trials. **Measured offline 2026-10-26** (run
+   20261026_034529 re-pooled; pre SDs are not extracted, so the arms' post SD
+   stands in for them):
+
+   | Rule, applied to every endpoint effect with verified pre / post (strength 10 of 11, lean mass 8 of 10, power 7 of 9) | Strength | Lean mass | Power |
+   |---|---|---|---|
+   | Endpoint (today) | B+ Moderate, +0.21 [+0.02, +0.41] | D+ Low, +0.14 [-0.09, +0.38] | I, +0.05 |
+   | Change from baseline, r = 0.5 (Morris 2008 d_ppc2; r sets the variance only) | D Moderate, +0.18 [-0.01, +0.37] | D Moderate, +0.14 [-0.08, +0.35] | I, +0.14 |
+   | ANCOVA approximation, r = 0.5 (endpoint - r x baseline difference; variance x (1 - r^2)) | C Moderate, +0.19 [+0.01, +0.38] | D Moderate, +0.14 [-0.05, +0.33] | I, +0.09 |
+
+   r = 0.3 / 0.7 move estimates by at most 0.02 SD; ANCOVA strength is B+ at
+   0.3, C at 0.5 and 0.7. Lean mass passes the benchmark under every rule;
+   strength stays not testable (coverage). Applying a rule only to the
+   `baseline_imbalance` trials is **biased by construction** (the flag selects
+   trials whose endpoint difference is small) and gave lean mass B+ (+0.25): not
+   an option. Recommendation: ANCOVA for every trial with verified pre / post
+   (the Cochrane-preferred estimate under imbalance), r = 0.5 as a founder
+   constant with 0.3 / 0.7 reported, and S5N / S5R reading the baseline SDs in
+   v1.41 so the post SD no longer stands in.
 2. **Polarity is per outcome, not per measure.** `energy_levels` ("fatigue or
    energy", `higher_better`) pools a fatigue score as if higher were better:
    the Hooper fatigue effect of `doi:103390nu17243831` enters reversed (g -0.17

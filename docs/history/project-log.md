@@ -10,6 +10,23 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-26 — text bugs fixed; decision 1 measured
+
+`sources/fulltext`: "Experimental Section" (and "Experimental design /
+procedures") is methods; a PDF served from a non-.pdf URL is parsed as PDF, and
+a cached tag-stripped PDF is fetched again (tests/test_fulltext_text.py). All 9
+affected studies now read with their methods (`jnsv72284`'s PDF yields only
+2.7k chars); their payloads changed, so the next extraction re-runs every agent
+for them. Not fixed, recorded: `registry:nct00412984` (ARISTOTLE, atrial
+fibrillation) is in the creatine corpus, and `doi:101113ep087886` was read from
+a repository landing page; neither produced a pooled effect.
+
+Decision 1 (endpoint values under baseline imbalance) measured offline on the
+same run: table in DECISIONS open 1. Under ANCOVA (r = 0.5) for every trial
+with pre / post: strength B+ -> C (+0.21 -> +0.19, on the threshold), lean mass
+D+ Low -> D Moderate, power I. Converting only the flagged trials is biased by
+construction and was ruled out.
+
 ## 2026-10-26 — first spot audit (run 20261026_034529)
 
 `spot_audit.py --extractions out/run_v140b_extractions.json` (seed 1, the pool
