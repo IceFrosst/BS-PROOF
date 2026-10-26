@@ -308,7 +308,8 @@ class BaselineImbalance(unittest.TestCase):
         post_only = {k: x for k, x in FFM.items() if not k.startswith("mean_")}
         eff, route = effect_from_claim({**BASE, "estimand": "endpoint"}, post_only, polarity="higher_better")
         self.assertEqual(route, "arm_stats_derived")
-        self.assertAlmostEqual(eff.md, 65.4 - 67.6)
+        # ANCOVA-adjusted (founder 2026-10-26): endpoint difference - r x baseline difference
+        self.assertAlmostEqual(eff.md, (65.4 - 67.6) - 0.5 * (62.9 - 68.0))
         self.assertIn("baseline_imbalance", eff.flags)
         # a change score is never read from post values
         self.assertIsNone(effect_from_claim(BASE, post_only, polarity="higher_better")[0])
@@ -320,6 +321,39 @@ class BaselineImbalance(unittest.TestCase):
         self.assertNotIn("baseline_imbalance", eff.flags)
         eff, _ = effect_from_claim({**BASE}, SJ, polarity="higher_better")       # change scores
         self.assertNotIn("baseline_imbalance", eff.flags)
+
+    def test_ancova_adjusts_every_parallel_endpoint_with_baselines(self):
+        from pipeline import meta_effects as me
+        from pipeline.effect_size import RULES, _derive_arm_sds, effect_from_claim
+        claim = {**BASE, "estimand": "endpoint"}
+        eff, _ = effect_from_claim(claim, FFM, polarity="higher_better")
+        v, _ = _derive_arm_sds(FFM, None)
+        raw = me.hedges_g(65.4, v["sd_ingredient"], 10, 67.6, v["sd_control"], 10)
+        adj = me.hedges_g(65.4 - 0.5 * (62.9 - 68.0), v["sd_ingredient"], 10, 67.6, v["sd_control"], 10)
+        self.assertEqual(RULES["ancova_r"], 0.5)
+        self.assertIn("ancova_adjusted", eff.flags)
+        self.assertAlmostEqual(eff.smd, adj.g)
+        self.assertAlmostEqual(eff.smd_variance, adj.variance * 0.75)
+        self.assertGreater(eff.smd, raw.g)                      # the baseline gap no longer counts against creatine
+        self.assertEqual(sorted(eff.ancova_at), [0.3, 0.7])
+        # a small gap is adjusted too (never only the imbalanced trials)
+        small, _ = effect_from_claim(claim, {**FFM, "pre_control": 64.0}, polarity="higher_better")
+        self.assertIn("ancova_adjusted", small.flags)
+        self.assertNotIn("baseline_imbalance", small.flags)
+
+    def test_no_adjustment_without_baselines_for_changes_or_crossovers(self):
+        from pipeline.effect_size import effect_from_claim
+        claim = {**BASE, "estimand": "endpoint"}
+        no_pre = {k: x for k, x in FFM.items() if not k.startswith("pre_")}
+        eff, _ = effect_from_claim(claim, no_pre, polarity="higher_better")
+        self.assertNotIn("ancova_adjusted", eff.flags)
+        self.assertAlmostEqual(eff.md, 65.4 - 67.6)
+        self.assertEqual(eff.ancova_at, {})
+        eff, _ = effect_from_claim(BASE, SJ, polarity="higher_better")              # change scores
+        self.assertNotIn("ancova_adjusted", eff.flags)
+        cross, _ = effect_from_claim({**claim, "design_kind": "crossover"}, FFM, polarity="higher_better")
+        self.assertNotIn("ancova_adjusted", cross.flags)
+        self.assertIn("baseline_imbalance", cross.flags)        # still flagged, as before
 
     def test_the_pool_caps_risk_of_bias_at_unclear(self):
         from pipeline import vocab
@@ -340,6 +374,11 @@ class BaselineImbalance(unittest.TestCase):
         self.assertEqual((flagged["rob"], "baseline_imbalance" in flagged["flags"]), ("concerns", True))
         clean = pool_outcomes([item({**FFM, "pre_control": 64.0})], product)["lean_body_mass"].studies[0]
         self.assertEqual(clean["rob"], "low")
+        # the outcome is re-graded at each sensitivity r (evidence_v2 "sensitivity")
+        from pipeline.evidence_v2 import summarise
+        sens = summarise([item(FFM)], product)["outcomes"][0]["sensitivity"]
+        self.assertEqual(sorted(sens), ["ancova_r_0.3", "ancova_r_0.7"])
+        self.assertEqual(sens["ancova_r_0.3"]["adjusted"], 1)
 
 
 if __name__ == "__main__":

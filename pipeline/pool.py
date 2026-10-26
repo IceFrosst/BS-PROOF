@@ -339,7 +339,8 @@ def pool_outcomes(items: list[dict], product: dict) -> dict[str, OutcomePool]:
                          "design_rank": s.design_rank, "reviewed": s.reviewed,
                          "dose_match": s.dose_match, "measure": s.measure, "claim_index": s.claim_index,
                          "measure_rank": s.measure_rank, "form_id": s.form_id,
-                         "dose_low_mg": s.dose_low_mg, "dose_high_mg": s.dose_high_mg} for s in studies]
+                         "dose_low_mg": s.dose_low_mg, "dose_high_mg": s.dose_high_mg,
+                         "ancova_at": s.effect.ancova_at} for s in studies]
         smd = [s for s in studies if s.effect.smd_variance is not None]
         pool.k = len(smd)
         if smd:

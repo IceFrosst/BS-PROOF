@@ -87,7 +87,7 @@ bump.
 The GRADE rules and letter table (`grade.RULES`, `TABLE`, `LEVELS`,
 `OFF_DOSE`, `VARIANTS`), the second-reviewer tolerances (`review.RULES`), study
 selection (`pool.ROUTE_RANK`, `CONFIDENCE`), the benchmark pass rule
-(`benchmark.RULES`) and every per-outcome MCID in `vocab/outcome.json` —
+(`benchmark.RULES`), the ANCOVA correlation (`effect_size.RULES`) and every per-outcome MCID in `vocab/outcome.json` —
 founder calls. Propose in `docs/DECISIONS.md`. A hook warns when a watched
 one moves (`scripts/verify_helpers.WATCHED_CONSTANTS`).
 
@@ -280,12 +280,14 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
   `evidence_v2.STATUS = "shadow"` until validation passes. `main` and the live
   site still run v14 until the simplification branches merge.
 - **Latest v2 run** `20261026_034529` (S4, S5N, S5R v1.40; 138/139 studies).
-  Re-pooled under the 2026-10-26 claim-level arm check: strength **k = 11, B+,
-  Moderate** (+0.21 [+0.02, +0.41]), coverage 44 % (not testable); lean mass
-  k = 10 **D+, Low**. The stored report says B+ / D Moderate (before the check).
+  Re-pooled under the 2026-10-26 claim-level arm check and ANCOVA adjustment:
+  strength **k = 11, C, Moderate** (+0.19 [+0.01, +0.38]; B+ at r = 0.3),
+  coverage 44 % (not testable); lean mass k = 10 **D, Moderate**. The stored
+  report says B+ / D Moderate (before both).
   The first spot audit on it FAILED (2026-10-26: one reversed direction from
   `energy_levels` polarity; S4 misread item 7 and item 2 once each) and found
-  11 studies read from broken text; open decisions 1-4 in `docs/DECISIONS.md`.
+  11 studies read from broken text (fixed 2026-10-26); open decisions 1-3 in
+  `docs/DECISIONS.md`.
 - **Known v2 problems:** the work list in `docs/DECISIONS.md`. Done: items
   1 (imprecision scales with information size), 2, 3 (offline part), 6, 10
   (prompts trimmed); decided: 5 (healthy

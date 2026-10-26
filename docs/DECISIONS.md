@@ -18,30 +18,7 @@ Last swept: 2026-10-26.
 From the first spot audit (run 20261026_034529, 2026-10-26; project log).
 Ordered by how much each moves a grade.
 
-1. **Endpoint values when the arms' baselines differ.** 11 of the 34 pooled
-   endpoint effects with verified pre and post values point the other way from
-   their change from baseline, all flagged `baseline_imbalance` (which today only
-   caps risk of bias); 9 of the 11 turn a creatine gain into a loss. Lean mass:
-   5 of its 10 pooled trials. **Measured offline 2026-10-26** (run
-   20261026_034529 re-pooled; pre SDs are not extracted, so the arms' post SD
-   stands in for them):
-
-   | Rule, applied to every endpoint effect with verified pre / post (strength 10 of 11, lean mass 8 of 10, power 7 of 9) | Strength | Lean mass | Power |
-   |---|---|---|---|
-   | Endpoint (today) | B+ Moderate, +0.21 [+0.02, +0.41] | D+ Low, +0.14 [-0.09, +0.38] | I, +0.05 |
-   | Change from baseline, r = 0.5 (Morris 2008 d_ppc2; r sets the variance only) | D Moderate, +0.18 [-0.01, +0.37] | D Moderate, +0.14 [-0.08, +0.35] | I, +0.14 |
-   | ANCOVA approximation, r = 0.5 (endpoint - r x baseline difference; variance x (1 - r^2)) | C Moderate, +0.19 [+0.01, +0.38] | D Moderate, +0.14 [-0.05, +0.33] | I, +0.09 |
-
-   r = 0.3 / 0.7 move estimates by at most 0.02 SD; ANCOVA strength is B+ at
-   0.3, C at 0.5 and 0.7. Lean mass passes the benchmark under every rule;
-   strength stays not testable (coverage). Applying a rule only to the
-   `baseline_imbalance` trials is **biased by construction** (the flag selects
-   trials whose endpoint difference is small) and gave lean mass B+ (+0.25): not
-   an option. Recommendation: ANCOVA for every trial with verified pre / post
-   (the Cochrane-preferred estimate under imbalance), r = 0.5 as a founder
-   constant with 0.3 / 0.7 reported, and S5N / S5R reading the baseline SDs in
-   v1.41 so the post SD no longer stands in.
-2. **Polarity is per outcome, not per measure.** `energy_levels` ("fatigue or
+1. **Polarity is per outcome, not per measure.** `energy_levels` ("fatigue or
    energy", `higher_better`) pools a fatigue score as if higher were better:
    the Hooper fatigue effect of `doi:103390nu17243831` enters reversed (g -0.17
    for less fatigue). Today it is the only pooled effect affected (a check of all
@@ -49,11 +26,11 @@ Ordered by how much each moves a grade.
    (`muscle_power`) and time-trial times (`exercise_endurance`) are in scope too.
    Options: split the outcome by direction; or a per-measure `lower_better`
    pattern in `vocab/outcome.json`, matched like the measure hierarchy.
-3. **No timepoint rule.** `doi:103390nu17061081` was pooled at its 7-day
+2. **No timepoint rule.** `doi:103390nu17061081` was pooled at its 7-day
    creatine-only wash-in (the authors attribute the LBM change to water), not
    after the 12-week intervention, because that claim came first. Proposal: the
    latest timepoint of the randomised comparison.
-4. **A reported interaction effect size taken as an SMD.** `reported_smd_p` took
+3. **A reported interaction effect size taken as an SMD.** `reported_smd_p` took
    "d = 0.95" from a group x time interaction (`doi:103390nu12061880`, leg press
    endurance) and its interaction p. Proposal: accept a reported SMD only when it
    is a between-arm contrast, else refuse with its reason.
@@ -87,6 +64,7 @@ All accepted by the founder **"for now, may revisit"** unless stated.
 
 | Date | Decision |
 |---|---|
+| 2026-10-26 | **Endpoint effects are ANCOVA-adjusted for the baseline difference**, for every parallel trial whose arms' baselines are verified, never only the imbalanced ones (`effect_size.RULES["ancova_r"] = 0.5`; each outcome also reports r = 0.3 and 0.7). Pre SDs are not extracted, so the post SDs stand in (S5N / S5R to read them in v1.41). Measured on run 20261026_034529: 11 of 34 pooled endpoint effects had pointed the other way from their change; strength B+ → **C Moderate** (+0.21 → +0.19 [+0.01, +0.38]; B+ at r = 0.3), lean mass D+ Low → **D Moderate** (+0.14), power I. Converting only the `baseline_imbalance` trials is biased by construction (lean mass +0.25) and was ruled out. |
 | 2026-10-26 | **Eligibility per claim: arms whose known co-interventions differ are refused** (`eligibility.unmatched_claim_arms`; unknown keeps). Measured on run 20261026_034529: 5 claims refused, all one trial (`doi:103390nu13072303`, creatine + training + beef protein vs a no-training control, pooled at g 1.09-1.27); re-pooled, strength B+ (k = 12 → 11, +0.24 → +0.21), lean mass D Moderate → **D+ Low** (k = 11 → 10; its no-flaw weight falls below half), power I. |
 | 2026-10-26 | **S5N / S5R contrast wording fix (v1.41), to run with the post-audit re-extraction.** S5N labels add-on controls (creatine + X vs X, X = caffeine, whey, bicarbonate, training) `vs_ingredient_arm`: 8 claims at v1.39, 21 at v1.40, which refuses the matched pair invariant 7 keeps. Tell the model the target ingredient alone decides the label, with that example. Upper bound offline (label corrected from S3 arm presence): estimates return to the v1.39 run's. |
 | 2026-10-25 | **Effects from an exact p-value: built** (`effect_size` route `smd_from_p`, ranked last). Only an exact two-sided p from a two-group test of the two arms (S5N / S5R `p_test`, which both readers must agree on), on endpoint values or changes, in a parallel trial with both arm sizes and a stated favoured arm; every other test refused with its reason; each outcome that uses it also reports estimate and letter without it. Measured: 8 creatine trial-outcomes refused as "only a p-value" on run 20261023_190836. |

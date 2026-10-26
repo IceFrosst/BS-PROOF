@@ -226,6 +226,15 @@ always means benefit, after the outcome's polarity. Routes, best first:
 - **Consistency guard**: when pre and post values are verified too, a change
   mean must equal post − pre and an endpoint mean must equal post at printed
   precision, or the arm statistics are refused.
+- **Baseline adjustment (ANCOVA)**, founder 2026-10-26: an endpoint
+  arm-statistics effect of a parallel trial whose arms' baselines are verified
+  uses the endpoint difference minus r × the baseline difference, standardised
+  by the endpoint SDs, variance × (1 − r²) (Cochrane Handbook §10.5.2), with
+  r = 0.5 (`effect_size.RULES`); flagged `ancova_adjusted`. Applied to every such
+  trial, never only the imbalanced ones (that selection is biased). Pre SDs
+  are not extracted, so pre and post SDs are taken as equal. Each outcome that
+  uses it also reports its estimate and letter at r = 0.3 and 0.7
+  (`sensitivity`).
 - **Baseline imbalance** (arms' baselines differ by more than the endpoint
   difference): flagged; the trial's risk of bias is capped at "unclear".
 - **Refused**: anything not a between-arm contrast against an ingredient-free

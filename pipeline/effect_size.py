@@ -76,6 +76,20 @@ Baseline imbalance (founder 2026-10-03: downgrade, never refuse):
   caps that trial's risk of bias at "unclear" (pipeline/pool.py), so GRADE's
   existing risk-of-bias rule downgrades when such trials carry the weight.
 
+ANCOVA adjustment (founder 2026-10-26, docs/DECISIONS.md):
+
+  An ENDPOINT arm-statistics effect of a parallel trial whose arms' baselines
+  are span-verified is adjusted for the baseline difference, the estimate
+  Cochrane prefers when arms differ at baseline (Handbook §10.5.2):
+  adjusted difference = endpoint difference - r x baseline difference, then
+  standardised by the endpoint SDs as before, variance x (1 - r^2). r is the
+  pre-post correlation, RULES["ancova_r"]; the pre and post SDs are taken as
+  equal (pre SDs are not extracted). Every such trial, never only the
+  imbalanced ones: the imbalance flag selects trials whose endpoint difference
+  is small, so converting only those is biased (measured 2026-10-26: lean mass
+  +0.14 -> +0.25). Flagged `ancova_adjusted`; the effect also carries its g and
+  variance at RULES["ancova_r_sensitivity"], which the outcome reports.
+
 Refused, each with its reason: anything not a between-arm contrast against an
 ingredient-free control; cluster / unstated designs (they need an ICC the papers
 rarely print); ratios and percent-change kinds (they need their own scale); a
@@ -90,6 +104,12 @@ from pipeline import meta_effects as me
 SMD = "smd"
 MD = "md"
 
+# Founder constants (CLAUDE.md invariant 4), decided 2026-10-26.
+RULES = {
+    "ancova_r": 0.5,                    # pre-post correlation for the ANCOVA adjustment
+    "ancova_r_sensitivity": (0.3, 0.7),  # reported beside every outcome that uses it
+}
+
 
 @dataclass(frozen=True)
 class Effect:
@@ -101,6 +121,8 @@ class Effect:
     unit: str | None = None           # the MD's unit, as printed
     estimand: str | None = None       # endpoint | change_from_baseline (never mixed later)
     flags: tuple[str, ...] = field(default_factory=tuple)
+    # ANCOVA-adjusted effects only: {r: (g, variance)} at the sensitivity r values.
+    ancova_at: dict = field(default_factory=dict)
 
     @property
     def scales(self) -> tuple[str, ...]:
@@ -208,9 +230,22 @@ def effect_from_claim(claim: dict, verified: dict, *, polarity: str | None,
             # "%" with no stated kind may be a relative change per arm, which is
             # not an outcome value; refusing is the safe reading.
             return None, "arm values in % without percentage_points kind (may be relative change)"
-        try:
-            g = me.hedges_g(v["mean_ingredient"], v["sd_ingredient"], v["n_ingredient"],
+        pre_i, pre_c = checks.get("pre_ingredient"), checks.get("pre_control")
+        endpoint_gap = (pre_i - pre_c if estimand == "endpoint" and isinstance(pre_i, (int, float))
+                        and isinstance(pre_c, (int, float)) else None)
+        # A crossover's "baselines" are period baselines of the same people: no adjustment.
+        baseline_gap = None if crossover else endpoint_gap
+
+        def at(r: float):
+            """(g, variance) with the ingredient mean adjusted by r x the baseline gap."""
+            shift = r * baseline_gap if baseline_gap is not None else 0.0
+            g = me.hedges_g(v["mean_ingredient"] - shift, v["sd_ingredient"], v["n_ingredient"],
                             v["mean_control"], v["sd_control"], v["n_control"])
+            return orient * g.g, g.variance * ((1 - r ** 2) if baseline_gap is not None else 1.0)
+        try:
+            g, g_var = at(RULES["ancova_r"])
+            ancova_at = ({r: at(r) for r in RULES["ancova_r_sensitivity"]}
+                         if baseline_gap is not None else {})
         except ValueError as exc:
             return None, f"arm statistics are not usable: {exc}"
         md = v["mean_ingredient"] - v["mean_control"]
@@ -218,14 +253,15 @@ def effect_from_claim(claim: dict, verified: dict, *, polarity: str | None,
                   + v["sd_control"] ** 2 / v["n_control"])
         if crossover:
             flags = flags + ("crossover_as_parallel",)
-        pre_i, pre_c = checks.get("pre_ingredient"), checks.get("pre_control")
-        if (estimand == "endpoint" and isinstance(pre_i, (int, float)) and isinstance(pre_c, (int, float))
-                and abs(pre_i - pre_c) > abs(md)):
+        if endpoint_gap is not None and abs(endpoint_gap) > abs(md):
             flags = flags + ("baseline_imbalance",)
+        if baseline_gap is not None:
+            flags = flags + ("ancova_adjusted",)
+            md, md_var = md - RULES["ancova_r"] * baseline_gap, md_var * (1 - RULES["ancova_r"] ** 2)
         route = "arm_stats_derived" if derived else "arm_stats"
-        return Effect(route, orient * g.g, g.variance, orient * md, md_var,
+        return Effect(route, g, g_var, orient * md, md_var,
                       claim.get("effect_unit") or claim.get("measure"), estimand,
-                      flags + derived), route
+                      flags + derived, ancova_at), route
 
     # --- reported estimates: magnitude from the paper, sign from the favoured arm
     sign = _favoured_sign(claim.get("effect_favours"))

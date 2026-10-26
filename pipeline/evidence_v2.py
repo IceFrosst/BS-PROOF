@@ -22,6 +22,7 @@ from __future__ import annotations
 import dataclasses
 
 from pipeline import vocab
+from pipeline.effect_size import RULES as EFFECT_RULES
 from pipeline.grade import grade_record, letter_from_record, study_weights
 from pipeline.pool import _pool, pool_outcomes
 
@@ -45,6 +46,22 @@ def _round(x, n=4):
     return round(x, n) if isinstance(x, (int, float)) else x
 
 
+def _regrade(pool, meta: dict, registry: dict | None, oid: str, studies: list[dict]) -> dict:
+    """The outcome re-pooled and re-graded on `studies` instead of its own."""
+    smd = [s for s in studies if s.get("g_variance") is not None]
+    reduced = dataclasses.replace(pool, studies=studies, k=len(smd),
+                                  smd=_pool([s["g"] for s in smd], [s["g_variance"] for s in smd]) if smd else None,
+                                  leave_one_out=None)
+    rec = grade_record(reduced, meta.get("mcid"), (registry or {}).get(oid))
+    weights = study_weights(reduced)
+    pooled = [{**s, "weight": w} for s, w in zip(smd, weights)]
+    grade = letter_from_record(rec, pooled, [s["weight"] for s in pooled])
+    return {"k": reduced.k,
+            "smd": reduced.smd and {"estimate": _round(reduced.smd["estimate"]),
+                                    "ci": [_round(x) for x in reduced.smd["ci"]]},
+            "letter": grade["letter"], "label": grade["label"]}
+
+
 def _without_route(pool, meta: dict, registry: dict | None, oid: str, route: str) -> dict | None:
     """The outcome re-pooled and re-graded WITHOUT one effect route, when the
     pool used it (founder 2026-10-25: p-derived effects are always shown with
@@ -52,19 +69,22 @@ def _without_route(pool, meta: dict, registry: dict | None, oid: str, route: str
     if not any(s["route"] == route for s in pool.studies):
         return None
     kept = [s for s in pool.studies if s["route"] != route]
-    smd = [s for s in kept if s.get("g_variance") is not None]
-    reduced = dataclasses.replace(pool, studies=kept, k=len(smd),
-                                  smd=_pool([s["g"] for s in smd], [s["g_variance"] for s in smd]) if smd else None,
-                                  leave_one_out=None)
-    rec = grade_record(reduced, meta.get("mcid"), (registry or {}).get(oid))
-    weights = study_weights(reduced)
-    pooled = [{**s, "weight": w} for s, w in zip([s for s in kept if s.get("g_variance") is not None], weights)]
-    grade = letter_from_record(rec, pooled, [s["weight"] for s in pooled])
-    return {f"without_{route}": {
-        "k": reduced.k, "dropped": len(pool.studies) - len(kept),
-        "smd": reduced.smd and {"estimate": _round(reduced.smd["estimate"]),
-                                "ci": [_round(x) for x in reduced.smd["ci"]]},
-        "letter": grade["letter"], "label": grade["label"]}}
+    return {f"without_{route}": {**_regrade(pool, meta, registry, oid, kept),
+                                 "dropped": len(pool.studies) - len(kept)}}
+
+
+def _ancova_r(pool, meta: dict, registry: dict | None, oid: str) -> dict | None:
+    """The outcome re-graded at each sensitivity r when any pooled trial was
+    ANCOVA-adjusted (founder 2026-10-26, effect_size.RULES). None otherwise."""
+    if not any(s.get("ancova_at") for s in pool.studies):
+        return None
+    out = {}
+    for r in EFFECT_RULES["ancova_r_sensitivity"]:
+        studies = [{**s, "g": s["ancova_at"][r][0], "g_variance": s["ancova_at"][r][1]}
+                   if r in (s.get("ancova_at") or {}) else s for s in pool.studies]
+        out[f"ancova_r_{r}"] = {**_regrade(pool, meta, registry, oid, studies),
+                                "adjusted": sum(bool(s.get("ancova_at")) for s in pool.studies)}
+    return out
 
 
 def summarise(items: list[dict], product: dict, registry: dict | None = None) -> dict:
@@ -103,7 +123,8 @@ def summarise(items: list[dict], product: dict, registry: dict | None = None) ->
         md = pool.md and {"estimate": _round(pool.md["estimate"]), "ci": [_round(x) for x in pool.md["ci"]],
                           "unit": pool.md["unit"], "method": pool.md["method"]}
         out.append({
-            "sensitivity": _without_route(pool, meta, registry, oid, "smd_from_p"),
+            "sensitivity": {**(_without_route(pool, meta, registry, oid, "smd_from_p") or {}),
+                            **(_ancova_r(pool, meta, registry, oid) or {})} or None,
             "outcome": oid, "label": meta.get("label") or oid, "polarity": meta.get("polarity"),
             "k": pool.k, "smd": smd, "md": md, "estimand_mix": pool.estimand_mix,
             "leave_one_out": pool.leave_one_out and [_round(x) for x in pool.leave_one_out],

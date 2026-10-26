@@ -10,6 +10,43 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-26 — ANCOVA adjustment built (founder: "ANCOVA and r = 0.5")
+
+`effect_size`: every endpoint arm-statistics effect of a parallel trial with
+verified baselines is adjusted (endpoint difference - 0.5 x baseline
+difference, variance x 0.75), flagged `ancova_adjusted`, carrying its g and
+variance at r = 0.3 / 0.7; `evidence_v2` reports `sensitivity.ancova_r_0.3 /
+_0.7`. `effect_size.RULES` is a watched constant. Crossovers are not adjusted;
+the baseline-imbalance flag and its risk-of-bias cap are unchanged. Re-pool of
+run 20261026_034529, identical to the offline measurement: strength **C,
+Moderate**, k = 11, +0.19 [+0.01, +0.38] (B+ at r = 0.3, C at 0.7); lean mass
+**D, Moderate**, k = 10, +0.14 [-0.05, +0.33]; power I. TS-parity goldens
+byte-identical. The measurement behind the decision:
+
+1. **Endpoint values when the arms' baselines differ.** 11 of the 34 pooled
+endpoint effects with verified pre and post values point the other way from
+their change from baseline, all flagged `baseline_imbalance` (which today only
+caps risk of bias); 9 of the 11 turn a creatine gain into a loss. Lean mass:
+5 of its 10 pooled trials. **Measured offline 2026-10-26** (run
+20261026_034529 re-pooled; pre SDs are not extracted, so the arms' post SD
+stands in for them):
+
+| Rule, applied to every endpoint effect with verified pre / post (strength 10 of 11, lean mass 8 of 10, power 7 of 9) | Strength | Lean mass | Power |
+|---|---|---|---|
+| Endpoint (today) | B+ Moderate, +0.21 [+0.02, +0.41] | D+ Low, +0.14 [-0.09, +0.38] | I, +0.05 |
+| Change from baseline, r = 0.5 (Morris 2008 d_ppc2; r sets the variance only) | D Moderate, +0.18 [-0.01, +0.37] | D Moderate, +0.14 [-0.08, +0.35] | I, +0.14 |
+| ANCOVA approximation, r = 0.5 (endpoint - r x baseline difference; variance x (1 - r^2)) | C Moderate, +0.19 [+0.01, +0.38] | D Moderate, +0.14 [-0.05, +0.33] | I, +0.09 |
+
+r = 0.3 / 0.7 move estimates by at most 0.02 SD; ANCOVA strength is B+ at
+0.3, C at 0.5 and 0.7. Lean mass passes the benchmark under every rule;
+strength stays not testable (coverage). Applying a rule only to the
+`baseline_imbalance` trials is **biased by construction** (the flag selects
+trials whose endpoint difference is small) and gave lean mass B+ (+0.25): not
+an option. Recommendation: ANCOVA for every trial with verified pre / post
+(the Cochrane-preferred estimate under imbalance), r = 0.5 as a founder
+constant with 0.3 / 0.7 reported, and S5N / S5R reading the baseline SDs in
+v1.41 so the post SD no longer stands in.
+
 ## 2026-10-26 — text bugs fixed; decision 1 measured
 
 `sources/fulltext`: "Experimental Section" (and "Experimental design /
@@ -22,7 +59,7 @@ fibrillation) is in the creatine corpus, and `doi:101113ep087886` was read from
 a repository landing page; neither produced a pooled effect.
 
 Decision 1 (endpoint values under baseline imbalance) measured offline on the
-same run: table in DECISIONS open 1. Under ANCOVA (r = 0.5) for every trial
+same run (table in the ANCOVA entry above). Under ANCOVA (r = 0.5) for every trial
 with pre / post: strength B+ -> C (+0.21 -> +0.19, on the threshold), lean mass
 D+ Low -> D Moderate, power I. Converting only the flagged trials is biased by
 construction and was ruled out.

@@ -62,6 +62,7 @@ WATCHED_CONSTANTS = {
     "pipeline/review.py": ("RULES",),
     "pipeline/pool.py": ("ROUTE_RANK", "CONFIDENCE"),
     "pipeline/benchmark.py": ("RULES",),
+    "pipeline/effect_size.py": ("RULES",),
 }
 
 
