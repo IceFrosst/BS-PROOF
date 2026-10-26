@@ -10,6 +10,26 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-26 — figure pilot
+
+Adapter: `call(..., images=)` sends images as one stream-json message (one
+shot, no tools; image SHA-256 in the cache key; tests/test_adapter_images.py).
+Pilot agents S5F (sonnet) and S5FR (opus), `prompts/s5_figure.md`, not wired
+into extraction. 19 panels from 10 papers (`figure_pilot_cases.json`), each
+with a number the same paper prints; PMC5234097 dropped because its figure and
+table disagree (week-8 bench change 14 vs 6 kg), and PMC11944689's text and
+figure differ in the later phases (SD 2.70 vs ~1.45; flagged). Images as PMC
+serves them (~750 px). 37/38 readings (one S5FR schema failure).
+- Plotted means: S5F median error 0.67 % of the y-axis (90th 3.6), 0.03 SD;
+  S5FR 0.77 % (90th 2.6), 0.04 SD. Error in a between-arm SMD: median 0.01 /
+  0.04, 90th 0.15 / 0.17. Readers within 1 % of the axis 37/50, 2 % 42/50, 5 %
+  46/50.
+- Individual points (PMC10044149): 4-6 of 6-7 points found, means off 3-8 % of
+  the axis, SDs off by up to a third: not usable.
+- First call: the reader wrapped its answer in the `values` field; renamed
+  `readings` (pilot-v0.2, v0.3 moves the top-level instruction).
+DECISIONS open 1.
+
 ## 2026-10-26 — v1.41 prompts; timepoint and SMD-basis rules (founder: approve 2-4)
 
 S4, S5, S5N, S5R v1.41 (`AGENT_PROMPT_VERSION`): S4 item 2 null for a placebo

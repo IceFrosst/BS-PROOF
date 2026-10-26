@@ -15,10 +15,19 @@ Last swept: 2026-10-26.
 
 ## Open
 
-From the first spot audit (run 20261026_034529, 2026-10-26; project log).
-Ordered by how much each moves a grade.
-
-None today.
+1. **A figure route?** Pilot 2026-10-26 (`scripts/experiments/figure_pilot.py`,
+   19 panels / 10 papers, truth = the same paper's printed number; project
+   log). Plotted means read well: median error 0.7 % of the y-axis (0.03 SD),
+   the error it puts into a between-arm SMD median 0.01-0.04, 90th percentile
+   0.15-0.17. Individual-point plots fail (readers found 4-6 of 6-7 points).
+   Error-bar SDs are only as good as the caption's statement of what the bars
+   are, and the two readers disagreed on that once. Proposal: a `figure_means`
+   route, ranked last, shown with and without (like `smd_from_p`): plotted
+   means only; both readers within a tolerance of the axis range (new constant;
+   2 % keeps 42 of 50 readings); an SD from a printed table or text, or from
+   error bars only when the caption names them and both readers agree; never
+   individual points. Measure the gain on the trials refused as figure-only
+   before building.
 
 ## v2 work list (agreed 2026-10-15, after the simplification)
 
