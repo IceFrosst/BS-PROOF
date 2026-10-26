@@ -29,7 +29,12 @@ FULLTEXT = "https://www.ebi.ac.uk/europepmc/webservices/rest/{pmcid}/fullTextXML
 SECTION_PATTERNS = {
     "methods": (r"^(materials?\s+and\s+)?methods?$", r"^methodology$",
                 r"^patients?\s+and\s+methods?$", r"^subjects?\s+and\s+methods?$",
-                r"^study\s+design"),
+                r"^study\s+design",
+                # MDPI's older template. MEASURED 2026-10-26: 3 creatine RCTs
+                # (PMC6265971, PMC5707641, PMC4808872) title their methods
+                # "2. Experimental Section"; every agent read them without
+                # methods and S4 returned all nulls.
+                r"^experimental\s+(section|design|procedures?)$"),
     "results": (r"^results?$", r"^findings?$", r"^results?\s+and\s+discussion$"),
     "discussion": (r"^discussion$", r"^conclusions?$"),
     # LIMITATIONS. Added 2026-08-10 (v1.12). The self-declared-underpowered
@@ -426,18 +431,29 @@ def fetch_pdf_text(url: str, *, timeout: int = 90) -> str | None:
                       follow_redirects=True)
         if r.status_code >= 400 or not r.content[:5].startswith(b"%PDF"):
             return None
+    except Exception:
+        return None
+    text = _pdf_bytes_text(r.content)
+    if text is None:
+        return None
+    cache.parent.mkdir(parents=True, exist_ok=True)
+    cache.write_text(text)
+    return text
+
+
+def _pdf_bytes_text(content: bytes) -> str | None:
+    """Text of a downloaded PDF, or None when it is unusable."""
+    if not _PDF_OK:
+        return None
+    try:
         text = "\n".join((p.extract_text() or "")
-                         for p in PdfReader(io.BytesIO(r.content)).pages)
+                         for p in PdfReader(io.BytesIO(content)).pages)
     except Exception:
         # A malformed PDF is a dead end, not a pipeline failure. Callers fall
         # back down the ladder.
         return None
     text = _WS.sub(" ", text).strip()
-    if len(text) < MIN_USABLE_CHARS:
-        return None
-    cache.parent.mkdir(parents=True, exist_ok=True)
-    cache.write_text(text)
-    return text
+    return text if len(text) >= MIN_USABLE_CHARS else None
 
 
 def fetch_html_text(url: str, *, timeout: int = 60) -> str | None:
@@ -451,13 +467,26 @@ def fetch_html_text(url: str, *, timeout: int = 60) -> str | None:
     cache = CACHE_DIR / f"html_{hashlib.sha256(url.encode()).hexdigest()[:24]}.txt"
     if cache.exists():
         t = cache.read_text(errors="replace")
-        return t if len(t) >= MIN_USABLE_CHARS else None
+        # A cached "%PDF" is a PDF this function once tag-stripped as HTML
+        # (fixed 2026-10-26): the bytes were decoded lossily, so fetch again.
+        if not t.startswith("%PDF"):
+            return t if len(t) >= MIN_USABLE_CHARS else None
     try:
         throttle(url)
         r = httpx.get(url, headers=_headers(url), timeout=timeout,
                       follow_redirects=True)
         if r.status_code >= 400:
             return None
+        if r.content[:5].startswith(b"%PDF"):
+            # Repositories serve PDFs from URLs without a .pdf suffix.
+            # MEASURED 2026-10-26: 7 creatine RCTs were sent to every agent as
+            # raw "%PDF-1.x" bytes and produced no claims.
+            text = _pdf_bytes_text(r.content)
+            if text is None:
+                return None
+            cache.parent.mkdir(parents=True, exist_ok=True)
+            cache.write_text(text)
+            return text
         body = re.sub(r"(?is)<(script|style|nav|footer|header)[^>]*>.*?</\1>", " ", r.text)
         text = _WS.sub(" ", _TAG.sub(" ", body)).strip()
     except Exception:
