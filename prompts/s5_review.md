@@ -58,6 +58,9 @@ answer; a wrong number is not.
                                 whenever they are printed, whatever the estimand;
                                 a deterministic check uses them to catch
                                 misprinted change columns
+  sd_pre_ingredient, sd_pre_control  each arm's SD of its BASELINE mean, when
+                                printed beside it ("62.9 ± 7.3" in the pre
+                                column -> 7.3); never an SE, never computed
   effect_size                   the paper's own between-arm estimate (a mean
                                 difference or a standardised effect such as
                                 Cohen's d / Hedges' g), as printed
@@ -69,6 +72,13 @@ answer; a wrong number is not.
                                 no unit is printed
   estimate_kind                 smd | mean_difference | ratio | relative_percent |
                                 percentage_points -- the kind of effect_size
+  smd_basis                     for an smd ONLY, what it compares, as the paper
+                                says: between_groups_endpoint |
+                                between_groups_change | interaction_or_anova (an
+                                effect size from a group x time interaction or
+                                an ANOVA) | within_group | null (not an smd, or
+                                not stated). A d printed beside an interaction p
+                                is interaction_or_anova.
   effect_favours                ingredient | control | neither -- which arm the
                                 between-arm result favours. For an outcome where
                                 lower is better (time, fat mass, pain), the arm
@@ -95,9 +105,15 @@ answer; a wrong number is not.
                                 change_from_baseline (changes, deltas) -- see
                                 READ THE NAMED ESTIMAND above
   design_kind                   parallel | crossover | cluster
-  contrast                      vs_ingredient_free (control got no target
-                                ingredient) | vs_ingredient_arm (both arms got
-                                it) | within_group | unclear
+  contrast                      vs_ingredient_free (the control arm got no
+                                TARGET INGREDIENT) | vs_ingredient_arm (the
+                                control arm ALSO got the target ingredient:
+                                two doses, two forms, two timings) |
+                                within_group | unclear. Only the target
+                                ingredient decides it: another substance or
+                                training that BOTH arms get does not count
+                                ("creatine + caffeine vs placebo + caffeine" is
+                                vs_ingredient_free).
 
 NEVER CALCULATE. Do not derive a mean from a change, an SD from an SE or a CI, a
 difference from two means, a CI from a p, or a total n from a percentage. Copy

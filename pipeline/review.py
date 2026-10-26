@@ -58,12 +58,15 @@ RULES = {
 # 2026-10-03 smoke test: comparing every field refused 7/7 claims over p-values
 # and estimate kinds that no effect route read.)
 _REPORTED_CATS = ("effect_favours", "estimate_kind", "design_kind", "contrast", "estimand")
+# An smd's basis decides whether it is pooled at all (founder 2026-10-26).
+_SMD_CATS = _REPORTED_CATS + ("smd_basis",)
 ROUTE_FIELDS = {
     # pre_* / post_* feed the consistency guard (pipeline/effect_size.py): a
     # misread baseline is a misread like any other.
     "arm_stats": (("n_ingredient", "n_control", "mean_ingredient", "mean_control",
                    "sd_ingredient", "sd_control", "pre_ingredient", "pre_control",
-                   "post_ingredient", "post_control"), ("design_kind", "contrast", "estimand")),
+                   "post_ingredient", "post_control", "sd_pre_ingredient", "sd_pre_control"),
+                  ("design_kind", "contrast", "estimand")),
     # An SD derived from a per-arm SE / CI (pipeline/effect_size._derive_arm_sds):
     # the printed SE / CI bounds are compared, never the derived SD, and the
     # CI's stated level is a fact the derivation reads.
@@ -71,11 +74,12 @@ ROUTE_FIELDS = {
                            "sd_ingredient", "sd_control", "se_ingredient", "se_control",
                            "ci_ingredient_low", "ci_ingredient_high", "ci_control_low",
                            "ci_control_high", "pre_ingredient", "pre_control", "post_ingredient",
-                           "post_control"), ("design_kind", "contrast", "estimand", "arm_ci_level")),
-    "reported_smd_ci": (("effect_size", "ci_low", "ci_high"), _REPORTED_CATS),
+                           "post_control", "sd_pre_ingredient", "sd_pre_control"),
+                          ("design_kind", "contrast", "estimand", "arm_ci_level")),
+    "reported_smd_ci": (("effect_size", "ci_low", "ci_high"), _SMD_CATS),
     "reported_md_ci": (("effect_size", "ci_low", "ci_high"), _REPORTED_CATS),
-    "reported_smd_p": (("effect_size", "p_value"), _REPORTED_CATS),
-    "reported_smd_n": (("effect_size", "n_ingredient", "n_control"), _REPORTED_CATS),
+    "reported_smd_p": (("effect_size", "p_value"), _SMD_CATS),
+    "reported_smd_n": (("effect_size", "n_ingredient", "n_control"), _SMD_CATS),
     # The test decides whether the p converts at all, so reviewer 2 must name
     # the same one (MUST_CONFIRM). Founder 2026-10-25.
     "smd_from_p": (("p_value", "n_ingredient", "n_control"),
@@ -84,7 +88,7 @@ ROUTE_FIELDS = {
 # The sign of a reported estimate comes from this field alone, so reviewer 2
 # must CONFIRM it; for the other categorical facts a null from reviewer 2 is
 # "not stated", not a conflict.
-MUST_CONFIRM = ("effect_favours", "p_test")
+MUST_CONFIRM = ("effect_favours", "p_test", "smd_basis")
 # Signs of reported estimates come from `effect_favours`, not the printed sign,
 # so these are compared by magnitude (pipeline/effect_size.py).
 _ABS_COMPARED = ("effect_size",)
@@ -97,7 +101,8 @@ S5N_FIELDS = ("evidence_span", "table_provenance", "n_ingredient", "n_control",
               "se_ingredient", "se_control", "ci_ingredient_low", "ci_ingredient_high",
               "ci_control_low", "ci_control_high", "arm_ci_level",
               "pre_ingredient", "pre_control", "post_ingredient", "post_control",
-              "effect_size", "effect_unit", "effect_favours", "estimate_kind",
+              "sd_pre_ingredient", "sd_pre_control",
+              "effect_size", "effect_unit", "effect_favours", "estimate_kind", "smd_basis",
               "ci_low", "ci_high", "ci_level", "p_value", "p_test", "estimand", "design_kind", "contrast")
 
 

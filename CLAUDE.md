@@ -86,7 +86,7 @@ bump.
 
 The GRADE rules and letter table (`grade.RULES`, `TABLE`, `LEVELS`,
 `OFF_DOSE`, `VARIANTS`), the second-reviewer tolerances (`review.RULES`), study
-selection (`pool.ROUTE_RANK`, `CONFIDENCE`), the benchmark pass rule
+selection (`pool.ROUTE_RANK`, `CONFIDENCE`, `TIMEPOINT_RANK`), the benchmark pass rule
 (`benchmark.RULES`), the ANCOVA correlation (`effect_size.RULES`) and every per-outcome MCID in `vocab/outcome.json` —
 founder calls. Propose in `docs/DECISIONS.md`. A hook warns when a watched
 one moves (`scripts/verify_helpers.WATCHED_CONSTANTS`).
@@ -280,14 +280,16 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
   `evidence_v2.STATUS = "shadow"` until validation passes. `main` and the live
   site still run v14 until the simplification branches merge.
 - **Latest v2 run** `20261026_034529` (S4, S5N, S5R v1.40; 138/139 studies).
-  Re-pooled under the 2026-10-26 claim-level arm check and ANCOVA adjustment:
-  strength **k = 11, C, Moderate** (+0.19 [+0.01, +0.38]; B+ at r = 0.3),
-  coverage 44 % (not testable); lean mass k = 10 **D, Moderate**. The stored
-  report says B+ / D Moderate (before both).
+  Re-pooled under the 2026-10-26 rules (claim-level arm check, ANCOVA,
+  polarity per measure, SMD basis): strength **k = 10, D, Moderate** (+0.14;
+  its heaviest trial, `doi:103390nu12061880`, entered through an interaction
+  d and is refused), coverage < 50 % (not testable); lean mass k = 10 **D,
+  Moderate**. The stored report says B+ / D Moderate (before them).
   The first spot audit on it FAILED (2026-10-26: one reversed direction from
   `energy_levels` polarity; S4 misread item 7 and item 2 once each) and found
-  11 studies read from broken text (fixed 2026-10-26). Polarity per measure
-  built; timepoint and SMD-basis rules wait for the v1.41 prompts.
+  11 studies read from broken text (fixed 2026-10-26). All audit decisions
+  are built; the v1.41 prompts (S4, S5, S5N, S5R) await one re-extraction,
+  2-study smoke test first. Figure pilot next (`docs/DECISIONS.md`).
 - **Known v2 problems:** the work list in `docs/DECISIONS.md`. Done: items
   1 (imprecision scales with information size), 2, 3 (offline part), 6, 10
   (prompts trimmed); decided: 5 (healthy

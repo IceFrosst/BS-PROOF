@@ -139,11 +139,11 @@ the agent's prompt version + model + effort + payload):
 |---|---|---|
 | S3 study | full text | design, arms (label, n, role, ingredient presence, co-interventions), population axes, comparator, isolation, registration |
 | S4 risk of bias | full text + registry | seven RoB items (randomisation method, blinding/placebo, prospective registration, outcome matches registry, attrition reported, ITT, attrition problem); §12 grades with items 1, 2, 5 and 7 |
-| S5 outcomes | results + tables, S3 arms | one claim per separately reported measure: outcome, measure, timepoint, the arm pair, primary flag (no numbers) |
+| S5 outcomes | results + tables, S3 arms | one claim per separately reported measure: outcome, measure, timepoint and its role (end of supplementation / interim / after it stopped, v1.41), the arm pair, primary flag (no numbers) |
 | S7 form & dose | methods + tables, S3 arms | per arm: form id, compound / elemental / per-kg dose, body mass, frequency |
 | S8 funding | funding + COI statements | funding class, funders (reported, never graded; §15) |
 | S6B outcome mapping | S5's outcome strings | one vocabulary id per claim, or `null` = discard |
-| S5N numbers | the mapped claims' identity | per arm mean, SD, n, SE, CI, p, pre/post values, as printed; estimand, contrast, design |
+| S5N numbers | the mapped claims' identity | per arm mean, SD, n, SE, CI, p, pre/post values and baseline SDs, as printed; estimand, contrast, design, the test behind a p, what a reported SMD compares (v1.41) |
 | S5R second reviewer (on by default; `SP_SECOND_REVIEWER=0` off) | the same claims, blind | the same numbers, read by a different model (Opus) |
 
 S3 runs first (S5 and S7 need its arms); S4, S5, S7, S8 in parallel; then S6B,
@@ -221,7 +221,7 @@ always means benefit, after the outcome's polarity. Routes, best first:
 |---|---|
 | `arm_stats` | both arms' mean, SD, n → Hedges' g (and the mean difference) |
 | `arm_stats_derived` | the same with an arm's SD derived from its printed SE or CI (Cochrane Handbook §6.5.2.2), flagged |
-| `reported_smd_ci` | a reported SMD + CI + stated level |
+| `reported_smd_ci` | a reported SMD + CI + stated level. Every reported-SMD route needs S5N's `smd_basis` to say it compares the two arms (at endpoint or in change); an interaction / ANOVA effect size, a within-group one or an unstated basis is refused (founder 2026-10-26) |
 | `reported_smd_p` | a reported SMD + an exact p |
 | `reported_smd_n` | a reported SMD + both arm sizes |
 | `reported_md_ci` | a reported mean difference + CI (natural units only) |
@@ -237,9 +237,11 @@ always means benefit, after the outcome's polarity. Routes, best first:
   arm-statistics effect of a parallel trial whose arms' baselines are verified
   uses the endpoint difference minus r × the baseline difference, standardised
   by the endpoint SDs, variance × (1 − r²) (Cochrane Handbook §10.5.2), with
-  r = 0.5 (`effect_size.RULES`); flagged `ancova_adjusted`. Applied to every such
-  trial, never only the imbalanced ones (that selection is biased). Pre SDs
-  are not extracted, so pre and post SDs are taken as equal. Each outcome that
+  r = 0.5 (`effect_size.RULES`); flagged `ancova_adjusted`. The slope is
+  r × SD_post / SD_pre when both arms' baseline SDs are verified (S5N v1.41,
+  flagged `ancova_baseline_sd`). Applied to every such
+  trial, never only the imbalanced ones (that selection is biased). Without
+  verified baseline SDs, pre and post SDs are taken as equal. Each outcome that
   uses it also reports its estimate and letter at r = 0.3 and 0.7
   (`sensitivity`).
 - **Baseline imbalance** (arms' baselines differ by more than the endpoint
@@ -254,8 +256,10 @@ Per outcome (`pipeline/pool.py`):
 
 1. **One effect per trial per outcome**, chosen by a fixed order so two
    extractions of one paper pick the same measure: the outcome's measure
-   hierarchy, then primary-outcome claims, then the strongest route (§10), then
-   claim order. Pooling two endpoints of one trial would count it twice.
+   hierarchy, then the timepoint (founder 2026-10-26, `pool.TIMEPOINT_RANK`:
+   the end of the randomised supplementation period, then unstated, then an
+   interim phase, then a follow-up after supplementation stopped), then
+   primary-outcome claims, then the strongest route (§10), then claim order. Pooling two endpoints of one trial would count it twice.
 2. **REML random effects** on Hedges' g; **Hartung–Knapp** CI when k ≥ 3, a
    normal CI at k = 2; a prediction interval when k ≥ 3; a leave-one-out range.
 3. A **mean-difference pool** in natural units only when every MD shares one unit.

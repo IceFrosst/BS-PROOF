@@ -18,7 +18,7 @@ def review(**over):
 
 
 HB = "higher_better"
-SMD_CLAIM = {**CLAIM, "estimate_kind": "smd", "ci_level": 0.95}
+SMD_CLAIM = {**CLAIM, "estimate_kind": "smd", "smd_basis": "between_groups_endpoint", "ci_level": 0.95}
 SMD_NUMS = {"verified": {"effect_size": 0.4, "ci_low": 0.1, "ci_high": 0.7}}
 
 
@@ -45,13 +45,13 @@ class Reconcile(unittest.TestCase):
 
     def test_a_categorical_difference_on_the_route_refuses_the_claim(self):
         self.assertEqual(reconcile(CLAIM, NUMS, review(estimand="change_from_baseline"), HB)["status"], "disagreed")
-        r = reconcile(SMD_CLAIM, SMD_NUMS, review(**SMD_NUMS["verified"], effect_favours="control"), HB)
+        r = reconcile(SMD_CLAIM, SMD_NUMS, review(**SMD_NUMS["verified"], smd_basis="between_groups_endpoint", effect_favours="control"), HB)
         self.assertEqual(r["status"], "disagreed")
 
     def test_the_favoured_arm_must_be_confirmed_for_a_reported_estimate(self):
-        r = reconcile(SMD_CLAIM, SMD_NUMS, review(**SMD_NUMS["verified"], effect_favours=None), HB)
+        r = reconcile(SMD_CLAIM, SMD_NUMS, review(**SMD_NUMS["verified"], smd_basis="between_groups_endpoint", effect_favours=None), HB)
         self.assertEqual(r["status"], "disagreed")
-        ok = reconcile(SMD_CLAIM, SMD_NUMS, review(**SMD_NUMS["verified"], estimate_kind="smd", ci_level=0.95), HB)
+        ok = reconcile(SMD_CLAIM, SMD_NUMS, review(**SMD_NUMS["verified"], smd_basis="between_groups_endpoint", estimate_kind="smd", ci_level=0.95), HB)
         self.assertEqual((ok["status"], ok["route"]), ("agreed", "reported_smd_ci"))
 
     def test_a_null_from_reviewer_two_on_other_facts_is_not_a_conflict(self):
@@ -63,14 +63,23 @@ class Reconcile(unittest.TestCase):
         self.assertNotIn("sd_control", r["verified"])
 
     def test_reviewer_two_cannot_add_numbers(self):
-        r = reconcile(SMD_CLAIM, SMD_NUMS, review(**SMD_NUMS["verified"], estimate_kind="smd",
+        r = reconcile(SMD_CLAIM, SMD_NUMS, review(**SMD_NUMS["verified"], smd_basis="between_groups_endpoint", estimate_kind="smd",
                                                   mean_ingredient=90.0), HB)
         self.assertEqual(set(r["verified"]), {"effect_size", "ci_low", "ci_high"})
 
     def test_effect_size_is_compared_by_magnitude(self):
         nums = {"verified": {"effect_size": -0.4, "ci_low": 0.1, "ci_high": 0.7}}
-        r = reconcile(SMD_CLAIM, nums, review(effect_size=0.4, ci_low=0.1, ci_high=0.7, estimate_kind="smd"), HB)
+        r = reconcile(SMD_CLAIM, nums, review(effect_size=0.4, ci_low=0.1, ci_high=0.7, estimate_kind="smd",
+                                              smd_basis="between_groups_endpoint"), HB)
         self.assertEqual(r["status"], "agreed")
+
+    def test_the_smd_basis_must_be_confirmed(self):
+        # founder 2026-10-26: what a reported SMD compares decides whether it is pooled
+        r = reconcile(SMD_CLAIM, SMD_NUMS, review(**SMD_NUMS["verified"], estimate_kind="smd", ci_level=0.95), HB)
+        self.assertEqual(r["status"], "disagreed")
+        r = reconcile(SMD_CLAIM, SMD_NUMS, review(**SMD_NUMS["verified"], estimate_kind="smd", ci_level=0.95,
+                                                  smd_basis="interaction_or_anova"), HB)
+        self.assertEqual(r["status"], "disagreed")
 
     def test_not_found_not_reviewed_and_no_effect(self):
         self.assertEqual(reconcile(CLAIM, NUMS, {"found": False}, HB)["status"], "disagreed")

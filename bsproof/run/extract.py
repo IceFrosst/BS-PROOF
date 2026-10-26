@@ -137,6 +137,7 @@ def _study_extraction(ext: dict) -> dict | None:
             "is_primary_outcome": cl.get("is_primary_outcome"),
             "evidence_span": _span(cl.get("evidence_span")),
             "timepoint": _span(cl.get("timepoint"), 120),
+            "timepoint_role": cl.get("timepoint_role"),
             "ingredient_arm": _span(cl.get("ingredient_arm"), 120),
             "control_arm": _span(cl.get("control_arm"), 120),
             # S5 lists outcomes; every number, with its span, is S5N's

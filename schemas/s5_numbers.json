@@ -189,6 +189,22 @@
             "minimum": -1000000000000.0,
             "maximum": 1000000000000.0
           },
+          "sd_pre_ingredient": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "exclusiveMinimum": 0,
+            "maximum": 1000000000000.0
+          },
+          "sd_pre_control": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "exclusiveMinimum": 0,
+            "maximum": 1000000000000.0
+          },
           "effect_size": {
             "type": [
               "number",
@@ -227,6 +243,19 @@
               "ratio",
               "relative_percent",
               "percentage_points",
+              null
+            ]
+          },
+          "smd_basis": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "between_groups_endpoint",
+              "between_groups_change",
+              "interaction_or_anova",
+              "within_group",
               null
             ]
           },
@@ -333,10 +362,13 @@
           "post_ingredient",
           "pre_control",
           "post_control",
+          "sd_pre_ingredient",
+          "sd_pre_control",
           "effect_size",
           "effect_unit",
           "effect_favours",
           "estimate_kind",
+          "smd_basis",
           "ci_low",
           "ci_high",
           "ci_level",

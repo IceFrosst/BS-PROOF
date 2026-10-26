@@ -10,6 +10,22 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-26 — v1.41 prompts; timepoint and SMD-basis rules (founder: approve 2-4)
+
+S4, S5, S5N, S5R v1.41 (`AGENT_PROMPT_VERSION`): S4 item 2 null for a placebo
+with blinding unmentioned and item 7 from stated counts only (the two audit
+misreads, quoted in the prompt); S5 `timepoint_role`; S5N / S5R contrast
+wording (only the target ingredient decides it, with the caffeine example),
+`sd_pre_*` and `smd_basis` (schemas, span check, review fields; `smd_basis`
+must be confirmed). Code: `pool.TIMEPOINT_RANK` in the selection order; a
+reported SMD needs a between-arm basis; the ANCOVA slope uses r x SD_post /
+SD_pre when baseline SDs are verified. Text budgets checked: every agent's
+input is unchanged (S5N / S5R were already over budget, S4 / S5 full text).
+Re-pool of run 20261026_034529 (pre-v1.41 extractions, so no `timepoint_role`
+or `smd_basis` yet): the two pooled reported SMDs, both interaction d's from
+`doi:103390nu12061880`, are refused; strength **D Moderate**, k = 10, +0.14;
+muscular endurance k = 4 → 3. tests/test_v141_rules.py.
+
 ## 2026-10-26 — polarity per measure built (founder: approve 2-4)
 
 `vocab/outcome.json` gains `measure_direction` for 11 outcomes, matched by

@@ -236,9 +236,19 @@ def effect_from_claim(claim: dict, verified: dict, *, polarity: str | None,
         # A crossover's "baselines" are period baselines of the same people: no adjustment.
         baseline_gap = None if crossover else endpoint_gap
 
+        # The ANCOVA slope is r x SD_post / SD_pre; with no verified baseline
+        # SDs (before S5N v1.41) the two are taken as equal.
+        sd_pre = (checks.get("sd_pre_ingredient"), checks.get("sd_pre_control"))
+        sd_ratio = 1.0
+        if baseline_gap is not None and all(isinstance(x, (int, float)) and x > 0 for x in sd_pre):
+            n1, n2 = v["n_ingredient"], v["n_control"]
+            pooled = lambda a, b: (((n1 - 1) * a ** 2 + (n2 - 1) * b ** 2) / (n1 + n2 - 2)) ** 0.5
+            sd_ratio = pooled(v["sd_ingredient"], v["sd_control"]) / pooled(*sd_pre)
+            flags = flags + ("ancova_baseline_sd",)
+
         def at(r: float):
             """(g, variance) with the ingredient mean adjusted by r x the baseline gap."""
-            shift = r * baseline_gap if baseline_gap is not None else 0.0
+            shift = r * sd_ratio * baseline_gap if baseline_gap is not None else 0.0
             g = me.hedges_g(v["mean_ingredient"] - shift, v["sd_ingredient"], v["n_ingredient"],
                             v["mean_control"], v["sd_control"], v["n_control"])
             return orient * g.g, g.variance * ((1 - r ** 2) if baseline_gap is not None else 1.0)
@@ -264,7 +274,8 @@ def effect_from_claim(claim: dict, verified: dict, *, polarity: str | None,
             flags = flags + ("sign_disagrees_with_reader",)
         if baseline_gap is not None:
             flags = flags + ("ancova_adjusted",)
-            md, md_var = md - RULES["ancova_r"] * baseline_gap, md_var * (1 - RULES["ancova_r"] ** 2)
+            md, md_var = (md - RULES["ancova_r"] * sd_ratio * baseline_gap,
+                          md_var * (1 - RULES["ancova_r"] ** 2))
         route = "arm_stats_derived" if derived else "arm_stats"
         return Effect(route, g, g_var, orient * md, md_var,
                       claim.get("effect_unit") or claim.get("measure"), estimand,
@@ -291,6 +302,14 @@ def effect_from_claim(claim: dict, verified: dict, *, polarity: str | None,
     level = claim.get("ci_level")
     if has_ci and level is None:
         flags = flags + ("ci_level_unstated",)
+    if kind == "smd" and claim.get("smd_basis") not in ("between_groups_endpoint", "between_groups_change"):
+        # Founder 2026-10-26: an effect size from a group x time interaction or
+        # an ANOVA (often converted from eta squared) or one arm's change is
+        # not the between-arm SMD the pool combines. MEASURED on run
+        # 20261026_034529: "d = 0.95" beside an interaction p was pooled.
+        basis = claim.get("smd_basis")
+        return None, ("reported SMD is " + basis.replace("_", " ") if basis
+                      else "reported SMD: what it compares is not stated") + "; only a between-arm SMD is pooled"
     if kind == "smd" and crossover:
         return None, "crossover SMD may be standardised by the SD of differences (d_z); not poolable"
     if crossover:

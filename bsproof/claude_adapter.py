@@ -407,7 +407,13 @@ PROMPT_VERSION = "v1.39"
 #   (`p_test`), so effect_size's smd_from_p route can convert a p-only result
 #   from a two-group test and refuse every other test. Measured on run
 #   20261023_190836: 8 trial-outcomes refused as "only a p-value".
-AGENT_PROMPT_VERSION: dict[str, str] = {"S4": "v1.40", "S5N": "v1.40", "S5R": "v1.40"}
+#   S4, S5, S5N, S5R v1.41 (2026-10-26, from the first spot audit): S4 item 2 is
+#   null for a placebo with blinding unmentioned, item 7 takes dropout only from
+#   stated counts; S5 names each claim's `timepoint_role`; S5N / S5R read the
+#   baseline SDs (`sd_pre_*`, for the ANCOVA adjustment) and an smd's basis
+#   (`smd_basis`), and are told only the target ingredient decides `contrast`
+#   (21 add-on controls were labelled vs_ingredient_arm at v1.40).
+AGENT_PROMPT_VERSION: dict[str, str] = {"S4": "v1.41", "S5": "v1.41", "S5N": "v1.41", "S5R": "v1.41"}
 
 
 def prompt_version(agent: str) -> str:

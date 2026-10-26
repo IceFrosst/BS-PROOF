@@ -68,6 +68,7 @@ class StudyEffect:
     reviewed: bool = False            # both reviewers agreed (pipeline/review.py)
     dose_match: str | None = None     # product dose vs this trial's (dose_match_tier); None = no product dose
     measure_rank: int = 0             # tier in the outcome's measure_hierarchy (0 = preferred)
+    timepoint_rank: int = 1           # TIMEPOINT_RANK of S5's timepoint_role
     measure: str | None = None
     # The trial's own form and daily elemental dose, so a reader (the app) can
     # re-match them against ANOTHER product without re-pooling.
@@ -143,8 +144,16 @@ def measure_polarity(claim: dict, polarity: str | None,
     return polarity, None
 
 
+# Founder 2026-10-26 (DECISIONS): the result at the END of the randomised
+# supplementation period, never an interim phase or a follow-up after it
+# stopped. S5's `timepoint_role`; unstated ranks after the end, before the rest.
+TIMEPOINT_RANK = {"end_of_supplementation": 0, None: 1, "interim": 2,
+                  "after_supplementation_stopped": 3}
+
+
 def selection_key(effect: "StudyEffect") -> tuple:
-    return (effect.measure_rank, not effect.primary, ROUTE_RANK.get(effect.route, 9), effect.claim_index)
+    return (effect.measure_rank, effect.timepoint_rank, not effect.primary,
+            ROUTE_RANK.get(effect.route, 9), effect.claim_index)
 
 
 GENERIC_UNPOOLABLE = "no verified effect estimate and incomplete arm statistics"
@@ -322,6 +331,7 @@ def _study_effects(item: dict, product: dict, polarity: dict,
                            reviewed=review["status"] == "agreed",
                            dose_match=dose_match_tier(product.get("ingredient") or "", s7, s3, claim, product),
                            measure_rank=measure_rank(claim, (hierarchy or {}).get(oid)),
+                           timepoint_rank=TIMEPOINT_RANK.get(claim.get("timepoint_role"), 1),
                            measure=claim.get("outcome_raw"), form_id=form_id,
                            dose_low_mg=dose["dose_low_mg"], dose_high_mg=dose["dose_high_mg"])
         cur = best.get(oid)

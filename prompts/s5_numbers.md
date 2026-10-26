@@ -92,6 +92,11 @@ wrong number is not.
                                 whenever they are printed, whatever the estimand;
                                 a deterministic check uses them to catch
                                 misprinted change columns
+  sd_pre_ingredient, sd_pre_control  each arm's SD of its BASELINE mean, when
+                                printed beside it ("62.9 ± 7.3" in the pre
+                                column -> 7.3); never an SE, never computed. A
+                                deterministic step uses it to adjust for a
+                                baseline difference between the arms
   effect_size                   the paper's own between-arm estimate (a mean
                                 difference or a standardised effect such as
                                 Cohen's d / Hedges' g), as printed
@@ -103,6 +108,17 @@ wrong number is not.
                                 no unit is printed
   estimate_kind                 smd | mean_difference | ratio | relative_percent |
                                 percentage_points -- the kind of effect_size
+  smd_basis                     for an smd ONLY, what it compares, as the paper
+                                says: between_groups_endpoint (the two arms'
+                                values at the timepoint) | between_groups_change
+                                (the two arms' changes from baseline) |
+                                interaction_or_anova (an effect size from a group
+                                x time interaction or an ANOVA, e.g. from eta
+                                squared) | within_group (one arm's change) | null
+                                (not an smd, or the paper does not say). A d
+                                printed beside an interaction p ("group x time
+                                interaction, p = 0.013, d = 0.95") is
+                                interaction_or_anova.
   effect_favours                ingredient | control | neither -- which arm the
                                 between-arm result favours. For an outcome where
                                 lower is better (time, fat mass, pain), the arm
@@ -128,9 +144,18 @@ wrong number is not.
   estimand                      endpoint | change_from_baseline -- the estimand
                                 of the means and SDs you copied (see above)
   design_kind                   parallel | crossover | cluster
-  contrast                      vs_ingredient_free (control got no target
-                                ingredient) | vs_ingredient_arm (both arms got
-                                it) | within_group | unclear
+  contrast                      vs_ingredient_free (the control arm got no
+                                TARGET INGREDIENT) | vs_ingredient_arm (the
+                                control arm ALSO got the target ingredient:
+                                two doses, two forms, two timings) |
+                                within_group | unclear. Only the target
+                                ingredient decides it: another substance or
+                                training that BOTH arms get does not count.
+                                "Creatine + caffeine vs placebo + caffeine" and
+                                "training + creatine vs training alone" are
+                                vs_ingredient_free. MEASURED 2026-10-26: 21
+                                such add-on controls were labelled
+                                vs_ingredient_arm and lost.
 
 NEVER CALCULATE. Do not derive a mean from a change, a change from two means,
 an SD from an SE or a CI, a difference from two means, a CI from a p, or a total

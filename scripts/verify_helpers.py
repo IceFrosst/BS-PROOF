@@ -60,7 +60,7 @@ CRITICAL = {
 WATCHED_CONSTANTS = {
     "pipeline/grade.py": ("RULES", "LEVELS", "OFF_DOSE", "TABLE", "VARIANTS"),
     "pipeline/review.py": ("RULES",),
-    "pipeline/pool.py": ("ROUTE_RANK", "CONFIDENCE"),
+    "pipeline/pool.py": ("ROUTE_RANK", "CONFIDENCE", "TIMEPOINT_RANK"),
     "pipeline/benchmark.py": ("RULES",),
     "pipeline/effect_size.py": ("RULES",),
 }

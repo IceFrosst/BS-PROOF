@@ -25,6 +25,9 @@ ITEM 2 double-blind + placebo controlled
 1 requires BOTH: an indistinguishable placebo/comparator, AND blinding of
 participants and those delivering the intervention. Single-blind -> 0.
 Open-label -> 0. "Double-blind" asserted with no placebo described -> 0.
+A placebo described but blinding never mentioned -> null (you cannot see
+whether it was blinded), not 0. MEASURED 2026-10-26: a rice-flour placebo
+trial that never mentions blinding was scored 0, i.e. high risk of bias.
 
 ITEM 3 prospective registration
 1 if a registration ID exists AND the registration date precedes the first
@@ -58,6 +61,11 @@ under 20% and none of that is reported. null if you cannot tell how many were
 randomised and how many analysed. A missing per-arm breakdown or missing
 reasons is NOT a problem here (that is item 5): "36 enrolled, 4 withdrew for
 personal reasons" is item 7 = 0 (11 %).
+The dropout rate comes ONLY from counts the paper states: how many were
+randomised (or enrolled) and how many were analysed. A percentage that is not
+a dropout rate is not attrition: "Thirteen participants (72% of the dance
+program) completed" is a share of the program, and with no randomised count
+item 7 is null. MEASURED 2026-10-26: that sentence was read as 28 % dropout.
 MEASURED 2026-10-25: the old single item 5 scored that example the same as 30 %
 dropout, and counted 59 % of the pooled strength weight as flawed.
 

@@ -104,7 +104,7 @@ class EffectSize(unittest.TestCase):
         self.assertIn("polarity", reason)
 
     def test_reported_smd_ci_uses_favoured_arm_not_printed_sign(self):
-        claim = {**BASE, "estimate_kind": "smd", "effect_favours": "ingredient", "ci_level": 0.95}
+        claim = {**BASE, "estimate_kind": "smd", "smd_basis": "between_groups_endpoint", "effect_favours": "ingredient", "ci_level": 0.95}
         v = {"effect_size": -0.43, "ci_low": 0.25, "ci_high": 0.61}
         eff, route = effect_from_claim(claim, v, polarity=None)
         self.assertEqual(route, "reported_smd_ci")
@@ -115,7 +115,7 @@ class EffectSize(unittest.TestCase):
         self.assertAlmostEqual(against.smd, -0.43)
 
     def test_unstated_ci_level_falls_back_to_exact_p(self):
-        claim = {**BASE, "estimate_kind": "smd", "effect_favours": "ingredient", "ci_level": None}
+        claim = {**BASE, "estimate_kind": "smd", "smd_basis": "between_groups_endpoint", "effect_favours": "ingredient", "ci_level": None}
         eff, route = effect_from_claim(claim, {"effect_size": 0.5, "ci_low": 0.1, "ci_high": 0.9,
                                                "p_value": 0.01}, polarity=None)
         self.assertEqual(route, "reported_smd_p")
@@ -133,7 +133,7 @@ class EffectSize(unittest.TestCase):
         self.assertAlmostEqual(eff.md, 4.4)
 
     def test_refusals(self):
-        smd = {**BASE, "estimate_kind": "smd", "ci_level": 0.95}
+        smd = {**BASE, "estimate_kind": "smd", "smd_basis": "between_groups_endpoint", "ci_level": 0.95}
         v = {"effect_size": 0.4, "ci_low": 0.1, "ci_high": 0.7}
         cases = [
             ({**smd, "effect_favours": "neither"}, "sign unknown"),
@@ -174,7 +174,7 @@ class EffectSize(unittest.TestCase):
         self.assertIn("%", reason)
 
     def test_unverified_numbers_are_never_used(self):
-        claim = {**BASE, "estimate_kind": "smd", "effect_favours": "ingredient", "ci_level": 0.95,
+        claim = {**BASE, "estimate_kind": "smd", "smd_basis": "between_groups_endpoint", "effect_favours": "ingredient", "ci_level": 0.95,
                  "effect_size": 0.4, "ci_low": 0.1, "ci_high": 0.7}
         eff, reason = effect_from_claim(claim, {}, polarity="higher_better")   # nothing verified
         self.assertIsNone(eff)

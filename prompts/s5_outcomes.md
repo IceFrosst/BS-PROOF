@@ -15,8 +15,10 @@ ONE CLAIM PER SEPARATELY REPORTED MEASURE. THIS IS THE UNIT.
 COLLAPSE the grid around ONE measure into one claim:
   the same measure at weeks 4, 8 and 12        -> ONE claim (the PRIMARY
                                                   analysis if the paper names
-                                                  one, otherwise the longest
-                                                  follow-up)
+                                                  one, otherwise the visit at
+                                                  the END of supplementation --
+                                                  never a visit after it
+                                                  stopped)
   the same measure in men and in women         -> ONE claim (the whole
                                                   randomised sample)
   lean mass in arm, leg, trunk and total       -> ONE claim (use the total)
@@ -115,6 +117,21 @@ MEASURED 2026-08-24: 45 otherwise usable results were lost for a missing
 timepoint while the papers stated it. Leave it null only when the paper
 reports several visits and names none as the analysis visit.
 
+TIMEPOINT_ROLE. Where this claim's visit sits in the randomised comparison:
+  end_of_supplementation          at the end of the randomised supplementation
+                                  period, compared with the trial's baseline
+  interim                         during supplementation, before its end; or a
+                                  change over one phase that starts after
+                                  baseline (a 7-day loading or "wash-in" phase,
+                                  then a training phase, each reported alone)
+  after_supplementation_stopped   a follow-up after the supplement was stopped
+                                  (washout, retention, detraining)
+  null                            the paper does not say
+Each phase a paper reports as its own result is its own claim, with its role.
+MEASURED 2026-10-26: a trial reporting a 7-day creatine wash-in (T1-T2), a
+12-week training phase (T2-T3) and the whole trial (T1-T3) was pooled at the
+wash-in, because nothing said which was the end of supplementation.
+
 is_primary_outcome: true only for outcomes the paper designates primary.
 Secondary and exploratory outcomes are still listed.
 
@@ -127,8 +144,8 @@ evidence_span: the SHORTEST quote showing this outcome was reported for these
 arms -- normally the between-group sentence, or the table row label with its
 values. 200 characters maximum. Not a whole paragraph or table.
 
-EACH CLAIM HAS EXACTLY SEVEN FIELDS: outcome_raw, measure, timepoint,
-ingredient_arm, control_arm, is_primary_outcome, evidence_span. Nothing else
+EACH CLAIM HAS EXACTLY EIGHT FIELDS: outcome_raw, measure, timepoint,
+timepoint_role, ingredient_arm, control_arm, is_primary_outcome, evidence_span. Nothing else
 -- no note, no comment, no contrast. A caveat about an arm or a subgroup goes
 inside evidence_span, or nowhere.
 

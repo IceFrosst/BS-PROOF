@@ -18,14 +18,7 @@ Last swept: 2026-10-26.
 From the first spot audit (run 20261026_034529, 2026-10-26; project log).
 Ordered by how much each moves a grade.
 
-1. **No timepoint rule.** `doi:103390nu17061081` was pooled at its 7-day
-   creatine-only wash-in (the authors attribute the LBM change to water), not
-   after the 12-week intervention, because that claim came first. Proposal: the
-   latest timepoint of the randomised comparison.
-2. **A reported interaction effect size taken as an SMD.** `reported_smd_p` took
-   "d = 0.95" from a group x time interaction (`doi:103390nu12061880`, leg press
-   endurance) and its interaction p. Proposal: accept a reported SMD only when it
-   is a between-arm contrast, else refuse with its reason.
+None today.
 
 ## v2 work list (agreed 2026-10-15, after the simplification)
 
@@ -56,6 +49,9 @@ All accepted by the founder **"for now, may revisit"** unless stated.
 
 | Date | Decision |
 |---|---|
+| 2026-10-26 | **Timepoint: the end of the randomised supplementation period** (S5 `timepoint_role`, v1.41; `pool.TIMEPOINT_RANK` after the measure hierarchy: end, unstated, interim, after stopping). Measured case: `doi:103390nu17061081` was pooled at its 7-day wash-in. |
+| 2026-10-26 | **A reported SMD is pooled only as a between-arm contrast** (S5N / S5R `smd_basis`, both readers must confirm). Measured on run 20261026_034529: the two pooled reported SMDs were both interaction d's from `doi:103390nu12061880` (leg press strength d = 0.33, endurance d = 0.95); refusing them takes strength C → **D Moderate** (k = 11 → 10, +0.19 → +0.14), the trial's arm data being figure-only. |
+| 2026-10-26 | **v1.41 extraction bundle** (one re-run): S4 item 2 null for a placebo with blinding unmentioned, item 7 from stated counts only; S5 `timepoint_role`; S5N / S5R contrast wording, `sd_pre_*`, `smd_basis`. |
 | 2026-10-26 | **Polarity per measure:** `vocab/outcome.json` `measure_direction` rules (11 outcomes) override an outcome's polarity for a measure (fatigue scores, PSQI / Hooper, sprint and time-trial times, reaction times, errors, fatigue indices, losses); a mixed measure is refused as "direction unclear". A sign that disagrees with S5N's favoured arm is flagged, not refused. Measured on run 20261026_034529: the Hooper fatigue effect -0.17 → +0.17; no other pooled effect changes (sprint times lose to power / jump in the hierarchy); 2 claims refused as unclear. |
 | 2026-10-26 | **Endpoint effects are ANCOVA-adjusted for the baseline difference**, for every parallel trial whose arms' baselines are verified, never only the imbalanced ones (`effect_size.RULES["ancova_r"] = 0.5`; each outcome also reports r = 0.3 and 0.7). Pre SDs are not extracted, so the post SDs stand in (S5N / S5R to read them in v1.41). Measured on run 20261026_034529: 11 of 34 pooled endpoint effects had pointed the other way from their change; strength B+ → **C Moderate** (+0.21 → +0.19 [+0.01, +0.38]; B+ at r = 0.3), lean mass D+ Low → **D Moderate** (+0.14), power I. Converting only the `baseline_imbalance` trials is biased by construction (lean mass +0.25) and was ruled out. |
 | 2026-10-26 | **Eligibility per claim: arms whose known co-interventions differ are refused** (`eligibility.unmatched_claim_arms`; unknown keeps). Measured on run 20261026_034529: 5 claims refused, all one trial (`doi:103390nu13072303`, creatine + training + beef protein vs a no-training control, pooled at g 1.09-1.27); re-pooled, strength B+ (k = 12 → 11, +0.24 → +0.21), lean mass D Moderate → **D+ Low** (k = 11 → 10; its no-flaw weight falls below half), power I. |

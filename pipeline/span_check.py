@@ -33,7 +33,9 @@ NUMERIC_FIELDS = ("effect_size", "ci_low", "ci_high", "p_value", "standard_error
                   "se_ingredient", "se_control", "ci_ingredient_low", "ci_ingredient_high",
                   "ci_control_low", "ci_control_high",
                   # per-arm baseline / post values (S5N), for the consistency guard
-                  "pre_ingredient", "post_ingredient", "pre_control", "post_control")
+                  "pre_ingredient", "post_ingredient", "pre_control", "post_control",
+                  # per-arm baseline SDs (S5N v1.41), for the ANCOVA adjustment
+                  "sd_pre_ingredient", "sd_pre_control")
 _N_FIELDS = {"n_ingredient": "ingredient_arm", "n_control": "control_arm"}
 
 # A number token: optional sign (ASCII or Unicode minus / en dash used as minus),
@@ -155,7 +157,8 @@ _ARM_OF_FIELD = {"mean_ingredient": "ingredient_arm", "sd_ingredient": "ingredie
                  "ci_ingredient_high": "ingredient_arm", "se_control": "control_arm",
                  "ci_control_low": "control_arm", "ci_control_high": "control_arm",
                  "pre_ingredient": "ingredient_arm", "post_ingredient": "ingredient_arm",
-                 "pre_control": "control_arm", "post_control": "control_arm"}
+                 "pre_control": "control_arm", "post_control": "control_arm",
+                 "sd_pre_ingredient": "ingredient_arm", "sd_pre_control": "control_arm"}
 
 
 def _label_is(cell, label: str) -> bool:
