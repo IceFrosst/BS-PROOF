@@ -11,6 +11,9 @@ and grade by grade.
     .venv/bin/python scripts/experiments/extraction_stability.py run --label B
     # 2. compare (offline)
     .venv/bin/python scripts/experiments/extraction_stability.py compare A B
+    # or, half the cost (founder rule 2026-10-28): ONE fresh run B against the
+    # production run's own SP_DUMP_EXTRACTIONS dump as A (same code and prompts)
+    .venv/bin/python scripts/experiments/extraction_stability.py compare dump:out/<dump>.json B
     # v2 poolability of ONE run, per mapped claim: which reader, effect, review
     .venv/bin/python scripts/experiments/extraction_stability.py numbers RSMOKE3
 
@@ -39,9 +42,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-# The study pool to sample from: the latest v2 creatine run (the v14 run this
-# used until 2026-10-15 was removed with v14).
-RUN = ROOT / "reports" / "runs" / "20261014_185045_creatine_creatine-monohydrate_claude-sr-ft-inter_context.json"
+# The study pool to sample from: the NEWEST creatine run context (until
+# 2026-10-28 a fixed 2026-10-14 run; SP_STABILITY_RUN overrides).
+RUN = Path(os.environ["SP_STABILITY_RUN"]) if os.environ.get("SP_STABILITY_RUN") else max(
+    (ROOT / "reports" / "runs").glob("*_creatine_*_context.json"), key=lambda p: p.name)
 OUT = ROOT / "out" / "stability"
 SHOWCASE = ["muscle_strength", "muscle_power", "lean_body_mass", "exercise_endurance", "energy_levels"]
 
@@ -378,7 +382,13 @@ def main(argv: list[str]) -> int:
     args = ap.parse_args(argv)
     if args.cmd == "run":
         return run(args.label, args.n, args.fake, args.resume, args.in_flight)
-    load = lambda label: json.loads((OUT / f"{label}.json").read_text(encoding="utf-8"))
+    def load(label: str) -> dict:
+        """A stability run by label, or `dump:<path>`: a production run's
+        SP_DUMP_EXTRACTIONS list, keyed like a stability run."""
+        if label.startswith("dump:"):
+            rows = json.loads(Path(label[5:]).read_text(encoding="utf-8"))
+            return {r["record"]["canonical_id"]: r for r in rows}
+        return json.loads((OUT / f"{label}.json").read_text(encoding="utf-8"))
     result = numbers_report(load(args.label)) if args.cmd == "numbers" else compare_runs(load(args.a), load(args.b))
     text = json.dumps(result, indent=1)
     print(text)

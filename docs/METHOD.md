@@ -396,7 +396,9 @@ What must hold before grades are shown to users:
   candidates: vitamin E and cardiovascular events, beta-carotene and lung cancer
   in smokers, selenium and prostate cancer).
 - **Stability**: the same studies extracted twice must give the same grades
-  (`scripts/experiments/extraction_stability.py`). Pass (founder 2026-10-25):
+  (`scripts/experiments/extraction_stability.py`; one fresh run with its own
+  empty cache compared against the production run's dump, founder rule
+  2026-10-28: as rigorous as two fresh runs, half the calls). Pass (founder 2026-10-25):
   every outcome with k ≥ 3 in both runs has the same letter (one step allowed
   only where the letter is threshold-sensitive), pooled estimates within
   0.1 SD, and ≥ 90 % agreement on each fact that feeds a grade (arms, numbers
