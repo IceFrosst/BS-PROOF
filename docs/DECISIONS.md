@@ -15,7 +15,19 @@ Last swept: 2026-10-26.
 
 ## Open
 
-1. **A figure route?** Pilot 2026-10-26 (`scripts/experiments/figure_pilot.py`,
+1. **Carriers and counter-ions are not co-interventions.** S3 lists a creatine
+   arm's vehicle (dextrose, maltodextrin) and the form's own counter-ion
+   (nitrate) as co-interventions, and not the placebo's identical vehicle, so
+   `unmatched_claim_arms` refuses matched trials. Proposal: a vocabulary of
+   inert carriers plus each form's counter-ion, ignored when comparing arms
+   (deterministic, re-pool only). Measured on run 20261028_082425: strength
+   k 10 -> 13 (D, +0.11 -> +0.13, coverage 34 -> 42 %), lean mass k 10 -> 11.
+2. **The contrast label from S3's arm facts.** The v1.41 wording did not stop
+   S5N labelling add-on controls `vs_ingredient_arm` (21 -> 20). Proposal: when
+   both claim arms resolve to S3 arms with presence yes / no, the contrast is
+   vs_ingredient_free; S5N's label only when they do not resolve. Changes no
+   pooled effect today; it stops a silent loss.
+3. **A figure route?** Pilot 2026-10-26 (`scripts/experiments/figure_pilot.py`,
    19 panels / 10 papers, truth = the same paper's printed number; project
    log). Plotted means read well: median error 0.7 % of the y-axis (0.03 SD),
    the error it puts into a between-arm SMD median 0.01-0.04, 90th percentile

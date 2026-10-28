@@ -10,6 +10,27 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-28 — v1.41 creatine run 20261028_082425
+
+S4, S5, S5N, S5R v1.41 plus every agent for the 9 re-texted studies, several
+sittings (previous attempt: 28 quota requeues, 3 failed); final 137 ok / 1
+skipped (the GAA pilot) / 1 partial (the usual S5N on `doi:101002acr22747`).
+**Strength D, Moderate**, k = 10, +0.11 [-0.09, +0.30], NOT TESTABLE (34 %);
+**lean mass D, Moderate**, k = 10, +0.14 [-0.05, +0.33], PASS (59 %); power I,
+k = 10. New fields arrived: `timepoint_role` on 1 367 of 1 471 claims (95
+interim, 10 after stopping), `smd_basis` on 33 of 34 reported SMDs (8
+interaction / ANOVA, refused), verified baseline SDs on 198 claims.
+
+Found: (1) the S5N / S5R contrast wording did NOT fix the add-on mislabel (21
+-> 20, including "CREATINE vs PLACEBO" as vs_ingredient_arm). (2) The
+claim-level arm check refuses trials over a carrier or the form's counter-ion
+S3 lists as a co-intervention: `doi:103390nu10111640` (dextrose; it left
+strength, lean mass and power once its methods were read), maltodextrin,
+nitrate for creatine nitrate. Offline: ignoring carriers and counter-ions (12
+list entries) gives strength k = 13, D, +0.13 [-0.04, +0.30], coverage 42 %;
+lean mass k = 11, D; taking the contrast from S3 arm presence changes no
+pooled effect. Both proposed in DECISIONS.
+
 ## 2026-10-26 — figure pilot
 
 Adapter: `call(..., images=)` sends images as one stream-json message (one
