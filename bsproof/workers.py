@@ -39,6 +39,14 @@ def _second_reviewer_enabled() -> bool:
     return os.environ.get("SP_SECOND_REVIEWER", "1") == "1"
 
 
+def _figure_reader_enabled() -> bool:
+    """The figure route (founder 2026-10-28, pipeline/figure.py): two figure
+    readers (S5F, S5FR) for claims whose text gives no effect and whose figure
+    the caption identifies; ~2 calls per such claim (creatine: ~23 claims).
+    SP_FIGURE_READER=0 turns it off."""
+    return os.environ.get("SP_FIGURE_READER", "1") == "1"
+
+
 # Mapped claims per S5N call. Coverage first, cost second (founder 2026-10-03):
 # a long claim list in one call risks silently skipped claims, so a study with
 # many claims is split; the chunks run one after another so every call after
@@ -158,6 +166,79 @@ def _second_review(out: dict, record: dict, text: str, sections: dict | None,
         reviews = (result or {}).get("reviews")
     out["review_v2"] = {"sent": len(sent),
                         "adjudication": reconcile_study(outcomes, reviews, sent, polarity, s3_arms)}
+
+
+def _figure_numbers(out: dict, record: dict, s3_facts: dict, call, *, figure_source=None) -> None:
+    """Read, from the paper's figure, each mapped outcome whose text gives no
+    effect: per outcome the claim the pool would pick (measure hierarchy, then
+    timepoint, then primary), one figure the caption identifies
+    (pipeline.figure.pick_figure), two readers on two models (S5F, S5FR).
+    The readings are stored on the claim (`figure_v1`); pipeline.figure.accept
+    decides in the pool. Only PMC articles (their figures are files); a claim
+    with no identified figure or no fetchable image is recorded with why.
+    `figure_source` (tests): an object with `figures(pmcid)` / `image(pmcid, href)`."""
+    from pipeline.eligibility import with_s3_contrast
+    from pipeline.figure import pick_figure
+    from pipeline.pool import TIMEPOINT_RANK, measure_rank
+    from pipeline.review import effect_route
+    from pipeline.span_check import fill_arm_n
+    if figure_source is None:
+        from sources import figures as figure_source
+    pmcid = record.get("pmcid")
+    outcomes = out.get("outcomes") or []
+    if not pmcid or not outcomes:
+        return
+    meta = {o["id"]: o for o in vocab.load("outcome")["outcomes"]}
+    s3_arms = (s3_facts or {}).get("arms") if isinstance(s3_facts, dict) else None
+    chosen: dict[str, tuple] = {}
+    for i, o in enumerate(outcomes):
+        oid, nums = o.get("outcome_vocab_id"), o.get("numbers_v2") or {}
+        if o.get("discarded") or not oid or not nums.get("found") or nums.get("not_read"):
+            continue
+        if (nums.get("review") or {}).get("status") == "disagreed":
+            continue
+        claim, _ = with_s3_contrast(_claim_for_numbers(o), {"arms": s3_arms or []})
+        if claim.get("contrast") != "vs_ingredient_free":
+            continue
+        verified = fill_arm_n(claim, nums.get("verified") or {}, s3_arms)[0]
+        if effect_route(claim, verified, meta.get(oid, {}).get("polarity")):
+            continue                                  # the text already gives an effect
+        key = (measure_rank(claim, meta.get(oid, {}).get("measure_hierarchy")),
+               TIMEPOINT_RANK.get(claim.get("timepoint_role"), 1),
+               not claim.get("is_primary_outcome"), i)
+        if oid not in chosen or key < chosen[oid][0]:
+            chosen[oid] = (key, i, claim)
+    if not chosen:
+        return
+    figures = figure_source.figures(pmcid)
+    labels = [a.get("label") for a in (s3_arms or []) if isinstance(a, dict) and a.get("label")]
+    for _key, i, claim in chosen.values():
+        fig = pick_figure(claim, figures)
+        if fig is None:
+            outcomes[i]["figure_v1"] = {"figure": None, "reason": "no figure caption names this measure"}
+            continue
+        img = figure_source.image(pmcid, fig["href"])
+        if img is None:
+            outcomes[i]["figure_v1"] = {"figure": fig["id"], "reason": "figure image could not be fetched"}
+            continue
+        payload = {"caption": fig["caption"],
+                   "panel": f"{claim.get('outcome_raw')} ({claim.get('measure') or 'unit not stated'})",
+                   "arms": [claim.get("ingredient_arm"), claim.get("control_arm")],
+                   "arm_labels": labels,
+                   "timepoints": ["baseline", claim.get("timepoint") or "end"]}
+        readings = {}
+        for agent in ("S5F", "S5FR"):
+            try:
+                result, m = call(agent, payload, images=[img])
+            except Exception as exc:
+                result, m = None, {"error": str(exc)}
+            readings[agent] = result
+            if result is None:
+                err = str((m or {}).get("error") or "")
+                if _quota_signal(err):
+                    out["_quota_exhausted"] = err
+                out.setdefault("_failed", []).append({"agent": agent, "error": err})
+        outcomes[i]["figure_v1"] = {"figure": fig["id"], "href": fig["href"], "readings": readings}
 
 
 def _verify_numbers(out: dict, record: dict, claims: list[dict]) -> list[dict]:
@@ -423,6 +504,8 @@ def extract_study(record: dict, text: str, registry: dict | None = None, *,
     _extract_numbers(out, record, text, sections, s3_facts, call)
     if _second_reviewer_enabled():
         _second_review(out, record, text, sections, s3_facts, call)
+    if _figure_reader_enabled():
+        _figure_numbers(out, record, s3_facts, call)
     return out
 
 

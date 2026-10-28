@@ -1,32 +1,133 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
-  "required": ["panel_found", "y_axis_label", "y_axis_min", "y_axis_max", "error_bar", "readings", "evidence"],
+  "required": [
+    "panel_found",
+    "plotted_quantity",
+    "y_axis_label",
+    "y_axis_min",
+    "y_axis_max",
+    "error_bar",
+    "readings",
+    "evidence"
+  ],
   "additionalProperties": false,
   "properties": {
-    "panel_found": {"type": "boolean"},
-    "y_axis_label": {"type": ["string", "null"], "maxLength": 120},
-    "y_axis_min": {"type": ["number", "null"]},
-    "y_axis_max": {"type": ["number", "null"]},
-    "error_bar": {"type": ["string", "null"], "enum": ["sd", "se", "ci95", "range", "none", "unstated", null]},
+    "panel_found": {
+      "type": "boolean"
+    },
+    "plotted_quantity": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "values_at_timepoints",
+        "change_from_baseline",
+        "percent_change",
+        "individual_points_only",
+        "other",
+        null
+      ]
+    },
+    "y_axis_label": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 120
+    },
+    "y_axis_min": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "y_axis_max": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "error_bar": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "sd",
+        "se",
+        "ci95",
+        "range",
+        "none",
+        "unstated",
+        null
+      ]
+    },
     "readings": {
       "type": "array",
       "maxItems": 12,
       "items": {
         "type": "object",
-        "required": ["arm", "timepoint", "mean", "error_bar_top", "error_bar_bottom", "points", "points_complete"],
+        "required": [
+          "arm",
+          "timepoint",
+          "mean",
+          "error_bar_top",
+          "error_bar_bottom",
+          "points",
+          "points_complete"
+        ],
         "additionalProperties": false,
         "properties": {
-          "arm": {"type": "string", "maxLength": 80},
-          "timepoint": {"type": "string", "maxLength": 80},
-          "mean": {"type": ["number", "null"]},
-          "error_bar_top": {"type": ["number", "null"]},
-          "error_bar_bottom": {"type": ["number", "null"]},
-          "points": {"type": ["array", "null"], "maxItems": 60, "items": {"type": "number"}},
-          "points_complete": {"type": ["boolean", "null"]}
+          "arm": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "timepoint": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "mean": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "error_bar_top": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "error_bar_bottom": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "points": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "maxItems": 60,
+            "items": {
+              "type": "number"
+            }
+          },
+          "points_complete": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
         }
       }
     },
-    "evidence": {"type": "string", "maxLength": 300}
+    "evidence": {
+      "type": "string",
+      "maxLength": 300
+    }
   }
 }

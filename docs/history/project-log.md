@@ -10,6 +10,20 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-28 — figure route built (runs at the next extraction)
+
+`sources/figures.py` (PMC figure list from the JATS, images from the article
+instance, cached); `pipeline/figure.py` (caption-based `pick_figure`, `accept`:
+both readers agree within 2 % of the y-axis on every mean and error bar, the
+same plotted quantity and error-bar kind; `RULES` watched); S5F / S5FR v1.0
+(production prompt: what is plotted, arm names mapped to the legend, baseline
+and the analysis timepoint); `workers._figure_numbers` (per study and outcome,
+the claim the pool would pick, only when its text gives no effect;
+`SP_FIGURE_READER`); pool route `figure_means` (rank 7, effect computed by the
+arm-statistics code incl. ANCOVA); `evidence_v2` sensitivity
+`without_figure_means`. Reach on run 20261028_082425: 23 (study, outcome)
+pairs in 16 PMC studies (3 strength, 7 power, 4 recovery). tests/test_figure_route.py.
+
 ## 2026-10-28 — re-pool fixes (founder rule: Claude decides, rigour first, then cost)
 
 Built, all deterministic, no model call: vehicles / counter-ions ignored in arm

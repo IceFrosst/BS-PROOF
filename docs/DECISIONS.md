@@ -15,19 +15,7 @@ Last swept: 2026-10-28.
 
 ## Open
 
-1. **A figure route?** Pilot 2026-10-26 (`scripts/experiments/figure_pilot.py`,
-   19 panels / 10 papers, truth = the same paper's printed number; project
-   log). Plotted means read well: median error 0.7 % of the y-axis (0.03 SD),
-   the error it puts into a between-arm SMD median 0.01-0.04, 90th percentile
-   0.15-0.17. Individual-point plots fail (readers found 4-6 of 6-7 points).
-   Error-bar SDs are only as good as the caption's statement of what the bars
-   are, and the two readers disagreed on that once. Proposal: a `figure_means`
-   route, ranked last, shown with and without (like `smd_from_p`): plotted
-   means only; both readers within a tolerance of the axis range (new constant;
-   2 % keeps 42 of 50 readings); an SD from a printed table or text, or from
-   error bars only when the caption names them and both readers agree; never
-   individual points. Measure the gain on the trials refused as figure-only
-   before building.
+None today.
 
 ## Work list (2026-10-28; replaces the 2026-10-15 list, whose items are done or decided below)
 
@@ -40,8 +28,8 @@ the cheaper one). "Next run" = settled by the next extraction run.
 | A1 | Claim-level arm check refused matched trials over a vehicle or the form's counter-ion | **Done** (Decided 2026-10-28) |
 | A2 | S5N mislabels add-on controls `vs_ingredient_arm` (prompt fix failed) | **Done**: contrast from S3 (Decided); 5 reviewer conflicts over the label and the never-reviewed claims settle at the next run |
 | A3 | Strength coverage below 50 % | **Done by C1**: 52 %, the benchmark passes |
-| A4 | Strength estimate at the low end of the published ones (+0.13 vs +0.20-0.46) | Watch: overlaps all 6, but the two largest meta-analyses only through our upper bound; the figure route (open 1) may move it |
-| A5 | Interaction d's refused (8), arm data figure-only | Open 1 (figure route) |
+| A4 | Strength estimate at the low end of the published ones (+0.13 vs +0.20-0.46) | Watch: overlaps all 6, but the two largest meta-analyses only through our upper bound; the figure route (D1) reads 3 strength trials |
+| A5 | Interaction d's refused (8), arm data figure-only | Figure route (D1) at the next run |
 | A6 | A sport-skill count ("successful kicks") mapped to muscle power | **Done**: `exclude_measures` |
 | A7 | The RA trial's S5N call fails every run (SE = 0 rejected; answer as a string) | Off-target, harmless; fix if disease populations are graded |
 | A8 | Reported mean differences that are interaction MDs | Checked: none pooled |
@@ -54,7 +42,7 @@ the cheaper one). "Next run" = settled by the next extraction run.
 | C4 | Papers whose figure, table and text disagree | Recorded; counted as paper errors in audits |
 | C5 | p-values from tests that do not convert (7) | Refused with reason; no route planned |
 | C6 | S4's "double-blind asserted, no placebo described -> 0" untested | Check in B1 |
-| D1 | Figure route | Open 1 below |
+| D1 | Figure route | **Built** (Decided 2026-10-28); runs in the next extraction (~23 claims, ~46 calls) |
 | D2 | High-resolution figures, individual-point plots | After D1 |
 | D3 | "Independently funded only" sensitivity analysis (METHOD §15) | Planned |
 | D4 | Grades for other populations | Later |
@@ -68,6 +56,7 @@ All accepted by the founder **"for now, may revisit"** unless stated.
 
 | Date | Decision |
 |---|---|
+| 2026-10-28 | **The figure route** (`figure_means`, Claude per founder rule; pilot 2026-10-26): for a claim whose text gives no effect, its caption-identified PMC figure read by S5F and S5FR; kept only on agreement within 2 % of the y-axis (`figure.RULES`, new constant), the same plotted quantity and error-bar kind; plotted means only; ranked last (`pool.ROUTE_RANK` 7); every outcome also shown without it. Measured reach on run 20261028_082425: 23 (study, outcome) pairs in 16 studies, 3 of them strength (`doi:103390nu12061880`, `doi:103390nu9111169`, `doi:103390nu8030143`). Rationale: Cochrane accepts data read from graphs with dual extraction; the pilot put the median error at 0.03 SD. |
 | 2026-10-28 | **Under `--full-text-only` an abstract is never extracted** (`run.corpus._best_text` returns no text for an abstract-only tier; the worker skips it as "no text"). Measured on run 20261028_082425 (cache-only tiers): 41 of 138 studies had been extracted from abstracts (36 with claims; 1 pooled effect, exercise recovery); without them strength coverage 42 -> 52 % and the strength benchmark PASSES (6/6, width x0.9), lean mass 79 %. Implements the 2026-10-17 decision. |
 | 2026-10-28 | **Vehicles and counter-ions are not co-interventions** (Claude per founder rule): a bare carrier (`vocab/cointervention.json`) on every ingredient arm is the vehicle; the form's counter-ion (`vocab/form.json` `counter_ion`, via S7) is the form. A carrier only some ingredient arms get stays a co-intervention. Measured: 3 matched trials recovered (dextrose, maltodextrin, creatine nitrate); strength k 10 -> 13. |
 | 2026-10-28 | **The contrast label comes from S3's arm facts** when both claim arms resolve (Claude per founder rule; `eligibility.with_s3_contrast`, also in `review.reconcile` and the S5R selection). Measured: the v1.41 wording left 20 mislabels. |

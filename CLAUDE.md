@@ -87,7 +87,8 @@ bump.
 The GRADE rules and letter table (`grade.RULES`, `TABLE`, `LEVELS`,
 `OFF_DOSE`, `VARIANTS`), the second-reviewer tolerances (`review.RULES`), study
 selection (`pool.ROUTE_RANK`, `CONFIDENCE`, `TIMEPOINT_RANK`), the benchmark pass rule
-(`benchmark.RULES`), the ANCOVA correlation (`effect_size.RULES`) and every per-outcome MCID in `vocab/outcome.json` —
+(`benchmark.RULES`), the ANCOVA correlation (`effect_size.RULES`), the figure readers'
+agreement tolerance (`figure.RULES`) and every per-outcome MCID in `vocab/outcome.json` —
 founder calls. Propose in `docs/DECISIONS.md`. A hook warns when a watched
 one moves (`scripts/verify_helpers.WATCHED_CONSTANTS`).
 
@@ -174,6 +175,8 @@ Per study: S3 (design, arms) first, then S4 (RoB), S5 (lists outcomes), S7 (form
 dose), S8 (funding) in parallel, then S6B (outcome mapping, one call per study)
 and S5N (the numbers v2 pools), then S5R (second reviewer, Opus; on by
 default, `SP_SECOND_REVIEWER=0` turns it off). About 7–8 calls per study.
+Then, only for a claim whose text gives no effect, S5F and S5FR read its
+figure (PMC articles; `SP_FIGURE_READER=0` off; `pipeline/figure.py`).
 
 Extraction has no metered spend; the limit is subscription **throughput**.
 Never run agent teams, workflows or other heavy sessions alongside an
@@ -199,6 +202,7 @@ run_pipeline.py         one ingredient end to end (--wiring for no model; --help
 pipeline/   deterministic, NO MODEL, unit-tested
   retrieve.py classify.py dedup.py relevance.py predatory.py storage.py showcase.py   retrieval
   span_check.py effect_size.py   verify extracted numbers; numbers -> signed effect + variance
+  figure.py                      the figure route: pick a figure, accept two agreeing readings
   meta_effects.py                Hedges' g, REML random effects, Hartung-Knapp CIs
   pool.py                        per-outcome study selection and pooling
   grade.py                       GRADE certainty + the letter table
@@ -208,7 +212,7 @@ pipeline/   deterministic, NO MODEL, unit-tested
   benchmark.py                   our pooled estimates vs published meta-analyses
   vocab.py                       vocabularies, dose conversion, form/population matching
   invariants.py selftest/        the two gates (selftest is a package; run with -m)
-sources/    deterministic HTTP layer: europepmc, clinicaltrials, oa, fulltext, crossref
+sources/    deterministic HTTP layer: europepmc, clinicaltrials, oa, fulltext, figures, crossref
 
 app/        Next.js routes: /scan (product), /api/scan, /methodology, / (waitlist)
 components/ scan/ (the /scan UI), site shell, waitlist form
@@ -283,11 +287,11 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
   with the 2026-10-28 fixes and without the 41 studies that had been read from
   abstracts: strength **k = 13, D, Moderate** (+0.13 [-0.04, +0.30]), coverage
   52 %, benchmark **passes**; lean mass k = 11 **D, Moderate**, passes (79 %).
-  The stored report predates the fixes. Next run settles the contrast-label
-  reviews and builds nothing new unless the figure route is in.
+  The stored report predates the fixes. The next run (v1.41 prompts unchanged)
+  drops the 41 abstract-read studies, settles the contrast-label reviews and
+  runs the figure route (S5F / S5FR, ~46 calls).
 - **Known v2 problems:** the work list in `docs/DECISIONS.md` (2026-10-28).
-  Open: the figure route, the second spot audit, stability, negative-control
-  benchmarks.
+  Open: the second spot audit, stability, negative-control benchmarks.
 - **Working baseline: `Jans_attempt`, not `main`** (founder, 2026-10-15).
   `origin/main` has diverged (68 commits since `d9cedc4`, 2026-09-22: live
   research worker, live result card, research-jobs SQL, scan-history UI,

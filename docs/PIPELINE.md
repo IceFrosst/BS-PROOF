@@ -71,6 +71,7 @@ biases the result.
 | Variable | Default | Effect |
 |---|---|---|
 | `SP_SECOND_REVIEWER` | `1` | S5R, a blind second read of the poolable numbers on a different model; `0` turns it off |
+| `SP_FIGURE_READER` | `1` | the figure route: S5F and S5FR read the figure of each claim whose text gives no effect (PMC articles; about 2 calls per such claim); `0` turns it off |
 | `SP_MODEL_A/B/C/R`, `SP_EFFORT_A/B/C/R` | `claude_adapter.TIER_MODEL` / `TIER_EFFORT` | Model and effort per tier (pinned full ids) |
 | `SP_MAX_CONCURRENCY` | `40` | Parallel model calls |
 | `SP_MAX_BUDGET_USD` | `0.50` | Per-call ceiling the CLI enforces |

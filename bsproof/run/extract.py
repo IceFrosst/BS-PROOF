@@ -143,6 +143,8 @@ def _study_extraction(ext: dict) -> dict | None:
             # S5 lists outcomes; every number, with its span, is S5N's
             # (numbers_v2.claim) since v1.37.
             "numbers_v2": o.get("numbers_v2"),
+            # the figure route's two readings (pipeline/figure.py), for audits
+            "figure_v1": o.get("figure_v1"),
         })
     return {
         "s3": None if not s3 else {

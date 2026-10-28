@@ -414,8 +414,8 @@ PROMPT_VERSION = "v1.39"
 #   (`smd_basis`), and are told only the target ingredient decides `contrast`
 #   (21 add-on controls were labelled vs_ingredient_arm at v1.40).
 AGENT_PROMPT_VERSION: dict[str, str] = {"S4": "v1.41", "S5": "v1.41", "S5N": "v1.41", "S5R": "v1.41",
-                                        # the figure pilot's own reader (not production)
-                                        "S5F": "pilot-v0.3", "S5FR": "pilot-v0.3"}
+                                        # the figure reader (pilot 2026-10-26; route 2026-10-28)
+                                        "S5F": "v1.0", "S5FR": "v1.0"}
 
 
 def prompt_version(agent: str) -> str:
@@ -557,10 +557,11 @@ AGENTS = {
     # every MAPPED S5 claim (workers._extract_numbers). Tier B (sonnet, low
     # effort) so it is cheap AND a different model from S5R's opus.
     "S5N": ("B", "s5_numbers.json",   "s5_numbers.md"),
-    # FIGURE PILOT (founder 2026-10-26, scripts/experiments/figure_pilot.py):
-    # one figure image in, the plotted per-arm values out. Two readers on two
-    # models, like S5N / S5R. Not wired into workers.py: no pooled number comes
-    # from a figure until the pilot's accuracy is measured and decided.
+    # FIGURE READERS (pilot 2026-10-26, scripts/experiments/figure_pilot.py;
+    # route decided 2026-10-28, pipeline/figure.py): one figure image in, the
+    # plotted per-arm means out. Two readers on two models, like S5N / S5R;
+    # workers._figure_numbers runs them only for claims whose text gives no
+    # effect and whose figure the caption identifies.
     "S5F": ("B", "s5_figure.json",    "s5_figure.md"),
     "S5FR": ("R", "s5_figure.json",   "s5_figure.md"),
 }

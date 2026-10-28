@@ -150,6 +150,7 @@ the agent's prompt version + model + effort + payload):
 | S6B outcome mapping | S5's outcome strings | one vocabulary id per claim, or `null` = discard |
 | S5N numbers | the mapped claims' identity | per arm mean, SD, n, SE, CI, p, pre/post values and baseline SDs, as printed; estimand, contrast, design, the test behind a p, what a reported SMD compares (v1.41) |
 | S5R second reviewer (on by default; `SP_SECOND_REVIEWER=0` off) | the same claims, blind | the same numbers, read by a different model (Opus) |
+| S5F / S5FR figure readers (on by default; `SP_FIGURE_READER=0` off) | one figure image + its caption, for a claim whose text gives no effect | the plotted per-arm means, error-bar tops and what is plotted, read twice on two models (§10 `figure_means`) |
 
 S3 runs first (S5 and S7 need its arms); S4, S5, S7, S8 in parallel; then S6B,
 S5N and S5R. S5N is the only reader of numbers (since prompt v1.37): a claim it
@@ -241,6 +242,7 @@ always means benefit, after the outcome's polarity. Routes, best first:
 | `reported_smd_n` | a reported SMD + both arm sizes |
 | `reported_md_ci` | a reported mean difference + CI (natural units only) |
 | `smd_from_p` | no estimate and no arm statistics: an exact two-sided p from a two-group test of these two arms (t-test, Welch, two-arm one-way ANOVA; S5N's `p_test`) on endpoint values or changes, both arm sizes and the favoured arm → t → Hedges' g (Cochrane Handbook §6.5.2.3). Parallel trials only; any other test is refused with its reason. Founder 2026-10-25. Every outcome that uses it also reports its estimate and letter without it (`sensitivity`) |
+| `figure_means` | the text gives no effect: the claim's figure (picked by its caption, `figure.pick_figure`; PMC articles only) read by two readers on two models (S5F, S5FR); kept only when both agree within 2 % of the y-axis on every mean and error bar, name the same plotted quantity (values at timepoints, or changes) and the same error-bar kind (sd, se or ci95 as the caption states; unstated bars give no SD); reader 1's values, never averaged; never individual points or percent changes. Then the arm-statistics arithmetic as for printed numbers (ANCOVA included). Ranked last; every outcome that uses it also reports its estimate and letter without it. Founder 2026-10-28, from the 2026-10-26 pilot (`pipeline/figure.py`) |
 
 - **Crossover trials**: arm statistics analysed as if parallel (Handbook
   §23.2.6, conservative), flagged; a paired MD with CI kept; a crossover SMD

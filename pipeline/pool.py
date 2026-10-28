@@ -44,11 +44,14 @@ from pipeline import vocab
 from pipeline.dose import _s7_for_claim, dose_match_for, study_dose
 from pipeline.effect_size import Effect, effect_from_claim
 from pipeline.eligibility import _ineligible, matched_addon_claim, unmatched_claim_arms, with_s3_contrast
+from pipeline.figure import accept as figure_accept
 from pipeline.span_check import fill_arm_n
 
 # smd_from_p: founder 2026-10-25, ranked last (the least direct route).
 ROUTE_RANK = {"arm_stats": 0, "arm_stats_derived": 1, "reported_smd_ci": 2, "reported_smd_p": 3,
-              "reported_smd_n": 4, "reported_md_ci": 5, "smd_from_p": 6}
+              "reported_smd_n": 4, "reported_md_ci": 5, "smd_from_p": 6,
+              # founder 2026-10-28: numbers read off a figure, last (pipeline/figure.py)
+              "figure_means": 7}
 CONFIDENCE = 0.95
 
 
@@ -314,6 +317,25 @@ def _study_effects(item: dict, product: dict, polarity: dict,
         eff, why = effect_from_claim(claim, verified, polarity=pol,
                                      abs_only=nums.get("abs_only") or (),
                                      checks=nums.get("verified") or {})
+        if eff is None and o.get("figure_v1"):
+            # The figure route (founder 2026-10-28, pipeline/figure.py): two
+            # agreeing readings of the claim's figure, ranked last.
+            readings = o["figure_v1"].get("readings") or {}
+            fig_numbers, fig_why = figure_accept(claim, readings.get("S5F"), readings.get("S5FR"))
+            if fig_numbers is None:
+                why = fig_why if why == GENERIC_UNPOOLABLE else f"{why}; {fig_why}"
+            else:
+                fig_claim = {**claim, "estimand": fig_numbers.pop("estimand")}
+                fig_verified, fig_n_flags = fill_arm_n(fig_claim, fig_numbers, s3.get("arms"))
+                fig_eff, fig_eff_why = effect_from_claim(fig_claim, fig_verified, polarity=pol,
+                                                         checks=fig_verified)
+                if fig_eff is None:
+                    why = f"figure read, but {fig_eff_why}"
+                else:
+                    eff = dataclasses.replace(fig_eff, route="figure_means",
+                                              flags=fig_eff.flags + ("from_figure",))
+                    claim, verified = fig_claim, fig_verified
+                    n_flags = n_flags + tuple(fig_n_flags)
         if eff is None:
             # A table that could not be FETCHED is not a number that is not
             # printed: say so, so the refusal is never read as a data gap.

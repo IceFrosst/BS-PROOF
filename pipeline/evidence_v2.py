@@ -124,6 +124,7 @@ def summarise(items: list[dict], product: dict, registry: dict | None = None) ->
                           "unit": pool.md["unit"], "method": pool.md["method"]}
         out.append({
             "sensitivity": {**(_without_route(pool, meta, registry, oid, "smd_from_p") or {}),
+                            **(_without_route(pool, meta, registry, oid, "figure_means") or {}),
                             **(_ancova_r(pool, meta, registry, oid) or {})} or None,
             "outcome": oid, "label": meta.get("label") or oid, "polarity": meta.get("polarity"),
             "k": pool.k, "smd": smd, "md": md, "estimand_mix": pool.estimand_mix,
