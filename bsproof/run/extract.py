@@ -268,7 +268,7 @@ def extract_stage(store, opts, primaries, pv, outcome_allowlist, run_context):
     raw = workers.extract_corpus(
         [{**p, "_canonical": p["canonical_id"], "ingredient": ingredient}
          for p in targets],
-        text_for=lambda r: _best_text(r),
+        text_for=lambda r: _best_text(r, opts.full_text_only),
         sections_for=lambda r: _sections(r),
         registry_for=lambda r: store.registry_facts(r["registration_id"])
                                if r.get("registration_id") else None,

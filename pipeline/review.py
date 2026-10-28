@@ -142,6 +142,8 @@ def reconcile(claim: dict, numbers: dict | None, review: dict | None,
     output); `review` is reviewer 2's entry for this claim, or None. Only the
     fields of the effect route reviewer 1's numbers take are compared, and only
     those reach the pool."""
+    from pipeline.eligibility import with_s3_contrast
+    claim, s3_decides_contrast = with_s3_contrast(claim, {"arms": s3_arms or []})
     verified = dict((numbers or {}).get("verified") or {})
     # The route counts arm sizes S3 supplies (span_check.fill_arm_n); those are
     # S3's facts, so they are never compared here -- the pool re-fills them.
@@ -153,6 +155,10 @@ def reconcile(claim: dict, numbers: dict | None, review: dict | None,
         return {"status": "disagreed", "route": route, "verified": {}, "dropped": [],
                 "conflicts": ["reviewer 2 did not find this outcome"]}
     num_fields, cat_fields = ROUTE_FIELDS[route]
+    if s3_decides_contrast:
+        # S3's arm facts decide the contrast (eligibility.with_s3_contrast), so
+        # a reader's label is not a conflict (founder rule 2026-10-28).
+        cat_fields = tuple(f for f in cat_fields if f != "contrast")
 
     conflicts: list[str] = []
     for f in cat_fields:

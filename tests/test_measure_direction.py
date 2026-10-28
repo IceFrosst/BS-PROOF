@@ -80,5 +80,14 @@ class ReaderSign(unittest.TestCase):
         self.assertNotIn("sign_disagrees_with_reader", eff.flags)
 
 
+class ExcludedMeasures(unittest.TestCase):
+    def test_a_sport_skill_count_is_not_muscle_power(self):
+        from pipeline.pool import excluded_measure
+        rules = OUTCOMES["muscle_power"].get("exclude_measures")
+        self.assertIsNotNone(excluded_measure({"outcome_raw": "Total successful kicks (sum of three bouts)"}, rules))
+        self.assertIsNone(excluded_measure({"outcome_raw": "Wingate peak power", "measure": "W"}, rules))
+        self.assertIsNone(excluded_measure({"outcome_raw": "Countermovement jump height", "measure": "cm"}, rules))
+
+
 if __name__ == "__main__":
     unittest.main()

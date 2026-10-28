@@ -32,12 +32,20 @@ def _sections(record: dict) -> dict:
         return {}
 
 
-def _best_text(record: dict) -> str:
+def _best_text(record: dict, full_text_only: bool = False) -> str:
+    """The text the agents read. Under --full-text-only a study whose best text
+    is only its abstract gets NO text, so the worker skips it as "no text"
+    (counted), never extracts the abstract (founder 2026-10-17: no
+    abstract-only extraction). MEASURED 2026-10-28 on run 20261028_082425: the
+    tier was discarded here, so studies kept for having an open-access location
+    whose copy could not be fetched were extracted from 1-3k-char abstracts."""
     from sources import fulltext as ft
     try:
-        text, _tier = ft.best_text(record)
+        text, tier = ft.best_text(record)
     except Exception:
-        text = record.get("abstract") or record.get("title") or ""
+        text, tier = record.get("abstract") or record.get("title") or "", "abstract_only"
+    if full_text_only and tier != "full_text":
+        return ""
     return text or (record.get("title") or "")
 
 

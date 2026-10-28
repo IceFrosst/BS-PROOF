@@ -10,6 +10,23 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-28 — re-pool fixes (founder rule: Claude decides, rigour first, then cost)
+
+Built, all deterministic, no model call: vehicles / counter-ions ignored in arm
+comparisons (`vocab/cointervention.json`, `form.json counter_ion`); contrast from
+S3's arm facts (pool, `review.reconcile`, S5R selection); `exclude_measures`
+(sport-skill counts out of muscle power); "creatine clearance" is a marker
+mention (ARISTOTLE out); under `--full-text-only` an abstract-only study gets
+no text (`run.corpus._best_text` had discarded the tier: 41 of 138 studies were
+extracted from abstracts; tiers measured cache-only, out/text_tiers_v141.json).
+Re-pool of run 20261028_082425 with all of it and the abstract-tier studies
+removed: **strength D, Moderate**, k = 13, +0.13 [-0.04, +0.30], coverage 52 %,
+benchmark **PASS** (6/6, width x0.9); **lean mass D, Moderate**, k = 11, +0.12
+[-0.06, +0.30], 79 %, PASS; power I, k = 10. Our strength estimate is at the
+low end: the two largest meta-analyses (+0.43, +0.46) overlap only through our
+upper bound. Settled at the next run: 5 reviewer conflicts over the contrast
+label, never-reviewed mislabelled claims (now sent to S5R).
+
 ## 2026-10-28 — v1.41 creatine run 20261028_082425
 
 S4, S5, S5N, S5R v1.41 plus every agent for the 9 re-texted studies, several

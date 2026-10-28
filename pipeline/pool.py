@@ -43,7 +43,7 @@ from pipeline import meta_effects as me
 from pipeline import vocab
 from pipeline.dose import _s7_for_claim, dose_match_for, study_dose
 from pipeline.effect_size import Effect, effect_from_claim
-from pipeline.eligibility import _ineligible, matched_addon_claim, unmatched_claim_arms
+from pipeline.eligibility import _ineligible, matched_addon_claim, unmatched_claim_arms, with_s3_contrast
 from pipeline.span_check import fill_arm_n
 
 # smd_from_p: founder 2026-10-25, ranked last (the least direct route).
@@ -151,6 +151,14 @@ TIMEPOINT_RANK = {"end_of_supplementation": 0, None: 1, "interim": 2,
                   "after_supplementation_stopped": 3}
 
 
+def excluded_measure(claim: dict, rules: list[dict] | None) -> dict | None:
+    """The first `exclude_measures` rule of the outcome whose `match` fits the
+    claim's outcome_raw + measure: a measure the protocol leaves out of this
+    outcome, whatever S6B mapped (founder rule 2026-10-28). None otherwise."""
+    text = f"{claim.get('outcome_raw') or ''} || {claim.get('measure') or ''}".lower()
+    return next((r for r in rules or [] if re.search(r["match"], text)), None)
+
+
 def selection_key(effect: "StudyEffect") -> tuple:
     return (effect.measure_rank, effect.timepoint_rank, not effect.primary,
             ROUTE_RANK.get(effect.route, 9), effect.claim_index)
@@ -251,12 +259,14 @@ def _pool(effects: list[float], variances: list[float]) -> dict:
 
 def _study_effects(item: dict, product: dict, polarity: dict,
                    hierarchy: dict | None = None,
-                   direction: dict | None = None) -> tuple[dict[str, StudyEffect], dict]:
+                   direction: dict | None = None,
+                   exclude: dict | None = None) -> tuple[dict[str, StudyEffect], dict]:
     """Best effect per outcome for one study, plus per-outcome refusal reasons."""
     ext, record = item["extraction"], item.get("record") or {}
     refusals: dict[str, str] = {}
     s3 = ext.get("S3") if isinstance(ext.get("S3"), dict) else {}
-    scope = _ineligible({"S3": s3, "record": record})
+    s7 = ext.get("S7") if isinstance(ext.get("S7"), dict) else {}
+    scope = _ineligible({"S3": s3, "S7": s7, "record": record})
     pop = vocab.pop_match(s3.get("population_axes") or {}, product.get("population") or {})
     best: dict[str, StudyEffect] = {}
     for i, o in enumerate(ext.get("outcomes") or []):
@@ -271,10 +281,16 @@ def _study_effects(item: dict, product: dict, polarity: dict,
             continue
         # S5N's claim when it read the numbers (pipeline/review.numbers_claim).
         claim = nums.get("claim") or o.get("claim") or {}
-        if scope and not (scope == "no_isolated_ingredient_arm" and matched_addon_claim(claim, s3)):
+        # S3's arm facts decide the contrast when both arms resolve (founder
+        # rule 2026-10-28, eligibility.with_s3_contrast); flagged when that
+        # overrides S5N's label.
+        s5n_contrast = claim.get("contrast")
+        claim, _ = with_s3_contrast(claim, s3)
+        n_contrast = ("contrast_from_s3",) if claim.get("contrast") != s5n_contrast else ()
+        if scope and not (scope == "no_isolated_ingredient_arm" and matched_addon_claim(claim, s3, s7)):
             refusals[oid] = f"study: {scope}"
             continue
-        if unmatched_claim_arms(claim, s3):
+        if unmatched_claim_arms(claim, s3, s7):
             refusals.setdefault(oid, "arms differ in more than the ingredient (co-interventions not matched)")
             continue
         if pop == "different":
@@ -284,13 +300,17 @@ def _study_effects(item: dict, product: dict, polarity: dict,
         if review["status"] == "disagreed":
             refusals.setdefault(oid, "reviewers disagree (human adjudication)")
             continue
+        excluded = excluded_measure(claim, (exclude or {}).get(oid))
+        if excluded:
+            refusals.setdefault(oid, f"measure outside the outcome's definition ({excluded['note']})")
+            continue
         pol, rule = measure_polarity(claim, polarity.get(oid), (direction or {}).get(oid))
         if rule and pol is None:
             refusals.setdefault(oid, f"direction of this measure is unclear ({rule.get('note')})")
             continue
         n_rule = (f"polarity_from_measure:{pol}",) if rule else ()
         verified, n_flags = fill_arm_n(claim, review["verified"], s3.get("arms"))
-        n_flags = tuple(n_flags) + n_rule
+        n_flags = tuple(n_flags) + n_rule + n_contrast
         eff, why = effect_from_claim(claim, verified, polarity=pol,
                                      abs_only=nums.get("abs_only") or (),
                                      checks=nums.get("verified") or {})
@@ -319,7 +339,6 @@ def _study_effects(item: dict, product: dict, polarity: dict,
             # as low risk of bias (RoB 2 domain 1); GRADE's rule does the rest.
             # A reported flaw, so CONCERNS (founder 2026-10-20).
             rob = "concerns"
-        s7 = ext.get("S7") if isinstance(ext.get("S7"), dict) else {}
         form_id = study_form(s7, claim)
         dose = trial_dose(product.get("ingredient") or "", s7, s3, claim)
         cand = StudyEffect(item["id"], eff.route, eff, bool(claim.get("is_primary_outcome")), i,
@@ -348,13 +367,14 @@ def pool_outcomes(items: list[dict], product: dict) -> dict[str, OutcomePool]:
     polarity = {o["id"]: o.get("polarity") for o in outcomes}
     hierarchy = {o["id"]: o.get("measure_hierarchy") for o in outcomes}
     direction = {o["id"]: o.get("measure_direction") for o in outcomes}
+    exclude = {o["id"]: o.get("exclude_measures") for o in outcomes}
     per_outcome: dict[str, list[StudyEffect]] = collections.defaultdict(list)
     refused: dict[str, collections.Counter] = collections.defaultdict(collections.Counter)
     for item in items:
         ext = item.get("extraction") or {}
         if ext.get("_skipped"):
             continue
-        best, refusals = _study_effects(item, product, polarity, hierarchy, direction)
+        best, refusals = _study_effects(item, product, polarity, hierarchy, direction, exclude)
         for oid, se in best.items():
             per_outcome[oid].append(se)
         for oid, why in refusals.items():

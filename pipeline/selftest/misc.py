@@ -204,6 +204,10 @@ def run(check):
                      "Level in Patients", "abstract": "CPK levels..."}
     check("phosphokinase counts as the marker too",
           _rc(_cpk, "creatine")[0] is False)
+    check("'creatine clearance' (a creatinine-clearance misprint) is a marker (ARISTOTLE)",
+          _rc({"title": "Patients With Atrial Fibrillation Taking NSAIDs and Oral Anticoagulants",
+               "abstract": "patients without severe renal (creatine clearance <=30 mL/min) disease; oral apixaban"},
+              "creatine")[0] is False)
     check("a topical cream is not evidence about oral supplementation",
           _rc({"title": "Repeated Application of a Novel Creatine Cream Improves "
                         "Muscular Peak and Average Power",

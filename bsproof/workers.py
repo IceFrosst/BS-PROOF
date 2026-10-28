@@ -117,6 +117,7 @@ def _second_review(out: dict, record: dict, text: str, sections: dict | None,
     """Send reviewer 2 every MAPPED claim whose span-verified numbers make an effect, in one
     call per study, and attach the reconciliation to each outcome's numbers_v2.
     Claims whose verified numbers make no effect are not sent."""
+    from pipeline.eligibility import with_s3_contrast
     from pipeline.review import effect_route, reconcile_study
     outcomes = out.get("outcomes") or []
     polarity = {o["id"]: o.get("polarity") for o in vocab.load("outcome")["outcomes"]}
@@ -124,9 +125,11 @@ def _second_review(out: dict, record: dict, text: str, sections: dict | None,
     # refuse anyway has nothing worth a second reading (and costs a call).
     from pipeline.span_check import fill_arm_n
     s3_arms = (s3_facts or {}).get("arms") if isinstance(s3_facts, dict) else None
+    # The contrast S3's arm facts decide, as the pool will (founder rule
+    # 2026-10-28): a claim S5N mislabelled is still worth a second reading.
     sent = {i for i, o in enumerate(outcomes)
             if not o.get("discarded") and effect_route(
-                _claim_for_numbers(o),
+                with_s3_contrast(_claim_for_numbers(o), {"arms": s3_arms or []})[0],
                 fill_arm_n(_claim_for_numbers(o), (o.get("numbers_v2") or {}).get("verified") or {},
                            s3_arms)[0],
                 polarity.get(o.get("outcome_vocab_id")))}

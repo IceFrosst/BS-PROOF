@@ -279,18 +279,15 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
 - **Method:** evidence method v2 is the pipeline's only method; v14 retired.
   `evidence_v2.STATUS = "shadow"` until validation passes. `main` and the live
   site still run v14 until the simplification branches merge.
-- **Latest v2 run** `20261028_082425` (v1.41: S4, S5, S5N, S5R; 138/139
-  studies): strength **k = 10, D, Moderate** (+0.11 [-0.09, +0.30]), coverage
-  34 % (not testable); lean mass k = 10 **D, Moderate**, passes (59 %). Open
-  (`docs/DECISIONS.md`): carriers / counter-ions wrongly refused by the
-  claim-level arm check (fixing it: strength k = 13, coverage 42 %), the
-  contrast label from S3, the figure route. Next: those, then the second
-  spot audit (seed 2) and the stability test.
-- **Known v2 problems:** the work list in `docs/DECISIONS.md`. Done: items
-  1 (imprecision scales with information size), 2, 3 (offline part), 6, 10
-  (prompts trimmed); decided: 5 (healthy
-  adults only), 7 (second reviewer on). Open: coverage, stability,
-  negative-control benchmarks.
+- **Latest v2 run** `20261028_082425` (v1.41; 138/139 studies). Re-pooled
+  with the 2026-10-28 fixes and without the 41 studies that had been read from
+  abstracts: strength **k = 13, D, Moderate** (+0.13 [-0.04, +0.30]), coverage
+  52 %, benchmark **passes**; lean mass k = 11 **D, Moderate**, passes (79 %).
+  The stored report predates the fixes. Next run settles the contrast-label
+  reviews and builds nothing new unless the figure route is in.
+- **Known v2 problems:** the work list in `docs/DECISIONS.md` (2026-10-28).
+  Open: the figure route, the second spot audit, stability, negative-control
+  benchmarks.
 - **Working baseline: `Jans_attempt`, not `main`** (founder, 2026-10-15).
   `origin/main` has diverged (68 commits since `d9cedc4`, 2026-09-22: live
   research worker, live result card, research-jobs SQL, scan-history UI,

@@ -9,25 +9,13 @@ the founder decides. When an item is decided, move it to "Decided" with its
 date; delete anything that no longer applies. Dated history goes to
 `docs/history/project-log.md`, not here.
 
-Last swept: 2026-10-26.
+Last swept: 2026-10-28.
 
 ---
 
 ## Open
 
-1. **Carriers and counter-ions are not co-interventions.** S3 lists a creatine
-   arm's vehicle (dextrose, maltodextrin) and the form's own counter-ion
-   (nitrate) as co-interventions, and not the placebo's identical vehicle, so
-   `unmatched_claim_arms` refuses matched trials. Proposal: a vocabulary of
-   inert carriers plus each form's counter-ion, ignored when comparing arms
-   (deterministic, re-pool only). Measured on run 20261028_082425: strength
-   k 10 -> 13 (D, +0.11 -> +0.13, coverage 34 -> 42 %), lean mass k 10 -> 11.
-2. **The contrast label from S3's arm facts.** The v1.41 wording did not stop
-   S5N labelling add-on controls `vs_ingredient_arm` (21 -> 20). Proposal: when
-   both claim arms resolve to S3 arms with presence yes / no, the contrast is
-   vs_ingredient_free; S5N's label only when they do not resolve. Changes no
-   pooled effect today; it stops a silent loss.
-3. **A figure route?** Pilot 2026-10-26 (`scripts/experiments/figure_pilot.py`,
+1. **A figure route?** Pilot 2026-10-26 (`scripts/experiments/figure_pilot.py`,
    19 panels / 10 papers, truth = the same paper's printed number; project
    log). Plotted means read well: median error 0.7 % of the y-axis (0.03 SD),
    the error it puts into a between-arm SMD median 0.01-0.04, 90th percentile
@@ -41,28 +29,38 @@ Last swept: 2026-10-26.
    individual points. Measure the gain on the trials refused as figure-only
    before building.
 
-## v2 work list (agreed 2026-10-15, after the simplification)
+## Work list (2026-10-28; replaces the 2026-10-15 list, whose items are done or decided below)
 
-Ordered by how much each distorts the grade (10 is clean-up, not accuracy).
-Items 1, 5 and 7 were decided 2026-10-16 (below); 2, 3 (offline part), 6
-and 10 are done.
+Status after run 20261028_082425 and the founder rule of 2026-10-28 (Claude's
+recommendation is the decision when it is the most rigorous option, ties to
+the cheaper one). "Next run" = settled by the next extraction run.
 
-| # | Problem | Proposed fix |
+| # | Item | Status |
 |---|---|---|
-| 1 | One small trial earns an A | **Done 2026-10-16:** imprecision −2 below 200 participants, −3 below 100 (decided below) |
-| 2 | A failed table fetch during the span check silently refuses a trial: the stored creatine run says strength k = 7 "I", a cache-only replay of the same extraction k = 9 "C−" | **Done 2026-10-16:** fetches retried; a failure is marked `table_fetch_failed` with its own refusal reason; no report while one is unresolved |
-| 3 | The largest refusal is "no verified effect estimate and incomplete arm statistics" (64 trial–outcome pairs in the replayed v1.36 creatine run) | **Done 2026-10-16 (offline part).** Breakdown: 40 have no outcome values in the text read (figures / untabled text — not recoverable from text), 12 post values without an SD, 5 only a p-value, 5 numbers not verified, 2 other. Fixed: tables whose outcome label is a section-header row (4 trials recovered; strength coverage 38 → 42 %, lean mass 59 → 65 %). The refusal now names the specific gap. Left: the missing SDs (item 10's prompt bump) and open decision 1 (p-value effects) |
-| 4 | Benchmark coverage too low: strength 42 % (10 pooled of 24 trials read and in scope; 7 figure-only, 4 no SD, 2 incomplete, 1 not a placebo contrast) | **Decided 2026-10-17: no abstracts, no outside sources.** Coverage already counts only trials we read, so abstract-only trials never lowered it. Run 20261017_222637 (v1.38): the SD fix recovered 2 of the 3; strength 57 % and lean mass 69 %, both PASS (that run's S5 saw a 2,225-char text slice, fixed 2026-10-18; re-run pending). Open: a reliable way to read figure-only results from the paper itself |
-| 5 | Off-target populations excluded (41 refusals) | **Decided 2026-10-16: keep excluding** for healthy-adult products; revisit later as separate populations |
-| 6 | v14's claim-level arm check (`_resolve_claim_arms`) never ran in v2 | **Done 2026-10-16: not ported.** It would refuse 9 of 49 pooled effects, all computed from both arms' own statistics against an ingredient-free control; its objections concern the test the paper reported (within-group, time main effect, omnibus) or a bookkeeping field v2 does not use. Porting it would drop 6 effects that point against creatine |
-| 7 | Every pooled number is single-read | **Decided 2026-10-16:** S5R on by default; takes effect at the next extraction run (step 3) |
-| 8 | Run-to-run stability never measured (outcome mapping moves ±2 trials per outcome) | `scripts/experiments/extraction_stability.py`, run solo |
-| 9 | The benchmark has no negative controls | Each new ingredient adds a "does not work" or "harms" row (METHOD §16) |
-| 10 | The extraction prompts still carry v14 wording and ask for fields only v14 read; S5N leaves the arm SD empty when it reads endpoint / post values | **Done 2026-10-16 (prompt v1.37; v1.38 after the smoke test), takes effect at the next extraction run.** S5 lists outcomes only (identity, no numbers: 440 → 108 prompt lines; the extraction prompts 1 091 → 739 lines in all); S5N is the only number reader and is told that endpoint means are the post values with the SD beside them (measured: 35 claims had post values and no mean/SD, 12 refused); S3 drops `self_declared_underpowered`, two legacy arm fields and a duplicate deficiency field; S7 is per arm only; S4, S6B, S8 lose unused fields and v14 wording. Re-pooling the stored v1.36 extractions with the new code: evidence block byte-identical |
-
-When v2 validates (METHOD §16): connect `lib/analyze/grade-v2.ts` in
-`lib/analyze/scan.ts`, build a grade card, remove the "not active yet" notice
-(`docs/APP.md` §4).
+| A1 | Claim-level arm check refused matched trials over a vehicle or the form's counter-ion | **Done** (Decided 2026-10-28) |
+| A2 | S5N mislabels add-on controls `vs_ingredient_arm` (prompt fix failed) | **Done**: contrast from S3 (Decided); 5 reviewer conflicts over the label and the never-reviewed claims settle at the next run |
+| A3 | Strength coverage below 50 % | **Done by C1**: 52 %, the benchmark passes |
+| A4 | Strength estimate at the low end of the published ones (+0.13 vs +0.20-0.46) | Watch: overlaps all 6, but the two largest meta-analyses only through our upper bound; the figure route (open 1) may move it |
+| A5 | Interaction d's refused (8), arm data figure-only | Open 1 (figure route) |
+| A6 | A sport-skill count ("successful kicks") mapped to muscle power | **Done**: `exclude_measures` |
+| A7 | The RA trial's S5N call fails every run (SE = 0 rejected; answer as a string) | Off-target, harmless; fix if disease populations are graded |
+| A8 | Reported mean differences that are interaction MDs | Checked: none pooled |
+| B1 | Second spot audit (seed 2) | After the next run |
+| B2 | Stability test | After the next run; script now full-text-only |
+| B3 | Negative-control benchmark rows | With the next ingredient |
+| C1 | **41 of 138 studies extracted from abstracts** under `--full-text-only` | **Done**: no text, skipped (Decided); takes effect at the next run, fewer calls |
+| C2 | ARISTOTLE (atrial fibrillation) passed the relevance gate on "creatine clearance" | **Done**: a marker mention |
+| C3 | Repository landing pages counted as full text (`doi:101113ep087886`) | Open: no rigorous detector yet; produced no pooled effect |
+| C4 | Papers whose figure, table and text disagree | Recorded; counted as paper errors in audits |
+| C5 | p-values from tests that do not convert (7) | Refused with reason; no route planned |
+| C6 | S4's "double-blind asserted, no placebo described -> 0" untested | Check in B1 |
+| D1 | Figure route | Open 1 below |
+| D2 | High-resolution figures, individual-point plots | After D1 |
+| D3 | "Independently funded only" sensitivity analysis (METHOD §15) | Planned |
+| D4 | Grades for other populations | Later |
+| D5 | Next ingredient: vitamin C (MCID table to approve, negative controls) | After validation |
+| E1 | App: connect `grade-v2.ts`, grade card, remove the notice | When v2 validates (METHOD §16) |
+| E2 | Phone / Supabase / Google verification; the big merge | Founder-scheduled |
 
 ## Decided
 
@@ -70,6 +68,10 @@ All accepted by the founder **"for now, may revisit"** unless stated.
 
 | Date | Decision |
 |---|---|
+| 2026-10-28 | **Under `--full-text-only` an abstract is never extracted** (`run.corpus._best_text` returns no text for an abstract-only tier; the worker skips it as "no text"). Measured on run 20261028_082425 (cache-only tiers): 41 of 138 studies had been extracted from abstracts (36 with claims; 1 pooled effect, exercise recovery); without them strength coverage 42 -> 52 % and the strength benchmark PASSES (6/6, width x0.9), lean mass 79 %. Implements the 2026-10-17 decision. |
+| 2026-10-28 | **Vehicles and counter-ions are not co-interventions** (Claude per founder rule): a bare carrier (`vocab/cointervention.json`) on every ingredient arm is the vehicle; the form's counter-ion (`vocab/form.json` `counter_ion`, via S7) is the form. A carrier only some ingredient arms get stays a co-intervention. Measured: 3 matched trials recovered (dextrose, maltodextrin, creatine nitrate); strength k 10 -> 13. |
+| 2026-10-28 | **The contrast label comes from S3's arm facts** when both claim arms resolve (Claude per founder rule; `eligibility.with_s3_contrast`, also in `review.reconcile` and the S5R selection). Measured: the v1.41 wording left 20 mislabels. |
+| 2026-10-28 | **Excluded measures per outcome** (`exclude_measures`; muscle power: sport-skill counts) and **"creatine clearance" is a marker mention** in the relevance gate (Claude per founder rule). |
 | 2026-10-26 | **Timepoint: the end of the randomised supplementation period** (S5 `timepoint_role`, v1.41; `pool.TIMEPOINT_RANK` after the measure hierarchy: end, unstated, interim, after stopping). Measured case: `doi:103390nu17061081` was pooled at its 7-day wash-in. |
 | 2026-10-26 | **A reported SMD is pooled only as a between-arm contrast** (S5N / S5R `smd_basis`, both readers must confirm). Measured on run 20261026_034529: the two pooled reported SMDs were both interaction d's from `doi:103390nu12061880` (leg press strength d = 0.33, endurance d = 0.95); refusing them takes strength C → **D Moderate** (k = 11 → 10, +0.19 → +0.14), the trial's arm data being figure-only. |
 | 2026-10-26 | **v1.41 extraction bundle** (one re-run): S4 item 2 null for a placebo with blinding unmentioned, item 7 from stated counts only; S5 `timepoint_role`; S5N / S5R contrast wording, `sd_pre_*`, `smd_basis`. |

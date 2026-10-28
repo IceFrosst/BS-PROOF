@@ -94,7 +94,11 @@ def relevance_check(record: dict, ingredient: str) -> tuple[bool, str]:
     # marker is there no supplement in the paper at all. Generic across
     # ingredients -- "magnesium kinase" does not exist, so other ingredients
     # simply never trigger it.
-    _marker = re.compile(rf"{re.escape(ingredient)}\s+(kinase|phosphokinase)", re.I)
+    # "clearance" added 2026-10-28 (founder rule, Claude): the ARISTOTLE
+    # anticoagulation trial (registry:nct00412984) reached extraction through
+    # one mention, "creatine clearance" (a misprint of creatinine clearance,
+    # the renal marker).
+    _marker = re.compile(rf"{re.escape(ingredient)}\s+(kinase|phosphokinase|clearance)", re.I)
     blob_ta = f"{title_l} {abs_l}"
     n_mentions = len(re.findall(re.escape(ingredient), blob_ta))
     n_marker = len(_marker.findall(blob_ta))

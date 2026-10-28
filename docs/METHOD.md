@@ -70,7 +70,10 @@ Per ingredient, from free sources only, all disk-cached so a run is replayable
   Intervention scope is what v2 runs have used.
 - **Full text, in order:** Europe PMC open access, then a green OA copy
   (OpenAlex / Unpaywall, PDF via `pypdf`), else the abstract only.
-  `--full-text-only` extracts only studies with readable full text.
+  `--full-text-only` extracts only studies with readable full text: a study
+  whose open-access copy cannot be fetched gets no text and is skipped as
+  "no text", never extracted from its abstract (`run.corpus._best_text`;
+  measured 2026-10-28: 41 of 138 studies had been extracted from abstracts).
 - **Relevance gate** (`pipeline/relevance.py`, before any model call): the
   ingredient must appear as an oral / dietary intervention. Marker-only mentions
   (creatine kinase), topical and IV routes are skipped.
@@ -106,7 +109,9 @@ vocabulary is discarded, never guessed.
   hierarchy** (which measure wins when a trial reports several, §11) and
   **MCID** (§14). An arm-statistics effect whose sign disagrees with the arm
   S5N says the result favours is flagged `sign_disagrees_with_reader`, never
-  refused.
+  refused. Optional **excluded measures** (`exclude_measures`, founder rule
+  2026-10-28): a measure the protocol leaves out of the outcome whatever S6B
+  mapped (a sport-skill count is not muscle power), refused with its reason.
 - **Forms** (`vocab/form.json`): per ingredient, with a salt family and molar
   masses. Form match is `exact` / `salt_family` / `different` / `unspecified`.
 - **Dose conversion**: the label's compound dose → elemental / active-moiety mg
@@ -180,8 +185,18 @@ CLAUDE.md invariant 7):
   `unmatched_claim_arms`, founder 2026-10-26). The study-level rule above reads
   S3's `ingredient_isolated`, which is "yes" when any pair isolates the
   ingredient, so this catches the other pairs of a multi-arm trial
-  (A + X + ingredient vs no treatment beside A + X + ingredient vs A + X);
-- the claim is not a contrast against an ingredient-free control (§10).
+  (A + X + ingredient vs no treatment beside A + X + ingredient vs A + X).
+  What is part of the preparation is not a co-intervention (founder rule
+  2026-10-28): a carrier (`vocab/cointervention.json`: dextrose,
+  maltodextrin, cellulose ...) listed on every ingredient arm of the trial is
+  the vehicle (a carrier only some ingredient arms get is a designed factor
+  and counts), and the counter-ion of the arm's own form (`vocab/form.json`
+  `counter_ion`, nitrate for creatine nitrate, read from S7) is part of the
+  form;
+- the claim is not a contrast against an ingredient-free control (§10). The
+  contrast comes from S3's arm facts when both claim arms resolve
+  (`eligibility.with_s3_contrast`, founder rule 2026-10-28); S5N's label only
+  when they do not, and a reader's label then is not a reviewer conflict.
 
 Unknown always means keep. v14's "authors declare it underpowered" refusal is
 dropped: pooling already gives a tiny trial a tiny weight.

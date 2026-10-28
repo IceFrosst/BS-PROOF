@@ -140,7 +140,7 @@ def run(label: str, n: int, fake: bool, resume: bool, in_flight: int = 5) -> int
         if rec is None:
             result = {"error": "record not found in Europe PMC"}
         else:
-            ext = workers.extract_study(rec, _best_text(rec), call=call, outcome_allowlist=SHOWCASE,
+            ext = workers.extract_study(rec, _best_text(rec, full_text_only=True), call=call, outcome_allowlist=SHOWCASE,
                                         sections=_sections(rec))
             result = {"record": rec, "extraction": ext}
             if ext.get("_quota_exhausted"):

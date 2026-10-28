@@ -8,7 +8,8 @@
     "conversion": "The MODEL never does the elemental arithmetic. S7 reports the compound dose and the form id; pipeline/vocab.py converts using molar masses recorded here. Arithmetic stays deterministic (invariant 1) and auditable.",
     "conversion_safe": "false means a hydrate of this salt is common in supplements AND the hydration state is routinely unstated. The ambiguity reaches 2.1x for chloride and 2.0x for sulfate. When false there is no single defensible elemental number, so elemental_dose_mg returns null (invariant 5).",
     "hydrate_molar_mass_g_mol": "Where the common hydrate is known, the ambiguity is BOUNDED rather than unknown: the true elemental dose lies between the hydrate and anhydrous conversions. elemental_dose_range_mg() returns that interval, which is usually narrow enough to land in one dose band anyway. Discarding a study we can bound would be over-caution, not caution.",
-    "standardisation": "Botanical withanolide percentages are LABEL CLAIMS that vary by batch. They are recorded for matching and are never used in arithmetic."
+    "standardisation": "Botanical withanolide percentages are LABEL CLAIMS that vary by batch. They are recorded for matching and are never used in arithmetic.",
+    "counter_ion": "A salt or ester form's partner (nitrate in creatine nitrate) is part of the FORM, not a co-intervention: an arm given that form does not differ from placebo by it (form indirectness covers it). Founder rule 2026-10-28 (Claude); measured on run 20261028_082425: creatine nitrate trials were refused as 'arms differ' over 'nitrate'."
   },
   "atomic_masses_g_mol": {
     "Mg": 24.305
@@ -249,6 +250,11 @@
           "conversion_safe": true,
           "aliases": [
             "creatine HCl"
+          ],
+          "counter_ion": [
+            "hydrochloride",
+            "hcl",
+            "hydrochloric acid"
           ]
         },
         {
@@ -260,7 +266,11 @@
           "active_mass_g_mol": null,
           "conversion_safe": false,
           "hydration_note": "Sold at several creatine:citrate ratios; stoichiometry usually unstated.",
-          "aliases": []
+          "aliases": [],
+          "counter_ion": [
+            "citrate",
+            "citric acid"
+          ]
         },
         {
           "id": "creatine_malate",
@@ -273,6 +283,10 @@
           "hydration_note": "Di- and tri-creatine malate both sold.",
           "aliases": [
             "tri-creatine malate"
+          ],
+          "counter_ion": [
+            "malate",
+            "malic acid"
           ]
         },
         {
@@ -283,7 +297,10 @@
           "molar_mass_g_mol": null,
           "active_mass_g_mol": null,
           "conversion_safe": false,
-          "aliases": []
+          "aliases": [],
+          "counter_ion": [
+            "nitrate"
+          ]
         },
         {
           "id": "creatine_ethyl_ester",
@@ -296,6 +313,9 @@
           "hydration_note": "Usually sold as the HCl salt; which is dosed is often unstated.",
           "aliases": [
             "CEE"
+          ],
+          "counter_ion": [
+            "ethyl ester"
           ]
         },
         {

@@ -24,7 +24,46 @@ def _normalise_cointerventions(values) -> frozenset[str] | None:
     return frozenset(_arm_norm(v) for v in values if _arm_norm(v))
 
 
-def _matched_factorial_background(s3: dict | None, ingredient: str) -> bool:
+def _counter_ions() -> dict[str, frozenset[str]]:
+    """{form id: its counter-ion names} from vocab/form.json (deterministic)."""
+    from pipeline import vocab
+    return {f["id"]: frozenset(_arm_norm(c) for c in f.get("counter_ion") or [])
+            for ing in vocab.load("form")["ingredients"].values() for f in ing.get("forms") or []}
+
+
+def _arm_cointerventions(arm: dict, s3: dict | None, s7: dict | None = None) -> frozenset[str] | None:
+    """The arm's co-interventions as S3 lists them, WITHOUT what is part of the
+    preparation (founder rule 2026-10-28, vocab/cointervention.json and
+    vocab/form.json `counter_ion`):
+      - a carrier (bare name: dextrose, maltodextrin, cellulose ...) listed on
+        EVERY administered ingredient arm: the vehicle. A carrier only some
+        ingredient arms get (creatine vs creatine + glucose) is a designed
+        factor and stays.
+      - the counter-ion of the arm's own form, from S7 by arm label (nitrate
+        for creatine nitrate): part of the form, judged as form indirectness.
+    MEASURED on run 20261028_082425: doi:103390nu10111640 (creatine + 5 g
+    dextrose; the placebo got the same dextrose, which S3 did not list),
+    doi:101007s1260301811488 (maltodextrin; the placebo IS maltodextrin) and
+    doi:103390nu9121359 (creatine nitrate) were refused as 'arms differ'.
+    None (unknown) stays None."""
+    from pipeline import vocab
+    own = _normalise_cointerventions(arm.get("active_cointerventions"))
+    if own is None:
+        return None
+    carriers = frozenset(_arm_norm(c) for c in vocab.load("cointervention")["carriers"])
+    ingredient_arms = [a for a in (s3 or {}).get("arms") or [] if isinstance(a, dict)
+                       and a.get("role", "administered") == "administered"
+                       and a.get("target_ingredient_presence") == "yes"]
+    lists = [_normalise_cointerventions(a.get("active_cointerventions")) or frozenset() for a in ingredient_arms]
+    vehicle = frozenset.intersection(*lists) & carriers if lists else frozenset()
+    ions: frozenset[str] = frozenset()
+    for row in (s7 or {}).get("arms") or []:
+        if isinstance(row, dict) and _arm_norm(row.get("label")) == _arm_norm(arm.get("label")):
+            ions = _counter_ions().get(row.get("form_vocab_id"), frozenset())
+    return own - vehicle - ions
+
+
+def _matched_factorial_background(s3: dict | None, ingredient: str, s7: dict | None = None) -> bool:
     """True only for an explicitly matched A+B versus B factorial contrast."""
     if not isinstance(s3, dict) or not isinstance(s3.get("arms"), list):
         return False
@@ -34,8 +73,8 @@ def _matched_factorial_background(s3: dict | None, ingredient: str) -> bool:
     controls = [a for a in arms if a.get("target_ingredient_presence") == "no"]
     if len(targets) != 1 or len(controls) != 1:
         return False
-    target_co = _normalise_cointerventions(targets[0].get("active_cointerventions"))
-    control_co = _normalise_cointerventions(controls[0].get("active_cointerventions"))
+    target_co = _arm_cointerventions(targets[0], s3, s7)
+    control_co = _arm_cointerventions(controls[0], s3, s7)
     return target_co is not None and control_co is not None and target_co == control_co
 
 
@@ -54,7 +93,7 @@ def _claim_arm_pair(claim: dict, s3: dict | None) -> tuple[dict | None, dict | N
     return target, control
 
 
-def matched_addon_claim(claim: dict, s3: dict | None) -> bool:
+def matched_addon_claim(claim: dict, s3: dict | None, s7: dict | None = None) -> bool:
     """True when THIS claim's two arms are an explicitly matched add-on pair:
     the claim's ingredient arm and control arm each resolve (exact label,
     unique) to an administered S3 arm, the first with the ingredient and the
@@ -69,12 +108,11 @@ def matched_addon_claim(claim: dict, s3: dict | None) -> bool:
         return False
     if target.get("target_ingredient_presence") != "yes" or control.get("target_ingredient_presence") != "no":
         return False
-    t_co = _normalise_cointerventions(target.get("active_cointerventions"))
-    c_co = _normalise_cointerventions(control.get("active_cointerventions"))
+    t_co, c_co = _arm_cointerventions(target, s3, s7), _arm_cointerventions(control, s3, s7)
     return t_co is not None and c_co is not None and t_co == c_co
 
 
-def unmatched_claim_arms(claim: dict, s3: dict | None) -> bool:
+def unmatched_claim_arms(claim: dict, s3: dict | None, s7: dict | None = None) -> bool:
     """True when THIS claim's two arms are known to differ in more than the
     ingredient: both resolve (exact label, unique) to administered S3 arms and
     both list their co-interventions, and the lists differ. The study-level
@@ -88,9 +126,28 @@ def unmatched_claim_arms(claim: dict, s3: dict | None) -> bool:
     target, control = _claim_arm_pair(claim, s3)
     if not target:
         return False
-    t_co = _normalise_cointerventions(target.get("active_cointerventions"))
-    c_co = _normalise_cointerventions(control.get("active_cointerventions"))
+    t_co, c_co = _arm_cointerventions(target, s3, s7), _arm_cointerventions(control, s3, s7)
     return t_co is not None and c_co is not None and t_co != c_co
+
+
+def with_s3_contrast(claim: dict, s3: dict | None) -> tuple[dict, bool]:
+    """(claim, decided): the claim with `contrast` set from S3's arm facts when
+    both of its arms resolve to administered S3 arms -- ingredient present in
+    the first and absent in the second is vs_ingredient_free, present in both is
+    vs_ingredient_arm -- and `decided` True; otherwise the claim unchanged
+    (S5N's label stands) and False. S3 is the study's arm reader; the arm's
+    presence of the target ingredient is its fact, not S5N's. Founder rule
+    2026-10-28 (Claude): MEASURED, S5N labelled add-on controls (creatine + X
+    vs X) and once "CREATINE vs PLACEBO" vs_ingredient_arm on 21 claims at
+    v1.40 and 20 at v1.41, after a prompt fix aimed at exactly that."""
+    target, control = _claim_arm_pair(claim, s3)
+    if not target:
+        return claim, False
+    t, c = target.get("target_ingredient_presence"), control.get("target_ingredient_presence")
+    contrast = {("yes", "no"): "vs_ingredient_free", ("yes", "yes"): "vs_ingredient_arm"}.get((t, c))
+    if contrast is None:
+        return claim, False
+    return ({**claim, "contrast": contrast} if claim.get("contrast") != contrast else claim), True
 
 
 def _ineligible(ext: dict) -> str | None:
@@ -152,6 +209,6 @@ def _ineligible(ext: dict) -> str | None:
     # benefit is dropped too. "yes"/unknown/None/absent all KEEP -- only S3's
     # explicit "no" (no arm isolates the ingredient) refuses.
     if (s3.get("ingredient_isolated") == "no" and
-            not _matched_factorial_background(s3, ext.get("record", {}).get("ingredient", ""))):
+            not _matched_factorial_background(s3, ext.get("record", {}).get("ingredient", ""), ext.get("S7"))):
         return "no_isolated_ingredient_arm"
     return None

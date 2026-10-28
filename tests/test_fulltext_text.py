@@ -74,5 +74,19 @@ class PdfServedAsHtml(unittest.TestCase):
             self.assertTrue(fulltext.fetch_html_text("https://repo.example/handle/4").startswith("Methods text."))
 
 
+class FullTextOnly(unittest.TestCase):
+    """Under --full-text-only an abstract is never extracted (founder
+    2026-10-17); measured 2026-10-28: the tier was being discarded."""
+    def test_an_abstract_gets_no_text_under_full_text_only(self):
+        from bsproof.run.corpus import _best_text
+        with patch.object(fulltext, "best_text", return_value=("an abstract " * 50, "abstract_only")):
+            self.assertEqual(_best_text({"title": "t"}, full_text_only=True), "")
+            self.assertTrue(_best_text({"title": "t"}).startswith("an abstract"))
+        with patch.object(fulltext, "best_text", return_value=(PAPER, "full_text")):
+            self.assertEqual(_best_text({"title": "t"}, full_text_only=True), PAPER)
+        with patch.object(fulltext, "best_text", side_effect=RuntimeError("fetch failed")):
+            self.assertEqual(_best_text({"title": "t", "abstract": "x"}, full_text_only=True), "")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1,0 +1,31 @@
+{
+  "vocab": "cointervention",
+  "version": "v1",
+  "status": "Founder rule 2026-10-28 (Claude). See pipeline/eligibility.py.",
+  "policy": {
+    "carriers": "An inert vehicle the supplement is given in (a sugar, starch, cellulose, water, juice, flavouring, capsule) is not a co-intervention WHEN every administered ingredient arm of the trial gets it: it is the preparation, and a placebo is by design that vehicle. When one ingredient arm gets it and another does not (creatine vs creatine + glucose), the trial varies it and it IS a co-intervention. An entry matches only as a bare name (\"glucose\"), never with a dose or other words. Measured on run 20261028_082425: 3 matched trials (dextrose, maltodextrin) were refused as 'arms differ', 2 designed creatine + glucose arms stay refused."
+  },
+  "carriers": [
+    "dextrose",
+    "glucose",
+    "maltodextrin",
+    "sucrose",
+    "fructose",
+    "starch",
+    "corn starch",
+    "cellulose",
+    "carboxymethyl cellulose",
+    "microcrystalline cellulose",
+    "rice flour",
+    "water",
+    "juice",
+    "grape juice",
+    "orange juice",
+    "flavouring",
+    "flavoring",
+    "sweetener",
+    "gelatin",
+    "gelatin capsule",
+    "capsule"
+  ]
+}

@@ -118,5 +118,40 @@ class UnmatchedClaimArms(unittest.TestCase):
                          (0, {"arms differ in more than the ingredient (co-interventions not matched)": 1}))
 
 
+class VehicleAndCounterIon(unittest.TestCase):
+    """Founder rule 2026-10-28 (Claude): a vehicle every ingredient arm gets and
+    the form's own counter-ion are the preparation, not a co-intervention."""
+    @staticmethod
+    def arms(*rows):
+        return {"arms": [{"label": l, "role": "administered", "target_ingredient_presence": p,
+                          "active_cointerventions": co} for l, p, co in rows]}
+
+    def test_a_vehicle_on_every_ingredient_arm_is_ignored(self):
+        s3 = self.arms(("Creatine", "yes", ["dextrose"]), ("Placebo", "no", []))
+        self.assertFalse(unmatched_claim_arms({"ingredient_arm": "Creatine", "control_arm": "Placebo"}, s3))
+        two = self.arms(("CR-H", "yes", ["maltodextrin"]), ("CR-M", "yes", ["maltodextrin"]), ("PLA", "no", []))
+        self.assertFalse(unmatched_claim_arms({"ingredient_arm": "CR-H", "control_arm": "PLA"}, two))
+
+    def test_a_carrier_the_trial_varies_is_a_co_intervention(self):
+        s3 = self.arms(("CR", "yes", []), ("CRCHO", "yes", ["glucose"]), ("PLA", "no", []))
+        self.assertTrue(unmatched_claim_arms({"ingredient_arm": "CRCHO", "control_arm": "PLA"}, s3))
+        self.assertFalse(unmatched_claim_arms({"ingredient_arm": "CR", "control_arm": "PLA"}, s3))
+
+    def test_only_a_bare_carrier_name_matches(self):
+        s3 = self.arms(("Creatine", "yes", ["glucose (95 g)"]), ("Placebo", "no", []))
+        self.assertTrue(unmatched_claim_arms({"ingredient_arm": "Creatine", "control_arm": "Placebo"}, s3))
+        s3 = self.arms(("Creatine", "yes", ["whey protein"]), ("Placebo", "no", []))
+        self.assertTrue(unmatched_claim_arms({"ingredient_arm": "Creatine", "control_arm": "Placebo"}, s3))
+
+    def test_the_forms_counter_ion_needs_the_form_from_s7(self):
+        s3 = self.arms(("CNH", "yes", ["nitrate"]), ("PLA", "no", []))
+        claim = {"ingredient_arm": "CNH", "control_arm": "PLA"}
+        s7 = {"arms": [{"label": "CNH", "form_vocab_id": "creatine_nitrate"}]}
+        self.assertFalse(unmatched_claim_arms(claim, s3, s7))
+        self.assertTrue(unmatched_claim_arms(claim, s3))                       # no form read: not assumed
+        mono = {"arms": [{"label": "CNH", "form_vocab_id": "creatine_monohydrate"}]}
+        self.assertTrue(unmatched_claim_arms(claim, s3, mono))                 # nitrate is not monohydrate's
+
+
 if __name__ == "__main__":
     unittest.main()
