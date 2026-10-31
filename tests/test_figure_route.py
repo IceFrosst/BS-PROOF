@@ -92,6 +92,11 @@ class Pool(unittest.TestCase):
         self.assertEqual(pooled.k, 0)
         self.assertTrue(any("readers disagree" in why for why in pooled.refused))
 
+    def test_a_claim_with_no_figure_read_says_why_not_that_a_reader_failed(self):
+        self.item["extraction"]["outcomes"][0]["figure_v1"] = {"figure": None, "reason": "no figure caption names this measure"}
+        pooled = pool_outcomes([self.item], self.product)["muscle_strength"]
+        self.assertTrue(any("figure: no figure caption names this measure" in why for why in pooled.refused))
+
 
 class Worker(unittest.TestCase):
     class Source:

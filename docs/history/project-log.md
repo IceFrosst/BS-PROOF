@@ -10,6 +10,40 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-31 — run 20261031_201501: spot audit seed 3 passes; stability run made like-for-like
+
+Run with S4R and the pooled-SE rule: 30 live calls (forecast 25), 791 cache hits,
+6 failed attempts; the only failure left is the usual S5N on the off-target
+rheumatoid-arthritis trial. Letters and estimates unchanged: strength D Moderate
+(k 14, +0.14 [-0.03, +0.30]), lean mass D Moderate (k 11, +0.12 [-0.06, +0.30]),
+power D+ Low (k 12, +0.10); benchmark passes both (6/6 and 2/2 overlap, coverage
+56 % and 79 %). The pooled-SE rule removed the two audited effects and one more
+(attention, memory, sleep duration; all k <= 2, all I).
+
+S4R read 27 studies: item 2 flaws 9 cleared, 5 kept; item 7 flaws 5 cleared, 9
+kept. Not all were read against the papers: of the two kept item 2 flaws in the
+audit sample, both are true (open-label, single-blind). One clearance is arguable:
+`nu12010193` says no substance was added to the placebo but athletes were unaware
+(S4R item 2 = 1; about 3 % of lean mass weight, no letter depends on it).
+
+Seed 3, read against each paper's text (and the figure image for the one figure
+effect): **0 consequential errors in 20, PASS.** All numbers, arms, measures,
+directions and ratings right. Harmless, not counted: `nu10111640` lists dextrose
+on the creatine arm only (both arms had it; a vehicle, exempt); `101007s1260301811488`
+prints a change of 3.5 in its table against 3.9 from pre and post (paper's own, C4).
+
+Found while reading: `baseline_imbalance` fires on trivial gaps in null trials
+and alone sets power's certainty (work list B4).
+
+Stability script: until now it rebuilt records from Europe PMC, sent no registry
+facts and offered S6B 5 outcomes, so against a production dump it would have
+measured those differences as instability. It now takes `--dump`, sends
+production's records, registry facts and full vocabulary, and `forecast` proves
+it without a model call: 25 studies, **243 calls, 243 hits on production's cache,
+0 misses**. `compare` also reports `rob.confirmed`, the rating after S4R, which is
+what the grade reads. Refusal text fixed: 68 claims with no figure read said "a
+reader returned nothing"; they now give the recorded reason (no grade moves).
+
 ## 2026-10-31 — second spot audit fails; second risk-of-bias reader built
 
 Seed 2 on run 20261031_142105, 20 effects read against the papers: every number

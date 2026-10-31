@@ -6,23 +6,28 @@ production Claude backend, each run with its OWN EMPTY cache (a shared cache
 would replay run A into run B and measure nothing), then compared field by field
 and grade by grade.
 
-    # 1. two independent runs (live model calls: run SOLO, see below)
-    .venv/bin/python scripts/experiments/extraction_stability.py run --label A
-    .venv/bin/python scripts/experiments/extraction_stability.py run --label B
-    # 2. compare (offline)
-    .venv/bin/python scripts/experiments/extraction_stability.py compare A B
-    # or, half the cost (founder rule 2026-10-28): ONE fresh run B against the
-    # production run's own SP_DUMP_EXTRACTIONS dump as A (same code and prompts)
+    # 1. what a run will cost, and that it sends production's input (no model call)
+    .venv/bin/python scripts/experiments/extraction_stability.py forecast --dump out/<dump>.json
+    # 2. ONE fresh run (live model calls: run SOLO, see below) against the
+    # production run's dump as the other reading (founder rule 2026-10-28)
+    .venv/bin/python scripts/experiments/extraction_stability.py run --label B --dump out/<dump>.json
+    # 3. compare (offline)
     .venv/bin/python scripts/experiments/extraction_stability.py compare dump:out/<dump>.json B
     # v2 poolability of ONE run, per mapped claim: which reader, effect, review
     .venv/bin/python scripts/experiments/extraction_stability.py numbers RSMOKE3
 
     # harness check with a fake model (no model calls)
-    .venv/bin/python scripts/experiments/extraction_stability.py run --label FAKE --fake --n 3
+    .venv/bin/python scripts/experiments/extraction_stability.py run --label FAKE --fake --n 3 --dump out/<dump>.json
 
-COST. ~10 model calls per study per run: the default 25 studies x 2 runs is
-~500 calls on the Claude subscription. Run it SOLO -- no other Claude session,
-team or extraction at the same time (CLAUDE.md "Extraction backends").
+The run sends what production sent: the dump's own records, the registry facts
+and the full outcome vocabulary. MEASURED 2026-10-31: until now it rebuilt the
+records from Europe PMC, sent no registry facts and offered 5 outcomes to S6B,
+so against a production dump it would have measured those differences too.
+`forecast` proves the match: every call a fresh run makes must hit production's
+cache, and the hit count is that run's cost.
+
+Run it SOLO -- no other Claude session, team or extraction at the same time
+(CLAUDE.md "Extraction backends").
 
 Outputs go to out/stability/ (gitignored): <label>.json holds every study's
 record and extraction; cache_<label>.sqlite is that run's private LLM cache.
@@ -85,19 +90,52 @@ def select_studies(n: int) -> list[dict]:
     return picked
 
 
-def rebuild_record(study: dict) -> dict | None:
-    """The retrieval-shaped record for one study, via Europe PMC (cached)."""
-    from sources import europepmc as ep
-    queries = ([f'DOI:"{study["doi"]}"'] if study.get("doi") else []) + \
-              ([f"EXT_ID:{study['pmid']} AND SRC:MED"] if study.get("pmid") else [])
-    for q in queries:
-        hits = ep.search(q, page_size=5, max_records=5)
-        if hits:
-            rec = ep.normalise(hits[0])
-            rec.update({"_canonical": study["canonical_id"], "canonical_id": study["canonical_id"],
-                        "ingredient": "creatine", "design_rank": 4})
-            return rec
-    return None
+def load_dump(path: Path) -> dict[str, dict]:
+    """{study id: record} from a production run's SP_DUMP_EXTRACTIONS file."""
+    rows = json.loads(Path(path).read_text(encoding="utf-8"))
+    return {r["record"]["canonical_id"]: r["record"] for r in rows}
+
+
+def extract(record: dict, call) -> dict:
+    """One study exactly as production extracts it (bsproof/run/extract.py)."""
+    from bsproof import workers
+    from bsproof.run.corpus import _best_text, _sections
+    from pipeline.storage import Store
+    registry = None
+    if record.get("registration_id"):
+        with Store(ROOT / "out" / "bsproof.sqlite") as store:
+            registry = store.registry_facts(record["registration_id"])
+    target = {**record, "_canonical": record["canonical_id"], "ingredient": "creatine"}
+    return workers.extract_study(target, _best_text(target, full_text_only=True), registry, call=call,
+                                 sections=_sections(target))
+
+
+def forecast(dump: Path, n: int) -> int:
+    """No model call: every call goes to production's cache, a miss is refused.
+    Hits + misses is what a fresh run costs; a miss on a call production made
+    means the run would not send production's input."""
+    import subprocess
+    from bsproof import claude_adapter as ca
+
+    class _Blocked:
+        def __getattr__(self, name):
+            return getattr(subprocess, name)
+
+        @staticmethod
+        def run(*_a, **_k):
+            raise OSError("forecast: model calls are blocked (cache miss)")
+    ca.subprocess = _Blocked()
+    records = load_dump(dump)
+    missing = [s["canonical_id"] for s in select_studies(n) if s["canonical_id"] not in records]
+    picked = [s["canonical_id"] for s in select_studies(n) if s["canonical_id"] in records]
+    for cid in picked:
+        extract(records[cid], ca.call)
+    usage = ca.USAGE.as_dict()
+    print(f"{len(picked)} studies ({len(missing)} not in the dump): {usage.get('cache_hits')} calls hit "
+          f"production's cache, {usage.get('live_calls')} missed")
+    for agent, row in sorted((usage.get("by_agent") or {}).items()):
+        print(f"  {agent:5} hits {row.get('hits', 0):4}  missed {row.get('calls', 0):3}")
+    return 0
 
 
 # ----------------------------------------------------------------------- run
@@ -105,7 +143,7 @@ def _fake_call(agent, payload, **_kw):
     return None, {"error": "fake call (harness check): no model was called"}
 
 
-def run(label: str, n: int, fake: bool, resume: bool, in_flight: int = 5) -> int:
+def run(label: str, n: int, fake: bool, resume: bool, dump: Path, in_flight: int = 5) -> int:
     OUT.mkdir(parents=True, exist_ok=True)
     cache = OUT / f"cache_{label}.sqlite"
     dest = OUT / f"{label}.json"
@@ -116,13 +154,12 @@ def run(label: str, n: int, fake: bool, resume: bool, in_flight: int = 5) -> int
     # Must be set BEFORE claude_adapter is imported: it reads CACHE_DB at import.
     os.environ["SP_LLM_CACHE"] = str(cache)
     from bsproof import claude_adapter as ca
-    from bsproof import workers
-    from bsproof.run.corpus import _best_text, _sections
     assert Path(ca.CACHE_DB) == cache, "the private cache did not take effect"
     if not fake and not ca.preflight():
         return 1
     call = _fake_call if fake else ca.call
 
+    records = load_dump(dump)
     done = json.loads(dest.read_text()) if dest.exists() else {}
     # --resume also REDOES studies with failed agents: their successful agents
     # replay from this run's own cache, so only the failures cost calls.
@@ -140,12 +177,11 @@ def run(label: str, n: int, fake: bool, resume: bool, in_flight: int = 5) -> int
         if stop.is_set():
             return
         cid = study["canonical_id"]
-        rec = rebuild_record(study)
+        rec = records.get(cid)
         if rec is None:
-            result = {"error": "record not found in Europe PMC"}
+            result = {"error": "study not in the production dump"}
         else:
-            ext = workers.extract_study(rec, _best_text(rec, full_text_only=True), call=call, outcome_allowlist=SHOWCASE,
-                                        sections=_sections(rec))
+            ext = extract(rec, call)
             result = {"record": rec, "extraction": ext}
             if ext.get("_quota_exhausted"):
                 # Stop at the FIRST limit hit and keep the previous record: a
@@ -243,6 +279,11 @@ def _effects_by_outcome(ext: dict) -> dict[str, tuple]:
     return out
 
 
+def _rob(ext: dict) -> str:
+    from pipeline.pool import confirmed_s4, rob_status
+    return rob_status(confirmed_s4(ext.get("S4"), ext.get("S4R"))[0])
+
+
 def _failed_agents(ext: dict) -> set[str]:
     return {f.get("agent") for f in ext.get("_failed") or [] if f.get("agent")}
 
@@ -255,7 +296,7 @@ def compare_runs(a: dict, b: dict) -> dict:
     ids = sorted(set(a) & set(b))
     pairs = {f"S3.{f}": [] for f in S3_FIELDS} | {f"S4.{f}": [] for f in S4_FIELDS} | \
             {f"S7.{f}": [] for f in S7_FIELDS} | {f"S8.{f}": [] for f in S8_FIELDS} | \
-            {f"claim.{f}": [] for f in CLAIM_FIELDS}
+            {f"claim.{f}": [] for f in CLAIM_FIELDS} | {"rob.confirmed": []}
     failures = {"A": collections.Counter(), "B": collections.Counter()}
     jaccard, compared, scorable = [], [], []
     effect_pairs = []
@@ -277,6 +318,9 @@ def compare_runs(a: dict, b: dict) -> dict:
                 ra, rb = _s7_view(ra), _s7_view(rb)
             for f in fields:
                 pairs[f"{agent}.{f}"].append((ra.get(f), rb.get(f)))
+        # What the grade reads: the rating after S4R (pool.confirmed_s4), not raw S4.
+        if not {"S4", "S4R"} & (fa | fb):
+            pairs["rob.confirmed"].append((_rob(ea), _rob(eb)))
         if "S5" in fa or "S5" in fb:
             continue
         ca, cb = _claims_by_outcome(ea), _claims_by_outcome(eb)
@@ -372,6 +416,10 @@ def main(argv: list[str]) -> int:
     r.add_argument("--fake", action="store_true", help="fake model: harness check only")
     r.add_argument("--resume", action="store_true")
     r.add_argument("--in-flight", type=int, default=5, help="studies extracted in parallel")
+    r.add_argument("--dump", type=Path, required=True, help="the production run's SP_DUMP_EXTRACTIONS file")
+    f = sub.add_parser("forecast")
+    f.add_argument("--dump", type=Path, required=True)
+    f.add_argument("--n", type=int, default=25)
     c = sub.add_parser("compare")
     c.add_argument("a")
     c.add_argument("b")
@@ -381,7 +429,9 @@ def main(argv: list[str]) -> int:
     nr.add_argument("--out", type=Path)
     args = ap.parse_args(argv)
     if args.cmd == "run":
-        return run(args.label, args.n, args.fake, args.resume, args.in_flight)
+        return run(args.label, args.n, args.fake, args.resume, args.dump, args.in_flight)
+    if args.cmd == "forecast":
+        return forecast(args.dump, args.n)
     def load(label: str) -> dict:
         """A stability run by label, or `dump:<path>`: a production run's
         SP_DUMP_EXTRACTIONS list, keyed like a stability run."""

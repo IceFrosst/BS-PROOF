@@ -33,15 +33,16 @@ the cheaper one). "Next run" = settled by the next extraction run.
 | A6 | A sport-skill count ("successful kicks") mapped to muscle power | **Done**: `exclude_measures` |
 | A7 | The RA trial's S5N call fails every run (SE = 0 rejected; answer as a string) | Off-target, harmless; fix if disease populations are graded |
 | A8 | Reported mean differences that are interaction MDs | Checked: none pooled |
-| B1 | Spot audit | Seed 2 failed (2026-10-31: 6 of 20, no wrong number); S4R and the pooled-SE rule built; seed 3 after the next run |
-| B2 | Stability test | After the audit passes; script now full-text-only |
+| B1 | Spot audit | **Passed**: seed 3 on run 20261031_201501, 0 consequential errors in 20 (seeds 1 and 2 failed before S4R and the pooled-SE rule) |
+| B2 | Stability test | Next, founder runs it: 243 calls (cache-only forecast); sends production's exact input since 2026-10-31 |
+| B4 | `baseline_imbalance` counts a trial as flawed whenever its baseline difference exceeds its endpoint difference, so a null trial with a trivial gap is flagged (best time 6.93 vs 6.96 s, SD about 0.23). Measured on 20261031_201501: 54 % of muscle power's weight, which alone takes power from D Moderate to D+ Low; strength and lean mass letters do not depend on it | Open: the rule predates the ANCOVA adjustment, which already corrects the difference, and RoB 2 asks only whether a gap suggests a problem with randomisation. Settle after stability; no model calls |
 | B3 | Negative-control benchmark rows | With the next ingredient |
 | C1 | **41 of 138 studies extracted from abstracts** under `--full-text-only` | **Done**: no text, skipped (Decided); takes effect at the next run, fewer calls |
 | C2 | ARISTOTLE (atrial fibrillation) passed the relevance gate on "creatine clearance" | **Done**: a marker mention |
 | C3 | Repository landing pages counted as full text (`doi:101113ep087886`) | Open: no rigorous detector yet; produced no pooled effect |
 | C4 | Papers whose figure, table and text disagree | Recorded; counted as paper errors in audits |
 | C5 | p-values from tests that do not convert (7) | Refused with reason; no route planned |
-| C6 | S4's "double-blind asserted, no placebo described -> 0" untested | Check in B1 |
+| C6 | S4's "double-blind asserted, no placebo described -> 0" | **Checked** in seed 3: the audited false zeros were all cleared by S4R; the true ones (open-label, single-blind) were kept |
 | D1 | Figure route | **Built and run** (2026-10-31): 27 claims read, 4 accepted, 3 pooled |
 | D2 | High-resolution figures, individual-point plots | Low priority: refusals were mostly unstated bars, not resolution |
 | D2b | S6B / S7 payloads carry vocabulary keys only code reads | Strip at the next planned prompt bump (it re-runs both); guarded by a test |

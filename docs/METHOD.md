@@ -402,11 +402,13 @@ What must hold before grades are shown to users:
 - **Stability**: the same studies extracted twice must give the same grades
   (`scripts/experiments/extraction_stability.py`; one fresh run with its own
   empty cache compared against the production run's dump, founder rule
-  2026-10-28: as rigorous as two fresh runs, half the calls). Pass (founder 2026-10-25):
+  2026-10-28: as rigorous as two fresh runs, half the calls; it sends
+  production's exact input, shown by a cache-only `forecast` where every call
+  hits production's cache). Pass (founder 2026-10-25):
   every outcome with k ≥ 3 in both runs has the same letter (one step allowed
   only where the letter is threshold-sensitive), pooled estimates within
   0.1 SD, and ≥ 90 % agreement on each fact that feeds a grade (arms, numbers
-  read, outcome mapping, S4 items 1, 2, 5, 7). A fact below 90 % does not fail
+  read, outcome mapping, S4 items 1, 2, 5, 7, and the rating after S4R). A fact below 90 % does not fail
   the method; it names the next prompt to fix. Not yet measured cleanly;
   two creatine runs whose S5 input differed (text slice vs full text) moved
   strength from C+ to D+ through S5 claim splitting alone (project log,
@@ -420,8 +422,8 @@ What must hold before grades are shown to users:
   hold at most 3; 4 or more fail (fix the prompt behind the most common error,
   re-audit). A reversed direction (benefit read as harm or back) fails alone.
   Results: seed 1 (2026-10-26) failed, seed 2 (2026-10-31) failed on 6 of 20
-  (no number wrong; 4 S4 false flaws, 2 SEs not per participant). Fixes built
-  (S4R, pooled-SE rule); re-audit after the next run.
+  (no number wrong; 4 S4 false flaws, 2 SEs not per participant). With S4R and
+  the pooled-SE rule, seed 3 (run 20261031_201501) passed: 0 of 20.
 
 The measurements behind the method's design are in
 `docs/history/2026-10-03-phase1-measurements.md`.

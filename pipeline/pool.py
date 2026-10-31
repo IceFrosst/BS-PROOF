@@ -337,8 +337,9 @@ def _study_effects(item: dict, product: dict, polarity: dict,
         if eff is None and o.get("figure_v1"):
             # The figure route (founder 2026-10-28, pipeline/figure.py): two
             # agreeing readings of the claim's figure, ranked last.
-            readings = o["figure_v1"].get("readings") or {}
-            fig_numbers, fig_why = figure_accept(claim, readings.get("S5F"), readings.get("S5FR"))
+            readings = o["figure_v1"].get("readings")
+            fig_numbers, fig_why = (figure_accept(claim, readings.get("S5F"), readings.get("S5FR")) if readings
+                                    else (None, f"figure: {o['figure_v1'].get('reason') or 'not read'}"))
             if fig_numbers is None:
                 why = fig_why if why == GENERIC_UNPOOLABLE else f"{why}; {fig_why}"
             else:
