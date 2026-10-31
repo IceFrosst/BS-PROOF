@@ -27,9 +27,9 @@ the cheaper one). "Next run" = settled by the next extraction run.
 |---|---|---|
 | A1 | Claim-level arm check refused matched trials over a vehicle or the form's counter-ion | **Done** (Decided 2026-10-28) |
 | A2 | S5N mislabels add-on controls `vs_ingredient_arm` (prompt fix failed) | **Done**: contrast from S3 (Decided); 5 reviewer conflicts over the label and the never-reviewed claims settle at the next run |
-| A3 | Strength coverage below 50 % | **Done by C1**: 52 %, the benchmark passes |
-| A4 | Strength estimate at the low end of the published ones (+0.13 vs +0.20-0.46) | Watch: overlaps all 6, but the two largest meta-analyses only through our upper bound; the figure route (D1) reads 3 strength trials |
-| A5 | Interaction d's refused (8), arm data figure-only | Figure route (D1) at the next run |
+| A3 | Strength coverage below 50 % | **Done**: 56 %, the benchmark passes |
+| A4 | Strength estimate at the low end of the published ones (+0.13 vs +0.20-0.46) | Watch: overlaps all 6, but the two largest meta-analyses only through our upper bound; the figure route added one trial and did not move it |
+| A5 | Interaction d's refused (8), arm data figure-only | D1 recovered few; `doi:103390nu12061880` stays out (readers split on the bars) |
 | A6 | A sport-skill count ("successful kicks") mapped to muscle power | **Done**: `exclude_measures` |
 | A7 | The RA trial's S5N call fails every run (SE = 0 rejected; answer as a string) | Off-target, harmless; fix if disease populations are graded |
 | A8 | Reported mean differences that are interaction MDs | Checked: none pooled |
@@ -42,8 +42,9 @@ the cheaper one). "Next run" = settled by the next extraction run.
 | C4 | Papers whose figure, table and text disagree | Recorded; counted as paper errors in audits |
 | C5 | p-values from tests that do not convert (7) | Refused with reason; no route planned |
 | C6 | S4's "double-blind asserted, no placebo described -> 0" untested | Check in B1 |
-| D1 | Figure route | **Built** (Decided 2026-10-28); runs in the next extraction (~23 claims, ~46 calls) |
-| D2 | High-resolution figures, individual-point plots | After D1 |
+| D1 | Figure route | **Built and run** (2026-10-31): 27 claims read, 4 accepted, 3 pooled |
+| D2 | High-resolution figures, individual-point plots | Low priority: refusals were mostly unstated bars, not resolution |
+| D2b | S6B / S7 payloads carry vocabulary keys only code reads | Strip at the next planned prompt bump (it re-runs both); guarded by a test |
 | D3 | "Independently funded only" sensitivity analysis (METHOD §15) | Planned |
 | D4 | Grades for other populations | Later |
 | D5 | Next ingredient: vitamin C (MCID table to approve, negative controls) | After validation |

@@ -177,7 +177,7 @@ def _figure_numbers(out: dict, record: dict, s3_facts: dict, call, *, figure_sou
     decides in the pool. Only PMC articles (their figures are files); a claim
     with no identified figure or no fetchable image is recorded with why.
     `figure_source` (tests): an object with `figures(pmcid)` / `image(pmcid, href)`."""
-    from pipeline.eligibility import with_s3_contrast
+    from pipeline.eligibility import _ineligible, matched_addon_claim, unmatched_claim_arms, with_s3_contrast
     from pipeline.figure import pick_figure
     from pipeline.pool import TIMEPOINT_RANK, measure_rank
     from pipeline.review import effect_route
@@ -190,6 +190,10 @@ def _figure_numbers(out: dict, record: dict, s3_facts: dict, call, *, figure_sou
         return
     meta = {o["id"]: o for o in vocab.load("outcome")["outcomes"]}
     s3_arms = (s3_facts or {}).get("arms") if isinstance(s3_facts, dict) else None
+    # Never read a figure for a claim the pool refuses on scope (measured
+    # 2026-10-31: 2 calls on a multi-ingredient arm the arm check then refused).
+    s3, s7 = out.get("S3") or s3_facts or {}, out.get("S7") or {}
+    scope = _ineligible({"S3": s3, "S7": s7, "record": record})
     chosen: dict[str, tuple] = {}
     for i, o in enumerate(outcomes):
         oid, nums = o.get("outcome_vocab_id"), o.get("numbers_v2") or {}
@@ -199,6 +203,9 @@ def _figure_numbers(out: dict, record: dict, s3_facts: dict, call, *, figure_sou
             continue
         claim, _ = with_s3_contrast(_claim_for_numbers(o), {"arms": s3_arms or []})
         if claim.get("contrast") != "vs_ingredient_free":
+            continue
+        if ((scope and not (scope == "no_isolated_ingredient_arm" and matched_addon_claim(claim, s3, s7)))
+                or unmatched_claim_arms(claim, s3, s7)):
             continue
         verified = fill_arm_n(claim, nums.get("verified") or {}, s3_arms)[0]
         if effect_route(claim, verified, meta.get(oid, {}).get("polarity")):

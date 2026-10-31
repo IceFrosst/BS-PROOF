@@ -4,6 +4,8 @@ Runs, newest first. Removed runs (v14 and earlier) remain in git history.
 
 | When (UTC) | Mode | Ingredient | Form | Kind | File |
 |---|---|---|---|---|---|
+| 2026-10-31 14:21 UTC | claude-ft-inter | `creatine` | `creatine_monohydrate` | summary | [runs/20261031_142105_creatine_creatine-monohydrate_claude-ft-inter_summary.md](runs/20261031_142105_creatine_creatine-monohydrate_claude-ft-inter_summary.md) |
+| 2026-10-31 14:21 UTC | claude-ft-inter | `creatine` | `creatine_monohydrate` | full | [runs/20261031_142105_creatine_creatine-monohydrate_claude-ft-inter_full.md](runs/20261031_142105_creatine_creatine-monohydrate_claude-ft-inter_full.md) |
 | 2026-10-28 08:24 UTC | claude-ft-inter | `creatine` | `creatine_monohydrate` | summary | [runs/20261028_082425_creatine_creatine-monohydrate_claude-ft-inter_summary.md](runs/20261028_082425_creatine_creatine-monohydrate_claude-ft-inter_summary.md) |
 | 2026-10-28 08:24 UTC | claude-ft-inter | `creatine` | `creatine_monohydrate` | full | [runs/20261028_082425_creatine_creatine-monohydrate_claude-ft-inter_full.md](runs/20261028_082425_creatine_creatine-monohydrate_claude-ft-inter_full.md) |
 | 2026-10-26 03:45 UTC | claude-ft-inter | `creatine` | `creatine_monohydrate` | summary | [runs/20261026_034529_creatine_creatine-monohydrate_claude-ft-inter_summary.md](runs/20261026_034529_creatine_creatine-monohydrate_claude-ft-inter_summary.md) |

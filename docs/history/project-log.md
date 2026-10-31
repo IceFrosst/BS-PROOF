@@ -10,6 +10,37 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-31 — creatine run 20261031_142105 (figure route, no abstracts)
+
+138 targets: 96 ok, 40 skipped (no full text: the abstract rule), 2 partial
+(the usual S5N on `doi:101002acr22747`; S5FR on `doi:103390nu15163567`, a
+schema failure). **Strength D, Moderate**, k = 14, +0.14 [-0.03, +0.30], I2 0,
+coverage 56 %, benchmark **PASS** (6/6, width x0.9; D at 2M, I at M/2); **lean
+mass D, Moderate**, k = 11, +0.12 [-0.06, +0.30], 79 %, **PASS**; **power D+,
+Low**, k = 12, +0.10 [-0.15, +0.35] (without the figure route I, k = 10).
+
+**Cost error (Claude):** forecast 60-80 live calls, actual 664 attempts, about
+5 h of quota pauses. `counter_ion` in `form.json` reaches the S7 payload and
+`exclude_measures` in `outcome.json` the S6B payload, so both agents missed the
+cache on every study. Guard: tests/test_vocab_payload_guard.py pins the keys.
+Not stripped now: that would invalidate them again, and the stability run must
+see this run's input.
+
+Figure route: 28 S5F / 46 S5FR attempts for 27 claims (80 others: no caption
+names the measure). **4 accepted, 3 pooled** (strength `doi:103390nu9111169`;
+power `doi:103390nu9111169`, `doi:101186s1297001701622`); the fourth was a
+multi-ingredient arm the arm check refuses (the worker now checks first). Refused:
+6 unstated bars, 3 + 2 disagreement on the bar kind / top, 4 means beyond 2 %,
+3 plotted quantity, 3 panel not found, 1 mean not read, 1 reader failed. Yield is low because the
+safeguards hold; the tolerance is not moved. `doi:103390nu12061880` stays out
+(one reader: bars sd, the other: unstated). Rejected: taking the bar kind from a
+paper's statistics statement (about 4 non-strength effects; a paper can state
+SD for tables and plot SE, and an SE read as SD shrinks the effect by sqrt(n)).
+
+Free stability measurement, same S5 claims re-read: S6B mapping 1149/1207 =
+95.2 % (its input changed slightly, so this is a lower bound on a clean test;
+one flip is the plain "Lean mass (LM)" -> discarded), S7 fields 97.3-99.6 %.
+
 ## 2026-10-28 — figure route built (runs at the next extraction)
 
 `sources/figures.py` (PMC figure list from the JATS, images from the article

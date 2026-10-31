@@ -80,7 +80,9 @@ Separate cache domains on purpose: the cache key is the agent's version + model
 serves stale answers. An agent bump re-runs that agent (and, by payload content,
 whatever reads its output); a `PROMPT_VERSION` bump invalidates all ~1,100
 cached creatine calls. A hook warns when a prompt or schema changes without a
-bump.
+bump. The S6B and S7 payloads carry vocabulary entries, so a new key in
+`vocab/outcome.json` or `vocab/form.json` re-runs them on every study
+(`tests/test_vocab_payload_guard.py`).
 
 ### 4. Never invent or move a constant
 
@@ -283,13 +285,10 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
 - **Method:** evidence method v2 is the pipeline's only method; v14 retired.
   `evidence_v2.STATUS = "shadow"` until validation passes. `main` and the live
   site still run v14 until the simplification branches merge.
-- **Latest v2 run** `20261028_082425` (v1.41; 138/139 studies). Re-pooled
-  with the 2026-10-28 fixes and without the 41 studies that had been read from
-  abstracts: strength **k = 13, D, Moderate** (+0.13 [-0.04, +0.30]), coverage
-  52 %, benchmark **passes**; lean mass k = 11 **D, Moderate**, passes (79 %).
-  The stored report predates the fixes. The next run (v1.41 prompts unchanged)
-  drops the 41 abstract-read studies, settles the contrast-label reviews and
-  runs the figure route (S5F / S5FR, ~46 calls).
+- **Latest v2 run** `20261031_142105` (v1.41 + figure route; 98/138 studies read,
+  40 without full text): strength **k = 14, D, Moderate** (+0.14 [-0.03, +0.30]),
+  coverage 56 %, benchmark **passes**; lean mass k = 11 **D, Moderate**, passes
+  (79 %); power k = 12 **D+, Low**.
 - **Known v2 problems:** the work list in `docs/DECISIONS.md` (2026-10-28).
   Open: the second spot audit, stability, negative-control benchmarks.
 - **Working baseline: `Jans_attempt`, not `main`** (founder, 2026-10-15).
