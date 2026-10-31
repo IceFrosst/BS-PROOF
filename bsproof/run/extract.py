@@ -170,6 +170,9 @@ def _study_extraction(ext: dict) -> dict | None:
                 (5, "attrition_ok"), (6, "itt"), (7, "attrition_problem"))},
             "evidence_spans": _spans(s4.get("evidence_spans")),
         },
+        # the second risk-of-bias reader (pool.confirmed_s4), for audits
+        "s4r": None if not ext.get("S4R") else {
+            k: ext["S4R"].get(k) for k in ("item2_double_blind_placebo", "item7_attrition_problem", "evidence_spans")},
         "s5_claims": claims,
         "s7": None if not s7 else {
             "arms": [{k: (_span(a.get(k), 120) if k in ("label", "form_raw") else

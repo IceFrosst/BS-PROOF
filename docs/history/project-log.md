@@ -10,6 +10,30 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-10-31 — second spot audit fails; second risk-of-bias reader built
+
+Seed 2 on run 20261031_142105, 20 effects read against the papers: every number
+right, no reversed direction, 6 consequential errors (limit 3). S4 (4): item 7 = 1
+from screening exclusions (`doi:103390nu16060766`) and from 1 vs 2 withdrawals
+at 16 % overall (`registry:nct01164020`, borderline); item 2 = 0 with blinding
+unmentioned (`doi:103390ijerph19137992`, a repeat of audit 1) and on an explicit
+"double-blind, placebo-controlled" (`doi:103390nu17243831`, right at v1.40).
+Quantity (2): mixed-model SE across nights (`doi:103390nu16162772`, g 1.13);
+percent change pooled over 3 visits with an SE over 86 observations
+(`doi:103390nu18081192`). Scan of all pooled effects: 3 such, none in strength or
+lean mass. C6's rule was not tested by the sample. Accepted figure
+`doi:103390nu9111169` checked by eye: readings right.
+
+Built: S4R (tier R, same prompt, blind; `workers._second_rob`,
+`pool.confirmed_s4`) and the pooled-over-visits refusal. Probe, 8 S4R calls on
+known cases: 5 of 5 false flaws cleared, 2 of 2 true flaws kept
+(`doi:103390nu12061880`, `doi:1010801550278320262633251`). It also rated
+`doi:1015191533428720030170026csaieo20co2` item 7 = 1 where S4 said 0: a flaw only S4R sees does
+not count under the rule, so a false negative of S4 is left to audits.
+
+Forecast by cache-only replay (`scripts/replay_from_cache.py`, now reviewers on
+by default): 791 hits, 25 misses (20 S4R, 2 S5FR, 1 S5F, 1 S5R, the usual S5N).
+
 ## 2026-10-31 — creatine run 20261031_142105 (figure route, no abstracts)
 
 138 targets: 96 ok, 40 skipped (no full text: the abstract rule), 2 partial

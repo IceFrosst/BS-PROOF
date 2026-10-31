@@ -413,7 +413,7 @@ PROMPT_VERSION = "v1.39"
 #   baseline SDs (`sd_pre_*`, for the ANCOVA adjustment) and an smd's basis
 #   (`smd_basis`), and are told only the target ingredient decides `contrast`
 #   (21 add-on controls were labelled vs_ingredient_arm at v1.40).
-AGENT_PROMPT_VERSION: dict[str, str] = {"S4": "v1.41", "S5": "v1.41", "S5N": "v1.41", "S5R": "v1.41",
+AGENT_PROMPT_VERSION: dict[str, str] = {"S4": "v1.41", "S4R": "v1.41", "S5": "v1.41", "S5N": "v1.41", "S5R": "v1.41",
                                         # the figure reader (pilot 2026-10-26; route 2026-10-28)
                                         "S5F": "v1.0", "S5FR": "v1.0"}
 
@@ -553,6 +553,10 @@ AGENTS = {
     # Evidence method v2 second reviewer: re-reads S5's poolable numbers blind
     # (pipeline/review.py). On by default; SP_SECOND_REVIEWER=0 turns it off (workers.py).
     "S5R": ("R", "s5_review.json",    "s5_review.md"),
+    # Second risk-of-bias reader, a different model, same prompt, blind to S4
+    # (founder rule 2026-10-31; workers._second_rob, pool.rob_status). Only for
+    # studies whose S4 reports a flaw and that yield an effect.
+    "S4R": ("R", "s4_rob.json",       "s4_rob.md"),
     # Evidence method v2 reviewer 1 for numbers: reads the per-arm numbers of
     # every MAPPED S5 claim (workers._extract_numbers). Tier B (sonnet, low
     # effort) so it is cheap AND a different model from S5R's opus.

@@ -144,6 +144,7 @@ the agent's prompt version + model + effort + payload):
 |---|---|---|
 | S3 study | full text | design, arms (label, n, role, ingredient presence, co-interventions), population axes, comparator, isolation, registration |
 | S4 risk of bias | full text + registry | seven RoB items (randomisation method, blinding/placebo, prospective registration, outcome matches registry, attrition reported, ITT, attrition problem); §12 grades with items 1, 2, 5 and 7 |
+| S4R second risk-of-bias reader (with `SP_SECOND_REVIEWER`) | the same paper, blind, a different model (Opus); only when S4 reports a flaw in a study that yields an effect | the same items; a flaw counts only when both report it (§12) |
 | S5 outcomes | results + tables, S3 arms | one claim per separately reported measure: outcome, measure, timepoint and its role (end of supplementation / interim / after it stopped, v1.41), the arm pair, primary flag (no numbers) |
 | S7 form & dose | methods + tables, S3 arms | per arm: form id, compound / elemental / per-kg dose, body mass, frequency |
 | S8 funding | funding + COI statements | funding class, funders (reported, never graded; §15) |
@@ -250,6 +251,9 @@ always means benefit, after the outcome's polarity. Routes, best first:
 - **Consistency guard**: when pre and post values are verified too, a change
   mean must equal post − pre and an endpoint mean must equal post at printed
   precision, or the arm statistics are refused.
+- **Pooled over visits**: an SD derived from an SE or CI is refused when the
+  timepoint says the result is pooled or across visits (that SE counts
+  observations, not people; founder rule 2026-10-31).
 - **Baseline adjustment (ANCOVA)**, founder 2026-10-26: an endpoint
   arm-statistics effect of a parallel trial whose arms' baselines are verified
   uses the endpoint difference minus r × the baseline difference, standardised
@@ -296,7 +300,7 @@ each downgrade with its reason:
 
 | Domain | Rule |
 |---|---|
-| Risk of bias | Only a REPORTED flaw downgrades (founder 2026-10-20): none if ≥ 50 % of the weight is from trials with no reported flaw (low or unclear); −2 if > 50 % is high-risk; else −1. A trial is HIGH risk when blinding/placebo is missing (S4 item 2); CONCERNS when it has an attrition problem (item 7: dropout ≥ 20 %, differing between arms, or caused by the intervention) or its arms were imbalanced at baseline; UNCLEAR when nothing wrong is reported but something is undescribed (randomisation method not named, attrition reporting incomplete (item 5), an item unknown), which does not downgrade (founder 2026-10-25) |
+| Risk of bias | Only a REPORTED flaw downgrades (founder 2026-10-20): none if ≥ 50 % of the weight is from trials with no reported flaw (low or unclear); −2 if > 50 % is high-risk; else −1. A trial is HIGH risk when blinding/placebo is missing (S4 item 2); CONCERNS when it has an attrition problem (item 7: dropout ≥ 20 %, differing between arms, or caused by the intervention) or its arms were imbalanced at baseline; UNCLEAR when nothing wrong is reported but something is undescribed (randomisation method not named, attrition reporting incomplete (item 5), an item unknown), which does not downgrade (founder 2026-10-25). A flaw counts only when two independent readers report it (S4, S4R; `pool.confirmed_s4`, founder rule 2026-10-31); a disputed flaw is flagged `rob_flaw_unconfirmed` |
 | Inconsistency | −1 at I² > 50 %, −2 at > 75 %; not assessed below 3 trials |
 | Imprecision | −1 if the CI crosses 0 or the threshold, or fewer than 400 participants in total (optimal information size); −2 if the CI spans both ±threshold or fewer than 200 participants; −3 below 100 participants (GRADE's "extremely serious", 2021 guidance) |
 | Indirectness | −1 per axis when > 50 % of the weight is not the product's exact form, or off-dose (§9); form + dose cap at −2. Populations: refused if `different`, reported if `adjacent` (§8) |
@@ -415,6 +419,9 @@ What must hold before grades are shown to users:
   Pass (founder 2026-10-25): 0-1 in 20; 2-3 sample 20 more and pass if the 40
   hold at most 3; 4 or more fail (fix the prompt behind the most common error,
   re-audit). A reversed direction (benefit read as harm or back) fails alone.
+  Results: seed 1 (2026-10-26) failed, seed 2 (2026-10-31) failed on 6 of 20
+  (no number wrong; 4 S4 false flaws, 2 SEs not per participant). Fixes built
+  (S4R, pooled-SE rule); re-audit after the next run.
 
 The measurements behind the method's design are in
 `docs/history/2026-10-03-phase1-measurements.md`.

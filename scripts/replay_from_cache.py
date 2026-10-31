@@ -50,11 +50,11 @@ def replay(out: Path, args: list[str]) -> int:
     out.mkdir(parents=True, exist_ok=True)
     os.environ["SP_DUMP_EXTRACTIONS"] = str(out / "extractions.json")
     os.environ["SP_AUTO_PUSH"] = "0"
-    # The second reviewer is on by default since 2026-10-16; runs made before
-    # that had it off, and its calls would be cache misses. Replay a run made
-    # with it on by passing SP_SECOND_REVIEWER=1 (its context records
-    # "second_reviewer").
-    os.environ.setdefault("SP_SECOND_REVIEWER", "0")
+    # As a real run: the second readers are on (S5R since 2026-10-16, S4R since
+    # 2026-10-31). The default here was 0 until 2026-10-31, which hid S4R's
+    # calls from a forecast (4 misses reported, 25 real). Replay a run from
+    # before 2026-10-16 with SP_SECOND_REVIEWER=0.
+    os.environ.setdefault("SP_SECOND_REVIEWER", "1")
     from bsproof import claude_adapter as ca
 
     class _Blocked:

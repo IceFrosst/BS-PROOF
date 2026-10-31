@@ -178,7 +178,9 @@ dose), S8 (funding) in parallel, then S6B (outcome mapping, one call per study)
 and S5N (the numbers v2 pools), then S5R (second reviewer, Opus; on by
 default, `SP_SECOND_REVIEWER=0` turns it off). About 7–8 calls per study.
 Then, only for a claim whose text gives no effect, S5F and S5FR read its
-figure (PMC articles; `SP_FIGURE_READER=0` off; `pipeline/figure.py`).
+figure (PMC articles; `SP_FIGURE_READER=0` off; `pipeline/figure.py`), and
+only when S4 reports a flaw in a study with an effect, S4R reads risk of bias
+again (a flaw counts only when both report it; `pool.confirmed_s4`).
 
 Extraction has no metered spend; the limit is subscription **throughput**.
 Never run agent teams, workflows or other heavy sessions alongside an
@@ -288,7 +290,9 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
 - **Latest v2 run** `20261031_142105` (v1.41 + figure route; 98/138 studies read,
   40 without full text): strength **k = 14, D, Moderate** (+0.14 [-0.03, +0.30]),
   coverage 56 %, benchmark **passes**; lean mass k = 11 **D, Moderate**, passes
-  (79 %); power k = 12 **D+, Low**.
+  (79 %); power k = 12 **D+, Low**. The second spot audit failed (6 of 20: no
+  wrong number; S4 false flaws, SEs not per participant). S4R and the pooled-SE
+  rule are built and need one small run, then audit seed 3, then stability.
 - **Known v2 problems:** the work list in `docs/DECISIONS.md` (2026-10-28).
   Open: the second spot audit, stability, negative-control benchmarks.
 - **Working baseline: `Jans_attempt`, not `main`** (founder, 2026-10-15).

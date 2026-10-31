@@ -9,7 +9,7 @@ the founder decides. When an item is decided, move it to "Decided" with its
 date; delete anything that no longer applies. Dated history goes to
 `docs/history/project-log.md`, not here.
 
-Last swept: 2026-10-28.
+Last swept: 2026-10-31.
 
 ---
 
@@ -33,8 +33,8 @@ the cheaper one). "Next run" = settled by the next extraction run.
 | A6 | A sport-skill count ("successful kicks") mapped to muscle power | **Done**: `exclude_measures` |
 | A7 | The RA trial's S5N call fails every run (SE = 0 rejected; answer as a string) | Off-target, harmless; fix if disease populations are graded |
 | A8 | Reported mean differences that are interaction MDs | Checked: none pooled |
-| B1 | Second spot audit (seed 2) | After the next run |
-| B2 | Stability test | After the next run; script now full-text-only |
+| B1 | Spot audit | Seed 2 failed (2026-10-31: 6 of 20, no wrong number); S4R and the pooled-SE rule built; seed 3 after the next run |
+| B2 | Stability test | After the audit passes; script now full-text-only |
 | B3 | Negative-control benchmark rows | With the next ingredient |
 | C1 | **41 of 138 studies extracted from abstracts** under `--full-text-only` | **Done**: no text, skipped (Decided); takes effect at the next run, fewer calls |
 | C2 | ARISTOTLE (atrial fibrillation) passed the relevance gate on "creatine clearance" | **Done**: a marker mention |
@@ -57,6 +57,9 @@ All accepted by the founder **"for now, may revisit"** unless stated.
 
 | Date | Decision |
 |---|---|
+| 2026-10-31 | **Risk of bias is read twice: a flaw counts only when both readers report it** (Claude per founder rule; S4R on Opus, called only when S4 reports a flaw in a study with an effect; `pool.confirmed_s4`). Two independent RoB assessors is the Cochrane standard. Measured: in both spot audits every S4 error was a false flaw, prompt edits did not stop them, and on 8 known cases S4R cleared all 5 false flaws and kept both true ones. |
+| 2026-10-31 | **An SD derived from an SE or CI of a result pooled over visits is refused** (Claude per founder rule). Measured: 3 pooled effects, none in strength or lean mass, incl. a g of 1.13. |
+| 2026-10-31 | **Rejected: taking the error-bar kind from a paper's statistics statement** (about 4 non-strength effects; a paper can state SD for tables and plot SE, and an SE read as SD shrinks the effect by sqrt(n)). The 2 % figure tolerance is not moved. |
 | 2026-10-28 | **The figure route** (`figure_means`, Claude per founder rule; pilot 2026-10-26): for a claim whose text gives no effect, its caption-identified PMC figure read by S5F and S5FR; kept only on agreement within 2 % of the y-axis (`figure.RULES`, new constant), the same plotted quantity and error-bar kind; plotted means only; ranked last (`pool.ROUTE_RANK` 7); every outcome also shown without it. Measured reach on run 20261028_082425: 23 (study, outcome) pairs in 16 studies, 3 of them strength (`doi:103390nu12061880`, `doi:103390nu9111169`, `doi:103390nu8030143`). Rationale: Cochrane accepts data read from graphs with dual extraction; the pilot put the median error at 0.03 SD. |
 | 2026-10-28 | **Under `--full-text-only` an abstract is never extracted** (`run.corpus._best_text` returns no text for an abstract-only tier; the worker skips it as "no text"). Measured on run 20261028_082425 (cache-only tiers): 41 of 138 studies had been extracted from abstracts (36 with claims; 1 pooled effect, exercise recovery); without them strength coverage 42 -> 52 % and the strength benchmark PASSES (6/6, width x0.9), lean mass 79 %. Implements the 2026-10-17 decision. |
 | 2026-10-28 | **Vehicles and counter-ions are not co-interventions** (Claude per founder rule): a bare carrier (`vocab/cointervention.json`) on every ingredient arm is the vehicle; the form's counter-ion (`vocab/form.json` `counter_ion`, via S7) is the form. A carrier only some ingredient arms get stays a co-intervention. Measured: 3 matched trials recovered (dextrose, maltodextrin, creatine nitrate); strength k 10 -> 13. |

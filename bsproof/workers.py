@@ -168,6 +168,44 @@ def _second_review(out: dict, record: dict, text: str, sections: dict | None,
                         "adjudication": reconcile_study(outcomes, reviews, sent, polarity, s3_arms)}
 
 
+def _second_rob(out: dict, record: dict, text: str, registry: dict | None, sections: dict | None,
+                s3_facts: dict, call) -> None:
+    """A second, blind risk-of-bias read (S4R, a different model) when S4 reports
+    a flaw in a study that yields an effect: a flaw counts only when both report
+    it (pipeline.pool.confirmed_s4), so no other study needs the call."""
+    from pipeline.eligibility import with_s3_contrast
+    from pipeline.review import effect_route
+    from pipeline.span_check import fill_arm_n
+    s4 = out.get("S4") or {}
+    if s4.get("item2_double_blind_placebo") != 0 and s4.get("item7_attrition_problem") != 1:
+        return
+    polarity = {o["id"]: o.get("polarity") for o in vocab.load("outcome")["outcomes"]}
+    s3_arms = (s3_facts or {}).get("arms") if isinstance(s3_facts, dict) else None
+
+    def yields_effect(o: dict) -> bool:
+        if o.get("discarded") or not o.get("outcome_vocab_id"):
+            return False
+        if ((o.get("figure_v1") or {}).get("readings") or {}).get("S5F"):
+            return True
+        claim, _ = with_s3_contrast(_claim_for_numbers(o), {"arms": s3_arms or []})
+        verified = fill_arm_n(claim, (o.get("numbers_v2") or {}).get("verified") or {}, s3_arms)[0]
+        return bool(effect_route(claim, verified, polarity.get(o["outcome_vocab_id"])))
+    if not any(yields_effect(o) for o in out.get("outcomes") or []):
+        return
+    try:
+        result, meta = call("S4R", _payload("S4R", record, text, registry, sections))
+    except Exception as exc:
+        result, meta = None, {"error": str(exc)}
+    out.setdefault("_meta", {})["S4R"] = meta
+    if result is None:
+        err = str((meta or {}).get("error") or "")
+        if _quota_signal(err):
+            out["_quota_exhausted"] = err
+        out.setdefault("_failed", []).append({"agent": "S4R", "error": err})
+        return
+    out["S4R"] = result
+
+
 def _figure_numbers(out: dict, record: dict, s3_facts: dict, call, *, figure_source=None) -> None:
     """Read, from the paper's figure, each mapped outcome whose text gives no
     effect: per outcome the claim the pool would pick (measure hierarchy, then
@@ -513,6 +551,8 @@ def extract_study(record: dict, text: str, registry: dict | None = None, *,
         _second_review(out, record, text, sections, s3_facts, call)
     if _figure_reader_enabled():
         _figure_numbers(out, record, s3_facts, call)
+    if _second_reviewer_enabled():
+        _second_rob(out, record, text, registry, sections, s3_facts, call)
     return out
 
 

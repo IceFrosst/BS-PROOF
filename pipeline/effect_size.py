@@ -97,12 +97,14 @@ favoured arm of "neither"; percentage values used as arm means without SDs.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 
 from pipeline import meta_effects as me
 
 SMD = "smd"
 MD = "md"
+_POOLED_OVER_VISITS = re.compile(r"\b(pooled|across)\b", re.I)
 
 # Founder constants (CLAUDE.md invariant 4), decided 2026-10-26.
 RULES = {
@@ -219,6 +221,12 @@ def effect_from_claim(claim: dict, verified: dict, *, polarity: str | None,
         v = {**v, **{f"mean_{a}": v[f"post_{a}"] for a in ("ingredient", "control")
                      if f"mean_{a}" not in v and f"post_{a}" in v}}
     v, derived = _derive_arm_sds(v, claim.get("arm_ci_level"))
+    if derived and _POOLED_OVER_VISITS.search(claim.get("timepoint") or ""):
+        # An SE or CI of a result pooled over visits or nights counts
+        # observations, not people, so SE x sqrt(n) is not an SD. MEASURED
+        # 2026-10-31 (spot audit): doi:103390nu18081192 (SE over 86 observations,
+        # 29 people), doi:103390nu16162772 (mixed-model SE across nights, g 1.13).
+        return None, "SE or CI of a result pooled over visits is not per participant; no SD"
     if all(k in v for k in arm_keys):
         bad = _inconsistent_arms(checks, estimand)
         if bad:

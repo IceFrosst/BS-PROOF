@@ -193,6 +193,23 @@ def unpoolable_detail(claim: dict, nums: dict, verified: dict) -> str:
     return GENERIC_UNPOOLABLE
 
 
+def confirmed_s4(s4: dict | None, s4r: dict | None) -> tuple[dict | None, bool]:
+    """(S4 items, disputed): a flaw counts only when both readers report it
+    (founder rule 2026-10-31; RoB by two independent readers is the Cochrane
+    standard). When S4 reports a flaw (item 2 = 0, item 7 = 1) the second reader
+    does not, that item takes the second reader's value and `disputed` is True.
+    No second reading (S4R off, not needed or failed): S4 stands. MEASURED
+    2026-10-31, spot audits of two runs: every S4 error was a false flaw; on 8
+    known cases S4R cleared all 5 false flaws and kept both true ones."""
+    if not s4 or not s4r:
+        return s4, False
+    merged, disputed = dict(s4), False
+    for item, flaw in (("item2_double_blind_placebo", 0), ("item7_attrition_problem", 1)):
+        if s4.get(item) == flaw and s4r.get(item) != flaw:
+            merged[item], disputed = s4r.get(item), True
+    return merged, disputed
+
+
 def rob_status(s4: dict | None) -> str:
     """Study-level risk of bias from the S4 items, read with S4's OWN meanings
     (prompts/s4_rob.md), not as "1 adequate / 0 inadequate":
@@ -354,7 +371,11 @@ def _study_effects(item: dict, product: dict, polarity: dict,
             n = max(arm_n)            # the same people in both periods: not 2n
         else:
             n = sum(arm_n)
-        rob = rob_status(ext.get("S4") if isinstance(ext.get("S4"), dict) else None)
+        s4_items, rob_disputed = confirmed_s4(ext.get("S4") if isinstance(ext.get("S4"), dict) else None,
+                                              ext.get("S4R") if isinstance(ext.get("S4R"), dict) else None)
+        rob = rob_status(s4_items)
+        if rob_disputed:
+            eff = dataclasses.replace(eff, flags=eff.flags + ("rob_flaw_unconfirmed",))
         if "baseline_imbalance" in eff.flags and rob in ("low", "unclear"):
             # Founder 2026-10-03: downgrade, never refuse. A trial whose arms
             # started further apart than the endpoint difference cannot count

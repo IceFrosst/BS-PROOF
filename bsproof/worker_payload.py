@@ -189,7 +189,7 @@ def _tables_text(record: dict, cap_chars: int = 4000,
 # S5's prompt + schema to 9,775 chars, leaving 2,225 chars of paper, and S5
 # missed outcomes that v1.36 had listed (strength 1RMs, whole-body lean mass),
 # so 2 strength and 2 lean-mass trials dropped out of the pool.
-FULL_TEXT_AGENTS = frozenset({"S4", "S5"})
+FULL_TEXT_AGENTS = frozenset({"S4", "S4R", "S5"})
 
 
 def _fit_text(agent: str, text: str, fixed_chars: int) -> str:
@@ -313,7 +313,7 @@ def _payload(agent: str, record: dict, text: str, registry: dict | None,
         # is load-bearing for arm eligibility and is therefore explicit rather
         # than guessed from a named case in the prompt.
         return {**base, "ingredient": record.get("ingredient")}
-    if agent == "S4":
+    if agent in ("S4", "S4R"):
         return {**base,
                 "registry_item3_prospective": (registry or {}).get("item3_prospective"),
                 "registry_primary_outcomes": (registry or {}).get(
