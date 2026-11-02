@@ -23,6 +23,8 @@ statistical convention 0.2 SD is used and the result says so.
 """
 from __future__ import annotations
 
+import re
+import statistics
 import math
 from dataclasses import dataclass, field
 
@@ -293,7 +295,35 @@ def _registry(down: dict, not_assessed: list[str], registry: dict | None, k: int
                             "trials have no results or result publication (upper bound)")
 
 
-def _threshold(mcid: dict | None) -> tuple[float, str]:
+def _natural_threshold(mcid: dict, pool) -> tuple[float, str] | None:
+    """An approved MCID in natural units as SDs: its value over the median
+    control-arm SD of this outcome's preferred-measure trials (founder
+    2026-11-03). Reads spreads only, never an effect, and is applied after
+    extraction because no SD is published. Other units and measures are left
+    out; None when no trial gives a usable SD."""
+    natural = mcid["natural"]
+    sds = []
+    for s in getattr(pool, "studies", None) or []:
+        if s.get("measure_rank") != 0 or not isinstance(s.get("sd_control"), (int, float)):
+            continue
+        unit = str(s.get("unit") or "").lower()
+        factor = next((f for pattern, f in natural["unit_factors"].items() if re.search(pattern, unit)), None)
+        if factor is not None:
+            sds.append(s["sd_control"] * factor)
+    if not sds:
+        return None
+    sd = statistics.median(sds)
+    return (natural["value"] / sd,
+            f"{mcid.get('source')}: {natural['value']} {natural['unit']} / median control SD "
+            f"{sd:.1f} {natural['unit']} ({len(sds)} trials)")
+
+
+def _threshold(mcid: dict | None, pool=None) -> tuple[float, str]:
+    if mcid and mcid.get("approved") is True and mcid.get("natural"):
+        converted = _natural_threshold(mcid, pool)
+        if converted:
+            return converted
+        return RULES["default_mcid_smd"], "statistical convention (0.2 SD): no control-arm SD to convert the approved MCID"
     if (mcid and mcid.get("approved") is True
             and isinstance(mcid.get("smd"), (int, float)) and mcid["smd"] > 0):
         return float(mcid["smd"]), str(mcid.get("source") or "approved MCID")
@@ -310,7 +340,7 @@ def grade_record(pool, mcid: dict | None = None, registry: dict | None = None) -
     per threshold variant (M, M/2, 2M) the benefit category and every
     downgrade except indirectness. `letter_from_record` (and its TypeScript
     port) adds the product's indirectness and reads the letter."""
-    m, source = _threshold(mcid)
+    m, source = _threshold(mcid, pool)
     rec = {"outcome": pool.outcome, "threshold": m, "threshold_source": source,
            "registry": registry, "variants": {}}
     if not pool.smd:

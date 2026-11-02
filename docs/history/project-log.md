@@ -10,6 +10,11 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-11-03 — vitamin C MCIDs and benchmark rows approved
+
+Founder approved the proposal; values and rows in DECISIONS. Installed `natural`
+MCID conversion in `grade._threshold`. Ready to run.
+
 ## 2026-11-03 — yes/no route and vitamin C preparation
 
 `event_counts` route, S5N and S5R v1.42, a pooled risk ratio for the benchmark, an

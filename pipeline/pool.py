@@ -436,6 +436,7 @@ def pool_outcomes(items: list[dict], product: dict) -> dict[str, OutcomePool]:
         pool.estimand_mix = dict(collections.Counter(s.effect.estimand or "unstated" for s in studies))
         pool.studies = [{"study": s.study_id, "route": s.route, "g": s.effect.smd,
                          "g_variance": s.effect.smd_variance, "md": s.effect.md, "unit": s.effect.unit,
+                         "sd_control": s.effect.sd_control,
                          "log_rr": s.effect.log_rr, "log_rr_variance": s.effect.log_rr_variance,
                          "estimand": s.effect.estimand, "primary": s.primary,
                          "flags": list(s.effect.flags), "n": s.n, "rob": s.rob,

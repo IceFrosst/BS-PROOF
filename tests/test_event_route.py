@@ -162,6 +162,44 @@ class BenchmarkFixes(unittest.TestCase):
         self.assertTrue(any("benefit_direction" in p for p in check_row(rr)))
 
 
+class NaturalUnitMcid(unittest.TestCase):
+    MCID = {"approved": True, "source": "Barrett", "natural": {
+        "value": 26.1, "unit": "h", "unit_factors": {"\\bdays?\\b": 24, "\\b(hours?|hrs?|h)\\b": 1}}}
+
+    def pool(self, *studies):
+        from types import SimpleNamespace
+        return SimpleNamespace(studies=list(studies))
+
+    def test_converted_by_the_median_control_sd_across_units(self):
+        from pipeline.grade import _threshold
+        pool = self.pool({"measure_rank": 0, "sd_control": 2.0, "unit": "days"},      # 48 h
+                         {"measure_rank": 0, "sd_control": 60.0, "unit": "hours"},
+                         {"measure_rank": 0, "sd_control": 3.0, "unit": "days"})      # 72 h
+        m, source = _threshold(self.MCID, pool)
+        self.assertAlmostEqual(m, 26.1 / 60.0)
+        self.assertIn("3 trials", source)
+
+    def test_other_measures_and_units_do_not_count(self):
+        from pipeline.grade import _threshold
+        pool = self.pool({"measure_rank": 1, "sd_control": 5.0, "unit": "days"},
+                         {"measure_rank": 0, "sd_control": 9.0, "unit": "points"},
+                         {"measure_rank": 0, "sd_control": None, "unit": "days"})
+        m, source = _threshold(self.MCID, pool)
+        self.assertEqual(m, 0.2)
+        self.assertIn("no control-arm SD", source)
+
+    def test_an_unapproved_value_is_never_used(self):
+        from pipeline.grade import _threshold
+        self.assertEqual(_threshold({**self.MCID, "approved": False},
+                                    self.pool({"measure_rank": 0, "sd_control": 2.0, "unit": "days"}))[0], 0.2)
+
+    def test_the_vocabulary_holds_the_approved_value(self):
+        from pipeline import vocab
+        o = {x["id"]: x for x in vocab.load("outcome")["outcomes"]}
+        self.assertEqual(o["cold_duration"]["mcid"]["natural"]["value"], 26.1)
+        self.assertIs(o["cold_duration"]["mcid"]["approved"], True)
+
+
 class VitaminCVocabulary(unittest.TestCase):
     def test_directions_and_measure_order(self):
         from pipeline import vocab

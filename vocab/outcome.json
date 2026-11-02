@@ -499,6 +499,7 @@
     "symptom duration"
    ],
    "polarity": "lower_better",
+   "mcid": {"natural": {"value": 26.1, "unit": "h", "unit_factors": {"\\bdays?\\b": 24, "\\b(hours?|hrs?|h)\\b": 1}}, "tier": 1, "basis": "benefit-harm tradeoff (sufficiently important difference)", "source": "Barrett B et al. Using benefit harm tradeoffs to estimate sufficiently important difference: the case of the common cold. Med Decis Making 2005 (doi:10.1177/0272989x04273147)", "quote": "For the scenario based on vitamin C, mean SID was estimated as 26.1 h (95% CI, 23.2 to 29.3)", "population": "adults with colds, asked about a vitamin C scenario", "approved": true, "approved_on": "2026-11-03 (founder)", "also_found": [{"value": "25 % severity reduction", "source": "Barrett B et al. Sufficiently important difference for common cold: severity reduction. Ann Fam Med 2007 (doi:10.1370/afm.698)", "quote": "The scenario based on vitamin C led to a mean SID of 25% (95% confidence interval [CI] 0.23-0.27)", "population": "adults with colds", "use": "shown beside the letter; the severity tier is not converted"}]},
    "measure_hierarchy": [
      {
        "tier": "duration of illness",
@@ -644,6 +645,7 @@
     "hypertension"
    ],
    "polarity": "lower_better",
+   "mcid": {"smd": 0.2, "tier": 4, "basis": "statistical convention (Cohen's small effect)", "source": "no adequate MCID found (searched 2026-11-02)", "population": "general adults", "approved": true, "approved_on": "2026-11-03 (founder)", "also_found": [{"value": "2 mmHg", "source": "Dose-dependent effect of nuts on blood pressure, preprint (doi:10.1101/2021.05.21.21257564)", "quote": "with the minimal clinically important difference being considered 2 mmHg", "population": "nut-consumption trials; states a convention without its origin", "use": "shown beside the letter; too weak to set it"}]},
    "measure_hierarchy": [
      {
        "tier": "systolic",

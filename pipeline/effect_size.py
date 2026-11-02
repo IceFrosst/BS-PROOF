@@ -147,6 +147,7 @@ class Effect:
     flags: tuple[str, ...] = field(default_factory=tuple)
     # ANCOVA-adjusted effects only: {r: (g, variance)} at the sensitivity r values.
     ancova_at: dict = field(default_factory=dict)
+    sd_control: float | None = None   # arm statistics only; for an MCID in natural units (grade._threshold)
     log_rr: float | None = None       # ingredient vs control, yes/no route only; benchmark only
     log_rr_variance: float | None = None
 
@@ -347,7 +348,7 @@ def effect_from_claim(claim: dict, verified: dict, *, polarity: str | None,
         route = "arm_stats_derived" if derived else "arm_stats"
         return Effect(route, g, g_var, orient * md, md_var,
                       claim.get("effect_unit") or claim.get("measure"), estimand,
-                      flags + derived, ancova_at), route
+                      flags + derived, ancova_at, sd_control=v["sd_control"]), route
 
     # --- reported estimates: magnitude from the paper, sign from the favoured arm
     sign = _favoured_sign(claim.get("effect_favours"))

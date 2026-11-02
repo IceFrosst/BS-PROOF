@@ -15,37 +15,7 @@ Last swept: 2026-11-02.
 
 ## Open
 
-Vitamin C, proposed 2026-11-02. Neither table is in the vocabularies yet.
-Every quote was checked by script against the Europe PMC abstract; PMC full text
-was unavailable for the Cochrane review and Juraschek (HTTP 500), so only abstract
-numbers are used. Retraction status was checked by Europe PMC publication type only.
-
-**O1. MCIDs (METHOD §14).**
-
-| Outcome | Proposed | Source and quote | Note |
-|---|---|---|---|
-| `cold_duration` | **26.1 h**, converted to SD by the median control-arm SD of the pooled trials; 25 % for severity, shown beside | Barrett 2005 (doi:10.1177/0272989x04273147): "For the scenario based on vitamin C, mean SID was estimated as 26.1 h (95% CI, 23.2 to 29.3)". Barrett 2007 (doi:10.1370/afm.698): "The scenario based on vitamin C led to a mean SID of 25% (95% confidence interval [CI] 0.23-0.27)" | Asked of adults with colds, about a vitamin C scenario. No SD is published, so the rule is fixed now and applied after extraction, using SDs only; re-pooling needs no model call |
-| `blood_pressure` | 0.2 SD default, flagged; 2 mmHg shown beside | Only source opened: a preprint on nuts (doi:10.1101/2021.05.21.21257564): "with the minimal clinically important difference being considered 2 mmHg" | States a convention without its origin; too weak to set the letter |
-| `cold_incidence`, `inflammation_crp`, `glycaemic_control`, `depressive_symptoms` | 0.2 SD default, flagged | None usable. CRP 0.5 mg/L appears only in a trial protocol (NCT07229781); no HbA1c source was opened | Default per METHOD §14 |
-
-**O2. Benchmark rows.** Estimates as published; a lower value is the benefit on all but the mood row.
-
-| Outcome | Type | Published | Population | Source | Status |
-|---|---|---|---|---|---|
-| `cold_incidence` | **Negative control** | RR 0.97 [0.94, 1.00] | general community, 10,708 | Cochrane, Hemilä 2013 (doi:10.1002/14651858.cd000980.pub4) | Route built; RR likely "not testable", our CI will be far wider |
-| `cold_incidence` | **Negative control** | RR 0.94 [0.87, 1.01] | respiratory illness, 10 studies across the review | Keya 2022 (doi:10.2174/2772432817666211230100723) | Route built; RR likely "not testable", our CI will be far wider |
-| `depressive_symptoms` | **Negative control** | g 0.09 [-0.15, 0.33] | adults, depressed and not, 10 trials, 836 | doi:10.1016/j.genhosppsych.2021.04.006 | Usable; sign unstated, read from its subgroup (negative = benefit) |
-| `cold_duration` | Benefit | SMD -0.36 [-0.62, -0.09] | respiratory infection | Keya 2022 | Usable; one row, from a lower-tier journal |
-| `blood_pressure` | Benefit | SBP -3.84 mmHg [-5.29, -2.38] | mixed, 29 trials, median 8 weeks | Juraschek 2012 (doi:10.3945/ajcn.111.027995) | Usable |
-| `blood_pressure` | Benefit | SBP -3.0 mmHg [-4.7, -1.3] | adults, 20 studies, 890 | doi:10.1080/09637486.2023.2264549 | Usable |
-| `inflammation_crp` | Benefit | CRP -0.23 mg/L [-0.44, -0.03] | 12 studies, 893 | Jafarnejad 2018 (doi:10.2174/1381612824666181017101810) | Usable; significant heterogeneity |
-| `inflammation_crp` | Benefit | CRP -0.73 mg/L [-1.30, -0.15] | 11 studies, 818; includes enriched foods | doi:10.1515/jcim-2019-0151 | Usable; I² 98 % |
-
-Left out: Ran 2018 (doi:10.1155/2018/1837634) and doi:10.1007/s00228-018-2601-7, both
-retracted; doi:10.1155/2020/8573742, vitamin C added to antivirals; Mason 2021 and Guan
-2020, diabetic and hypertensive populations only; doi:10.1080/10408398.2019.1703642,
-vitamin C and/or E; Ashor 2017, no overall number in its abstract, so `glycaemic_control`
-has no row; Cochrane's 8 % and Hemilä 2023's 15 %, relative scales we do not pool.
+None today.
 
 ## Work list (2026-10-28; replaces the 2026-10-15 list, whose items are done or decided below)
 
@@ -78,7 +48,7 @@ the cheaper one). "Next run" = settled by the next extraction run.
 | D2b | S6B / S7 payloads carry vocabulary keys only code reads | Strip at the next planned prompt bump (it re-runs both); guarded by a test |
 | D3 | "Independently funded only" sensitivity analysis (METHOD §15) | Planned |
 | D4 | Grades for other populations | Later |
-| D5 | Next ingredient: vitamin C (MCID table to approve, negative controls) | After validation |
+| D5 | Next ingredient: vitamin C | MCIDs and benchmark rows approved 2026-11-03; founder runs the extraction (117 studies, about 950 calls) |
 | E1 | App: connect `grade-v2.ts`, grade card, remove the notice | When v2 validates (METHOD §16) |
 | E2 | Phone / Supabase / Google verification; the big merge | Founder-scheduled |
 
@@ -88,6 +58,8 @@ All accepted by the founder **"for now, may revisit"** unless stated.
 
 | Date | Decision |
 |---|---|
+| 2026-11-03 | **Vitamin C MCIDs** (founder, METHOD §14): `cold_duration` 26.1 h (Barrett 2005, a vitamin C scenario), converted to SD by the median control-arm SD of its duration trials, from spreads only and after extraction, because no SD is published; 25 % severity (Barrett 2007) shown beside. `blood_pressure` 0.2 SD, 2 mmHg shown beside, because its only source (a preprint on nuts) states a convention without its origin. `cold_incidence`, `inflammation_crp`, `glycaemic_control`, `depressive_symptoms`: flagged default, nothing usable found (CRP 0.5 mg/L only in a trial protocol; no HbA1c source opened). |
+| 2026-11-03 | **Vitamin C benchmark rows** (founder): 8 rows in `vocab/benchmarks.json` from 7 reviews; negative controls are cold incidence (Cochrane RR 0.97, Keya RR 0.94) and mood (g 0.09, sign read from its subgroup). Abstract numbers only: PMC full text was unavailable for Cochrane and Juraschek. Left out: Ran 2018 and doi:10.1007/s00228-018-2601-7 (retracted); doi:10.1155/2020/8573742 (added to antivirals); Mason 2021 and Guan 2020 (diabetic, hypertensive only); doi:10.1080/10408398.2019.1703642 (vitamin C and/or E); Ashor 2017 (no overall number in its abstract, so `glycaemic_control` has no row); Cochrane's 8 % and Hemilä 2023's 15 % (relative scales we do not pool). |
 | 2026-11-03 | **Yes/no outcomes are pooled** (founder): S5N and S5R v1.42 read participants with an event per arm; route `event_counts`, ln(OR) × √3/π on the SMD scale (Chinn 2000; Cochrane Handbook v5.1 §9.4.6); 0.5 continuity correction (`effect_size.RULES`); `pool.ROUTE_RANK` 5.5, after reported estimates of a mean; the risk ratio is pooled for the benchmark only. All METHOD §16 negative-control candidates are event outcomes, and none could run. Episode counts stay unpooled. |
 | 2026-11-03 | **Vitamin C preparation** (Claude per founder rule): `blood_pressure` and `glycaemic_control` are `lower_better`, because null refused every arm-statistics effect; `measure_hierarchy` for those two, `inflammation_crp` and `cold_duration`; benchmark rows may carry `benefit_direction`, and units ignore spacing. Re-pooled creatine: strength, lean mass and power estimates unchanged; blood pressure k 0 → 2 and blood sugar k 0 → 2, both I. |
 | 2026-11-02 | **New benefit row "Possible"** (founder; `grade.TABLE`, `grade.benefit`): estimate > 0, CI excludes meaningful harm and holds both 0 and M; C− at High (unreachable) and Moderate, D+ at Low, I at Very low. "None" denied a benefit still inside the CI (strength +0.14 [-0.03, +0.30] read D); making those inconclusive would have put every creatine outcome at I, calling 14 trials unstudied. No new letter or constant. Must be tested by the negative controls: if a known failure earns C−, the row changes. |

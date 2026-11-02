@@ -366,7 +366,13 @@ The smallest change a person would notice, per outcome, on that scale. Policy
 
 Approved so far: muscle strength, power, muscular endurance, exercise endurance
 (0.2 SD, Hopkins 2004 "smallest worthwhile change"), lean body mass (0.2 SD,
+convention), cold duration (26.1 h, Barrett 2005), blood pressure (0.2 SD,
 convention). Every other outcome uses the flagged default.
+
+A value published only in natural units with no published SD is converted by the
+median control-arm SD of the outcome's preferred-measure trials (`natural`,
+`grade._threshold`, founder 2026-11-03): spreads only, after extraction, and the
+flagged default when no trial gives a usable SD.
 
 Values are sourced **per ingredient, as it is added** (2026-10-16): before an
 ingredient's run, its graded outcomes without an approved value get a sourced
@@ -402,7 +408,7 @@ What must hold before grades are shown to users:
   or fail. A row printed with lower = benefit carries `benefit_direction: "lower"`
   and is flipped to our benefit-positive scale; a risk-ratio row (`scale: "rr"`)
   is compared with our pooled risk ratio as printed, widths on the log scale.
-  Today: 19 rows from 10 creatine meta-analyses; on run 20261025_101638 lean mass
+  Today: 8 vitamin C rows from 7 reviews, and 19 rows from 10 creatine meta-analyses; on run 20261025_101638 lean mass
   passes (coverage 69 %), strength is not testable (44 %).
 - **Negative controls.** Every row today is a creatine success, so a pipeline
   that called everything effective would pass. Each new ingredient adds at least
