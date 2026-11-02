@@ -9,13 +9,52 @@ the founder decides. When an item is decided, move it to "Decided" with its
 date; delete anything that no longer applies. Dated history goes to
 `docs/history/project-log.md`, not here.
 
-Last swept: 2026-10-31.
+Last swept: 2026-11-02.
 
 ---
 
 ## Open
 
-None today.
+Vitamin C, proposed 2026-11-02. Nothing below is in the code or vocabularies yet.
+Every quote was checked by script against the Europe PMC abstract; PMC full text
+was unavailable for the Cochrane review and Juraschek (HTTP 500), so only abstract
+numbers are used. Retraction status was checked by Europe PMC publication type only.
+
+**O1. MCIDs (METHOD §14).**
+
+| Outcome | Proposed | Source and quote | Note |
+|---|---|---|---|
+| `cold_duration` | **26.1 h**, converted to SD by the median control-arm SD of the pooled trials; 25 % for severity, shown beside | Barrett 2005 (doi:10.1177/0272989x04273147): "For the scenario based on vitamin C, mean SID was estimated as 26.1 h (95% CI, 23.2 to 29.3)". Barrett 2007 (doi:10.1370/afm.698): "The scenario based on vitamin C led to a mean SID of 25% (95% confidence interval [CI] 0.23-0.27)" | Asked of adults with colds, about a vitamin C scenario. No SD is published, so the rule is fixed now and applied after extraction, using SDs only; re-pooling needs no model call |
+| `blood_pressure` | 0.2 SD default, flagged; 2 mmHg shown beside | Only source opened: a preprint on nuts (doi:10.1101/2021.05.21.21257564): "with the minimal clinically important difference being considered 2 mmHg" | States a convention without its origin; too weak to set the letter |
+| `cold_incidence`, `inflammation_crp`, `glycaemic_control`, `depressive_symptoms` | 0.2 SD default, flagged | None usable. CRP 0.5 mg/L appears only in a trial protocol (NCT07229781); no HbA1c source was opened | Default per METHOD §14 |
+
+**O2. Benchmark rows.** Estimates as published; a lower value is the benefit on all but the mood row.
+
+| Outcome | Type | Published | Population | Source | Status |
+|---|---|---|---|---|---|
+| `cold_incidence` | **Negative control** | RR 0.97 [0.94, 1.00] | general community, 10,708 | Cochrane, Hemilä 2013 (doi:10.1002/14651858.cd000980.pub4) | Needs O3 G1 |
+| `cold_incidence` | **Negative control** | RR 0.94 [0.87, 1.01] | respiratory illness, 10 studies across the review | Keya 2022 (doi:10.2174/2772432817666211230100723) | Needs O3 G1 |
+| `depressive_symptoms` | **Negative control** | g 0.09 [-0.15, 0.33] | adults, depressed and not, 10 trials, 836 | doi:10.1016/j.genhosppsych.2021.04.006 | Usable; sign unstated, read from its subgroup (negative = benefit) |
+| `cold_duration` | Benefit | SMD -0.36 [-0.62, -0.09] | respiratory infection | Keya 2022 | Usable; one row, from a lower-tier journal |
+| `blood_pressure` | Benefit | SBP -3.84 mmHg [-5.29, -2.38] | mixed, 29 trials, median 8 weeks | Juraschek 2012 (doi:10.3945/ajcn.111.027995) | Usable after O3 G2, G3 |
+| `blood_pressure` | Benefit | SBP -3.0 mmHg [-4.7, -1.3] | adults, 20 studies, 890 | doi:10.1080/09637486.2023.2264549 | Usable after O3 G2, G3 |
+| `inflammation_crp` | Benefit | CRP -0.23 mg/L [-0.44, -0.03] | 12 studies, 893 | Jafarnejad 2018 (doi:10.2174/1381612824666181017101810) | Usable after O3 G3; significant heterogeneity |
+| `inflammation_crp` | Benefit | CRP -0.73 mg/L [-1.30, -0.15] | 11 studies, 818; includes enriched foods | doi:10.1515/jcim-2019-0151 | Usable after O3 G3; I² 98 % |
+
+Left out: Ran 2018 (doi:10.1155/2018/1837634) and doi:10.1007/s00228-018-2601-7, both
+retracted; doi:10.1155/2020/8573742, vitamin C added to antivirals; Mason 2021 and Guan
+2020, diabetic and hypertensive populations only; doi:10.1080/10408398.2019.1703642,
+vitamin C and/or E; Ashor 2017, no overall number in its abstract, so `glycaemic_control`
+has no row; Cochrane's 8 % and Hemilä 2023's 15 %, relative scales we do not pool.
+
+**O3. Code gaps found while preparing.** Claude recommends fixing all four before the run.
+
+| # | Gap | Effect if not fixed | Fix |
+|---|---|---|---|
+| G1 | Yes/no outcomes cannot be pooled: S5N reads no event counts, and `effect_size` refuses ratios | `cold_incidence` gets no effect, so the main negative control cannot run. All of METHOD §16's listed candidates are event outcomes too | S5N and S5R read events per arm; odds ratio converted to SMD (Cochrane Handbook §10.6; formula to be checked against the source); an `rr` benchmark scale. Before the first run it costs no extra calls; after it, S5N and S5R run again |
+| G2 | `blood_pressure` and `glycaemic_control` have polarity null | Every arm-statistics effect is refused | Set `lower_better` |
+| G3 | `benchmark.compare` does not orient lower-is-better rows, and reads "mm Hg" and "mmHg" as different units | A real agreement reads as NO OVERLAP or not comparable | Orient rows; normalise units |
+| G4 | These outcomes have no `measure_hierarchy` | Which measure counts for a trial is left to primary flag and route | SBP then DBP; HbA1c then fasting glucose; CRP then IL-6; duration then severity |
 
 ## Work list (2026-10-28; replaces the 2026-10-15 list, whose items are done or decided below)
 
