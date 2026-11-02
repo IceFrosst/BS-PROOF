@@ -22,6 +22,25 @@ def _run(**kw):
 
 
 class Stability(unittest.TestCase):
+    def test_full_pool_swaps_fresh_readings_into_the_whole_run(self):
+        from unittest import mock
+
+        def fake(items, product, registry):
+            # k and estimate come from which reading of s1 was graded
+            swapped = items[0]["extraction"] == "fresh"
+            return {"outcomes": [
+                {"outcome": "kept", "k": 5, "smd": {"estimate": 0.25 if swapped else 0.1},
+                 "run_grade": {"letter": "C" if swapped else "D"}},
+                {"outcome": "thin", "k": 2, "smd": None, "run_grade": {"letter": "I"}}]}
+        production = {"s1": {"record": {"canonical_id": "s1"}, "extraction": "prod"},
+                      "s2": {"record": {"canonical_id": "s2"}, "extraction": "prod"}}
+        context = {"product": {}, "evidence_v2": {"outcomes": [{"outcome": "kept", "record": {"registry": None}}]}}
+        with mock.patch("pipeline.evidence_v2.summarise", fake):
+            rows = es.full_pool(production, {"s1": {"extraction": "fresh"}}, context)
+        self.assertEqual(sorted(rows), ["kept"])            # k < 3 in both is not compared
+        self.assertFalse(rows["kept"]["same_letter"])
+        self.assertEqual(rows["kept"]["estimate_difference"], 0.15)
+
     def test_kappa(self):
         self.assertEqual(es._kappa([("a", "a"), ("b", "b")]), 1.0)
         self.assertEqual(es._kappa([("a", "b"), ("b", "a")]), -1.0)

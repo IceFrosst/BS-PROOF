@@ -409,10 +409,15 @@ What must hold before grades are shown to users:
   only where the letter is threshold-sensitive), pooled estimates within
   0.1 SD, and ≥ 90 % agreement on each fact that feeds a grade (arms, numbers
   read, outcome mapping, S4 items 1, 2, 5, 7, and the rating after S4R). A fact below 90 % does not fail
-  the method; it names the next prompt to fix. Not yet measured cleanly;
-  two creatine runs whose S5 input differed (text slice vs full text) moved
-  strength from C+ to D+ through S5 claim splitting alone (project log,
-  2026-10-20).
+  the method; it names the next prompt to fix. Letters and estimates are read
+  from the whole run re-graded with the fresh readings swapped in (`compare`,
+  `full_pool`), because the 25 sampled studies alone give k <= 3 and letter I.
+  Result (run 20261031_201501, 2026-11-02): **passes**. All 5 outcomes with
+  k >= 3 keep their letter; the largest estimate change is 0.034 SD (strength
+  0.027, with one study lost to a failed S5 call). Only 25 of the 98 read
+  studies were re-read (11 of the 37 pooled effects in strength, lean mass and
+  power). Below 90 %: S4 items 2, 5 and 7 (80, 76, 88 %; the rating after S4R
+  agrees 96 %), `ingredient_isolated` (88 %), outcome mapping (89 %).
 - **Spot audit** (founder 2026-10-20): a fixed-seed sample of 20 pooled effects
   (`scripts/experiments/spot_audit.py`) checked against the papers' full text:
   measure, arms, numbers and risk-of-bias items. The benchmark sees only the

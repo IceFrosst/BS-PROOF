@@ -290,10 +290,10 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
 - **Latest v2 run** `20261031_201501` (v1.41 + figure route + S4R; 98/138 studies
   read, 40 without full text): strength **k = 14, D, Moderate** (+0.14 [-0.03, +0.30]),
   coverage 56 %, benchmark **passes**; lean mass k = 11 **D, Moderate**, passes
-  (79 %); power k = 12 **D+, Low**. Spot audit seed 3 **passes** (0 of 20). Next:
-  stability (243 calls, founder runs it).
+  (79 %); power k = 12 **D+, Low**. Spot audit seed 3 **passes** (0 of 20).
+  Stability **passes** (same letters, largest change 0.034 SD).
 - **Known v2 problems:** the work list in `docs/DECISIONS.md` (2026-10-28).
-  Open: stability, negative-control benchmarks, `baseline_imbalance` (B4).
+  Open: negative-control benchmarks, `baseline_imbalance` (B4).
 - **Working baseline: `Jans_attempt`, not `main`** (founder, 2026-10-15).
   `origin/main` has diverged (68 commits since `d9cedc4`, 2026-09-22: live
   research worker, live result card, research-jobs SQL, scan-history UI,

@@ -10,6 +10,38 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-11-02 — stability passes (METHOD §16)
+
+Fresh run B1 of 25 studies against production run 20261031_201501, with its own
+empty cache, over two sessions (subscription limit at study 12). Two calls failed
+with `max_turns` (S5 on `doi:1010801550278320232193556`, S5FR on
+`doi:103390nu15245134`); not retried, because a failure is part of what a re-run
+does. Production had one failure in 98 studies (S5N).
+
+The 25 studies graded alone give k <= 3 and letter I everywhere, so a letter
+there cannot move. `compare` now also re-grades the whole run with the fresh
+readings swapped in (`full_pool`):
+
+| Outcome | Production | Fresh | Change |
+|---|---|---|---|
+| strength | D k14 +0.139 | D k13 +0.166 | 0.027 |
+| lean mass | D k11 +0.123 | D k10 +0.116 | 0.007 |
+| power | D+ k12 +0.103 | D+ k11 +0.100 | 0.003 |
+| muscular endurance | I k4 +0.150 | I k4 +0.184 | 0.034 |
+| exercise endurance | I k3 -0.074 | I k3 -0.074 | 0.000 |
+
+The k and estimate changes in strength, lean mass and power all come from the
+study lost to the failed S5; without it those three are identical. It re-read 11
+of the 37 pooled effects in those outcomes, so this bounds the other 26 only by
+assumption. Facts: comparator 100 %, n randomised 100 %, means 93 %, SDs 96 %,
+rating after S4R 96 % (one flip, low to concerns, in a study pooled in no main
+outcome). Below 90 %: S4 item 2 80 %, item 5 76 %, item 7 88 %,
+`ingredient_isolated` 88 %, mapping 89 %. `effect_favours` agrees 74 %: it only
+sets a sign for a reported effect or a flag on arm statistics; no pooled sign
+moved. Effects: 34 of 37 present in both runs, 32 within 0.05; the largest gap
+(0.25, `doi:101007s1135702501889y`) and one refusal
+(`doi:101186s129700190291x`) are in trials pooled in neither run.
+
 ## 2026-10-31 — run 20261031_201501: spot audit seed 3 passes; stability run made like-for-like
 
 Run with S4R and the pooled-SE rule: 30 live calls (forecast 25), 791 cache hits,

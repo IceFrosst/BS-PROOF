@@ -11,7 +11,8 @@ and grade by grade.
     # 2. ONE fresh run (live model calls: run SOLO, see below) against the
     # production run's dump as the other reading (founder rule 2026-10-28)
     .venv/bin/python scripts/experiments/extraction_stability.py run --label B --dump out/<dump>.json
-    # 3. compare (offline)
+    # 3. compare (offline); against a dump it also re-grades the whole run with
+    #    the fresh readings swapped in, which is the result METHOD §16 reads
     .venv/bin/python scripts/experiments/extraction_stability.py compare dump:out/<dump>.json B
     # v2 poolability of ONE run, per mapped claim: which reader, effect, review
     .venv/bin/python scripts/experiments/extraction_stability.py numbers RSMOKE3
@@ -373,6 +374,36 @@ def _score_both(a: dict, b: dict, ids: list[str]) -> dict:
     return {oid: {"A": ga.get(oid), "B": gb.get(oid)} for oid in SHOWCASE}
 
 
+def full_pool(production: dict, fresh: dict, context: dict) -> dict:
+    """The grade question at full size: the production run re-graded with the
+    fresh readings swapped in, per outcome with k >= 3 in either. MEASURED
+    2026-11-02: graded alone, the 25 sampled studies give k <= 3 and letter I
+    for every outcome, so a letter there cannot move and proves nothing. A
+    study whose agent failed in the fresh run is swapped in as it came, because
+    that loss is part of what a re-run does."""
+    from pipeline.evidence_v2 import summarise
+    product = context["product"]
+    registry = {o["outcome"]: o["record"].get("registry") for o in context["evidence_v2"]["outcomes"]}
+
+    def grades(swap: dict) -> dict:
+        items = [{"id": r["record"].get("_canonical") or c, "record": r["record"],
+                  "extraction": (swap.get(c) or r)["extraction"]} for c, r in production.items()]
+        return {o["outcome"]: o for o in summarise(items, product, registry)["outcomes"]}
+    before, after = grades({}), grades(fresh)
+    rows = {}
+    for oid, a in before.items():
+        b = after[oid]
+        if a["k"] < 3 and b["k"] < 3:
+            continue
+        est_a, est_b = (a["smd"] or {}).get("estimate"), (b["smd"] or {}).get("estimate")
+        rows[oid] = {"production": {"letter": a["run_grade"]["letter"], "k": a["k"], "smd": est_a},
+                     "fresh": {"letter": b["run_grade"]["letter"], "k": b["k"], "smd": est_b},
+                     "same_letter": a["run_grade"]["letter"] == b["run_grade"]["letter"],
+                     "estimate_difference": (round(abs(est_a - est_b), 3)
+                                             if est_a is not None and est_b is not None else None)}
+    return rows
+
+
 def numbers_report(run: dict) -> dict:
     """Per mapped claim: who read its numbers (S5N; S5 before v1.37), the effect route they
     make (pipeline/effect_size.py) or the refusal, and the second review."""
@@ -439,7 +470,14 @@ def main(argv: list[str]) -> int:
             rows = json.loads(Path(label[5:]).read_text(encoding="utf-8"))
             return {r["record"]["canonical_id"]: r for r in rows}
         return json.loads((OUT / f"{label}.json").read_text(encoding="utf-8"))
-    result = numbers_report(load(args.label)) if args.cmd == "numbers" else compare_runs(load(args.a), load(args.b))
+    if args.cmd == "numbers":
+        result = numbers_report(load(args.label))
+    else:
+        a, b = load(args.a), load(args.b)
+        result = compare_runs(a, b)
+        if args.a.startswith("dump:"):
+            context = json.loads(RUN.read_text(encoding="utf-8"))
+            result["full_pool"] = full_pool(a, b, context)
     text = json.dumps(result, indent=1)
     print(text)
     if args.out:
