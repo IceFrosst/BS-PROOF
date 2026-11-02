@@ -379,8 +379,8 @@ def _study_effects(item: dict, product: dict, polarity: dict,
             eff = dataclasses.replace(eff, flags=eff.flags + ("rob_flaw_unconfirmed",))
         if "baseline_imbalance" in eff.flags and rob in ("low", "unclear"):
             # Founder 2026-10-03: downgrade, never refuse. A trial whose arms
-            # started further apart than the endpoint difference cannot count
-            # as low risk of bias (RoB 2 domain 1); GRADE's rule does the rest.
+            # started further apart than chance allows cannot count as low
+            # risk of bias (RoB 2 question 1.3); GRADE's rule does the rest.
             # A reported flaw, so CONCERNS (founder 2026-10-20).
             rob = "concerns"
         form_id = study_form(s7, claim)

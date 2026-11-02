@@ -294,14 +294,28 @@ class ConsistencyGuard(unittest.TestCase):
 FFM = {"mean_ingredient": 65.4, "mean_control": 67.6, "post_ingredient": 65.4, "post_control": 67.6,
        "pre_ingredient": 62.9, "pre_control": 68.0, "se_ingredient": 2.3, "se_control": 2.2,
        "n_ingredient": 10, "n_control": 10}
+BEYOND_CHANCE = {**FFM, "pre_ingredient": 52.9}    # gap 15.1, SE about 3.2
 
 
 class BaselineImbalance(unittest.TestCase):
-    def test_a_gap_larger_than_the_endpoint_difference_is_flagged_not_refused(self):
+    def test_a_gap_beyond_chance_is_flagged_not_refused(self):
         from pipeline.effect_size import effect_from_claim
-        eff, route = effect_from_claim({**BASE, "estimand": "endpoint"}, FFM, polarity="higher_better")
+        eff, route = effect_from_claim({**BASE, "estimand": "endpoint"}, BEYOND_CHANCE, polarity="higher_better")
         self.assertEqual(route, "arm_stats_derived")
         self.assertIn("baseline_imbalance", eff.flags)
+
+    def test_a_gap_within_chance_is_not_flagged_even_if_above_the_endpoint_difference(self):
+        from pipeline.effect_size import effect_from_claim
+        # gap 5.1 > endpoint difference 2.2, but SE about 3.2 (z about 1.6)
+        eff, _ = effect_from_claim({**BASE, "estimand": "endpoint"}, FFM, polarity="higher_better")
+        self.assertNotIn("baseline_imbalance", eff.flags)
+        self.assertIn("ancova_adjusted", eff.flags)
+
+    def test_the_gap_is_judged_on_baseline_sds_when_verified(self):
+        from pipeline.effect_size import effect_from_claim
+        wide = {**BEYOND_CHANCE, "sd_pre_ingredient": 30.0, "sd_pre_control": 30.0}
+        eff, _ = effect_from_claim({**BASE, "estimand": "endpoint"}, wide, polarity="higher_better")
+        self.assertNotIn("baseline_imbalance", eff.flags)
 
     def test_an_endpoint_mean_may_be_given_as_the_post_value_only(self):
         from pipeline.effect_size import effect_from_claim
@@ -310,7 +324,6 @@ class BaselineImbalance(unittest.TestCase):
         self.assertEqual(route, "arm_stats_derived")
         # ANCOVA-adjusted (founder 2026-10-26): endpoint difference - r x baseline difference
         self.assertAlmostEqual(eff.md, (65.4 - 67.6) - 0.5 * (62.9 - 68.0))
-        self.assertIn("baseline_imbalance", eff.flags)
         # a change score is never read from post values
         self.assertIsNone(effect_from_claim(BASE, post_only, polarity="higher_better")[0])
 
@@ -351,7 +364,7 @@ class BaselineImbalance(unittest.TestCase):
         self.assertEqual(eff.ancova_at, {})
         eff, _ = effect_from_claim(BASE, SJ, polarity="higher_better")              # change scores
         self.assertNotIn("ancova_adjusted", eff.flags)
-        cross, _ = effect_from_claim({**claim, "design_kind": "crossover"}, FFM, polarity="higher_better")
+        cross, _ = effect_from_claim({**claim, "design_kind": "crossover"}, BEYOND_CHANCE, polarity="higher_better")
         self.assertNotIn("ancova_adjusted", cross.flags)
         self.assertIn("baseline_imbalance", cross.flags)        # still flagged, as before
 
@@ -370,7 +383,7 @@ class BaselineImbalance(unittest.TestCase):
                 "S4": {"item1_randomisation_method": 1, "item2_double_blind_placebo": 1, "item5_attrition_ok": 1},
                 "outcomes": [{"claim": claim, "outcome_vocab_id": "lean_body_mass", "discarded": False,
                               "numbers_v2": {"verified": v, "claim": claim}}]}}
-        flagged = pool_outcomes([item(FFM)], product)["lean_body_mass"].studies[0]
+        flagged = pool_outcomes([item(BEYOND_CHANCE)], product)["lean_body_mass"].studies[0]
         self.assertEqual((flagged["rob"], "baseline_imbalance" in flagged["flags"]), ("concerns", True))
         clean = pool_outcomes([item({**FFM, "pre_control": 64.0})], product)["lean_body_mass"].studies[0]
         self.assertEqual(clean["rob"], "low")

@@ -71,10 +71,15 @@ Printed-table consistency guard (added 2026-10-03; RSMOKE5 found a paper whose
 
 Baseline imbalance (founder 2026-10-03: downgrade, never refuse):
 
-  An ENDPOINT effect whose arms' verified baselines differ by more than the
-  endpoint difference itself is flagged `baseline_imbalance`; the pool then
-  caps that trial's risk of bias at "unclear" (pipeline/pool.py), so GRADE's
-  existing risk-of-bias rule downgrades when such trials carry the weight.
+  An ENDPOINT effect whose arms' verified baselines differ by more than chance
+  allows (|difference| / its SE > RULES["baseline_gap_z"]; baseline SDs if
+  verified, else the endpoint SDs) is flagged `baseline_imbalance`, RoB 2's
+  question 1.3. The pool then rates that trial's risk of bias "concerns"
+  (pipeline/pool.py), so GRADE's risk-of-bias rule downgrades when such trials
+  carry the weight. Until 2026-11-02 the test was a gap larger than the endpoint
+  difference, which flagged null trials for trivial gaps (6.93 vs 6.96 s, SD
+  about 0.23): MEASURED on run 20261031_201501, 13 pooled effects, none beyond
+  chance, 54 % of muscle power's weight.
 
 ANCOVA adjustment (founder 2026-10-26, docs/DECISIONS.md):
 
@@ -110,6 +115,7 @@ _POOLED_OVER_VISITS = re.compile(r"\b(pooled|across)\b", re.I)
 RULES = {
     "ancova_r": 0.5,                    # pre-post correlation for the ANCOVA adjustment
     "ancova_r_sensitivity": (0.3, 0.7),  # reported beside every outcome that uses it
+    "baseline_gap_z": 1.96,             # baseline gap beyond chance (decided 2026-11-02)
 }
 
 
@@ -271,8 +277,14 @@ def effect_from_claim(claim: dict, verified: dict, *, polarity: str | None,
                   + v["sd_control"] ** 2 / v["n_control"])
         if crossover:
             flags = flags + ("crossover_as_parallel",)
-        if endpoint_gap is not None and abs(endpoint_gap) > abs(md):
-            flags = flags + ("baseline_imbalance",)
+        if endpoint_gap is not None:
+            # Baseline SDs when verified; else the endpoint SDs stand in, as they
+            # do for the ANCOVA slope above.
+            sds = sd_pre if all(isinstance(x, (int, float)) and x > 0 for x in sd_pre) \
+                else (v["sd_ingredient"], v["sd_control"])
+            gap_se = (sds[0] ** 2 / v["n_ingredient"] + sds[1] ** 2 / v["n_control"]) ** 0.5
+            if abs(endpoint_gap) > RULES["baseline_gap_z"] * gap_se:
+                flags = flags + ("baseline_imbalance",)
         reader = _favoured_sign(claim.get("effect_favours"))
         if reader is not None and g and (g > 0) != (reader > 0):
             # S5N's reading of which arm did better disagrees with the sign

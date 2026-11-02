@@ -265,8 +265,9 @@ always means benefit, after the outcome's polarity. Routes, best first:
   verified baseline SDs, pre and post SDs are taken as equal. Each outcome that
   uses it also reports its estimate and letter at r = 0.3 and 0.7
   (`sensitivity`).
-- **Baseline imbalance** (arms' baselines differ by more than the endpoint
-  difference): flagged; the trial's risk of bias is capped at "unclear".
+- **Baseline imbalance** (arms' baselines differ by more than chance allows:
+  |difference| / SE > 1.96, RoB 2 question 1.3, Claude per founder rule
+  2026-11-02): flagged; the trial's risk of bias is rated "concerns".
 - **Refused**: anything not a between-arm contrast against an ingredient-free
   control, cluster or unstated designs, ratio and percent-change kinds, a
   favoured arm of "neither", percentages used as arm means without SDs.
@@ -300,7 +301,7 @@ each downgrade with its reason:
 
 | Domain | Rule |
 |---|---|
-| Risk of bias | Only a REPORTED flaw downgrades (founder 2026-10-20): none if ≥ 50 % of the weight is from trials with no reported flaw (low or unclear); −2 if > 50 % is high-risk; else −1. A trial is HIGH risk when blinding/placebo is missing (S4 item 2); CONCERNS when it has an attrition problem (item 7: dropout ≥ 20 %, differing between arms, or caused by the intervention) or its arms were imbalanced at baseline; UNCLEAR when nothing wrong is reported but something is undescribed (randomisation method not named, attrition reporting incomplete (item 5), an item unknown), which does not downgrade (founder 2026-10-25). A flaw counts only when two independent readers report it (S4, S4R; `pool.confirmed_s4`, founder rule 2026-10-31); a disputed flaw is flagged `rob_flaw_unconfirmed` |
+| Risk of bias | Only a REPORTED flaw downgrades (founder 2026-10-20): none if ≥ 50 % of the weight is from trials with no reported flaw (low or unclear); −2 if > 50 % is high-risk; else −1. A trial is HIGH risk when blinding/placebo is missing (S4 item 2); CONCERNS when it has an attrition problem (item 7: dropout ≥ 20 %, differing between arms, or caused by the intervention) or its arms differed at baseline beyond chance; UNCLEAR when nothing wrong is reported but something is undescribed (randomisation method not named, attrition reporting incomplete (item 5), an item unknown), which does not downgrade (founder 2026-10-25). A flaw counts only when two independent readers report it (S4, S4R; `pool.confirmed_s4`, founder rule 2026-10-31); a disputed flaw is flagged `rob_flaw_unconfirmed` |
 | Inconsistency | −1 at I² > 50 %, −2 at > 75 %; not assessed below 3 trials |
 | Imprecision | −1 if the CI crosses 0 or the threshold, or fewer than 400 participants in total (optimal information size); −2 if the CI spans both ±threshold or fewer than 200 participants; −3 below 100 participants (GRADE's "extremely serious", 2021 guidance) |
 | Indirectness | −1 per axis when > 50 % of the weight is not the product's exact form, or off-dose (§9); form + dose cap at −2. Populations: refused if `different`, reported if `adjacent` (§8) |

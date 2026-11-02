@@ -10,6 +10,13 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-11-02 — B4: a baseline gap counts as a flaw only beyond chance
+
+`baseline_imbalance` now tests |gap| / SE > 1.96 instead of gap > endpoint
+difference (DECISIONS). Re-pooled offline from `out/run_v141c_extractions.json`,
+no model calls: 13 flagged pooled effects → 0, power D+ Low → D Moderate, no
+estimate moved. The stored run 20261031_201501 is not rewritten.
+
 ## 2026-11-02 — stability passes (METHOD §16)
 
 Fresh run B1 of 25 studies against production run 20261031_201501, with its own
