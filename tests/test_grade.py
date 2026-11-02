@@ -31,8 +31,31 @@ class Benefit(unittest.TestCase):
         self.assertEqual(benefit(-0.5, (-0.8, -0.3), m), "harm")
 
     def test_too_wide_for_any_category_is_inconclusive(self):
-        self.assertEqual(benefit(0.5, (-0.1, 1.1), 0.2), "inconclusive")     # big but crosses 0
+        self.assertEqual(benefit(0.3, (-0.3, 0.9), 0.2), "inconclusive")     # big but could be harm
         self.assertEqual(benefit(0.0, (-0.6, 0.6), 0.2), "inconclusive")     # could be harm
+
+
+class PossibleBenefit(unittest.TestCase):
+    """Founder 2026-11-02: CI excludes meaningful harm, holds both 0 and M."""
+
+    def test_creatine_strength_shape_is_possible(self):
+        self.assertEqual(benefit(0.14, (-0.03, 0.30), 0.2), "possible")
+
+    def test_an_estimate_above_m_crossing_zero_is_possible(self):
+        self.assertEqual(benefit(0.22, (-0.01, 0.45), 0.2), "possible")
+
+    def test_a_ci_below_m_stays_none(self):
+        self.assertEqual(benefit(0.05, (-0.05, 0.15), 0.2), "none")
+        self.assertEqual(TABLE["none"][4], "F")
+
+    def test_a_ci_above_zero_stays_small(self):
+        self.assertEqual(benefit(0.14, (0.03, 0.25), 0.2), "small")
+
+    def test_meaningful_harm_in_the_ci_stays_inconclusive(self):
+        self.assertEqual(benefit(0.10, (-0.25, 0.45), 0.2), "inconclusive")
+
+    def test_row_ranks_between_small_and_none(self):
+        self.assertEqual((TABLE["possible"][3], TABLE["possible"][2], TABLE["possible"][1]), ("C-", "D+", "I"))
 
 
 class CertaintyDomains(unittest.TestCase):

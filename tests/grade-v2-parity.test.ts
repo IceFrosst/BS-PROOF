@@ -52,6 +52,10 @@ describe("evidence v2 grade parity with pipeline/grade.py", () => {
     expect([...domains]).toEqual(expect.arrayContaining(["indirectness", "publication_bias", "imprecision"]));
   });
 
+  it("the letter table matches Python's, every row and cell", () => {
+    expect(JSON.parse(JSON.stringify(TABLE))).toEqual(golden.table);
+  });
+
   it("very low certainty is always I", () => {
     for (const row of Object.values(TABLE)) expect(row[1]).toBe("I");
   });

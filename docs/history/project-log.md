@@ -10,6 +10,24 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-11-02 — "Possible" benefit row (founder)
+
+`grade.benefit` calls a positive estimate whose CI excludes meaningful harm and
+holds both 0 and M "possible": C− at Moderate, D+ at Low, I at Very low. Considered
+and rejected: inconclusive (every creatine outcome I, founder: wrong for a result
+that leans positive across 14 trials). Re-pooled offline from
+`out/run_v141c_extractions.json`, no model calls, with B4:
+
+| Outcome | k | Estimate | Stored | Now | At M/2, 2M |
+|---|---|---|---|---|---|
+| strength | 14 | +0.14 [-0.03, +0.30] | D Moderate | C− Moderate | C−, D |
+| lean mass | 11 | +0.12 [-0.06, +0.30] | D Moderate | C− Moderate | C−, D |
+| power | 12 | +0.10 [-0.15, +0.35] | D+ Low | C− Moderate | I, D |
+
+All other outcomes stay I (Very low). All three are threshold-sensitive. Stability
+still holds under the new letters: `full_pool` gives the same letter in both
+readings on all 5 outcomes with k >= 3. The negative controls are the row's test.
+
 ## 2026-11-02 — B4: a baseline gap counts as a flaw only beyond chance
 
 `baseline_imbalance` now tests |gap| / SE > 1.96 instead of gap > endpoint

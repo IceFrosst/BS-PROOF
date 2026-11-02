@@ -46,11 +46,12 @@ export function doseMatchFor(productLow: number | null, productHigh: number | nu
 /** pipeline/grade.py LEVELS. */
 export const LEVELS: Record<number, string> = { 4: "High", 3: "Moderate", 2: "Low", 1: "Very low" };
 
-/** pipeline/grade.py TABLE — the founder-approved §4 grade table (2026-10-03). */
+/** pipeline/grade.py TABLE — the founder-approved §4 grade table (2026-10-03; "possible" 2026-11-02). */
 export const TABLE: Record<string, Record<number, string>> = {
   large: { 4: "A+", 3: "A", 2: "B", 1: "I" },
   meaningful: { 4: "A", 3: "B+", 2: "C+", 1: "I" },
   small: { 4: "C", 3: "C", 2: "C-", 1: "I" },
+  possible: { 4: "C-", 3: "C-", 2: "D+", 1: "I" },
   none: { 4: "F", 3: "D", 2: "D+", 1: "I" },
   harm: { 4: "F", 3: "F", 2: "D-", 1: "I" },
 };

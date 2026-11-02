@@ -320,6 +320,7 @@ threshold *M* (§14), in the good direction:
 | Large | estimate ≥ 2·M, CI excludes 0 |
 | Meaningful | estimate ≥ M, CI excludes 0 |
 | Small | 0 < estimate < M, CI excludes 0 |
+| Possible | estimate > 0, CI excludes meaningful harm (lower > −M) and holds both 0 and M (founder 2026-11-02) |
 | None | CI excludes harm and the estimate is below M |
 | Harm | estimate ≤ −M in the bad direction, CI excludes 0 |
 | Inconclusive | a CI too wide for any row → grade **I** |
@@ -331,9 +332,13 @@ threshold *M* (§14), in the good direction:
 | Large | A+ | A | B | I |
 | Meaningful | A | B+ | C+ | I |
 | Small | C | C | C− | I |
+| Possible | (C−) | C− | D+ | I |
 | None | F | D | D+ | I |
 | Harm | F ⚠ | F ⚠ | D− ⚠ | I |
 
+- **Possible** means probably helps, not confirmed: not shown to work and not
+  shown not to. Its High cell cannot occur, because a CI crossing 0 and M always
+  loses a level for imprecision.
 - **I = insufficient evidence**, never a low letter: *not studied* must never
   look like *studied and failed* (CLAUDE.md invariant 8).
 - **F** means shown not to work (High certainty for "None") or harm (⚠, at

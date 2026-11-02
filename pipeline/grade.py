@@ -66,6 +66,8 @@ TABLE = {
     "large":      {4: "A+", 3: "A",  2: "B",  1: "I"},
     "meaningful": {4: "A",  3: "B+", 2: "C+", 1: "I"},
     "small":      {4: "C",  3: "C",  2: "C-", 1: "I"},
+    # Founder 2026-11-02. High cannot occur: a CI crossing 0 and M loses a level for imprecision.
+    "possible":   {4: "C-", 3: "C-", 2: "D+", 1: "I"},
     "none":       {4: "F",  3: "D",  2: "D+", 1: "I"},
     "harm":       {4: "F",  3: "F",  2: "D-", 1: "I"},
 }
@@ -262,6 +264,11 @@ def benefit(estimate: float, ci: tuple[float, float], m: float) -> str:
         return "meaningful"
     if lo > 0 and 0 < estimate < m:
         return "small"
+    if estimate > 0 and -m < lo <= 0 and hi >= m:
+        # Founder 2026-11-02: leans positive, no meaningful harm, and both zero
+        # and a meaningful benefit are still inside the CI. "None" would deny a
+        # benefit the CI holds; "I" would call a well-studied result unstudied.
+        return "possible"
     if lo > -m and estimate < m:
         return "none"
     return "inconclusive"
