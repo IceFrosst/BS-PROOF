@@ -95,6 +95,18 @@ ANCOVA adjustment (founder 2026-10-26, docs/DECISIONS.md):
   +0.14 -> +0.25). Flagged `ancova_adjusted`; the effect also carries its g and
   variance at RULES["ancova_r_sensitivity"], which the outcome reports.
 
+Yes/no outcomes (founder 2026-11-03, docs/DECISIONS.md):
+
+  Verified counts of participants with at least one event, plus both arm sizes,
+  give the route `event_counts`: ln(OR) x sqrt(3) / pi on the SMD scale, so a
+  yes/no trial is graded like every other (Chinn 2000; Cochrane Handbook v5.1
+  §9.4.6). It assumes a logistic outcome with equal spread in both arms, and is
+  flagged `or_to_smd`. A cell of 0 adds RULES["event_zero_cell"] to all four
+  (`continuity_correction`). No events in either arm, or every participant in
+  both, gives no odds ratio and is refused. A crossover needs paired counts and
+  is refused. The log risk ratio travels with the effect for the like-for-like
+  benchmark only; it never reaches a letter.
+
 Refused, each with its reason: anything not a between-arm contrast against an
 ingredient-free control; cluster / unstated designs (they need an ICC the papers
 rarely print); ratios and percent-change kinds (they need their own scale); a
@@ -102,6 +114,7 @@ favoured arm of "neither"; percentage values used as arm means without SDs.
 """
 from __future__ import annotations
 
+import math
 import re
 from dataclasses import dataclass, field
 
@@ -116,7 +129,10 @@ RULES = {
     "ancova_r": 0.5,                    # pre-post correlation for the ANCOVA adjustment
     "ancova_r_sensitivity": (0.3, 0.7),  # reported beside every outcome that uses it
     "baseline_gap_z": 1.96,             # baseline gap beyond chance (decided 2026-11-02)
+    "event_zero_cell": 0.5,             # added to all four cells when one is 0 (decided 2026-11-03)
 }
+# Chinn 2000; Cochrane Handbook v5.1 §9.4.6 (decided 2026-11-03).
+_LOG_OR_TO_SMD = math.sqrt(3) / math.pi
 
 
 @dataclass(frozen=True)
@@ -131,6 +147,8 @@ class Effect:
     flags: tuple[str, ...] = field(default_factory=tuple)
     # ANCOVA-adjusted effects only: {r: (g, variance)} at the sensitivity r values.
     ancova_at: dict = field(default_factory=dict)
+    log_rr: float | None = None       # ingredient vs control, yes/no route only; benchmark only
+    log_rr_variance: float | None = None
 
     @property
     def scales(self) -> tuple[str, ...]:
@@ -196,6 +214,31 @@ def _derive_arm_sds(verified: dict, ci_level) -> tuple[dict, tuple[str, ...]]:
     return v, tuple(flags)
 
 
+def _event_effect(v: dict, polarity: str | None, crossover: bool) -> tuple[Effect | None, str]:
+    """The yes/no route (module docstring), from verified counts."""
+    if crossover:
+        return None, "yes/no counts from a crossover need paired counts; not pooled"
+    orient = _orientation(polarity)
+    if orient is None:
+        return None, "outcome has no recorded polarity, so event counts cannot be oriented"
+    e1, n1, e2, n2 = v["events_ingredient"], v["n_ingredient"], v["events_control"], v["n_control"]
+    if not (0 <= e1 <= n1 and 0 <= e2 <= n2):
+        return None, "more events than participants: counts episodes, not people"
+    if (e1 == 0 and e2 == 0) or (e1 == n1 and e2 == n2):
+        return None, "no difference to measure: no events, or all participants, in both arms"
+    cells = [e1, n1 - e1, e2, n2 - e2]
+    flags = ("or_to_smd",)
+    if 0 in cells:
+        cells = [c + RULES["event_zero_cell"] for c in cells]
+        flags = flags + ("continuity_correction",)
+    a, b, c, d = cells
+    log_or, var = math.log(a * d / (b * c)), 1 / a + 1 / b + 1 / c + 1 / d
+    return Effect("event_counts", orient * log_or * _LOG_OR_TO_SMD, var * _LOG_OR_TO_SMD ** 2,
+                  estimand="event_proportion", flags=flags,
+                  log_rr=math.log((a / (a + b)) / (c / (c + d))),
+                  log_rr_variance=1 / a - 1 / (a + b) + 1 / c - 1 / (c + d)), "event_counts"
+
+
 def effect_from_claim(claim: dict, verified: dict, *, polarity: str | None,
                       abs_only: tuple[str, ...] | list[str] = (),
                       checks: dict | None = None) -> tuple[Effect | None, str]:
@@ -211,6 +254,11 @@ def effect_from_claim(claim: dict, verified: dict, *, polarity: str | None,
         return None, f"design is {design or 'unstated'}, not parallel or crossover"
     crossover = design == "crossover"
     kind = claim.get("estimate_kind")
+    # Before the ratio refusal: a paper printing counts usually prints an RR too.
+    # Arm means, when a trial has them, stay the first choice.
+    if (all(k in verified for k in ("events_ingredient", "events_control", "n_ingredient", "n_control"))
+            and not ("mean_ingredient" in verified and "mean_control" in verified)):
+        return _event_effect(verified, polarity, crossover)
     if kind in ("ratio", "relative_percent"):
         return None, f"{kind} needs its own scale; not pooled with differences"
     flags = tuple(f"sign_from_words:{f}" for f in abs_only)

@@ -498,7 +498,17 @@
     "illness duration",
     "symptom duration"
    ],
-   "polarity": "lower_better"
+   "polarity": "lower_better",
+   "measure_hierarchy": [
+     {
+       "tier": "duration of illness",
+       "match": "duration|length|days? (of|with)|time to (recovery|resolution)"
+     },
+     {
+       "tier": "severity score",
+       "match": "severity|wurss|symptom score"
+     }
+   ]
   },
   {
    "id": "digestive_comfort",
@@ -561,7 +571,21 @@
     "inflammation",
     "interleukin"
    ],
-   "polarity": "lower_better"
+   "polarity": "lower_better",
+   "measure_hierarchy": [
+     {
+       "tier": "CRP",
+       "match": "c.reactive|\\b(hs.?)?crp\\b"
+     },
+     {
+       "tier": "IL-6",
+       "match": "il.?6|interleukin.?6"
+     },
+     {
+       "tier": "TNF-alpha",
+       "match": "tnf|tumou?r necrosis"
+     }
+   ]
   },
   {
    "id": "cortisol",
@@ -619,7 +643,17 @@
     "blood pressure",
     "hypertension"
    ],
-   "polarity": null
+   "polarity": "lower_better",
+   "measure_hierarchy": [
+     {
+       "tier": "systolic",
+       "match": "systolic|\\bsbp\\b"
+     },
+     {
+       "tier": "diastolic",
+       "match": "diastolic|\\bdbp\\b"
+     }
+   ]
   },
   {
    "id": "glycaemic_control",
@@ -641,7 +675,21 @@
     "HbA1c",
     "insulin resistance"
    ],
-   "polarity": null
+   "polarity": "lower_better",
+   "measure_hierarchy": [
+     {
+       "tier": "HbA1c",
+       "match": "hba1c|a1c|glycated|glycosylated"
+     },
+     {
+       "tier": "fasting glucose",
+       "match": "fasting (plasma |blood |serum )?(glucose|sugar)|\\bfpg\\b|\\bfbg\\b"
+     },
+     {
+       "tier": "insulin resistance / fasting insulin",
+       "match": "homa|insulin"
+     }
+   ]
   },
   {
    "id": "adverse_events_any",

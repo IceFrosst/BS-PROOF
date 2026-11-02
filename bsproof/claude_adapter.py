@@ -413,7 +413,9 @@ PROMPT_VERSION = "v1.39"
 #   baseline SDs (`sd_pre_*`, for the ANCOVA adjustment) and an smd's basis
 #   (`smd_basis`), and are told only the target ingredient decides `contrast`
 #   (21 add-on controls were labelled vs_ingredient_arm at v1.40).
-AGENT_PROMPT_VERSION: dict[str, str] = {"S4": "v1.41", "S4R": "v1.41", "S5": "v1.41", "S5N": "v1.41", "S5R": "v1.41",
+#   S5N, S5R v1.42 (2026-11-03, founder): both read `events_*`, participants with
+#   an event per arm, for the yes/no route (pipeline/effect_size._event_effect).
+AGENT_PROMPT_VERSION: dict[str, str] = {"S4": "v1.41", "S4R": "v1.41", "S5": "v1.41", "S5N": "v1.42", "S5R": "v1.42",
                                         # the figure reader (pilot 2026-10-26; route 2026-10-28)
                                         "S5F": "v1.0", "S5FR": "v1.0"}
 

@@ -61,6 +61,15 @@ answer; a wrong number is not.
   sd_pre_ingredient, sd_pre_control  each arm's SD of its BASELINE mean, when
                                 printed beside it ("62.9 ± 7.3" in the pre
                                 column -> 7.3); never an SE, never computed
+  events_ingredient, events_control  for a YES/NO outcome (caught a cold or
+                                not, had an adverse event or not): the NUMBER OF
+                                PARTICIPANTS in each arm with at least one
+                                event, as printed ("12 (30%)" -> 12). Give
+                                n_ingredient and n_control with them. null when
+                                only a percentage is printed (never computed),
+                                and null for counts of episodes or events, where
+                                one person can count twice. A yes/no outcome
+                                has no means: leave mean_* and sd_* null
   effect_size                   the paper's own between-arm estimate (a mean
                                 difference or a standardised effect such as
                                 Cohen's d / Hedges' g), as printed

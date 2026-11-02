@@ -21,6 +21,7 @@ about a different question, which the reader weighs (§3 stage 6 indirectness).
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 
 import statistics
@@ -29,7 +30,7 @@ from pipeline import vocab
 from pipeline.span_check import find_number
 
 PATH = Path(__file__).resolve().parents[1] / "vocab" / "benchmarks.json"
-SCALES = ("smd", "md")
+SCALES = ("smd", "md", "rr")
 
 # THE PASS RULE (founder-approved 2026-10-04; constants, invariant 4 --
 # docs/DECISIONS.md, decided 2026-10-04). Per (outcome, scale), ALL THREE must hold:
@@ -59,6 +60,10 @@ def check_row(row: dict) -> list[str]:
         problems.append(f"scale {row.get('scale')!r} not in {SCALES}")
     if row.get("scale") == "md" and not row.get("unit"):
         problems.append("a mean-difference row needs its unit")
+    if row.get("benefit_direction") not in (None, "higher", "lower"):
+        problems.append(f"benefit_direction {row.get('benefit_direction')!r} is not higher or lower")
+    if row.get("scale") == "rr" and row.get("benefit_direction"):
+        problems.append("a risk-ratio row is compared as published; it takes no benefit_direction")
     est, lo, hi = row.get("estimate"), row.get("ci_low"), row.get("ci_high")
     if not all(isinstance(x, (int, float)) for x in (est, lo, hi)):
         problems.append("estimate and both interval bounds are required")
@@ -74,11 +79,20 @@ def check_row(row: dict) -> list[str]:
 
 
 def _unit(u) -> str:
-    return str(u or "").strip().lower()
+    return "".join(str(u or "").lower().split())      # "mm Hg" = "mmHg"
 
 
 def _sign(x: float) -> int:
     return (x > 0) - (x < 0)
+
+
+def _theirs(r: dict) -> tuple[float, float, float]:
+    """A row as (estimate, low, high) on our scale. Our SMD and MD pools are
+    benefit-positive; a row printed with lower = benefit (`benefit_direction`:
+    "lower") is flipped to match, its stored numbers stay as printed. A risk
+    ratio is ingredient vs control on both sides, so it is never flipped."""
+    est, lo, hi = r["estimate"], r["ci_low"], r["ci_high"]
+    return (-est, -hi, -lo) if r.get("benefit_direction") == "lower" else (est, lo, hi)
 
 
 def compare(block: dict | None, rows: list[dict]) -> list[dict]:
@@ -91,7 +105,7 @@ def compare(block: dict | None, rows: list[dict]) -> list[dict]:
     for r in rows:
         res = {"id": r["id"], "outcome": r["outcome"], "measure": r.get("measure"),
                "population": r.get("population"), "scale": r["scale"], "unit": r.get("unit"),
-               "theirs": (r["estimate"], r["ci_low"], r["ci_high"]), "ours": None, "k": None,
+               "theirs": _theirs(r), "ours": None, "k": None,
                "comparable": False, "overlap": None, "same_direction": None, "reason": None}
         o = outcomes.get(r["outcome"])
         pool = (o or {}).get(r["scale"])
@@ -103,9 +117,11 @@ def compare(block: dict | None, rows: list[dict]) -> list[dict]:
             res["reason"] = f"units differ ({pool.get('unit')!r} vs {r.get('unit')!r})"
         else:
             est, (lo, hi) = pool["estimate"], pool["ci"]
-            res.update(ours=(est, lo, hi), k=o.get("k"), comparable=True,
-                       overlap=lo <= r["ci_high"] and r["ci_low"] <= hi,
-                       same_direction=_sign(est) == _sign(r["estimate"]))
+            t_est, t_lo, t_hi = res["theirs"]
+            log = (lambda x: math.log(x)) if r["scale"] == "rr" else (lambda x: x)
+            res.update(ours=(est, lo, hi), k=pool.get("k", o.get("k")), comparable=True,
+                       overlap=lo <= t_hi and t_lo <= hi,
+                       same_direction=_sign(log(est)) == _sign(log(t_est)))
         out.append(res)
     return out
 
@@ -130,8 +146,10 @@ def verdicts(block: dict | None, results: list[dict]) -> list[dict]:
     out = []
     for (oid, scale), rows in sorted(groups.items()):
         cov = coverage(outcomes.get(oid) or {})
-        ours = rows[0]["ours"][2] - rows[0]["ours"][1]
-        ratio = ours / statistics.median(r["theirs"][2] - r["theirs"][1] for r in rows)
+        # Ratios are compared by width on the log scale.
+        scale_of = (lambda x: math.log(x)) if scale == "rr" else (lambda x: x)
+        width = lambda t: scale_of(t[2]) - scale_of(t[1])
+        ratio = width(rows[0]["ours"]) / statistics.median(width(r["theirs"]) for r in rows)
         hits = sum(bool(r["overlap"]) for r in rows)
         reasons = []
         if cov is None or cov < RULES["min_coverage"]:

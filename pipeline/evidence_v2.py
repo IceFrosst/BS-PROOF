@@ -122,12 +122,14 @@ def summarise(items: list[dict], product: dict, registry: dict | None = None) ->
                             "method": pool.smd["method"]}
         md = pool.md and {"estimate": _round(pool.md["estimate"]), "ci": [_round(x) for x in pool.md["ci"]],
                           "unit": pool.md["unit"], "method": pool.md["method"]}
+        rr = pool.rr and {"estimate": _round(pool.rr["estimate"]), "ci": [_round(x) for x in pool.rr["ci"]],
+                          "method": pool.rr["method"], "k": pool.rr["k"]}
         out.append({
             "sensitivity": {**(_without_route(pool, meta, registry, oid, "smd_from_p") or {}),
                             **(_without_route(pool, meta, registry, oid, "figure_means") or {}),
                             **(_ancova_r(pool, meta, registry, oid) or {})} or None,
             "outcome": oid, "label": meta.get("label") or oid, "polarity": meta.get("polarity"),
-            "k": pool.k, "smd": smd, "md": md, "estimand_mix": pool.estimand_mix,
+            "k": pool.k, "smd": smd, "md": md, "rr": rr, "estimand_mix": pool.estimand_mix,
             "leave_one_out": pool.leave_one_out and [_round(x) for x in pool.leave_one_out],
             "refused": pool.refused, "note": pool.note,
             "record": rec, "studies": [{k: v for k, v in s.items() if k not in ("form_match", "dose_match")}

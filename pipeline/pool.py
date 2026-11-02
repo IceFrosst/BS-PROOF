@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import collections
 import dataclasses
+import math
 import re
 from dataclasses import dataclass, field
 
@@ -51,7 +52,10 @@ from pipeline.span_check import fill_arm_n
 ROUTE_RANK = {"arm_stats": 0, "arm_stats_derived": 1, "reported_smd_ci": 2, "reported_smd_p": 3,
               "reported_smd_n": 4, "reported_md_ci": 5, "smd_from_p": 6,
               # founder 2026-10-28: numbers read off a figure, last (pipeline/figure.py)
-              "figure_means": 7}
+              "figure_means": 7,
+              # founder 2026-11-03: yes/no counts, after every reported estimate
+              # of a mean, before the two least direct routes
+              "event_counts": 5.5}
 CONFIDENCE = 0.95
 
 
@@ -255,6 +259,7 @@ class OutcomePool:
     k: int = 0
     smd: dict | None = None
     md: dict | None = None
+    rr: dict | None = None            # yes/no route only; benchmark only, never a letter
     studies: list[dict] = field(default_factory=list)
     refused: dict[str, int] = field(default_factory=dict)
     estimand_mix: dict[str, int] = field(default_factory=dict)
@@ -431,6 +436,7 @@ def pool_outcomes(items: list[dict], product: dict) -> dict[str, OutcomePool]:
         pool.estimand_mix = dict(collections.Counter(s.effect.estimand or "unstated" for s in studies))
         pool.studies = [{"study": s.study_id, "route": s.route, "g": s.effect.smd,
                          "g_variance": s.effect.smd_variance, "md": s.effect.md, "unit": s.effect.unit,
+                         "log_rr": s.effect.log_rr, "log_rr_variance": s.effect.log_rr_variance,
                          "estimand": s.effect.estimand, "primary": s.primary,
                          "flags": list(s.effect.flags), "n": s.n, "rob": s.rob,
                          "form_match": s.form_match, "pop_match": s.pop_match,
@@ -448,11 +454,16 @@ def pool_outcomes(items: list[dict], product: dict) -> dict[str, OutcomePool]:
                 loo = [_pool(ys[:i] + ys[i + 1:], vs[:i] + vs[i + 1:])["estimate"] for i in range(len(ys))]
                 pool.leave_one_out = (min(loo), max(loo))
         md = [s for s in studies if s.effect.md_variance is not None]
-        units = {(s.effect.unit or "").strip().lower() for s in md}
+        units = {"".join((s.effect.unit or "").lower().split()) for s in md}  # "mm Hg" = "mmHg"
         if md and len(units) == 1 and "" not in units:
             pool.md = {**_pool([s.effect.md for s in md], [s.effect.md_variance for s in md]),
                        "unit": next(iter(units))}
         elif md:
             pool.note = f"mean differences in {len(units)} different units; natural-unit pool not formed"
+        rr = [s for s in studies if s.effect.log_rr_variance is not None]
+        if rr:
+            p = _pool([s.effect.log_rr for s in rr], [s.effect.log_rr_variance for s in rr])
+            pool.rr = {"estimate": math.exp(p["estimate"]), "ci": [math.exp(x) for x in p["ci"]],
+                       "method": p["method"], "k": len(rr)}
         out[oid] = pool
     return out

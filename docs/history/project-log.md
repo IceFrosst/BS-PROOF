@@ -10,6 +10,18 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-11-03 — yes/no route and vitamin C preparation
+
+`event_counts` route, S5N and S5R v1.42, a pooled risk ratio for the benchmark, an
+`rr` benchmark scale, row orientation (`benefit_direction`), unit spacing, polarity
+for blood pressure and blood sugar, four measure hierarchies (DECISIONS). No model
+calls. Re-pooled `out/run_v141c_extractions.json`: main creatine estimates identical;
+blood pressure and blood sugar now k = 2, I, previously refused for no polarity. That
+dump predates v1.42, so it holds no event counts: the route has unit tests only until
+vitamin C runs. Cost for later: the version bump re-runs S5N and S5R, and the polarity
+and hierarchy values (sent in its payload) re-run S6B, on creatine's next full run.
+Dry run: 117 vitamin C studies pass the full-text and relevance filters.
+
 ## 2026-11-02 — "Possible" benefit row (founder)
 
 `grade.benefit` calls a positive estimate whose CI excludes meaningful harm and

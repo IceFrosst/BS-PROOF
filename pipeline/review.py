@@ -76,6 +76,8 @@ ROUTE_FIELDS = {
                            "ci_control_high", "pre_ingredient", "pre_control", "post_ingredient",
                            "post_control", "sd_pre_ingredient", "sd_pre_control"),
                           ("design_kind", "contrast", "estimand", "arm_ci_level")),
+    "event_counts": (("n_ingredient", "n_control", "events_ingredient", "events_control"),
+                     ("design_kind", "contrast")),
     "reported_smd_ci": (("effect_size", "ci_low", "ci_high"), _SMD_CATS),
     "reported_md_ci": (("effect_size", "ci_low", "ci_high"), _REPORTED_CATS),
     "reported_smd_p": (("effect_size", "p_value"), _SMD_CATS),
@@ -101,7 +103,7 @@ S5N_FIELDS = ("evidence_span", "table_provenance", "n_ingredient", "n_control",
               "se_ingredient", "se_control", "ci_ingredient_low", "ci_ingredient_high",
               "ci_control_low", "ci_control_high", "arm_ci_level",
               "pre_ingredient", "pre_control", "post_ingredient", "post_control",
-              "sd_pre_ingredient", "sd_pre_control",
+              "sd_pre_ingredient", "sd_pre_control", "events_ingredient", "events_control",
               "effect_size", "effect_unit", "effect_favours", "estimate_kind", "smd_basis",
               "ci_low", "ci_high", "ci_level", "p_value", "p_test", "estimand", "design_kind", "contrast")
 

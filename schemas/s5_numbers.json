@@ -205,6 +205,22 @@
             "exclusiveMinimum": 0,
             "maximum": 1000000000000.0
           },
+          "events_ingredient": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 1000000
+          },
+          "events_control": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 1000000
+          },
           "effect_size": {
             "type": [
               "number",
@@ -376,7 +392,9 @@
           "p_test",
           "estimand",
           "design_kind",
-          "contrast"
+          "contrast",
+          "events_ingredient",
+          "events_control"
         ]
       }
     }

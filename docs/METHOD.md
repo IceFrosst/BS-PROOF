@@ -149,7 +149,7 @@ the agent's prompt version + model + effort + payload):
 | S7 form & dose | methods + tables, S3 arms | per arm: form id, compound / elemental / per-kg dose, body mass, frequency |
 | S8 funding | funding + COI statements | funding class, funders (reported, never graded; §15) |
 | S6B outcome mapping | S5's outcome strings | one vocabulary id per claim, or `null` = discard |
-| S5N numbers | the mapped claims' identity | per arm mean, SD, n, SE, CI, p, pre/post values and baseline SDs, as printed; estimand, contrast, design, the test behind a p, what a reported SMD compares (v1.41) |
+| S5N numbers | the mapped claims' identity | per arm mean, SD, n, SE, CI, p, pre/post values, baseline SDs and participants with an event, as printed; estimand, contrast, design, the test behind a p, what a reported SMD compares (v1.41) |
 | S5R second reviewer (on by default; `SP_SECOND_REVIEWER=0` off) | the same claims, blind | the same numbers, read by a different model (Opus) |
 | S5F / S5FR figure readers (on by default; `SP_FIGURE_READER=0` off) | one figure image + its caption, for a claim whose text gives no effect | the plotted per-arm means, error-bar tops and what is plotted, read twice on two models (§10 `figure_means`) |
 
@@ -243,6 +243,7 @@ always means benefit, after the outcome's polarity. Routes, best first:
 | `reported_smd_n` | a reported SMD + both arm sizes |
 | `reported_md_ci` | a reported mean difference + CI (natural units only) |
 | `smd_from_p` | no estimate and no arm statistics: an exact two-sided p from a two-group test of these two arms (t-test, Welch, two-arm one-way ANOVA; S5N's `p_test`) on endpoint values or changes, both arm sizes and the favoured arm → t → Hedges' g (Cochrane Handbook §6.5.2.3). Parallel trials only; any other test is refused with its reason. Founder 2026-10-25. Every outcome that uses it also reports its estimate and letter without it (`sensitivity`) |
+| `event_counts` | a yes/no outcome: verified participants with an event plus arm sizes in both arms, and no arm means. ln(OR) × √3/π on the SMD scale (Chinn 2000; Cochrane Handbook v5.1 §9.4.6), flagged `or_to_smd`; 0.5 added to all four cells when one is 0 (`continuity_correction`). Refused: no events or all participants in both arms, more events than participants (episodes, not people), crossovers. The risk ratio is also pooled, for the benchmark only (founder 2026-11-03) |
 | `figure_means` | the text gives no effect: the claim's figure (picked by its caption, `figure.pick_figure`; PMC articles only) read by two readers on two models (S5F, S5FR); kept only when both agree within 2 % of the y-axis on every mean and error bar, name the same plotted quantity (values at timepoints, or changes) and the same error-bar kind (sd, se or ci95 as the caption states; unstated bars give no SD); reader 1's values, never averaged; never individual points or percent changes. Then the arm-statistics arithmetic as for printed numbers (ANCOVA included). Ranked last; every outcome that uses it also reports its estimate and letter without it. Founder 2026-10-28, from the 2026-10-26 pilot (`pipeline/figure.py`) |
 
 - **Crossover trials**: arm statistics analysed as if parallel (Handbook
@@ -398,7 +399,10 @@ What must hold before grades are shown to users:
   reason), so a trial we could not read, or refused as out of scope, is in
   neither number. It guards against grading a lucky, poolable subset of the
   trials we have. Failing coverage or precision is "not testable", never pass
-  or fail. Today: 19 rows from 10 creatine meta-analyses; on run 20261025_101638 lean mass
+  or fail. A row printed with lower = benefit carries `benefit_direction: "lower"`
+  and is flipped to our benefit-positive scale; a risk-ratio row (`scale: "rr"`)
+  is compared with our pooled risk ratio as printed, widths on the log scale.
+  Today: 19 rows from 10 creatine meta-analyses; on run 20261025_101638 lean mass
   passes (coverage 69 %), strength is not testable (44 %).
 - **Negative controls.** Every row today is a creatine success, so a pipeline
   that called everything effective would pass. Each new ingredient adds at least

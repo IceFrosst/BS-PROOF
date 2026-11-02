@@ -89,6 +89,7 @@
      }
     },
     "refused": {},
+    "rr": null,
     "run_grade": {
      "benefit": "inconclusive",
      "downgrades": {
@@ -266,6 +267,7 @@
      }
     },
     "refused": {},
+    "rr": null,
     "run_grade": {
      "benefit": "harm",
      "downgrades": {
@@ -436,6 +438,7 @@
      }
     },
     "refused": {},
+    "rr": null,
     "run_grade": {
      "benefit": "large",
      "downgrades": {
