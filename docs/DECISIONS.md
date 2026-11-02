@@ -15,7 +15,21 @@ Last swept: 2026-10-31.
 
 ## Open
 
-None today.
+**O1. "None" when the CI still reaches the threshold (2026-11-02).** `grade.benefit`
+calls an outcome "none" when the estimate is below M and the CI excludes harm,
+even if the CI's upper end passes M. So strength (+0.14 [-0.03, +0.30], M 0.20)
+gets D, "no meaningful benefit", when a meaningful benefit is still inside its CI.
+
+| Option | Rule | Creatine, re-pooled on 20261031_201501 |
+|---|---|---|
+| A (recommended) | "none" also needs CI upper < M; otherwise inconclusive, grade I | strength, lean mass, power D → **I**; **every** creatine outcome is then I |
+| B | Same rule, but a new row and letter for "uncertain, adequately studied", so k = 14 does not read like k = 1 | same three get the new letter; changes `grade.TABLE`, the port and the goldens |
+| C | Keep the rule, change only the words ("no meaningful benefit shown") | letters stay D; the letter still ranks creatine below a shown small benefit |
+
+Claude recommends A: it is what the CI says, standard in GRADE's threshold
+approach, and needs no new letter; F stays reachable because a tight CI still
+gives "none". Not adopted under the founder rule because it turns the whole
+ingredient into I, a product consequence as well as a method one.
 
 ## Work list (2026-10-28; replaces the 2026-10-15 list, whose items are done or decided below)
 
@@ -58,6 +72,7 @@ All accepted by the founder **"for now, may revisit"** unless stated.
 
 | Date | Decision |
 |---|---|
+| 2026-11-02 | **One dominant trial is shown, not downgraded** (Claude per founder rule). GRADE has no dominance domain and leave-one-out is already computed and stored. Measured: `doi:101249mss0000000000003202` carries 46 % of strength and 52 % of lean mass; leave-one-out range +0.105 to +0.222 and +0.102 to +0.141. The grade card (E1) must show the largest trial's weight beside the letter; no new constant. |
 | 2026-11-02 | **A baseline gap counts as a flaw only beyond chance** (Claude per founder rule; `effect_size.RULES["baseline_gap_z"] = 1.96`, |gap| / SE on baseline SDs when verified, else endpoint SDs). RoB 2 question 1.3 asks whether a gap suggests a problem with randomisation; comparing it to the endpoint difference flagged null trials for trivial gaps, and ANCOVA already corrects the size. Downgrade-never-refuse (2026-10-03) stands. Replayed on 20261031_201501: flagged pooled effects 13 → 0; power D+ Low → D Moderate; no estimate moved; strength and lean mass unchanged. The rule fires on nothing in this run, so only unit tests exercise it. |
 | 2026-10-31 | **Risk of bias is read twice: a flaw counts only when both readers report it** (Claude per founder rule; S4R on Opus, called only when S4 reports a flaw in a study with an effect; `pool.confirmed_s4`). Two independent RoB assessors is the Cochrane standard. Measured: in both spot audits every S4 error was a false flaw, prompt edits did not stop them, and on 8 known cases S4R cleared all 5 false flaws and kept both true ones. |
 | 2026-10-31 | **An SD derived from an SE or CI of a result pooled over visits is refused** (Claude per founder rule). Measured: 3 pooled effects, none in strength or lean mass, incl. a g of 1.13. |
