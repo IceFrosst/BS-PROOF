@@ -66,7 +66,18 @@ combinations; no plain-glucosamine pain SMD in the abstract) and Liu 2018 BJSM
 used), after `--demo`. Funding is extracted (S8) but not a grade input, so a
 pass here depends on the pool, not on a funding penalty.
 
-**Recommendation**: approve 1–4 as written.
+**Census before the run (2026-11-03, no model):** 106 relevant glucosamine RCTs,
+20 readable (PMC 11, CORE 5, open copies 4). Only about 2 of the 20 test
+glucosamine alone against placebo on the knee (Runhaar's prevention trial and its
+follow-up, likely one trial). The rest are combinations (refused by invariant 7),
+comparisons with no placebo, or other outcomes. The trials behind the benchmarks
+are paywalled (Elsevier 20, Springer 14, Wiley 7 of the 86 unreadable). Expected
+`joint_pain` k ≈ 1, so the run would not test the negative control either.
+
+**Recommendation**: keep 1–3 on file (correct, sourced, reusable once more text
+is readable, e.g. Elsevier enabled), but **do not run glucosamine now**. Instead,
+census two or three other "does not work" candidates (no model) and run the one
+with the most readable single-ingredient placebo trials.
 
 ## Work list (2026-10-28; replaces the 2026-10-15 list, whose items are done or decided below)
 

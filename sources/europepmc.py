@@ -110,9 +110,15 @@ def _query(ingredient: str, *, scope: str = "broad") -> str:
             f'(ABSTRACT:"{ing} supplement") OR '
             f'(ABSTRACT:"supplementation with {ing}")'
         )
+        # No SUPPLEMENT_CONTEXT here (2026-11-03). The ingredient is already
+        # required in the title or in a supplement phrase, and the relevance
+        # gate checks every record before any model call. MEASURED: the clause
+        # hid 66 of 119 glucosamine RCTs (trials that call it a treatment and
+        # never say "oral" or "supplementation"), and 93 creatine and 141
+        # vitamin C hits.
         q = (
             f'({intervention}) AND (SRC:"MED") AND ({kinds}) '
-            f'AND ({SUPPLEMENT_CONTEXT}) NOT ({CLINICAL_EXCLUSIONS})'
+            f'NOT ({CLINICAL_EXCLUSIONS})'
         )
         return q
 

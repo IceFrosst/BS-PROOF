@@ -151,3 +151,14 @@ class KeyedSourcesWidenTheFilter(unittest.TestCase):
         with patch("sources.http.secret", lambda name: "k" if name == "S2_API_KEY" else ""):
             kept = corpus._prioritize_primaries(recs, full_text_only=True)
         self.assertEqual([r.get("doi") for r in kept], ["10.1/a"])
+
+
+class InterventionQuery(unittest.TestCase):
+    """MEASURED 2026-11-03: requiring "oral"/"supplementation" hid 66 of 119
+    glucosamine RCTs. The intervention scope keeps only the drug-context exclusions."""
+    def test_no_supplement_wording_required(self):
+        from sources import europepmc as ep
+        q = ep._query("glucosamine", scope="intervention")
+        self.assertNotIn(ep.SUPPLEMENT_CONTEXT, q)
+        self.assertIn('TITLE:"glucosamine"', q)
+        self.assertIn("NOT (eclampsia", q)

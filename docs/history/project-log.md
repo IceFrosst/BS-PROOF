@@ -10,6 +10,17 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-11-03 — intervention search no longer requires "oral"/"supplementation"; glucosamine census
+
+`sources/europepmc._query(scope="intervention")` dropped `SUPPLEMENT_CONTEXT`: the
+ingredient is already required in the title or a supplement phrase, the
+drug-context exclusions stay, and the relevance gate checks every record before
+any model call. Measured hit counts: glucosamine 53 -> 119, creatine 398 -> 491,
+vitamin C 315 -> 456 (the next creatine and vitamin C runs retrieve the extra
+records). Glucosamine census: 106 relevant RCTs, 20 readable, about 2
+single-ingredient placebo trials on the knee, so a run would give `joint_pain`
+k ≈ 1 (DECISIONS O2). Not run. 288 Python tests.
+
 ## 2026-11-03 — Semantic Scholar source, wider full-text filter, PAPERS_APIs, glucosamine proposal
 
 `sources/fulltext.fetch_s2_text` (rung 6, `S2_API_KEY`): Semantic Scholar's
