@@ -1,4 +1,5 @@
-"""Elsevier full-text rung (sources/fulltext.fetch_elsevier_text) and the
+"""Elsevier and CORE full-text rungs (sources/fulltext.fetch_elsevier_text,
+fetch_core_text) and the
 pipeline-secret loader (sources/http.secret). No network: httpx.get is mocked.
 MEASURED 2026-11-03: 30 of 64 unreadable vitamin C studies are Elsevier's."""
 import tempfile
@@ -88,3 +89,52 @@ class ElsevierRung(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CoreRung(unittest.TestCase):
+    """CORE (sources/fulltext.fetch_core_text). MEASURED 2026-11-03: 8 of 64."""
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.patches = [patch.object(fulltext, "CACHE_DIR", Path(self.tmp.name)),
+                        patch.object(fulltext, "_core_wait", lambda: None),
+                        patch.object(fulltext, "secret", lambda name: "core-key" if name == "CORE_API_KEY" else "")]
+        for p in self.patches:
+            p.start()
+
+    def tearDown(self):
+        for p in self.patches:
+            p.stop()
+        self.tmp.cleanup()
+
+    def _get(self, results, status=200):
+        return patch("httpx.get", return_value=SimpleNamespace(
+            status_code=status, json=lambda: {"results": results}))
+
+    def test_exact_doi_full_text_is_used_and_cached(self):
+        with self._get([{"doi": "10.1/OTHER", "fullText": "x" * 5000},
+                        {"doi": "10.1/A", "fullText": BODY}]) as get:
+            self.assertEqual(fulltext.fetch_core_text({"doi": "10.1/a"}), BODY.strip())
+            self.assertEqual(fulltext.fetch_core_text({"doi": "10.1/a"}), BODY.strip())   # cache
+        self.assertEqual(get.call_count, 1)
+        self.assertEqual(get.call_args.kwargs["headers"]["Authorization"], "Bearer core-key")
+
+    def test_a_different_doi_is_never_used(self):
+        with self._get([{"doi": "10.1/b", "fullText": BODY}]):
+            self.assertIsNone(fulltext.fetch_core_text({"doi": "10.1/a"}))
+
+    def test_broken_sign_text_is_refused(self):
+        with self._get([{"doi": "10.1/a", "fullText": BODY + " increased (þ0·12 mmol/l)"}]):
+            self.assertIsNone(fulltext.fetch_core_text({"doi": "10.1/a"}))
+
+    def test_rate_limited_then_answers(self):
+        responses = [SimpleNamespace(status_code=429, json=lambda: {}),
+                     SimpleNamespace(status_code=200, json=lambda: {"results": [{"doi": "10.1/a", "fullText": BODY}]})]
+        with patch("httpx.get", side_effect=responses), patch("time.sleep"):
+            self.assertEqual(fulltext.fetch_core_text({"doi": "10.1/a"}), BODY.strip())
+
+    def test_no_key_or_no_doi_makes_no_call(self):
+        with self._get([]) as get:
+            self.assertIsNone(fulltext.fetch_core_text({"title": "no doi"}))
+            with patch.object(fulltext, "secret", lambda name: ""):
+                self.assertIsNone(fulltext.fetch_core_text({"doi": "10.1/a"}))
+        get.assert_not_called()

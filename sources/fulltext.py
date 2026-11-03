@@ -391,6 +391,13 @@ def best_text(record: dict, *,
     if text:
         return text, "full_text"
 
+    # RUNG 5: CORE (CORE_API_KEY), repository copies across publishers.
+    # MEASURED 2026-11-03: full text for 8 of the 64 unreadable vitamin C
+    # studies, 3 of them refused for broken signs, so 5 gained.
+    text = fetch_core_text(record)
+    if text:
+        return text, "full_text"
+
     return (record.get("abstract") or ""), "abstract_only"
 
 
@@ -466,6 +473,70 @@ def fetch_elsevier_text(record: dict, *, timeout: int = 60) -> str | None:
     if text:
         cache.parent.mkdir(parents=True, exist_ok=True)
         cache.write_text(text)
+    return text
+
+
+# ------------------------------------------------------------- CORE full text
+
+CORE_SEARCH = "https://api.core.ac.uk/v3/search/works/"
+# MEASURED 2026-11-03 with a free key: 1.2 s between searches drew HTTP 429 on
+# 12 of 64; 6 s drew none. (ratelimit.Bucket cannot hold a rate below 1/s.)
+CORE_MIN_INTERVAL_S = 6.0
+_core_lock = __import__("threading").Lock()
+_core_last = [0.0]
+
+
+def _core_wait() -> None:
+    import time
+    with _core_lock:
+        delay = _core_last[0] + CORE_MIN_INTERVAL_S - time.monotonic()
+        if delay > 0:
+            time.sleep(delay)
+        _core_last[0] = time.monotonic()
+
+
+def fetch_core_text(record: dict, *, timeout: int = 60) -> str | None:
+    """The full text CORE holds for this record's exact DOI, or None. Needs
+    CORE_API_KEY (docs/PIPELINE.md); without it this is a no-op. A result whose
+    DOI differs is never used, and broken-sign text is refused like a PDF's."""
+    key = secret("CORE_API_KEY")
+    doi = (record.get("doi") or "").strip().lower()
+    if not key or not doi:
+        return None
+    cache = CACHE_DIR / f"core_{hashlib.sha256(doi.encode()).hexdigest()[:24]}.txt"
+    if cache.exists():
+        t = cache.read_text(errors="replace")
+        return t if len(t) >= MIN_USABLE_CHARS and not _broken_signs(t) else None
+    import httpx
+    r = None
+    for _ in range(3):
+        _core_wait()
+        try:
+            r = httpx.get(CORE_SEARCH, params={"q": f'doi:"{doi}"', "limit": 5}, timeout=timeout,
+                          follow_redirects=True,
+                          headers={"Authorization": f"Bearer {key}", **_headers(CORE_SEARCH)})
+        except Exception:
+            return None
+        if r.status_code != 429:
+            break
+        import time
+        time.sleep(20)
+    if r is None or r.status_code != 200:
+        return None
+    try:
+        results = r.json().get("results") or []
+    except ValueError:
+        return None
+    texts = [(w.get("fullText") or "") for w in results
+             if (w.get("doi") or "").strip().lower() == doi]
+    text = _WS.sub(" ", max(texts, key=len, default="")).strip()
+    if len(text) < MIN_USABLE_CHARS:
+        return None
+    if _broken_signs(text):
+        print("  CORE text refused: its symbol font misreads minus/plus signs")
+        return None
+    cache.parent.mkdir(parents=True, exist_ok=True)
+    cache.write_text(text)
     return text
 
 

@@ -10,6 +10,16 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-11-03 — CORE full-text source wired (working)
+
+`sources/fulltext.fetch_core_text`: rung 5 of `best_text`, after Elsevier.
+Exact-DOI matches only; broken-sign text refused like a PDF's; one search per
+6 s (1.2 s drew HTTP 429 on 12 of 64). Founder's personal key in the gitignored
+`.env.pipeline`, handover in PIPELINE §2. `tests/conftest.py` hides real keys from
+every test. Census on vitamin C (no model): readable **52 -> 56 of 116** (CORE held
+8 of the 64; 3 refused for broken signs). The other publisher keys need an
+institutional or ORCID identity the founder does not have. 282 Python tests.
+
 ## 2026-11-03 — Elsevier full-text source wired; key not yet enabled
 
 `sources/fulltext.fetch_elsevier_text`: rung 4 of `best_text` (after PMC, listed

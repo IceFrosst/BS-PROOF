@@ -47,7 +47,9 @@ fails the run.
 |---|---|---|
 | `ELSEVIER_API_KEY` | Elsevier full text (ScienceDirect, incl. AJCN and J Nutr): `sources/fulltext.fetch_elsevier_text`, the last text source tried, after PMC, listed copies and green OA | **Key valid, full text blocked.** 2026-11-03: the founder's personal key answers Scopus but the article API returns `AUTHENTICATION_ERROR` for every article, open access included |
 
-**Handover (the company replaces the founder's personal key):**
+| `CORE_API_KEY` | Repository full text across publishers (core.ac.uk): `sources/fulltext.fetch_core_text`, tried after Elsevier; exact-DOI matches only, broken-sign text refused; one search per 6 s (free-key rate limit) | **Working.** 2026-11-03, founder's personal key: full text for 8 of the 64 unreadable vitamin C studies, 3 refused for broken signs |
+
+**Handover (the company replaces the founder's personal keys):**
 
 1. On <https://dev.elsevier.com>, sign in with the company's Elsevier account and
    create a key ("I want an API key"). Name the company as the user and the
@@ -58,12 +60,15 @@ fails the run.
 3. Put it in `.env.pipeline` on every machine that runs extractions
    (`ELSEVIER_API_KEY=...`), replacing the old value. Revoke the founder's
    personal key on the portal afterwards.
-4. Check without the model: run the demo (`--demo`). A key that works raises
+4. CORE: register at <https://core.ac.uk/services/api> with the company email,
+   ask about their commercial licence (free keys are non-commercial), put the
+   key in `.env.pipeline` as `CORE_API_KEY=...`.
+5. Check without the model: run the demo (`--demo`). A key that works raises
    the census's readable count. A key that is still blocked prints
    `ELSEVIER: the key is valid but not enabled for full text` once.
 
-Successful reads are cached as `out/http_cache/els_*.txt` (the key is sent as a
-header, so it never appears in a URL, a cache name or a log).
+Successful reads are cached as `out/http_cache/els_*.txt` and `core_*.txt` (keys are sent as
+headers, so it never appears in a URL, a cache name or a log).
 
 ## 3. Run
 
