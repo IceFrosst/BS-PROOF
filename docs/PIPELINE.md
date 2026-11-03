@@ -35,6 +35,36 @@ lacks `httpx`, and a hook blocks it. Extraction needs a signed-in Claude Code CL
 (`claude auth status`). Green-OA lookups need `BSPROOF_CONTACT_EMAIL` (Unpaywall
 policy); without it they raise rather than silently finding nothing.
 
+### API keys (never in the repo)
+
+Pipeline keys live in **`.env.pipeline`** at the repo root, which is gitignored
+(`.env*`), or in environment variables of the same name (the environment wins).
+Start from the committed template: `cp .env.pipeline.example .env.pipeline`.
+`sources/http.secret()` reads them; a missing key turns its source off, it never
+fails the run.
+
+| Variable | Unlocks | Status |
+|---|---|---|
+| `ELSEVIER_API_KEY` | Elsevier full text (ScienceDirect, incl. AJCN and J Nutr): `sources/fulltext.fetch_elsevier_text`, the last text source tried, after PMC, listed copies and green OA | **Key valid, full text blocked.** 2026-11-03: the founder's personal key answers Scopus but the article API returns `AUTHENTICATION_ERROR` for every article, open access included |
+
+**Handover (the company replaces the founder's personal key):**
+
+1. On <https://dev.elsevier.com>, sign in with the company's Elsevier account and
+   create a key ("I want an API key"). Name the company as the user and the
+   pipeline as the use.
+2. Ask Elsevier to enable full-text (text and data mining) access for that key
+   (developer portal support, or the company's Elsevier contact). Say it is for
+   **commercial** use: Elsevier's default terms cover non-commercial research.
+3. Put it in `.env.pipeline` on every machine that runs extractions
+   (`ELSEVIER_API_KEY=...`), replacing the old value. Revoke the founder's
+   personal key on the portal afterwards.
+4. Check without the model: run the demo (`--demo`). A key that works raises
+   the census's readable count. A key that is still blocked prints
+   `ELSEVIER: the key is valid but not enabled for full text` once.
+
+Successful reads are cached as `out/http_cache/els_*.txt` (the key is sent as a
+header, so it never appears in a URL, a cache name or a log).
+
 ## 3. Run
 
 ```bash

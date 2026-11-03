@@ -33,6 +33,24 @@ CACHE_DIR = Path(__file__).parent.parent / "out" / "http_cache"
 # give faster, more stable service when you supply one. One value, one variable.
 CONTACT_EMAIL = os.environ.get("BSPROOF_CONTACT_EMAIL", "")
 
+# Pipeline secrets (API keys) never live in the repo. Read from the environment,
+# else from the gitignored `.env.pipeline` at the repo root (KEY=value lines);
+# the template with instructions is `.env.pipeline.example`.
+ENV_FILE = Path(__file__).parent.parent / ".env.pipeline"
+
+
+def secret(name: str) -> str:
+    """An API key by name, or "" when it is not configured."""
+    value = os.environ.get(name, "").strip()
+    if value or not ENV_FILE.exists():
+        return value
+    for line in ENV_FILE.read_text(encoding="utf-8").splitlines():
+        key, sep, val = line.strip().partition("=")
+        if sep and key.strip() == name and not key.lstrip().startswith("#"):
+            return val.strip().strip('"').strip("'")
+    return ""
+
+
 USER_AGENT = ("bs-proof/0.1 (supplement evidence pipeline"
               + (f"; mailto:{CONTACT_EMAIL}" if CONTACT_EMAIL else "") + ")")
 

@@ -19,7 +19,7 @@ import json
 import re
 import xml.etree.ElementTree as ET
 
-from sources.http import CACHE_DIR, SourceError, _headers
+from sources.http import CACHE_DIR, SourceError, _headers, secret
 from sources.ratelimit import throttle
 
 FULLTEXT = "https://www.ebi.ac.uk/europepmc/webservices/rest/{pmcid}/fullTextXML"
@@ -384,7 +384,89 @@ def best_text(record: dict, *,
         if text:
             return text, "full_text"
 
+    # RUNG 4: Elsevier's full-text API (ELSEVIER_API_KEY). MEASURED 2026-11-03:
+    # 30 of the 64 vitamin C studies without readable text are Elsevier's (AJCN
+    # and J Nutr moved there). Last, so no study that already reads changes text.
+    text = fetch_elsevier_text(record)
+    if text:
+        return text, "full_text"
+
     return (record.get("abstract") or ""), "abstract_only"
+
+
+# ----------------------------------------------------------- Elsevier full text
+
+ELSEVIER_ARTICLE = "https://api.elsevier.com/content/article/doi/{doi}"
+_ELSEVIER_BLOCKED: list[str] = []   # set once per process when the key is refused
+
+
+def _is_elsevier(record: dict) -> bool:
+    doi = (record.get("doi") or "").lower()
+    return doi.startswith("10.1016/") or "elsevier" in (record.get("publisher") or "").lower()
+
+
+def _local(tag: str) -> str:
+    return tag.rsplit("}", 1)[-1]
+
+
+def elsevier_sections(xml: str | None,
+                      prefer: tuple[str, ...] = ("methods", "results", "limitations")) -> str | None:
+    """The preferred body sections of an Elsevier full-text XML, or None when the
+    response holds no body (the API returns metadata and abstract only for an
+    article the key is not entitled to -- that is NOT full text)."""
+    if not xml:
+        return None
+    try:
+        root = ET.fromstring(xml)
+    except ET.ParseError:
+        return None
+    found: dict[str, list[str]] = {}
+    for sec in root.iter():
+        if _local(sec.tag) != "section":
+            continue
+        title = next((c for c in sec if _local(c.tag) == "section-title"), None)
+        name = _match_section(_text(title)) if title is not None else None
+        if name in prefer:
+            found.setdefault(name, []).append(_text(sec))
+    chunks = ["\n\n".join(found[k]) for k in prefer if k in found]
+    text = "\n\n".join(chunks)
+    return text if len(text) >= MIN_USABLE_CHARS else None
+
+
+def fetch_elsevier_text(record: dict, *, timeout: int = 60) -> str | None:
+    """Methods/results text from Elsevier's Article Retrieval API, or None.
+    Needs ELSEVIER_API_KEY (docs/PIPELINE.md); without it this is a no-op."""
+    key = secret("ELSEVIER_API_KEY")
+    doi = (record.get("doi") or "").strip()
+    if not key or not doi or _ELSEVIER_BLOCKED or not _is_elsevier(record):
+        return None
+    cache = CACHE_DIR / f"els_{hashlib.sha256(doi.lower().encode()).hexdigest()[:24]}.txt"
+    if cache.exists():
+        return cache.read_text(errors="replace") or None
+    import httpx
+    from urllib.parse import quote
+    url = ELSEVIER_ARTICLE.format(doi=quote(doi, safe="/"))
+    try:
+        throttle(url)
+        r = httpx.get(url, timeout=timeout, headers={
+            "X-ELS-APIKey": key, "Accept": "text/xml", **_headers(url)})
+    except Exception:
+        return None
+    if r.status_code in (401, 403) and "AUTHENTICATION_ERROR" in r.text:
+        # MEASURED 2026-11-03 with a personal key: Scopus answers, the full-text
+        # API refuses every article (even open access) until Elsevier enables
+        # text-and-data-mining access for the key. Say it once, then stop asking.
+        _ELSEVIER_BLOCKED.append(doi)
+        print("  ELSEVIER: the key is valid but not enabled for full text "
+              "(AUTHENTICATION_ERROR). See docs/PIPELINE.md, 'API keys'.")
+        return None
+    if r.status_code >= 400:
+        return None
+    text = elsevier_sections(r.text)
+    if text:
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        cache.write_text(text)
+    return text
 
 
 # ----------------------------------------------------- beyond Europe PMC JATS

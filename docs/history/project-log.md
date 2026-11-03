@@ -10,6 +10,19 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-11-03 — Elsevier full-text source wired; key not yet enabled
+
+`sources/fulltext.fetch_elsevier_text`: rung 4 of `best_text` (after PMC, listed
+copies, green OA, so no study that already reads changes text). Keys come from
+`sources/http.secret()`: environment, else the gitignored `.env.pipeline`
+(template `.env.pipeline.example`, handover steps in PIPELINE §2 "API keys").
+Measured with the founder's personal key: Scopus search and abstracts answer
+(200); the article API refuses every article, open access included (403
+`AUTHENTICATION_ERROR`), so Elsevier must enable full-text access for the key.
+Until then the rung prints one notice and adds nothing. Its section parser is
+unit-tested on a hand-built response only; the first real response must be
+checked. 277 Python tests.
+
 ## 2026-11-03 — vitamin C run `20261103_101034`: too thin to test anything
 
 116 studies targeted, 52 read, 64 without readable text (20 PMC articles outside the
