@@ -15,7 +15,58 @@ Last swept: 2026-11-02.
 
 ## Open
 
-None today.
+### O2. Glucosamine as the negative control: MCID, measure order, benchmark rows (proposed 2026-11-03)
+
+Why glucosamine: vitamin C (run `20261103_101034`) gave k <= 1 everywhere, so its
+"does not work" rows could not be tested. Glucosamine for osteoarthritis pain is
+the best-documented "statistically detectable, clinically unimportant" supplement,
+with a funding effect (manufacturer-funded Rotta trials positive, independent
+trials near zero): a pipeline that believes every trial would grade it well.
+Every number below was opened and quoted from the source (PubMed abstract or
+Europe PMC full text, 2026-11-03).
+
+**1. MCID for `joint_pain`: 0.37 SD** (recommended).
+
+| | |
+|---|---|
+| Source | Wandel S et al. BMJ 2010;341:c4675 (doi:10.1136/bmj.c4675, PMC2941572), methods |
+| Quote | "We prespecified a minimal clinically important difference of 0.37 SD units, corresponding to 0.9 cm on a 10 cm visual analogue scale. This was based on the median minimal clinically important difference found in recent studies in patients with osteoarthritis." |
+| Tier | 1: anchor-based values in the same population (OA patients), as summarised by the review |
+| Caveat | Those anchor-based studies measured change within a patient; applying them between groups is strict (a smaller between-group difference can still matter). The alternative is the flagged 0.2 SD default |
+| Also found | 0.40 SD, Sumsuzzman DM et al. J Clin Med 2024 (doi:10.3390/jcm13237444): "We incorporated an SMD value of 0.40 as a minimum clinically important difference (MCID) to interpret the pain outcome." Shown beside, not used |
+
+**2. Measure order for `joint_pain`** (one effect per trial): WOMAC pain
+subscale, then pain VAS / NRS, then WOMAC total, then Lequesne index. Pain
+first because pain is the outcome the benchmarks pool.
+
+**3. Benchmark rows** (all SMD, printed with lower = benefit, so
+`benefit_direction: "lower"`):
+
+| id | Estimate | Source | Quote |
+|---|---|---|---|
+| `gl-wandel` | −0.17 [−0.28, −0.05] (95% credible interval), 10 trials, 3,803 patients | Wandel 2010 BMJ, results (full text) | "Corresponding effect sizes were −0.17 (−0.28 to −0.05) for glucosamine" |
+| `gl-towheed-nonrotta` | −0.15 [−0.35, 0.05] | Towheed TE et al. Cochrane 2005, CD002946.pub2 (PMID 15846645), abstract | "Pooled results for pain (SMD -0.15, 95% CI -0.35, 0.05) and function using the WOMAC index (SMD 0.03, 95% CI -0.18, 0.25) in those RCTs in which a non-Rotta preparation of glucosamine was compared to placebo did not reach statistical significance." |
+| `gl-knapik-indep` | −0.19 [−0.39, −0.02] | Knapik JJ et al. J Spec Oper Med 2018 (doi:10.55460/AUC0-QM7H, PMID 30566740), abstract | "Studies without involvement of the commercial glucosamine industry had a lower (but still significant) pain reduction efficacy (summary SMD = -0.19, 95% CI = -0.39 to -0.02)" |
+
+All three sit below the 0.37 MCID: the expected letter is "no meaningful
+benefit", never C or better.
+
+**Excluded, with reason** (go to `benchmarks.json` `"excluded"`): the pools that
+include manufacturer-funded trials, Towheed 2005 all trials (SMD −0.61
+[−0.95, −0.28]) and Rotta only (SMD −1.31 [−1.99, −0.64]), and Knapik 2018 all
+trials (SMD −0.35 [−0.54, −0.16]). The reviews themselves show these are
+inflated by funding (Wandel: "Industry independent trials showed smaller effects
+than commercially funded trials (P=0.02 for interaction)"). This is a choice:
+if our pool lands near −0.6, the benchmark fails, which is the point of a
+negative control. Also excluded: Sumsuzzman 2024 (network meta-analysis of
+combinations; no plain-glucosamine pain SMD in the abstract) and Liu 2018 BJSM
+(no glucosamine numbers in the abstract).
+
+**4. Run**: `glucosamine --form glucosamine_sulfate` (the form most trials
+used), after `--demo`. Funding is extracted (S8) but not a grade input, so a
+pass here depends on the pool, not on a funding penalty.
+
+**Recommendation**: approve 1–4 as written.
 
 ## Work list (2026-10-28; replaces the 2026-10-15 list, whose items are done or decided below)
 

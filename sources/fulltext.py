@@ -398,6 +398,16 @@ def best_text(record: dict, *,
     if text:
         return text, "full_text"
 
+    # RUNG 6: Semantic Scholar's open-access link (S2_API_KEY), when it names a
+    # copy the rungs above did not try. MEASURED 2026-11-03: 19 new links for
+    # the 60 still-unreadable vitamin C studies, 3 read (publisher PDFs).
+    tried = {(u or {}).get("url") for u in (record.get("full_text_urls") or [])}
+    if isinstance(loc, dict):
+        tried.add(loc.get("url"))
+    text = fetch_s2_text(record, tried)
+    if text:
+        return text, "full_text"
+
     return (record.get("abstract") or ""), "abstract_only"
 
 
@@ -482,17 +492,22 @@ CORE_SEARCH = "https://api.core.ac.uk/v3/search/works/"
 # MEASURED 2026-11-03 with a free key: 1.2 s between searches drew HTTP 429 on
 # 12 of 64; 6 s drew none. (ratelimit.Bucket cannot hold a rate below 1/s.)
 CORE_MIN_INTERVAL_S = 6.0
-_core_lock = __import__("threading").Lock()
-_core_last = [0.0]
+_spacing_lock = __import__("threading").Lock()
+_last_call: dict[str, float] = {}
+
+
+def _space(service: str, interval_s: float) -> None:
+    """At most one call per `interval_s` to `service`, across threads."""
+    import time
+    with _spacing_lock:
+        delay = _last_call.get(service, 0.0) + interval_s - time.monotonic()
+        if delay > 0:
+            time.sleep(delay)
+        _last_call[service] = time.monotonic()
 
 
 def _core_wait() -> None:
-    import time
-    with _core_lock:
-        delay = _core_last[0] + CORE_MIN_INTERVAL_S - time.monotonic()
-        if delay > 0:
-            time.sleep(delay)
-        _core_last[0] = time.monotonic()
+    _space("core", CORE_MIN_INTERVAL_S)
 
 
 def fetch_core_text(record: dict, *, timeout: int = 60) -> str | None:
@@ -538,6 +553,55 @@ def fetch_core_text(record: dict, *, timeout: int = 60) -> str | None:
     cache.parent.mkdir(parents=True, exist_ok=True)
     cache.write_text(text)
     return text
+
+
+# ------------------------------------------------ Semantic Scholar open access
+
+S2_PAPER = "https://api.semanticscholar.org/graph/v1/paper/DOI:{doi}"
+S2_MIN_INTERVAL_S = 1.1          # a key allows 1 request per second
+# PMC and Europe PMC pages for articles OUTSIDE the open-access subset are free
+# to read but not to download automatically (PMC terms); S2 links to them.
+# MEASURED 2026-11-03: 3 of the 6 vitamin C texts S2 could add were such pages,
+# so they are skipped, never scraped.
+_S2_SKIP_HOSTS = ("ncbi.nlm.nih.gov", "europepmc.org")
+
+
+def _s2_wait() -> None:
+    _space("s2", S2_MIN_INTERVAL_S)
+
+
+def fetch_s2_text(record: dict, tried: set | None = None, *, timeout: int = 60) -> str | None:
+    """Text from the open-access copy Semantic Scholar lists for this DOI, when it
+    is a URL not already tried and not a PMC page. Needs S2_API_KEY; else no-op."""
+    key = secret("S2_API_KEY")
+    doi = (record.get("doi") or "").strip()
+    if not key or not doi:
+        return None
+    import httpx
+    from urllib.parse import quote, urlparse
+    r = None
+    for attempt in range(4):
+        _s2_wait()
+        try:
+            r = httpx.get(S2_PAPER.format(doi=quote(doi, safe="/")), timeout=timeout,
+                          params={"fields": "openAccessPdf"},
+                          headers={"x-api-key": key, **_headers("https://api.semanticscholar.org")})
+        except Exception:
+            return None
+        if r.status_code != 429:
+            break
+        import time
+        time.sleep(5 * (attempt + 1))
+    if r is None or r.status_code != 200:
+        return None
+    try:
+        url = ((r.json() or {}).get("openAccessPdf") or {}).get("url") or ""
+    except ValueError:
+        return None
+    if not url or url in (tried or set()) or any(h in urlparse(url).netloc for h in _S2_SKIP_HOSTS):
+        return None
+    text = fetch_pdf_text(url) if url.lower().endswith(".pdf") else fetch_html_text(url)
+    return text if text and not _broken_signs(text) else None
 
 
 # ----------------------------------------------------- beyond Europe PMC JATS

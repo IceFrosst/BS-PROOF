@@ -49,6 +49,13 @@ fails the run.
 
 | `CORE_API_KEY` | Repository full text across publishers (core.ac.uk): `sources/fulltext.fetch_core_text`, tried after Elsevier; exact-DOI matches only, broken-sign text refused; one search per 6 s (free-key rate limit) | **Working.** 2026-11-03, founder's personal key: full text for 8 of the 64 unreadable vitamin C studies, 3 refused for broken signs |
 
+| `S2_API_KEY` | Semantic Scholar open-access links: `sources/fulltext.fetch_s2_text`, tried last; skips links already tried and PMC pages outside the open-access set; one request per 1.1 s | **Working.** 2026-11-03, founder's personal key: 27 creatine and 5 vitamin C RCTs readable through it |
+
+With any keyed source configured, `--full-text-only` keeps every record with a
+DOI and lets the ladder try it (`corpus._prioritize_primaries`). Which sources
+exist, which need an account and how many trials each could add:
+`docs/PAPERS_APIs.md`.
+
 **Handover (the company replaces the founder's personal keys):**
 
 1. On <https://dev.elsevier.com>, sign in with the company's Elsevier account and
@@ -63,7 +70,10 @@ fails the run.
 4. CORE: register at <https://core.ac.uk/services/api> with the company email,
    ask about their commercial licence (free keys are non-commercial), put the
    key in `.env.pipeline` as `CORE_API_KEY=...`.
-5. Check without the model: run the demo (`--demo`). A key that works raises
+5. Semantic Scholar: request a key at
+   <https://www.semanticscholar.org/product/api#api-key-form> for the company,
+   read its licence for commercial use, put it in `.env.pipeline` as `S2_API_KEY=...`.
+6. Check without the model: run the demo (`--demo`). A key that works raises
    the census's readable count. A key that is still blocked prints
    `ELSEVIER: the key is valid but not enabled for full text` once.
 

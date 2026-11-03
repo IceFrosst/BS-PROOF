@@ -138,3 +138,48 @@ class CoreRung(unittest.TestCase):
             with patch.object(fulltext, "secret", lambda name: ""):
                 self.assertIsNone(fulltext.fetch_core_text({"doi": "10.1/a"}))
         get.assert_not_called()
+
+
+class SemanticScholarRung(unittest.TestCase):
+    """Semantic Scholar (sources/fulltext.fetch_s2_text). MEASURED 2026-11-03: 3 of 60."""
+    def setUp(self):
+        self.patches = [patch.object(fulltext, "_s2_wait", lambda: None),
+                        patch.object(fulltext, "secret", lambda name: "s2-key" if name == "S2_API_KEY" else "")]
+        for p in self.patches:
+            p.start()
+
+    def tearDown(self):
+        for p in self.patches:
+            p.stop()
+
+    def _s2(self, url, status=200):
+        return patch("httpx.get", return_value=SimpleNamespace(
+            status_code=status, json=lambda: {"openAccessPdf": {"url": url} if url else None}))
+
+    def test_a_new_publisher_pdf_is_read(self):
+        with self._s2("https://www.nature.com/articles/1.pdf") as get, \
+                patch.object(fulltext, "fetch_pdf_text", return_value=BODY) as pdf:
+            self.assertEqual(fulltext.fetch_s2_text({"doi": "10.1/a"}, set()), BODY)
+        pdf.assert_called_once_with("https://www.nature.com/articles/1.pdf")
+        self.assertEqual(get.call_args.kwargs["headers"]["x-api-key"], "s2-key")
+
+    def test_pmc_pages_and_already_tried_links_are_skipped(self):
+        for url, tried in (("https://www.ncbi.nlm.nih.gov/pmc/articles/3046321", set()),
+                           ("http://europepmc.org/pmc/articles/PMC5620677", set()),
+                           ("https://repo.example/x.pdf", {"https://repo.example/x.pdf"})):
+            with self._s2(url), patch.object(fulltext, "fetch_pdf_text") as pdf, \
+                    patch.object(fulltext, "fetch_html_text") as html:
+                self.assertIsNone(fulltext.fetch_s2_text({"doi": "10.1/a"}, tried))
+            pdf.assert_not_called(); html.assert_not_called()
+
+    def test_broken_sign_text_and_no_link_give_none(self):
+        with self._s2("https://x.example/a.pdf"), \
+                patch.object(fulltext, "fetch_pdf_text", return_value=BODY + " (þ0·12)"):
+            self.assertIsNone(fulltext.fetch_s2_text({"doi": "10.1/a"}))
+        with self._s2(None):
+            self.assertIsNone(fulltext.fetch_s2_text({"doi": "10.1/a"}))
+
+    def test_no_key_makes_no_call(self):
+        with self._s2("https://x.example/a.pdf") as get, patch.object(fulltext, "secret", lambda n: ""):
+            self.assertIsNone(fulltext.fetch_s2_text({"doi": "10.1/a"}))
+        get.assert_not_called()

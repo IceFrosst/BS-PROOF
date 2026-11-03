@@ -10,6 +10,7 @@ The current docs, one per topic and none duplicating another:
 | `docs/PIPELINE.md` | running the pipeline, flags, switches, checking a run |
 | `docs/APP.md` | the app, section-numbered (code cites `APP §N`) |
 | `docs/DECISIONS.md` | open founder decisions, the v2 work list, decided items |
+| `docs/PAPERS_APIs.md` | where full text comes from, which keys/accounts would add papers, measured per supplement |
 | `docs/history/` | archives and the dated project log; never current |
 
 A change that makes any doc untrue updates that doc in the same commit.

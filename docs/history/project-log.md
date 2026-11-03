@@ -10,6 +10,20 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-11-03 — Semantic Scholar source, wider full-text filter, PAPERS_APIs, glucosamine proposal
+
+`sources/fulltext.fetch_s2_text` (rung 6, `S2_API_KEY`): Semantic Scholar's
+open-access link when it is new; PMC pages outside the open-access set skipped
+(PMC terms). Source census over every relevant RCT (no model): creatine 400
+relevant, **134 readable** (PMC 77, listed copies 20, CORE 10, Semantic Scholar 27);
+vitamin C 298 relevant, **62 readable** (39, 13, 5, 5). Found: `--full-text-only`
+dropped records with no listed copy before any source was tried, which lost 29
+readable creatine RCTs; with a keyed source configured a DOI is now enough
+(`corpus._prioritize_primaries`). New `docs/PAPERS_APIs.md`: every source and
+account, with what it reads or could add per supplement. Glucosamine proposed
+as the negative control (DECISIONS O2: MCID 0.37 SD from Wandel 2010, measure
+order, 3 benchmark rows, industry-inflated pools excluded). 287 Python tests.
+
 ## 2026-11-03 — CORE full-text source wired (working)
 
 `sources/fulltext.fetch_core_text`: rung 5 of `best_text`, after Elsevier.

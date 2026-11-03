@@ -11,5 +11,5 @@ import pytest
 def _no_real_api_keys(monkeypatch):
     from sources import http
     monkeypatch.setattr(http, "ENV_FILE", Path(os.devnull + ".missing"))
-    for name in ("ELSEVIER_API_KEY", "CORE_API_KEY"):
+    for name in ("ELSEVIER_API_KEY", "CORE_API_KEY", "S2_API_KEY"):
         monkeypatch.delenv(name, raising=False)

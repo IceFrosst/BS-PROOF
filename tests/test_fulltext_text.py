@@ -137,3 +137,17 @@ class BrokenSignFont(unittest.TestCase):
                                    get_object=lambda: {"/BaseFont": "/ABCDEF+TimesNewRoman"})}})
         with patch.object(fulltext, "PdfReader", lambda _b: SimpleNamespace(pages=[page])):
             self.assertEqual(fulltext._pdf_bytes_text(b"%PDF"), PAPER.strip())
+
+
+class KeyedSourcesWidenTheFilter(unittest.TestCase):
+    """MEASURED 2026-11-03: 29 readable creatine RCTs had no listed free copy and
+    were dropped by --full-text-only before Semantic Scholar or CORE was tried."""
+    def test_a_doi_is_enough_only_when_a_keyed_source_is_configured(self):
+        from bsproof.run import corpus
+        recs = [{"oa": "abstract_only", "year": 2020, "doi": "10.1/a"},
+                {"oa": "abstract_only", "year": 2020}]
+        with patch("sources.http.secret", lambda name: ""):
+            self.assertEqual(corpus._prioritize_primaries(recs, full_text_only=True), [])
+        with patch("sources.http.secret", lambda name: "k" if name == "S2_API_KEY" else ""):
+            kept = corpus._prioritize_primaries(recs, full_text_only=True)
+        self.assertEqual([r.get("doi") for r in kept], ["10.1/a"])

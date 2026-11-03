@@ -54,8 +54,18 @@ def _prioritize_primaries(primaries: list[dict], *,
     def key(s: dict):
         oa = (s.get("oa") or "abstract_only").lower()
         return (_OA_RANK.get(oa, 6), -(s.get("year") or 0))
+    # A keyed source (Elsevier, CORE, Semantic Scholar) can read a record that
+    # lists no free copy, by its DOI alone. MEASURED 2026-11-03: 29 readable
+    # creatine RCTs (25 via Semantic Scholar, 4 via CORE) were dropped here
+    # before any source was tried. One that still cannot be read is skipped as
+    # "no text" at no model cost.
+    from sources.http import secret
+    keyed = any(secret(k) for k in ("ELSEVIER_API_KEY", "CORE_API_KEY", "S2_API_KEY"))
+
     def readable(s: dict) -> bool:
         if _OA_RANK.get((s.get("oa") or "").lower(), 9) <= 1:
+            return True
+        if keyed and s.get("doi"):
             return True
         return bool(s.get("oa_location") or s.get("full_text_urls"))
 
@@ -65,7 +75,8 @@ def _prioritize_primaries(primaries: list[dict], *,
         via_oa = sum(1 for s in kept
                      if _OA_RANK.get((s.get("oa") or "").lower(), 9) > 1)
         print(f"  FULL-TEXT-ONLY: {len(kept)}/{len(ordered)} RCTs kept"
-              + (f" ({via_oa} via green OA, not PMC)" if via_oa else ""))
+              + (f" ({via_oa} via green OA or a keyed source, not PMC)" if via_oa else "")
+              + ("; keyed sources on, so a DOI is enough to try" if keyed else ""))
         ordered = kept
     else:
         n_ft = sum(1 for s in ordered
