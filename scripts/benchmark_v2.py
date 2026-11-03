@@ -36,7 +36,10 @@ def _source_texts(row: dict, cache: dict) -> dict:
     key = row["pmcid"] or row["doi"]
     if key not in cache:
         hits = europepmc.search(f'DOI:"{row["doi"]}"', page_size=1, max_records=1)
-        abstract = re.sub(r"<[^>]+>", "", (hits[0] if hits else {}).get("abstractText") or "")
+        # Only real tags: a bare "<" in the text ("25(OH)D level <30 nmol/L",
+        # Beaudart 2014) must not swallow everything up to the next tag.
+        abstract = re.sub(r"</?[A-Za-z][A-Za-z0-9]*(?:\s[^>]*)?/?>", "",
+                          (hits[0] if hits else {}).get("abstractText") or "")
         xml = fulltext.fetch_xml(row["pmcid"]) if row.get("pmcid") else None
         tables = [" | ".join(r) for t in fulltext.extract_tables_structured(xml) for r in t.get("rows", [])]
         cache[key] = {"abstract": _norm(abstract),

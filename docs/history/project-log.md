@@ -10,6 +10,20 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-11-03 — vitamin D strength chosen as the negative control; `--outcome` flag
+
+No-model census of five "does not work" candidates (DECISIONS O3): vitamin D →
+strength has 31 readable on-topic trials (about 10–12 single-ingredient placebo),
+the others 0–17. Founder approved it. Added `--outcome <id>`
+(`pipeline/relevance.outcome_screen`: grade one outcome, extract only studies
+naming it in title or abstract; count printed and in the report): vitamin D keeps
+71 of 624 relevant RCTs, and misses none of the 62 the census regex found.
+Benchmark rows `vd-str-u65`, `vd-str-65plus`, `vd-str-athletes`. Fixed
+`scripts/benchmark_v2.py` tag stripping: `<[^>]+>` ate Beaudart's abstract from
+"level <30 nmol/L" to the next tag, so its quote failed; now 30/30 rows verify.
+Found, not fixed: the relevance gate misses "omega-3"/"fish oil" (43 of 2,212
+omega-3 RCTs kept). Glucosamine (O2) on hold.
+
 ## 2026-11-03 — intervention search no longer requires "oral"/"supplementation"; glucosamine census
 
 `sources/europepmc._query(scope="intervention")` dropped `SUPPLEMENT_CONTEXT`: the

@@ -15,7 +15,62 @@ Last swept: 2026-11-02.
 
 ## Open
 
-### O2. Glucosamine as the negative control: MCID, measure order, benchmark rows (proposed 2026-11-03)
+### O3. Vitamin D3 and muscle strength as the negative control (approved 2026-11-03)
+
+Replaces O2 as the next negative control (O2 is on hold: k ≈ 1). Founder
+approved the proposal on 2026-11-03.
+
+**Census of candidates (2026-11-03, no model).** Retrieval at intervention scope,
+`--full-text-only`, then studies whose title or abstract names the outcome, then
+the text ladder:
+
+| Candidate | On topic | Readable | Readable, placebo, no combination in title |
+|---|--:|--:|--:|
+| **Vitamin D → muscle strength** | 62 | **31** | **19** |
+| Vitamin D → depressive symptoms | 42 | 17 | 11 |
+| Ginkgo → memory / cognition | 66 | 4 | 2 |
+| Magnesium → cramps | 3 | 0 | 0 |
+| Omega-3 → depressive symptoms | 4 | 0 | 0 (relevance-gate defect, below) |
+
+Reading the 31 titles: about 10–12 test vitamin D alone against placebo in
+athletes, students, children or older adults; the COPD, stroke and Parkinson's
+trials are refused as off-target populations. Expected k ≈ 8–12.
+
+**Why this pair.** Published as small at best, and the same outcome, MCID
+(0.2 SD, approved 2026-10-03) and measure order as creatine strength, which
+passes its benchmark. So the run tests whether the method tells an ingredient
+that works from one that does not, with no new MCID.
+
+**Benchmark rows added** (`vocab/benchmarks.json`, all SMD, higher = benefit,
+quotes verified by `scripts/benchmark_v2.py verify`):
+
+| id | Estimate | Source |
+|---|---|---|
+| `vd-str-u65` | 0.03 [−0.08, 0.14] | Beaudart 2014 JCEM (PMID 25033068), abstract, subgroup under 65 |
+| `vd-str-65plus` | 0.25 [0.01, 0.48] | same, subgroup 65 or older |
+| `vd-str-athletes` | 0.05 [−0.39, 0.48] | Zhang 2019 PLoS ONE (PMC6490896), abstract, 8 RCTs |
+
+Not used: Beaudart's overall SMD 0.17 (P = .02; CI not in the abstract, full
+text not open), and Bislev 2021 JBMR (54 RCTs, "does not support a beneficial
+effect"; strength only as mean differences in Newton, not comparable with our
+SMD or kg pools; in `"excluded"`).
+
+**Run.** `vitamin_d --form vitamin_d3_cholecalciferol --full-text-only
+--intervention-scope --outcome muscle_strength`, after `--demo`. The new
+`--outcome` flag extracts only the studies naming strength: 71 of 624 relevant
+RCTs (about 35 readable, about 280 calls) instead of about 290 readable studies
+on every topic (about 2,000+ calls). Expected letter: D or below, estimate
+0–0.2 SD. A clear benefit would be a warning about the method.
+
+**Defect found on the way (not fixed):** `pipeline.relevance.relevance_check`
+turns the id `omega_3` into the literal "omega 3", but papers write "omega-3",
+"n-3" or "fish oil", so it kept 43 of 2,212 omega-3 RCTs. `beta_carotene`
+("beta-carotene", "β-carotene") has the same weakness. Fix before any omega-3 or
+beta-carotene run: hyphen-tolerant matching plus the form vocabulary's aliases.
+It changes the gate for every ingredient, so it gets its own commit and a
+re-count for creatine and vitamin C.
+
+### O2. Glucosamine as the negative control: MCID, measure order, benchmark rows (proposed 2026-11-03; ON HOLD, see O3)
 
 Why glucosamine: vitamin C (run `20261103_101034`) gave k <= 1 everywhere, so its
 "does not work" rows could not be tested. Glucosamine for osteoarthritis pain is

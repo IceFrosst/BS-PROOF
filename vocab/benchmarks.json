@@ -13,6 +13,10 @@
   {
    "source": "10.3389/fnut.2026.1800546 (abstract)",
    "reason": "the Europe PMC abstract says CMJ 2.87 cm, the full text and its GRADE table 2.70 cm [0.18, 5.21]; the full text is used."
+  },
+  {
+   "source": "10.1002/jbmr.4412",
+   "reason": "Bislev 2021 (54 RCTs, 'does not support a beneficial effect'): strength pooled only as mean differences in Newton per muscle group (e.g. knee flexion MD -3.3 [-6.63 to -0.03] N); no SMD, and our natural-unit strength pool is in kg, so not comparable like for like (2026-11-03)."
   }
  ],
  "benchmarks": [
@@ -620,6 +624,75 @@
    "verified": "2026-11-03",
    "benefit_direction": "lower",
    "note": "I2 98 %"
+  },
+  {
+   "id": "vd-str-u65",
+   "ingredient": "vitamin_d",
+   "outcome": "muscle_strength",
+   "measure": "global muscle strength",
+   "comparison": "vitamin D (all forms and doses, with or without calcium) vs placebo or control",
+   "scale": "smd",
+   "unit": null,
+   "interval": "95% CI",
+   "doi": "10.1210/jc.2014-1742",
+   "pmid": "25033068",
+   "pmcid": null,
+   "title": "The effects of vitamin D on skeletal muscle strength, muscle mass, and muscle power: a systematic review and meta-analysis of randomized controlled trials.",
+   "quote": "Supplementation seems also more effective on people aged 65 years or older compared to younger subjects (SMD 0.25; 95% CI 0.01 to 0.48 vs SMD 0.03; 95% CI -0.08 to 0.14)",
+   "quote_location": "abstract",
+   "verified": "2026-11-03",
+   "population": "subjects younger than 65 (subgroup of 30 RCTs, 5615 individuals, mean age 61.1)",
+   "estimate": 0.03,
+   "ci_low": -0.08,
+   "ci_high": 0.14,
+   "k": null,
+   "note": "negative control: no effect in younger adults. The overall SMD 0.17 (P = .02) is not used: its CI is not in the abstract and the full text is not open"
+  },
+  {
+   "id": "vd-str-65plus",
+   "ingredient": "vitamin_d",
+   "outcome": "muscle_strength",
+   "measure": "global muscle strength",
+   "comparison": "vitamin D (all forms and doses, with or without calcium) vs placebo or control",
+   "scale": "smd",
+   "unit": null,
+   "interval": "95% CI",
+   "doi": "10.1210/jc.2014-1742",
+   "pmid": "25033068",
+   "pmcid": null,
+   "title": "The effects of vitamin D on skeletal muscle strength, muscle mass, and muscle power: a systematic review and meta-analysis of randomized controlled trials.",
+   "quote": "Supplementation seems also more effective on people aged 65 years or older compared to younger subjects (SMD 0.25; 95% CI 0.01 to 0.48 vs SMD 0.03; 95% CI -0.08 to 0.14)",
+   "quote_location": "abstract",
+   "verified": "2026-11-03",
+   "population": "subjects aged 65 or older (subgroup)",
+   "estimate": 0.25,
+   "ci_low": 0.01,
+   "ci_high": 0.48,
+   "k": null,
+   "note": "small benefit in older adults, larger below 25(OH)D 30 nmol/L"
+  },
+  {
+   "id": "vd-str-athletes",
+   "ingredient": "vitamin_d",
+   "outcome": "muscle_strength",
+   "measure": "overall muscle strength",
+   "population": "athletes, 8 RCTs, 284 participants",
+   "comparison": "vitamin D vs placebo or control",
+   "scale": "smd",
+   "unit": null,
+   "estimate": 0.05,
+   "ci_low": -0.39,
+   "ci_high": 0.48,
+   "interval": "95% CI",
+   "k": 8,
+   "doi": "10.1371/journal.pone.0215826",
+   "pmid": "31039170",
+   "pmcid": "PMC6490896",
+   "title": "Effect of vitamin D supplementation on upper and lower limb muscle strength and muscle power in athletes: A meta-analysis.",
+   "quote": "vitamin D supplementation had no impact on overall muscle strength outcomes (SMD 0.05, 95% CI: -0.39 to 0.48, p = 0.84)",
+   "quote_location": "abstract",
+   "verified": "2026-11-03",
+   "note": "negative control"
   }
  ]
 }

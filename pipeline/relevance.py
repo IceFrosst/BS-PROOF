@@ -144,3 +144,30 @@ def relevance_check(record: dict, ingredient: str) -> tuple[bool, str]:
     return False, "ingredient mention only (not intervention)"
 
 
+
+
+# --outcome (founder 2026-11-03): extract only the studies whose title or
+# abstract names ONE outcome. A cost cap for a single-outcome run (the vitamin D
+# strength negative control: about 31 readable studies instead of about 290).
+# It can only DROP a study, never add one, and it is printed with its counts;
+# a trial that measured the outcome without naming it in title or abstract is
+# missed, which the benchmark's coverage check (benchmark.RULES) exposes.
+def outcome_pattern(outcome_id: str) -> re.Pattern | None:
+    """Every name the vocabulary gives the outcome, as one case-insensitive
+    pattern: its label, the label's last word ("strength"), search_terms,
+    includes and the measure_hierarchy regexes. None for an unknown id."""
+    from pipeline import vocab
+    entry = vocab.outcome(outcome_id)
+    if entry is None:
+        return None
+    label = entry.get("label") or ""
+    literals = [label, *(label.split()[-1:]), *(entry.get("search_terms") or []),
+                *(entry.get("includes") or [])]
+    parts = [re.escape(t) for t in literals if t and len(t) >= 3]
+    parts += [m["match"] for m in entry.get("measure_hierarchy") or [] if m.get("match")]
+    return re.compile("|".join(f"(?:{p})" for p in parts), re.I) if parts else None
+
+
+def outcome_screen(record: dict, pattern: re.Pattern) -> bool:
+    """True when the title or abstract names the outcome."""
+    return bool(pattern.search(_blob(record)[2]))

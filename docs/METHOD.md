@@ -408,10 +408,14 @@ What must hold before grades are shown to users:
   or fail. A row printed with lower = benefit carries `benefit_direction: "lower"`
   and is flipped to our benefit-positive scale; a risk-ratio row (`scale: "rr"`)
   is compared with our pooled risk ratio as printed, widths on the log scale.
-  Today: 8 vitamin C rows from 7 reviews, and 19 rows from 10 creatine meta-analyses; on run 20261025_101638 lean mass
+  Today: 19 rows from 10 creatine meta-analyses, 8 vitamin C rows from 7
+  reviews, 3 vitamin D strength rows from 2 (2026-11-03); on run 20261025_101638 lean mass
   passes (coverage 69 %), strength is not testable (44 %).
-- **Negative controls.** Every row today is a creatine success, so a pipeline
-  that called everything effective would pass. Each new ingredient adds at least
+- **Negative controls.** The creatine rows are all successes, so a pipeline
+  that called everything effective would pass them. The "does not work" rows
+  are vitamin C (mood, cold incidence in the general population) and vitamin D
+  strength (under-65s SMD 0.03, athletes 0.05); none has been testable yet
+  (vitamin C run `20261103_101034`: k ≤ 1). Each new ingredient adds at least
   one "does not work" or "harms" row (`docs/history/v14-anchors.csv` lists
   candidates: vitamin E and cardiovascular events, beta-carotene and lung cancer
   in smokers, selenium and prostate cancer).

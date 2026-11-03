@@ -53,3 +53,45 @@ class RunOptionsTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class OutcomeScreen(unittest.TestCase):
+    """--outcome (2026-11-03): grade one outcome, extract only studies that name it."""
+    def test_flag(self):
+        self.assertIsNone(parse_args(["creatine"]).outcome)
+        self.assertEqual(parse_args(["vitamin_d", "--outcome", "muscle_strength"]).outcome,
+                         "muscle_strength")
+
+    def test_screen_uses_every_vocabulary_name(self):
+        from pipeline.relevance import outcome_pattern, outcome_screen
+        p = outcome_pattern("muscle_strength")
+        for text in ("Knee extensor strength after 12 weeks", "Handgrip dynamometry",
+                     "1RM leg press", "peak torque at 60 deg/s"):
+            self.assertTrue(outcome_screen({"title": text}, p), text)
+        self.assertFalse(outcome_screen({"title": "Serum 25(OH)D after vitamin D3",
+                                         "abstract": "Bone mineral density and PTH."}, p))
+        self.assertTrue(outcome_screen({"title": "Vitamin D3 in older adults",
+                                        "abstract": "Secondary outcome: grip strength."}, p))
+        self.assertIsNone(outcome_pattern("not_an_outcome"))
+
+    def test_corpus_drops_studies_that_do_not_name_it(self):
+        from unittest.mock import patch
+        from bsproof.run import corpus
+        recs = [{"design_rank": 4, "oa": "pmc", "title": "Vitamin D supplementation and grip strength"},
+                {"design_rank": 4, "oa": "pmc", "title": "Vitamin D supplementation and mood"}]
+
+        class Store:
+            def counts(self): return {}
+            def studies(self, syntheses=False): return recs
+
+        ctx = {}
+        opts = parse_args(["vitamin_d", "--outcome", "muscle_strength"])
+        with patch.object(corpus, "relevance_check", lambda s, i: (True, "")), \
+             patch.object(corpus, "RETRIEVE_MAX_PRIMARIES", 0), \
+             patch("pipeline.predatory.flag_records", lambda rows: {}), \
+             patch("pipeline.predatory.format_summary", lambda s: ""):
+            kept, n = corpus.load_corpus(Store(), opts, None, ["muscle_strength"], ctx)
+        self.assertEqual([r["title"] for r in kept], [recs[0]["title"]])
+        self.assertEqual(ctx["outcome_screen"],
+                         {"outcome": "muscle_strength", "kept": 1, "dropped": 1,
+                          "dropped_without_abstract": 1})

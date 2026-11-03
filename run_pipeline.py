@@ -34,6 +34,7 @@ def _new_run_context(opts: RunOptions, product: dict, outcome_allowlist,
         "form": opts.form,
         "product": product,
         "scope": opts.scope,
+        "outcome_screen": None,
         "showcase_outcomes": outcome_allowlist,
         "showcase_study_counts": {k: v for k, v in showcase_counts.items()
                                   if not str(k).startswith("_")},
@@ -71,12 +72,19 @@ def main(argv: list[str]) -> int:
             print("   ", f["id"])
         return 1
 
-    # Top-N by published RCT count (Europe PMC), not a fixed list.
+    # Top-N by published RCT count (Europe PMC), not a fixed list; --outcome
+    # grades just that one.
     showcase_counts: dict = {}
-    outcome_allowlist = show.outcomes_for(
-        ingredient, top_n=opts.top_n, all_outcomes=opts.all_outcomes,
-        counts_out=showcase_counts,
-    )
+    if opts.outcome:
+        if vocab.outcome(opts.outcome) is None:
+            print(f"unknown outcome {opts.outcome!r}; see vocab/outcome.json")
+            return 1
+        outcome_allowlist = [opts.outcome]
+    else:
+        outcome_allowlist = show.outcomes_for(
+            ingredient, top_n=opts.top_n, all_outcomes=opts.all_outcomes,
+            counts_out=showcase_counts,
+        )
 
     pv = vocab.population_variants()[0]
     product = {"ingredient": ingredient, "form_vocab_id": form,

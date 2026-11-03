@@ -100,6 +100,12 @@ def _selftest_tail() -> str:
 
 def _section_run_stats(ctx: dict) -> str:
     lines = ["## This run — extraction stats\n"]
+    screen = ctx.get("outcome_screen")
+    if screen:
+        lines.append(f"- Outcome screen (`--outcome {screen['outcome']}`): **{screen['kept']}** "
+                     f"studies name it in title or abstract; {screen['dropped']} dropped "
+                     f"({screen['dropped_without_abstract']} had no abstract). A trial that "
+                     f"measured it without naming it is missed; see the benchmark coverage.")
     lines.append(f"- Targeted studies: **{ctx.get('studies_targeted', '?')}**")
     lines.append(f"- Succeeded (usable): **{ctx.get('studies_ok', '?')}**")
     lines.append(f"- Skipped (no text): **{ctx.get('studies_skipped', 0)}**")

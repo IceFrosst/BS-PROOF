@@ -295,7 +295,8 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
   Stability **passes** (same letters, largest change 0.034 SD).
 - **Known v2 problems:** the work list in `docs/DECISIONS.md` (2026-10-28).
   Vitamin C run `20261103_101034` (52/116 studies readable): every outcome I, k <= 1;
-  too thin to test the negative controls. Next: more readable full text. Re-pooled offline with B4 and the new
+  too thin to test the negative controls. Next negative control: vitamin D3 →
+  muscle strength (`--outcome muscle_strength`, DECISIONS O3). Re-pooled offline with B4 and the new
   "Possible" row (2026-11-02), strength, lean mass and power are all **C−,
   Moderate**; the stored run still shows the letters above.
 - **Working baseline: `Jans_attempt`, not `main`** (founder, 2026-10-15).

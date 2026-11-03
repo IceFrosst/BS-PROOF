@@ -219,6 +219,19 @@ def load_corpus(store, opts, db, outcome_allowlist, run_context) -> tuple[list[d
           f"{len(relevant)} after relevance gate "
           f"(dropped {rejected} noise)")
     primaries = relevant
+    if getattr(opts, "outcome", None):
+        from pipeline.relevance import outcome_pattern, outcome_screen
+        pattern = outcome_pattern(opts.outcome)
+        kept = [s for s in primaries if outcome_screen(s, pattern)]
+        no_abstract = sum(1 for s in primaries
+                          if not outcome_screen(s, pattern) and not (s.get("abstract") or "").strip())
+        print(f"  OUTCOME SCREEN ({opts.outcome}): {len(kept)}/{len(primaries)} studies name it "
+              f"in title or abstract; {len(primaries) - len(kept)} dropped"
+              f" ({no_abstract} of them have no abstract, title only)")
+        run_context["outcome_screen"] = {"outcome": opts.outcome, "kept": len(kept),
+                                         "dropped": len(primaries) - len(kept),
+                                         "dropped_without_abstract": no_abstract}
+        primaries = kept
     # Everything that SURVIVED the gates, before --limit. This is the
     # denominator for the sample-size note; counting pre-gate records would
     # project against studies we were never going to score.
