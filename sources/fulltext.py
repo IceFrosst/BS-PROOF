@@ -401,6 +401,35 @@ except ImportError:  # pragma: no cover
     _PDF_OK = False
 
 MIN_USABLE_CHARS = 1500      # below this a "full text" is a landing page stub
+
+# Typesetter symbol fonts whose character table maps the minus sign to "2" and
+# the plus sign to "þ". MEASURED 2026-11-03 on the vitamin C run: in 5 of 6
+# Cambridge (Br J Nutr) PDFs, "(-0·12 mmol/l, 95 % CI -0·32, 0·09)" extracted as
+# "(20·12 mmol/l, 95 % CI 20·32, 0·09)" and "+0·12" as "þ0·12" -- in pypdf,
+# pdfminer and PyMuPDF alike (the PDF's own table is wrong; fontTools does not
+# help). A sign read as a digit would pass the span check and pool as an effect
+# of 20, so such a PDF is refused (the study counts as having no full text),
+# never decoded with a guessed table.
+_BROKEN_SIGN_TEXT = re.compile(r"(?<![A-Za-z])þ ?\d")
+_BROKEN_SIGN_FONTS = re.compile(r"Adv(?:MathSymb|P4C4E|PS7DA6)")
+
+
+def _broken_signs(text: str) -> bool:
+    """Whether extracted text shows the broken-sign symbol font (see above)."""
+    return bool(_BROKEN_SIGN_TEXT.search(text or ""))
+
+
+def _broken_sign_fonts(reader) -> bool:
+    """Whether any page uses one of the measured broken-sign symbol fonts."""
+    try:
+        for page in reader.pages:
+            fonts = (page.get("/Resources") or {}).get("/Font") or {}
+            for ref in fonts.values():
+                if _BROKEN_SIGN_FONTS.search(str(ref.get_object().get("/BaseFont") or "")):
+                    return True
+    except Exception:
+        return False
+    return False
 _TAG = re.compile(r"<[^>]+>")
 _WS = re.compile(r"\s+")
 
@@ -424,7 +453,7 @@ def fetch_pdf_text(url: str, *, timeout: int = 90) -> str | None:
     cache = CACHE_DIR / f"pdf_{hashlib.sha256(url.encode()).hexdigest()[:24]}.txt"
     if cache.exists():
         t = cache.read_text(errors="replace")
-        return t if len(t) >= MIN_USABLE_CHARS else None
+        return t if len(t) >= MIN_USABLE_CHARS and not _broken_signs(t) else None
     try:
         throttle(url)
         r = httpx.get(url, headers=_headers(url), timeout=timeout,
@@ -446,13 +475,17 @@ def _pdf_bytes_text(content: bytes) -> str | None:
     if not _PDF_OK:
         return None
     try:
-        text = "\n".join((p.extract_text() or "")
-                         for p in PdfReader(io.BytesIO(content)).pages)
+        reader = PdfReader(io.BytesIO(content))
+        text = "\n".join((p.extract_text() or "") for p in reader.pages)
     except Exception:
         # A malformed PDF is a dead end, not a pipeline failure. Callers fall
         # back down the ladder.
         return None
     text = _WS.sub(" ", text).strip()
+    if _broken_signs(text) or _broken_sign_fonts(reader):
+        print("  PDF refused: its symbol font misreads minus/plus signs "
+              "(counted as no full text)")
+        return None
     return text if len(text) >= MIN_USABLE_CHARS else None
 
 
@@ -470,7 +503,7 @@ def fetch_html_text(url: str, *, timeout: int = 60) -> str | None:
         # A cached "%PDF" is a PDF this function once tag-stripped as HTML
         # (fixed 2026-10-26): the bytes were decoded lossily, so fetch again.
         if not t.startswith("%PDF"):
-            return t if len(t) >= MIN_USABLE_CHARS else None
+            return t if len(t) >= MIN_USABLE_CHARS and not _broken_signs(t) else None
     try:
         throttle(url)
         r = httpx.get(url, headers=_headers(url), timeout=timeout,

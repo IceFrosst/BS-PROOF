@@ -1,3 +1,4 @@
 httpx>=0.27
 pypdf>=5.0        # PDF full text; optional at runtime, see sources/fulltext.py
+fonttools>=4.0    # pypdf parses Type1/CFF font encodings with it (otherwise one warning per font, measured 2026-11-03: same text)
 jsonschema>=4.0   # validates extraction output against schemas/ (claude_adapter, tests)

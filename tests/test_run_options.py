@@ -28,6 +28,28 @@ class RunOptionsTests(unittest.TestCase):
             with self.assertRaises(SystemExit):
                 parse_args(argv)
 
+    def test_demo_flag(self):
+        self.assertFalse(parse_args(["creatine"]).demo)
+        self.assertTrue(parse_args(["creatine", "--demo"]).demo)
+
+    def test_a_demo_writes_no_report(self):
+        from unittest.mock import patch
+        from bsproof.run.report import finish
+        with patch("scripts.auto_report_push.write_report") as write:
+            finish(parse_args(["creatine", "--demo"]), None, {}, 0.0)
+        write.assert_not_called()
+
+    def test_demo_summary_flags_failed_calls(self):
+        import io
+        from contextlib import redirect_stdout
+        from bsproof.run.extract import _demo_summary
+        raw = [{"record": {}, "extraction": {"_meta": {"S3": {"cache": False}},
+                                             "_failed": [{"agent": "S4", "error": "timeout"}]}}]
+        out = io.StringIO()
+        with redirect_stdout(out):
+            _demo_summary(raw)
+        self.assertIn("DEMO summary", out.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()

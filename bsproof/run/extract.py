@@ -19,6 +19,30 @@ CHECKPOINTS = Path(__file__).resolve().parents[2] / "out" / "checkpoints"
 # Exit code of a run that stopped on the subscription limit before writing any
 # report: re-run the same command to resume.
 EXIT_INCOMPLETE = 3
+DEMO_STUDIES = 3
+
+
+def _text_census(targets: list[dict], text_for) -> None:
+    """--demo: how many studies would actually be read. MEASURED 2026-11-03: the
+    vitamin C corpus passed the full-text filter with 116 studies, but 59 of the
+    first 88 had no readable text (Europe PMC serves no XML for non-open PMC
+    articles; publisher PDFs behind a login), which only showed mid-run."""
+    print(f"\n  DEMO text census: fetching the text of all {len(targets)} studies (network only, no model)...")
+    readable = sum(1 for r in targets if len((text_for(r) or "").strip()) >= 200)
+    print(f"  DEMO: {readable}/{len(targets)} studies have readable full text; "
+          f"the other {len(targets) - readable} will be skipped as 'no text' (no model calls)")
+
+
+def _demo_summary(raw: list[dict]) -> None:
+    stats = _agent_stats(raw)
+    print("\n" + "=" * 74 + "\nDEMO summary (no report written)")
+    for agent, b in sorted(stats.items()):
+        errs = "; ".join(f"{k} x{n}" for k, n in b["errors"].items())
+        print(f"  {agent:5} ok={b['ok']} fail={b['fail']} cached={b['cache']}" + (f"  errors: {errs}" if errs else ""))
+    bad = sum(b["fail"] for b in stats.values())
+    print("  VERDICT: " + ("clean -- start the full run with the same command minus --demo"
+                           if not bad else f"{bad} failed calls -- check them before the full run")
+          + "\n" + "=" * 74)
 
 
 def _table_fetch_failed(raw: list[dict]) -> list[str]:
@@ -241,6 +265,10 @@ def extract_stage(store, opts, primaries, pv, outcome_allowlist, run_context):
     run_context["concurrency"] = ca.MAX_CONCURRENCY
     run_context["studies_in_flight"] = ca.MAX_CONCURRENCY
 
+    if opts.demo:
+        _text_census([{**p, "ingredient": ingredient} for p in primaries],
+                     lambda r: _best_text(r, opts.full_text_only))
+        limit = limit or DEMO_STUDIES
     if limit is None:
         targets = primaries
     elif scope == "per_outcome" and outcome_allowlist:
@@ -261,7 +289,7 @@ def extract_stage(store, opts, primaries, pv, outcome_allowlist, run_context):
         print(f"  NOTE: {len(targets)} studies is a large run. "
               f"Cap it with --limit N if this is a smoke test.")
     run_context["studies_targeted"] = len(targets)
-    checkpoint = CHECKPOINTS / f"{ingredient}_{opts.form}.json"
+    checkpoint = CHECKPOINTS / f"{ingredient}_{opts.form}{'_demo' if opts.demo else ''}.json"
     if checkpoint.exists():
         try:
             prev = json.loads(checkpoint.read_text(encoding="utf-8"))
@@ -283,6 +311,8 @@ def extract_stage(store, opts, primaries, pv, outcome_allowlist, run_context):
         checkpoint=checkpoint,
     )
     _report_failures(raw)
+    if opts.demo:
+        _demo_summary(raw)
     cut = _incomplete_quota(raw)
     if cut and os.environ.get("SP_ALLOW_INCOMPLETE") != "1":
         # A run truncated by the limit must never reach reports/: failed calls

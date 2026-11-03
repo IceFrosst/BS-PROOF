@@ -90,3 +90,50 @@ class FullTextOnly(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class BrokenSignFont(unittest.TestCase):
+    """MEASURED 2026-11-03 (vitamin C run): Cambridge PDFs whose symbol font maps
+    minus to "2" and plus to "thorn" -- "(-0.12, 95 % CI -0.32, 0.09)" read as
+    "(20·12 mmol/l, 95 % CI 20·32, 0·09)". Refused, never decoded."""
+    BROKEN = ("Methods text. " * 200
+              + "decreased (20·12 mmol/l, 95 % CI 20·32, 0·09) but increased (þ0·12 mmol/l)")
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.patch = patch.object(fulltext, "CACHE_DIR", Path(self.tmp.name))
+        self.patch.start()
+
+    def tearDown(self):
+        self.patch.stop()
+        self.tmp.cleanup()
+
+    def test_signature(self):
+        self.assertTrue(fulltext._broken_signs("increased (þ0·12 mmol/l"))
+        self.assertTrue(fulltext._broken_signs("fax þ44 1792"))
+        self.assertFalse(fulltext._broken_signs("Þingvellir 2019; mean 0·12 ± 0·03"))
+        self.assertFalse(fulltext._broken_signs(PAPER))
+
+    def test_a_cached_broken_pdf_text_is_refused(self):
+        url = "https://www.cambridge.org/x.pdf"
+        (Path(self.tmp.name) / f"pdf_{hashlib.sha256(url.encode()).hexdigest()[:24]}.txt").write_text(self.BROKEN)
+        self.assertIsNone(fulltext.fetch_pdf_text(url))
+
+    def test_a_cached_clean_pdf_text_is_kept(self):
+        url = "https://link.springer.com/y.pdf"
+        (Path(self.tmp.name) / f"pdf_{hashlib.sha256(url.encode()).hexdigest()[:24]}.txt").write_text(PAPER)
+        self.assertEqual(fulltext.fetch_pdf_text(url), PAPER)
+
+    def test_a_fresh_pdf_with_the_broken_font_is_refused(self):
+        page = SimpleNamespace(extract_text=lambda: PAPER,
+                               get=lambda k: {"/Font": {"/F1": SimpleNamespace(
+                                   get_object=lambda: {"/BaseFont": "/IKAPPK+AdvP4C4E51"})}})
+        with patch.object(fulltext, "PdfReader", lambda _b: SimpleNamespace(pages=[page])):
+            self.assertIsNone(fulltext._pdf_bytes_text(b"%PDF"))
+
+    def test_a_fresh_clean_pdf_is_kept(self):
+        page = SimpleNamespace(extract_text=lambda: PAPER,
+                               get=lambda k: {"/Font": {"/F1": SimpleNamespace(
+                                   get_object=lambda: {"/BaseFont": "/ABCDEF+TimesNewRoman"})}})
+        with patch.object(fulltext, "PdfReader", lambda _b: SimpleNamespace(pages=[page])):
+            self.assertEqual(fulltext._pdf_bytes_text(b"%PDF"), PAPER.strip())

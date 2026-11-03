@@ -656,10 +656,15 @@ def extract_corpus(records: list[dict], text_for, registry_for=None, *,
                     if time.time() >= resume_at:
                         resume_at = time.time() + QUOTA_WAIT_S
                         quota_waited += QUOTA_WAIT_S
+                        # The limit's own words (e.g. "resets 6am") show
+                        # whether it is the 5-hour or the weekly window.
+                        said = next((str(f.get("error")) for f in extraction.get("_failed") or []
+                                     if _quota_signal(f.get("error"))), "")
                         print(f"  QUOTA HIT on {r.get('canonical_id', '?')}: "
                               f"requeued; run will pause {QUOTA_WAIT_S}s once "
                               f"in-flight studies drain "
-                              f"(requeues so far: {requeued})")
+                              f"(requeues so far: {requeued})"
+                              + (f"\n    limit says: {said[:200]}" if said else ""))
                     continue
                 results_by_id[i] = {"record": r, "extraction": extraction}
                 if checkpoint:

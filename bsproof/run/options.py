@@ -23,6 +23,10 @@ class RunOptions:
     # Founder 2026-08-08: score the WHOLE available corpus by default. A capped
     # run is a SAMPLE of the evidence, not the answer. So the cap is opt-IN.
     limit: int | None
+    # A small real run before a big one (founder 2026-11-03): checks how much of
+    # the corpus has readable text, then extracts DEMO_STUDIES studies with real
+    # calls (cached, so the full run reuses them) and writes no report.
+    demo: bool = False
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -35,6 +39,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--wiring", action="store_true", help="synthetic extraction, no model")
     p.add_argument("--dose", type=float, help="the product's ELEMENTAL mg, for the dose match")
     p.add_argument("--limit", type=int, help="cap studies extracted (default: whole corpus)")
+    p.add_argument("--demo", action="store_true",
+                   help="before a big run: count readable full text across the corpus, extract "
+                        "3 studies for real (cached for the full run), write no report")
     p.add_argument("--full-text-only", action="store_true", help="extract only full-text studies")
     p.add_argument("--all-outcomes", action="store_true", help="grade the full outcome vocabulary")
     p.add_argument("--top-outcomes", type=int, default=DEFAULT_TOP_OUTCOMES,
@@ -59,4 +66,4 @@ def parse_args(argv: list[str]) -> RunOptions:
     return RunOptions(
         ingredient=a.ingredients[0], form=a.form, wiring=a.wiring,
         full_text_only=a.full_text_only, all_outcomes=a.all_outcomes,
-        top_n=a.top_outcomes, scope=scope, dose_mg=a.dose, limit=a.limit)
+        top_n=a.top_outcomes, scope=scope, dose_mg=a.dose, limit=a.limit, demo=a.demo)

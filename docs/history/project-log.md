@@ -10,6 +10,33 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-11-03 — first vitamin C attempt stopped; broken-sign PDFs refused, `--demo`
+
+Founder stopped the run after 29 studies extracted. The terminal spam was pypdf's
+"fontTools is required..." warnings; re-extracting 6 PDFs with `fonttools`
+installed gave byte-identical text, so they were harmless (`fonttools` added to
+`requirements.txt` to silence them). Usage limit hit after about 10 minutes and
+stayed through 9 probes (about 2 h 15 min) until the founder stopped it; the
+`QUOTA HIT` line now quotes the limit's own message.
+
+Found while checking: **59 of the first 88 studies were skipped as "no text"**
+(no model calls). 18 are PMC articles outside the open-access subset (Europe PMC
+answers HTTP 500, NCBI says the publisher forbids XML); 39 list a green-OA copy
+that is a login page or broken link. And 5 of the 6 newly fetched PDFs (all
+Cambridge, Br J Nutr) use a symbol font that turns minus into "2" and plus into
+"þ": "(-0·12 mmol/l, 95 % CI -0·32, 0·09)" read as "(20·12 mmol/l, 95 % CI
+20·32, 0·09)", the same in pypdf, pdfminer and PyMuPDF. Such PDFs are now
+refused (`fulltext._broken_signs`, text signature plus measured font names), so
+those studies count as no full text; none had been extracted. Side effect: one
+cached creatine PDF (Benton 2011, cognition, `doi:101017s0007114510004733`) is now
+refused too; it touches no strength, lean-mass or power estimate.
+
+New `--demo` flag (founder asked for a demo before every big run): text census
+of the whole corpus, 3 studies for real (cached), per-agent summary, no report.
+Census on vitamin C (no model): **52 of 116 studies have readable full text**;
+29 are already extracted and cached, so about 23 studies (~180 calls) remain.
+Gates green (271 Python tests).
+
 ## 2026-11-03 — vitamin C MCIDs and benchmark rows approved
 
 Founder approved the proposal; values and rows in DECISIONS. Installed `natural`

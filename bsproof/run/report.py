@@ -10,6 +10,10 @@ def finish(opts, outcome_allowlist, run_context, run_started: float) -> None:
     # Wiring is synthetic and never a claim, so it stays out of reports/runs/.
     if opts.wiring:
         return
+    # A demo extracts a handful of studies to check the run is healthy; its
+    # letters are a sample, so it never becomes a report either.
+    if opts.demo:
+        return
     mode = "claude"
     if opts.full_text_only:
         mode += "-ft"

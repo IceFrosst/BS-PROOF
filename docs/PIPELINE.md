@@ -45,10 +45,32 @@ python3 -m pipeline.selftest                     # expect ALL PASSED
 # 2. wiring check: synthetic extraction, no model, writes no report
 .venv/bin/python run_pipeline.py creatine --form creatine_monohydrate --wiring
 
-# 3. a real run (Claude subscription) — the creatine v2 runs used these flags
+# 3. demo: the same command plus --demo. Counts readable full text across the
+#    corpus (network only), extracts 3 studies for real (cached, so the full run
+#    reuses them), prints a per-agent summary and writes no report
+.venv/bin/python run_pipeline.py creatine --form creatine_monohydrate \
+    --full-text-only --intervention-scope --all-outcomes --demo
+
+# 4. a real run (Claude subscription) — the creatine v2 runs used these flags
 .venv/bin/python run_pipeline.py creatine --form creatine_monohydrate \
     --full-text-only --intervention-scope --all-outcomes
 ```
+
+**Demo before every big run** (founder, 2026-11-03). It costs about 25 calls,
+reused by the full run. Start the full run only on a clean verdict, and expect
+the "no text" count the census printed.
+
+**Skipped as "no text" costs nothing** (no model call) and is counted. The
+full-text filter keeps a study when an open copy is *listed*; the census shows
+how many can actually be read. Measured on vitamin C, 2026-11-03: Europe PMC
+serves no XML for PMC articles outside the open-access subset (HTTP 500), and
+many listed publisher or repository copies are login pages. PDFs set in a
+typesetter symbol font that turns minus into "2" and plus into "þ" are refused
+(`sources/fulltext._broken_signs`): a misread sign would pool as an effect of 20.
+
+The `fontTools is required to fully parse the encoding...` lines come from pypdf
+reading PDF fonts; install `fonttools` (`requirements.txt`) to silence them. They
+did not change the extracted text (measured on 6 PDFs).
 
 **Run extractions solo.** No agent teams, workflows or other heavy sessions on
 the same subscription while one runs: a truncated extraction hides refusals and
@@ -61,6 +83,7 @@ biases the result.
 | `--form <id>` | The product's form (vocabulary id) |
 | `--dose <mg>` | The product's daily **elemental** dose, so the run's own letters judge dose indirectness |
 | `--limit N` | Extract only N studies (default: the whole corpus — a capped run is a sample) |
+| `--demo` | Text census of the corpus, then 3 studies for real; no report (run before a big run) |
 | `--full-text-only` | Extract only studies with readable full text |
 | `--all-outcomes` / `--top-outcomes N` | Grade every outcome / the top N by RCT count (default 5) |
 | `--broad-scope` / `--supplement-scope` / `--intervention-scope` / `--per-outcome` | Retrieval scope (default broad; METHOD §3) |
@@ -87,7 +110,8 @@ Every successful model call is cached as it returns (keyed by the agent's prompt
 version, model, effort and payload) and every fetched paper is cached under
 `out/http_cache/`, so **re-running the same command resumes for free**.
 
-- *Usage limit:* the run pauses and probes, requeueing the affected studies. If
+- *Usage limit:* the run pauses and probes, requeueing the affected studies; the
+  `QUOTA HIT` line quotes the limit's own message (which window, when it resets). If
   studies still carry a limit failure after the wait budget, it stops before
   grading and writes **no report** (exit code 3, an INCOMPLETE banner).
 - *A cited table could not be fetched* for the number check (after retries):
