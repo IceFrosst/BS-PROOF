@@ -4,6 +4,8 @@ Runs, newest first. Removed runs (v14 and earlier) remain in git history.
 
 | When (UTC) | Mode | Ingredient | Form | Kind | File |
 |---|---|---|---|---|---|
+| 2026-11-03 10:10 UTC | claude-ft-inter | `vitamin_c` | `ascorbic_acid` | summary | [runs/20261103_101034_vitamin-c_ascorbic-acid_claude-ft-inter_summary.md](runs/20261103_101034_vitamin-c_ascorbic-acid_claude-ft-inter_summary.md) |
+| 2026-11-03 10:10 UTC | claude-ft-inter | `vitamin_c` | `ascorbic_acid` | full | [runs/20261103_101034_vitamin-c_ascorbic-acid_claude-ft-inter_full.md](runs/20261103_101034_vitamin-c_ascorbic-acid_claude-ft-inter_full.md) |
 | 2026-10-31 20:15 UTC | claude-ft-inter | `creatine` | `creatine_monohydrate` | summary | [runs/20261031_201501_creatine_creatine-monohydrate_claude-ft-inter_summary.md](runs/20261031_201501_creatine_creatine-monohydrate_claude-ft-inter_summary.md) |
 | 2026-10-31 20:15 UTC | claude-ft-inter | `creatine` | `creatine_monohydrate` | full | [runs/20261031_201501_creatine_creatine-monohydrate_claude-ft-inter_full.md](runs/20261031_201501_creatine_creatine-monohydrate_claude-ft-inter_full.md) |
 | 2026-10-31 14:21 UTC | claude-ft-inter | `creatine` | `creatine_monohydrate` | summary | [runs/20261031_142105_creatine_creatine-monohydrate_claude-ft-inter_summary.md](runs/20261031_142105_creatine_creatine-monohydrate_claude-ft-inter_summary.md) |

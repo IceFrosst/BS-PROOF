@@ -10,6 +10,20 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-11-03 — vitamin C run `20261103_101034`: too thin to test anything
+
+116 studies targeted, 52 read, 64 without readable text (20 PMC articles outside the
+open-access subset; 30 of the 64 are Elsevier, incl. AJCN and J Nutr). 0 partial
+failures. Every outcome **I, k <= 1**. Refusals across outcomes: 29 combination arms
+(`no_isolated_ingredient_arm`, mostly C+E), 11 off-target populations.
+
+Yes/no route worked on real text: Johnston 2014 (doi:103390nu6072572), 7/15 vs 11/13
+with colds, our RR 0.55 [0.31, 0.99] vs the paper's 0.55 [0.33, 0.94]; g = +1.01, I.
+Benchmark: CRP passes (k = 1, so it validates nothing); cold incidence and duration
+NOT_TESTABLE (our CI 11x and 3x the published width); mood and blood pressure no
+pool. **The negative controls are not tested**: with k = 1 every letter is I, so
+"stays low" is guaranteed, not earned. The binding limit is readable text.
+
 ## 2026-11-03 — first vitamin C attempt stopped; broken-sign PDFs refused, `--demo`
 
 Founder stopped the run after 29 studies extracted. The terminal spam was pypdf's
