@@ -122,15 +122,23 @@ it validates (`docs/METHOD.md` §16, `docs/DECISIONS.md`).
   yet…") on the landing screen and at the top of every result, and
   `/methodology` explains why.
 - **What is built:** `lib/analyze/grade-v2.ts` re-matches a run's stored
-  `evidence_v2` block (newest `reports/runs/*_context.json` for the ingredient)
-  to the scanned product's form and daily elemental dose, adding GRADE
-  indirectness only. It is parity-pinned to Python (`tests/grade-v2-parity.test.ts`)
-  and **not called**.
+  `evidence_v2` block to the scanned product's form and daily elemental dose,
+  adding GRADE indirectness only. It is parity-pinned to Python
+  (`tests/grade-v2-parity.test.ts`) and **not called**.
+- **Which grades may show** (founder 2026-11-04): only those listed in
+  `vocab/grades_live.json`, one entry per ingredient pinning ONE retained run
+  and the outcomes of it that passed validation (METHOD §16). A newer run never
+  replaces a validated one by being newer; an unlisted ingredient or outcome
+  answers `not_assessed`; a missing or unreadable list shows nothing (fails
+  closed). `tests/test_grades_live.py` fails if a listed outcome does not pass
+  its benchmark in the pinned run. Adding an entry is a founder decision. The
+  list is empty today.
 - **To switch on:** call `gradeProductV2` in `analyzeFromLabel` stage 2, build a
   grade card that shows each letter with its estimate, CI, k and certainty
   (CLAUDE.md invariant 8) -- the letter at the outcome's threshold M only, with
-  a "borderline" marker when the M/2 or 2M letter differs (founder 2026-10-25), remove the notice, and trace the run files into the
-  `/api/scan` bundle (`next.config.ts` `outputFileTracingIncludes`).
+  a "borderline" marker when the M/2 or 2M letter differs (founder 2026-10-25), remove the notice, and trace the pinned run files into the
+  `/api/scan` bundle (`next.config.ts` `outputFileTracingIncludes`; the list
+  itself is traced already).
 
 ## 5. The model boundary
 

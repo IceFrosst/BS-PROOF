@@ -1,0 +1,5 @@
+{
+ "version": "2026-11-04",
+ "description": "The only evidence-v2 grades the app may show (docs/APP.md §4, founder 2026-11-04). Each entry pins ONE retained run (never 'the newest run') and the outcomes of it that passed validation (docs/METHOD.md §16). Every other outcome, and every ingredient without an entry, answers not_assessed. tests/test_grades_live.py checks that each listed outcome passes its benchmark in the pinned run. Adding an entry is a founder decision, recorded in docs/DECISIONS.md, and needs: the benchmark passing for that outcome in that run, the run's spot audit passing, and at least one negative control passing method-wide.",
+ "live": []
+}

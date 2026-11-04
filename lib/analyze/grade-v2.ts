@@ -16,6 +16,10 @@
  * NOT CONNECTED (2026-10-15): /scan does not call this until v2 is validated
  * (the benchmark passes and the known v2 problems are fixed). It stays built
  * and parity-pinned so connecting it is one call in lib/analyze/scan.ts.
+ *
+ * WHICH GRADES MAY SHOW (founder 2026-11-04): only the runs and outcomes listed
+ * in vocab/grades_live.json. A newer run never replaces a validated one by
+ * being newer, and an outcome that did not pass validation is never shown.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -222,30 +226,6 @@ const PREVIEW_DIR = process.env.NODE_ENV !== "production" ? process.env.EVIDENCE
 const RETAINED_RUNS = path.join(process.cwd(), "reports", "runs");
 const RUNS_DIR = PREVIEW_DIR ? path.resolve(PREVIEW_DIR) : RETAINED_RUNS;
 
-/** Newest retained run context (`*_context.json`) for this ingredient that carries an evidence_v2 block. */
-export function evidenceBlockFor(ingredient: string, runsDir = RUNS_DIR): { runId: string; block: Record<string, unknown> } | null {
-  let names: string[] = [];
-  try {
-    names = fs.readdirSync(runsDir).filter((n) => n.endsWith("_context.json")).sort().reverse();
-  } catch {
-    return null;
-  }
-  for (const name of names) {
-    try {
-      const art = JSON.parse(fs.readFileSync(path.join(runsDir, name), "utf8")) as Record<string, unknown>;
-      const product = (art.product ?? {}) as Record<string, unknown>;
-      const block = art.evidence_v2 as Record<string, unknown> | undefined;
-      if (String(product.ingredient) !== ingredient || !block || block.method !== "evidence-v2") continue;
-      if (/demo/i.test(name)) continue;
-      if (/preview/i.test(name) && path.resolve(runsDir) === RETAINED_RUNS) continue;   // a preview is never a retained run
-      return { runId: name.replace(/_context\.json$/, ""), block };
-    } catch {
-      continue;
-    }
-  }
-  return null;
-}
-
 export function gradeBlock(
   block: Record<string, unknown>,
   form: string | null,
@@ -273,10 +253,45 @@ export function gradeBlock(
   });
 }
 
-/** v2 grades for a scanned product. `doseMg` is the ELEMENTAL daily dose, already converted. */
-export function gradeProductV2(ingredient: string, form: string | null, doseMg: number | null, runsDir = RUNS_DIR): ProductGradesV2 {
-  const found = evidenceBlockFor(ingredient, runsDir);
-  if (!found) return { status: "not_assessed", ingredient };
+export type LiveEntry = { ingredient: string; run_id: string; outcomes: string[] };
+
+/** vocab/grades_live.json: the validated (ingredient, run, outcomes) the app may show. */
+export function loadLiveGrades(file = path.join(process.cwd(), "vocab", "grades_live.json")): LiveEntry[] {
+  try {
+    const live = (JSON.parse(fs.readFileSync(file, "utf8")) as { live?: LiveEntry[] }).live;
+    return Array.isArray(live) ? live : [];
+  } catch {
+    return [];   // no list, no grades: fail closed
+  }
+}
+
+/** The pinned run's evidence_v2 block, read by its id (never "the newest run"). */
+export function pinnedBlock(entry: LiveEntry, runsDir = RUNS_DIR): Record<string, unknown> | null {
+  if (!/^[\w.-]+$/.test(entry.run_id)) return null;
+  try {
+    const art = JSON.parse(fs.readFileSync(path.join(runsDir, `${entry.run_id}_context.json`), "utf8")) as Record<string, unknown>;
+    const product = (art.product ?? {}) as Record<string, unknown>;
+    const block = art.evidence_v2 as Record<string, unknown> | undefined;
+    if (String(product.ingredient) !== entry.ingredient || !block || block.method !== "evidence-v2") return null;
+    return block;
+  } catch {
+    return null;
+  }
+}
+
+/** v2 grades for a scanned product. `doseMg` is the ELEMENTAL daily dose, already converted.
+ * Only outcomes listed in vocab/grades_live.json for this ingredient are graded. */
+export function gradeProductV2(
+  ingredient: string, form: string | null, doseMg: number | null,
+  runsDir = RUNS_DIR, live: LiveEntry[] = loadLiveGrades(),
+): ProductGradesV2 {
+  const entry = live.find((e) => e.ingredient === ingredient);
+  const block = entry ? pinnedBlock(entry, runsDir) : null;
+  if (!entry || !block) return { status: "not_assessed", ingredient };
+  const allowed = new Set(entry.outcomes);
+  const listed = ((block.outcomes as StoredOutcome[] | undefined) ?? []).filter((o) => allowed.has(o.outcome));
+  if (!listed.length) return { status: "not_assessed", ingredient };
+  const found = { runId: entry.run_id, block: { ...block, outcomes: listed } as Record<string, unknown> };
   return {
     status: "graded",
     ingredient,

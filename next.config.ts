@@ -21,6 +21,7 @@ const nextConfig: NextConfig = {
     "/api/scan": [
       "./vocab/form.json",
       "./vocab/compatibility.json",
+      "./vocab/grades_live.json",
       "./prompts/label.md",
       "./prompts/company.md",
       "./prompts/compatibility.md",

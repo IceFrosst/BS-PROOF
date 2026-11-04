@@ -18,6 +18,7 @@ side.
 from __future__ import annotations
 
 import math
+import re
 
 from pipeline import vocab
 from pipeline.eligibility import _arm_norm
@@ -94,9 +95,56 @@ def _pos_finite(x) -> float | None:
     return v
 
 
+# S7's own quote checks its dose (2026-11-04). MEASURED: vitamin D run
+# 20261103_205726, doi:10.1371/journal.pone.0225600, quote "20 000 IU (500 ug)/week",
+# read as elemental_dose_mg 500 per day: micrograms taken as mg and the weekly
+# schedule kept, about 7,000 times the real 0.071 mg/day. The prompt already asks
+# for a daily total in mg; this refuses the reading instead of trusting it.
+_MICRO = re.compile(r"(\d[\d\s,]*(?:\.\d+)?)\s*(?:µg|μg|ug|mcg|micrograms?)\b", re.I)
+# A trial's length ("for 6 weeks", "during 6 months", "12-week") is not a
+# schedule; MEASURED: those were the only false alarms in 725 cached arms.
+_DURATION = re.compile(
+    r"\b(?:for|during|over|after|lasting|of)\s+(?:the\s+)?(?:first\s+|next\s+)?"
+    r"(?:\d+|one|two|three|four|five|six|eight|ten|twelve|sixteen|twenty)\s*-?\s*(?:weeks?|months?|wks?)\b"
+    r"|\b\d+\s*-\s*(?:week|month)\b", re.I)
+_NOT_DAILY = re.compile(r"\b(?:week|weekly|weeks|wk|month|monthly|months|fortnight(?:ly)?)\b", re.I)
+_DAILY = re.compile(r"\b(?:day|daily|d)\b|/\s*d\b|\bper day\b|\ba day\b", re.I)
+
+
+def _span_refusal(s7: dict) -> str | None:
+    """A dose its own evidence span contradicts: the number printed in
+    micrograms, or a schedule less often than daily."""
+    span = str(s7.get("evidence_span") or "")
+    values = [v for v in (_pos_finite(s7.get("elemental_dose_mg")),
+                          _pos_finite(s7.get("compound_dose_mg"))) if v is not None]
+    if not span or not values:
+        return None
+    for m in _MICRO.finditer(span):
+        try:
+            printed = float(re.sub(r"[\s,]", "", m.group(1)))
+        except ValueError:
+            continue
+        if any(math.isclose(printed, v, rel_tol=1e-9) for v in values):
+            return "dose_unit_mismatch"
+    # A schedule less often than daily. MEASURED in the cache (2026-11-04):
+    # "50,000 IU ... once every 2 weeks" stored as 1.25 mg with frequency 0.0714
+    # (per dose, never multiplied); "50,000 IU/week" as 1.25 with no frequency.
+    # Whether S7 multiplied cannot be seen, so the dose is refused, not guessed.
+    freq = _pos_finite(s7.get("dose_frequency_per_day"))
+    if freq is not None and freq < 1:
+        return "dose_not_daily"
+    schedule = _DURATION.sub(" ", span)
+    if _NOT_DAILY.search(schedule) and not _DAILY.search(schedule):
+        return "dose_not_daily"
+    return None
+
+
 def study_dose(ingredient: str, s7: dict | None) -> dict:
     if not s7:
         return {"dose_low_mg": None, "dose_high_mg": None, "dose_basis": "unstated"}
+    refused = _span_refusal(s7)
+    if refused:
+        return {"dose_low_mg": None, "dose_high_mg": None, "dose_basis": refused}
     form_id = s7.get("form_vocab_id")
     declared_basis = s7.get("dose_basis") or "unstated"
 
@@ -108,6 +156,18 @@ def study_dose(ingredient: str, s7: dict | None) -> dict:
 
     elemental = _pos_finite(s7.get("elemental_dose_mg"))
     compound = _pos_finite(s7.get("compound_dose_mg"))
+
+    # A per-kg value copied into a mass field. MEASURED in the cache
+    # (2026-11-04): "0.3 g/kg/day", 80.5 kg, stored compound_dose_mg 300 and
+    # dose_per_kg_mg 300 with basis compound_only, which read as a 300 mg dose
+    # instead of 24 g. The per-kg branch below handles it; a copy without a
+    # stated body mass gives no dose.
+    per_kg_value = _pos_finite(s7.get("dose_per_kg_mg"))
+    if per_kg_value is not None:
+        if compound is not None and math.isclose(compound, per_kg_value, rel_tol=1e-9):
+            compound = None
+        if elemental is not None and math.isclose(elemental, per_kg_value, rel_tol=1e-9):
+            elemental = None
 
     # A known-form extraction sometimes copies compound_dose_mg into the
     # elemental field. Equality is not evidence that the amount is elemental:

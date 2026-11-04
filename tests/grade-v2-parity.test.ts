@@ -11,7 +11,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { gradeBlock, gradeProductV2, TABLE } from "@/lib/analyze/grade-v2";
+import { gradeBlock, gradeProductV2, loadLiveGrades, TABLE } from "@/lib/analyze/grade-v2";
 
 type Expected = {
   letter: string;
@@ -62,18 +62,37 @@ describe("evidence v2 grade parity with pipeline/grade.py", () => {
 });
 
 describe("gradeProductV2", () => {
-  it("reads the newest retained run context with an evidence_v2 block for the ingredient", () => {
+  const setup = () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "grade-v2-"));
     const write = (name: string, art: unknown) => fs.writeFileSync(path.join(dir, name), JSON.stringify(art));
     write("20260101_000000_creatine_x_context.json", { product: { ingredient: "creatine" }, evidence_v2: golden.block });
-    write("20260202_000000_creatine_x_context.json", { product: { ingredient: "creatine" } });
-    const r = gradeProductV2("creatine", "creatine_monohydrate", 5000, dir);
+    write("20260303_000000_creatine_y_context.json", { product: { ingredient: "creatine" }, evidence_v2: golden.block });
+    return dir;
+  };
+  const strength = [{ ingredient: "creatine", run_id: "20260101_000000_creatine_x", outcomes: ["muscle_strength"] }];
+
+  it("grades only the pinned run and the listed outcomes (vocab/grades_live.json)", () => {
+    const r = gradeProductV2("creatine", "creatine_monohydrate", 5000, setup(), strength);
     expect(r.status).toBe("graded");
     if (r.status === "graded") {
-      expect(r.run_id).toBe("20260101_000000_creatine_x");
-      expect(r.outcomes.find((o) => o.outcome === "muscle_strength")?.letter).toBe("A");
+      expect(r.run_id).toBe("20260101_000000_creatine_x");   // pinned, although a newer run exists
+      expect(r.outcomes.map((o) => o.outcome)).toEqual(["muscle_strength"]);
+      expect(r.outcomes[0].letter).toBe("A");
     }
-    expect(gradeProductV2("vitamin_c", null, null, dir).status).toBe("not_assessed");
+  });
+
+  it("answers not_assessed without an entry, for a missing run, or with no listed outcome", () => {
+    const dir = setup();
+    expect(gradeProductV2("creatine", null, null, dir, []).status).toBe("not_assessed");
+    expect(gradeProductV2("vitamin_c", null, null, dir, strength).status).toBe("not_assessed");
+    expect(gradeProductV2("creatine", null, null, dir,
+      [{ ingredient: "creatine", run_id: "20990101_000000_missing", outcomes: ["muscle_strength"] }]).status).toBe("not_assessed");
+    expect(gradeProductV2("creatine", null, null, dir,
+      [{ ingredient: "creatine", run_id: "20260101_000000_creatine_x", outcomes: ["not_an_outcome"] }]).status).toBe("not_assessed");
+  });
+
+  it("the committed list is empty until validation (METHOD §16)", () => {
+    expect(loadLiveGrades()).toEqual([]);
   });
 });
 

@@ -10,6 +10,18 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-11-04 — S7 dose check; validated-grades list for the app
+
+`pipeline/dose._span_refusal`: a dose printed in micrograms but stored as mg, or a
+less-than-daily schedule, is refused; a copied per-kg value uses the stated
+mass. Over 725 cached S7 arm readings: 6 refused, all real errors, 0 false after
+excluding trial lengths. `vocab/grades_live.json` (empty) + `grade-v2.ts`: the app
+grades only pinned (ingredient, run, outcomes), never the newest run, and fails
+closed; `tests/test_grades_live.py` requires a passing benchmark for each listed
+outcome. Found, deferred to the next prompt bump: the strength grip tier matches
+any "dynamometer" (vitamin D run pooled hip flexion). 300 Python tests, 14 parity
+tests, typecheck and lint clean.
+
 ## 2026-11-04 — "Possible" needs estimate >= M/2 (founder, DECISIONS)
 
 `grade.benefit`: "possible" now also needs the estimate to reach M/2. Vitamin D

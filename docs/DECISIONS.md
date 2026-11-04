@@ -71,8 +71,12 @@ vitamin-D-free arm; 3 no usable numbers). The largest trial (DO-HEALTH 2025, n =
 enter the SMD pool. Benchmark: 3/3 rows overlap, NOT TESTABLE (coverage 40 %).
 The letter led to the 2026-11-04 decision below (now D, Moderate). Audit item: one pooled trial (PLoS ONE 2019,
 doi:10.1371/journal.pone.0225600) shows a dose of 500 mg and the measure "hip
-flexion strength". Its effect is not affected (no `--dose` was given), but S7's
-dose and the measure choice should be checked by hand.
+flexion strength". The dose is now refused by the S7 dose check (2026-11-04,
+below). The measure: the trial reports hip flexion, biceps and pectoral strength
+(hand-held dynamometer, N) and hand grip (kg); the grip tier's pattern
+`grip|handgrip|dynamomet` matches every "dynamometer" measure, so all four tie and
+claim order picks hip flexion. Fix with the next planned prompt bump (the
+hierarchy sits in `vocab/outcome.json`, whose edit re-runs S6B and S7; D2b).
 
 **Defect found on the way (not fixed):** `pipeline.relevance.relevance_check`
 turns the id `omega_3` into the literal "omega 3", but papers write "omega-3",
@@ -187,6 +191,8 @@ All accepted by the founder **"for now, may revisit"** unless stated.
 
 | Date | Decision |
 |---|---|
+| 2026-11-04 | **Grades shown only from a validated list** (founder; `vocab/grades_live.json`, APP §4): the app grades only pinned (ingredient, run, outcomes) entries, never "the newest run", and fails closed. An entry needs its benchmark passing in that run (enforced by `tests/test_grades_live.py`), the run's spot audit passing, and a negative control passing method-wide. Empty today. |
+| 2026-11-04 | **S7 doses checked against their own quote** (`pipeline/dose._span_refusal`; founder rule: rigorous and free, no prompt bump): a dose printed in micrograms but stored as mg, or a less-than-daily schedule, is refused (`dose_unit_mismatch`, `dose_not_daily`); a per-kg value copied into a mass field uses the stated body mass. Measured over 725 cached S7 arm readings: 6 refused, all real errors (vitamin D 500 µg/week read as 500 mg/day; 50,000 IU every 2 weeks stored per dose; creatine 3x/week stored as daily), 0 false refusals after trial lengths ("for 6 weeks") were excluded; one copied per-kg value (0.3 g/kg/day read as 300 mg) now gives 21 g. No pooled effect changes (dose is indirectness, not weight). |
 | 2026-11-04 | **"Possible" needs estimate ≥ M/2** (founder, was O4; `grade.benefit`). The vitamin D strength negative control (run `20261103_205726`, k = 2, +0.055 [−0.11, +0.22]) read C−, the letter of creatine, only because its CI's top end cleared M: with the same estimate and more trials it would have read D, so less evidence earned a better letter. No new constant (M/2 is the half-threshold already reported). Re-pooled offline: vitamin D strength C− → **D Moderate**; creatine strength +0.139, lean mass +0.123, power +0.103 keep C− (power 0.003 above the floor). Rejected: dropping the row (the 2026-11-02 reason still holds for creatine). |
 | 2026-11-03 | **Vitamin C MCIDs** (founder, METHOD §14): `cold_duration` 26.1 h (Barrett 2005, a vitamin C scenario), converted to SD by the median control-arm SD of its duration trials, from spreads only and after extraction, because no SD is published; 25 % severity (Barrett 2007) shown beside. `blood_pressure` 0.2 SD, 2 mmHg shown beside, because its only source (a preprint on nuts) states a convention without its origin. `cold_incidence`, `inflammation_crp`, `glycaemic_control`, `depressive_symptoms`: flagged default, nothing usable found (CRP 0.5 mg/L only in a trial protocol; no HbA1c source opened). |
 | 2026-11-03 | **Vitamin C benchmark rows** (founder): 8 rows in `vocab/benchmarks.json` from 7 reviews; negative controls are cold incidence (Cochrane RR 0.97, Keya RR 0.94) and mood (g 0.09, sign read from its subgroup). Abstract numbers only: PMC full text was unavailable for Cochrane and Juraschek. Left out: Ran 2018 and doi:10.1007/s00228-018-2601-7 (retracted); doi:10.1155/2020/8573742 (added to antivirals); Mason 2021 and Guan 2020 (diabetic, hypertensive only); doi:10.1080/10408398.2019.1703642 (vitamin C and/or E); Ashor 2017 (no overall number in its abstract, so `glycaemic_control` has no row); Cochrane's 8 % and Hemilä 2023's 15 % (relative scales we do not pool). |
