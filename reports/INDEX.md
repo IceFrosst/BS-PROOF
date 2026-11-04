@@ -4,6 +4,8 @@ Runs, newest first. Removed runs (v14 and earlier) remain in git history.
 
 | When (UTC) | Mode | Ingredient | Form | Kind | File |
 |---|---|---|---|---|---|
+| 2026-11-04 19:51 UTC | claude-ft-top1-inter | `vitamin_d` | `vitamin_d3_cholecalciferol` | summary | [runs/20261104_195129_vitamin-d_vitamin-d3-cholecalciferol_claude-ft-top1-inter_summary.md](runs/20261104_195129_vitamin-d_vitamin-d3-cholecalciferol_claude-ft-top1-inter_summary.md) |
+| 2026-11-04 19:51 UTC | claude-ft-top1-inter | `vitamin_d` | `vitamin_d3_cholecalciferol` | full | [runs/20261104_195129_vitamin-d_vitamin-d3-cholecalciferol_claude-ft-top1-inter_full.md](runs/20261104_195129_vitamin-d_vitamin-d3-cholecalciferol_claude-ft-top1-inter_full.md) |
 | 2026-11-03 20:57 UTC | claude-ft-top1-inter | `vitamin_d` | `vitamin_d3_cholecalciferol` | summary | [runs/20261103_205726_vitamin-d_vitamin-d3-cholecalciferol_claude-ft-top1-inter_summary.md](runs/20261103_205726_vitamin-d_vitamin-d3-cholecalciferol_claude-ft-top1-inter_summary.md) |
 | 2026-11-03 20:57 UTC | claude-ft-top1-inter | `vitamin_d` | `vitamin_d3_cholecalciferol` | full | [runs/20261103_205726_vitamin-d_vitamin-d3-cholecalciferol_claude-ft-top1-inter_full.md](runs/20261103_205726_vitamin-d_vitamin-d3-cholecalciferol_claude-ft-top1-inter_full.md) |
 | 2026-11-03 10:10 UTC | claude-ft-inter | `vitamin_c` | `ascorbic_acid` | summary | [runs/20261103_101034_vitamin-c_ascorbic-acid_claude-ft-inter_summary.md](runs/20261103_101034_vitamin-c_ascorbic-acid_claude-ft-inter_summary.md) |

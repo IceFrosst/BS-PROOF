@@ -85,6 +85,13 @@ kept a third. `--outcome` now always runs its own uncapped search: **144 on topi
 54 readable** (was 71 and 34). Next: re-run the same command (the 34 read studies
 are cached; about 20 new studies, about 150 calls).
 
+**Result, run `20261104_195129` (2026-11-04):** 144 screened, 54 read, 133 calls
+(241 cache hits). muscle_strength k = 3, **+0.08 [−0.26, +0.42]** (Hartung–Knapp,
+2 df), Low, **I**; benchmark **PASS** (coverage 50 %, width 1.4×, 3/3 overlap):
+the first negative control to pass. The letter is I, not a false benefit; the
+CI is wide because k = 3 gives the t-interval 2 degrees of freedom. The
+PLoS ONE trial's dose is now refused by the S7 check.
+
 **Defect found on the way (not fixed):** `pipeline.relevance.relevance_check`
 turns the id `omega_3` into the literal "omega 3", but papers write "omega-3",
 "n-3" or "fish oil", so it kept 43 of 2,212 omega-3 RCTs. `beta_carotene`

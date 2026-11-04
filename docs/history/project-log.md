@@ -10,6 +10,11 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-11-04 — vitamin D strength run 20261104_195129: first negative control passes
+
+54 of 144 read, 133 calls. muscle_strength k = 3, +0.08 [−0.26, +0.42], Low, I.
+Benchmark PASS: coverage 50 %, width 1.4×, overlaps all 3 null rows (DECISIONS O3).
+
 ## 2026-11-04 — `--outcome` runs its own uncapped search
 
 Vitamin D strength: the store already held 624 relevant vitamin D trials, so the

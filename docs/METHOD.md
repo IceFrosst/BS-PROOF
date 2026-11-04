@@ -415,8 +415,9 @@ What must hold before grades are shown to users:
 - **Negative controls.** The creatine rows are all successes, so a pipeline
   that called everything effective would pass them. The "does not work" rows
   are vitamin C (mood, cold incidence in the general population) and vitamin D
-  strength (under-65s SMD 0.03, athletes 0.05); none has been testable yet
-  (vitamin C run `20261103_101034`: k ≤ 1). Each new ingredient adds at least
+  strength (under-65s SMD 0.03, athletes 0.05). Vitamin D strength **passes**
+  (run `20261104_195129`: k = 3, +0.08 [−0.26, +0.42], letter I, coverage 50 %);
+  vitamin C is not testable (run `20261103_101034`: k ≤ 1). Each new ingredient adds at least
   one "does not work" or "harms" row (`docs/history/v14-anchors.csv` lists
   candidates: vitamin E and cardiovascular events, beta-carotene and lung cancer
   in smokers, selenium and prostate cancer).
