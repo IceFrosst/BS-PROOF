@@ -89,8 +89,13 @@ class OutcomeScreen(unittest.TestCase):
         with patch.object(corpus, "relevance_check", lambda s, i: (True, "")), \
              patch.object(corpus, "RETRIEVE_MAX_PRIMARIES", 0), \
              patch("pipeline.predatory.flag_records", lambda rows: {}), \
-             patch("pipeline.predatory.format_summary", lambda s: ""):
+             patch("pipeline.predatory.format_summary", lambda s: ""), \
+             patch("pipeline.retrieve.retrieve") as retrieve:
             kept, n = corpus.load_corpus(Store(), opts, None, ["muscle_strength"], ctx)
+        # --outcome always runs that outcome's own, uncapped search.
+        kw = retrieve.call_args.kwargs
+        self.assertEqual((kw["scope"], kw["outcome_ids"], kw["per_outcome_quota"]),
+                         ("per_outcome", ["muscle_strength"], corpus.OUTCOME_QUOTA))
         self.assertEqual([r["title"] for r in kept], [recs[0]["title"]])
         self.assertEqual(ctx["outcome_screen"],
                          {"outcome": "muscle_strength", "kept": 1, "dropped": 1,

@@ -43,6 +43,7 @@ def retrieve(ingredient: str, store: Store, *,
              scope: str = "broad", oa_lookups: int = 250,
              publisher_lookups: int = 400,
              outcome_ids: list[str] | None = None,
+             per_outcome_quota: int | None = None,
              verbose: bool = True) -> dict:
     """
     One ingredient, end to end. Returns a stats dict.
@@ -75,7 +76,7 @@ def retrieve(ingredient: str, store: Store, *,
         #   ~60% of rows are duplicates -- one trial matches sleep AND anxiety
         #   ~65% of RCTs are dropped by full-text-only (35% survive, measured)
         # So a quota of N yields roughly N/7 usable studies per outcome.
-        per = int(os.environ.get("SP_PER_OUTCOME_QUOTA", "60"))
+        per = per_outcome_quota or int(os.environ.get("SP_PER_OUTCOME_QUOTA", "60"))
         byo = ep.discover_by_outcome(ingredient, oids, per_outcome=per)
         pri = byo["primaries"]
         covered = {k: v for k, v in byo["by_outcome"].items() if v}

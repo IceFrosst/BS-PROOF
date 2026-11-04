@@ -78,6 +78,13 @@ below). The measure: the trial reports hip flexion, biceps and pectoral strength
 claim order picks hip flexion. Fix with the next planned prompt bump (the
 hierarchy sits in `vocab/outcome.json`, whose edit re-runs S6B and S7; D2b).
 
+**Coverage lever (2026-11-04, no model):** the intervention search kept the top
+600 vitamin D trials and, with 624 in the store, never searched again; the
+dedicated strength query matches 182, of which the default per-outcome quota (60)
+kept a third. `--outcome` now always runs its own uncapped search: **144 on topic,
+54 readable** (was 71 and 34). Next: re-run the same command (the 34 read studies
+are cached; about 20 new studies, about 150 calls).
+
 **Defect found on the way (not fixed):** `pipeline.relevance.relevance_check`
 turns the id `omega_3` into the literal "omega 3", but papers write "omega-3",
 "n-3" or "fish oil", so it kept 43 of 2,212 omega-3 RCTs. `beta_carotene`

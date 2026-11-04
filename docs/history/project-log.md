@@ -10,6 +10,14 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-11-04 — `--outcome` runs its own uncapped search
+
+Vitamin D strength: the store already held 624 relevant vitamin D trials, so the
+run never searched again, and the per-outcome query (182 hits) has a default
+quota of 60. `--outcome` now always runs that outcome's search with
+`corpus.OUTCOME_QUOTA` = 1000 (network, cached): 144 studies name strength, 54
+readable (was 71 / 34).
+
 ## 2026-11-04 — S7 dose check; validated-grades list for the app
 
 `pipeline/dose._span_refusal`: a dose printed in micrograms but stored as mg, or a

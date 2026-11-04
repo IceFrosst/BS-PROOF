@@ -13,6 +13,9 @@ from pipeline.storage import DEFAULT_DB
 
 WIRING_DB = DEFAULT_DB.parent / "wiring_demo.sqlite"
 RETRIEVE_MAX_PRIMARIES = int(os.environ.get("SP_RETRIEVE_MAX_PRIMARIES", "600"))
+# --outcome's own search: enough for every hit of one outcome (vitamin D
+# strength matches 182, 2026-11-04). A retrieval budget, not a grading constant.
+OUTCOME_QUOTA = 1000
 
 _OA_RANK = {
     "full_text": 0, "fulltext": 0, "green_oa": 1, "hybrid": 2,
@@ -180,6 +183,18 @@ def load_corpus(store, opts, db, outcome_allowlist, run_context) -> tuple[list[d
                       if s.get("design_rank") == 4
                       and relevance_check(s, ingredient)[0])
     need_retrieve = _n_relevant < target
+    if getattr(opts, "outcome", None):
+        # --outcome: always run that outcome's own search, uncapped. MEASURED
+        # 2026-11-04: vitamin D strength. The intervention search kept the top
+        # 600 vitamin D trials (71 name strength, 34 readable) and, with 624 in
+        # the store, never searched again; the strength query matches 182, and
+        # the default per-outcome quota of 60 kept a third of them. Uncapped:
+        # 144 name strength, 54 readable. Responses are cached on disk.
+        print(f"retrieving {opts.outcome} trials for {ingredient} (per-outcome search, "
+              f"quota {OUTCOME_QUOTA})...")
+        retrieve(ingredient, store, max_primaries=RETRIEVE_MAX_PRIMARIES,
+                 outcome_ids=[opts.outcome], scope="per_outcome",
+                 per_outcome_quota=OUTCOME_QUOTA)
     if need_retrieve:
         print(f"corpus: {_n_relevant} RCT-rank {ingredient} studies in store, "
               f"target {target} -- expanding")

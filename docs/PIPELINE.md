@@ -129,7 +129,7 @@ biases the result.
 | `--dose <mg>` | The product's daily **elemental** dose, so the run's own letters judge dose indirectness |
 | `--limit N` | Extract only N studies (default: the whole corpus — a capped run is a sample) |
 | `--demo` | Text census of the corpus, then 3 studies for real; no report (run before a big run) |
-| `--outcome <id>` | Grade only this outcome, and extract only studies whose title or abstract names it (its vocabulary label, search terms, includes and measure patterns; `pipeline/relevance.outcome_screen`). A cost cap for a single-outcome run: the dropped count is printed and goes in the report; a trial that measured the outcome without naming it is missed, which the benchmark coverage shows |
+| `--outcome <id>` | Grade only this outcome: first runs that outcome's own Europe PMC search, uncapped (`corpus.OUTCOME_QUOTA`), then extracts only studies whose title or abstract names it (its vocabulary label, search terms, includes and measure patterns; `pipeline/relevance.outcome_screen`). A cost cap for a single-outcome run: the dropped count is printed and goes in the report; a trial that measured the outcome without naming it is missed, which the benchmark coverage shows |
 | `--full-text-only` | Extract only studies with readable full text |
 | `--all-outcomes` / `--top-outcomes N` | Grade every outcome / the top N by RCT count (default 5) |
 | `--broad-scope` / `--supplement-scope` / `--intervention-scope` / `--per-outcome` | Retrieval scope (default broad; METHOD §3) |
