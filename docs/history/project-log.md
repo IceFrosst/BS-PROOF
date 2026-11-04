@@ -10,6 +10,18 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-11-04 — vitamin D strength run 20261103_205726; "Possible" row fails its test
+
+71 studies screened by `--outcome muscle_strength`, 34 read, 224 calls. muscle_strength
+k = 2, +0.06 [−0.11, +0.22], **C− Moderate** (DECISIONS O3), the letter the
+2026-11-02 decision said would make the "Possible" row change. Proposal O4:
+"possible" also needs estimate >= M/2. Re-pooled offline: vitamin D → D, creatine
+strength / lean mass / power keep C− (+0.139, +0.123, +0.103). Benchmark 3/3
+overlap, not testable (coverage 40 %). Fixed: `benchmark_v2.py compare` defaulted
+to the creatine rows for any run (now uses the artifact's ingredient); the report's
+telemetry check ignored cache hits and called all 8 agents "impossible" after a
+`--demo`. 293 Python tests.
+
 ## 2026-11-03 — vitamin D strength chosen as the negative control; `--outcome` flag
 
 No-model census of five "does not work" candidates (DECISIONS O3): vitamin D →

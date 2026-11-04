@@ -286,12 +286,17 @@ def reconcile_agent_views(by_agent: dict | None, agent_stats: dict | None) -> li
     for name in sorted(set(agent_stats) - set(by_agent)):
         out.append(f"{name}: has a success row but made no recorded model calls")
     for name in sorted(set(by_agent) & set(agent_stats)):
+        # A study answered from the cache (e.g. by the --demo run before it)
+        # needs no attempt. MEASURED 2026-11-03: vitamin D run 20261103_205726
+        # flagged all 8 agents as impossible (S3: 32 attempts + 3 cache hits
+        # for 34 studies) because cache hits were not counted.
         attempts = by_agent[name].get("calls", 0)
+        served = attempts + by_agent[name].get("cache_hits", 0)
         st = agent_stats[name]
         studies = st.get("ok", 0) + st.get("fail", 0)
-        if attempts < studies:
-            out.append(f"{name}: {attempts} attempts for {studies} studies -- "
-                       f"impossible, every study needs at least one attempt")
+        if served < studies:
+            out.append(f"{name}: {attempts} attempts and {served - attempts} cache hits for "
+                       f"{studies} studies -- impossible, every study needs at least one")
         if by_agent[name].get("fail", 0) < st.get("fail", 0):
             out.append(f"{name}: {by_agent[name].get('fail', 0)} failed attempts "
                        f"but {st.get('fail', 0)} failed studies -- a study only "

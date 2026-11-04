@@ -113,3 +113,38 @@ class PassRule(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CompareUsesTheRunsIngredient(unittest.TestCase):
+    """2026-11-03: `compare` defaulted to creatine, so a vitamin D run was read
+    against the creatine rows."""
+    def test_default_is_the_artifacts_ingredient(self):
+        import json, sys, tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+        import benchmark_v2
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "ctx.json"
+            p.write_text(json.dumps({"ingredient": "vitamin_d", "evidence_v2": {"outcomes": []}}))
+            with patch.object(benchmark_v2, "compare", return_value=0) as cmp:
+                benchmark_v2.main(["compare", str(p)])
+                self.assertEqual(cmp.call_args[0][1], "vitamin_d")
+                benchmark_v2.main(["compare", str(p), "--ingredient", "creatine"])
+                self.assertEqual(cmp.call_args[0][1], "creatine")
+
+
+class ReconcileCountsCacheHits(unittest.TestCase):
+    """2026-11-03: studies served from the --demo cache made every agent look
+    'impossible' (fewer attempts than studies)."""
+    def test_cache_hits_count_as_served(self):
+        import sys
+        from pathlib import Path
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+        from auto_report_push import reconcile_agent_views
+        ok = reconcile_agent_views({"S3": {"calls": 32, "cache_hits": 3, "fail": 1}},
+                                   {"S3": {"ok": 34, "fail": 0}})
+        self.assertEqual(ok, [])
+        bad = reconcile_agent_views({"S3": {"calls": 30, "cache_hits": 3}},
+                                    {"S3": {"ok": 34, "fail": 0}})
+        self.assertEqual(len(bad), 1)

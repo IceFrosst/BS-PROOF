@@ -111,17 +111,21 @@ def main(argv: list[str]) -> int:
     c = sub.add_parser("compare")
     c.add_argument("artifact", nargs="?", type=Path, help="a run's *_context.json (its evidence_v2 block)")
     c.add_argument("--stability", help="an out/stability/<label>.json run instead")
-    c.add_argument("--ingredient", default="creatine")
+    c.add_argument("--ingredient", help="default: the artifact's own ingredient (creatine for --stability)")
     args = ap.parse_args(argv)
     if args.cmd == "verify":
         return verify(benchmark.load(args.ingredient))
     if args.stability:
         block = _block_from_stability(args.stability)
     elif args.artifact:
-        block = json.loads(args.artifact.read_text(encoding="utf-8")).get("evidence_v2")
+        ctx = json.loads(args.artifact.read_text(encoding="utf-8"))
+        block = ctx.get("evidence_v2")
+        # A vitamin D run was compared with the creatine rows when this
+        # defaulted to "creatine" (2026-11-03). The run says what it graded.
+        args.ingredient = args.ingredient or ctx.get("ingredient")
     else:
         ap.error("compare needs an artifact or --stability LABEL")
-    return compare(block, args.ingredient)
+    return compare(block, args.ingredient or "creatine")
 
 
 if __name__ == "__main__":

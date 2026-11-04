@@ -15,6 +15,35 @@ Last swept: 2026-11-02.
 
 ## Open
 
+### O4. The "Possible" row gave a known null C− (proposed 2026-11-04)
+
+The 2026-11-02 decision said: "Must be tested by the negative controls: if a
+known failure earns C−, the row changes." Vitamin D run `20261103_205726`
+(O3): muscle_strength k = 2, SMD **+0.06 [−0.11, +0.22]**, Moderate, **C−,
+"possible"**, the same letter as creatine strength (+0.14). The estimate agrees
+with the null benchmarks (under-65s +0.03, athletes +0.05; 3/3 rows overlap),
+but the benchmark is not testable (coverage 40 % < 50 %), so this is a weak test.
+
+The defect does not depend on k: "possible" fires because the CI's upper end
+(+0.22) is just above M (0.20). With the same estimate and more trials, the CI
+would fall below M and the result would read "none", D. **A thinner evidence base
+earns a better letter.**
+
+**Proposal**: "possible" also needs the estimate to reach half the MCID
+(`estimate >= M/2`) in `grade.benefit`. No new constant: M/2 is the half-threshold
+the grade already reports. Re-pooled offline (no model calls):
+
+| Run | Outcome | Estimate | Now | With the rule |
+|---|---|---|---|---|
+| vitamin D `20261103_205726` | strength | +0.055 | C− Moderate | **D Moderate** |
+| creatine (`out/run_v141c_extractions.json`) | strength | +0.139 | C− | C− |
+| creatine | lean mass | +0.123 | C− | C− |
+| creatine | power | +0.103 | C− | C− (0.003 above the boundary) |
+
+Alternative considered: drop the row (creatine back to D). Rejected: the
+2026-11-02 reason still holds for creatine. Needs the founder's yes (`grade.TABLE` / `grade.benefit`
+are founder calls, invariant 4); then grade-v2.ts and its goldens follow.
+
 ### O3. Vitamin D3 and muscle strength as the negative control (approved 2026-11-03)
 
 Replaces O2 as the next negative control (O2 is on hold: k ≈ 1). Founder
@@ -61,6 +90,18 @@ SMD or kg pools; in `"excluded"`).
 RCTs (about 35 readable, about 280 calls) instead of about 290 readable studies
 on every topic (about 2,000+ calls). Expected letter: D or below, estimate
 0–0.2 SD. A clear benefit would be a warning about the method.
+
+**Result, run `20261103_205726` (2026-11-03):** 71 screened, 34 read, 37 no
+text, 1 failed (S5 max_turns). muscle_strength k = 2, +0.06 [−0.11, +0.22],
+C− Moderate; 18 refused (8 off-target population: children, COPD, stroke,
+Parkinson's, spinal cord injury, cirrhosis; 5 combination arms; 2 no
+vitamin-D-free arm; 3 no usable numbers). The largest trial (DO-HEALTH 2025, n =
+2,157) reported grip strength as a mean difference in kPa only, so it could not
+enter the SMD pool. Benchmark: 3/3 rows overlap, NOT TESTABLE (coverage 40 %).
+The letter is the subject of O4. Audit item: one pooled trial (PLoS ONE 2019,
+doi:10.1371/journal.pone.0225600) shows a dose of 500 mg and the measure "hip
+flexion strength". Its effect is not affected (no `--dose` was given), but S7's
+dose and the measure choice should be checked by hand.
 
 **Defect found on the way (not fixed):** `pipeline.relevance.relevance_check`
 turns the id `omega_3` into the literal "omega 3", but papers write "omega-3",
