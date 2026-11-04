@@ -10,6 +10,14 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-11-04 — "Possible" needs estimate >= M/2 (founder, DECISIONS)
+
+`grade.benefit`: "possible" now also needs the estimate to reach M/2. Vitamin D
+strength (+0.055) C− → D Moderate; creatine re-pooled from
+`out/run_v141c_extractions.json`: strength, lean mass, power still "possible", C−
+(+0.139, +0.123, +0.103). grade-v2.ts takes the benefit category from the Python
+record, so only its comment changed; goldens current, parity 12/12, 294 Python tests.
+
 ## 2026-11-04 — vitamin D strength run 20261103_205726; "Possible" row fails its test
 
 71 studies screened by `--outcome muscle_strength`, 34 read, 224 calls. muscle_strength

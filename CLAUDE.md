@@ -296,8 +296,9 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
 - **Known v2 problems:** the work list in `docs/DECISIONS.md` (2026-10-28).
   Vitamin C run `20261103_101034` (52/116 studies readable): every outcome I, k <= 1;
   too thin to test the negative controls. Vitamin D3 → strength run
-  `20261103_205726` (the negative control, DECISIONS O3): k = 2, +0.06, C−, the
-  same letter as creatine; proposal O4 tightens the "Possible" row. Creatine re-pooled offline with B4 and the new
+  `20261103_205726` (the negative control, DECISIONS O3): k = 2, +0.06, read C−
+  like creatine, so "Possible" now needs estimate ≥ M/2 (2026-11-04): vitamin D D,
+  creatine still C−. Creatine re-pooled offline with B4 and the new
   "Possible" row (2026-11-02), strength, lean mass and power are all **C−,
   Moderate**; the stored run still shows the letters above.
 - **Working baseline: `Jans_attempt`, not `main`** (founder, 2026-10-15).

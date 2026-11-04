@@ -15,35 +15,6 @@ Last swept: 2026-11-02.
 
 ## Open
 
-### O4. The "Possible" row gave a known null C− (proposed 2026-11-04)
-
-The 2026-11-02 decision said: "Must be tested by the negative controls: if a
-known failure earns C−, the row changes." Vitamin D run `20261103_205726`
-(O3): muscle_strength k = 2, SMD **+0.06 [−0.11, +0.22]**, Moderate, **C−,
-"possible"**, the same letter as creatine strength (+0.14). The estimate agrees
-with the null benchmarks (under-65s +0.03, athletes +0.05; 3/3 rows overlap),
-but the benchmark is not testable (coverage 40 % < 50 %), so this is a weak test.
-
-The defect does not depend on k: "possible" fires because the CI's upper end
-(+0.22) is just above M (0.20). With the same estimate and more trials, the CI
-would fall below M and the result would read "none", D. **A thinner evidence base
-earns a better letter.**
-
-**Proposal**: "possible" also needs the estimate to reach half the MCID
-(`estimate >= M/2`) in `grade.benefit`. No new constant: M/2 is the half-threshold
-the grade already reports. Re-pooled offline (no model calls):
-
-| Run | Outcome | Estimate | Now | With the rule |
-|---|---|---|---|---|
-| vitamin D `20261103_205726` | strength | +0.055 | C− Moderate | **D Moderate** |
-| creatine (`out/run_v141c_extractions.json`) | strength | +0.139 | C− | C− |
-| creatine | lean mass | +0.123 | C− | C− |
-| creatine | power | +0.103 | C− | C− (0.003 above the boundary) |
-
-Alternative considered: drop the row (creatine back to D). Rejected: the
-2026-11-02 reason still holds for creatine. Needs the founder's yes (`grade.TABLE` / `grade.benefit`
-are founder calls, invariant 4); then grade-v2.ts and its goldens follow.
-
 ### O3. Vitamin D3 and muscle strength as the negative control (approved 2026-11-03)
 
 Replaces O2 as the next negative control (O2 is on hold: k ≈ 1). Founder
@@ -98,7 +69,7 @@ Parkinson's, spinal cord injury, cirrhosis; 5 combination arms; 2 no
 vitamin-D-free arm; 3 no usable numbers). The largest trial (DO-HEALTH 2025, n =
 2,157) reported grip strength as a mean difference in kPa only, so it could not
 enter the SMD pool. Benchmark: 3/3 rows overlap, NOT TESTABLE (coverage 40 %).
-The letter is the subject of O4. Audit item: one pooled trial (PLoS ONE 2019,
+The letter led to the 2026-11-04 decision below (now D, Moderate). Audit item: one pooled trial (PLoS ONE 2019,
 doi:10.1371/journal.pone.0225600) shows a dose of 500 mg and the measure "hip
 flexion strength". Its effect is not affected (no `--dose` was given), but S7's
 dose and the measure choice should be checked by hand.
@@ -216,6 +187,7 @@ All accepted by the founder **"for now, may revisit"** unless stated.
 
 | Date | Decision |
 |---|---|
+| 2026-11-04 | **"Possible" needs estimate ≥ M/2** (founder, was O4; `grade.benefit`). The vitamin D strength negative control (run `20261103_205726`, k = 2, +0.055 [−0.11, +0.22]) read C−, the letter of creatine, only because its CI's top end cleared M: with the same estimate and more trials it would have read D, so less evidence earned a better letter. No new constant (M/2 is the half-threshold already reported). Re-pooled offline: vitamin D strength C− → **D Moderate**; creatine strength +0.139, lean mass +0.123, power +0.103 keep C− (power 0.003 above the floor). Rejected: dropping the row (the 2026-11-02 reason still holds for creatine). |
 | 2026-11-03 | **Vitamin C MCIDs** (founder, METHOD §14): `cold_duration` 26.1 h (Barrett 2005, a vitamin C scenario), converted to SD by the median control-arm SD of its duration trials, from spreads only and after extraction, because no SD is published; 25 % severity (Barrett 2007) shown beside. `blood_pressure` 0.2 SD, 2 mmHg shown beside, because its only source (a preprint on nuts) states a convention without its origin. `cold_incidence`, `inflammation_crp`, `glycaemic_control`, `depressive_symptoms`: flagged default, nothing usable found (CRP 0.5 mg/L only in a trial protocol; no HbA1c source opened). |
 | 2026-11-03 | **Vitamin C benchmark rows** (founder): 8 rows in `vocab/benchmarks.json` from 7 reviews; negative controls are cold incidence (Cochrane RR 0.97, Keya RR 0.94) and mood (g 0.09, sign read from its subgroup). Abstract numbers only: PMC full text was unavailable for Cochrane and Juraschek. Left out: Ran 2018 and doi:10.1007/s00228-018-2601-7 (retracted); doi:10.1155/2020/8573742 (added to antivirals); Mason 2021 and Guan 2020 (diabetic, hypertensive only); doi:10.1080/10408398.2019.1703642 (vitamin C and/or E); Ashor 2017 (no overall number in its abstract, so `glycaemic_control` has no row); Cochrane's 8 % and Hemilä 2023's 15 % (relative scales we do not pool). |
 | 2026-11-03 | **Yes/no outcomes are pooled** (founder): S5N and S5R v1.42 read participants with an event per arm; route `event_counts`, ln(OR) × √3/π on the SMD scale (Chinn 2000; Cochrane Handbook v5.1 §9.4.6); 0.5 continuity correction (`effect_size.RULES`); `pool.ROUTE_RANK` 5.5, after reported estimates of a mean; the risk ratio is pooled for the benchmark only. All METHOD §16 negative-control candidates are event outcomes, and none could run. Episode counts stay unpooled. |

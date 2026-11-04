@@ -54,6 +54,12 @@ class PossibleBenefit(unittest.TestCase):
     def test_meaningful_harm_in_the_ci_stays_inconclusive(self):
         self.assertEqual(benefit(0.10, (-0.25, 0.45), 0.2), "inconclusive")
 
+    def test_estimate_below_half_m_is_none(self):
+        # DECISIONS O4: the vitamin D strength negative control.
+        self.assertEqual(benefit(0.055, (-0.11, 0.22), 0.2), "none")
+        self.assertEqual(benefit(0.10, (-0.15, 0.35), 0.2), "possible")   # creatine power shape
+        self.assertEqual(benefit(0.099, (-0.15, 0.35), 0.2), "none")
+
     def test_row_ranks_between_small_and_none(self):
         self.assertEqual((TABLE["possible"][3], TABLE["possible"][2], TABLE["possible"][1]), ("C-", "D+", "I"))
 

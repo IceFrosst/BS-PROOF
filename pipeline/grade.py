@@ -266,10 +266,14 @@ def benefit(estimate: float, ci: tuple[float, float], m: float) -> str:
         return "meaningful"
     if lo > 0 and 0 < estimate < m:
         return "small"
-    if estimate > 0 and -m < lo <= 0 and hi >= m:
+    if estimate >= m / 2 and -m < lo <= 0 and hi >= m:
         # Founder 2026-11-02: leans positive, no meaningful harm, and both zero
         # and a meaningful benefit are still inside the CI. "None" would deny a
         # benefit the CI holds; "I" would call a well-studied result unstudied.
+        # Founder 2026-11-04 (DECISIONS O4): the estimate must also reach M/2.
+        # MEASURED: the vitamin D strength negative control (run 20261103_205726,
+        # +0.055 [-0.11, +0.22]) read C-, the letter of creatine (+0.14), only
+        # because its CI's top end cleared M; more trials would have made it D.
         return "possible"
     if lo > -m and estimate < m:
         return "none"
