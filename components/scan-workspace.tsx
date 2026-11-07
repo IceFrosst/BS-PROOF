@@ -10,8 +10,7 @@
  *            survive a trip to History. Its camera is switched off while hidden.
  *            After a page RELOAD the scan it was showing is put back
  *            (lib/saved-scans/use-scan-resume.ts: the saved scan is read again
- *            with the person's own token, then its research job is read and
- *            followed to its end -- no rescan, no new research). Until that has
+ *            with the person's own token -- no rescan, no model call). Until that has
  *            been decided the camera stays off, and while the saved scan is read
  *            a short "Restoring your scan" line takes the place of the camera.
  *   History  <ScanHistory>, mounted only while it is the visible tab, so it
@@ -158,7 +157,7 @@ export function ScanWorkspace({ catalog }: { catalog: CatalogIngredient[] }) {
             auth={auth}
             active={tab === "scan"}
             initialResult={{ runId: resume.scanId, savedAt: null, analysis: resume.analysis }}
-            restored={{ intent: resume.intent }}
+            restored
             onLeave={resume.leave}
             hideTopbar
           />

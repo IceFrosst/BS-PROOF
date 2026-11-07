@@ -3,9 +3,9 @@
 /*
  * PUT THE SCAN BACK AFTER A RELOAD (used once, by components/scan-workspace.tsx).
  *
- * Reloading /scan used to throw the Scan tab away: the scan on screen, its research
- * job id (in memory) and the poll with it. The tab kept a pointer (lib/scan-research/resume.ts: owner
- * + scan id + intent, nothing else) and this hook turns it back into the screen:
+ * Reloading /scan used to throw the Scan tab away. The tab keeps a pointer
+ * (lib/saved-scans/resume.ts: owner + scan id, nothing else) and this hook turns
+ * it back into the screen:
  *
  *   1. wait for the sign-in session to be READ again (`auth.loading`). Nothing is
  *      decided, requested or deleted while that is still going on.
@@ -14,10 +14,7 @@
  *      Signed out, another account, no sign-in configured, or a value that is not a
  *      pointer  ->  the normal Scan screen, and the pointer is deleted.
  *   3. the scan is on screen again, drawn by the same <ScanFlow> a History scan uses
- *      (`restored`): that screen READS the scan's research job (read-only, owner
- *      filtered) and follows it to its end -- queued, running, then the completed card
- *      by itself -- and asks for research only in the one case `intent: "fresh"` says
- *      (see lib/scan-research/resume.ts). It never rescans and never starts a second job.
+ *      (`restored`). It never rescans and never calls a model.
  *
  * ONE decision per page load. After it, a sign-out or another account clears the
  * pointer and drops the restored screen on the spot (the previous person's scan is
@@ -30,7 +27,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { ScanAnalysis } from "@/lib/analyze/scan";
 import type { AuthSession } from "@/lib/auth/use-supabase-session";
-import { clearResumeCheckpoint, readResumeCheckpoint, type ResumeCheckpoint, type ResumeIntent } from "@/lib/scan-research/resume";
+import { clearResumeCheckpoint, readResumeCheckpoint, type ResumeCheckpoint } from "./resume";
 import { getJson, parseSaved } from "./client";
 
 export type ScanResume =
@@ -40,7 +37,7 @@ export type ScanResume =
   | { phase: "none" }
   /** A pointer for the signed-in person: the session or the saved scan is being read. */
   | { phase: "restoring" }
-  | { phase: "ready"; scanId: string; intent: ResumeIntent; analysis: ScanAnalysis; leave: () => void }
+  | { phase: "ready"; scanId: string; analysis: ScanAnalysis; leave: () => void }
   /** The scan could not be read right now (it is still in History). */
   | { phase: "failed"; retry: () => void; startNew: () => void };
 
@@ -117,5 +114,5 @@ export function useScanResume(auth: Pick<AuthSession, "configured" | "loading" |
   if (!answer) return { phase: "restoring" };
   if (answer.kind === "gone") return { phase: "none" };
   if (answer.kind === "failed") return { phase: "failed", retry, startNew: leave };
-  return { phase: "ready", scanId: peek.scan, intent: peek.intent, analysis: answer.analysis, leave };
+  return { phase: "ready", scanId: peek.scan, analysis: answer.analysis, leave };
 }

@@ -54,8 +54,6 @@ export interface FlowCopy {
   captureInputLabel: string;
   fileInputLabel: string;
   takePhoto: string;
-  uploadPhoto: string;
-  fileHint: string;
   signInHint: string;
   stagedAlt: string;
   scanThis: string;
@@ -176,8 +174,6 @@ export const FLOW_EN: FlowCopy = {
   captureInputLabel: "Photograph the label with the camera",
   fileInputLabel: "Choose an image of the label",
   takePhoto: "Take a photo",
-  uploadPhoto: "Upload a photo",
-  fileHint: "PNG, JPEG or WebP, up to 12 MB.",
   signInHint: "Results need a Google sign-in. You can take or upload a photo first.",
   stagedAlt: "The label you staged for analysis",
   scanThis: "Scan this label",
@@ -287,8 +283,6 @@ export const FLOW_LT: FlowCopy = {
   captureInputLabel: "Nufotografuoti etiketę kamera",
   fileInputLabel: "Pasirinkti etiketės nuotrauką",
   takePhoto: "Fotografuoti",
-  uploadPhoto: "Įkelti nuotrauką",
-  fileHint: "PNG, JPEG arba WebP, iki 12 MB.",
   signInHint: "Rezultatams reikia prisijungti su Google. Nuotrauką gali pasiimti ar įkelti ir anksčiau.",
   stagedAlt: "Etiketė, paruošta analizei",
   scanThis: "Skenuoti šią etiketę",

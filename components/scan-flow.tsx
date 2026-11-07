@@ -2,35 +2,27 @@
 
 /*
  * THE SCAN. Photograph a label with a LIVE camera viewfinder -- or upload a
- * photo, or search for the supplement by name -- and get LIVE RESEARCH on it.
+ * photo, or search for the supplement by name -- and see what the label says,
+ * with background marked "unverified". Evidence grades are NOT active
+ * (2026-10-15): <GradingNotice> says so on every result and replay.
  *
- * LIVE-ONLY (2026-10-05, founder: "only live research results, with a progress
- * bar on a loading screen between the label read and the results"). The page is
- * a state machine and each state OWNS the viewport:
+ * The page is a state machine and each state OWNS the viewport:
  *
- *   landing -> staged -> label analysis (loading) -> saved scan
- *           -> LIVE RESEARCH loading screen (progress bar) -> live audit | problem
+ *   landing -> staged -> label analysis (loading) -> result | problem
  *
  *   - landing: search pill, live viewfinder (<ScanCamera>, the page's H1 is
  *     its overlay), shutter, upload link.
  *   - staged: the photo and "Scan this label" / Retake / Choose another.
  *   - label analysis: a progress panel (dimmed thumbnail, a static list of what
  *     this step covers, indeterminate bar). /api/scan answers once at the end.
- *   - saved scan: the label was read and the run was stored for THIS signed-in
- *     owner. Only then is research requested (lib/scan-research/use-live-research.ts),
- *     and the screen is <ScanResearchScreen>'s loading phase: a top-level
- *     loading screen with an INDETERMINATE bar (the API reports a status and
- *     server timestamps, never a percentage: no fake %, ETA or count) and the
- *     read-label facts beside it. The hook is called HERE, at this component's
- *     top level, so the poll lives as long as the scan screen and is never
- *     unmounted by a change of what is drawn.
- *   - live audit: the completed research and ONLY that -- EXPERIMENTAL and
- *     UNGRADED, drawn without a score, bar, arc or verdict. No retained or cached
- *     audit, no "no evidence run" card, no model recall and no company profile is
- *     drawn as evidence beside it or instead of it.
- *   - problem: failed / refused / unavailable / not saved / not eligible /
- *     signed out each say what happened, that nothing was substituted, and what
- *     to do (check again, scan again, back). Never a blank or a hang.
+ *   - result: the read label (or typed entry) facts, the grading notice, the
+ *     warnings, and the unverified sections (components/scan-result-sections.tsx).
+ *   - problem: each refusal or failure says what happened and what to do.
+ *
+ * History (2026-11 merge): until 2026-11 this screen showed LIVE RESEARCH only
+ * (2026-10-05). Live research was removed in the merge of main into the v2 line
+ * (docs/history/live-research.md); the result is again the label facts and the
+ * unverified sections.
  *
  * Camera and search sheet are unchanged from the 2026-09-16 camera-first
  * redesign: <ScanCamera> runs whenever nothing is staged, no result is shown
@@ -58,22 +50,16 @@
  * (SCAN_REQUIRE_AUTH=1) is what actually refuses an unauthenticated request.
  *
  * REPLAY. `initialResult` renders a scan from the History tab through this very
- * component with no scan request at all, dated "Saved scan from ...". Opening a
- * saved scan NEVER requests research by itself: it READS the scan's research job
- * (read-only GET by owner + scan) -- a job that exists is shown and followed to its
- * end, automatically, the loading screen replaced by the finished card -- and when
- * there is none it says "Live research not requested" and waits for a deliberate
- * button (the server is idempotent per scan, so asking again never starts a second
- * job).
+ * component with no scan request at all, dated "Saved scan from ...". A scan
+ * saved before 2026-11 is drawn without its v14 fields: the History reader's
+ * allow-list (lib/scan-history/analysis-keys.ts) no longer returns them.
  *
  * RELOAD. A reload used to throw the Scan tab away. This component keeps an opaque
- * pointer for it in the tab's sessionStorage (lib/scan-research/resume.ts: owner id,
- * scan id, intent -- never a token, photo, analysis or result) and
+ * pointer for it in the tab's sessionStorage (lib/saved-scans/resume.ts: owner id and
+ * scan id -- never a token, photo, analysis or result) and
  * components/scan-workspace.tsx puts the scan back through the same replay path
- * (`restored`): the saved scan is read again, its job is READ and followed. Only the
- * person's own fresh scan whose request the reload cut off (`intent: "fresh"`, no job
- * on the server) may ask for research, once. "Scan another" and sign-out clear the
- * pointer; a scan merely opened from History never writes one.
+ * (`restored`). "Scan another" and sign-out clear the pointer; a scan merely opened
+ * from History never writes one.
  *
  * Rules this component keeps, all from CLAUDE.md:
  *
@@ -93,9 +79,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { SignInCard } from "@/components/google-sign-in";
 import { ScanCamera } from "@/components/scan-camera";
-import { ScanResearchScreen } from "@/components/scan-research-panel";
 import { SearchSheet } from "@/components/search-sheet";
 import { shrinkForUpload } from "@/lib/camera/capture";
+import { BasisBadge, Facts, GradingNotice, ResultSections, WarningsCard } from "@/components/scan-result-sections";
 import { SupplementSearch } from "@/components/supplement-search";
 import type { CatalogIngredient } from "@/lib/analyze/catalog";
 import type { ManualScanInput, ScanAnalysis } from "@/lib/analyze/scan";
@@ -104,10 +90,8 @@ import { FLOW_COPY } from "@/lib/i18n/copy/flow";
 import { RESULT_COPY, enumWord } from "@/lib/i18n/copy/result";
 import { useLang, type Lang } from "@/lib/i18n/locale";
 import { TranslationProvider, TranslationStatus, useHasTranslationProvider, useTr, type TranslateHeaders } from "@/lib/i18n/translate-client";
-import { clearResumeCheckpoint, noteFreshScan, noteJobKnown, type ResumeIntent } from "@/lib/scan-research/resume";
-import { useLiveResearch } from "@/lib/scan-research/use-live-research";
+import { clearResumeCheckpoint, noteSavedScan } from "@/lib/saved-scans/resume";
 
-type Basis = keyof ScanAnalysis["basis_legend"];
 type NullableNumber = number | null;
 
 const MAX_BYTES = 12 * 1024 * 1024;
@@ -137,30 +121,6 @@ function words(value: string): string {
 /** A recorded mass exactly as recorded: no rounding and no unit change (0.05 mg stays "0.05 mg"). */
 function exactMg(value: NullableNumber): string {
   return value === null || value === undefined ? "—" : `${value} mg`;
-}
-
-function BasisBadge({ kind, legend }: { kind: Basis; legend: ScanAnalysis["basis_legend"] }) {
-  const { lang, r } = useLocalized();
-  // English shows the legend the server stored; Lithuanian the same six badges, keyed.
-  const entry = lang === "en" || !r.basis[kind] ? legend[kind] : r.basis[kind];
-  return (
-    <span className={`scan-badge scan-badge-${kind}`} title={entry.means}>
-      {entry.label}
-    </span>
-  );
-}
-
-function Facts({ rows }: { rows: Array<[string, React.ReactNode]> }) {
-  return (
-    <dl className="sc-facts">
-      {rows.map(([k, v]) => (
-        <div key={k}>
-          <dt>{k}</dt>
-          <dd>{v}</dd>
-        </div>
-      ))}
-    </dl>
-  );
 }
 
 /** A scan that was saved to the signed-in person's history and is being shown again. */
@@ -194,12 +154,10 @@ export interface ScanFlowProps {
   initialResult?: SavedScanResult;
   /**
    * With `initialResult`: this saved scan is the one the Scan tab was showing before the page was reloaded
-   * (components/scan-workspace.tsx), not one opened from History. It reads the scan's research job and follows it
-   * to its end; `intent: "fresh"` additionally lets it ask for research ONCE if the server has no job for it (the
-   * person's own new scan whose request the reload cut off). The back control is "Scan another" and it clears the
-   * reload checkpoint.
+   * (components/scan-workspace.tsx), not one opened from History. The back control is "Scan another" and it
+   * clears the reload checkpoint.
    */
-  restored?: { intent: ResumeIntent };
+  restored?: boolean;
   /** Replay / restore only: what the back control does (it replaces "Scan another"). */
   onLeave?: () => void;
   /** A new scan finished AND the server reports it stored, so History is now out of date. */
@@ -302,7 +260,7 @@ function ScanFlowInner({ catalog, hideTopbar = false, auth: sharedAuth, active =
   const authConfigured = auth.configured;
   const replay = initialResult !== undefined;
   // A saved scan put back by a reload: shown like a replay, but it is the Scan tab's own scan (see `restored` above).
-  const restoring = replay && restored !== undefined;
+  const restoring = replay && Boolean(restored);
 
   // WHOSE SCREEN IS THIS. Everything a request returns is stamped with the
   // owner it was made for, and only the CURRENT owner's outcome is ever drawn.
@@ -599,50 +557,15 @@ function ScanFlowInner({ catalog, hideTopbar = false, auth: sharedAuth, active =
   const staged = Boolean(file && preview);
   const labResult = Boolean(data && !error && legend);
 
-  // LIVE RESEARCH. Shown for every scan that is a supplement read (or typed); the server decides
-  // eligibility (a scan with no supplement identity is answered 422 and drawn as "not eligible").
-  // Research is asked for ONLY with a run id the server reported as stored for this
-  // signed-in owner (a fresh scan), or the saved scan's own id (a History replay);
-  // an unsaved scan has no id, so it asks for nothing and says so.
-  const researchShown = labResult && data?.status !== "analyzer_unavailable" && data?.status !== "not_a_supplement_label";
-  const researchScanId = !researchShown ? null : replay ? initialResult?.runId ?? null : data?.persistence?.status === "stored" ? data.run_id ?? null : null;
-  // A History scan only READS its job (and waits for the button); a restored scan reads it too, and a restored FRESH scan may ask once.
-  const askIfNone = restored?.intent === "fresh";
-  const research = useLiveResearch({ scanId: researchScanId, ownerId: auth.userId, getAccessToken, enabled: auth.configured, replay: replay && !askIfNone, discover: replay, askIfNone });
-  const waiting = researchShown && research.phase === "loading";
-
-  // THE RELOAD CHECKPOINT (lib/scan-research/resume.ts): an opaque pointer -- owner, scan id, intent -- so a page reload can
-  // put this scan and its research back. Written for the person's own scan once the server says it is stored, upgraded when
-  // its job is known to exist; a scan merely opened from History never writes one.
+  // THE RELOAD CHECKPOINT (lib/saved-scans/resume.ts): an opaque pointer -- owner and scan id -- so a page reload can
+  // put this scan back. Written for the person's own new scan once the server says it is stored; a scan merely opened
+  // from History never writes one.
   const checkpointOwner = auth.configured ? auth.userId : null;
-  const tracksResume = !replay || restoring;
+  const storedRunId = !replay && data?.persistence?.status === "stored" ? data.run_id ?? null : null;
   useEffect(() => {
-    if (tracksResume && !restoring && checkpointOwner && researchScanId) noteFreshScan(checkpointOwner, researchScanId);
-  }, [tracksResume, restoring, checkpointOwner, researchScanId]);
-  const knownJobId = research.job?.id ?? null;
-  useEffect(() => {
-    if (tracksResume && checkpointOwner && researchScanId && knownJobId) noteJobKnown(checkpointOwner, researchScanId);
-  }, [tracksResume, checkpointOwner, researchScanId, knownJobId]);
-
-  // Between "waiting" and anything else the screen changes: move focus and scroll to the
-  // new state -- but only when this tab is the visible one and the person has not already
-  // moved to another control, so a late answer never steals focus from what they are doing.
-  const settledPhase = researchShown ? research.phase : null;
-  const lastPhase = useRef(settledPhase);
-  useEffect(() => {
-    const before = lastPhase.current;
-    lastPhase.current = settledPhase;
-    // "Not requested" is not news: a saved scan whose lookup found no job is already described by its dated note.
-    if (before !== "loading" || settledPhase === null || settledPhase === "loading" || settledPhase === "not-requested" || !activeRef.current) return;
-    const status = research.statusRef.current;
-    if (!status || typeof window === "undefined") return;
-    const here = document.activeElement;
-    if (here && here !== document.body && !status.closest(".sc-result-wrap")?.contains(here)) return;
-    const reduce = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const card = status.closest(".sc-research");
-    if (card && typeof card.scrollIntoView === "function") card.scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" });
-    status.focus({ preventScroll: true });
-  }, [settledPhase, research.statusRef]);
+    if (checkpointOwner && storedRunId) noteSavedScan(checkpointOwner, storedRunId);
+  }, [checkpointOwner, storedRunId]);
+  const sectionsShown = labResult && data?.status !== "analyzer_unavailable" && data?.status !== "not_a_supplement_label";
 
   // The scanned-product header: what was scanned or typed, and what happened.
   const headerKicker = error
@@ -666,7 +589,7 @@ function ScanFlowInner({ catalog, hideTopbar = false, auth: sharedAuth, active =
             ? f.namePhotoCouldNot
             : data?.ingredient_label_text ?? f.nameResult;
 
-  // The facts the research will be given, as the scan recorded them: exact numbers (0.05 mg
+  // The facts as the scan recorded them: exact numbers (0.05 mg
   // stays 0.05 mg), the unit as printed, and an unknown form / dose / daily regimen said
   // out loud -- never a default serving, and no elemental / compound basis is inferred.
   const servingsText = (n: NullableNumber | undefined) => (n === null || n === undefined ? f.servingsNotStated : f.servingsPerDay(n));
@@ -676,7 +599,7 @@ function ScanFlowInner({ catalog, hideTopbar = false, auth: sharedAuth, active =
     : label && labelDose
       ? [label.form_vocab_id ? words(label.form_vocab_id) : r.formNotStated, labelDose, servingsText(label.servings_per_day)]
       : [];
-  const labelBlock = !researchShown || !legend ? null : typed && entry ? (
+  const labelBlock = !sectionsShown || !legend ? null : typed && entry ? (
     <details className="scan-lab-disclosure sc-read-facts" open data-testid="read-facts">
       <summary><h3>{r.whatYouEntered}</h3><BasisBadge kind="user_input" legend={legend} /></summary>
       <p className="la-dim"><b>{entry.ingredient_label}</b>, {entry.form_label}. {summaryParts.join(", ")}. {r.typedNotRead}</p>
@@ -698,16 +621,6 @@ function ScanFlowInner({ catalog, hideTopbar = false, auth: sharedAuth, active =
       {label.evidence_spans?.length ? <p className="la-spans">{r.readFrom} {label.evidence_spans.map((span) => `“${span}”`).join(", ")}</p> : null}
     </details>
   ) : null;
-  const thumb = preview
-    // eslint-disable-next-line @next/next/no-img-element
-    ? <img className="sc-thumb sc-thumb-dim" src={preview} alt="" />
-    : <span className="sc-thumb sc-thumb-typed" aria-hidden="true">Aa</span>;
-  // The scan itself was not saved, so there is nothing to research: scanning the same photo again is the retry.
-  const rescan = () => {
-    setOutcome(null);
-    setHeroImage("idle");
-  };
-
   const errorText = (e: ScanError): string => {
     switch (e.code) {
       case "too_large": return f.imageTooLarge(e.mb);
@@ -939,18 +852,14 @@ function ScanFlowInner({ catalog, hideTopbar = false, auth: sharedAuth, active =
           ) : null}
           {/* A server error sentence can be machine-translated too (see errorText); a result carries its own status line below. */}
           {error ? <TranslationStatus /> : null}
-          {/* THE LIVE-ONLY RESULT. One screen at a time, by the live research phase:
-              loading (the label was read and the scan is saved: a top-level loading
-              screen with an indeterminate progress bar), the completed live audit,
-              "not requested" (History), or an actionable problem. No retained or cached
-              audit, no "no evidence run" card, no model recall and no company profile is
-              drawn here: the live research is the only evidence a scan shows. */}
-          {labResult && data && legend ? (<div className="scan-lab-result" data-scan-stage={researchShown ? research.phase : "label"}>
+          {/* THE RESULT: label facts, the grading notice, warnings and the
+              unverified sections. Nothing on it is a grade. */}
+          {labResult && data && legend ? (<div className="scan-lab-result">
             <header className="ab-top scan-lab-top sc-scanned" ref={replay ? undefined : setResultTop} tabIndex={-1}>
               <button type="button" className="ab-back" aria-label={leaveLabel} onClick={leave}>‹</button>
               <div className="ab-title"><strong>{headerName}</strong><small>{typed ? f.subtitleTyped : `${f.subtitleLabel}${label?.brand ? ` · ${label.brand}` : ""}`}</small></div>
             </header>
-            {!waiting ? (
+            {(
               <div className="ab-photo-hero scan-lab-hero">
                 {preview && !typed && heroImage !== "error" ? (
                   /* eslint-disable-next-line @next/next/no-img-element */
@@ -959,7 +868,7 @@ function ScanFlowInner({ catalog, hideTopbar = false, auth: sharedAuth, active =
                   <div className="ab-jar"><div className="ab-jar-lid" /><span>FIELD NOTES / 001</span><strong>{(headerName || "product").split(" ").slice(0, 3).join(" ")}</strong><i>{typed ? f.typedProductEntry : f.photoPreviewUnavailable}</i><div>{f.heroFormLabel} <b>{entry?.form_label ?? "—"}</b></div></div>
                 )}
               </div>
-            ) : null}
+            )}
 
             {/* A result is only ever drawn for the person it belongs to (see
                 `ownerKey`): sign-out or an account switch removes it from
@@ -993,18 +902,24 @@ function ScanFlowInner({ catalog, hideTopbar = false, auth: sharedAuth, active =
                 </div>
               ) : null}
 
-              {researchShown ? (
-                waiting ? (
-                  <>
-                    <ScanResearchScreen research={research} lang={lang} head={thumb} />
-                    {labelBlock}
-                  </>
-                ) : (
-                  <>
-                    {labelBlock}
-                    <ScanResearchScreen research={research} lang={lang} onRescan={!replay && !typed && file ? rescan : undefined} />
-                  </>
-                )
+              {data.status === "ingredient_not_supported" ? (
+                <div className="la-empty" data-testid="not-supported">
+                  <strong>{r.ingredientNotSupported(data.ingredient_label_text ?? null)}</strong>
+                  <span>
+                    {r.nothingRun}
+                    {data.queue && (data.queue as { queued?: boolean }).queued ? ` ${r.requestRecorded}` : ""}
+                  </span>
+                  {data.supported_ingredients?.length ? <span className="la-dim">{r.coveredSoFar} {data.supported_ingredients.join(", ")}</span> : null}
+                </div>
+              ) : null}
+
+              {sectionsShown ? (
+                <>
+                  <GradingNotice />
+                  <WarningsCard data={data} />
+                  {labelBlock}
+                  <ResultSections data={data} typed={typed} />
+                </>
               ) : null}
 
               <details className="sc-details sc-technical">
