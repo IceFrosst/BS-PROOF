@@ -1,3 +1,0 @@
-# Byte-exact on every checkout: the published audits, images and text are hash-pinned (SHA256SUMS, manifest.json).
-* -text
-*.jpg binary

@@ -1,7 +1,11 @@
 # Live research (main, 2026-10-03 to 2026-10-06) — removed 2026-11
 
-What it was, why it was removed, and what it left behind. The full worker
-runbook, the SQL and the team status of the time are in `live-research/`.
+What it was, why it was removed, and what it left behind. The SQL still applied
+in production is in `live-research/`. The worker runbook
+(`docs/research/pc-research-worker.md`), the team status of the time and the
+research-model comparisons (`docs/design/research-*`) are in git history:
+`origin/main` as of 2026-10-06 (commit `4dcc2f0`), removed from this tree in the
+2026-11 clean-up.
 
 ## What it was
 
