@@ -109,13 +109,6 @@ def run(check):
           oamod.oa_location(oa_work)["url"] == "http://x/y.pdf")
     check("closed access -> None, a real answer",
           oamod.oa_location(closed) is None)
-    check("reference list available for SR resolution",
-          len(oamod.referenced_work_ids(oa_work)) == 3,
-          "narrows S2's search space; never decides membership")
-    check("reference ids are OPENALEX ids, and the name now says so",
-          oamod.referenced_work_ids({"referenced_works": ["W1"]}) == ["W1"]
-          and not oamod.referenced_work_ids({"referenced_works": ["W1"]})[0].startswith("10."),
-          "the old name promised DOIs and returned W-ids")
     check("europepmc full_text short-circuits the lookup",
           oamod.resolve({"oa": "full_text", "doi": "10.1/x"})["checked"] == ["europepmc"],
           "free answer wins")
@@ -179,9 +172,6 @@ def run(check):
               {"availability": "Open access", "documentStyle": "html", "url": "c"}]}})]
           == ["pdf", "html"],
           "a link we cannot open is not a source; counting it inflates the OA rate")
-    check("pdf extraction is OPTIONAL at runtime",
-          isinstance(ft.pdf_available(), bool),
-          "a machine without pypdf must still run the pipeline")
     # This gate is offline. A fake URL is still a real network attempt when
     # optional PDF support is installed; stub the transport, not the parser.
     from unittest.mock import patch

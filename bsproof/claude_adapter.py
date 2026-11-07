@@ -781,40 +781,6 @@ class Usage:
             output.append(bucket)
         return sorted(output, key=lambda item: str(item.get(key)))
 
-    def report(self):
-        snapshot = self.as_dict()
-        t = snapshot["tokens"]
-        token_text = (
-            f"in={t['input']} cache_w={t['cache_write']} "
-            f"cache_r={t['cache_read']} out={t['output']}"
-            if all(t.get(k) is not None for k in
-                   ("input", "cache_write", "cache_read", "output"))
-            else "tokens=unavailable")
-        cost_text = (
-            f"${snapshot['api_equivalent_usd']:.3f}"
-            if snapshot.get("api_equivalent_usd") is not None else "unavailable")
-        # "API-equivalent", not "spent": a subscription bills nothing per call.
-        lines = [f"calls={snapshot['calls']} cache_hits={snapshot['cache_hits']} "
-                 f"retries={snapshot['retries']} failures={snapshot['failures']} "
-                 f"{token_text} API-equivalent={cost_text} "
-                 "(subscription spend $0)"]
-        for k, v in sorted(snapshot["by_agent"].items()):
-            agent_tokens = v.get("tokens") or {}
-            agent_token_text = (
-                f"in={agent_tokens['fresh_input']} "
-                f"cache_w={agent_tokens['cache_write']} "
-                f"cache_r={agent_tokens['cache_read']} "
-                f"out={agent_tokens['output']}"
-                if agent_tokens.get("total") is not None
-                else "tokens=unavailable")
-            agent_cost = (
-                f"${v['api_equivalent_cost']:.3f}"
-                if v.get("api_equivalent_cost") is not None else "unavailable")
-            lines.append(f"  {k}: model={v.get('model') or '-'} calls={v['calls']} "
-                         f"hits={v['hits']} fail={v['fail']} "
-                         f"{agent_token_text} {agent_cost}")
-        return "\n".join(lines)
-
     def as_dict(self) -> dict:
         """Structured form for run_context, so reports render the same numbers."""
         with self._usage_lock:

@@ -18,8 +18,6 @@ def run(check):
              "oa": "abstract_only", "source": "europepmc"}])
         c = st_db.counts()
         check("studies persisted", c["studies"] == 3 and c["syntheses"] == 1)
-        check("unclassified records are queryable",
-              [r["canonical_id"] for r in st_db.unclassified()] == ["pmid:99"])
 
         try:
             st_db.upsert_studies([{"pmid": "7"}])

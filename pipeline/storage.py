@@ -157,11 +157,6 @@ class Store:
             args = (1 if syntheses else 0,)
         return [dict(r) for r in self.conn.execute(q, args)]
 
-    def unclassified(self) -> list[dict]:
-        """Studies awaiting S1. This list is the model budget for classification."""
-        return [dict(r) for r in
-                self.conn.execute("SELECT * FROM study WHERE design_rank IS NULL")]
-
     # ------------------------------------------------------ registry facts
 
     def upsert_registry_facts(self, facts: list[dict]) -> int:

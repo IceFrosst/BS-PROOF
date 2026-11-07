@@ -651,10 +651,6 @@ _TAG = re.compile(r"<[^>]+>")
 _WS = re.compile(r"\s+")
 
 
-def pdf_available() -> bool:
-    return _PDF_OK
-
-
 def fetch_pdf_text(url: str, *, timeout: int = 90) -> str | None:
     """
     Download a PDF and extract its text. None when unusable.

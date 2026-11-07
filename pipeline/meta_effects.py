@@ -122,32 +122,8 @@ class MetaAnalysisResult:
         return (self.ci_lower, self.ci_upper)
 
     @property
-    def prediction_interval(self) -> Tuple[float, float]:
-        return (self.prediction_lower, self.prediction_upper)
-
-    @property
-    def mu(self) -> float:
-        return self.estimate
-
-    @property
     def se(self) -> float:
         return self.standard_error
-
-    @property
-    def Q(self) -> float:
-        return self.q
-
-    @property
-    def I2(self) -> float:
-        return self.i2
-
-    @property
-    def tau_squared(self) -> float:
-        return self.tau2
-
-    @property
-    def normal_ci(self) -> Tuple[float, float]:
-        return self.ci
 
 
 # ---- validation and normal quantiles -------------------------------------
@@ -402,10 +378,6 @@ def student_t_ppf(probability: Number, degrees_of_freedom: Number) -> float:
 
 
 # Short aliases make the quantile available without requiring a dependency.
-t_ppf = student_t_ppf
-student_t_quantile = student_t_ppf
-
-
 # ---- effect sizes and standard errors -----------------------------------
 
 
@@ -473,13 +445,6 @@ def hedges_g(mean1: Number, sd1: Number, n1: int,
 
 
 # Descriptive aliases keep the API discoverable without changing semantics.
-hedges_g_estimate = hedges_g
-calculate_hedges_g = hedges_g
-hedges_g_variance = sampling_variance_g
-variance_g = sampling_variance_g
-calculate_sampling_variance_g = sampling_variance_g
-
-
 def se_from_ci(lower: Number, upper: Number, confidence_level: Number) -> float:
     """Derive SE from a symmetric normal CI with an explicit level."""
     lo, hi = _finite(lower, "lower"), _finite(upper, "upper")
@@ -493,9 +458,6 @@ def se_from_ci(lower: Number, upper: Number, confidence_level: Number) -> float:
     except (OverflowError, ZeroDivisionError):
         raise ValueError("standard error is not finite") from None
     return _positive_result(result, "standard error")
-
-
-standard_error_from_ci = se_from_ci
 
 
 def se_from_normal_p(effect: Number, two_sided_p: Number) -> float:
@@ -522,12 +484,6 @@ def se_from_normal_p(effect: Number, two_sided_p: Number) -> float:
     except (OverflowError, ZeroDivisionError):
         raise ValueError("standard error is not finite") from None
     return _positive_result(result, "standard error")
-
-
-standard_error_from_normal_p = se_from_normal_p
-se_from_p = se_from_normal_p
-standard_error_from_p = se_from_normal_p
-se_from_p_value = se_from_normal_p
 
 
 # ---- pooling and REML ----------------------------------------------------
@@ -571,9 +527,6 @@ def inverse_variance_pool(effects: Sequence[Union[Number, EffectEstimate]],
     variance = _positive_finite_variance(variance, "pooled variance")
     standard_error = _positive_result(standard_error, "pooled standard error")
     return PooledEstimate(estimate, variance, standard_error, extra)
-
-
-pool_inverse_variance = inverse_variance_pool
 
 
 def _reml_score(tau2: float, ys: Tuple[float, ...], vs: Tuple[float, ...]) -> float:
@@ -732,10 +685,6 @@ def reml_tau2(effects: Sequence[Union[Number, EffectEstimate]],
     return _nonnegative(best_tau, "REML tau2 estimate")
 
 
-reml_tau_squared = reml_tau2
-estimate_tau2_reml = reml_tau2
-
-
 def heterogeneity_q(effects: Sequence[Union[Number, EffectEstimate]],
                     variances: Optional[Sequence[Number]] = None) -> float:
     """Cochran's Q using fixed-effect inverse-variance weights."""
@@ -858,20 +807,12 @@ def random_effects_meta_analysis(
                               tuple(warnings))
 
 
-meta_analysis = random_effects_meta_analysis
-
-
 __all__ = [
     "EffectEstimate", "HedgesGEstimate", "PooledEstimate", "MetaAnalysisResult",
-    "normal_ppf", "student_t_ppf", "t_ppf", "student_t_quantile",
-    "pooled_sd", "hedges_g", "hedges_g_estimate",
-    "calculate_hedges_g", "sampling_variance_g", "hedges_g_variance",
-    "variance_g", "calculate_sampling_variance_g", "se_from_ci",
-    "standard_error_from_ci", "se_from_normal_p", "standard_error_from_normal_p",
-    "se_from_p", "standard_error_from_p", "se_from_p_value", "inverse_variance_pool",
-    "pool_inverse_variance", "reml_tau2", "reml_tau_squared",
-    "estimate_tau2_reml", "heterogeneity_q", "i_squared",
-    "hartung_knapp_variance", "random_effects_meta_analysis", "meta_analysis",
+    "normal_ppf", "student_t_ppf", "pooled_sd", "hedges_g", "sampling_variance_g",
+    "se_from_ci", "se_from_normal_p", "inverse_variance_pool", "reml_tau2",
+    "heterogeneity_q", "i_squared", "hartung_knapp_variance",
+    "random_effects_meta_analysis",
 ]
 
 
