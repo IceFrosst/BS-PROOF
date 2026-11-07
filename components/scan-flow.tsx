@@ -38,15 +38,12 @@
  *     line shows -- never the card and never an unlocked screen;
  *   - signed in: every `/api/scan` request carries `Authorization: Bearer
  *     <current access token>`, the server binds the run to that user, and the
- *     result says whether it was actually stored to History. The research
- *     requests and polls carry the same owner's token (one refresh on a 401);
- *   - sign-out / expiry / another Google account: the in-flight scan AND the
- *     research request/poll are aborted, a late answer is discarded, and the held
- *     result is removed -- the next person is never shown the previous person's
- *     scan or research.
+ *     result says whether it was actually stored to History;
+ *   - sign-out / expiry / another Google account: the in-flight scan is
+ *     aborted, a late answer is discarded, and the held result is removed --
+ *     the next person is never shown the previous person's scan.
  * With any of the three missing the flow has no header and no gate, so local and
- * CI runs need no Google project (live research is then reported as off, never
- * replaced by anything). The UI gate is a convenience; the server
+ * CI runs need no Google project. The UI gate is a convenience; the server
  * (SCAN_REQUIRE_AUTH=1) is what actually refuses an unauthenticated request.
  *
  * REPLAY. `initialResult` renders a scan from the History tab through this very

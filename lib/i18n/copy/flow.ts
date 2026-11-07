@@ -66,7 +66,7 @@ export interface FlowCopy {
   loadingCovers: string;
   photoStages: string[];
   manualStages: string[];
-  /** Said under the label-read stages: what happens next (the live research screen). */
+  /** Said under the label-read stages: what the result will show. */
   loadingNext: string;
   // ---- sign-in -----------------------------------------------------------
   signInScanTitle: string;
@@ -183,9 +183,9 @@ export const FLOW_EN: FlowCopy = {
   loadingTitle: "Checking your supplement",
   loadingSub: "Usually about 10 seconds.",
   loadingCovers: "This step covers",
-  photoStages: ["Reading the label", "Reading the dose, form and servings", "Saving the scan"],
-  manualStages: ["Checking what you entered", "Saving the scan"],
-  loadingNext: "Next comes live research on your saved scan, on its own screen with its own progress bar.",
+  photoStages: ["Reading the label", "Reading the dose, form and servings", "Looking up the literature, the form and mix, and the company", "Saving the scan"],
+  manualStages: ["Checking what you entered", "Looking up the literature, the form and mix, and the company", "Saving the scan"],
+  loadingNext: "Next: what the label says, and background marked “unverified”. No grade is given yet.",
   signInScanTitle: "Sign in to scan this label",
   signInScanBody: "Results are saved to your Google account so you can find them again in History. Your photo stays on this device until you scan.",
   signInSearchTitle: "Sign in to search",
@@ -202,7 +202,7 @@ export const FLOW_EN: FlowCopy = {
   tryAgain: "Try again",
   sessionEnded: "Your session ended. Sign in again to continue.",
   restoringTitle: "Restoring your scan…",
-  restoringBody: "Looking up your last scan and its research. Nothing is scanned again.",
+  restoringBody: "Looking up your last scan. Nothing is scanned again.",
   restoreFailedTitle: "Could not restore your scan",
   restoreFailedBody: "Your saved scan is still in History. Try again, or start a new scan.",
   restoreStartNew: "Start a new scan",
@@ -223,7 +223,7 @@ export const FLOW_EN: FlowCopy = {
   refusalTooLarge: "That request is too large for this site. Use a smaller photo, or a shorter typed entry, and try again.",
   savedScanFrom: "Saved scan from",
   savedScan: "Saved scan.",
-  replayExplain: "This is a saved scan, shown as it was stored. Nothing was re-run, and opening it did not request research.",
+  replayExplain: "This is a saved scan, shown as it was stored. Nothing was re-run.",
   restoredExplain: "This page was reloaded, so your scan was put back as it was stored. Nothing was scanned again.",
   backToHistory: "Back to history",
   scanAnother: "Scan another",
@@ -292,9 +292,9 @@ export const FLOW_LT: FlowCopy = {
   loadingTitle: "Tikriname tavo papildą",
   loadingSub: "Paprastai apie 10 sekundžių.",
   loadingCovers: "Šis žingsnis apima",
-  photoStages: ["Skaitome etiketę", "Skaitome dozę, formą ir porcijas", "Išsaugome skenavimą"],
-  manualStages: ["Tikriname, ką įvedei", "Išsaugome skenavimą"],
-  loadingNext: "Toliau – tiesioginis tyrimas pagal tavo išsaugotą skenavimą: atskirame ekrane su savo eigos juosta.",
+  photoStages: ["Skaitome etiketę", "Skaitome dozę, formą ir porcijas", "Ieškome literatūros, formos ir mišinio bei įmonės duomenų", "Išsaugome skenavimą"],
+  manualStages: ["Tikriname, ką įvedei", "Ieškome literatūros, formos ir mišinio bei įmonės duomenų", "Išsaugome skenavimą"],
+  loadingNext: "Toliau – ką sako etiketė ir foninė informacija, pažymėta „nepatikrinta“. Įvertinimas dar neteikiamas.",
   signInScanTitle: "Prisijunk, kad nuskenuotum šią etiketę",
   signInScanBody: "Rezultatai išsaugomi tavo Google paskyroje, todėl vėliau gali juos rasti Istorijoje. Nuotrauka lieka tavo įrenginyje, kol nuskenuoji.",
   signInSearchTitle: "Prisijunk, kad galėtum ieškoti",
@@ -311,7 +311,7 @@ export const FLOW_LT: FlowCopy = {
   tryAgain: "Bandyti dar kartą",
   sessionEnded: "Tavo sesija baigėsi. Prisijunk dar kartą, kad tęstum.",
   restoringTitle: "Atkuriamas tavo skenavimas…",
-  restoringBody: "Ieškoma tavo paskutinio skenavimo ir jo tyrimo. Nieko nėra skenuojama iš naujo.",
+  restoringBody: "Ieškoma tavo paskutinio skenavimo. Nieko nėra skenuojama iš naujo.",
   restoreFailedTitle: "Nepavyko atkurti tavo skenavimo",
   restoreFailedBody: "Tavo išsaugotas skenavimas vis dar yra istorijoje. Bandyk dar kartą arba pradėk naują skenavimą.",
   restoreStartNew: "Pradėti naują skenavimą",
@@ -332,7 +332,7 @@ export const FLOW_LT: FlowCopy = {
   refusalTooLarge: "Ši užklausa per didelė šiai svetainei. Naudok mažesnę nuotrauką arba trumpesnį įvestą aprašą ir bandyk dar kartą.",
   savedScanFrom: "Išsaugotas skenavimas,",
   savedScan: "Išsaugotas skenavimas.",
-  replayExplain: "Tai išsaugotas skenavimas, rodomas toks, koks buvo išsaugotas. Nieko nebuvo paleista iš naujo, o jį atvėrus tyrimas nebuvo užsakytas.",
+  replayExplain: "Tai išsaugotas skenavimas, rodomas toks, koks buvo išsaugotas. Nieko nebuvo paleista iš naujo.",
   restoredExplain: "Šis puslapis buvo perkrautas, todėl tavo skenavimas grąžintas toks, koks buvo išsaugotas. Nieko nebuvo skenuota iš naujo.",
   backToHistory: "Atgal į istoriją",
   scanAnother: "Skenuoti kitą",

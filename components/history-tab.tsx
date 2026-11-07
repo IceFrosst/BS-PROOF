@@ -10,8 +10,8 @@
  * Both carry `Authorization: Bearer <current access token>` and are `no-store`.
  * Opening a saved scan renders the stored analysis through the SAME <ScanFlow>
  * renderer the live Scan tab uses (its `initialResult` prop) -- the identical
- * Evidence Ledger card -- and makes no scan request and no model call. It is
- * dated "Saved scan from ..." so a replay is never read as current research.
+ * result -- and makes no scan request and no model call. It is dated "Saved
+ * scan from ..." so a replay is never read as a new scan.
  * Original photos are never requested: only the stored analysis comes back.
  *
  * SESSION SAFETY. Everything below `HistoryBody` is keyed by the signed-in

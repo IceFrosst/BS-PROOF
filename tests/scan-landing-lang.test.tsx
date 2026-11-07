@@ -120,10 +120,10 @@ describe("label-analysis loading view claims no backend progress", () => {
       await vi.advanceTimersByTimeAsync(60_000);
     });
     expect(el.querySelector(".sc-progress")).not.toBeNull();
-    expect(el.querySelectorAll(".sc-stages li").length).toBe(3);
+    expect(el.querySelectorAll(".sc-stages li").length).toBe(4);
     // the step lists only what it really does: no legacy evidence comparison is promised
-    expect(el.querySelector(".sc-stages")?.textContent).toBe("Reading the labelReading the dose, form and servingsSaving the scan");
-    expect(el.querySelector('[data-testid="loading-next"]')?.textContent).toContain("live research on your saved scan");
+    expect(el.querySelector(".sc-stages")?.textContent).toBe("Reading the labelReading the dose, form and servingsLooking up the literature, the form and mix, and the companySaving the scan");
+    expect(el.querySelector('[data-testid="loading-next"]')?.textContent).toContain("No grade is given yet");
     expect(el.querySelector(".sc-stages .is-done")).toBeNull();
     expect(el.querySelector(".sc-stages .is-current")).toBeNull();
     expect(el.querySelector("[aria-current]")).toBeNull();
@@ -142,7 +142,7 @@ describe("label-analysis loading view claims no backend progress", () => {
     expect(el.textContent).toContain("Tikriname tavo papildą");
     expect(el.textContent).toContain("Šis žingsnis apima");
     expect(el.textContent).toContain("Skaitome etiketę");
-    expect(el.querySelector('[data-testid="loading-next"]')?.textContent).toContain("tiesioginis tyrimas");
+    expect(el.querySelector('[data-testid="loading-next"]')?.textContent).toContain("Įvertinimas dar neteikiamas");
   });
 });
 
