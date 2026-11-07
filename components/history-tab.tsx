@@ -56,8 +56,6 @@ export interface ScanHistoryProps {
   onGoToScan: () => void;
 }
 
-export const SESSION_ENDED_NOTICE = "Your session ended. Sign in again to continue.";
-
 function parseRuns(json: unknown): HistoryRun[] | null {
   if (!isObject(json) || json.status !== "ok" || !Array.isArray(json.runs)) return null;
   const runs: HistoryRun[] = [];

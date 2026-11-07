@@ -3,7 +3,7 @@
  * SUPABASE AUTH, never by anything the caller says about itself.
  *
  * Used by `POST /api/scan` (owner binding, and the optional SCAN_REQUIRE_AUTH
- * gate), `POST /api/scan/claim`, `GET /api/scan/history` and
+ * gate), `POST /api/scan/translate`, `GET /api/scan/history` and
  * `GET /api/scan/history/[id]`. Server-only: it reads `SUPABASE_URL` +
  * `SUPABASE_SERVICE_ROLE_KEY` (no `NEXT_PUBLIC_` prefix, so Next.js never
  * inlines them into a client bundle) and speaks plain `fetch`, the same shape

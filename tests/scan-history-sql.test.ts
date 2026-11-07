@@ -132,8 +132,9 @@ describe("docs/scan-history.sql on a shared Supabase project", () => {
     expect(RAW).not.toMatch(/(?:automatically|will be|are) (?:deleted|purged|erased|removed) after/i);
   });
 
-  it("says scan_users is unpopulated, that nothing in the UI claims, and where the emails live", () => {
-    expect(RAW).toMatch(/NOTHING IN THE UI CALLS IT/);
+  it("says scan_users is unused (its writer was removed) and where the emails live", () => {
+    expect(RAW).toMatch(/scan_users \(2026-09-16\): UNUSED and EMPTY/);
+    expect(RAW).toMatch(/was removed from the app in the 2026-11 clean-up/);
     expect(RAW).toMatch(/scan_runs\.user_email/);
     expect(RAW).not.toMatch(/one row per signed-in person/i);
     expect(RAW).not.toMatch(/Called by the client/i);

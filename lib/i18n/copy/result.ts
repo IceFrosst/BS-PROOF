@@ -433,13 +433,6 @@ const ENUM_LT: Record<string, string> = {
   timing_separate: "vartoti skirtingu laiku",
   caution: "atsargiai",
   info: "informacija",
-  // audit source access
-  full_text: "pilnas tekstas",
-  abstract: "santrauka",
-  snippet: "ištrauka",
-  // ledger checklist states
-  supported: "pagrįsta",
-  concern: "abejonė",
 };
 
 /** Display word for a stored enum value; the original (underscores as spaces) when there is no mapping. */

@@ -154,7 +154,6 @@ class FakeAuth {
       supabaseAnonKey: () => (this.configured ? "anon-key" : null),
       googleClientId: () => (this.configured ? "test-client-id.apps.googleusercontent.com" : null),
       getSupabaseBrowserClient: () => (this.configured ? this.client : null),
-      resetSupabaseBrowserClientForTests: () => {},
     };
   }
 }

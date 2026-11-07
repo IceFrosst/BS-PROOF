@@ -69,12 +69,9 @@ describe("PWA install contract", () => {
     },
   );
 
-  it("keeps the requested white logo and brand palette as vector sources", () => {
-    const whiteLogo = readFileSync(join(root, "public", "logo-white.svg"), "utf8");
+  it("keeps the brand palette in the vector app icon", () => {
     const appIcon = readFileSync(join(root, "public", "pwa-icon.svg"), "utf8");
 
-    expect(whiteLogo).toContain("#FFFFFF");
-    expect(whiteLogo).not.toContain("#12B76A");
     expect(appIcon).toContain("#12B76A");
     expect(appIcon).toContain("#1A73F0");
     expect(appIcon).toContain("#0B0F14");

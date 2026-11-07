@@ -13,7 +13,7 @@
  *   - configured: NO request is sent until a Supabase session exists, and a
  *     returning session being read is neither "signed out" nor "unlocked";
  *   - every POST /api/scan (photo AND typed) carries `Bearer <current token>`,
- *     and /api/scan/claim is never called;
+ *     and nothing else is requested;
  *   - sign-out, expiry and an account switch remove the result, abort the
  *     request in flight and discard its late answer.
  */

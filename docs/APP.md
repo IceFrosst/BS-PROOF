@@ -12,8 +12,7 @@ since removed; the capture flow and tokens are still current).
 **Routes:** `/` (waitlist only), `/scan` (the product, unlisted, `noindex`:
 two tabs, Scan and History), `/methodology` (how grading will work),
 `POST /api/scan`, `GET /api/scan/history`, `GET /api/scan/history/[id]`,
-`POST /api/scan/translate`, `POST /api/scan/claim` (kept, unused by the UI),
-`POST /api/waitlist`.
+`POST /api/scan/translate`, `POST /api/waitlist`.
 
 **History of this screen:** `main` ran its own line from 2026-09-22 to 2026-10-06
 (camera-first landing, workspace tabs, History, EN/LT, then live research).
@@ -225,8 +224,9 @@ button needs the origin); every other route keeps `no-referrer`.
    `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`. Run `docs/scan-history.sql`.
 
 `lib/auth/supabase-browser.ts` is the only file importing `@supabase/supabase-js`;
-every server store uses plain `fetch`. `POST /api/scan/claim` is kept as an
-owner-verified acknowledgement endpoint; the UI no longer calls it.
+every server store uses plain `fetch`. (`POST /api/scan/claim` and its
+`scan_users` table were unused since 2026-10-03; the route was removed in the
+2026-11 clean-up, the empty table is still in the database.)
 
 ## 8. Source ranking, as shown to the user
 
@@ -257,7 +257,7 @@ and a recall the model omits still appears from the registry.
 
 ```
 app/scan/page.tsx, app/scan-workspace.css
-app/api/scan/route.ts, app/api/scan/history/, app/api/scan/translate/, app/api/scan/claim/
+app/api/scan/route.ts, app/api/scan/history/, app/api/scan/translate/
 lib/analyze/scan.ts            the orchestrator, ScanAnalysisV1
 lib/analyze/llm.ts             the one model boundary
 lib/analyze/vision.ts          label prompt + contract (label-v1.5: printed elemental dose)

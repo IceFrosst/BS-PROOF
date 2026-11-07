@@ -219,7 +219,7 @@ pipeline/   deterministic, NO MODEL, unit-tested
   invariants.py selftest/        the two gates (selftest is a package; run with -m)
 sources/    deterministic HTTP layer: europepmc, clinicaltrials, oa, fulltext, figures, crossref
 
-app/        Next.js routes: /scan (product), /api/scan (+ /history, /translate, /claim),
+app/        Next.js routes: /scan (product), /api/scan (+ /history, /translate),
             /methodology, / (waitlist)
 components/ scan-workspace (tabs), scan-flow (Scan), scan-result-sections (result body),
             history-tab, camera/search/sign-in pieces, site shell, waitlist form

@@ -27,7 +27,6 @@ import type { Lang } from "./lang";
 
 export type { Lang };
 export const LANG_KEY = "bsproof.lang";
-export const LANGS: readonly Lang[] = ["en", "lt"];
 
 const CHANGE_EVENT = "bsproof:lang";
 
@@ -129,7 +128,3 @@ export function useScanLang(): Lang {
   return outsideScan ? "en" : lang;
 }
 
-/** Pick the right dictionary. Both languages are always complete (typed), so no fallback chain. */
-export function pick<T>(lang: Lang, dictionaries: Record<Lang, T>): T {
-  return dictionaries[lang];
-}

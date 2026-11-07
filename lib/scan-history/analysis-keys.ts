@@ -56,4 +56,5 @@ type NotAScanAnalysisKey = Exclude<Listed, keyof ScanAnalysis>;
 
 // A compile-time assertion only; nothing here exists at run time.
 export type AnalysisKeysCoverTheType = [Unclassified, NotAScanAnalysisKey] extends [never, never] ? true : never;
+/** @public Read by no code: its TYPE fails the build when the list drifts (knip: kept on purpose). */
 export const ANALYSIS_KEYS_COVER_THE_TYPE: AnalysisKeysCoverTheType = true;

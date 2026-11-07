@@ -325,7 +325,7 @@ describe("no-secret, no-browser-leakage", () => {
   });
 
   it("no server-only auth/history module has a NEXT_PUBLIC_ service-role alias or a client directive", () => {
-    for (const rel of ["lib/auth/server-auth.ts", "lib/auth/claim.ts", "lib/scan-history/reader.ts", "lib/scan-history/store.ts"]) {
+    for (const rel of ["lib/auth/server-auth.ts", "lib/scan-history/reader.ts", "lib/scan-history/store.ts"]) {
       const text = fs.readFileSync(path.join(ROOT, rel), "utf8");
       expect(text, rel).not.toMatch(/NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY/);
       expect(text, rel).not.toMatch(/^["']use client["']/m);

@@ -17,8 +17,7 @@
 --
 -- OWNERSHIP (2026-10-03): `user_id` / `user_email` are bound ONCE, at INSERT,
 -- by POST /api/scan from the Supabase-verified caller. No application code
--- UPDATEs them afterwards (POST /api/scan/claim only verifies an already-owned
--- run), and a row inserted without an owner (a legacy or anonymous local/test
+-- UPDATEs them afterwards, and a row inserted without an owner (a legacy or anonymous local/test
 -- run) keeps a null `user_id` and is never readable through the history API.
 --
 -- This file is NEVER run by the app or CI. Apply it once, deliberately, in the
@@ -199,7 +198,7 @@ create index if not exists scan_runs_source_idx      on public.scan_runs (source
 -- we capture their email"). Idempotent ALTER, so re-running this file against
 -- an already-provisioned project is safe. 2026-10-03: these columns are now
 -- written at INSERT by POST /api/scan from the Supabase-verified caller (see
--- the OWNERSHIP note above), not attached afterwards by /api/scan/claim.
+-- the OWNERSHIP note above), never attached afterwards.
 alter table public.scan_runs add column if not exists user_id    uuid;
 alter table public.scan_runs add column if not exists user_email text;
 
@@ -259,18 +258,12 @@ on conflict (id) do nothing;
 
 
 -- ---------------------------------------------------------------------------
--- scan_users (2026-09-16): OPTIONAL and, today, EMPTY. The only writer is
--- `POST /api/scan/claim` (service role, lib/auth/claim.ts), which verifies a
--- Supabase session AND that the run is already owned by that user, then upserts
--- one row per person. NOTHING IN THE UI CALLS IT any more (2026-10-03: sign-in
--- gates the scan and the owner is bound at INSERT, so there is no "claim" step),
--- so this table is not populated by the app and nothing reads it. A signed-in
--- person's email is kept in `scan_runs.user_email` -- that is the one place to
--- look. The table is kept only because the route and its tests still exist; if
--- they are ever deleted, drop this table with them. If the route is ever called,
--- `scans` is recomputed as the exact number of `scan_runs` the user owns (a
--- count query, not read-then-increment), so repeating a claim cannot double
--- count.
+-- scan_users (2026-09-16): UNUSED and EMPTY. Its only writer, POST
+-- /api/scan/claim, was removed from the app in the 2026-11 clean-up (nothing
+-- had called it since 2026-10-03: sign-in gates the scan and the owner is bound
+-- at INSERT). A signed-in person's email is kept in `scan_runs.user_email`.
+-- The table is still in the production database; dropping it is a separate,
+-- deliberate step (`drop table public.scan_users;`), not done by the app.
 create table if not exists public.scan_users (
   user_id        uuid primary key,                 -- auth.users.id (Supabase-managed; not a foreign key here so this table survives independently of the auth schema's own migrations)
   email          text,
@@ -279,7 +272,7 @@ create table if not exists public.scan_users (
   scans          integer     not null default 0     -- number of scan_runs owned by this user, recomputed on claim; see note above
 );
 
-comment on table  public.scan_users            is 'BS-PROOF scan history: optional, currently unpopulated (no UI calls POST /api/scan/claim; emails live in scan_runs.user_email). Server-write only; no anon policy, no public read path.';
+comment on table  public.scan_users            is 'BS-PROOF scan history: unused and unpopulated (its writer, POST /api/scan/claim, was removed 2026-11; emails live in scan_runs.user_email). Server-write only; no anon policy, no public read path.';
 comment on column public.scan_users.scans      is 'Number of scan_runs owned by this user, recomputed from a count query on each claim (idempotent -- never incremented).';
 
 create index if not exists scan_users_email_idx on public.scan_users (email);
