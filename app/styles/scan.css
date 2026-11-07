@@ -38,7 +38,8 @@
    middle-dot meta strings.
 
    Scoping: everything here hangs off `.scan-page` or a `.sc-*` / `.scan-*`
-   class that only components/scan/ renders. Shared `.la-*` rules
+   class that only the /scan components (components/scan-*.tsx, history-tab,
+   search-sheet, supplement-search, google-sign-in) render. Shared `.la-*` rules
    (defined at the top of this file) are NOT edited -- where /scan needs a
    different look for `.la-alert`, `.la-empty`, `.la-dim`, `.la-result`,
    `.la-spans` it gets a `.scan-page .la-*` override below.

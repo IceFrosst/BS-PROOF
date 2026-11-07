@@ -1,4 +1,4 @@
-name: dashboard
+name: app
 
 # The Next.js app's gates. Only paths the app builds from or its tests read:
 # the Python pipeline has its own workflow (selftest.yml). prompts/, schemas/
@@ -31,7 +31,7 @@ on:
       - "eslint.config.*"
       - "knip.json"
       - "vercel.json"
-      - ".github/workflows/dashboard.yml"
+      - ".github/workflows/app.yml"
   pull_request:
     paths: *app_paths
   # Nightly full run, so a dependency or Chromium update that breaks the suite
@@ -44,11 +44,11 @@ permissions:
   contents: read
 
 concurrency:
-  group: dashboard-${{ github.workflow }}-${{ github.ref }}
+  group: app-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  dashboard:
+  app:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -80,7 +80,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: dashboard-playwright-${{ github.run_attempt }}
+          name: app-playwright-${{ github.run_attempt }}
           path: |
             playwright-report/
             test-results/
@@ -88,7 +88,7 @@ jobs:
           retention-days: 7
 
   deploy-aykhan-main:
-    needs: dashboard
+    needs: app
     if: >-
       ${{ success() &&
           github.event_name == 'push' &&

@@ -1,8 +1,7 @@
 /*
  * Google sign-in is the gate in front of real scan results wherever it is
  * configured (2026-09-23, founder: results depend on a Google login; replaces
- * the 2026-09-16 "Save your result" nudge, the blurred result lock and the late
- * /api/scan/claim). Drives the REAL <ScanFlow> in jsdom, mocking only
+ * the 2026-09-16 "Save your result" nudge and the blurred result lock). Drives the REAL <ScanFlow> in jsdom, mocking only
  * `@/lib/auth/supabase-browser` (the one module that would otherwise reach a
  * real Supabase project), so the gate, the bearer header, session expiry and the
  * account-switch rules run exactly as a browser would run them.
@@ -196,7 +195,7 @@ describe("configured: a Google session is required before any request", () => {
 });
 
 describe("configured and signed in: requests carry the session", () => {
-  it("a photo scan sends Bearer <access token>, never calls /api/scan/claim, and says it was saved only when stored", async () => {
+  it("a photo scan sends Bearer <access token> and says it was saved only when stored", async () => {
     fakeAuth.configured = true;
     fakeAuth.session = sessionFor(USER_A, "tok-photo");
     const calls = stubFetch(() => jsonResponse(analysis({ persistence: STORED })));

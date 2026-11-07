@@ -3,9 +3,7 @@
  * have NOT run through the extraction pipeline.
  *
  * Founder decision 2026-09-08: the scan must answer for ANY supplement, not
- * only the one ingredient with a retained run. "The retained runs, you can
- * access them if you have them, but even if you don't, do the analysis through
- * the system prompt of the API itself."
+ * only an ingredient with an evidence run.
  *
  * While evidence grading is not active (2026-10-15, docs/APP.md §4) this runs
  * for every supported product. When grading is switched on, a graded run will

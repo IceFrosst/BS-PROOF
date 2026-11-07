@@ -36,7 +36,7 @@ A letter always travels with its estimate, confidence interval, number of trials
 and certainty. **I** means insufficient evidence, never a low grade: *not
 studied* must never look like *studied and failed*.
 
-**Status (2026-10-15):** the pipeline runs this method, but grades are a preview
+**Status (2026-11):** the pipeline runs this method, but grades are a preview
 until they pass a check against published meta-analyses (`docs/METHOD.md` §16).
 The app shows no grade yet; it says so.
 
@@ -53,8 +53,10 @@ npm run dev                  # http://localhost:3000/scan
 Photograph a Supplement Facts label, or type ingredient + form + dose. Today the
 result shows what the label says plus background clearly badged "unverified"
 (literature orientation, form and mix, company and MLM disclosure, funding and
-publication-bias disclosures), and a notice that grades are not active yet.
-Without a model key the photo path returns 503; the typed path still works.
+publication-bias disclosures), and a notice that grades are not active yet, in
+English or Lithuanian. With Google sign-in configured, scans are saved to a
+History tab. Without a model key the photo path returns 503; the typed path
+still works.
 Details: `docs/APP.md`. On a phone with the live camera: Android
 `adb reverse tcp:3000 tcp:3000`, then open `localhost:3000/scan`.
 
@@ -83,6 +85,7 @@ Runs land in `reports/runs/` (summary, full report, context JSON). Full guide:
 | [`CLAUDE.md`](CLAUDE.md) | Rules, invariants, workflow and current state. **Read before changing code.** Other agents: [`AGENTS.md`](AGENTS.md) |
 | [`docs/METHOD.md`](docs/METHOD.md) | The evidence method: retrieval → extraction → pooling → GRADE → letters, and how it is validated |
 | [`docs/PIPELINE.md`](docs/PIPELINE.md) | How to run the pipeline, its flags and switches, how to check a run |
-| [`docs/APP.md`](docs/APP.md) | The app: `/scan`, its API, the model sections, history, sign-in, design system, PWA |
+| [`docs/APP.md`](docs/APP.md) | The app: `/scan`, its API, the model sections, History, sign-in, EN/LT, design system, PWA |
 | [`docs/DECISIONS.md`](docs/DECISIONS.md) | Open founder decisions, the v2 work list, and what has been decided |
+| [`docs/PAPERS_APIs.md`](docs/PAPERS_APIs.md) | Where full text comes from, and which keys or accounts would add papers |
 | [`docs/history/`](docs/history/) | Archives (including the retired v14 model) and the dated project log — not a task list |

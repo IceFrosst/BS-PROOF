@@ -54,8 +54,6 @@ export interface ResultCopy {
   nothingRun: string;
   requestRecorded: string;
   coveredSoFar: string;
-  // ledger tabs
-  estimate: string;
   // prior section
   priorTitle: string;
   systematicReviews: string;
@@ -183,7 +181,6 @@ const EN: ResultCopy = {
   nothingRun: "Nothing has been run for it.",
   requestRecorded: "Your request was recorded.",
   coveredSoFar: "Covered so far:",
-  estimate: "Estimate",
   priorTitle: "What the literature says",
   systematicReviews: "Systematic reviews:",
   noOutcomeNamed: "The model named no outcome with describable evidence for this ingredient.",
@@ -311,7 +308,6 @@ const LT: ResultCopy = {
   nothingRun: "Jai nieko nebuvo paleista.",
   requestRecorded: "Tavo užklausa užfiksuota.",
   coveredSoFar: "Kol kas apima:",
-  estimate: "Įvertis",
   priorTitle: "Ką sako literatūra",
   systematicReviews: "Sisteminės apžvalgos:",
   noOutcomeNamed: "Modelis nenurodė jokio rezultato, kuriam šiai medžiagai galima aprašyti įrodymus.",

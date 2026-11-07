@@ -1,9 +1,8 @@
 /* /scan workspace: the Scan / History tabs, the History panel, and the
    sign-in gate states the camera-first flow gained on 2026-09-23.
 
-   Imported by app/scan/page.tsx and app/tester/page.tsx (the latter only for
-   the Google sign-in card's states, 2026-10-03), so it loads with those routes
-   and nothing else. Everything here hangs off .scan-workspace or a .sw-* class that only
+   Imported by app/scan/page.tsx only, so it loads with that route and nothing
+   else. Everything here hangs off .scan-workspace or a .sw-* class that only
    components/scan-workspace.tsx and components/history-tab.tsx render; the
    few .sc-* rules below style new elements inside the sign-in card and the scan
    flow (classes that did not exist before). It does not restyle the result

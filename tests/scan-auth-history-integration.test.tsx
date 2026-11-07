@@ -20,7 +20,6 @@
  *     date
  *   - another account sees none of it, and asking for someone else's / a
  *     legacy / a missing id is the same 404 (no existence oracle)
- *   - /api/scan/claim is never called by the UI
  */
 import { createElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -195,7 +194,6 @@ describe("sign-in required + history required, UI wired to the real routes", () 
     expect(fake.modelCalls).toBe(modelCallsAfterScan); // no reanalysis
     expect(fake.callsTo("/rest/v1/scan_runs").filter((c) => c.method === "POST")).toHaveLength(insertsAfterScan); // no new row
     expect(fake.nonGetRunWrites.filter((c) => c.method !== "POST")).toHaveLength(0); // never UPDATE/DELETE a run
-    expect(apiCalls.some((c) => c.path.startsWith("/api/scan/claim"))).toBe(false);
     expect(el.textContent).toMatch(/saved/i);
   });
 

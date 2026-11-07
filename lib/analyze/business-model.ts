@@ -1,7 +1,7 @@
 /*
  * MLM / DIRECT-SELLING DISCLOSURE — pure, browser-safe (no fs/path, no
  * model boundary). Split out of company.ts (which imports node:fs to read
- * prompts/company.md) so components/scan/scan-flow.tsx — a client component — can
+ * prompts/company.md) so components/scan-result-sections.tsx — a client component — can
  * import the rendering decision without pulling a server-only module and its
  * filesystem import into the browser bundle.
  *

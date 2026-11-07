@@ -2,7 +2,7 @@ name: selftest
 
 # Only paths that can change a deterministic Python result. The TypeScript
 # ports are pinned to Python goldens (tests/grade-v2-parity.test.ts,
-# tests/vocab-parity.test.ts), which run in dashboard.yml.
+# tests/vocab-parity.test.ts), which run in app.yml.
 on:
   push:
     paths:
@@ -44,7 +44,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      # See dashboard.yml: selftest needs httpx transitively. Missing until
+      # See app.yml: selftest needs httpx transitively. Missing until
       # 2026-08-10; this workflow had never been green.
       - name: Install Python dependencies
         run: pip install -r requirements.txt pytest vulture

@@ -117,7 +117,7 @@ export function useLang(): { lang: Lang; setLang: (lang: Lang) => void; toggleLa
 /**
  * The language for SHARED chrome (the site header/footer, the Google button).
  * The choice belongs to the /scan workspace: every other route that renders the
- * same components -- the waitlist, /methodology, /tester -- is English-only and
+ * same components -- the waitlist, /methodology -- is English-only and
  * must not flip because someone chose Lithuanian in the scan. Without a router
  * (a bare component in a test) the choice applies.
  */
