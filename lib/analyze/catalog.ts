@@ -2,7 +2,7 @@
  * THE SEARCHABLE CATALOG behind "Search for your supplement" on /scan.
  *
  * Derived on the server from vocab/form.json — the same vocabulary the label
- * prompt is given and the same ids `scoreProduct` and `elementalDoseRangeMg`
+ * prompt is given and the same ids `elementalDoseRangeMg`
  * accept — so a manual entry can only ever name an ingredient × form the rest
  * of the pipeline already understands. Adding an ingredient to the vocabulary
  * adds it here; there is no second list to keep in sync.

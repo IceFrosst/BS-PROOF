@@ -11,7 +11,6 @@ export interface SearchCopy {
   catalogCount: (n: number) => string;
   exactFormOf: (label: string) => string;
   chooseForm: string;
-  hasEvidenceRun: string;
   cfuNote: string;
   convExact: string;
   convBounded: string;
@@ -39,7 +38,6 @@ const EN: SearchCopy = {
   catalogCount: (n) => `${n} ingredients in the catalog — the same vocabulary the label reader uses.`,
   exactFormOf: (l) => `Exact form of ${l}`,
   chooseForm: "Choose the form…",
-  hasEvidenceRun: " (has an evidence run)",
   cfuNote: "Counted in CFU, not mass — the analysis runs without a dose axis.",
   convExact: "A typed dose converts exactly to the active amount.",
   convBounded: "This salt's hydration is often unstated, so a typed dose converts to a bounded range rather than one number.",
@@ -67,7 +65,6 @@ const LT: SearchCopy = {
   catalogCount: (n) => `Kataloge yra ${n} veikliųjų medžiagų — tas pats žodynas, kurį naudoja etikečių skaitytuvas.`,
   exactFormOf: (l) => `Tiksli „${l}“ forma`,
   chooseForm: "Pasirink formą…",
-  hasEvidenceRun: " (turi įrodymų paleidimą)",
   cfuNote: "Skaičiuojama KSV, o ne mase — analizė vykdoma be dozės ašies.",
   convExact: "Įvesta dozė tiksliai perskaičiuojama į veikliąją medžiagą.",
   convBounded: "Šios druskos hidratacija dažnai nenurodoma, todėl įvesta dozė perskaičiuojama į ribotą intervalą, o ne į vieną skaičių.",

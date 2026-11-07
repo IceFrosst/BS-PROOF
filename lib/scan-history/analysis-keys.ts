@@ -10,6 +10,10 @@
  *     them from the row itself (never the stored copy).
  *   - `persistence` is absent on purpose: it carries the private photo's
  *     bucket / path / sha and never leaves.
+ *   - The v14 keys (`evidence` with its score rows, `ledger_audit`,
+ *     `dose_effectiveness`) were removed with v14 (2026-10-15; merged into main
+ *     2026-11): a scan saved before then is replayed WITHOUT them, so no v14
+ *     grade ever reaches the screen again.
  *
  * KEPT IN STEP BY THE COMPILER. This file may only import the analysis TYPE
  * (an `import type`, erased at build, so no analyzer / model / pipeline code
@@ -30,10 +34,7 @@ export const ANALYSIS_KEYS = [
   "label",
   "input",
   "product",
-  "evidence",
-  "ledger_audit",
   "evidence_prior",
-  "dose_effectiveness",
   "compatibility",
   "company",
   "literature_warnings",
