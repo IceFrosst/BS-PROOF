@@ -202,21 +202,14 @@ body:has(.scan-page) .footer-inner p:last-child { display: none; }
 .sc-thumb-typed { color: var(--sp-mute); font-size: var(--fs-3); font-weight: 700; letter-spacing: -0.02em; }
 .sc-progress-bar { position: relative; height: 4px; overflow: hidden; border-radius: 999px; background: var(--sp-tint); }
 .sc-progress-bar > span { position: absolute; inset: 0 auto 0 0; width: 38%; border-radius: 999px; background: var(--sp-measured); animation: sc-slide 1.6s ease-in-out infinite; }
-.sc-progress-bar.is-steps { height: 6px; }
-.sc-progress-bar.is-steps > span { animation: none; transition: width 600ms ease; }
 @keyframes sc-slide { 0% { transform: translateX(-110%); } 100% { transform: translateX(290%); } }
 .sc-stages { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .sc-stages li { display: grid; grid-template-columns: 16px 1fr; gap: 10px; align-items: baseline; color: var(--sp-mute); }
 .sc-stage-mark { display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--sp-line); background: var(--sp-white); align-self: center; }
-.sc-stages li.is-done { color: var(--sp-mute); }
-.sc-stages li.is-done .sc-stage-mark { background: var(--sp-measured); border-color: var(--sp-measured); }
-.sc-stages li.is-current { color: var(--sp-ink); font-weight: 600; }
-.sc-stages li.is-current .sc-stage-mark { border-color: var(--sp-measured); box-shadow: inset 0 0 0 2px var(--sp-white), inset 0 0 0 6px var(--sp-measured); animation: sc-pulse 1.2s ease-in-out infinite alternate; }
-@keyframes sc-pulse { from { opacity: 1; } to { opacity: 0.45; } }
 .scan-page .la-stage { color: inherit; font-weight: inherit; font-size: var(--fs-2); }
 .sc-progress .sc-signin-card { max-width: none; margin-top: 4px; }
 
-/* -------- sign-in card + result lock -------- */
+/* -------- sign-in card -------- */
 .sc-signin-card {
   display: grid; gap: 8px; justify-items: center; width: 100%; max-width: 360px;
   padding: 16px; border: 1px solid var(--sp-line); border-radius: var(--sp-radius);
@@ -227,7 +220,6 @@ body:has(.scan-page) .footer-inner p:last-child { display: none; }
 .sc-google-btn { display: flex; justify-content: center; min-height: 44px; width: 100%; }
 .sc-result-wrap { display: grid; gap: 12px; justify-items: stretch; }
 .sc-result-wrap .sc-signin-card { max-width: none; }
-.la-result.sc-locked { filter: blur(9px); user-select: none; pointer-events: none; }
 .sc-signed-in-line { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; margin: 0 0 12px; color: var(--sp-mute); font-size: var(--fs-1); }
 .sc-signout { min-height: 32px; padding: 0 4px; border: none; background: none; color: var(--sp-ink); font-weight: 700; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 
@@ -383,7 +375,6 @@ body:has(.scan-page) .footer-inner p:last-child { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .sc-progress-bar > span { animation: none; width: 100%; opacity: 0.5; }
-  .sc-stages li.is-current .sc-stage-mark { animation: none; }
   .sc-shutter-ring, .sc-details > summary::after { transition: none; }
 }
 
