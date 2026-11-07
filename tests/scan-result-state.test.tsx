@@ -1,7 +1,7 @@
 /*
- * /scan result state. LIVE-ONLY since 2026-10-05: a finished scan shows the label facts and the live
- * research screen, never the retained lab card / cached audit / "no evidence run" card / model recall /
- * company profile. (The old tab, validity, dimension and warning-bundle tests of that card were removed with it.)
+ * /scan result state (2026-11 merge): a finished scan shows the label facts, the grading notice, the
+ * warnings and the unverified sections -- never a v14 score, Ledger card, dose card or live research,
+ * even when an older saved analysis still carries those fields.
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -10,7 +10,6 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ScanFlow } from "@/components/scan-flow";
 import { ingredientCatalog } from "@/lib/analyze/catalog";
-import { retainedAuditForProduct } from "@/lib/evidence-ledger/retained-audits";
 
 declare global { var IS_REACT_ACT_ENVIRONMENT: boolean | undefined; }
 const fixture = JSON.parse(readFileSync(join(process.cwd(), "tests", "fixtures", "scan-photo-rich.json"), "utf8"));
@@ -46,9 +45,6 @@ async function photo(el: HTMLElement, body: unknown = fixture) {
   await act(async () => el.querySelector<HTMLButtonElement>("button.la-analyze")?.click());
   await act(async () => { await Promise.resolve(); });
 }
-function audit() {
-  return retainedAuditForProduct({ ingredient: "creatine", form: "creatine_monohydrate", compoundDoseMg: 4000, servingsPerDay: 1, isMultiIngredient: false, actives: [{ name: "Creatine Monohydrate", compoundDoseMg: 4000 }], otherActives: [] });
-}
 
 describe("/scan result state", () => {
   it("delivers the exact failed-scan reason with recovery chrome", async () => {
@@ -62,16 +58,27 @@ describe("/scan result state", () => {
     expect(el.querySelector(".sc-again")).not.toBeNull();
   });
 
-  it("draws NO retained / cached / model-recall / company evidence, and no 'no evidence run' card, even when the analysis carries all of it", async () => {
-    const retained = audit(); expect(retained).not.toBeNull();
-    const el = await mount(); await photo(el, { ...structuredClone(fixture), ledger_audit: retained, status: "ingredient_not_supported", ingredient_label_text: "Vitamin D3", supported_ingredients: ["creatine"], queue: { queued: true } });
-    expect(el.querySelector(".scan-lab-result")).not.toBeNull(); // the scan did complete
-    for (const selector of [".ab-tabs", "[role=tablist]", ".scan-lab-validity", ".ab-general-score", ".ab-number", ".ab-card", ".ab-warnings", ".ab-headline", ".scan-section", ".scan-legend", ".la-empty", "details.ab-warning-row"]) expect(el.querySelector(selector), selector).toBeNull();
-    expect(el.textContent).not.toMatch(/No evidence run|evidence run exists|not scored|Is your dose the dose that worked|Model knowledge|MLM|Funding & independence|Publication bias|evidence score|Multi ingredient product|Nordic Labs Ü|Evidence orientation|Compatibility|Company/i);
+  it("draws no grade of any kind -- even from v14 fields an older analysis still carries -- and says grading is not active", async () => {
+    const legacy = { ...structuredClone(fixture), ledger_audit: { audit: { outcomes: [] } }, evidence: { rows: [{ outcome: "muscle_strength", composite: 72 }] }, dose_effectiveness: { outcomes: [] } };
+    const el = await mount(); await photo(el, legacy);
+    expect(el.querySelector(".scan-lab-result")).not.toBeNull();
+    for (const selector of [".ab-tabs", "[role=tablist]", ".scan-lab-validity", ".ab-general-score", ".ab-number", ".ab-headline", ".sc-research"]) expect(el.querySelector(selector), selector).toBeNull();
+    // (the fixture's stored caveat still says "evidence score": old saved text, not a grade)
+    expect(el.textContent).not.toMatch(/General score|Is your dose the dose that worked|Live research/i);
     expect(el.textContent).not.toMatch(/\d+\/(100|4|3)\b/);
-    // what IS there: the read-label facts and the live research screen, and nothing numeric-scored
+    expect(el.querySelector('[data-testid="grading-notice"]')?.textContent).toMatch(/not active yet/i);
     expect(el.querySelector('[data-testid="read-facts"]')).not.toBeNull();
-    expect(el.querySelectorAll(".sc-research")).toHaveLength(1);
+    // the unverified sections, each with its basis badge
+    expect(el.querySelectorAll(".scan-section").length).toBeGreaterThanOrEqual(1);
+    expect(el.querySelector(".scan-badge-model_prior")).not.toBeNull();
+  });
+
+  it("an ingredient outside the vocabulary says so, with the request recorded and what is covered", async () => {
+    const el = await mount(); await photo(el, { ...structuredClone(fixture), status: "ingredient_not_supported", ingredient_label_text: "Vitamin D3", supported_ingredients: ["creatine"], queue: { queued: true } });
+    const card = el.querySelector('[data-testid="not-supported"]');
+    expect(card?.textContent).toMatch(/Vitamin D3 is not in the evidence vocabulary yet/);
+    expect(card?.textContent).toMatch(/request was recorded/);
+    expect(card?.textContent).toMatch(/creatine/);
   });
 
   it("collapses capture chrome after a result, moves focus, and offers Scan another", async () => {
@@ -127,8 +134,8 @@ describe("/scan result state", () => {
 
   it("uses shared A/B styling once and the real photo hero with a fallback jar", () => {
     const globals = readFileSync(join(process.cwd(), "app", "globals.css"), "utf8");
-    expect(globals).toContain('@import "./design-lab/ab/ab.css"');
-    expect(readFileSync(join(process.cwd(), "app", "scan-lab-result.css"), "utf8")).not.toContain(".ab-photo-hero{");
+    expect(globals).toContain('@import "./styles/ab.css"');
+    expect(readFileSync(join(process.cwd(), "app", "styles", "scan-result.css"), "utf8")).not.toContain(".ab-photo-hero{");
   });
 
   it("keeps the photo hero and replaces a failed photo element with the exact jar fallback", async () => {

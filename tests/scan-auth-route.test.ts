@@ -196,7 +196,7 @@ describe("SCAN_REQUIRE_AUTH=1: refused BEFORE the body, the model, storage or hi
     const res = await POST(manualReq(bearer("tok-a")));
     expect(res.status).toBe(200);
     const body = await json(res);
-    expect(body.status).toBe("scored");
+    expect(body.status).toBe("not_graded"); // evidence grading is not active (2026-10-15)
     expect(body.persistence?.status).toBe("stored");
     noLeak(JSON.stringify(body));
     expect(fake.runs).toHaveLength(1);

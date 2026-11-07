@@ -52,7 +52,7 @@
  * REPLAY. `initialResult` renders a scan from the History tab through this very
  * component with no scan request at all, dated "Saved scan from ...". A scan
  * saved before 2026-11 is drawn without its v14 fields: the History reader's
- * allow-list (lib/scan-history/analysis-keys.ts) no longer returns them.
+ * allow-list (the server-side analysis-keys list) no longer returns them.
  *
  * RELOAD. A reload used to throw the Scan tab away. This component keeps an opaque
  * pointer for it in the tab's sessionStorage (lib/saved-scans/resume.ts: owner id and

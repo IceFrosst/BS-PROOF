@@ -317,7 +317,7 @@ describe("no-secret, no-browser-leakage", () => {
     const source = fs.readFileSync(path.join(ROOT, "lib", "scan-history", "store.ts"), "utf8");
     expect(source).not.toMatch(/^"use client"/m);
     const componentFiles = (fs.readdirSync(path.join(ROOT, "components"), { recursive: true }) as string[]).filter((f) => f.endsWith(".tsx"));
-    expect(componentFiles).toContain(path.join("scan", "scan-flow.tsx"));
+    expect(componentFiles).toContain("scan-flow.tsx");
     for (const file of componentFiles) {
       const text = fs.readFileSync(path.join(ROOT, "components", file), "utf8");
       expect(text, file).not.toMatch(/scan-history/);

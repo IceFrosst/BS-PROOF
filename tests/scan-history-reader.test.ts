@@ -313,7 +313,9 @@ describe("GET /api/scan/history/[id]: owner-filtered detail", () => {
     expect(body.analysis.run_id).toBe(RUN_A1); // the stale stored id is replaced by the row's own
     expect(body.analysis.schema_version).toBe("ScanAnalysisV1");
     expect(body.analysis.status).toBe("scored");
-    expect(body.analysis.evidence).toEqual({ score: 42, secret_marker: "SAVED_EVIDENCE_PAYLOAD" }); // verbatim saved payload
+    // the v14 score payload of an older saved scan is NOT returned (lib/scan-history/analysis-keys.ts, 2026-11)
+    expect(body.analysis.evidence).toBeUndefined();
+    expect(JSON.stringify(body)).not.toContain("SAVED_EVIDENCE_PAYLOAD");
     expect(body.analysis.app_version).toEqual({ package_version: "0.1.0", git_sha: "deadbeef", git_ref: "main", deployment_id: null, vercel_env: "production", url: "x.vercel.app" });
   });
 

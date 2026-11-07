@@ -33,6 +33,12 @@ const nextConfig: NextConfig = {
       "./schemas/evidence_prior.json",
       "./schemas/literature_warnings.json",
     ],
+    // Display translation (EN -> LT) reads its prompt and schema at request time
+    // too; main (2026-10) did not trace them, so a deployment could not load them.
+    "/api/scan/translate": [
+      "./prompts/translate.md",
+      "./schemas/translate.json",
+    ],
   },
 };
 

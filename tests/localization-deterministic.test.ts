@@ -17,20 +17,16 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { installLocalStorage } from "./helpers/local-storage";
 
-import { doseEffectivenessSection, type DoseRowInput } from "@/lib/analyze/dose-effectiveness";
 import { registryRecalls } from "@/lib/analyze/company";
-import { scoreProduct } from "@/lib/analyze/product-score";
 import { analyzeManual, type ScanDeps } from "@/lib/analyze/scan";
 import { businessModelDisclosure } from "@/lib/analyze/business-model";
 import { literatureDisclosures } from "@/lib/analyze/literature-disclosures";
 import { FLOW_COPY } from "@/lib/i18n/copy/flow";
 import { HISTORY_COPY } from "@/lib/i18n/copy/history";
-import { RESULT_COPY, enumWord, ledgerWord, strengthLabel } from "@/lib/i18n/copy/result";
+import { RESULT_COPY, enumWord, strengthLabel } from "@/lib/i18n/copy/result";
 import { SEARCH_COPY } from "@/lib/i18n/copy/search";
-import { doseNoteText, doseReadingBody, knownServerText } from "@/lib/i18n/deterministic";
+import { knownServerText } from "@/lib/i18n/deterministic";
 import { LANG_KEY, normalizeLang, readStoredLang, resetLangMemory, writeLang } from "@/lib/i18n/locale";
-import { score, ledgerFromAudit } from "@/lib/evidence-ledger";
-import { retainedAuditForProduct } from "@/lib/evidence-ledger/retained-audits";
 
 const ROOT = process.cwd();
 
@@ -103,7 +99,6 @@ describe("dictionaries", () => {
     expect(lt.imageTooLarge("13.4")).toContain("13.4");
     expect(lt.imageTooLarge("13.4")).toContain("12 MB");
     expect(lt.requestFailed(502)).toContain("502");
-    expect(RESULT_COPY.lt.formEvidenceStrength("0.85", "ladder")).toContain("0.85");
     expect(HISTORY_COPY.lt.latest(3)).toContain("3");
     expect(RESULT_COPY.lt.warningCount(2)).toMatch(/^2 /);
   });
@@ -117,59 +112,15 @@ describe("dictionaries", () => {
     expect(strengthLabel("en", "limited")).toBe("limited evidence");
   });
 
-  it("ledger words are display-only: the scorer keeps its English and its numbers", () => {
-    const audit = retainedAuditForProduct({ ingredient: "creatine", form: "creatine_monohydrate", compoundDoseMg: 4000, servingsPerDay: 1, isMultiIngredient: false, actives: [{ name: "Creatine", compoundDoseMg: 4000 }], otherActives: [] })!;
-    for (const outcome of audit.audit.outcomes) {
-      const scored = score(ledgerFromAudit(outcome));
-      // every word the ledger can print has an LT rendering; none is left as English
-      for (const word of [scored.effectWord, scored.certaintyWord, scored.formWord, scored.doseWord, scored.label, ...scored.firedGates]) {
-        expect(ledgerWord("lt", word), word).not.toBe(word);
-        expect(ledgerWord("en", word)).toBe(word);
-      }
-    }
+  it("the grading notice is in both languages", () => {
+    expect(RESULT_COPY.en.gradingNoticeTitle).toBe("Evidence grades are not active yet.");
+    expect(RESULT_COPY.lt.gradingNoticeTitle).not.toBe(RESULT_COPY.en.gradingNoticeTitle);
   });
 });
 
-describe("dose reading + note: Lithuanian is re-rendered from stored numbers; English is pinned to the server", () => {
-  const rows: DoseRowInput[] = [
-    { outcome: "a_in", outcome_label: "In range", composite: 1, verdict: null, arcs: { dose: { closeness: 1, product_match: "in_band" } }, benefit_dose_range_mg: { low: 3000, high: 5000 }, null_dose_range_mg: null },
-    { outcome: "b_in_contested", outcome_label: "Contested", composite: 1, verdict: null, arcs: { dose: { closeness: 1, product_match: "in_band" } }, benefit_dose_range_mg: { low: 3000, high: 5000 }, null_dose_range_mg: { low: 4000, high: 6000 } },
-    { outcome: "c_below", outcome_label: "Below", composite: 1, verdict: null, arcs: { dose: { closeness: 0.1, product_match: "below_50" } }, benefit_dose_range_mg: { low: 8000, high: 9000 }, null_dose_range_mg: null },
-    { outcome: "d_above", outcome_label: "Above", composite: 1, verdict: null, arcs: { dose: { closeness: 0.3, product_match: "above_200" } }, benefit_dose_range_mg: { low: 500, high: 900 }, null_dose_range_mg: null },
-    { outcome: "e_noband", outcome_label: null, composite: null, verdict: null, arcs: { dose: { closeness: null, product_match: null } }, benefit_dose_range_mg: null, null_dose_range_mg: { low: 100, high: 200 } },
-    { outcome: "f_noband_nonull", outcome_label: "No band", composite: null, verdict: null, arcs: {}, benefit_dose_range_mg: null, null_dose_range_mg: null },
-    { outcome: "g_other", outcome_label: "Other", composite: 1, verdict: null, arcs: { dose: { closeness: 0.62, product_match: "mid" } }, benefit_dose_range_mg: { low: 4000, high: 4500 }, null_dose_range_mg: null },
-    { outcome: "h_below_by_close", outcome_label: "Below by closeness", composite: 1, verdict: null, arcs: { dose: { closeness: 0.5, product_match: null } }, benefit_dose_range_mg: { low: 9000, high: 9500 }, null_dose_range_mg: null },
-    { outcome: "i_above_by_close", outcome_label: "Above by closeness", composite: 1, verdict: null, arcs: { dose: { closeness: 0.5, product_match: null } }, benefit_dose_range_mg: { low: 100, high: 300 }, null_dose_range_mg: null },
-  ];
-  const inputs: Array<[string, { perServing: number | null; servings: number | null }]> = [
-    ["daily", { perServing: 4000, servings: 1 }],
-    ["daily x2", { perServing: 2500.5, servings: 2 }],
-    ["per serving", { perServing: 4000, servings: null }],
-    ["no dose", { perServing: null, servings: 1 }],
-  ];
-
-  it.each(inputs)("%s: EN twin equals the server text; LT keeps every number and the tone", (_label, input) => {
-    const section = doseEffectivenessSection({ perServingElementalMg: input.perServing, servingsPerDay: input.servings, conversionBasis: "converted", rows });
-    expect(doseNoteText("en", section)).toBe(section.note);
-    const lt = doseNoteText("lt", section);
-    for (const n of section.note.match(/\d+(?:\.\d+)?/g) ?? []) expect(lt, `note keeps ${n}`).toContain(n);
-    section.outcomes.forEach((o) => {
-      const parts = { dose: section.scored_dose_mg, benefit: o.benefit_range_mg, nulls: o.null_range_mg, productMatch: o.product_match, closeness: o.closeness };
-      const en = doseReadingBody("en", parts);
-      const name = o.outcome_label ?? o.outcome.replace(/_/g, " ");
-      expect(`${name}: ${en.body}`, o.outcome).toBe(o.reading);
-      expect(en.tone).toBe(o.tone);
-      const ltBody = doseReadingBody("lt", parts);
-      expect(ltBody.tone).toBe(o.tone);
-      // every figure (doses, ranges, closeness) is copied, not recomputed or reformatted
-      for (const n of en.body.match(/\d+(?:\.\d+)?/g) ?? []) expect(ltBody.body, `${o.outcome} keeps ${n}`).toContain(n);
-      expect(ltBody.body).not.toBe(en.body);
-    });
-  });
-
-  it("scoring and ledger modules never import the i18n or translation layer", () => {
-    for (const rel of ["lib/analyze/scoring.ts", "lib/analyze/product-score.ts", "lib/analyze/dose-effectiveness.ts", "lib/analyze/manual-dose.ts", "lib/evidence-ledger/index.ts", "lib/evidence-ledger/retained-audits.ts", "lib/analyze/vocab.ts", "lib/analyze/catalog.ts"]) {
+describe("module boundaries", () => {
+  it("grading and dose modules never import the i18n or translation layer", () => {
+    for (const rel of ["lib/analyze/grade-v2.ts", "lib/analyze/manual-dose.ts", "lib/analyze/vocab.ts", "lib/analyze/catalog.ts"]) {
       const text = fs.readFileSync(path.join(ROOT, rel), "utf8");
       expect(text, rel).not.toMatch(/i18n|analyze\/translate|from "\.\/translate"/);
     }
@@ -185,7 +136,6 @@ describe("fixed server sentences all have a deterministic Lithuanian rendering",
       },
       chatJson: null,
       fetch: (async () => new Response(JSON.stringify({ hitCount: 7 }), { status: 200 })) as typeof fetch,
-      scoreProduct,
       budgetMs: 55_000,
       now: () => (t += 10),
     };

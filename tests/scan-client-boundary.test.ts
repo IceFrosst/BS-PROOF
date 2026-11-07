@@ -3,15 +3,15 @@ import { dirname, join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const ROOT = process.cwd();
-// Every client entry the /scan and /tester routes mount: the workspace (tabs), the
-// scan flow, the History tab and the /tester label analyzer all ship to the
-// browser and must stay clear of the server-only retained-audit data and of
-// node:fs / node:path.
+// Every client entry the /scan route mounts: the workspace (tabs), the scan flow,
+// its result sections and the History tab all ship to the browser and must stay
+// clear of server-only data and of node:fs / node:path. (The /tester label
+// analyzer and the retained audits were removed with v14.)
 const ENTRIES = [
   join(ROOT, "components", "scan-workspace.tsx"),
   join(ROOT, "components", "scan-flow.tsx"),
   join(ROOT, "components", "history-tab.tsx"),
-  join(ROOT, "components", "label-analyzer.tsx"),
+  join(ROOT, "components", "scan-result-sections.tsx"),
 ];
 const EXTENSIONS = [".ts", ".tsx", ".js", ".jsx"];
 const FORBIDDEN_PATH = /(?:retained-audits|app[\\/]design-lab[\\/]ab[\\/]audits)/;

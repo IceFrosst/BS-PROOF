@@ -13,7 +13,7 @@
  * Stored values are never edited, so a History replay renders the same way.
  */
 
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 
 import { businessModelDisclosure } from "@/lib/analyze/business-model";
 import { literatureDisclosures } from "@/lib/analyze/literature-disclosures";
@@ -74,9 +74,11 @@ export function Facts({ rows }: { rows: Array<[string, ReactNode]> }) {
 
 function Section({ id, title, basis, legend, children }: { id: string; title: string; basis: Basis[]; legend: Legend; children: ReactNode }) {
   const { r } = useCopy();
+  // A live result and a History replay can be on the page together: ids are per instance.
+  const uid = useId();
   return (
-    <details className="scan-section scan-lab-disclosure" id={`scan-${id}`}>
-      <summary className="scan-section-head" id={`scan-${id}-title`}>
+    <details className="scan-section scan-lab-disclosure" id={`${uid}-scan-${id}`}>
+      <summary className="scan-section-head" id={`${uid}-scan-${id}-title`}>
         <h3>{title}</h3>
         <div className="scan-badges" aria-label={r.sourcesUsed}>
           {basis.map((b) => <BasisBadge key={b} kind={b} legend={legend} />)}
@@ -404,7 +406,7 @@ export function SourceLegend({ legend }: { legend: Legend }) {
   const { lang, r } = useCopy();
   return (
     <details className="sc-details scan-legend">
-      <summary id="scan-legend-title">{r.legendTitle}</summary>
+      <summary>{r.legendTitle}</summary>
       <ol>
         {Object.entries(legend)
           .sort(([, a], [, b]) => a.rank - b.rank)
