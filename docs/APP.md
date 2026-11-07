@@ -9,9 +9,17 @@ sections at the end. The full design history is
 `docs/history/2026-09-16-scan-design-log.md` (it describes the v14 result card,
 since removed; the capture flow and tokens are still current).
 
-**Routes:** `/` (waitlist only), `/scan` (the product, unlisted, `noindex`),
-`/methodology` (how grading will work), `POST /api/scan`, `POST /api/scan/claim`,
+**Routes:** `/` (waitlist only), `/scan` (the product, unlisted, `noindex`:
+two tabs, Scan and History), `/methodology` (how grading will work),
+`POST /api/scan`, `GET /api/scan/history`, `GET /api/scan/history/[id]`,
+`POST /api/scan/translate`, `POST /api/scan/claim` (kept, unused by the UI),
 `POST /api/waitlist`.
+
+**History of this screen:** `main` ran its own line from 2026-09-22 to 2026-10-06
+(camera-first landing, workspace tabs, History, EN/LT, then live research).
+The 2026-11 merge kept that screen, removed live research
+(`docs/history/live-research.md`) and every v14 grading surface, and put this
+line's result body in (§1).
 
 ---
 
@@ -29,6 +37,10 @@ grade, score or verdict; every block says where it came from:
 | Does the form and the mix hold up? | cited form notes and interactions among the actives | `curated_table`, `model_prior` |
 | Who makes it, and what is on record? | printed seals, FDA recalls on file, the model's company profile including a conservative MLM / direct-selling read (§1b) | `label`, `registry`, `model_prior` |
 | Warnings | caveats; funding-independence and publication-bias disclosures (§1c); the MLM disclosure (§1b) | `model_prior` for the disclosures |
+
+The whole page is in English or Lithuanian (§13). The result body is
+`components/scan-result-sections.tsx`; the screen around it is
+`components/scan-flow.tsx` inside `components/scan-workspace.tsx`.
 
 ### 1a. The typed path — "Search your supplement"
 
@@ -119,8 +131,8 @@ Removed 2026-10-15: the v14 score, its dose bars and the Evidence Ledger card
 it validates (`docs/METHOD.md` §16, `docs/DECISIONS.md`).
 
 - **What the user sees:** `<GradingNotice>` ("Evidence grades are not active
-  yet…") on the landing screen and at the top of every result, and
-  `/methodology` explains why.
+  yet…") at the top of every result and History replay, the loading screen's
+  "No grade is given yet", and `/methodology` explains why.
 - **What is built:** `lib/analyze/grade-v2.ts` re-matches a run's stored
   `evidence_v2` block to the scanned product's form and daily elemental dose,
   adding GRADE indirectness only. It is parity-pinned to Python
@@ -156,34 +168,51 @@ the provider before setting it.
 Each prompt has its own version constant and cache domain (CLAUDE.md
 invariant 3): `LABEL_PROMPT_VERSION` (`vision.ts`), `COMPAT_PROMPT_VERSION`,
 `COMPANY_PROMPT_VERSION`, `EVIDENCE_PRIOR_PROMPT_VERSION`,
-`LITERATURE_WARNINGS_PROMPT_VERSION`.
+`LITERATURE_WARNINGS_PROMPT_VERSION`, `TRANSLATE_PROMPT_VERSION`
+(`lib/analyze/translate.ts`, the EN → LT display translation, §13).
 
 ## 6. Scan-run history (optional)
 
 Every accepted `POST /api/scan` is recorded when Supabase is configured
-(`lib/scan-history/store.ts`, `docs/scan-history.sql`): the complete response,
-the request facts (never image bytes in the row), the status, and the exact app
-release (package version plus Vercel commit and deployment ids). A photo's
-original image goes to a **private** Storage bucket (`scan-images`) with its
-path, size and SHA-256 in the row.
+(`lib/scan-history/store.ts`, `docs/scan-history.sql`, which is what the
+production database runs): the complete response, the request facts (never
+image bytes in the row), the status, the exact app release, and the owner
+(`user_id`, `user_email`) bound at insert from the verified token. A photo's
+original image goes to a **private** Storage bucket (`scan-images`).
 
 `persistence.status` is `stored` / `unavailable` / `failed` — never `stored`
-unless the write succeeded; the image outcome is reported separately. Without
-Supabase, runs answer normally with `unavailable`. `SCAN_HISTORY_REQUIRED=1`
-fails closed (503 before any model call when unconfigured; 500 when the write
-fails). There is deliberately **no read endpoint and no signed image URL**:
-reading history is a Supabase SQL-editor job. Unverified against a real project.
+unless the write succeeded. Without Supabase, runs answer normally with
+`unavailable`. `SCAN_HISTORY_REQUIRED=1` fails closed (503 before any model call
+when unconfigured; 500 when the write fails).
 
-## 7. Sign-in and email capture (optional)
+**The History tab** reads the signed-in person's own runs:
+`GET /api/scan/history` (the list) and `GET /api/scan/history/[id]` (one run),
+both requiring a verified Google-backed token, filtered on the owner server-side
+(`lib/scan-history/reader.ts`), uncached, and a uniform 404 for anything that is
+not theirs. A saved run is drawn by the same screen with no scan request and no
+model call, dated "Saved scan from …". The reader returns only the keys in
+`lib/scan-history/analysis-keys.ts` (an allow-list the compiler keeps equal to
+`ScanAnalysis`), so a scan saved before 2026-11 is replayed **without** its v14
+score, Ledger and dose fields. No photo or signed image URL is ever returned.
 
-While a scan loads, and over the finished result until a session exists, `/scan`
-offers Google sign-in through Supabase Auth, in-page, so the computed result is
-never lost. When sign-in is configured and nobody is signed in, the result is
-blurred and `inert` under a "Save your result" card; signing in removes the blur
-(no re-fetch). `POST /api/scan/claim` (`lib/auth/claim.ts`) verifies the
-caller's token server-side, attaches the user to the `scan_runs` row and upserts
-`scan_users` (its `scans` counter is a best-effort read-then-write, not an
-atomic increment).
+**Reload:** the Scan tab keeps an opaque pointer (owner id + scan id only) in
+`sessionStorage` (`lib/saved-scans/resume.ts`); a reload reads that scan again
+from History and shows it, without scanning again.
+
+## 7. Sign-in
+
+Google sign-in through Supabase Auth (`lib/auth/`). Where the three client
+variables are set, **sign-in gates the request**: a photo can be staged, but
+"Scan this label" and the search are replaced by a sign-in card until a session
+exists; every `POST /api/scan` then carries the bearer token and the server binds
+the run to that user. Sign-out, expiry or another account aborts the request in
+flight and removes the result on screen. The server side is
+`lib/auth/server-auth.ts`: a token means something only when Supabase Auth
+verifies it, and "Google" is read from server-controlled fields. With
+`SCAN_REQUIRE_AUTH=1` the server refuses an unauthenticated scan before any
+model call (401, or 503 when Supabase Auth cannot answer). History always
+requires sign-in. `/scan` sends `Referrer-Policy: strict-origin` (Google's
+button needs the origin); every other route keeps `no-referrer`.
 
 **Setup** (all three client vars must be set, or sign-in is simply not offered):
 
@@ -196,7 +225,8 @@ atomic increment).
    `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`. Run `docs/scan-history.sql`.
 
 `lib/auth/supabase-browser.ts` is the only file importing `@supabase/supabase-js`;
-every server store uses plain `fetch`. Unverified against a real project.
+every server store uses plain `fetch`. `POST /api/scan/claim` is kept as an
+owner-verified acknowledgement endpoint; the UI no longer calls it.
 
 ## 8. Source ranking, as shown to the user
 
@@ -219,29 +249,36 @@ and a recall the model omits still appears from the registry.
   literature count and a demand-queue entry.
 - No FDA warning-letter lookup (no API), no drug interactions, no per-user
   goals, no branded-product catalogue, no IU or CFU mass.
-- No public read endpoint for scan history, no signed image URL.
+- No read endpoint for anyone else's scan history, no signed image URL: History
+  returns only the signed-in owner's own runs (§6).
 - No offline cache: cached evidence would go stale.
 
 ## 10. Files
 
 ```
-app/scan/page.tsx, app/api/scan/route.ts, app/api/scan/claim/route.ts
+app/scan/page.tsx, app/scan-workspace.css
+app/api/scan/route.ts, app/api/scan/history/, app/api/scan/translate/, app/api/scan/claim/
 lib/analyze/scan.ts            the orchestrator, ScanAnalysisV1
 lib/analyze/llm.ts             the one model boundary
-lib/analyze/vision.ts          label prompt + contract
+lib/analyze/vision.ts          label prompt + contract (label-v1.5: printed elemental dose)
 lib/analyze/evidence-prior.ts  literature orientation (stage 2b)
 lib/analyze/compatibility.ts   curated table + model fill-in
 lib/analyze/company.ts         label + openFDA + model profile
 lib/analyze/literature-warnings.ts, literature-disclosures.ts, business-model.ts   disclosures
+lib/analyze/translate.ts       EN -> LT display translation (server)
 lib/analyze/catalog.ts, manual-dose.ts, vocab.ts, census.ts   catalog, units, dose conversion, census
 lib/analyze/grade-v2.ts        v2 product grade — built, not connected (§4)
-lib/scan-history/, lib/auth/, lib/camera/, lib/waitlist/
-components/scan/               scan-flow (state machine in flow-state.ts), capture-views,
-                               scan-camera, search-sheet, supplement-search, report-sections,
-                               google-sign-in, primitives, format
+lib/i18n/                      EN/LT: locale, copy/ (flow, result, history, search), deterministic LT, translate-client
+lib/scan-history/              store (write), reader + analysis-keys (History read)
+lib/saved-scans/               History client, reload pointer
+lib/auth/, lib/camera/, lib/waitlist/
+components/scan-workspace.tsx  the two tabs (Scan, History) and the reload restore
+components/scan-flow.tsx       the Scan state machine (landing, staged, loading, result)
+components/scan-result-sections.tsx   the result body: grading notice, warnings, sections
+components/history-tab.tsx, scan-camera.tsx, search-sheet.tsx, supplement-search.tsx, google-sign-in.tsx
 app/styles/                    base, ab (card primitives), scan, scan-result, article, front-door
-prompts/{label,company,compatibility,evidence_prior,literature_warnings}.md + schemas/
-vocab/compatibility.json, docs/scan-history.sql, docs/waitlist.sql
+prompts/{label,company,compatibility,evidence_prior,literature_warnings,translate}.md + schemas/
+vocab/compatibility.json, vocab/grades_live.json, docs/scan-history.sql, docs/waitlist.sql
 ```
 
 ## 11. `/scan` design system
@@ -258,7 +295,7 @@ things only; `--sp-unverified` (`#885a00`) model-recalled things only;
 sentence case, `tabular-nums` in columns, prose ≤ 62ch. One radius (12 px; the
 viewfinder 24 px), rules not boxes, targets ≥ 44 px, no shadows on the report.
 
-**State model** — each state owns the viewport (`components/scan/flow-state.ts`):
+**State model** — each state owns the viewport (`components/scan-flow.tsx`):
 
 ```
 landing ──shutter/upload──▶ staged ──"Scan this label"──▶ loading ──▶ result
@@ -269,13 +306,13 @@ landing ──shutter/upload──▶ staged ──"Scan this label"──▶ lo
 
 | State | Owns the viewport | Primary action |
 |---|---|---|
-| landing | grading notice, search pill, dark live viewfinder with the H1, shutter, "Upload a photo" | shutter |
+| landing | top bar (logo, EN/LT), headline above a framed live viewfinder, one control row: Upload / shutter / Search | shutter |
 | staged | the photo | "Scan this label"; retake |
-| loading | progress panel with the stage list; the "Save your result" card when sign-in is configured | — |
+| loading | progress panel with the stage list and "No grade is given yet" | — |
 | result | compact header, grading notice, warnings, report sections; focus and scroll move to it (instant under reduced motion) | "Scan another" (top and bottom) |
 | error / not a label / not supported | the same header slot plus one note | "Scan another" |
 
-**Camera:** a live `getUserMedia` viewfinder (`components/scan/scan-camera.tsx`,
+**Camera:** a live `getUserMedia` viewfinder (`components/scan-camera.tsx`,
 capture via `lib/camera/capture.ts`), stopped on capture, unmount and hidden
 tab. `vercel.json` sends `Permissions-Policy: camera=(self)`. A
 `capture="environment"` file input stays mounted as the fallback for denial,
@@ -292,3 +329,17 @@ maskable), iOS `public/apple-touch-icon.png`, `public/favicon.svg`. No service
 worker. Phone check (unverified): iOS Safari on `/scan/` → Share → Add to Home
 Screen; Android Chrome → Install app. Launch should open `/scan/` without
 browser chrome.
+
+## 13. Languages (EN / LT)
+
+One persisted choice (`localStorage` `bsproof.lang`, `en` | `lt`, English by
+default; `lib/i18n/locale.ts`) drives the whole `/scan` workspace, the footer and
+the skip link. Fixed words come from `lib/i18n/copy/*` (every key in both
+languages, pinned by `tests/localization-deterministic.test.ts`); sentences the
+server always emits have a fixed Lithuanian rendering
+(`lib/i18n/deterministic.ts`); model-written prose is translated on screen by
+`POST /api/scan/translate` (`lib/analyze/translate.ts` through `llm.ts`; the same
+auth gate as `POST /api/scan`, the same kill switch, and a cache partitioned per
+verified user) and marked "machine-translated, not
+checked by a person" with a switch back to the original. The stored analysis is
+always the English original; numbers are never translated or reformatted.

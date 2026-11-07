@@ -17,3 +17,5 @@ it stood with v14 intact is tag `v14-final`).
 | `2026-09-11-creatine-share-of-gain.md` | How much strength creatine adds in kg, from published meta-analyses (input for MCIDs and natural-unit display) |
 | `2026-09-16-scan-design-log.md` | The `/scan` design passes and measurements (its result card is the removed v14 one) |
 | `2026-09-11-competitor-analysis-effect-axis.md` | Market summary: who grades whether a supplement works |
+| `live-research.md`, `live-research/` | `main`'s live research (2026-10-03 to 10-06): what it was, why it was removed in the 2026-11 merge, what it left in the database; its worker runbook, SQL and team status |
+| `research-benchmark-preview/`, `research-original-contract-comparison/`, `multi-ingredient-options.jpg` | `main`'s research-model comparisons and design images of 2026-10 (archives) |

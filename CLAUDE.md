@@ -31,9 +31,9 @@ doesn't match the specific product as weaker (GRADE indirectness). Two parts:
    meta-analysis + GRADE + a letter per outcome) → immutable run artifacts in
    `reports/runs/`.
 2. **App** (Next.js 16 on Vercel): `/scan` reads a supplement label (photo or
-   typed). **Evidence grading is not active in the app yet**: it shows the
-   label facts and model-written background badged "unverified", plus a
-   notice that grades are not active.
+   typed), with a History tab and English/Lithuanian. **Evidence grading is not
+   active in the app yet**: it shows the label facts and model-written
+   background badged "unverified", plus a notice that grades are not active.
 
 v2 replaced the v14 scoring model on 2026-10-15 (founder decision). v14 —
 its scorer, runs, `/runs` dashboard, TS ports and the Evidence Ledger — is
@@ -51,7 +51,7 @@ parity-pinned but **deliberately not called** until v2 is validated
 | File | Role |
 |---|---|
 | `bsproof/claude_adapter.py` | Claude production extraction (subscription + `--safe-mode`) |
-| `lib/analyze/llm.ts` | **The app's one model transport.** Label vision read (`vision.ts`), compatibility, company profile, literature warnings, evidence prior. DeepSeek by default (`DEEPSEEK_API_KEY`); `MODEL_API_URL` / `LABEL_MODEL` / `TEXT_MODEL` swap provider without code changes |
+| `lib/analyze/llm.ts` | **The app's one model transport.** Label vision read (`vision.ts`), compatibility, company profile, literature warnings, evidence prior, EN→LT display translation (`translate.ts`). DeepSeek by default (`DEEPSEEK_API_KEY`); `MODEL_API_URL` / `LABEL_MODEL` / `TEXT_MODEL` swap provider without code changes |
 
 `python3 -m pipeline.invariants` enforces this (AST for Python, a text scan for
 TS). Everything in `pipeline/`, `sources/` and the rest of `lib/analyze/` is
@@ -219,11 +219,14 @@ pipeline/   deterministic, NO MODEL, unit-tested
   invariants.py selftest/        the two gates (selftest is a package; run with -m)
 sources/    deterministic HTTP layer: europepmc, clinicaltrials, oa, fulltext, figures, crossref
 
-app/        Next.js routes: /scan (product), /api/scan, /methodology, / (waitlist)
-components/ scan/ (the /scan UI), site shell, waitlist form
+app/        Next.js routes: /scan (product), /api/scan (+ /history, /translate, /claim),
+            /methodology, / (waitlist)
+components/ scan-workspace (tabs), scan-flow (Scan), scan-result-sections (result body),
+            history-tab, camera/search/sign-in pieces, site shell, waitlist form
 lib/analyze/        the scan: llm.ts (model transport), vision.ts, scan.ts, vocab.ts,
-                    grade-v2.ts (built, not connected), model-written sections
-lib/scan-history/ lib/auth/   optional Supabase history + Google sign-in
+                    translate.ts, grade-v2.ts (built, not connected), model-written sections
+lib/i18n/           EN/LT copy, locale, deterministic LT, translate client
+lib/scan-history/ lib/saved-scans/ lib/auth/   Supabase history (write + owner read), reload, Google sign-in
 
 prompts/*.md  schemas/*.json  vocab/*.json
 reports/runs/          immutable run archive: <id>_summary.md, _full.md, _context.json
@@ -301,29 +304,32 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
   creatine still C−. Creatine re-pooled offline with B4 and the new
   "Possible" row (2026-11-02), strength, lean mass and power are all **C−,
   Moderate**; the stored run still shows the letters above.
-- **Working baseline: `Jans_attempt`, not `main`** (founder, 2026-10-15).
-  `origin/main` has diverged (68 commits since `d9cedc4`, 2026-09-22: live
-  research worker, live result card, research-jobs SQL, scan-history UI,
-  localisation) and conflicts with this line. Until the founder schedules the
-  "big merge", treat `Jans_attempt` as main: branch from it, merge into it,
-  never merge to or from `origin/main`, never resolve those conflicts.
+- **The big merge is done on `integration`, not yet pushed** (2026-11-07,
+  `docs/history/project-log.md`): `origin/main` merged in; live research and
+  every v14 grading surface removed; `main`'s workspace, History, EN/LT,
+  sign-in and label-read fixes kept; v2 stays disconnected. Until the founder
+  pushes `integration` to `main` (a fast-forward), keep working on
+  `integration` (worktree `../BS-PROOF-integration`), not on `origin/main`.
 - **Binding limit:** readable open-access full text (295/386 creatine RCTs are
   abstract-only), then off-target populations and figure-only results.
 - **App:** `/scan` answers `not_graded` for every supported product and says
   grades are not active yet; it shows label facts and model-written sections
-  badged unverified (`docs/APP.md`). Label reads: DeepSeek, thinking disabled,
-  prompt `label-v1.3`.
-- **Optional infra, unverified:** Supabase scan history, Google sign-in. PWA
+  badged unverified, in EN or LT, with a History tab (`docs/APP.md`). Label
+  reads: DeepSeek, thinking disabled, prompt `label-v1.5`.
+- **Infra:** Supabase scan history and Google sign-in run in production
+  (`main`, 2026-10); the merged code is not yet verified there. PWA
   installable, no offline cache.
 
 ## Next
 
-1. The 2026-10-15 simplification is complete and merged into `Jans_attempt`
-   (`docs/history/project-log.md`, 2026-10-15 entries).
-2. **v2 work list** (`docs/DECISIONS.md`), then connect `grade-v2.ts` in
-   `lib/analyze/scan.ts`, build the grade card and remove the notice.
-3. Verify on a real phone (live camera, busy-label read, PWA install) and
-   against real Supabase / Google projects.
+1. **Push the merge** (founder): a Vercel preview of `integration` tested on a
+   phone (sign-in, a scan, History, EN/LT), live research switched off and its
+   worker stopped, then `git push origin integration:main`
+   (`docs/DECISIONS.md`, 2026-11-07).
+2. **v2 validation** (`docs/DECISIONS.md`): a fresh creatine run, its benchmark
+   and spot audit, then the first `vocab/grades_live.json` entries; then connect
+   `grade-v2.ts` in `lib/analyze/scan.ts`, build the grade card and remove the notice.
+3. Verify on a real phone (live camera, busy-label read, PWA install).
 
 ## Conventions
 

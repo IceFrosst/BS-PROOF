@@ -10,6 +10,29 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-11-07 — the big merge: origin/main into `integration` (not pushed)
+
+Plan: `~/.claude/plans/humble-booping-hamster.md` (approved). One `git merge
+origin/main` on `integration`, then reviewable commits:
+1. mechanical resolution (pipeline/, lib/analyze/*, docs ours; `main`'s screen,
+   auth, scan-history SQL, label-v1.5 and translation theirs; `components/scan/*`
+   retired);
+2. live research removed, its docs and SQL archived (`docs/history/live-research*`);
+3. v14 leftovers in `main`'s screen code removed (History drops the v14 keys on
+   replay; LT fixed sentences follow our server text);
+4. the `/scan` result rebuilt on `main`'s screen with our sections
+   (`components/scan-result-sections.tsx`, EN/LT grading notice);
+5. tests reconciled (557 vitest, 300 Python, 24 Playwright; 6 Playwright need a
+   sign-in-configured build); CSS back to our split `app/styles/*` with `main`'s
+   landing styles;
+6. docs.
+Found and fixed on the way: duplicate element ids between a live result and a
+History replay; `main` never traced the translate prompt/schema into the
+`/api/scan/translate` bundle; user-visible copy still promised live research.
+Gates: invariants, selftest, typecheck, lint, build. Founder actions before the
+push: preview test, `SCAN_LIVE_RESEARCH_ENABLED` off and the worker stopped,
+then `git push origin integration:main`.
+
 ## 2026-11-04 — vitamin D strength run 20261104_195129: first negative control passes
 
 54 of 144 read, 133 calls. muscle_strength k = 3, +0.08 [−0.26, +0.42], Low, I.
