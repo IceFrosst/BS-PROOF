@@ -267,8 +267,8 @@ Without a model key the photo path returns 503 `analyzer_unavailable`; the typed
 
 - **Every push to `main` deploys to production** (`IceFrosst/BS-PROOF` →
   Vercel `bs-proof-dashboard`). Work on a branch/worktree, get all gates green,
-  then merge. Non-`main` branches do not build on Vercel (`vercel.json`
-  `ignoreCommand`).
+  then merge. Only `main` (production) and `integration` (a preview, for the
+  merge, 2026-11) build on Vercel (`vercel.json` `ignoreCommand`).
 - **Ownership:** Claude Code owns every file; other agents (e.g. Codex) may write
   anything, and Claude verifies their commits afterwards (`python3 scripts/verify_helpers.py`).
   Shared agent rules: `AGENTS.md`.
