@@ -10,6 +10,28 @@ measurements here; keep `CLAUDE.md` to rules and a short current-state snapshot.
 
 ---
 
+## 2026-11-07 — deep clean of `integration` after the merge
+
+The October simplification's discipline applied to the merged tree (plan approved):
+418 → 369 tracked files, 65 MB → 39 MB, about 214,000 lines removed.
+1. `main`'s research-model comparison archives (18 MB), the live-research worker
+   runbook and team status (SQL kept; git history `origin/main@4dcc2f0`).
+2. The last two v14 runs (`20261013_072633`, `20261014_185045`).
+3. Dead CSS: 35 live-research / live-card / Ledger-tab classes and 5 more in
+   `styles/scan.css`. Computed style and box of all 4,201 elements in 44 page
+   states (EN/LT, 390/1280 px) identical before and after (History replay not
+   covered: it needs a signed-in build).
+4. `POST /api/scan/claim` + `lib/auth/claim.ts` (no caller since 2026-10-03; the
+   empty `scan_users` table stays in the database), 6 unused exports, Ledger
+   words in the LT enum map, two unused logos. `knip` clean.
+5. Python (vulture, hand-checked): `Store.unclassified`,
+   `oa.referenced_work_ids`, `fulltext.pdf_available`, `Usage.report`, 6 alias
+   properties and 15 alias names in `meta_effects`.
+6. Stale text: comments naming `/tester`, `components/scan/`, the claim route;
+   CI `dashboard.yml` → `app.yml`; README.
+Kept on purpose: `docs/history/v14-*`, the v2 runs, the collaborator deploy-hook
+job, `vocab/` payload keys (D2b, next prompt bump), `scripts/experiments/`.
+
 ## 2026-11-07 — the big merge: origin/main into `integration` (not pushed)
 
 Plan: `~/.claude/plans/humble-booping-hamster.md` (approved). One `git merge
