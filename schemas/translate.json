@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Display translation (Lithuanian)",
+  "description": "One Lithuanian rendering per input text, same order. Display only: it never feeds scoring, dose bands, enums or any stored analysis.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["translations"],
+  "properties": {
+    "translations": {
+      "type": "array",
+      "maxItems": 24,
+      "items": {"type": "string", "maxLength": 12000}
+    }
+  }
+}

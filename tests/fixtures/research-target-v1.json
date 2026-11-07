@@ -1,0 +1,544 @@
+{
+  "_comment": "Shared TS/Python fixture. `analysis` is a saved scan; `target` is EXACTLY what lib/scan-research/target.ts builds from it (asserted by tests/scan-research-target-sql.test.ts); the Python worker contract (tests/test_pc_research_worker.py) is run on these same targets. `daily_known`: the scan recorded an explicit servings_per_day or daily regimen. `blend`: the scan itself says there is more than one active.",
+  "cases": [
+    {
+      "name": "photo_single_servings_unknown",
+      "daily_known": false,
+      "blend": false,
+      "analysis": {
+        "schema_version": "ScanAnalysisV1",
+        "status": "scored",
+        "source": "photo",
+        "label": {
+          "brand": "Acme",
+          "product_name": "Magnesium Glycinate",
+          "ingredient_vocab_id": "magnesium",
+          "ingredient_label_text": "Magnesium glycinate",
+          "form_vocab_id": "magnesium_glycinate",
+          "compound_dose_mg": 200,
+          "printed_elemental_dose_mg": null,
+          "dose_unit_as_printed": "mg",
+          "servings_per_day": null,
+          "is_multi_ingredient": false,
+          "other_actives": [],
+          "actives": [
+            {
+              "name": "Magnesium (as magnesium glycinate)",
+              "compound_dose_mg": 200,
+              "printed_elemental_dose_mg": null,
+              "dose_unit_as_printed": "mg",
+              "form_text": "glycinate"
+            }
+          ]
+        },
+        "product": {
+          "elemental_dose_mg": {
+            "low": 28.192,
+            "high": 28.192,
+            "basis": "table"
+          },
+          "scored_dose_mg": 28.192,
+          "scored_dose_basis": "per_serving"
+        }
+      },
+      "target": {
+        "version": "ResearchJobV1",
+        "fact_basis": "label",
+        "product": {
+          "brand": "Acme",
+          "product_name": "Magnesium Glycinate"
+        },
+        "ingredient": {
+          "vocab_id": "magnesium",
+          "label": "Magnesium glycinate"
+        },
+        "form": {
+          "vocab_id": "magnesium_glycinate",
+          "label": null
+        },
+        "dose": {
+          "compound_per_serving_mg": 200,
+          "printed_elemental_per_serving_mg": null,
+          "unit_as_printed": "mg",
+          "elemental_per_serving_mg": {
+            "low": 28.192,
+            "high": 28.192,
+            "basis": "table"
+          },
+          "daily_elemental_mg": null
+        },
+        "servings_per_day": null,
+        "is_multi_ingredient": false,
+        "actives": [
+          {
+            "name": "Magnesium (as magnesium glycinate)",
+            "compound_per_serving_mg": 200,
+            "printed_elemental_per_serving_mg": null,
+            "unit_as_printed": "mg",
+            "form_text": "glycinate"
+          }
+        ],
+        "other_actives": [],
+        "handling": {
+          "text_fields_are_untrusted_data": true,
+          "component_evidence_is_not_blend_efficacy": true
+        }
+      }
+    },
+    {
+      "name": "photo_blend_servings_unknown",
+      "daily_known": false,
+      "blend": true,
+      "analysis": {
+        "schema_version": "ScanAnalysisV1",
+        "status": "scored",
+        "source": "photo",
+        "label": {
+          "brand": "Acme",
+          "product_name": "Sleep Stack",
+          "ingredient_vocab_id": "magnesium",
+          "ingredient_label_text": "Magnesium",
+          "form_vocab_id": null,
+          "compound_dose_mg": 200,
+          "printed_elemental_dose_mg": 100,
+          "dose_unit_as_printed": "mg",
+          "servings_per_day": null,
+          "is_multi_ingredient": true,
+          "other_actives": [
+            "Melatonin"
+          ],
+          "actives": [
+            {
+              "name": "Magnesium",
+              "compound_dose_mg": 200,
+              "printed_elemental_dose_mg": 100,
+              "dose_unit_as_printed": "mg",
+              "form_text": null
+            },
+            {
+              "name": "Melatonin",
+              "compound_dose_mg": 0.5,
+              "printed_elemental_dose_mg": null,
+              "dose_unit_as_printed": "mg",
+              "form_text": null
+            }
+          ]
+        }
+      },
+      "target": {
+        "version": "ResearchJobV1",
+        "fact_basis": "label",
+        "product": {
+          "brand": "Acme",
+          "product_name": "Sleep Stack"
+        },
+        "ingredient": {
+          "vocab_id": "magnesium",
+          "label": "Magnesium"
+        },
+        "form": {
+          "vocab_id": null,
+          "label": null
+        },
+        "dose": {
+          "compound_per_serving_mg": 200,
+          "printed_elemental_per_serving_mg": 100,
+          "unit_as_printed": "mg",
+          "elemental_per_serving_mg": null,
+          "daily_elemental_mg": null
+        },
+        "servings_per_day": null,
+        "is_multi_ingredient": true,
+        "actives": [
+          {
+            "name": "Magnesium",
+            "compound_per_serving_mg": 200,
+            "printed_elemental_per_serving_mg": 100,
+            "unit_as_printed": "mg",
+            "form_text": null
+          },
+          {
+            "name": "Melatonin",
+            "compound_per_serving_mg": 0.5,
+            "printed_elemental_per_serving_mg": null,
+            "unit_as_printed": "mg",
+            "form_text": null
+          }
+        ],
+        "other_actives": [
+          "Melatonin"
+        ],
+        "handling": {
+          "text_fields_are_untrusted_data": true,
+          "component_evidence_is_not_blend_efficacy": true
+        }
+      }
+    },
+    {
+      "name": "photo_single_servings_explicit",
+      "daily_known": true,
+      "blend": false,
+      "analysis": {
+        "schema_version": "ScanAnalysisV1",
+        "status": "scored",
+        "source": "photo",
+        "label": {
+          "ingredient_vocab_id": "magnesium",
+          "ingredient_label_text": "Magnesium",
+          "form_vocab_id": null,
+          "compound_dose_mg": 200,
+          "printed_elemental_dose_mg": null,
+          "dose_unit_as_printed": "mg",
+          "servings_per_day": 2,
+          "is_multi_ingredient": false,
+          "other_actives": [],
+          "actives": [
+            {
+              "name": "Magnesium",
+              "compound_dose_mg": 200,
+              "printed_elemental_dose_mg": null,
+              "dose_unit_as_printed": "mg",
+              "form_text": null
+            }
+          ]
+        }
+      },
+      "target": {
+        "version": "ResearchJobV1",
+        "fact_basis": "label",
+        "product": {
+          "brand": null,
+          "product_name": null
+        },
+        "ingredient": {
+          "vocab_id": "magnesium",
+          "label": "Magnesium"
+        },
+        "form": {
+          "vocab_id": null,
+          "label": null
+        },
+        "dose": {
+          "compound_per_serving_mg": 200,
+          "printed_elemental_per_serving_mg": null,
+          "unit_as_printed": "mg",
+          "elemental_per_serving_mg": null,
+          "daily_elemental_mg": null
+        },
+        "servings_per_day": 2,
+        "is_multi_ingredient": false,
+        "actives": [
+          {
+            "name": "Magnesium",
+            "compound_per_serving_mg": 200,
+            "printed_elemental_per_serving_mg": null,
+            "unit_as_printed": "mg",
+            "form_text": null
+          }
+        ],
+        "other_actives": [],
+        "handling": {
+          "text_fields_are_untrusted_data": true,
+          "component_evidence_is_not_blend_efficacy": true
+        }
+      }
+    },
+    {
+      "name": "photo_single_daily_regimen_scored",
+      "daily_known": true,
+      "blend": false,
+      "analysis": {
+        "schema_version": "ScanAnalysisV1",
+        "status": "scored",
+        "source": "photo",
+        "label": {
+          "ingredient_vocab_id": "magnesium",
+          "ingredient_label_text": "Magnesium",
+          "form_vocab_id": null,
+          "compound_dose_mg": 200,
+          "printed_elemental_dose_mg": null,
+          "dose_unit_as_printed": "mg",
+          "servings_per_day": null,
+          "is_multi_ingredient": false,
+          "other_actives": [],
+          "actives": [
+            {
+              "name": "Magnesium",
+              "compound_dose_mg": 200,
+              "printed_elemental_dose_mg": null,
+              "dose_unit_as_printed": "mg",
+              "form_text": null
+            }
+          ]
+        },
+        "product": {
+          "elemental_dose_mg": {
+            "low": 56,
+            "high": 56,
+            "basis": "table"
+          },
+          "scored_dose_mg": 56,
+          "scored_dose_basis": "daily"
+        }
+      },
+      "target": {
+        "version": "ResearchJobV1",
+        "fact_basis": "label",
+        "product": {
+          "brand": null,
+          "product_name": null
+        },
+        "ingredient": {
+          "vocab_id": "magnesium",
+          "label": "Magnesium"
+        },
+        "form": {
+          "vocab_id": null,
+          "label": null
+        },
+        "dose": {
+          "compound_per_serving_mg": 200,
+          "printed_elemental_per_serving_mg": null,
+          "unit_as_printed": "mg",
+          "elemental_per_serving_mg": {
+            "low": 56,
+            "high": 56,
+            "basis": "table"
+          },
+          "daily_elemental_mg": 56
+        },
+        "servings_per_day": null,
+        "is_multi_ingredient": false,
+        "actives": [
+          {
+            "name": "Magnesium",
+            "compound_per_serving_mg": 200,
+            "printed_elemental_per_serving_mg": null,
+            "unit_as_printed": "mg",
+            "form_text": null
+          }
+        ],
+        "other_actives": [],
+        "handling": {
+          "text_fields_are_untrusted_data": true,
+          "component_evidence_is_not_blend_efficacy": true
+        }
+      }
+    },
+    {
+      "name": "photo_multi_flag_unknown_one_active",
+      "daily_known": false,
+      "blend": false,
+      "analysis": {
+        "schema_version": "ScanAnalysisV1",
+        "status": "scored",
+        "source": "photo",
+        "label": {
+          "ingredient_vocab_id": "magnesium",
+          "ingredient_label_text": "Magnesium",
+          "form_vocab_id": null,
+          "compound_dose_mg": 200,
+          "printed_elemental_dose_mg": null,
+          "dose_unit_as_printed": "mg",
+          "servings_per_day": null,
+          "is_multi_ingredient": null,
+          "other_actives": null,
+          "actives": [
+            {
+              "name": "Magnesium",
+              "compound_dose_mg": 200,
+              "printed_elemental_dose_mg": null,
+              "dose_unit_as_printed": "mg",
+              "form_text": null
+            }
+          ]
+        }
+      },
+      "target": {
+        "version": "ResearchJobV1",
+        "fact_basis": "label",
+        "product": {
+          "brand": null,
+          "product_name": null
+        },
+        "ingredient": {
+          "vocab_id": "magnesium",
+          "label": "Magnesium"
+        },
+        "form": {
+          "vocab_id": null,
+          "label": null
+        },
+        "dose": {
+          "compound_per_serving_mg": 200,
+          "printed_elemental_per_serving_mg": null,
+          "unit_as_printed": "mg",
+          "elemental_per_serving_mg": null,
+          "daily_elemental_mg": null
+        },
+        "servings_per_day": null,
+        "is_multi_ingredient": null,
+        "actives": [
+          {
+            "name": "Magnesium",
+            "compound_per_serving_mg": 200,
+            "printed_elemental_per_serving_mg": null,
+            "unit_as_printed": "mg",
+            "form_text": null
+          }
+        ],
+        "other_actives": null,
+        "handling": {
+          "text_fields_are_untrusted_data": true,
+          "component_evidence_is_not_blend_efficacy": true
+        }
+      }
+    },
+    {
+      "name": "photo_other_actives_listed_but_flag_false",
+      "daily_known": false,
+      "blend": true,
+      "analysis": {
+        "schema_version": "ScanAnalysisV1",
+        "status": "scored",
+        "source": "photo",
+        "label": {
+          "ingredient_vocab_id": "magnesium",
+          "ingredient_label_text": "Magnesium",
+          "form_vocab_id": null,
+          "compound_dose_mg": 200,
+          "printed_elemental_dose_mg": null,
+          "dose_unit_as_printed": "mg",
+          "servings_per_day": null,
+          "is_multi_ingredient": false,
+          "other_actives": [
+            "Vitamin B6"
+          ],
+          "actives": [
+            {
+              "name": "Magnesium",
+              "compound_dose_mg": 200,
+              "printed_elemental_dose_mg": null,
+              "dose_unit_as_printed": "mg",
+              "form_text": null
+            }
+          ]
+        }
+      },
+      "target": {
+        "version": "ResearchJobV1",
+        "fact_basis": "label",
+        "product": {
+          "brand": null,
+          "product_name": null
+        },
+        "ingredient": {
+          "vocab_id": "magnesium",
+          "label": "Magnesium"
+        },
+        "form": {
+          "vocab_id": null,
+          "label": null
+        },
+        "dose": {
+          "compound_per_serving_mg": 200,
+          "printed_elemental_per_serving_mg": null,
+          "unit_as_printed": "mg",
+          "elemental_per_serving_mg": null,
+          "daily_elemental_mg": null
+        },
+        "servings_per_day": null,
+        "is_multi_ingredient": false,
+        "actives": [
+          {
+            "name": "Magnesium",
+            "compound_per_serving_mg": 200,
+            "printed_elemental_per_serving_mg": null,
+            "unit_as_printed": "mg",
+            "form_text": null
+          }
+        ],
+        "other_actives": [
+          "Vitamin B6"
+        ],
+        "handling": {
+          "text_fields_are_untrusted_data": true,
+          "component_evidence_is_not_blend_efficacy": true
+        }
+      }
+    },
+    {
+      "name": "manual_entry_servings_unknown",
+      "daily_known": false,
+      "blend": false,
+      "analysis": {
+        "schema_version": "ScanAnalysisV1",
+        "status": "scored",
+        "source": "manual",
+        "input": {
+          "basis": "user_input",
+          "ingredient": "magnesium",
+          "ingredient_label": "Magnesium",
+          "form": "magnesium_glycinate",
+          "form_label": "Magnesium glycinate",
+          "dose_per_serving": {
+            "value": 400,
+            "unit": "mg",
+            "mg": 400
+          },
+          "servings_per_day": null
+        },
+        "product": {
+          "ingredient": "magnesium",
+          "form": "magnesium_glycinate",
+          "compound_dose_mg": 400,
+          "elemental_dose_mg": {
+            "low": 56,
+            "high": 56,
+            "basis": "table"
+          },
+          "servings_per_day": null,
+          "scored_dose_mg": 56,
+          "scored_dose_basis": "per_serving",
+          "is_multi_ingredient": false,
+          "other_actives": []
+        }
+      },
+      "target": {
+        "version": "ResearchJobV1",
+        "fact_basis": "user_input",
+        "product": {
+          "brand": null,
+          "product_name": null
+        },
+        "ingredient": {
+          "vocab_id": "magnesium",
+          "label": "Magnesium"
+        },
+        "form": {
+          "vocab_id": "magnesium_glycinate",
+          "label": "Magnesium glycinate"
+        },
+        "dose": {
+          "compound_per_serving_mg": 400,
+          "printed_elemental_per_serving_mg": null,
+          "unit_as_printed": "mg",
+          "elemental_per_serving_mg": {
+            "low": 56,
+            "high": 56,
+            "basis": "table"
+          },
+          "daily_elemental_mg": null
+        },
+        "servings_per_day": null,
+        "is_multi_ingredient": null,
+        "actives": null,
+        "other_actives": null,
+        "handling": {
+          "text_fields_are_untrusted_data": true,
+          "component_evidence_is_not_blend_efficacy": true
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,113 @@
+{
+ "about": "The ONE private validation run of the live-research-v0.3 candidate (2026-10-05, commit 17e3231, 19.5 s, requested effort medium): the model ran ONE WebSearch, opened NOTHING with WebFetch, cited no identifier and returned an audit whose every inventory is empty. The worker's guard and the server's check accepted it, BY DESIGN (an empty inventory has nothing to ground). It is NOT evidence that the citation fix works, and it is not a usable audit: the owner's criterion 6 ('at least one outcome with a non-empty inventory') failed, so the validation FAILED. This fixture keeps the returned search text and the audit verbatim (including the Haiku search summary's figures, which are NOT findings) so that the failure shape stays testable: the guard accepts it; the validation analysis must call it 'complete but empty; usability not shown' and must not pass it. Stripped: the tool_use_id, the job id and the lease token of the harness, and the brand from the product name. No model, no network.",
+ "stripped": [
+  "tool_use_id",
+  "job_id",
+  "lease_token",
+  "brand in audit.product"
+ ],
+ "run": {
+  "commit": "17e3231de56d61ef8bbc0c8943444bfe132a633c",
+  "prompt_version_at_run": "live-research-v0.3",
+  "effort_requested": "medium",
+  "tool_calls": {
+   "WebSearch": 1,
+   "WebFetch": 0
+  },
+  "returned_text_sha256": "572831b8920617d79fa5668b8f819054ee0c46bf6bf78971fca4b9e7173ee878",
+  "returned_text_bytes": 2223
+ },
+ "receipts": [
+  {
+   "tool": "WebSearch",
+   "kind": "request",
+   "returned_kind": "search_snippet",
+   "returned_text": "Web search results for query: \"vitamin D3 plus vitamin K2 combination randomized trial meta-analysis bone density\"\n\nLinks: [{\"title\":\"Issue 4, 2020\",\"url\":\"https://pubs.rsc.org/en/content/articlepdf/2013/mw/c9fo03063h\"},{\"title\":\"Issue 4, 2020\",\"url\":\"https://pubs.rsc.org/es/content/articlelanding/2020/fo/c9fo03063h\"},{\"title\":\"www.frontiersin.org\",\"url\":\"https://www.frontiersin.org/journals/public-health/articles/10.3389/fpubh.2022.979649/pdf\"},{\"title\":\"SYSTEMATIC REVIEW article\",\"url\":\"https://frontiersin.org/articles/10.3389/fpubh.2022.979649/full\"},{\"title\":\"examine.com\",\"url\":\"https://examine.com/summaries/study/g983b0/\"},{\"title\":\"pubmed.ncbi.nlm.nih.gov\",\"url\":\"https://pubmed.ncbi.nlm.nih.gov/11180916/\"},{\"title\":\"drmirkin.com\",\"url\":\"https://drmirkin.com/?p=9078\"},{\"title\":\"Claim analyzed\",\"url\":\"https://lenz.io/c/vitamin-k-vitamin-d-absorption-bone-health-81497963\"},{\"title\":\"Claim analyzed\",\"url\":\"https://lenz.io/c/81497963\"}]\n\nBased on the search results, here's what the research shows about vitamin D3 and vitamin K2 combination therapy for bone density:\n\n## Meta-Analysis Findings\n\nA comprehensive meta-analysis examined eight randomized controlled trials with a total of 971 subjects. The combination of vitamin K with vitamin D significantly increased total bone mineral density (BMD), with a pooled effect size of 0.316. \n\nThe analysis also showed a significant decrease in undercarboxylated osteocalcin when K2 or vitamin K (not specified) was used at doses less than 500 μg per day in combination with vitamin D.\n\n## Effectiveness of K2 vs. K1\n\nThe combination of vitamin K and D can significantly increase total BMD, with a more favorable effect expected when vitamin K2 is used.\n\n## Mechanism of Action\n\nVitamin D3 enhances calcium absorption from the intestines, while vitamin K2 activates osteocalcin, a protein that directs calcium into bone tissue rather than soft tissues.\n\n## Overall Conclusion\n\nOverall, moderate-quality evidence indicated that a combination of vitamin D and vitamin K can improve bone mineral density, with K2 appearing to be better than K1 for this purpose.\n\n\nREMINDER: You MUST include the sources above in your response to the user using markdown hyperlinks."
+  }
+ ],
+ "audit": {
+  "meta": {
+   "run_at": "2026-10-05",
+   "model": "claude-sonnet-5-5",
+   "prompt": "live-research-v0.3",
+   "note": "Experimental, unvalidated, unreviewed model audit. Not human-verified. Page access was through web-tool summaries and search snippets only; no original paper was opened."
+  },
+  "product": "VITAMINS D3 4000 IU + K2",
+  "ingredient": "Vitamin D3 and Vitamin K2 (combination)",
+  "form": "Vitamin D3 (cholecalciferol); vitamin K2 form not stated on the label data",
+  "daily_dose": "unknown",
+  "dose_note": "The label data gives the name \"4000 IU\" for vitamin D3, but the number of servings per day was not supplied, so the daily amount is unknown. The vitamin K2 amount and form (for example MK-4 or MK-7) were not supplied. No elemental or compound mass was printed. Per serving, the name suggests 4000 IU of D3, but that is per serving only.",
+  "for_whom": {
+   "reasonable": "Not determined from verified sources in this run.",
+   "not_shown": "Nobody was confirmed as benefiting from this exact D3 plus K2 product in this run.",
+   "source": "No guideline body was confirmed in this run, so none is quoted."
+  },
+  "outcomes": [
+   {
+    "name": "Whole D3 + K2 product",
+    "population": "Not specified (no population supplied)",
+    "sentence": "No study of this exact D3 plus K2 combination at these doses was confirmed in this run, so nothing can be said about it.",
+    "ledger": {
+     "effectPoints": "unclear",
+     "effect_basis": "Only one search snippet was seen, describing a meta-analysis of vitamin K plus D on bone density. It printed no identifier and was not opened, so it is not cited. The exact product combination was not confirmed as tested.",
+     "bodyIsRct": false,
+     "checklist": {
+      "risk_of_bias": "unknown",
+      "consistency": "unknown",
+      "precision": "unknown",
+      "directness": "unknown",
+      "publication_bias": "unknown"
+     },
+     "gates": {
+      "rctCount": 0,
+      "largestRctN": 0,
+      "longestRctWeeks": 0,
+      "chronicOutcome": true,
+      "surrogate": false,
+      "allPositiveIndustryOrOneLab": false
+     },
+     "formFit": "unknown",
+     "doseFit": "unknown",
+     "effective_daily_range": "unknown"
+    },
+    "detail": {
+     "effect": {
+      "found": "No verified study of this exact combination was found.",
+      "missing": "Trials of this product, or of D3 4000 IU with K2 at a known dose, with a confirmed identifier.",
+      "move": "—"
+     },
+     "evidence": {
+      "found": "Nothing could be confirmed. This is a case of no verified evidence, not evidence of no benefit.",
+      "missing": "Opened and verified papers.",
+      "move": "—"
+     },
+     "form": {
+      "found": "Vitamin D3 is the form named. The K2 form is unknown.",
+      "missing": "K2 form (MK-4 or MK-7).",
+      "move": "—"
+     },
+     "dose": {
+      "found": "Name says 4000 IU D3 per serving. Servings per day and K2 amount are unknown.",
+      "missing": "Daily D3 and K2 amounts.",
+      "move": "—"
+     }
+    },
+    "inventory": [],
+    "absolute_effect": "Not available.",
+    "clinically_meaningful": "unknown. No threshold was applied because no verified effect was found.",
+    "strongest_study": "None confirmed in this run.",
+    "strongest_doubt": "A search snippet mentioned a meta-analysis of vitamin K plus D on bone density, but it was not opened and no identifier was printed, so it could not be used.",
+    "study_that_would_move_this": "A randomized trial of D3 near 4000 IU plus K2 at a stated dose, with a clear outcome such as bone density or fractures."
+   }
+  ],
+  "searches_run": [
+   "vitamin D3 plus vitamin K2 combination randomized trial meta-analysis bone density"
+  ],
+  "could_not_access": [
+   "A meta-analysis of vitamin K plus D on bone density (frontiersin.org and rsc.org links): seen only as a search snippet, no identifier printed, not opened, so not cited.",
+   "No registry (PubMed, ClinicalTrials.gov) pages were opened in this run."
+  ],
+  "self_confidence": "low",
+  "confidence_note": "Only one search was run and no source was opened. No study identifier was printed in a result, so no study is cited. The audit is a placeholder finding that the exact combination was not confirmed as tested. It is not a finding of no effect."
+ }
+}

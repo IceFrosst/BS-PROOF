@@ -1,0 +1,312 @@
+{
+  "meta": {
+    "run_at": "2026-10-03",
+    "model": "claude-opus-5-5",
+    "prompt": "audit-v0.4",
+    "note": "This is an experimental benchmark run, not a human-verified medical assessment. No human has checked it. Several key sources (Cochrane zinc 2024 full text, Jolliffe 2025 full text, Maggini 2012 full text) blocked automated access, so some figures come from abstracts or search snippets. The access field on each source records this."
+  },
+  "product": "Vitamin D3 25 mcg + vitamin C 500 mg + zinc 10 mg (as gluconate), daily combination",
+  "ingredient": "vitamin D3 + vitamin C + zinc",
+  "form": "Vitamin D3 plus vitamin C (chemical form not stated) plus zinc gluconate, as one fixed combination",
+  "daily_dose": "25 mcg (1000 IU) D3 + 500 mg vitamin C + 10 mg elemental zinc per day; serving count unknown",
+  "dose_note": "25 mcg of vitamin D3 equals 1000 IU. The label gives zinc as 10 mg elemental zinc. Zinc gluconate is about 14% zinc, so that means roughly 70 mg of the gluconate compound. Every comparison here uses the 10 mg elemental figure. Vitamin C is 500 mg, and its chemical form (ascorbic acid or a salt) is not stated. The daily totals were supplied for this test and were not read from a label photo, and the number of servings is unknown. We assume the full amounts are taken every day. All three amounts are below common upper intake limits: 4000 IU for vitamin D, 2000 mg for vitamin C and 40 mg for zinc. The one combination trial we found (Maggini 2012) used 1000 mg vitamin C plus 10 mg zinc with no vitamin D. It treated colds that had already started, so its dose does not match this product's prevention use.",
+  "for_whom": {
+    "reasonable": "Nobody has a cold-prevention reason backed by a trial of this exact mix. People with a low intake or a diagnosed deficiency of vitamin D, vitamin C or zinc have a reason to correct it, but this audit did not test that.",
+    "not_shown": "Cold prevention by this D3 + C + zinc combination has not been shown for anyone. We found no trial of it in healthy adults, older adults, athletes or people with a deficiency.",
+    "source": "No guideline body takes a position on this exact combination that we found. The Cochrane review of vitamin C (CD000980.pub4) found that regular vitamin C did not reduce colds in the general population. The Cochrane review of zinc (CD014914.pub2, 2024) found too little evidence to recommend zinc for preventing colds. We did not open NIH ODS or EFSA documents."
+  },
+  "outcomes": [
+    {
+      "name": "Fewer colds, this exact mix",
+      "population": "Adults, general, taking D3 + C + zinc together daily",
+      "sentence": "Nobody has tested this exact D3, C and zinc mix for preventing colds. We found 0 trials, so its effect on how often you catch a cold is unknown.",
+      "ledger": {
+        "effectPoints": "unclear",
+        "effect_basis": "No randomised or non-randomised trial of vitamin D3 + vitamin C + zinc taken together for preventing the common cold was found. That is a finding of no evidence, not evidence of no benefit. The closest registered trial, HELP-COVID-19 (NCT04335084, 254 enrolled health workers), gave vitamin C, vitamin D and zinc to both arms and randomised only hydroxychloroquine, so it cannot test the supplements. It also measured COVID-19 symptoms, not colds, and no results are posted. Two other registered trials (NCT01484756 and NCT01971112) tested multi-nutrient tablets that are not this combination: one had no vitamin D, and the other added many other vitamins and minerals. Neither has posted results. Single-nutrient evidence is kept in a separate row and is not averaged into this one, as requested.",
+        "bodyIsRct": false,
+        "checklist": {
+          "risk_of_bias": "unknown",
+          "consistency": "unknown",
+          "precision": "unknown",
+          "directness": "unknown",
+          "publication_bias": "unknown"
+        },
+        "gates": {
+          "rctCount": 0,
+          "largestRctN": 0,
+          "longestRctWeeks": 0,
+          "chronicOutcome": true,
+          "surrogate": false,
+          "allPositiveIndustryOrOneLab": false
+        },
+        "formFit": "unknown",
+        "doseFit": "unknown",
+        "effective_daily_range": "No dose of this combination has been tested for preventing colds, so no effective range exists."
+      },
+      "detail": {
+        "effect": {
+          "found": "No trial measured how often people catch colds while taking vitamin D3, vitamin C and zinc together.",
+          "missing": "Any measured effect of the combination on cold risk, cold count or days ill.",
+          "move": "A placebo-controlled trial of this exact mix, counting colds over at least one winter."
+        },
+        "evidence": {
+          "found": "Searches found 0 trials of this three-nutrient mix for cold prevention. One COVID-19 trial gave all three nutrients to both groups, so it cannot show any effect of the nutrients.",
+          "missing": "Any randomised trial in which only one group gets D3 + C + zinc.",
+          "move": "A registered, independently funded randomised trial with published results."
+        },
+        "form": {
+          "found": "No study used vitamin D3 + vitamin C + zinc gluconate as one product for cold prevention.",
+          "missing": "Any test of this form.",
+          "move": "A trial using the same three nutrients in the same forms."
+        },
+        "dose": {
+          "found": "No dose of this combination has been tested for colds.",
+          "missing": "Any tested dose to compare with 25 mcg D3, 500 mg vitamin C and 10 mg zinc.",
+          "move": "A trial at or near these amounts, given daily."
+        }
+      },
+      "inventory": [],
+      "absolute_effect": "Not available. No trial of this combination reported cold incidence, so no risk difference or NNT (number needed to treat) can be calculated.",
+      "clinically_meaningful": "unknown. Nobody has tested the combination, and we found no agreed minimum important reduction (MCID) for cold incidence.",
+      "strongest_study": "None exists for this combination. The nearest record, HELP-COVID-19 (NCT04335084), gave all three nutrients to both arms, so it cannot answer this question.",
+      "strongest_doubt": "Without any trial, a combined effect cannot be assumed from the single nutrients. Taken alone, each one showed little or no effect on cold risk in large reviews.",
+      "study_that_would_move_this": "A placebo-controlled randomised trial of daily D3 25 mcg + vitamin C 500 mg + zinc 10 mg in a few hundred to a few thousand adults. It would count confirmed colds over at least one full winter, with preregistered outcomes and independent funding.",
+      "subgroup_hypothesis_only": false,
+      "studied_in": {
+        "sex": "unknown",
+        "age_min": null,
+        "age_max": null,
+        "age_note": "No trial exists, so nobody was enrolled.",
+        "ethnicity": "not reported",
+        "confidence": "unknown"
+      },
+      "why_positive_signal_is_unreliable": "There is no positive signal for the combination. Claims that the three nutrients work better together rest on lab and immune-function reasoning, not on trials counting colds."
+    },
+    {
+      "name": "Fewer colds, each nutrient alone",
+      "population": "Adults, single nutrient (D, C or zinc), not this mix",
+      "sentence": "Taken alone, each nutrient barely changed cold risk in big reviews: vitamin C RR 0.97, zinc RR 0.93, vitamin D OR 0.94. None were tested as this mix.",
+      "ledger": {
+        "effectPoints": "0",
+        "effect_basis": "This row is context only. It covers single nutrients, not this product, and is not an average applied to the combination. Vitamin C: the Cochrane review (10.1002/14651858.CD000980.pub4) pooled 29 trial comparisons with 11,306 participants and found a cold incidence RR of 0.97 (95% CI 0.94 to 1.00). An RR (risk ratio) under 1 means fewer colds, and this interval reaches 1, which means no difference. Zinc: the 2024 Cochrane review (10.1002/14651858.CD014914.pub2) found RR 0.93 (95% CI 0.85 to 1.01; I2 = 20%, so the trials mostly agreed; 9 studies, 1449 participants; low certainty) for developing a cold. Vitamin D: the 2025 meta-analysis by Jolliffe and colleagues (10.1016/S2213-8587(24)00348-6) of 40 studies with 61,589 participants found OR 0.94 (95% CI 0.88 to 1.00, p=0.057) for any acute respiratory infection. It found no effect modification by age, baseline vitamin D status, dosing frequency or dose size. At this product's exact dose, Rees 2013 (1000 IU/day, 759 adults) found a winter URTI (upper respiratory tract infection) rate ratio of 0.93 (95% CI 0.79 to 1.09). One network meta-analysis (Zhu 2025, 10.1016/j.eclinm.2025.103479) reported zinc RR 0.69 (95% CI 0.51 to 0.94; low certainty) and moderate-dose vitamin C RR 0.93 (95% CI 0.87 to 1.00) for URTI or common cold. Vitamin D was not statistically significant. That review found small-study effects (a sign that small positive trials were more likely to be published), which weakens the zinc signal. Overall, the rating is 0: no meaningful preventive effect has been shown for any single nutrient in general adults. The rctCount below is an approximation: 29 vitamin C comparisons, 9 zinc trials and 40 vitamin D studies, which are not fully separate trials.",
+        "bodyIsRct": true,
+        "checklist": {
+          "risk_of_bias": "supported",
+          "consistency": "supported",
+          "precision": "supported",
+          "directness": "concern",
+          "publication_bias": "supported"
+        },
+        "gates": {
+          "rctCount": 78,
+          "largestRctN": 15804,
+          "longestRctWeeks": 74,
+          "chronicOutcome": true,
+          "surrogate": false,
+          "allPositiveIndustryOrOneLab": false
+        },
+        "formFit": "2",
+        "doseFit": "unknown",
+        "effective_daily_range": "No single-nutrient dose has been shown to prevent colds in general adults. Tested ranges include vitamin C 200 mg/day or more in the Cochrane review, vitamin D 400 to 4000 IU/day and more, with 1000 IU tested directly in Rees 2013, and various zinc doses that we could not capture."
+      },
+      "detail": {
+        "effect": {
+          "found": "Each nutrient alone left cold risk almost unchanged: vitamin C RR 0.97 (95% CI 0.94 to 1.00), zinc RR 0.93 (95% CI 0.85 to 1.01), vitamin D OR 0.94 (95% CI 0.88 to 1.00).",
+          "missing": "Whether the three together act differently from each alone. Nobody has tested that.",
+          "move": "A factorial trial (one that tests each nutrient alone and in combination) would show whether the mix adds anything."
+        },
+        "evidence": {
+          "found": "Large reviews: 11,306 people for vitamin C, 1449 for zinc prevention and 61,589 for vitamin D. One trial gave 1000 IU vitamin D, this product's exact dose, to 759 adults and found no change.",
+          "missing": "The zinc prevention evidence is low certainty, and we only saw a search snippet of that review.",
+          "move": "A larger independent zinc prevention trial would settle the zinc part."
+        },
+        "form": {
+          "found": "Trials used the same nutrients one at a time. The zinc salts and vitamin C forms varied.",
+          "missing": "Zinc gluconate at 10 mg as a daily preventive, combined with the other two.",
+          "move": "Trials reporting the zinc salt and elemental dose used."
+        },
+        "dose": {
+          "found": "500 mg vitamin C falls inside the tested range of 200 mg/day or more. 1000 IU vitamin D was tested directly and showed no effect.",
+          "missing": "The zinc doses in the prevention trials, which we could not read.",
+          "move": "Access to the Cochrane zinc full text would show whether 10 mg was tested."
+        }
+      },
+      "inventory": [
+        {
+          "id": "10.1002/14651858.CD000980.pub4",
+          "year": 2013,
+          "design": "sr_ma",
+          "n": 11306,
+          "direction": "none",
+          "access": "abstract",
+          "funding": "independent",
+          "note": "Cochrane review, vitamin C alone. Regular supplementation did not change cold incidence in the general population: RR 0.97 (95% CI 0.94 to 1.00), 29 comparisons. Colds were 8% (3% to 12%) shorter in adults. In 5 trials with 598 people under heavy physical stress, the risk of colds was halved."
+        },
+        {
+          "id": "10.1002/14651858.CD014914.pub2",
+          "year": 2024,
+          "design": "sr_ma",
+          "n": 1449,
+          "direction": "none",
+          "access": "snippet",
+          "funding": "independent",
+          "note": "Cochrane review, zinc alone. Risk of developing a cold: RR 0.93 (95% CI 0.85 to 1.01), I2 = 20%, 9 studies, low certainty. The full text was blocked, so the doses could not be read."
+        },
+        {
+          "id": "10.1016/S2213-8587(24)00348-6",
+          "year": 2025,
+          "design": "sr_ma",
+          "n": 61589,
+          "direction": "none",
+          "access": "abstract",
+          "funding": "unknown",
+          "note": "Jolliffe et al., vitamin D alone, 40 studies. Any acute respiratory infection: OR 0.94 (95% CI 0.88 to 1.00, p=0.057). No effect modification by age, baseline status, frequency or dose."
+        },
+        {
+          "id": "10.1093/cid/cit549",
+          "year": 2013,
+          "design": "rct",
+          "n": 759,
+          "direction": "none",
+          "access": "full_text",
+          "funding": "independent",
+          "pooled_in": "10.1016/S2213-8587(24)00348-6",
+          "note": "Rees et al. 1000 IU/day D3 (this product's dose) in adults aged 45 to 75, mean baseline 25(OH)D about 25 ng/mL. Winter URTI rate ratio 0.93 (95% CI 0.79 to 1.09). NCI funded. Inclusion in the 2025 review is assumed and was not checked."
+        },
+        {
+          "id": "10.1016/j.eclinm.2025.103479",
+          "year": 2025,
+          "design": "sr_ma",
+          "n": 101751,
+          "direction": "unclear",
+          "access": "full_text",
+          "funding": "independent",
+          "note": "Zhu et al. network meta-analysis, 107 RCTs, single nutrients only (no combination nodes). For URTI or common cold: zinc RR 0.69 (0.51 to 0.94; low certainty), vitamin C 501 to 1000 mg RR 0.93 (0.87 to 1.00); vitamin D not significant. Small-study effects found."
+        }
+      ],
+      "absolute_effect": "Absolute risk differences were not reported in the sources we opened, so no NNT can be given. Relative results: vitamin C RR 0.97 (95% CI 0.94 to 1.00); zinc RR 0.93 (95% CI 0.85 to 1.01); vitamin D OR 0.94 (95% CI 0.88 to 1.00); vitamin D 1000 IU rate ratio 0.93 (95% CI 0.79 to 1.09).",
+      "clinically_meaningful": "no. We found no MCID (minimum important difference) for cold incidence. The point estimates mean 3% to 7% relative reductions, and every confidence interval reaches or crosses 1, which means no difference. Neither Cochrane review called the preventive effect meaningful.",
+      "strongest_study": "The Cochrane vitamin C review (CD000980.pub4) pooled 29 comparisons with 11,306 participants and found a cold incidence RR of 0.97 (95% CI 0.94 to 1.00). For vitamin D, the 2025 meta-analysis of 61,589 participants found OR 0.94 (95% CI 0.88 to 1.00).",
+      "strongest_doubt": "These results are for single nutrients, so they cannot say what the combination does. The zinc prevention estimate is low certainty, and one network meta-analysis reported a larger zinc effect (RR 0.69) that small-study bias may explain.",
+      "study_that_would_move_this": "A large independent factorial trial that randomises adults to D3, vitamin C, zinc, all three or placebo, counting confirmed colds over a winter.",
+      "subgroup_hypothesis_only": false,
+      "studied_in": {
+        "sex": "mixed",
+        "sex_note": "Reviews pooled men and women.",
+        "age_min": null,
+        "age_max": null,
+        "age_note": "Reviews include children and adults; Rees 2013 enrolled ages 45 to 75.",
+        "ethnicity": "not reported",
+        "confidence": "inferred"
+      },
+      "why_positive_signal_is_unreliable": "The one positive zinc estimate (RR 0.69, low certainty) comes from a network meta-analysis whose authors found small-study effects. That pattern usually inflates benefit, so it supports the null from the larger Cochrane estimate. The vitamin C benefit in people under extreme physical stress applies only to that group and to vitamin C alone."
+    },
+    {
+      "name": "Easing a cold, C + zinc (no D)",
+      "population": "Adults who already have a cold; C + zinc only",
+      "sentence": "In 94 people with a cold, vitamin C 1000 mg plus zinc 10 mg (no D) eased a runny nose over 5 days, but only when 2 small trials were pooled.",
+      "ledger": {
+        "effectPoints": "unclear",
+        "effect_basis": "Maggini 2012 (10.1177/147323001204000104) reported two small pilot double-blind randomised placebo-controlled trials of vitamin C 1000 mg plus zinc 10 mg (Redoxon Double Action) in people with a common cold, given for 5 days. The trials had 30 and 64 people. In each trial alone, the shorter runny nose (rhinorrhoea, 9% to 27% shorter) was not statistically significant. Only the pooled analysis of 94 people was significant against placebo. This is treatment of a cold that has already started, not prevention. The product had no vitamin D and twice this product's vitamin C. We saw only the abstract text via search snippets, so effect sizes and CIs were not available. Both trials come from one report, and funding was not confirmed. The rating is unclear because the evidence is too small, too short and from too narrow a source to judge the effect size.",
+        "bodyIsRct": true,
+        "checklist": {
+          "risk_of_bias": "unknown",
+          "consistency": "concern",
+          "precision": "concern",
+          "directness": "concern",
+          "publication_bias": "unknown"
+        },
+        "gates": {
+          "rctCount": 2,
+          "largestRctN": 64,
+          "longestRctWeeks": 0.7,
+          "chronicOutcome": false,
+          "surrogate": false,
+          "allPositiveIndustryOrOneLab": true
+        },
+        "formFit": "1",
+        "doseFit": "2",
+        "effective_daily_range": "Only vitamin C 1000 mg + zinc 10 mg per day for 5 days was tested, in people who already had a cold."
+      },
+      "detail": {
+        "effect": {
+          "found": "Pooled over 2 trials of 94 people, vitamin C + zinc shortened runny nose more than placebo over 5 days. Neither trial showed this on its own.",
+          "missing": "Effect sizes with confidence intervals, total cold length, and any result for preventing colds.",
+          "move": "A larger treatment trial reporting cold length in days with confidence intervals."
+        },
+        "evidence": {
+          "found": "2 small pilot randomised trials (30 and 64 people), published together in 2012.",
+          "missing": "Independent replication and a confirmed funding source.",
+          "move": "A replication by a separate research group."
+        },
+        "form": {
+          "found": "Vitamin C 1000 mg plus zinc 10 mg, sold as Redoxon Double Action, with no vitamin D.",
+          "missing": "Vitamin D was not part of the tested product.",
+          "move": "A trial of the full D3 + C + zinc product."
+        },
+        "dose": {
+          "found": "Zinc 10 mg matches this product. Vitamin C was 1000 mg, twice this product's 500 mg.",
+          "missing": "Any test at 500 mg vitamin C, or with D3 added.",
+          "move": "A trial at this product's amounts."
+        }
+      },
+      "inventory": [
+        {
+          "id": "10.1177/147323001204000104",
+          "year": 2012,
+          "design": "rct",
+          "n": 94,
+          "direction": "unclear",
+          "access": "snippet",
+          "funding": "unknown",
+          "note": "Maggini, Beveridge, Suter. Two pilot RCTs (n=30 and n=64) of vitamin C 1000 mg + zinc 10 mg for 5 days in people with a common cold. Neither trial was significant alone; the pooled analysis favoured treatment for rhinorrhoea. No vitamin D. Treatment, not prevention. PMID 22429343."
+        }
+      ],
+      "absolute_effect": "Not derivable from what we could access. The abstract reports a 9% to 27% shorter runny nose in the separate trials (not significant) and a significant pooled difference without a stated size or CI in the snippet.",
+      "clinically_meaningful": "unknown. We found no MCID for runny-nose duration, and the size of the pooled effect was not available to us.",
+      "strongest_study": "Maggini 2012, the pooled analysis of 2 pilot double-blind placebo-controlled trials (94 people), vitamin C 1000 mg + zinc 10 mg for 5 days in people with a cold.",
+      "strongest_doubt": "The trials are tiny pilots, and the result reached significance only after pooling. Both come from one report about a branded product, the dose differs, and there is no vitamin D. They also treated colds rather than preventing them.",
+      "study_that_would_move_this": "An independent, preregistered randomised trial of several hundred adults with new colds, comparing this product's dose with placebo on cold length in days.",
+      "subgroup_hypothesis_only": false,
+      "studied_in": {
+        "sex": "unknown",
+        "age_min": null,
+        "age_max": null,
+        "age_note": "Ages not available in the abstract snippet we saw.",
+        "ethnicity": "not reported",
+        "confidence": "unknown"
+      }
+    }
+  ],
+  "searches_run": [
+    "randomized trial vitamin D vitamin C zinc combination prevention common cold respiratory infections (extended)",
+    "vitamin C zinc combination common cold randomized placebo-controlled trial Maggini",
+    "Cochrane vitamin C for preventing and treating the common cold Hemila Chalker regular supplementation",
+    "\"vitamin D\" \"vitamin C\" \"zinc\" combined supplement randomized trial upper respiratory tract infection incidence adults placebo (extended)",
+    "Comparative effectiveness of oral nutritional supplements in preventing respiratory tract infections among adults network meta-analysis 2025",
+    "randomized trial vitamin D3 zinc vitamin C prophylaxis COVID-19 healthcare workers prevention",
+    "Nault 2024 Cochrane zinc for prevention and treatment of the common cold prevention results",
+    "Redoxon vitamin C vitamin D zinc combination clinical trial respiratory infection prevention (extended)",
+    "Jolliffe 2021 vitamin D acute respiratory infection meta-analysis",
+    "CORONAVIT trial BMJ 2022 vitamin D 800 IU 3200 IU",
+    "Cochrane 2024 zinc prevention risk of developing a cold RR",
+    "HELP-COVID-19 NCT04335084 results",
+    "Rees 2013 vitamin D3 1000 IU URTI randomized trial",
+    "vitamin C plus zinc daily supplementation prevention respiratory infections randomized trial elderly",
+    "\"vitamin C, vitamin D and zinc\" supplementation randomized controlled trial prevention infection (extended)",
+    "Jolliffe 2025 Lancet Diabetes Endocrinology vitamin D ARI stratified aggregate data",
+    "ClinicalTrials.gov API records NCT04335084, NCT01484756, NCT01971112"
+  ],
+  "could_not_access": [
+    "Cochrane zinc review 2024 (CD014914.pub2) full text and abstract PDF returned HTTP 403. The prevention RR came only from a search snippet, and the zinc doses in the prevention trials could not be read.",
+    "Jolliffe 2025 Lancet Diabetes & Endocrinology full text returned 403. Figures came from the Penn State repository abstract.",
+    "Jolliffe 2021 full text (Birmingham repository) returned 403.",
+    "eClinicalMedicine network meta-analysis on ScienceDirect returned 403. The PMC version was used instead.",
+    "Maggini 2012 full text was not opened. Only abstract text via search snippets was seen, so effect sizes, CIs and funding are unconfirmed.",
+    "PubMed abstract pages were blocked by a cookie notice.",
+    "HELP-COVID-19 (NCT04335084) has no posted results. Both arms got vitamin C, D and zinc in any case.",
+    "NCT01484756 and NCT01971112 (multi-nutrient tablets) have no posted results, and no publication was located."
+  ],
+  "self_confidence": "medium",
+  "confidence_note": "I am fairly confident that no published trial tests vitamin D3 + vitamin C + zinc together for preventing colds. Several targeted searches found none, and the reviews we opened either excluded combination products or had no combination group. However, I could not search bibliographic databases directly, so a small trial in a non-indexed or non-English journal could have been missed. The single-nutrient figures for vitamin C and vitamin D come from opened abstracts or full text. The zinc prevention figure comes from a search snippet of the Cochrane abstract. The only combination evidence (Maggini 2012) is vitamin C + zinc without D, used to treat colds, and was seen only in snippets."
+}

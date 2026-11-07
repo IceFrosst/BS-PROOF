@@ -1,0 +1,432 @@
+{
+  "meta": {
+    "run_at": "2026-10-03",
+    "model": "claude-opus-5-5",
+    "prompt": "audit-v0.4",
+    "note": "Experimental benchmark run. No human has verified it. Several key papers were read only as abstracts (VITAL, ASCEND, Cochrane 2020, Gencer 2021, VITAL Rhythm, STRENGTH, UK Biobank cohort). The NEJM and PMC full texts of VITAL were blocked (403 and captcha). The Hu 2019 meta-analysis and the 2023 VITAL win-ratio paper were read in full through a summarising fetch tool, so table-level details may be compressed. The NIH ODS fact sheet page returned 403, so its position comes from a search snippet."
+  },
+  "product": "Fish oil omega-3, 1000 mg EPA+DHA per day (supplied regimen)",
+  "ingredient": "omega-3 (EPA+DHA)",
+  "form": "Fish oil providing EPA+DHA. Whether it is triglyceride or ethyl ester form is not stated. The EPA to DHA ratio is not stated.",
+  "daily_dose": "1000 mg EPA+DHA combined per day (not total oil mass)",
+  "dose_note": "This audit assumes 1000 mg/day of EPA plus DHA combined, as supplied. That is the active omega-3 amount, not the total fish oil weight. The number of capsules per serving is unknown, but the daily total was supplied, so no regimen was inferred. The big prevention trials, VITAL and ASCEND, gave one 1 g capsule a day containing 840 mg EPA+DHA. In VITAL that was 460 mg EPA and 380 mg DHA, as the prescription ethyl ester Omacor. So this product gives about 160 mg/day more EPA+DHA than the trials that tested and found no benefit. REDUCE-IT and STRENGTH gave 4 g/day of prescription drugs. That is 4 times this product's dose, and in REDUCE-IT it was purified EPA only. Those results do not transfer to this product.",
+  "for_whom": {
+    "reasonable": "Nobody has been shown to avoid a first heart attack or stroke by taking 1 g/day fish oil. Large trials in people over 50 and in people with diabetes found no clear benefit. Someone who eats little fish has, at most, an unconfirmed subgroup signal.",
+    "not_shown": "Adults without heart disease, including people with diabetes: 840 mg/day EPA+DHA was tested in 41,351 people for 5 to 7 years with no clear drop in major heart events. Adults under 50 have never been tested.",
+    "source": "AHA Science Advisory (Siscovick et al., Circulation 2017), as reported by TCTMD: 'Fish oil is not recommended for the prevention of cardiovascular disease in patients with diabetes, nor is it recommended for individuals at high cardiovascular risk.' A search snippet of the NIH ODS fact sheet says VITAL and ASCEND did not show heart benefits. Cochrane CD003177.pub5 (2020) found little or no effect on cardiovascular events."
+  },
+  "outcomes": [
+    {
+      "name": "Heart attack and stroke prevention",
+      "population": "Adults 50+ without heart disease (general)",
+      "sentence": "In 25,871 adults over 50 with no heart disease, 1 g/day fish oil for 5.3 years did not cut heart attacks, strokes or heart deaths (HR 0.92).",
+      "ledger": {
+        "effectPoints": "0",
+        "effect_basis": "VITAL (10.1056/NEJMoa1811403) is the only large trial in a general population that was not selected for high risk. People took 840 mg/day EPA+DHA or placebo for a median 5.3 years. A major cardiovascular event occurred in 386 people on omega-3 and 419 on placebo, HR 0.92 (95% CI 0.80 to 1.06). There was also no difference in cardiovascular or all-cause death. Heart attack alone was lower, HR 0.72 (95% CI 0.59 to 0.90), 145 vs 200 events. But that was a secondary endpoint among about 24 comparisons, so it may be chance (AAFP summary). Pooled analyses that mix in people who already had heart disease find small relative reductions. Hu 2019 (10.1161/JAHA.119.013543) reported MI RR 0.92 (0.86 to 0.99) and total CVD RR 0.97 (0.94 to 0.99) without REDUCE-IT. Cochrane 2020 (10.1002/14651858.CD003177.pub5) reported cardiovascular events RR 0.96 (0.92 to 1.01), rated high certainty. Neither reports a result for primary prevention on its own. Tier 0 because the main prevention endpoint was tested and not changed. Any true effect at this dose is at most a few percent relative and a fraction of a percentage point absolute. On the harm side, trials at 1 g/d or less showed slightly more atrial fibrillation (an irregular heartbeat), HR 1.12 (1.03 to 1.22) (Gencer 2021). In VITAL alone it was HR 1.09 (0.96 to 1.24).",
+        "bodyIsRct": true,
+        "checklist": {
+          "risk_of_bias": "supported",
+          "consistency": "supported",
+          "precision": "concern",
+          "directness": "supported",
+          "publication_bias": "supported"
+        },
+        "gates": {
+          "rctCount": 1,
+          "largestRctN": 25871,
+          "longestRctWeeks": 276,
+          "chronicOutcome": true,
+          "surrogate": false,
+          "allPositiveIndustryOrOneLab": false
+        },
+        "formFit": "3",
+        "doseFit": "4",
+        "effective_daily_range": "No dose has been shown to prevent a first heart event in a general population. The dose tested was 840 mg/day EPA+DHA, and it found no clear benefit. This product's 1000 mg/day is close to that tested dose."
+      },
+      "detail": {
+        "effect": {
+          "found": "Major heart events: 386 of about 12,900 on fish oil vs 419 of about 12,900 on placebo, HR 0.92 (0.80 to 1.06). That works out to about 3.0% vs 3.2% over 5.3 years (my estimate from the counts). Heart attacks alone: 145 vs 200, HR 0.72 (0.59 to 0.90). That was a secondary result.",
+          "missing": "The confidence interval runs from a 20% drop to a 6% rise, so a small true benefit cannot be ruled out. The heart attack finding was never confirmed as a main result.",
+          "move": "A second large placebo-controlled trial in healthy adults at about 1 g/day, with heart attack as the main endpoint."
+        },
+        "evidence": {
+          "found": "One very large, NIH-funded, double-blind trial (VITAL, 25,871 people, median 5.3 years). Cochrane 2020 pooled 86 trials and 162,796 people and found little or no effect on cardiovascular events (high certainty). Hu 2019 pooled 13 trials and 127,477 people and found small drops, mostly from trials in people who already had heart disease.",
+          "missing": "Neither meta-analysis gives a pooled result for people without heart disease only. I read VITAL only as an abstract and secondary reports.",
+          "move": "An individual-patient meta-analysis limited to primary prevention trials."
+        },
+        "form": {
+          "found": "VITAL used Omacor, a 1 g ethyl ester capsule with 460 mg EPA and 380 mg DHA. This product is fish oil with EPA+DHA, but its chemical form and ratio are unknown.",
+          "missing": "Nobody has run a head-to-head heart outcome trial of triglyceride vs ethyl ester fish oil.",
+          "move": "The label stating the ester form and the EPA to DHA split."
+        },
+        "dose": {
+          "found": "The trial dose was 840 mg/day EPA+DHA. This product gives 1000 mg/day, about 19% more.",
+          "missing": "No effective dose has been established for this population. Higher doses (4 g/day) were tested only in high-risk people.",
+          "move": "A trial at 1 to 2 g/day EPA+DHA in healthy adults."
+        }
+      },
+      "inventory": [
+        {
+          "id": "10.1056/NEJMoa1811403",
+          "year": 2019,
+          "design": "rct",
+          "n": 25871,
+          "direction": "none",
+          "funding": "independent",
+          "access": "abstract",
+          "note": "VITAL. Men 50 and over, women 55 and over, no CVD. 840 mg/day EPA+DHA (Omacor) vs placebo, 2x2 with vitamin D. Major CV events 386 vs 419. HR 0.92 (0.80 to 1.06) from the secondary report. NIH-funded. The capsule maker supplied the study agents.",
+          "pooled_in": "10.1161/JAHA.119.013543"
+        },
+        {
+          "id": "10.1161/JAHA.119.013543",
+          "year": 2019,
+          "design": "sr_ma",
+          "n": 127477,
+          "direction": "benefit",
+          "funding": "independent",
+          "access": "full_text",
+          "note": "13 RCTs, doses 376 to 4000 mg/d. Without REDUCE-IT: MI RR 0.92 (0.86 to 0.99), CVD death 0.93 (0.88 to 0.99), stroke 1.05 (0.98 to 1.14), major vascular events 0.97 (0.94 to 1.00). Most included trials enrolled people who already had heart disease or were at high risk. No primary-prevention-only result."
+        },
+        {
+          "id": "10.1002/14651858.CD003177.pub5",
+          "year": 2020,
+          "design": "sr_ma",
+          "n": 162796,
+          "direction": "none",
+          "funding": "independent",
+          "access": "abstract",
+          "note": "Cochrane, 86 RCTs. Long-chain omega-3: CV events RR 0.96 (0.92 to 1.01), all-cause death 0.97 (0.93 to 1.01), both high certainty. CHD death 0.90 and CHD events 0.91, low certainty. Includes trials in people with and without heart disease."
+        },
+        {
+          "id": "10.1001/jama.2021.1489",
+          "year": 2021,
+          "design": "rct",
+          "n": 24127,
+          "direction": "none",
+          "funding": "independent",
+          "access": "abstract",
+          "note": "VITAL Rhythm. Incident atrial fibrillation 469 (3.7%) vs 431 (3.4%), HR 1.09 (0.96 to 1.24), P=.19. Same participants as VITAL.",
+          "pooled_in": "10.1161/CIRCULATIONAHA.121.055654"
+        },
+        {
+          "id": "10.1161/CIRCULATIONAHA.121.055654",
+          "year": 2021,
+          "design": "sr_ma",
+          "n": 81210,
+          "direction": "harm",
+          "funding": "independent",
+          "access": "abstract",
+          "note": "7 CV outcome RCTs. AF HR 1.25 (1.07 to 1.46). Trials at 1 g/d or less: HR 1.12 (1.03 to 1.22). Trials above 1 g/d: HR 1.49 (1.04 to 2.15). P for interaction <0.001."
+        },
+        {
+          "id": "10.1136/bmjmed-2022-000451",
+          "year": 2024,
+          "design": "cohort",
+          "n": 415737,
+          "direction": "harm",
+          "funding": "unknown",
+          "access": "abstract",
+          "note": "UK Biobank, observational. In people without CVD, regular fish oil use was linked to AF, HR 1.13 (1.10 to 1.17), and stroke, HR 1.05 (1.00 to 1.11). Dose unknown. Confounding is possible."
+        }
+      ],
+      "absolute_effect": "Major cardiovascular events: 386 vs 419 events in about 12,900 per arm over a median 5.3 years, HR 0.92 (95% CI 0.80 to 1.06). By my estimate from the counts, that is about 3.0% vs 3.2%, a difference of about 0.26 percentage points. The difference is not statistically significant, so no NNT (number needed to treat) applies. Myocardial infarction (secondary endpoint): 145 vs 200, HR 0.72 (0.59 to 0.90), about 0.4 percentage points.",
+      "clinically_meaningful": "No. No agreed minimal important difference exists for cutting cardiovascular events. The main result could not be told apart from no effect. Even the best case in the confidence interval (20% relative) would mean well under 1 percentage point absolute over 5 years at this risk level.",
+      "strongest_study": "VITAL (Manson et al., NEJM 2019, 10.1056/NEJMoa1811403). 25,871 adults with no heart disease, double-blind, NIH-funded, 840 mg/day EPA+DHA vs placebo, median 5.3 years. The main heart outcome was not reduced, HR 0.92 (0.80 to 1.06).",
+      "strongest_doubt": "Heart attacks were 28% lower in VITAL (HR 0.72, 0.59 to 0.90), and pooled trials show about an 8% relative drop in MI. A small heart attack benefit may be real but was never the main tested result. Nobody has tested adults under 50. Atrial fibrillation (an irregular heartbeat) was slightly more common in trials at 1 g/d or less, HR 1.12 (1.03 to 1.22).",
+      "study_that_would_move_this": "A second large, independent, placebo-controlled trial of about 1 g/day EPA+DHA in adults without heart disease, with myocardial infarction as the main endpoint. Ideally it would be stratified by fish intake or omega-3 blood level.",
+      "subgroup_hypothesis_only": false,
+      "why_positive_signal_is_unreliable": "The positive pooled results (Hu 2019) come mostly from trials in people who already had heart disease. They also include open-label trials and REDUCE-IT, a 4 g/day EPA drug trial. Neither applies to a healthy person on 1 g/day. The VITAL heart attack drop was one of about 24 comparisons with no multiplicity correction.",
+      "studied_in": {
+        "sex": "mixed",
+        "sex_note": "51% women",
+        "age_min": 50,
+        "age_max": null,
+        "age_note": "Men 50 and over, women 55 and over, mean age 67",
+        "ethnicity": "5,106 Black participants of 25,871. Other groups not reported in the sources I opened.",
+        "confidence": "verified"
+      }
+    },
+    {
+      "name": "Heart attack and stroke prevention",
+      "population": "Adults with diabetes, no heart disease",
+      "sentence": "In 15,480 people with diabetes but no heart disease, 1 g/day fish oil for 7.4 years did not cut serious heart events (8.9% vs 9.2%).",
+      "ledger": {
+        "effectPoints": "0",
+        "effect_basis": "ASCEND (10.1056/NEJMoa1804989) randomised 15,480 people with diabetes and no atherosclerotic heart disease. They got 1 g capsules (840 mg EPA+DHA per Hu 2019 Table 1) or olive oil placebo for a mean 7.4 years, with 76% adherence. Serious vascular events: 8.9% vs 9.2%, rate ratio 0.97 (95% CI 0.87 to 1.08), P=0.55. All-cause death showed no significant difference. The pooled analysis in Hu 2019 includes ASCEND, so it adds no separate certainty here. Tier 0: tested, nothing found. The interval rules out more than a 13% relative drop.",
+        "bodyIsRct": true,
+        "checklist": {
+          "risk_of_bias": "supported",
+          "consistency": "supported",
+          "precision": "supported",
+          "directness": "supported",
+          "publication_bias": "supported"
+        },
+        "gates": {
+          "rctCount": 1,
+          "largestRctN": 15480,
+          "longestRctWeeks": 386,
+          "chronicOutcome": true,
+          "surrogate": false,
+          "allPositiveIndustryOrOneLab": false
+        },
+        "formFit": "3",
+        "doseFit": "4",
+        "effective_daily_range": "None shown. 840 mg/day EPA+DHA was tested for 7.4 years and found no effect. This product's 1000 mg/day is close to that."
+      },
+      "detail": {
+        "effect": {
+          "found": "Serious vascular events 8.9% vs 9.2%, rate ratio 0.97 (0.87 to 1.08). That is about 0.3 percentage points apart and not significant. Deaths showed no significant difference.",
+          "missing": "—",
+          "move": "Only a much larger trial or a clearly different dose could change this."
+        },
+        "evidence": {
+          "found": "One large, long trial run from Oxford (ASCEND, 15,480 people, mean 7.4 years). An AHA 2017 advisory already did not recommend fish oil for people with diabetes.",
+          "missing": "I read the ASCEND results only as an abstract. I did not confirm the funding details.",
+          "move": "Full-text check of ASCEND funding and capsule content."
+        },
+        "form": {
+          "found": "1 g fish oil capsules, 840 mg EPA+DHA (per Hu 2019), against olive oil placebo.",
+          "missing": "I could not confirm the ester form used.",
+          "move": "The product label stating its ester form."
+        },
+        "dose": {
+          "found": "Tested 840 mg/day. This product gives 1000 mg/day.",
+          "missing": "Higher doses were not tested in ASCEND.",
+          "move": "—"
+        }
+      },
+      "inventory": [
+        {
+          "id": "10.1056/NEJMoa1804989",
+          "year": 2018,
+          "design": "rct",
+          "n": 15480,
+          "direction": "none",
+          "funding": "unknown",
+          "access": "abstract",
+          "note": "ASCEND, PMID 30146932. Diabetes, no ASCVD. 1 g n-3 capsule vs olive oil, mean 7.4 years. Serious vascular events 8.9% vs 9.2%, RR 0.97 (0.87 to 1.08). Run from Oxford and listed by the BHF. I did not verify the funding split.",
+          "pooled_in": "10.1161/JAHA.119.013543"
+        }
+      ],
+      "absolute_effect": "Serious vascular events 8.9% vs 9.2% over a mean 7.4 years, rate ratio 0.97 (95% CI 0.87 to 1.08), P=0.55. That is about 0.3 percentage points, not significant, so no NNT applies.",
+      "clinically_meaningful": "No. No agreed minimal important difference exists for cutting cardiovascular events. The result was null, and the interval excludes more than a 13% relative drop.",
+      "strongest_study": "ASCEND (NEJM 2018, 10.1056/NEJMoa1804989). 15,480 adults with diabetes, 1 g/day omega-3 vs olive oil, mean 7.4 years. Rate ratio 0.97 (0.87 to 1.08).",
+      "strongest_doubt": "The olive oil placebo is not inert, but any effect from it would be small. Adherence was 76%, which could weaken a true effect a little.",
+      "study_that_would_move_this": "A trial of a clearly higher EPA+DHA dose in people with diabetes but no heart disease, against an inert placebo.",
+      "subgroup_hypothesis_only": false,
+      "why_positive_signal_is_unreliable": "REDUCE-IT included people with diabetes and found benefit, but it used 4 g/day of purified EPA drug, required high triglycerides and used a mineral oil placebo. It does not test this product.",
+      "studied_in": {
+        "sex": "mixed",
+        "sex_note": "63% men",
+        "age_min": null,
+        "age_max": null,
+        "age_note": "Mean age 63. Entry age limits not verified.",
+        "ethnicity": "not reported",
+        "confidence": "verified"
+      }
+    },
+    {
+      "name": "Heart attack and stroke prevention",
+      "population": "Adults 50+ who eat under 1.5 fish meals a week",
+      "sentence": "In VITAL, people eating under 1.5 fish servings a week had 21% fewer major heart events (HR 0.79). It was one subgroup and is unconfirmed.",
+      "ledger": {
+        "effectPoints": "1",
+        "effect_basis": "A VITAL analysis (10.3390/nu15194235, reporting the trial's subgroup results) gives these figures. Low fish intake (under 1.5 servings a week): HR 0.79 (95% CI 0.65 to 0.96). High fish intake: HR 1.05 (0.85 to 1.30). P for interaction (a test of whether the two groups really differ) = 0.017. An interaction test exists, so this is not a bare subgroup p-value. But it is one subgroup among many in one trial, and no other trial has confirmed it. Tier 1 (small): a 21% relative drop on a baseline of about 3% over 5 years is well under 1 percentage point absolute.",
+        "bodyIsRct": true,
+        "checklist": {
+          "risk_of_bias": "concern",
+          "consistency": "unknown",
+          "precision": "concern",
+          "directness": "supported",
+          "publication_bias": "unknown"
+        },
+        "gates": {
+          "rctCount": 1,
+          "largestRctN": 25871,
+          "longestRctWeeks": 276,
+          "chronicOutcome": true,
+          "surrogate": false,
+          "allPositiveIndustryOrOneLab": true
+        },
+        "formFit": "3",
+        "doseFit": "4",
+        "effective_daily_range": "Only 840 mg/day EPA+DHA was tested. No range has been established."
+      },
+      "detail": {
+        "effect": {
+          "found": "Low fish eaters: HR 0.79 (0.65 to 0.96). High fish eaters: HR 1.05 (0.85 to 1.30). P interaction 0.017.",
+          "missing": "I found no absolute event counts for this subgroup. No second trial has tested it.",
+          "move": "A trial enrolling only low fish eaters or people with low omega-3 blood levels."
+        },
+        "evidence": {
+          "found": "A subgroup from one large NIH trial, with an interaction test reported.",
+          "missing": "Many subgroups were tested in VITAL, so a chance finding is possible. ASCEND results by fish intake were not found.",
+          "move": "Subgroup results by fish intake from ASCEND or a pooled analysis."
+        },
+        "form": {
+          "found": "Same as VITAL: Omacor, 460 mg EPA plus 380 mg DHA.",
+          "missing": "The ester form of this product is unknown.",
+          "move": "—"
+        },
+        "dose": {
+          "found": "Tested 840 mg/day. This product gives 1000 mg/day.",
+          "missing": "—",
+          "move": "—"
+        }
+      },
+      "inventory": [
+        {
+          "id": "10.3390/nu15194235",
+          "year": 2023,
+          "design": "other",
+          "n": 25871,
+          "direction": "unclear",
+          "funding": "independent",
+          "access": "full_text",
+          "note": "Secondary VITAL analysis (win ratio). Overall reciprocal win ratio 0.90 (0.78 to 1.04). Fish intake subgroup: HR 0.79 (0.65 to 0.96) low vs 1.05 (0.85 to 1.30) high, P interaction 0.017."
+        },
+        {
+          "id": "10.1056/NEJMoa1811403",
+          "year": 2019,
+          "design": "rct",
+          "n": 25871,
+          "direction": "none",
+          "funding": "independent",
+          "access": "abstract",
+          "note": "Parent trial. Overall null. The subgroup is reported in secondary sources."
+        }
+      ],
+      "absolute_effect": "HR 0.79 (95% CI 0.65 to 0.96) in low fish eaters vs HR 1.05 (0.85 to 1.30) in high fish eaters, P interaction 0.017. I could not find subgroup event counts, so ARR and NNT cannot be derived.",
+      "clinically_meaningful": "Unknown. No agreed minimal important difference exists for cutting cardiovascular events. Without subgroup event counts, the absolute size cannot be judged.",
+      "strongest_study": "VITAL prespecified-subgroup reporting (via 10.3390/nu15194235). HR 0.79 (0.65 to 0.96) in people eating under 1.5 fish servings a week.",
+      "strongest_doubt": "It is a single subgroup in a trial whose main result was null. Many subgroups were examined, and no independent trial has replicated it.",
+      "study_that_would_move_this": "A placebo-controlled trial enrolling only adults with low fish intake or a low omega-3 index, with heart attack and stroke as endpoints.",
+      "subgroup_hypothesis_only": false,
+      "why_positive_signal_is_unreliable": "It comes from one trial, after the overall result was null, among multiple subgroup comparisons.",
+      "studied_in": {
+        "sex": "mixed",
+        "sex_note": "51% women in the parent trial",
+        "age_min": 50,
+        "age_max": null,
+        "age_note": "Men 50 and over, women 55 and over",
+        "ethnicity": "not reported for this subgroup",
+        "confidence": "inferred"
+      }
+    },
+    {
+      "name": "Heart attack and stroke prevention",
+      "population": "High-risk adults with high triglycerides on statins",
+      "sentence": "A 4 g/day purified EPA drug cut heart events in high-risk people with high triglycerides. A 4 g EPA+DHA trial found nothing. 1 g was not tested.",
+      "ledger": {
+        "effectPoints": "unclear",
+        "effect_basis": "REDUCE-IT (10.1056/NEJMoa1812792) enrolled people on statins with triglycerides of 135 to 499 mg/dL. Its primary prevention part (29.3%) had diabetes plus risk factors. 4 g/day icosapent ethyl (a purified EPA drug) gave 17.2% vs 22.0% events, HR 0.75 (0.68 to 0.83), NNT 21. That benefit appeared weaker in the primary prevention part, with interaction p 0.14 (snippet). It was industry-sponsored (Amarin) with a mineral oil placebo. STRENGTH (10.1001/jama.2020.22258) gave 4 g/day EPA+DHA carboxylic acids to 13,078 high-risk people (70% with diabetes) against corn oil. Result: 12.0% vs 12.2%, HR 0.99 (0.90 to 1.09). Neither tested 1 g/day fish oil. For this product, nobody has tested it in this group, so the answer is unclear.",
+        "bodyIsRct": true,
+        "checklist": {
+          "risk_of_bias": "concern",
+          "consistency": "concern",
+          "precision": "unknown",
+          "directness": "concern",
+          "publication_bias": "unknown"
+        },
+        "gates": {
+          "rctCount": 2,
+          "largestRctN": 13078,
+          "longestRctWeeks": 182,
+          "chronicOutcome": true,
+          "surrogate": false,
+          "allPositiveIndustryOrOneLab": true
+        },
+        "formFit": "1",
+        "doseFit": "0",
+        "effective_daily_range": "4 g/day icosapent ethyl (EPA only) in one industry trial. 4 g/day EPA+DHA was null. 1 g/day was not tested in this group."
+      },
+      "detail": {
+        "effect": {
+          "found": "REDUCE-IT overall: 17.2% vs 22.0%, HR 0.75 (0.68 to 0.83). STRENGTH: 12.0% vs 12.2%, HR 0.99 (0.90 to 1.09).",
+          "missing": "I did not verify a separate result for the primary prevention part of REDUCE-IT.",
+          "move": "An independent trial of high-dose EPA in primary prevention with an inert placebo."
+        },
+        "evidence": {
+          "found": "Two large industry trials that disagree with each other.",
+          "missing": "No trial of over-the-counter 1 g fish oil in this group.",
+          "move": "—"
+        },
+        "form": {
+          "found": "Prescription purified EPA ethyl ester (REDUCE-IT) and an EPA+DHA carboxylic acid drug (STRENGTH).",
+          "missing": "Both differ from ordinary fish oil.",
+          "move": "—"
+        },
+        "dose": {
+          "found": "4 g/day in both trials. This product gives 1 g/day.",
+          "missing": "No trial tested 1 g/day in this group.",
+          "move": "—"
+        }
+      },
+      "inventory": [
+        {
+          "id": "10.1056/NEJMoa1812792",
+          "year": 2019,
+          "design": "rct",
+          "n": 8179,
+          "direction": "benefit",
+          "funding": "industry",
+          "access": "snippet",
+          "note": "REDUCE-IT, PMID 30415628. Icosapent ethyl 4 g/d vs mineral oil. Primary 17.2% vs 22.0%, HR 0.75 (0.68 to 0.83). 29.3% primary prevention. AF hospitalisation 3.1% vs 2.1%. Amarin-sponsored."
+        },
+        {
+          "id": "10.1001/jama.2020.22258",
+          "year": 2020,
+          "design": "rct",
+          "n": 13078,
+          "direction": "none",
+          "funding": "industry",
+          "access": "abstract",
+          "note": "STRENGTH, PMID 33190147. 4 g/d omega-3 carboxylic acids vs corn oil, median 42 months. 12.0% vs 12.2%, HR 0.99 (0.90 to 1.09). 70% had diabetes."
+        }
+      ],
+      "absolute_effect": "REDUCE-IT overall: absolute difference 4.8% (95% CI 3.1 to 6.5), NNT 21 (15 to 33), with 4 g/day EPA drug. STRENGTH: 12.0% vs 12.2%, HR 0.99 (0.90 to 1.09). None of this applies to 1 g/day fish oil.",
+      "clinically_meaningful": "Unknown for this product. No agreed minimal important difference exists for cutting cardiovascular events, and the product's dose and form were never tested in this group.",
+      "strongest_study": "STRENGTH (JAMA 2020, 10.1001/jama.2020.22258). 13,078 high-risk adults, 4 g/day EPA+DHA vs corn oil. HR 0.99 (0.90 to 1.09).",
+      "strongest_doubt": "The two high-dose trials disagree. The positive one used purified EPA and a mineral oil placebo and was sponsored by the drug maker.",
+      "study_that_would_move_this": "An independent trial of 1 to 4 g/day fish oil vs an inert placebo in high-risk adults with high triglycerides and no heart disease.",
+      "subgroup_hypothesis_only": false,
+      "why_positive_signal_is_unreliable": "REDUCE-IT is the only positive trial. It was industry-funded and used a mineral oil comparator, and a similar-dose EPA+DHA trial found no benefit.",
+      "studied_in": {
+        "sex": "mixed",
+        "sex_note": "STRENGTH 35% women",
+        "age_min": null,
+        "age_max": null,
+        "age_note": "STRENGTH mean 62.5. Entry ages not verified.",
+        "ethnicity": "not reported",
+        "confidence": "inferred"
+      }
+    }
+  ],
+  "searches_run": [
+    "VITAL trial marine n-3 fatty acids primary prevention Manson NEJM 2019",
+    "ASCEND omega-3 diabetes NEJM 2018",
+    "Cochrane Abdelhamid 2020 omega-3 CVD",
+    "Hu Manson 2019 JAHA meta-analysis 13 trials",
+    "VITAL HR 0.92 MI 0.72 fish intake subgroup",
+    "Gencer 2021 Circulation omega-3 atrial fibrillation meta-analysis",
+    "NIH ODS omega-3 fact sheet cardiovascular",
+    "Recent primary prevention meta-analyses 2022 to 2024",
+    "AHA Siscovick 2017 science advisory",
+    "Aung 2018 JAMA Cardiology meta-analysis",
+    "REDUCE-IT primary prevention cohort interaction",
+    "STRENGTH JAMA 2020",
+    "2025 omega-3 primary prevention trials",
+    "UK Biobank fish oil AF stroke BMJ Medicine 2024",
+    "VITAL Rhythm JAMA 2021"
+  ],
+  "could_not_access": [
+    "VITAL NEJM full text (nejm.org 403, PMC captcha). I used the Europe PMC abstract plus secondary reports.",
+    "NIH ODS omega-3 fact sheet (403). I used a search snippet only.",
+    "ACC summary page of the AHA 2017 advisory (security page). I used the TCTMD report instead.",
+    "ASCEND and Cochrane 2020 full texts. I read abstracts only.",
+    "REDUCE-IT abstract body and the primary prevention subgroup HR. I used snippets.",
+    "DOAJ record for the UK Biobank study (403). I used the Europe PMC abstract."
+  ],
+  "self_confidence": "medium-high",
+  "confidence_note": "The main finding is solid: two large independent trials (41,351 people) of a dose close to this product found no clear drop in major heart events in people without heart disease. I am less sure about funding details, ASCEND capsule content (taken from the Hu 2019 table), exact arm sizes in VITAL (estimated), and REDUCE-IT subgroup figures, which I saw only in snippets. The REDUCE-IT follow-up length was not verified, so longestRctWeeks for the high-risk row uses STRENGTH's 42 months."
+}

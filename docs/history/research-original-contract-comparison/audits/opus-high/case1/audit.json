@@ -1,0 +1,361 @@
+{
+  "meta": {
+    "run_at": "2026-10-03",
+    "model": "claude-opus-5-5",
+    "prompt": "audit-v0.4",
+    "note": "Experimental benchmark run. No human has checked this audit. The key bisglycinate trial (Schuster 2025) was read in full on the Dove Press site. PMC and PubMed pages showed a browser check and could not be read, so the Mah and Pitre review and the Abbasi and Nielsen trials were read only as abstracts through Europe PMC. The NIH ODS magnesium fact sheet returned HTTP 403."
+  },
+  "product": "Magnesium bisglycinate, 200 mg elemental magnesium per day (test regimen supplied)",
+  "ingredient": "magnesium",
+  "form": "bisglycinate (magnesium chelated to two glycine molecules)",
+  "daily_dose": "200 mg elemental magnesium per day",
+  "dose_note": "The supplied dose is read as 200 mg of elemental magnesium, not 200 mg of the bisglycinate compound. Every verdict below assumes this reading. If the label meant 200 mg of compound, the magnesium content would be only about 28 mg (24.3 of about 172 g/mol, our own arithmetic). That would be far below anything tested. At 200 mg elemental, a fully reacted bisglycinate also supplies about 1.2 g of glycine. This is our calculation and assumes no added buffer. The bisglycinate trial gave 250 mg elemental magnesium plus 1,523 mg glycine a day, taken 30 to 60 minutes before bed for 4 weeks. So this product gives 80% of the tested magnesium dose. The number of servings per container is unknown, so it is not known how many capsules make up the 200 mg. The older trials in older adults used 320 mg (citrate) and 500 mg (form not stated in the abstract we read) of elemental magnesium a day.",
+  "for_whom": {
+    "reasonable": "Adults who sleep poorly have one trial behind them. In it, 250 mg a day of this exact form lowered insomnia scores by a small amount over 4 weeks.",
+    "not_shown": "Nobody has tested it in people who already sleep well, in diagnosed insomnia disorder, or beyond 4 weeks. The extra benefit in people who eat little magnesium is only a lead and has not been confirmed.",
+    "source": "We found no guideline body that takes a position on magnesium for sleep. The NIH ODS magnesium fact sheet could not be opened (HTTP 403). The Mah and Pitre 2021 review (PMID 33865376) says the evidence is too poor for doctors to make recommendations for older adults with insomnia."
+  },
+  "outcomes": [
+    {
+      "name": "Sleep when you sleep poorly",
+      "population": "Adults 18 to 65 reporting poor sleep, bisglycinate",
+      "sentence": "In 155 adults with poor sleep, 250 mg a day for 4 weeks cut insomnia scores by 3.9 points vs 2.3 on placebo (0 to 28 scale). A small gain.",
+      "ledger": {
+        "effectPoints": "1",
+        "effect_basis": "Schuster 2025 (doi 10.2147/NSS.S524348) was a double-blind randomised trial in 155 adults with self-reported poor sleep, using the same form. The Insomnia Severity Index (ISI, a 0 to 28 questionnaire) fell by 3.9 [95% CI −5.8 to −2.0] points on magnesium and by 2.3 [95% CI −4.1 to −0.4] on placebo; p = 0.049; Cohen's d = 0.2 (a standardised effect size, so a small difference). The gap between the groups is about 1.6 points. That is below the 4-point group-level and 6-point individual thresholds from Yang 2009. None of the secondary sleep, fatigue or mood scales differed between groups. This is the 'small' tier: real in the data, but probably not something a person would notice.",
+        "bodyIsRct": true,
+        "checklist": {
+          "risk_of_bias": "supported",
+          "consistency": "unknown",
+          "precision": "concern",
+          "directness": "supported",
+          "publication_bias": "unknown"
+        },
+        "gates": {
+          "rctCount": 1,
+          "largestRctN": 155,
+          "longestRctWeeks": 4,
+          "chronicOutcome": false,
+          "surrogate": false,
+          "allPositiveIndustryOrOneLab": true
+        },
+        "formFit": "4",
+        "doseFit": "3",
+        "effective_daily_range": "Only 250 mg elemental magnesium a day as bisglycinate has been tested in this population. No dose-finding exists."
+      },
+      "detail": {
+        "effect": {
+          "found": "Insomnia scores fell 1.6 points more on magnesium than on placebo after 4 weeks (p = 0.049). Cohen's d was 0.2. Six other scales, covering sleep quality, daytime sleepiness, fatigue, stress and mood, showed no difference between groups.",
+          "missing": "The trial did not measure sleep objectively, for example with a sleep lab or wearable. We could not find the paper's own confidence interval for the between-group difference. There is no data past 4 weeks.",
+          "move": "A second trial of the same size showing a gap of 4 or more ISI points would move this up. A null result would move it to no effect."
+        },
+        "evidence": {
+          "found": "There is one registered (DRKS00031494), double-blind, placebo-controlled trial of 155 people. It was funded by Leibniz University Hannover, and the capsules were made by Biogena. 134 people finished: 13 dropped out on placebo and 8 on magnesium.",
+          "missing": "Nobody has repeated the trial. One author has worked for nutraceutical companies. The main result only just passed the usual significance cutoff.",
+          "move": "An independent repeat trial in a different country."
+        },
+        "form": {
+          "found": "The trial tested magnesium bisglycinate, the same form as this product.",
+          "missing": "Glycine on its own may affect sleep, and the trial could not separate glycine from magnesium.",
+          "move": "A trial with a glycine-only comparison arm."
+        },
+        "dose": {
+          "found": "This product gives 200 mg a day. The trial gave 250 mg plus 1,523 mg glycine a day, taken 30 to 60 minutes before bed.",
+          "missing": "Nobody has tested 200 mg, and nobody has compared different doses.",
+          "move": "A dose-comparison trial including about 200 mg."
+        }
+      },
+      "inventory": [
+        {
+          "id": "10.2147/NSS.S524348",
+          "year": 2025,
+          "design": "rct",
+          "n": 155,
+          "direction": "benefit",
+          "access": "full_text",
+          "funding": "independent",
+          "note": "Schuster et al., Nature and Science of Sleep. 250 mg elemental Mg as bisglycinate for 4 weeks, in German adults aged 18 to 65 (70.6% female). ISI −3.9 vs −2.3, p = 0.049, d = 0.2. No secondary outcomes differed. University funded; product made by Biogena."
+        }
+      ],
+      "absolute_effect": "ISI change at week 4: −3.9 [95% CI −5.8 to −2.0] on magnesium vs −2.3 [95% CI −4.1 to −0.4] on placebo; p = 0.049; Cohen's d = 0.2. The difference between the point estimates is about −1.6 points on the 0 to 28 ISI (our arithmetic; we did not find the paper's between-group CI). Within each group, scores fell 28% on magnesium and 18% on placebo. No NNT can be derived because responder rates were not reported.",
+      "clinically_meaningful": "no. The roughly 1.6-point gap is below the ISI minimally important difference from Yang, Morin et al. 2009 (Curr Med Res Opin): 4 points for group comparisons and 6 points for one person's response. Cohen's d = 0.2 is a statistical convention for a small effect. It is not a measure of whether anyone would notice.",
+      "strongest_study": "Schuster 2025 (doi 10.2147/NSS.S524348). This double-blind, registered trial randomised 155 adults with poor sleep to 250 mg a day of magnesium bisglycinate or placebo for 4 weeks. It was funded by a university.",
+      "strongest_doubt": "The only positive result is one borderline p-value (p = 0.049) from one trial. All 6 secondary scales showed nothing. Placebo alone lowered scores by 18%, and the extra gain is below the size people notice.",
+      "study_that_would_move_this": "An independent replication of at least 150 people over 8 to 12 weeks. It would need a glycine-only arm, objective sleep measures, and baseline blood or dietary magnesium status.",
+      "subgroup_hypothesis_only": false,
+      "studied_in": {
+        "sex": "mixed",
+        "sex_note": "70.6% female (108 of 153)",
+        "age_min": 18,
+        "age_max": 65,
+        "age_note": "Mean age about 46 to 47",
+        "ethnicity": "not reported (recruited across Germany)",
+        "confidence": "verified"
+      }
+    },
+    {
+      "name": "Insomnia in older adults",
+      "population": "Adults over about 51 with insomnia, other Mg forms",
+      "sentence": "In 3 small trials of 151 older adults, other magnesium forms cut time to fall asleep by 17.36 minutes. The evidence is weak.",
+      "ledger": {
+        "effectPoints": "1",
+        "effect_basis": "Mah and Pitre 2021 (PMID 33865376) pooled 3 RCTs in 151 older adults. Time to fall asleep was 17.36 minutes shorter on magnesium (95% CI −27.27 to −7.44, p = 0.0006). Total sleep time was 16.06 minutes longer, but this was not statistically significant. The review rated all trials at moderate to high risk of bias and the evidence as low to very low certainty. Abbasi 2012 (500 mg a day for 8 weeks, n = 46) reported better ISI and sleep logs. Nielsen 2010 (320 mg citrate for 7 weeks, n = 100) saw PSQI improve from 10.4 to 6.6 in both groups alike. We put this in the small tier because the effect is modest and uncertain.",
+        "bodyIsRct": true,
+        "checklist": {
+          "risk_of_bias": "concern",
+          "consistency": "concern",
+          "precision": "concern",
+          "directness": "concern",
+          "publication_bias": "unknown"
+        },
+        "gates": {
+          "rctCount": 3,
+          "largestRctN": 100,
+          "longestRctWeeks": 8,
+          "chronicOutcome": false,
+          "surrogate": false,
+          "allPositiveIndustryOrOneLab": false
+        },
+        "formFit": "2",
+        "doseFit": "2",
+        "effective_daily_range": "320 to 500 mg elemental magnesium a day in these older-adult trials (forms other than bisglycinate)."
+      },
+      "detail": {
+        "effect": {
+          "found": "People fell asleep 17.36 minutes faster (95% CI −27.27 to −7.44). Total sleep rose 16.06 minutes, but this was not significant.",
+          "missing": "No agreed threshold exists for how much faster falling asleep matters to someone with insomnia. Overall sleep quality results were mixed: in Nielsen 2010 placebo improved just as much.",
+          "move": "A larger trial with low risk of bias in older adults with insomnia."
+        },
+        "evidence": {
+          "found": "One review covers 3 small trials. The review calls the evidence low to very low certainty.",
+          "missing": "We could read only the abstracts, not full texts. Funding was not stated in what we read.",
+          "move": "Full-text checking of the 3 trials and a newer pooled review."
+        },
+        "form": {
+          "found": "The trials used citrate and other salts, not bisglycinate. The abstract of the 500 mg trial did not name the form.",
+          "missing": "Nobody has tested bisglycinate in older adults with insomnia.",
+          "move": "A bisglycinate trial in this age group."
+        },
+        "dose": {
+          "found": "The trials gave 320 to 500 mg a day. This product gives 200 mg.",
+          "missing": "Nobody has tested whether 200 mg works in this group.",
+          "move": "A dose comparison in older adults."
+        }
+      },
+      "inventory": [
+        {
+          "id": "PMID:33865376",
+          "year": 2021,
+          "design": "sr_ma",
+          "n": 151,
+          "direction": "benefit",
+          "access": "abstract",
+          "funding": "unknown",
+          "note": "Mah and Pitre, BMC Complement Med Ther. 3 RCTs in older adults. Sleep onset latency −17.36 min (95% CI −27.27 to −7.44). Low to very low certainty (GRADE). A 2024 correction changed only search counts and wording."
+        },
+        {
+          "id": "PMID:23853635",
+          "year": 2012,
+          "design": "rct",
+          "n": 46,
+          "direction": "benefit",
+          "access": "abstract",
+          "funding": "unknown",
+          "pooled_in": "PMID:33865376 (inferred, full text not read)",
+          "note": "Abbasi et al., J Res Med Sci. 500 mg Mg a day for 8 weeks in elderly people with primary insomnia. ISI improved (P = 0.006), as did sleep onset latency (P = 0.02). Form not stated in the abstract."
+        },
+        {
+          "id": "PMID:21199787",
+          "year": 2010,
+          "design": "rct",
+          "n": 100,
+          "direction": "none",
+          "access": "abstract",
+          "funding": "unknown",
+          "note": "Nielsen et al., Magnes Res. 320 mg Mg citrate for 7 weeks in adults over 51 with PSQI >5. PSQI improved from 10.4 to 6.6 in both groups. Inclusion in Mah 2021 not confirmed."
+        }
+      ],
+      "absolute_effect": "Sleep onset latency was 17.36 min shorter vs placebo (95% CI −27.27 to −7.44, p = 0.0006). Total sleep time was +16.06 min, not statistically significant (CI not in the abstract). Not derivable as ARR or NNT.",
+      "clinically_meaningful": "unknown. We found no established minimally important difference for sleep onset latency in insomnia. The review itself says the evidence is too poor to guide recommendations.",
+      "strongest_study": "Mah and Pitre 2021 (PMID 33865376), a systematic review with meta-analysis of 3 RCTs in 151 older adults, graded with GRADE.",
+      "strongest_doubt": "All 3 trials had moderate to high risk of bias. In the largest one, placebo improved sleep quality as much as magnesium. None tested bisglycinate.",
+      "study_that_would_move_this": "A preregistered trial of at least 200 older adults with diagnosed insomnia. It would test magnesium bisglycinate against placebo for 8 to 12 weeks and measure sleep objectively.",
+      "subgroup_hypothesis_only": false,
+      "studied_in": {
+        "sex": "mixed",
+        "sex_note": "Nielsen 2010: 78 of 100 female; other trials not checked",
+        "age_min": 51,
+        "age_max": 85,
+        "age_note": "Nielsen range 51 to 85; Abbasi enrolled elderly people (exact range not read)",
+        "ethnicity": "not reported",
+        "confidence": "inferred"
+      }
+    },
+    {
+      "name": "Sleep if you already sleep well",
+      "population": "Adults without sleep complaints",
+      "sentence": "Nobody has tested magnesium bisglycinate for sleep in adults who already sleep well.",
+      "ledger": {
+        "effectPoints": "unclear",
+        "effect_basis": "We found no randomised trial of bisglycinate, or of any form, for sleep in adults without sleep complaints. All the trials we found enrolled people who reported poor sleep or insomnia. Nobody has tested this. That is not the same as a test that found nothing.",
+        "bodyIsRct": false,
+        "checklist": {
+          "risk_of_bias": "unknown",
+          "consistency": "unknown",
+          "precision": "unknown",
+          "directness": "unknown",
+          "publication_bias": "unknown"
+        },
+        "gates": {
+          "rctCount": 0,
+          "largestRctN": 0,
+          "longestRctWeeks": 0,
+          "chronicOutcome": false,
+          "surrogate": false,
+          "allPositiveIndustryOrOneLab": false
+        },
+        "formFit": "unknown",
+        "doseFit": "unknown",
+        "effective_daily_range": "Not established for this population."
+      },
+      "detail": {
+        "effect": {
+          "found": "Nobody has tested it.",
+          "missing": "There is no trial in good sleepers.",
+          "move": "A trial enrolling adults with normal sleep scores."
+        },
+        "evidence": {
+          "found": "No studies were found.",
+          "missing": "Every trial we found enrolled people who slept poorly.",
+          "move": "Any randomised trial in this group."
+        },
+        "form": {
+          "found": "Nobody has tested it.",
+          "missing": "There are no data for any form.",
+          "move": "A bisglycinate trial in good sleepers."
+        },
+        "dose": {
+          "found": "Nobody has tested it.",
+          "missing": "There are no data for any dose.",
+          "move": "A trial at about 200 mg a day."
+        }
+      },
+      "inventory": [],
+      "absolute_effect": "No data.",
+      "clinically_meaningful": "unknown. No trial exists, so no threshold can be applied.",
+      "strongest_study": "None found.",
+      "strongest_doubt": "The trials all enrolled poor sleepers. People who already sleep well have less room to improve.",
+      "study_that_would_move_this": "A randomised trial of magnesium bisglycinate against placebo in adults with normal baseline sleep scores.",
+      "subgroup_hypothesis_only": false,
+      "studied_in": {
+        "sex": "unknown",
+        "age_min": null,
+        "age_max": null,
+        "ethnicity": "not reported",
+        "confidence": "unknown"
+      }
+    },
+    {
+      "name": "Poor sleep with low Mg diet",
+      "population": "Poor sleepers who eat little magnesium",
+      "sentence": "One trial hinted that people eating less magnesium improved more (rho = −0.25). It was not a planned comparison, so it is only a lead.",
+      "ledger": {
+        "effectPoints": "unclear",
+        "effect_basis": "This comes from Schuster 2025 (doi 10.2147/NSS.S524348). In the magnesium group only, lower dietary magnesium went with bigger ISI improvement: Spearman's rho = −0.25 (a weak correlation), p = 0.036. No such link appeared on placebo (p = 0.795). Intake was measured with a single unvalidated question, and no blood magnesium was measured. We found no formal test of whether intake changed the treatment effect. The trial is counted once here for transparency. Its randomised comparison does not apply to this subgroup, so bodyIsRct is false.",
+        "bodyIsRct": false,
+        "checklist": {
+          "risk_of_bias": "concern",
+          "consistency": "unknown",
+          "precision": "concern",
+          "directness": "concern",
+          "publication_bias": "unknown"
+        },
+        "gates": {
+          "rctCount": 1,
+          "largestRctN": 155,
+          "longestRctWeeks": 4,
+          "chronicOutcome": false,
+          "surrogate": false,
+          "allPositiveIndustryOrOneLab": true
+        },
+        "formFit": "4",
+        "doseFit": "3",
+        "effective_daily_range": "Only 250 mg elemental magnesium a day as bisglycinate was tested."
+      },
+      "detail": {
+        "effect": {
+          "found": "There was a weak correlation (rho = −0.25, p = 0.036) between low magnesium intake and more benefit, in the magnesium group only.",
+          "missing": "We found no formal test of whether the benefit differed by intake. No blood magnesium was measured.",
+          "move": "A trial that stratifies by measured magnesium status and reports an interaction test."
+        },
+        "evidence": {
+          "found": "The finding is an exploratory analysis inside one trial.",
+          "missing": "It was not planned in advance and has not been repeated.",
+          "move": "A preregistered trial in people with confirmed low intake or low blood magnesium."
+        },
+        "form": {
+          "found": "Same form as this product.",
+          "missing": "—",
+          "move": "—"
+        },
+        "dose": {
+          "found": "250 mg a day was tested; this product gives 200 mg.",
+          "missing": "Nobody has tested whether people low in magnesium need a different dose.",
+          "move": "A dose comparison in people low in magnesium."
+        }
+      },
+      "inventory": [
+        {
+          "id": "10.2147/NSS.S524348",
+          "year": 2025,
+          "design": "rct",
+          "n": 155,
+          "direction": "unclear",
+          "access": "full_text",
+          "funding": "independent",
+          "note": "An exploratory correlation within one arm, Spearman rho = −0.25, p = 0.036. Dietary intake came from a single unvalidated question. The same trial is listed in the poor-sleep row."
+        }
+      ],
+      "absolute_effect": "No effect size for this subgroup was reported. Only Spearman's rho = −0.25, p = 0.036 (magnesium arm) and p = 0.795 (placebo arm).",
+      "clinically_meaningful": "unknown. There is no subgroup effect size to compare with the ISI minimally important difference (4 points for groups, 6 for individuals; Yang 2009).",
+      "strongest_study": "Schuster 2025 (doi 10.2147/NSS.S524348). This was an exploratory analysis inside the 155-person bisglycinate trial.",
+      "strongest_doubt": "The finding rests on a correlation within one arm, using a single unvalidated diet question. No interaction test was found, so it may be chance.",
+      "study_that_would_move_this": "A randomised trial that measures blood or validated dietary magnesium at baseline and prespecifies an interaction test between magnesium status and treatment.",
+      "subgroup_hypothesis_only": true,
+      "why_positive_signal_is_unreliable": "Post-hoc correlations inside a single trial with a borderline main result often fail to replicate. Intake was measured with one unvalidated item.",
+      "studied_in": {
+        "sex": "mixed",
+        "sex_note": "70.6% female in the full trial",
+        "age_min": 18,
+        "age_max": 65,
+        "ethnicity": "not reported",
+        "confidence": "verified"
+      }
+    }
+  ],
+  "searches_run": [
+    "magnesium bisglycinate randomized placebo-controlled trial sleep insomnia severity index",
+    "Mah Pitre 2021 oral magnesium supplementation insomnia older adults systematic review meta-analysis BMC",
+    "magnesium supplementation sleep quality systematic review meta-analysis 2024 2025 randomized trials adults",
+    "magnesium glycinate sleep randomized controlled trial 2026 (extended)",
+    "Abbasi 2012 magnesium supplementation primary insomnia elderly double-blind J Res Med Sci 500 mg",
+    "Nielsen Johnson Zeng 2010 magnesium supplementation poor quality sleep adults older than 51",
+    "magnesium L-threonate sleep quality randomized double-blind placebo trial Hausenblas 2024 Sleep Medicine X",
+    "magnesium sleep meta-analysis 2025 Insomnia Severity Index pooled Schuster included (extended)",
+    "Insomnia Severity Index minimal clinically important difference Yang Morin 2009",
+    "Europe PMC records for PMID 33865376, 23853635, 21199787 and PMC12832366",
+    "ClinicalTrials.gov NCT07515417"
+  ],
+  "could_not_access": [
+    "PMC full text of Schuster 2025 (PMC12412596) showed a reCAPTCHA page; we read the full text on the Dove Press site instead.",
+    "Full text of Mah and Pitre 2021 (PMC8053283 and Springer) was blocked by a browser check and a login redirect; only the Europe PMC abstract and the 2024 correction notice were read. So the 3 included trials were not individually confirmed.",
+    "Full text of Abbasi 2012 (DOAJ HTTP 403; PMC blocked); abstract only. The magnesium salt used was not stated in that abstract.",
+    "PubMed record for Arab 2023 systematic review (PMID 35184264) asked for cookies; only search snippets were seen, so it was not used as a source.",
+    "NIH ODS Magnesium Health Professional fact sheet returned HTTP 403.",
+    "ISRCTN14728094 record and PDF could not be read.",
+    "Examine.com summaries returned HTTP 403.",
+    "NCT07515417 (magnesium citrate 400 mg, 41 adults, Saudi Arabia, completed June 2026) is registered, but we found no published results."
+  ],
+  "self_confidence": "medium",
+  "confidence_note": "The main finding comes from a full-text reading of the only trial of this exact form for sleep (Schuster 2025). It showed a small, borderline benefit over 4 weeks in adults who sleep poorly. The older-adult evidence was read only as abstracts, so we could not confirm which trials the review pooled or how they were funded. Trials of magnesium L-threonate (Hausenblas 2024, seen only as search snippets; Lopresti and Smith 2025, doi 10.3389/fnut.2025.1729164, abstract only) tested a different form at different doses. We kept them out of the rows above. The Lopresti trial found one self-reported sleep measure improved (p = 0.043), two did not, and wearable sleep data showed no group difference. A completed but unpublished citrate trial (NCT07515417) may change the picture for other forms. The 200 mg dose is assumed to be elemental magnesium. If it is compound mass, the dose would be far below anything tested."
+}

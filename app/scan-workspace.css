@@ -1,0 +1,176 @@
+/* /scan workspace: the Scan / History tabs, the History panel, and the
+   sign-in gate states the camera-first flow gained on 2026-09-23.
+
+   Imported by app/scan/page.tsx and app/tester/page.tsx (the latter only for
+   the Google sign-in card's states, 2026-10-03), so it loads with those routes
+   and nothing else. Everything here hangs off .scan-workspace or a .sw-* class that only
+   components/scan-workspace.tsx and components/history-tab.tsx render; the
+   few .sc-* rules below style new elements inside the sign-in card and the scan
+   flow (classes that did not exist before). It does not restyle the result
+   card, the camera block or any shared primitive, and it reuses the /scan
+   tokens (--sp-*, --fs-*) defined on .scan-page in globals.css. */
+
+.scan-workspace { width: 100%; max-width: 640px; margin-inline: auto; }
+.scan-workspace .sw-panel[hidden] { display: none !important; }
+
+/* ---- top bar: brand left; icon tabs + language + account right (2026-10-03) ---- */
+.scan-page .sw-bar { margin: 0 0 18px; }
+.scan-page .sc-translate-status { margin: 0 0 10px; color: var(--sp-mute); font-size: var(--fs-1); overflow-wrap: anywhere; }
+.scan-page .sw-tabs {
+  display: inline-grid; grid-template-columns: 1fr 1fr; gap: 2px; padding: 3px;
+  border: 1px solid var(--sp-line); border-radius: 999px; background: var(--sp-white);
+}
+.scan-page .sw-tab {
+  width: 38px; height: 30px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 999px;
+  background: transparent; color: var(--sp-ink); cursor: pointer;
+}
+.scan-page .sw-tab:hover { background: var(--sp-tint); }
+.scan-page .sw-tab[aria-selected="true"] { background: var(--sp-ink); color: var(--sp-white); }
+.scan-page .sw-tab:focus-visible { outline: 2px solid var(--sp-measured); outline-offset: 2px; }
+
+/* ---- History ---- */
+.scan-page .sw-title { margin: 4px 0 8px; font-size: var(--fs-5); font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
+.sw-sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.scan-page .sw-account { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; margin: 0 0 12px; color: var(--sp-mute); font-size: var(--fs-1); }
+.scan-page .sw-lede { margin: 0 0 12px; color: var(--sp-mute); font-size: var(--fs-1); }
+.sw-runs { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.sw-run {
+  display: grid; gap: 4px; width: 100%; min-height: 56px; padding: 12px 14px; text-align: left; font: inherit; cursor: pointer;
+  border: 1px solid var(--sp-line); border-radius: var(--sp-radius); background: var(--sp-white); color: var(--sp-ink);
+}
+.sw-run:hover { background: var(--sp-tint); }
+.sw-run:focus-visible, .sw-back:focus-visible { outline: 2px solid var(--sp-measured); outline-offset: 2px; }
+.sw-run-name { font-size: var(--fs-3); font-weight: 700; line-height: 1.25; overflow-wrap: anywhere; }
+.sw-run-meta { display: flex; flex-wrap: wrap; gap: 2px 14px; color: var(--sp-mute); font-size: var(--fs-1); }
+.sw-run-status { color: var(--sp-unverified); font-weight: 700; text-transform: capitalize; }
+
+.sw-note, .sw-error { display: grid; justify-items: start; gap: 8px; padding: 16px; border: 1px solid var(--sp-line); border-radius: var(--sp-radius); background: var(--sp-white); }
+.sw-note strong, .sw-error strong { font-size: var(--fs-3); }
+.sw-note span, .sw-error span { color: var(--sp-mute); font-size: var(--fs-2); }
+.sw-error { border-left: 3px solid var(--sp-danger); border-radius: 0 var(--sp-radius) var(--sp-radius) 0; }
+.sw-go, .sw-retry { min-height: 48px; }
+.sw-loading p, .scan-page .sw-status { margin: 0 0 10px; color: var(--sp-mute); font-size: var(--fs-2); }
+.sw-loading ul { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.sw-loading li { height: 56px; border-radius: var(--sp-radius); background: var(--sp-tint); }
+.sw-detail { display: grid; gap: 12px; }
+.sw-back {
+  justify-self: start; min-height: 44px; padding: 0 4px; border: 0; background: none; color: var(--sp-ink);
+  font: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+}
+
+/* ---- sign-in card states (components/google-sign-in.tsx) ---- */
+.sc-google { display: grid; justify-items: center; gap: 8px; width: 100%; }
+.sc-signin-card .sc-google-status { color: var(--sp-mute); }
+.sc-signin-card .sc-google-error { display: grid; justify-items: center; gap: 8px; }
+.sc-signin-card .sc-google-error p { color: var(--sp-danger); font-weight: 600; }
+.sc-google-retry {
+  min-height: 44px; padding: 0 18px; border: 1.5px solid var(--sp-ink); border-radius: 999px; background: var(--sp-white);
+  color: var(--sp-ink); font: inherit; font-size: var(--fs-2); font-weight: 700; cursor: pointer;
+}
+.sc-google-retry:hover { background: var(--sp-tint); }
+.sc-signin-card .sc-signin-notice { color: var(--sp-ink); font-weight: 700; }
+
+/* ---- scan flow: gate + saved-result notes ---- */
+.sc-check { margin: 0; padding: 14px 0; color: var(--sp-mute); font-size: var(--fs-2); text-align: center; }
+.sc-below-block .sc-signin-notice { margin: 4px 0 0; color: var(--sp-ink); font-size: var(--fs-1); font-weight: 700; text-align: center; }
+.scan-page .sc-save-status { margin: 0 0 12px; color: var(--sp-mute); font-size: var(--fs-1); }
+.scan-page .sc-replay-note {
+  margin: 0 0 10px; padding: 10px 12px; border: 1px solid var(--sp-line); border-left: 3px solid var(--sp-ink); border-radius: 0 var(--sp-radius) var(--sp-radius) 0;
+  background: var(--sp-white); color: var(--sp-ink); font-size: var(--fs-1); line-height: 1.45;
+}
+.scan-page .sc-replay-note:focus { outline: none; }
+.sc-landing-account { justify-content: center; margin: 4px 0 0; }
+
+/* Desktop (2026-10-03): headline on one line and a shorter viewfinder, so the
+   Upload / shutter / Search row is inside the first screen on a laptop. */
+@media (min-width: 900px) {
+  .scan-page .sc-headline { max-width: none; font-size: 2.2rem; }
+  .scan-workspace .sc-viewfinder { max-height: min(calc(100svh - 330px), 440px); min-height: 280px; }
+}
+
+/* ---- live research (components/scan-research-panel.tsx) ----
+   /scan shows LIVE RESEARCH ONLY: this card is the whole evidence area, the loading
+   screen between the label read and the result, and the result itself. Amber edge
+   and an EXPERIMENTAL / UNGRADED tag mark it as unvalidated. The progress bar is
+   INDETERMINATE (the API reports no percentage): it slides, it never fills, and
+   under prefers-reduced-motion globals.css makes it a static half-opacity track.
+   The three-step strip only marks the job's real stage (queued / running / finished).
+   No score colour, arc or number is drawn. Everything wraps; nothing forces a
+   horizontal scroll. */
+.scan-page .sc-research { margin: 16px 0; padding: 16px; border: 1px solid var(--sp-line); border-left: 3px solid var(--sp-unverified); border-radius: 0 var(--sp-radius) var(--sp-radius) 0; background: var(--sp-white); color: var(--sp-ink); font-size: var(--fs-2); line-height: 1.45; overflow-wrap: anywhere; }
+.scan-page .sc-research h2 { margin: 0 0 8px; font-size: var(--fs-3); font-weight: 800; }
+.scan-page .sc-research h3 { margin: 16px 0 6px; font-size: var(--fs-2); font-weight: 800; }
+.scan-page .sc-research p { margin: 0 0 8px; }
+.sc-research-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.sc-research-tag { padding: 2px 10px; border: 1px solid var(--sp-unverified); border-radius: 999px; color: var(--sp-unverified); font-size: var(--fs-1); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.scan-page .sc-research-status { font-weight: 600; }
+.scan-page .sc-research-dim { color: var(--sp-mute); font-size: var(--fs-1); }
+.scan-page .sc-research-times { margin-top: 0; }
+.scan-page .sc-research-failure { color: var(--sp-danger); font-weight: 700; }
+.scan-page .sc-research-loading { margin-top: 8px; }
+.scan-page .sc-research-head { align-items: start; margin-bottom: 8px; }
+.scan-page .sc-research-head h2 { margin: 0 0 6px; }
+.scan-page .sc-research-head .sc-research-tags { margin: 0; }
+.sc-research-bar { height: 6px; margin: 4px 0 12px; }
+.scan-page .sc-research-loading .sc-research-status { font-size: var(--fs-3); }
+/* What was read from the label: always open beside the research, so it is never lost while waiting. */
+.scan-lab-result .sc-read-facts { margin: 12px 0; }
+.scan-lab-result .sc-read-facts .sc-facts { margin-bottom: 8px; }
+.sc-research-btn {
+  min-height: 44px; margin: 0 0 8px; padding: 0 18px; border: 1.5px solid var(--sp-ink); border-radius: 999px; background: var(--sp-white);
+  color: var(--sp-ink); font: inherit; font-size: var(--fs-2); font-weight: 700; cursor: pointer;
+}
+.sc-research-btn:hover { background: var(--sp-tint); }
+.sc-research-btn:focus-visible, .sc-research-status:focus-visible, .sc-research-details summary:focus-visible { outline: 2px solid var(--sp-measured); outline-offset: 2px; }
+.sc-research-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; margin: 10px 0 6px; padding: 0; list-style: none; }
+.sc-research-steps li { padding: 6px 2px 0; border-top: 3px solid var(--sp-line); color: var(--sp-mute); font-size: var(--fs-1); font-weight: 600; }
+.sc-research-steps li[data-done="true"] { border-top-color: var(--sp-measured); color: var(--sp-ink); }
+.sc-research-steps li[aria-current="step"] { border-top-color: var(--sp-ink); color: var(--sp-ink); font-weight: 800; }
+.sc-research-steps li[aria-current="step"][data-failed="true"] { border-top-color: var(--sp-danger); color: var(--sp-danger); }
+.scan-page .sc-research-missing, .scan-page .sc-research-note { padding: 10px 12px; border-left: 3px solid var(--sp-unverified); border-radius: 0 8px 8px 0; background: var(--sp-tint); font-size: var(--fs-1); }
+.scan-page .sc-research-missing { font-weight: 600; }
+.sc-research-details { margin: 8px 0; padding: 0 12px; border: 1px solid var(--sp-line); border-radius: var(--sp-radius); }
+.sc-research-details summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; font-weight: 700; cursor: pointer; }
+.sc-research-details summary::after { content: "+"; color: var(--sp-mute); font-size: var(--fs-3); font-weight: 400; }
+.sc-research-details[open] summary::after { content: "\2212"; }
+.sc-research-dl { display: grid; gap: 6px; margin: 0 0 12px; }
+.sc-research-dl div { display: grid; gap: 0; }
+.sc-research-dl dt { color: var(--sp-mute); font-size: var(--fs-1); }
+.sc-research-dl dd { margin: 0; font-weight: 600; }
+.scan-page .sc-research-group { margin: 10px 0 2px; font-weight: 700; }
+.sc-research-counts { display: grid; gap: 2px; margin: 0 0 8px; padding-left: 18px; }
+.sc-research-outcome { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--sp-line); }
+.scan-page .sc-research-outcome h3 { margin-top: 0; }
+/* The model's own English text inside the Lithuanian view: marked, never restyled as a translation. */
+.sc-research p[lang="en"], .sc-research h3[lang="en"] { padding-left: 8px; border-left: 2px solid var(--sp-line); }
+@media (min-width: 560px) {
+  .sc-research-dl div { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 12px; }
+}
+
+/* LIVE RESULT CARD (components/live-result-card.tsx). It reuses the approved ab-* card, tabs, warnings block and bar rows
+   (design-lab/ab/ab.css placed by scan-lab-result.css); this only fits them inside the research section: the outcome headline
+   carries no number tile, the section's own box/margins are not stacked on the card, and long model text and ids wrap. */
+/* A grid item of .la-result (display: grid) takes its content's min-content width unless told otherwise: the outcome tab strip is
+   nowrap, so without this the whole section grew wider than the phone and the card's right edge was clipped. */
+.scan-page .sc-research { min-width: 0; max-width: 100%; }
+.scan-page .sc-research-result { padding: 12px; }
+.scan-page .sc-research .sc-live-card { margin: 12px 0; min-width: 0; }
+.scan-page .sc-research .sc-live-card p { margin: 0; }
+.scan-page .sc-research .sc-live-card h3 { margin: 4px 0 6px; font-size: 22px; font-weight: 800; line-height: 1.15; color: var(--ab-ink); }
+.scan-page .sc-research .sc-live-card .ab-listhead h3 { margin: 0; font-size: 17px; }
+.scan-lab-result .sc-live-card .ab-headline.sc-live-headline { grid-template-columns: minmax(0, 1fr); }
+.sc-live-card .ab-headline > div, .sc-live-card .ab-bar-detail, .sc-live-card .ab-warning-list { min-width: 0; overflow-wrap: anywhere; }
+.sc-live-card .ab-tabs button[role="tab"][aria-selected="true"] small { color: #dfe8d6; }
+.sc-live-card .ab-tabs { margin-top: 8px; }
+.sc-live-card .ab-tabs button { gap: 6px; }
+.sc-live-card [role="tabpanel"]:focus-visible, .sc-live-card .ab-tabs button:focus-visible, .sc-live-card .ab-bars button:focus-visible, .sc-live-card .ab-warnings summary:focus-visible, .sc-live-card .ab-warning-list summary:focus-visible { outline: 3px solid #bc8344; outline-offset: 2px; }
+.sc-live-card .ab-warning-list ul, .sc-live-sources ul { margin: 4px 0 0; padding-left: 18px; display: grid; gap: 4px; }
+.sc-live-card .ab-warning-list details > summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-weight: 650; overflow-wrap: anywhere; }
+.sc-live-src-id { font-weight: 650; overflow-wrap: anywhere; }
+.sc-live-src-note { color: var(--ab-muted); }
+.sc-live-card p[lang="en"], .sc-live-card h3[lang="en"] { padding-left: 8px; border-left: 2px solid var(--ab-line); }
+.sc-live-card .ab-tabs [lang="en"], .sc-live-card .ab-bar-name [lang="en"], .sc-live-card .ab-pop [lang="en"] { border-left: 0; padding-left: 0; }
+.sc-live-more { margin-top: 12px; }
+.sc-live-card .ab-bars.outcomes .sc-live-sentence { color: var(--ab-ink); font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
+.sc-live-card .sc-live-stamp-line { display: block; margin-top: 2px; }
+.sc-live-card .sc-live-stamp-line[lang="en"] { padding-left: 0; border-left: 0; font-weight: 600; color: var(--ab-ink); overflow-wrap: anywhere; }

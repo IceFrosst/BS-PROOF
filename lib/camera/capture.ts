@@ -1,6 +1,6 @@
 /*
  * THE LIVE CAMERA VIEWFINDER's two pure(ish) jobs, split out of
- * components/scan/scan-camera.tsx so they are unit-testable without mounting React
+ * components/scan-camera.tsx so they are unit-testable without mounting React
  * or a real camera (2026-09-16 redesign, founder: "use your eyes" — the
  * reference is a live getUserMedia viewfinder, not the platform camera app).
  *
@@ -56,7 +56,11 @@ export function cameraSupported(): boolean {
 export async function startCamera(constraints?: MediaStreamConstraints): Promise<MediaStream> {
   return navigator.mediaDevices.getUserMedia(
     constraints ?? {
-      video: { facingMode: { ideal: "environment" } },
+      // Ask for the sensor's real resolution (2026-10-03). With facingMode
+      // alone browsers hand back ~640x480, and desktop webcams also lack
+      // autofocus -- a small, soft frame of a dense Supplement Facts panel.
+      // `ideal` never rejects; a camera that cannot do 4K returns its best.
+      video: { facingMode: { ideal: "environment" }, width: { ideal: 3840 }, height: { ideal: 2160 } },
       audio: false,
     },
   );
@@ -133,16 +137,60 @@ export async function captureFrameToBlob(
 }
 
 /** Convenience wrapper for the real DOM: draws `video` itself via
- * `drawImage`, the shape components/scan/scan-camera.tsx actually needs. Split
+ * `drawImage`, the shape components/scan-camera.tsx actually needs. Split
  * from `captureFrameToBlob` above so tests can mock canvas creation and
  * drawing without a real <video> element decoding frames. */
-export async function captureVideoFrame(video: HTMLVideoElement, options: CaptureOptions = {}): Promise<Blob | null> {
+export async function captureVideoFrame(video: HTMLVideoElement, options: CaptureOptions = {}, crop?: CropRect | null): Promise<Blob | null> {
+  if (crop) {
+    return captureFrameToBlob(
+      { videoWidth: crop.w, videoHeight: crop.h },
+      () => document.createElement("canvas"),
+      (ctx, width, height) => ctx.drawImage(video, crop.x, crop.y, crop.w, crop.h, 0, 0, width, height),
+      options,
+    );
+  }
   return captureFrameToBlob(
     video,
     () => document.createElement("canvas"),
     (ctx, width, height) => ctx.drawImage(video, 0, 0, width, height),
     options,
   );
+}
+
+export interface CropRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/**
+ * The part of the camera frame the person actually sees inside the on-screen
+ * guide (2026-10-03: the photo used to be the whole sensor frame, much wider
+ * than the guide). The <video> is `object-fit: cover`, so the sensor frame is
+ * scaled up and centred; this maps the guide's on-screen box back to sensor
+ * pixels. `pad` (fraction of the guide) keeps a little margin so a panel
+ * touching the corners is not clipped. Null when anything has no size.
+ */
+export function coverCropRect(
+  videoW: number,
+  videoH: number,
+  view: { left: number; top: number; width: number; height: number },
+  guide: { left: number; top: number; width: number; height: number },
+  pad = 0.06,
+): CropRect | null {
+  if (!videoW || !videoH || !view.width || !view.height || !guide.width || !guide.height) return null;
+  const scale = Math.max(view.width / videoW, view.height / videoH);
+  const ox = (view.width - videoW * scale) / 2;
+  const oy = (view.height - videoH * scale) / 2;
+  const px = guide.width * pad;
+  const py = guide.height * pad;
+  const x0 = Math.max(0, (guide.left - px - view.left - ox) / scale);
+  const y0 = Math.max(0, (guide.top - py - view.top - oy) / scale);
+  const x1 = Math.min(videoW, (guide.left + guide.width + px - view.left - ox) / scale);
+  const y1 = Math.min(videoH, (guide.top + guide.height + py - view.top - oy) / scale);
+  if (x1 - x0 < 1 || y1 - y0 < 1) return null;
+  return { x: Math.round(x0), y: Math.round(y0), w: Math.round(x1 - x0), h: Math.round(y1 - y0) };
 }
 
 let captureCounter = 0;
@@ -154,4 +202,40 @@ export function blobToCaptureFile(blob: Blob, mimeType = DEFAULT_MIME): File {
   captureCounter += 1;
   const ext = mimeType === "image/jpeg" ? "jpg" : mimeType.split("/")[1] || "bin";
   return new File([blob], `scan-capture-${Date.now()}-${captureCounter}.${ext}`, { type: mimeType });
+}
+
+/** Uploads above this are re-encoded before POST /api/scan (2026-10-03).
+ * Vercel refuses request bodies over 4.5 MB before the route runs, so a
+ * typical 4-8 MB phone photo failed with an opaque error. */
+export const UPLOAD_REENCODE_BYTES = 3_500_000;
+
+/**
+ * A picked photo, downscaled to `maxLongEdge` and re-encoded as JPEG when it
+ * is too large to upload. Small files pass through untouched, and any decode
+ * failure returns the original file -- the server's own size check still
+ * answers for it, so this can only make an upload smaller, never break one.
+ */
+export async function shrinkForUpload(file: File, options: CaptureOptions = {}): Promise<File> {
+  if (file.size <= UPLOAD_REENCODE_BYTES || typeof createImageBitmap !== "function") return file;
+  let bitmap: ImageBitmap | null = null;
+  try {
+    bitmap = await createImageBitmap(file);
+    const decoded = bitmap;
+    const blob = await captureFrameToBlob(
+      { videoWidth: decoded.width, videoHeight: decoded.height },
+      () => document.createElement("canvas"),
+      (ctx, width, height) => ctx.drawImage(decoded, 0, 0, width, height),
+      { maxLongEdge: 2560, ...options },
+    );
+    // Only ever swap in a SMALLER file; anything else keeps the original.
+    return blob && blob.size < file.size ? blobToCaptureFile(blob, "image/jpeg") : file;
+  } catch {
+    return file;
+  } finally {
+    try {
+      bitmap?.close();
+    } catch {
+      /* closing is best effort */
+    }
+  }
 }

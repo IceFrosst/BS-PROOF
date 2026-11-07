@@ -1,0 +1,371 @@
+"use client";
+
+/*
+ * THE HISTORY TAB (2026-09-23): the signed-in person's last 20 scans, and a way
+ * to open any of them again.
+ *
+ *   GET /api/scan/history          -> { status: "ok", runs: [{ id, created_at, source, status, product_name }], next_cursor: null }
+ *   GET /api/scan/history/<uuid>   -> { status: "ok", run_id, analysis: <the saved ScanAnalysis> }
+ *
+ * Both carry `Authorization: Bearer <current access token>` and are `no-store`.
+ * Opening a saved scan renders the stored analysis through the SAME <ScanFlow>
+ * renderer the live Scan tab uses (its `initialResult` prop) -- the identical
+ * Evidence Ledger card -- and makes no scan request and no model call. It is
+ * dated "Saved scan from ..." so a replay is never read as current research.
+ * Original photos are never requested: only the stored analysis comes back.
+ *
+ * SESSION SAFETY. Everything below `HistoryBody` is keyed by the signed-in
+ * user's id, so signing out or switching Google accounts unmounts it: its
+ * in-flight requests are aborted by effect cleanup, its list and any open scan
+ * are dropped, and a late answer for the previous person has nowhere to land.
+ * Each response is also checked against its own AbortSignal before it is
+ * applied. A 401 gets one refresh-and-retry; a second one ends the session on
+ * screen (the sign-in card comes back, saying why) instead of showing an error
+ * the person cannot act on.
+ *
+ * Error text is deliberately generic: nothing from the server's body, no
+ * token, no run id beyond what the person already sees.
+ */
+import { useCallback, useEffect, useId, useRef, useState } from "react";
+
+import { SignInCard } from "@/components/google-sign-in";
+import { formatSavedAt, ScanFlow } from "@/components/scan-flow";
+import type { CatalogIngredient } from "@/lib/analyze/catalog";
+import type { ScanAnalysis } from "@/lib/analyze/scan";
+import type { AuthSession } from "@/lib/auth/use-supabase-session";
+import { getJson, isObject, parseSaved, type Failure } from "@/lib/saved-scans/client";
+import { FLOW_COPY } from "@/lib/i18n/copy/flow";
+import { HISTORY_COPY } from "@/lib/i18n/copy/history";
+import { useLang } from "@/lib/i18n/locale";
+
+export interface HistoryRun {
+  id: string;
+  created_at: string;
+  source: string;
+  status: string;
+  product_name: string | null;
+}
+
+export interface ScanHistoryProps {
+  catalog: CatalogIngredient[];
+  /** The workspace's shared session -- one subscription for the whole page. */
+  auth: AuthSession;
+  /** Bumped by the workspace each time a new scan was actually stored; refetches the list. */
+  refreshToken: number;
+  /** The empty state's way back to the camera. */
+  onGoToScan: () => void;
+}
+
+export const SESSION_ENDED_NOTICE = "Your session ended. Sign in again to continue.";
+
+function parseRuns(json: unknown): HistoryRun[] | null {
+  if (!isObject(json) || json.status !== "ok" || !Array.isArray(json.runs)) return null;
+  const runs: HistoryRun[] = [];
+  for (const item of json.runs) {
+    if (!isObject(item) || typeof item.id !== "string" || typeof item.created_at !== "string") continue;
+    runs.push({
+      id: item.id,
+      created_at: item.created_at,
+      source: typeof item.source === "string" ? item.source : "photo",
+      status: typeof item.status === "string" ? item.status : "ok",
+      product_name: typeof item.product_name === "string" && item.product_name.trim() ? item.product_name : null,
+    });
+  }
+  return runs;
+}
+
+function words(value: string): string {
+  return value.replace(/_/g, " ");
+}
+
+/* `product_name` is what the label said (or what was typed): original text,
+ * never translated. Only the fallback wording around it follows the language. */
+function runTitle(run: HistoryRun, h: (typeof HISTORY_COPY)["en"]): string {
+  return run.product_name ?? (run.source === "manual" ? h.typedSupplement : h.unnamedLabel);
+}
+
+function listMessage(h: (typeof HISTORY_COPY)["en"], failure: Exclude<Failure, "auth">): string {
+  return failure === "not_found" ? h.listNotFound : failure === "unavailable" ? h.listUnavailable : h.listFailed;
+}
+
+function detailMessage(h: (typeof HISTORY_COPY)["en"], failure: Exclude<Failure, "auth">): string {
+  return failure === "not_found" ? h.detailNotFound : failure === "unavailable" ? h.detailUnavailable : h.detailFailed;
+}
+
+/* ------------------------------------------------------------------ shell -- */
+
+export function ScanHistory({ catalog, auth, refreshToken, onGoToScan }: ScanHistoryProps) {
+  const { lang } = useLang();
+  const h = HISTORY_COPY[lang];
+  const f = FLOW_COPY[lang];
+  // The notice is held as a flag, not as text, so switching language rewords it.
+  const [sessionEnded, setSessionEnded] = useState(false);
+  const notice = sessionEnded ? f.sessionEnded : null;
+  const gate: "unconfigured" | "checking" | "signin" | "open" = !auth.configured ? "unconfigured" : auth.loading ? "checking" : auth.userId ? "open" : "signin";
+  const onSessionEnded = useCallback(() => setSessionEnded(true), []);
+
+  // Signing in again retires the "session ended" explanation.
+  const [lastGate, setLastGate] = useState(gate);
+  if (lastGate !== gate) {
+    setLastGate(gate);
+    if (gate === "open") setSessionEnded(false);
+  }
+
+  if (gate === "open" && auth.userId) {
+    return (
+      <div className="sw-history" data-testid="history-panel">
+        <HistoryBody
+          key={auth.userId}
+          catalog={catalog}
+          auth={auth}
+          owner={auth.userId}
+          refreshToken={refreshToken}
+          onGoToScan={onGoToScan}
+          onSessionEnded={onSessionEnded}
+        />
+      </div>
+    );
+  }
+  return (
+    <div className="sw-history" data-testid="history-panel">
+      <h1 className="sw-title">{h.yourScans}</h1>
+      {gate === "unconfigured" ? (
+        <div className="sw-note" data-testid="history-unconfigured">
+          <strong>{h.notAvailableTitle}</strong>
+          <span>{h.notAvailableBody}</span>
+        </div>
+      ) : gate === "checking" ? (
+        <p className="sw-status" role="status">
+          {f.checkingSignIn}
+        </p>
+      ) : (
+        <SignInCard title={f.signInHistoryTitle} body={f.signInHistoryBody} notice={notice} />
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------- body -- */
+
+type ListState = { key: string; status: "ready"; runs: HistoryRun[] } | { key: string; status: "error"; failure: Exclude<Failure, "auth"> };
+
+function HistoryBody({
+  catalog,
+  auth,
+  owner,
+  refreshToken,
+  onGoToScan,
+  onSessionEnded,
+}: {
+  catalog: CatalogIngredient[];
+  auth: AuthSession;
+  owner: string;
+  refreshToken: number;
+  onGoToScan: () => void;
+  onSessionEnded: () => void;
+}) {
+  const { getAccessToken, signOut } = auth;
+  const { lang } = useLang();
+  const h = HISTORY_COPY[lang];
+  const f = FLOW_COPY[lang];
+  const [attempt, setAttempt] = useState(0);
+  const [list, setList] = useState<ListState | null>(null);
+  const [selected, setSelected] = useState<HistoryRun | null>(null);
+  const restoreFocus = useRef<string | null>(null);
+  const requestKey = `${refreshToken}:${attempt}`;
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void (async () => {
+      const result = await getJson("/api/scan/history", owner, getAccessToken, controller.signal);
+      if (controller.signal.aborted) return;
+      if (result.ok) {
+        const runs = parseRuns(result.json);
+        setList(runs ? { key: requestKey, status: "ready", runs } : { key: requestKey, status: "error", failure: "failed" });
+      } else if (result.failure === "auth") {
+        onSessionEnded();
+        void signOut();
+      } else {
+        setList({ key: requestKey, status: "error", failure: result.failure });
+      }
+    })();
+    return () => controller.abort();
+  }, [owner, requestKey, getAccessToken, signOut, onSessionEnded]);
+
+  // Back from a saved scan: put focus on the row that opened it.
+  useEffect(() => {
+    if (selected || !restoreFocus.current) return;
+    const id = restoreFocus.current;
+    restoreFocus.current = null;
+    Array.from(document.querySelectorAll<HTMLElement>("[data-run-id]"))
+      .find((row) => row.dataset.runId === id)
+      ?.focus();
+  }, [selected, list]);
+
+  if (selected) {
+    return (
+      <>
+        <h1 className="sw-title sw-sr-only">{f.savedScanRegion}</h1>
+        <SavedScan
+          key={selected.id}
+          catalog={catalog}
+          auth={auth}
+          owner={owner}
+          run={selected}
+          onBack={() => {
+            restoreFocus.current = selected.id;
+            setSelected(null);
+          }}
+          onSessionEnded={onSessionEnded}
+        />
+      </>
+    );
+  }
+
+  const loading = list === null || list.key !== requestKey;
+  const ready = list?.status === "ready" ? list : null;
+
+  return (
+    <>
+      <h1 className="sw-title">{h.yourScans}</h1>
+      <p className="sw-account">
+        {f.signedInAs} <strong>{auth.email ?? h.yourGoogleAccount}</strong>
+        <button type="button" className="sc-signout" onClick={() => void signOut()}>
+          {f.signOut}
+        </button>
+      </p>
+      {ready ? (
+        ready.runs.length === 0 ? (
+          <div className="sw-note" data-testid="history-empty">
+            <strong>{h.noSavedTitle}</strong>
+            <span>{h.noSavedBody}</span>
+            <button type="button" className="button button-dark sw-go" onClick={onGoToScan}>
+              {h.goToScan}
+            </button>
+          </div>
+        ) : (
+          <>
+            <p className="sw-lede">{h.latest(ready.runs.length)}</p>
+            <ul className="sw-runs" aria-busy={loading} data-testid="history-list">
+              {ready.runs.map((run) => {
+                const savedAt = formatSavedAt(run.created_at, lang);
+                return (
+                  <li key={run.id}>
+                    <button type="button" className="sw-run" data-run-id={run.id} onClick={() => setSelected(run)}>
+                      <span className="sw-run-name">{runTitle(run, h)}</span>
+                      <span className="sw-run-meta">
+                        <span>{run.source === "manual" ? h.typedSearch : h.photoScan}</span>
+                        {run.status !== "ok" ? <span className="sw-run-status">{h.statusWords[run.status] ?? words(run.status)}</span> : null}
+                        <span>
+                          {h.saved} <time dateTime={run.created_at}>{savedAt ?? run.created_at}</time>
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </>
+        )
+      ) : loading ? (
+        <div className="sw-loading" role="status" aria-live="polite" data-testid="history-loading">
+          <p>{h.loadingScans}</p>
+          <ul aria-hidden="true">
+            <li />
+            <li />
+            <li />
+          </ul>
+        </div>
+      ) : list && list.status === "error" ? (
+        <div className="sw-error" role="alert" data-testid="history-error">
+          <strong>{h.couldNotLoadTitle}</strong>
+          <span>{listMessage(h, list.failure)}</span>
+          <button type="button" className="button button-outline sw-retry" onClick={() => setAttempt((n) => n + 1)}>
+            {f.tryAgain}
+          </button>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+/* ------------------------------------------------------------- saved scan -- */
+
+type DetailState = { key: number; status: "ready"; analysis: ScanAnalysis } | { key: number; status: "error"; failure: Exclude<Failure, "auth"> };
+
+function SavedScan({
+  catalog,
+  auth,
+  owner,
+  run,
+  onBack,
+  onSessionEnded,
+}: {
+  catalog: CatalogIngredient[];
+  auth: AuthSession;
+  owner: string;
+  run: HistoryRun;
+  onBack: () => void;
+  onSessionEnded: () => void;
+}) {
+  const { getAccessToken, signOut } = auth;
+  const { lang } = useLang();
+  const h = HISTORY_COPY[lang];
+  const f = FLOW_COPY[lang];
+  const [attempt, setAttempt] = useState(0);
+  const [detail, setDetail] = useState<DetailState | null>(null);
+  const headingId = useId();
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void (async () => {
+      const result = await getJson(`/api/scan/history/${encodeURIComponent(run.id)}`, owner, getAccessToken, controller.signal);
+      if (controller.signal.aborted) return;
+      if (result.ok) {
+        const analysis = parseSaved(result.json, run.id);
+        setDetail(analysis ? { key: attempt, status: "ready", analysis } : { key: attempt, status: "error", failure: "failed" });
+      } else if (result.failure === "auth") {
+        onSessionEnded();
+        void signOut();
+      } else {
+        setDetail({ key: attempt, status: "error", failure: result.failure });
+      }
+    })();
+    return () => controller.abort();
+  }, [owner, run.id, attempt, getAccessToken, signOut, onSessionEnded]);
+
+  if (detail?.status === "ready" && detail.key === attempt) {
+    return (
+      <ScanFlow
+        catalog={catalog}
+        auth={auth}
+        initialResult={{ runId: run.id, savedAt: run.created_at, analysis: detail.analysis }}
+        onLeave={onBack}
+      />
+    );
+  }
+
+  const failed = detail?.status === "error" && detail.key === attempt ? detail : null;
+  return (
+    <div className="sw-detail" aria-labelledby={headingId}>
+      <button type="button" className="sw-back" onClick={onBack}>
+        {f.backToHistory}
+      </button>
+      {failed ? (
+        <div className="sw-error" role="alert" data-testid="history-detail-error">
+          <strong id={headingId}>{h.couldNotOpen}</strong>
+          <span>{detailMessage(h, failed.failure)}</span>
+          {failed.failure !== "not_found" ? (
+            <button type="button" className="button button-outline sw-retry" onClick={() => setAttempt((n) => n + 1)}>
+              {f.tryAgain}
+            </button>
+          ) : null}
+        </div>
+      ) : (
+        <p id={headingId} className="sw-status" role="status" data-testid="history-detail-loading">
+          {h.openingSaved}
+        </p>
+      )}
+    </div>
+  );
+}

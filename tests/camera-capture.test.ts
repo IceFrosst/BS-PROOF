@@ -7,7 +7,7 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { blobToCaptureFile, cameraSupported, captureFrameToBlob, startCamera, stopCamera } from "@/lib/camera/capture";
+import { blobToCaptureFile, cameraSupported, captureFrameToBlob, coverCropRect, startCamera, stopCamera } from "@/lib/camera/capture";
 
 describe("cameraSupported", () => {
   const originalMediaDevices = navigator.mediaDevices;
@@ -40,14 +40,17 @@ describe("cameraSupported", () => {
 });
 
 describe("startCamera / stopCamera", () => {
-  it("requests the rear camera with no audio by default", async () => {
+  it("requests the rear camera at its best resolution, with no audio, by default", async () => {
     const fakeStream = { getTracks: () => [] } as unknown as MediaStream;
     const getUserMedia = vi.fn().mockResolvedValue(fakeStream);
     Object.defineProperty(navigator, "mediaDevices", { value: { getUserMedia }, configurable: true });
 
     const stream = await startCamera();
     expect(stream).toBe(fakeStream);
-    expect(getUserMedia).toHaveBeenCalledWith({ video: { facingMode: { ideal: "environment" } }, audio: false });
+    expect(getUserMedia).toHaveBeenCalledWith({
+      video: { facingMode: { ideal: "environment" }, width: { ideal: 3840 }, height: { ideal: 2160 } },
+      audio: false,
+    });
   });
 
   it("stops every track, and is safe to call with null/undefined/an already-stopped stream", () => {
@@ -139,5 +142,20 @@ describe("blobToCaptureFile", () => {
     expect(file).toBeInstanceOf(File);
     expect(file.type).toBe("image/jpeg");
     expect(file.name).toMatch(/^scan-capture-.*\.jpg$/);
+  });
+});
+
+describe("coverCropRect", () => {
+  it("maps the on-screen guide back to sensor pixels under object-fit: cover", () => {
+    // 1600x1200 sensor shown in a 400x500 box: scale 500/1200, 1600 wide -> 666.7 shown, 133.3 cut each side.
+    const view = { left: 0, top: 0, width: 400, height: 500 };
+    const guide = { left: 24, top: 120, width: 352, height: 230 };
+    const r = coverCropRect(1600, 1200, view, guide, 0)!;
+    expect(r).toEqual({ x: Math.round((24 + 133.333) * 2.4), y: 288, w: Math.round(352 * 2.4), h: 552 });
+  });
+  it("clamps to the sensor frame and returns null for unsized inputs", () => {
+    const r = coverCropRect(100, 100, { left: 0, top: 0, width: 100, height: 100 }, { left: -50, top: -50, width: 300, height: 300 }, 0)!;
+    expect(r).toEqual({ x: 0, y: 0, w: 100, h: 100 });
+    expect(coverCropRect(0, 0, { left: 0, top: 0, width: 1, height: 1 }, { left: 0, top: 0, width: 1, height: 1 })).toBeNull();
   });
 });

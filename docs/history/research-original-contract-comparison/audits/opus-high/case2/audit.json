@@ -1,0 +1,354 @@
+{
+  "meta": {
+    "run_at": "2026-10-03",
+    "model": "claude-opus-5-5",
+    "prompt": "audit-v0.4",
+    "note": "Automated benchmark run with live web tools. No human has verified this audit. NIH ODS fact sheet, the Alsanie 2026 full text and the Akhgarjand 2022 full text could not be opened (403 or paywall), so those rest on abstracts or search snippets. Included-trial lists of the meta-analyses were not opened, so pooled_in tags are inferred, not checked."
+  },
+  "product": "Ashwagandha root extract standardised to 5% withanolides, 600 mg extract/day (supplied test regimen)",
+  "ingredient": "ashwagandha (Withania somnifera)",
+  "form": "root extract standardised to 5% withanolides",
+  "daily_dose": "600 mg extract/day (supplied test regimen; serving count unknown)",
+  "dose_note": "The 600 mg is extract mass, not raw root powder and not withanolide mass. At 5% withanolides this gives about 30 mg withanolides a day. The two closest trials (Chandrasekhar 2012, Salve 2019) gave 600 mg/day of a root extract as 300 mg twice daily; Chandrasekhar's extract was standardised to at least 5% withanolides. We do not know whether this product is taken once or twice a day, or how many servings the pack holds. Every verdict here assumes 600 mg extract per day. A news snippet (not opened as a primary regulation) says Poland caps intake at 10 mg withanolides a day, which this product would exceed. Denmark and France have banned ashwagandha in supplements, per news snippets and a BfR document title.",
+  "for_whom": {
+    "reasonable": "Adults who already feel stressed (enrolled on a stress scale cut-off) had lower stress scores than placebo in most small 6 to 12 week trials of 240 to 600 mg/day root extract, at low certainty.",
+    "not_shown": "Adults who are not stressed (nobody has tested this), use beyond 12 weeks, pregnancy, and people with liver or thyroid disease. One 2025 review and one 12-week trial found no stress benefit over placebo.",
+    "source": "NIH ODS ashwagandha fact sheet (snippet only, page blocked): extract lowered stress scores and cortisol vs placebo in small trials. Akhgarjand 2022 and Marchi 2025 rate certainty low. Germany's BfR flags liver injury cases. No guideline body recommends it for stress."
+  },
+  "outcomes": [
+    {
+      "name": "Stress",
+      "population": "Adults with self-reported stress, otherwise healthy",
+      "sentence": "In stressed adults, pooled trials show stress scores about 4.9 points lower than placebo (0 to 40 scale), but one review and one trial found no gain.",
+      "ledger": {
+        "effectPoints": "1",
+        "effect_basis": "Bachour 2025 (10.1192/bjo.2025.10136, 15 studies, 873 people): PSS (Perceived Stress Scale, 0 to 40) mean difference -4.88 (95% CI -7.84 to -1.91) at 8 weeks. Vijayakumar 2024 (PMID 39348746, 9 RCTs, 558): MD -4.72 (-8.45 to -0.99). Akhgarjand 2022 (10.1002/ptr.7598): SMD -1.75 (-2.29 to -1.22), I2 83.1%, certainty low. Albalawi 2025 (10.1177/02601060251363647, 6 RCTs, 488): SMD -0.355 (-1.188 to 0.47), P = 0.40, no effect. Smith 2023 (10.1177/02698811231200023, n=120, 12 weeks, different 1.5% extract): no difference, p = 0.867. Rated small because the most-tested dose trial shows a 2.48-point gap at week 8, reviews disagree, and placebo groups improve a lot.",
+        "bodyIsRct": true,
+        "checklist": {
+          "risk_of_bias": "concern",
+          "consistency": "concern",
+          "precision": "concern",
+          "directness": "supported",
+          "publication_bias": "unknown"
+        },
+        "gates": {
+          "rctCount": 15,
+          "largestRctN": 120,
+          "longestRctWeeks": 12,
+          "chronicOutcome": false,
+          "surrogate": false,
+          "allPositiveIndustryOrOneLab": false
+        },
+        "formFit": "3",
+        "doseFit": "4",
+        "effective_daily_range": "240 to 600 mg/day standardised root extract in positive trials; 600 mg/day (300 mg twice daily) is the most-tested dose; Akhgarjand 2022 dose-response favoured 300 to 600 mg/day for stress."
+      },
+      "detail": {
+        "effect": {
+          "found": "Pooled stress scores fell about 4.7 to 4.9 points more than placebo on a 0 to 40 scale. In the 600 mg arm of Salve 2019, week 8 scores were 14.15 vs 16.63 on placebo. Cortisol also fell.",
+          "missing": "No agreed threshold for a noticeable change on the stress scale was found. One 2025 review found no effect on perceived stress, only on cortisol.",
+          "move": "A large trial reporting how many people reached a pre-set, meaningful drop in stress score."
+        },
+        "evidence": {
+          "found": "About 15 small placebo-controlled trials, mostly 60 to 120 people over 8 to 12 weeks, pooled in several reviews. Akhgarjand 2022 rated certainty low.",
+          "missing": "No trial over 141 people or longer than 12 weeks was found. Reviews disagree: I2 = 83.1% (trials disagreed a lot) in one, a null in another.",
+          "move": "An independent trial of 300 or more stressed adults with registered outcomes."
+        },
+        "form": {
+          "found": "Chandrasekhar 2012 used a root extract standardised to at least 5% withanolides (KSM-66), the same label specification as this product.",
+          "missing": "This product's extraction method and brand are unknown, so it may not match the tested extract. Other trials used extracts at 1.5%, 2.5% or other levels.",
+          "move": "A trial or assay showing this product's extract matches a tested one."
+        },
+        "dose": {
+          "found": "600 mg/day matches the dose in Chandrasekhar 2012 and the higher arm of Salve 2019, which did better than 250 mg/day.",
+          "missing": "Whether this product is split into two doses, as tested, is unknown.",
+          "move": "Head-to-head trial of once vs twice daily 600 mg."
+        }
+      },
+      "inventory": [
+        {
+          "id": "10.1192/bjo.2025.10136",
+          "year": 2025,
+          "design": "sr_ma",
+          "n": 873,
+          "direction": "benefit",
+          "access": "full_text",
+          "funding": "unknown",
+          "note": "Bachour 2025, 15 studies. PSS -4.88 (95% CI -7.84 to -1.91) at 8 weeks; cortisol and HAM-A lower; quality of life no change. I2 and bias ratings not found in accessed text."
+        },
+        {
+          "id": "10.1002/ptr.7598",
+          "year": 2022,
+          "design": "sr_ma",
+          "n": 1002,
+          "direction": "benefit",
+          "access": "abstract",
+          "funding": "unknown",
+          "note": "Akhgarjand 2022, PMID 36017529, 12 trials. Stress SMD -1.75 (95% CI -2.29 to -1.22), I2 83.1%. Dose-response favoured 300 to 600 mg/d. Certainty of evidence low."
+        },
+        {
+          "id": "PMID:39348746",
+          "year": 2024,
+          "design": "sr_ma",
+          "n": 558,
+          "direction": "benefit",
+          "access": "abstract",
+          "funding": "unknown",
+          "note": "Vijayakumar 2024, Explore, 9 RCTs. PSS MD -4.72 (95% CI -8.45 to -0.99); HAM-A MD -2.19; cortisol MD -2.58."
+        },
+        {
+          "id": "10.1177/02601060251363647",
+          "year": 2025,
+          "design": "sr_ma",
+          "n": 488,
+          "direction": "none",
+          "access": "abstract",
+          "funding": "unknown",
+          "note": "Albalawi 2025, PMID 40746175, 6 RCTs on stress. PSS SMD -0.355 (95% CI -1.188 to 0.47), P = 0.40, I2 50.9%. Cortisol -1.16 ug/dL (-1.64 to -0.69)."
+        },
+        {
+          "id": "PMID:41644067",
+          "year": 2026,
+          "design": "sr_ma",
+          "n": 0,
+          "direction": "benefit",
+          "access": "abstract",
+          "funding": "unknown",
+          "note": "Alsanie 2026, Complement Ther Med, 22 RCTs on mental health. Reports stress improved with linear and non-linear dose links. Effect sizes and n not in the abstract I accessed."
+        },
+        {
+          "id": "10.4103/0253-7176.106022",
+          "year": 2012,
+          "design": "rct",
+          "n": 64,
+          "direction": "benefit",
+          "access": "full_text",
+          "funding": "unknown",
+          "pooled_in": "likely 10.1002/ptr.7598 and 10.1192/bjo.2025.10136 (inclusion lists not opened)",
+          "note": "Chandrasekhar 2012, KSM-66 root extract at least 5% withanolides, 300 mg twice daily, 60 days, PSS 14 or more at entry. PSS fell 44.0% vs 5.5%, P<0.0001. Declared no support; extract maker not stated as funder."
+        },
+        {
+          "id": "PMID:32021735",
+          "year": 2019,
+          "design": "rct",
+          "n": 60,
+          "direction": "benefit",
+          "access": "full_text",
+          "funding": "unknown",
+          "pooled_in": "likely 10.1192/bjo.2025.10136 (inclusion list not opened)",
+          "note": "Salve 2019 Cureus, KSM-66 250 or 600 mg/day vs placebo, 8 weeks, PSS 20 or more. Week 8 PSS 14.15 (600 mg) vs 16.63 placebo, p<0.001. Extract supplied by Ixoreal Biomed."
+        },
+        {
+          "id": "10.1097/MD.0000000000017186",
+          "year": 2019,
+          "design": "rct",
+          "n": 60,
+          "direction": "benefit",
+          "access": "abstract",
+          "funding": "unknown",
+          "pooled_in": "likely 10.1002/ptr.7598 (inclusion list not opened)",
+          "note": "Lopresti 2019, Shoden extract 240 mg once daily, 60 days. HAM-A lower (P = .040), DASS-21 not significant (P = .096), cortisol lower (P < .001)."
+        },
+        {
+          "id": "10.1177/02698811231200023",
+          "year": 2023,
+          "design": "rct",
+          "n": 120,
+          "direction": "none",
+          "access": "full_text",
+          "funding": "industry",
+          "note": "Smith 2023, Witholytin 1.5% withanolides, 400 mg/day, 12 weeks, ages 40 to 75, BMI 25 to 35, high stress. PSS fell 38.59% vs 35.63% placebo, p = 0.867. Funded by Verdure Sciences."
+        },
+        {
+          "id": "10.25122/jml-2025-0172",
+          "year": 2026,
+          "design": "rct",
+          "n": 141,
+          "direction": "benefit",
+          "access": "full_text",
+          "funding": "unknown",
+          "note": "West 2026, three arms: ashwagandha plus Triphala and Trikatu, root extract alone, placebo, 600 mg/day, 8 weeks. Combination PSS -11.75 vs -1.29 placebo, P<0.0001. Root-extract-alone result not extracted. Products from Agaja Nutraceuticals."
+        }
+      ],
+      "absolute_effect": "Bachour 2025: PSS mean difference -4.88 points (95% CI -7.84 to -1.91) at 8 weeks on a 0 to 40 scale. Vijayakumar 2024: MD -4.72 (95% CI -8.45 to -0.99). Albalawi 2025: SMD -0.355 (95% CI -1.188 to 0.47), P = 0.40. Salve 2019, 600 mg arm: week 8 PSS 14.15 vs 16.63 placebo, a raw gap of 2.48 points (change -8.80 vs -6.07). Chandrasekhar 2012: PSS fell 44.0% vs 5.5%. Smith 2023: 38.59% vs 35.63%, p = 0.867. No NNT derivable because no trial reported responders.",
+      "clinically_meaningful": "unknown. No agreed MCID (smallest change people notice) for the Perceived Stress Scale was found in these searches. Cohen's labels would call the SMDs (-0.355 to -1.75) small to very large, which is a statistical convention, not proof anyone would notice. Large placebo drops (35.63% in Smith 2023) make the extra gain look smaller.",
+      "strongest_study": "Smith 2023 (n=120, 12 weeks, full text) is the largest and longest single-extract trial with a pre-specified stress outcome, and it found no difference from placebo (p = 0.867), though it used a 1.5% extract at 400 mg/day. For this exact form and dose, Chandrasekhar 2012 (n=64, 60 days) is the closest match and was strongly positive.",
+      "strongest_doubt": "Most positive trials are small (about 60 people), short, run in India with extract makers supplying product, and show placebo groups barely improving (5.5% in Chandrasekhar 2012), which is unusual. When placebo groups improved a lot (Smith 2023), the gap vanished. Reviews disagree, from a null (Albalawi 2025) to SMD -1.75 with I2 83.1% (Akhgarjand 2022).",
+      "study_that_would_move_this": "An independent, pre-registered trial of 300 or more stressed adults outside India, using a 5% withanolide root extract at 600 mg/day for at least 12 weeks, reporting the share who reach a meaningful stress-score drop.",
+      "subgroup_hypothesis_only": false,
+      "studied_in": {
+        "sex": "mixed",
+        "sex_note": "Chandrasekhar 2012: 41 men, 23 women. Others enrolled both sexes.",
+        "age_min": 18,
+        "age_max": 75,
+        "age_note": "Chandrasekhar 18 to 54, West 18 to 65, Smith 40 to 75; Salve means about 30 to 33.",
+        "ethnicity": "not reported",
+        "confidence": "inferred"
+      }
+    },
+    {
+      "name": "Stress",
+      "population": "Adults not selected for high stress",
+      "sentence": "Nobody has tested whether this lowers stress in adults who are not already stressed. Trials enrolled people above a stress-score cut-off.",
+      "ledger": {
+        "effectPoints": "unclear",
+        "effect_basis": "No trial found that enrolled adults without a stress-score cut-off and measured perceived stress. The trials found (Chandrasekhar 2012, Salve 2019, Lopresti 2019, Smith 2023, West 2026) all required raised stress at entry. A search snippet claimed a review found no benefit in non-stressed people, but I could not verify it, so it is not used.",
+        "bodyIsRct": false,
+        "checklist": {
+          "risk_of_bias": "unknown",
+          "consistency": "unknown",
+          "precision": "unknown",
+          "directness": "concern",
+          "publication_bias": "unknown"
+        },
+        "gates": {
+          "rctCount": 0,
+          "largestRctN": 0,
+          "longestRctWeeks": 0,
+          "chronicOutcome": false,
+          "surrogate": false,
+          "allPositiveIndustryOrOneLab": false
+        },
+        "formFit": "unknown",
+        "doseFit": "unknown",
+        "effective_daily_range": "Not established in this population."
+      },
+      "detail": {
+        "effect": {
+          "found": "Nothing. This is no evidence, not evidence of no benefit.",
+          "missing": "Any trial in adults with normal stress levels.",
+          "move": "A placebo-controlled trial in unselected adults."
+        },
+        "evidence": {
+          "found": "No trials found in this group.",
+          "missing": "Every trial found used a stress-score entry cut-off.",
+          "move": "Any trial without a stress cut-off reporting PSS."
+        },
+        "form": {
+          "found": "Not tested in this group.",
+          "missing": "No form data for this group.",
+          "move": "A trial in this group using a 5% withanolide root extract."
+        },
+        "dose": {
+          "found": "Not tested in this group.",
+          "missing": "No dose data for this group.",
+          "move": "A trial in this group at 600 mg/day."
+        }
+      },
+      "inventory": [],
+      "absolute_effect": "No data. Nobody has tested this in adults not selected for stress.",
+      "clinically_meaningful": "unknown. No data, and no MCID exists for the Perceived Stress Scale that was found here.",
+      "strongest_study": "None found.",
+      "strongest_doubt": "People with low stress scores have little room to improve, so results from stressed adults may not carry over.",
+      "study_that_would_move_this": "A placebo-controlled trial of 600 mg/day root extract in adults recruited without a stress cut-off, for at least 8 weeks.",
+      "subgroup_hypothesis_only": false,
+      "studied_in": {
+        "sex": "unknown",
+        "age_min": null,
+        "age_max": null,
+        "age_note": "No trials found.",
+        "ethnicity": "not reported",
+        "confidence": "unknown"
+      }
+    },
+    {
+      "name": "Stress with a mental disorder",
+      "population": "Adults with anxiety or other mental disorders",
+      "sentence": "In people with anxiety or other mental disorders, one review found lower stress (SMD -0.95) and anxiety than control, but certainty was low.",
+      "ledger": {
+        "effectPoints": "1",
+        "effect_basis": "Marchi 2025 (10.1192/bjo.2025.10885, 14 RCTs, 713 people, full text): stress SMD -0.95 (95% CI -1.46 to -0.43), I2 58%, based on limited studies; anxiety SMD -1.62 (-2.66 to -0.57), I2 94%, outlier-corrected -1.13. Certainty low for stress and anxiety. Rated small given low certainty, few stress studies and wide intervals.",
+        "bodyIsRct": true,
+        "checklist": {
+          "risk_of_bias": "concern",
+          "consistency": "concern",
+          "precision": "concern",
+          "directness": "concern",
+          "publication_bias": "unknown"
+        },
+        "gates": {
+          "rctCount": 14,
+          "largestRctN": 0,
+          "longestRctWeeks": 0,
+          "chronicOutcome": false,
+          "surrogate": false,
+          "allPositiveIndustryOrOneLab": false
+        },
+        "formFit": "2",
+        "doseFit": "3",
+        "effective_daily_range": "Median about 500 to 600 mg/day in Marchi 2025; range 10 to 12,000 mg/day; withanolides 1.5% to 8%."
+      },
+      "detail": {
+        "effect": {
+          "found": "Stress SMD -0.95 (a standardised effect size; Cohen's convention would call it large) and anxiety SMD -1.62, both vs control.",
+          "missing": "No MCID for stress scales. The number of stress studies is small and was not stated in what I read.",
+          "move": "A trial in diagnosed anxiety reporting response and remission rates."
+        },
+        "evidence": {
+          "found": "14 RCTs, 713 people, mixed diagnoses: anxiety disorders 35.7%, insomnia and chronic stress 14.3% each.",
+          "missing": "Largest trial size and longest duration were not extracted (recorded as 0 because unknown). Certainty rated low.",
+          "move": "A large trial in one diagnosis, such as generalised anxiety disorder."
+        },
+        "form": {
+          "found": "Trials used extracts at 1.5% to 8% withanolides.",
+          "missing": "How many used a 5% root extract is not known.",
+          "move": "Subgroup by extract type."
+        },
+        "dose": {
+          "found": "Typical dose 500 to 600 mg/day, close to this product.",
+          "missing": "Dose range was very wide, 10 to 12,000 mg/day.",
+          "move": "Dose-response analysis within this population."
+        }
+      },
+      "inventory": [
+        {
+          "id": "10.1192/bjo.2025.10885",
+          "year": 2025,
+          "design": "sr_ma",
+          "n": 713,
+          "direction": "benefit",
+          "access": "full_text",
+          "funding": "unknown",
+          "note": "Marchi 2025 BJPsych Open, 14 RCTs in mental disorders. Stress SMD -0.95 (95% CI -1.46 to -0.43), I2 58%; anxiety SMD -1.62 (-2.66 to -0.57), I2 94%. Certainty low for stress and anxiety."
+        }
+      ],
+      "absolute_effect": "Stress SMD -0.95 (95% CI -1.46 to -0.43), I2 58% (trials disagreed moderately). Anxiety SMD -1.62 (95% CI -2.66 to -0.57), I2 94% (trials disagreed a lot); outlier-corrected -1.13 (-1.65 to -0.60). Not convertible to points or NNT from what I accessed.",
+      "clinically_meaningful": "unknown. No MCID for perceived stress was found. Cohen's 0.8 cut-off would label -0.95 large, but that is a statistical convention, not proof patients noticed it.",
+      "strongest_study": "Marchi 2025, a systematic review of 14 RCTs (713 people) with GRADE ratings, opened in full text.",
+      "strongest_doubt": "Stress results rest on few studies across mixed diagnoses, and certainty was rated low. Anxiety trials disagreed a lot (I2 94%).",
+      "study_that_would_move_this": "A large, independent, pre-registered trial of 600 mg/day 5% withanolide root extract added to usual care in diagnosed generalised anxiety disorder, at least 12 weeks.",
+      "subgroup_hypothesis_only": false,
+      "studied_in": {
+        "sex": "unknown",
+        "age_min": null,
+        "age_max": null,
+        "age_note": "Not reported in what I accessed.",
+        "ethnicity": "not reported",
+        "confidence": "unknown"
+      }
+    }
+  ],
+  "searches_run": [
+    "ashwagandha stress meta-analysis randomized controlled trials perceived stress scale",
+    "NIH ODS ashwagandha fact sheet health professional stress anxiety",
+    "Chandrasekhar 2012 ashwagandha root extract stress anxiety 600 mg randomized double-blind",
+    "Salve 2019 Cureus ashwagandha 250 mg 600 mg stressed healthy adults perceived stress scale",
+    "ashwagandha stress anxiety meta-analysis GRADE certainty low heterogeneity industry funding 2024 2025 systematic review",
+    "Akhgarjand 2022 Phytotherapy Research ashwagandha anxiety stress meta-analysis SMD dose-response",
+    "Lopresti 2019 ashwagandha 240 mg stressed adults randomized Medicine Hamilton anxiety DASS cortisol",
+    "ashwagandha liver injury case series safety withdrawal Denmark ban 2024 2025",
+    "ashwagandha randomized trial stress no significant difference placebo independent trial 2023 2024 2025 (extended)",
+    "ashwagandha mental health in adults dose-response meta-analysis Complementary Therapies in Medicine 2026",
+    "Europe PMC REST: ashwagandha AND stress AND meta-analysis 2022 to 2026; record lookup PMIDs 41644067, 36017529, 40746175"
+  ],
+  "could_not_access": [
+    "NIH ODS ashwagandha health professional fact sheet (HTTP 403); used search snippet only.",
+    "Alsanie 2026, Complement Ther Med, DOI 10.1016/j.ctim.2026.103325 (ScienceDirect 403); abstract only, no effect sizes.",
+    "Akhgarjand 2022 full text; abstract and snippets only, so the included-trial list was not checked.",
+    "Included-trial tables for Bachour 2025 and Albalawi 2025, so pooled_in tags are inferred.",
+    "Lopresti 2019 full text; funding not verified.",
+    "BfR and EU regulatory documents on liver safety; news snippets only."
+  ],
+  "self_confidence": "medium",
+  "confidence_note": "The main row rests on several opened sources: two trials in full text that match this form and dose, one large null trial in full text, and four reviews, two in full text. Reviews disagree on whether perceived stress improves, and I could not check which trials each review pooled, so the deduplicated trial count of 15 is an estimate based on Bachour 2025. Funding is unclear for most positive trials. Safety concerns (liver injury reports, bans in Denmark and France) come from snippets and are not scored here. The mental disorder row rests on one review."
+}

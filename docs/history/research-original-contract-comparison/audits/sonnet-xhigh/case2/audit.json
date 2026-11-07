@@ -1,0 +1,360 @@
+{
+  "meta": {
+    "run_at": "2026-10-03",
+    "model": "claude-sonnet-5-5",
+    "prompt": "audit-v0.4",
+    "note": "Run with live web search and page fetch. Many sources were read only as tool-generated page summaries or abstracts, and several pages were blocked (see could_not_access). Experimental benchmark. No human has verified this audit."
+  },
+  "product": "Ashwagandha root extract standardised to 5% withanolides, 600 mg extract per day (supplied test regimen)",
+  "ingredient": "Ashwagandha (Withania somnifera) root extract",
+  "form": "Root extract standardised to 5% withanolides. Brand, extraction method and lab test method are not stated.",
+  "daily_dose": "600 mg extract per day (supplied test regimen; serving count unknown)",
+  "dose_note": "I assumed the supplied dose of 600 mg of extract per day. That is not 600 mg of raw root and not 600 mg of withanolides. The best-matched trials gave 300 mg of extract twice a day (KSM-66, a root-only extract with at least 5% withanolides). At 5%, 600 mg of extract holds about 30 mg of withanolides, if this product's percentage was measured the same way as in the trials. Withanolide percentages are not comparable across lab methods: other trials used 1.5% (Smith 2023), 2.5% by a USP method (Majeed 2023) and 35% withanolide glycosides (Lopresti 2019). If this product's extract is 12:1 like KSM-66 (as described in Pakhale 2025), 600 mg of extract stands for about 7.2 g of raw root, but the ratio for this product is not stated. The serving count is unknown, so I could not check whether the 600 mg is taken in one dose or split in two as in the trials. Every verdict below assumes 600 mg of a 5% root extract per day.",
+  "for_whom": {
+    "reasonable": "Adults with self-reported everyday stress, like those enrolled in the 8-week trials (PSS 13 or above, no psychiatric diagnosis). Results lean positive but are small, short and mostly linked to extract makers.",
+    "not_shown": "Nothing shown for diagnosed anxiety disorders, adults over 65, pregnancy, or use beyond 24 weeks. Some European agencies advise against use in pregnancy and with thyroid or liver conditions.",
+    "source": "NIH Office of Dietary Supplements health professional fact sheet on ashwagandha (ods.od.nih.gov/factsheets/Ashwagandha-HealthProfessional): I saw only a search snippet saying extracts 'may lower stress, anxiety, and cortisol levels'; I could not open the page. EU Article 8 safety procedure opened June 2024, Denmark ban, UK FSA review (read in a trade press summary only). I found no guideline that recommends this product for stress."
+  },
+  "outcomes": [
+    {
+      "name": "Stress in adults",
+      "population": "Adults with self-reported stress, no diagnosis",
+      "sentence": "Stress scores fell more than placebo at 8 weeks (pooled -4.88, CI -7.84 to -1.91), but one review of 6 trials found no stress effect.",
+      "ledger": {
+        "effectPoints": "1",
+        "effect_basis": "Tier 1 (small). Three meta-analyses of RCTs give different answers on perceived stress. Bachour 2025 (15 RCTs, 873 people): PSS pooled -4.88 (95% CI -7.84 to -1.91) at 8 weeks. Akhgarjand 2022 (12 RCTs, 1,002 people): stress SMD -1.75 (CI -2.29 to -1.22), I2 = 83.1%, and its authors rated certainty low. Albalawi 2025 (6 RCTs for PSS, 488 people in its set): SMD -0.355 (CI -1.188 to 0.47), p=0.40. Single trials I opened: Chandrasekhar 2012 (KSM-66, 600 mg/day, 60 days) PSS fell 44.0% vs 5.5% on placebo; West 2026 (extract 300 mg twice a day, 8 weeks) PSS change -8.20 (SD 6.59) vs -1.29 (SD 5.57) on placebo; Lopresti 2019 (35% extract, 240 mg/day) missed its primary DASS-21 endpoint (P = .096). All trials lasted 8 to 9 weeks. I chose tier 1 rather than 2 because (a) no validated PSS threshold exists, (b) placebo groups improved a lot in some trials (35.63% in Smith 2023), (c) one meta-analysis found no PSS effect, (d) positive trials are small and linked to extract makers, and (e) the 1,002-person KSM-66 trial has not reported stress results. Certainty rests on the reviews. The single trials only illustrate and are not added on top of them. Cortisol, a surrogate, fell in the reviews but is not the outcome scored here.",
+        "bodyIsRct": true,
+        "checklist": {
+          "risk_of_bias": "concern",
+          "consistency": "concern",
+          "precision": "concern",
+          "directness": "concern",
+          "publication_bias": "unknown"
+        },
+        "gates": {
+          "rctCount": 5,
+          "largestRctN": 141,
+          "longestRctWeeks": 8.6,
+          "chronicOutcome": true,
+          "surrogate": false,
+          "allPositiveIndustryOrOneLab": true
+        },
+        "formFit": "3",
+        "doseFit": "4",
+        "effective_daily_range": "250 to 600 mg of extract per day in 8-week trials (Salve 2019 tested 250 and 600 mg/day; Chandrasekhar 2012 tested 600 mg/day). Akhgarjand 2022 reported stress effects at 300 to 600 mg/day."
+      },
+      "detail": {
+        "effect": {
+          "found": "Pooled stress score (Perceived Stress Scale, PSS) at 8 weeks: -4.88 (95% CI -7.84 to -1.91) across 15 trials and 873 people (Bachour 2025). Akhgarjand 2022 pooled 12 trials: stress SMD -1.75 (CI -2.29 to -1.22; a standardised effect size), with I2 = 83.1% (the trials disagreed a lot). Albalawi 2025 pooled 6 trials: PSS SMD -0.355 (CI -1.188 to 0.47, p=0.40), so no clear effect.",
+          "missing": "No validated smallest noticeable change on the PSS exists for stressed adults without a diagnosis, so I cannot say if a 4.88 point gap would be felt. I could not see why Albalawi 2025 found nothing while the other two reviews found benefit.",
+          "move": "Stress results from the 1,002-person KSM-66 trial, or an independent trial with the PSS as main outcome and a responder cutoff set in advance."
+        },
+        "evidence": {
+          "found": "Trials I opened: Chandrasekhar 2012 (KSM-66, 64 adults, 60 days, PSS fell 44.0% vs 5.5%), Salve 2019 (60 adults, 8 weeks, PSS fell at 250 and 600 mg a day), West 2026 (141 adults, 8 weeks, PSS change -8.20 vs -1.29), Majeed 2023 (54 adults, 2.5% extract, 9.74 points between groups), Lopresti 2019 (60 adults, mixed result). Where a source was stated, it was an extract maker, or authors employed by one.",
+          "missing": "The largest KSM-66 trial (1,002 adults, 600 mg/day, 8 weeks) has published only safety results. Its stress results are 'deferred to a separate paper'. I found no independently funded trial of this extract, and no stress trial of this extract longer than 24 weeks in people without excess weight.",
+          "move": "The stress results of the 1,002-person trial, or an independent repeat."
+        },
+        "form": {
+          "found": "The label says root extract standardised to 5% withanolides. KSM-66 is a root-only extract with at least 5% withanolides (HPLC, 12:1 root to extract) and was used in Chandrasekhar 2012. Other trials used other extracts: 1.5% (Smith 2023, no effect), 2.5% plus piperine (Majeed 2023), 35% withanolide glycosides (Lopresti 2019).",
+          "missing": "The brand and the way this product is made are not stated, so I cannot tell if it matches KSM-66. Withanolide percentages from different lab methods are not directly comparable.",
+          "move": "A label showing the brand and the test method behind the 5% figure."
+        },
+        "dose": {
+          "found": "600 mg of extract a day matches the 300 mg twice a day used in Chandrasekhar 2012, Pakhale 2025 and the 1,002-person trial. Salve 2019 saw PSS falls at 250 and 600 mg a day. At 5%, 600 mg of extract holds about 30 mg of withanolides, if the label figure is right.",
+          "missing": "Serving count is unknown, so I could not check if the 600 mg is taken once or split in two as in the trials. No trial with enough people compared 600 mg against lower doses.",
+          "move": "A dose comparison with several hundred people per arm."
+        }
+      },
+      "inventory": [
+        {
+          "id": "10.1192/bjo.2025.10136",
+          "year": 2025,
+          "design": "sr_ma",
+          "n": 873,
+          "direction": "benefit",
+          "access": "abstract",
+          "funding": "unknown",
+          "note": "Bachour 2025, BJPsych Open. 15 RCTs pooled. PSS at 8 weeks -4.88 (95% CI -7.84 to -1.91). Cortisol -2.36 (CI -3.26 to -1.46). HAM-A -3.52. Trial list, I2 and bias ratings were not visible in the page text I got."
+        },
+        {
+          "id": "10.1002/ptr.7598",
+          "year": 2022,
+          "design": "sr_ma",
+          "n": 1002,
+          "direction": "benefit",
+          "access": "abstract",
+          "funding": "unknown",
+          "note": "Akhgarjand 2022, Phytotherapy Research. 12 RCTs. Stress SMD -1.75 (CI -2.29 to -1.22), I2 83.1%. Anxiety SMD -1.55 (CI -2.37 to -0.74), I2 93.8%. Authors rated certainty low. Stress effects seen at 300 to 600 mg/day."
+        },
+        {
+          "id": "10.1177/02601060251363647",
+          "year": 2025,
+          "design": "sr_ma",
+          "n": 488,
+          "direction": "none",
+          "access": "abstract",
+          "funding": "unknown",
+          "note": "Albalawi 2025, Nutrition and Health. Cortisol (7 RCTs): -1.16 ug/dL (CI -1.64 to -0.69). PSS (6 RCTs): SMD -0.355 (CI -1.188 to 0.47), p=0.40, I2 50.9%. Included trials and extract types not seen."
+        },
+        {
+          "id": "23439798",
+          "year": 2012,
+          "design": "rct",
+          "n": 64,
+          "direction": "benefit",
+          "access": "full_text",
+          "funding": "industry",
+          "pooled_in": "Akhgarjand 2022 (probable, list not opened)",
+          "note": "Chandrasekhar 2012. KSM-66 300 mg twice a day, 60 days, adults 18 to 54 with chronic stress, no psychiatric disorder. PSS fell 44.0% vs 5.5% on placebo. Cortisol fell 27.9% vs 7.9%. Declared no funding, but the maker supplied the extract."
+        },
+        {
+          "id": "10.7759/cureus.6466",
+          "year": 2019,
+          "design": "rct",
+          "n": 60,
+          "direction": "benefit",
+          "access": "abstract",
+          "funding": "unknown",
+          "pooled_in": "Akhgarjand 2022 (probable, list not opened)",
+          "note": "Salve 2019, Cureus. 125 mg or 300 mg twice a day vs placebo, 8 weeks, PSS above 20. Abstract reports PSS falls at 250 mg/day (P<0.05) and 600 mg/day (P<0.001). Extract standardisation and funding not verified."
+        },
+        {
+          "id": "10.1097/MD.0000000000017186",
+          "year": 2019,
+          "design": "rct",
+          "n": 60,
+          "direction": "unclear",
+          "access": "full_text",
+          "funding": "industry",
+          "pooled_in": "Akhgarjand 2022 (probable, list not opened)",
+          "note": "Lopresti 2019. Shoden extract, 35% withanolide glycosides, 240 mg once a day, 60 days. Primary DASS-21 near but not significant (P = .096). HAM-A P = .040. Morning cortisol P < .001. Funded by the maker (Arjuna Natural)."
+        },
+        {
+          "id": "10.1097/MD.0000000000035521",
+          "year": 2023,
+          "design": "rct",
+          "n": 54,
+          "direction": "benefit",
+          "access": "full_text",
+          "funding": "industry",
+          "note": "Majeed 2023. Extract at 2.5% withanolides plus 5 mg piperine, 500 mg/day, 60 days, 50 analysed. PSS gap between groups 9.74 points (p<0.001). Authors work for the maker (Sami-Sabinsa)."
+        },
+        {
+          "id": "10.25122/jml-2025-0172",
+          "year": 2026,
+          "design": "rct",
+          "n": 141,
+          "direction": "benefit",
+          "access": "full_text",
+          "funding": "industry",
+          "note": "West 2026. Root extract (12:1) 300 mg twice a day, 8 weeks, 130 analysed. PSS change -8.20 (SD 6.59) vs -1.29 (SD 5.57) on placebo. The p-value I saw (<0.0001) was for a blend arm vs placebo. Cortisol P=0.059. Product supplied by Agaja Nutraceuticals."
+        },
+        {
+          "id": "10.1002/ptr.70315",
+          "year": 2026,
+          "design": "rct",
+          "n": 1002,
+          "direction": "unclear",
+          "access": "full_text",
+          "funding": "industry",
+          "note": "Pakhale 2026, safety paper only. KSM-66 300 mg twice a day vs placebo, 8 weeks, adults 18 to 65. Adverse events 5.6% vs 9.2%, none serious. Stress, anxiety and cortisol results are deferred to a separate paper, so not counted here."
+        }
+      ],
+      "absolute_effect": "Bachour 2025 (15 RCTs, 873 people): PSS pooled -4.88 (95% CI -7.84 to -1.91), p=0.0013 at 8 weeks. Albalawi 2025 (6 RCTs): PSS SMD -0.355 (95% CI -1.188 to 0.47), p=0.40. Akhgarjand 2022 (12 RCTs): stress SMD -1.75 (95% CI -2.29 to -1.22), I2 = 83.1%. Chandrasekhar 2012 (KSM-66, 600 mg/day, 60 days): PSS fell 44.0% vs 5.5% on placebo. No ARR or NNT can be derived because the outcome is a continuous score with no responder threshold.",
+      "clinically_meaningful": "unknown. I found no validated minimal important difference for the PSS in stressed adults without a diagnosis, so no responder threshold can be applied. Cohen's 0.2/0.5/0.8 is a statistical convention, not proof anyone would notice. On that convention Akhgarjand's SMD -1.75 would be very large, but it comes with I2 = 83.1% and a low certainty rating from its own authors. Albalawi's SMD -0.355 would be small, and its CI includes no effect.",
+      "strongest_study": "Bachour 2025 (BJPsych Open, DOI 10.1192/bjo.2025.10136): 15 trials, 873 people, PSS at 8 weeks -4.88 (95% CI -7.84 to -1.91). The closest single trial to this product is Chandrasekhar 2012 (PMID 23439798): KSM-66 at 300 mg twice a day, 64 adults, 60 days, PSS fell 44.0% vs 5.5% on placebo. I read only review-level or summary text, not each review's trial list.",
+      "strongest_doubt": "The reviews disagree. Albalawi 2025 found no PSS effect (SMD -0.355, CI -1.188 to 0.47, p=0.40) while Bachour 2025 and Akhgarjand 2022 found benefit, and Akhgarjand's own authors rated certainty low with I2 = 83.1%. The positive trials were small, 8 to 9 weeks long, and made with extract from makers or by authors tied to them. The one large trial (1,002 adults on 600 mg/day) has not yet published stress results. A 120-person trial of a different extract (Smith 2023) saw 38.59% vs 35.63% improvement on placebo, p=0.867, which shows how big placebo responses can be.",
+      "study_that_would_move_this": "The stress results from the 1,002-person KSM-66 trial (NCT05684991, 600 mg/day, 8 weeks), or an independently funded, preregistered placebo-controlled trial of 600 mg/day of a 5% withanolide root extract with the PSS as main outcome and at least 12 weeks of follow-up.",
+      "studied_in": {
+        "sex": "mixed",
+        "sex_note": "Both sexes enrolled. Majeed 2023 was 78% male.",
+        "age_min": 18,
+        "age_max": 65,
+        "age_note": "West 2026 enrolled 18 to 65. Chandrasekhar 2012 enrolled 18 to 54.",
+        "ethnicity": "Not reported in the sources I opened. Several trials ran at Indian sites.",
+        "confidence": "inferred"
+      },
+      "subgroup_hypothesis_only": false
+    },
+    {
+      "name": "Stress with excess weight",
+      "population": "Overweight or obese adults with stress",
+      "sentence": "One 24-week trial (n=100) found stress 4.72 points lower than placebo. A 12-week trial of a weaker extract (n=120) found no difference (p=0.867).",
+      "ledger": {
+        "effectPoints": "unclear",
+        "effect_basis": "Two RCTs point in opposite directions and used different extracts. Pakhale 2025 (KSM-66, over 5% withanolides, 300 mg twice a day, 24 weeks, n=100, 91 analysed, BMI 25.0 to 39.9): PSS between-group difference -4.72 (95% CI -5.65 to -3.80), p<0.001; cortisol difference -2.32 mcg/dL (p=0.006); extract supplied by the maker, single centre. Smith 2023 (Witholytin, 1.5% withanolides, 200 mg twice a day, 12 weeks, n=120, 111 analysed, ages 40 to 75): PSS fell 38.59% on ashwagandha and 35.63% on placebo, between-group p=0.867. The two trials differ in extract, dose, length and age, so I cannot say if the gap is due to the form or chance. With one positive trial from a maker-supplied source and a different-extract null, the evidence cannot settle the question. Marked unclear.",
+        "bodyIsRct": true,
+        "checklist": {
+          "risk_of_bias": "concern",
+          "consistency": "concern",
+          "precision": "concern",
+          "directness": "concern",
+          "publication_bias": "unknown"
+        },
+        "gates": {
+          "rctCount": 2,
+          "largestRctN": 120,
+          "longestRctWeeks": 24,
+          "chronicOutcome": true,
+          "surrogate": false,
+          "allPositiveIndustryOrOneLab": true
+        },
+        "formFit": "3",
+        "doseFit": "4",
+        "effective_daily_range": "600 mg/day of KSM-66 for 24 weeks in one trial. 400 mg/day of a 1.5% withanolide extract for 12 weeks showed no benefit over placebo."
+      },
+      "detail": {
+        "effect": {
+          "found": "Pakhale 2025: PSS fell 6.16 points on ashwagandha and 1.43 on placebo, a gap of -4.72 (95% CI -5.65 to -3.80), p<0.001 at 24 weeks. Smith 2023: PSS fell 38.59% vs 35.63% on placebo, p=0.867, so no difference between groups.",
+          "missing": "Pakhale 2025 reported an effect size of Cohen's d = -2.125 (a statistical size measure), which is unusually large and unconfirmed by anyone else. No PSS threshold for a noticeable change exists.",
+          "move": "A second, independently run trial of the 5% extract in this group."
+        },
+        "evidence": {
+          "found": "Two RCTs, 100 and 120 adults. Pakhale 2025 was single centre and the maker supplied the extract. Smith 2023 was paid for by the maker of its own extract (Verdure Sciences) and found nothing. Adverse events were mild and similar in both groups in both trials.",
+          "missing": "No independent trial of the 5% extract here. No repeat of the 24-week result. 9 people were lost in Pakhale 2025.",
+          "move": "An independent trial of 600 mg/day of a 5% extract in overweight adults."
+        },
+        "form": {
+          "found": "Pakhale 2025 used KSM-66 (over 5% withanolides by HPLC, 12:1). Smith 2023 used a 1.5% withanolide extract, so it is a weaker match to this product.",
+          "missing": "The brand and extraction method of this product are not stated.",
+          "move": "A label showing brand and test method."
+        },
+        "dose": {
+          "found": "600 mg/day of extract equals Pakhale 2025's dose. Smith 2023 gave 400 mg/day of a 1.5% extract, about 6 mg of withanolides a day against about 30 mg a day at 5% and 600 mg.",
+          "missing": "Serving count is unknown. No trial here compared doses.",
+          "move": "A dose-comparison trial in this group."
+        }
+      },
+      "inventory": [
+        {
+          "id": "10.25122/jml-2025-0147",
+          "year": 2025,
+          "design": "rct",
+          "n": 100,
+          "direction": "benefit",
+          "access": "full_text",
+          "funding": "industry",
+          "note": "Pakhale 2025, J Med Life. KSM-66 300 mg twice a day vs placebo, 24 weeks, adults 19 to 65, BMI 25.0 to 39.9. PSS gap -4.72 (CI -5.65 to -3.80). Weight -8.46 vs -2.41 kg. Single centre. Maker supplied extract."
+        },
+        {
+          "id": "10.1177/02698811231200023",
+          "year": 2023,
+          "design": "rct",
+          "n": 120,
+          "direction": "none",
+          "access": "full_text",
+          "funding": "industry",
+          "note": "Smith 2023, J Psychopharmacol. Witholytin 1.5% withanolides, 200 mg twice a day, 12 weeks, ages 40 to 75, BMI 25 to 35. PSS fell 38.59% vs 35.63% on placebo, between-group p=0.867. No cortisol measured. Funded by Verdure Sciences, the maker."
+        }
+      ],
+      "absolute_effect": "Pakhale 2025 (24 weeks): PSS change -6.16 (ashwagandha) vs -1.43 (placebo), between-group difference -4.72 (95% CI -5.65 to -3.80), p<0.001. Cortisol difference -2.32 mcg/dL (p=0.006). Smith 2023 (12 weeks): PSS fell 38.59% (ashwagandha) vs 35.63% (placebo), between-group p=0.867, no CI given. No ARR or NNT derivable.",
+      "clinically_meaningful": "unknown. I found no validated minimal important difference for the PSS in this group. Cohen's conventions are a statistical label only. The two trials give opposite answers on whether anything beyond placebo happened.",
+      "strongest_study": "Pakhale 2025 (DOI 10.25122/jml-2025-0147): KSM-66, 600 mg/day, 24 weeks, 100 adults with BMI 25.0 to 39.9. PSS gap -4.72 (95% CI -5.65 to -3.80). It is the closest match to this product in this group, but it is single centre and the maker supplied the extract.",
+      "strongest_doubt": "Smith 2023, 120 adults, found no difference from placebo (p=0.867) with a 1.5% extract, so the benefit may depend on the extract, or it may be placebo response. Pakhale 2025's reported effect size (Cohen's d = -2.125) is unusually large for a supplement trial and has not been repeated.",
+      "study_that_would_move_this": "An independently funded, preregistered trial of 600 mg/day of a 5% withanolide root extract in overweight or obese adults, with the PSS as main outcome and at least 12 weeks of follow-up.",
+      "studied_in": {
+        "sex": "mixed",
+        "sex_note": "Both sexes enrolled; Smith 2023 had 60 men and 60 women.",
+        "age_min": 19,
+        "age_max": 75,
+        "age_note": "Pakhale 2025 enrolled 19 to 65. Smith 2023 enrolled 40 to 75.",
+        "ethnicity": "Not reported in the sources I opened.",
+        "confidence": "verified"
+      },
+      "subgroup_hypothesis_only": false
+    },
+    {
+      "name": "Stress with a diagnosed disorder",
+      "population": "Adults with diagnosed anxiety or other disorder",
+      "sentence": "The stress trials I opened excluded people with a diagnosed anxiety or psychiatric condition, so I found no test of it for them.",
+      "ledger": {
+        "effectPoints": "unclear",
+        "effect_basis": "I opened no trial of a 5% withanolide root extract for stress in people with a diagnosed anxiety disorder or other psychiatric condition. The stress trials I opened excluded them (Chandrasekhar 2012: no psychiatric disorders; West 2026 and registry record NCT06714942: diagnosed psychiatric conditions excluded). Trials of other ashwagandha extracts in anxiety disorders exist, but I did not open them. This is 'no evidence found', not 'evidence of no benefit'. Marked unclear.",
+        "bodyIsRct": false,
+        "checklist": {
+          "risk_of_bias": "unknown",
+          "consistency": "unknown",
+          "precision": "unknown",
+          "directness": "unknown",
+          "publication_bias": "unknown"
+        },
+        "gates": {
+          "rctCount": 0,
+          "largestRctN": 0,
+          "longestRctWeeks": 0,
+          "chronicOutcome": true,
+          "surrogate": false,
+          "allPositiveIndustryOrOneLab": false
+        },
+        "formFit": "unknown",
+        "doseFit": "unknown",
+        "effective_daily_range": "No range established for this group from the sources I opened."
+      },
+      "detail": {
+        "effect": {
+          "found": "No stress results for this extract in people with a diagnosed disorder were found.",
+          "missing": "Any effect size, in either direction.",
+          "move": "A placebo-controlled trial in people with a diagnosed anxiety disorder."
+        },
+        "evidence": {
+          "found": "The stress trials I opened enrolled people without a psychiatric diagnosis. Nobody has shown me a trial of this extract in a diagnosed group.",
+          "missing": "All trial data in this group for the 5% extract.",
+          "move": "A trial that enrols diagnosed adults and reports stress and anxiety scores."
+        },
+        "form": {
+          "found": "Nothing to compare for this group.",
+          "missing": "Which extract, if any, was tested in diagnosed groups. I did not open those trials.",
+          "move": "A trial naming its extract and withanolide percentage."
+        },
+        "dose": {
+          "found": "Nothing to compare for this group.",
+          "missing": "Any dose shown to work here.",
+          "move": "A dose-finding trial in this group."
+        }
+      },
+      "inventory": [],
+      "absolute_effect": "No data for this population.",
+      "clinically_meaningful": "unknown. There are no data here, and no minimal important difference was applied.",
+      "strongest_study": "None opened for this population.",
+      "strongest_doubt": "A lack of trials is not evidence of no benefit. Other ashwagandha extracts have been tried in anxiety disorders and I did not open those trials, so this row says nothing about them.",
+      "study_that_would_move_this": "A preregistered, placebo-controlled trial of 600 mg/day of a 5% withanolide root extract in adults with a diagnosed anxiety disorder, with at least 8 weeks of follow-up and stress and anxiety scores as outcomes.",
+      "studied_in": {
+        "sex": "unknown",
+        "age_min": null,
+        "age_max": null,
+        "age_note": "No trial for this group opened.",
+        "ethnicity": "not reported",
+        "confidence": "unknown"
+      }
+    }
+  ],
+  "searches_run": [
+    "ashwagandha stress anxiety systematic review meta-analysis randomized controlled trials",
+    "KSM-66 ashwagandha 600 mg stress randomized double-blind placebo-controlled Perceived Stress Scale cortisol",
+    "Withania somnifera root extract 5% withanolides 300 mg twice daily stress chronic randomized trial",
+    "Ashwagandha NIH Office of Dietary Supplements OR EFSA OR liver injury safety assessment",
+    "Lopresti 2019 / Salve 2019 / Chandrasekhar 2012 (PMID 23439798) ashwagandha stress trials",
+    "NCCIH ashwagandha what the science says stress anxiety",
+    "ashwagandha stress randomized trial null result no significant difference placebo independent",
+    "ashwagandha meta-analysis stress risk of bias industry funding conflict of interest GRADE certainty",
+    "ashwagandha Denmark DTU risk assessment EFSA 2024 2025 safety withanolides",
+    "Akhgarjand 2022 ashwagandha anxiety and stress meta-analysis Phytotherapy Research",
+    "Pakhale Langade KSM-66 1,002 adults multinational efficacy results 2026 (twice)",
+    "KSM-66 long-term 12 months safety Phytotherapy Research 2025",
+    "Ashwagandha 600 mg/day placebo-controlled stress healthy adults 2024 2025",
+    "NIH ODS Ashwagandha health professional fact sheet (domain-limited search)",
+    "Fetched: PMC12242034, PMC12863098, PMC6750292, PMC3573577, PMC10647917, PMC10578737, PMC12973907, PMC13436282, PMC13209861, citedrive page for Albalawi 2025, nutraingredients 2026, ClinicalTrials.gov API records NCT05684991, NCT06714942, NCT06244147"
+  ],
+  "could_not_access": [
+    "NIH ODS ashwagandha fact sheets (health professional, consumer, Just the Facts PDF): HTTP 403. I have only a search-result snippet for the NIH position.",
+    "NCBI LiverTox ashwagandha entry: reCAPTCHA page only. The 'likelihood score B' liver-injury rating came from a search summary, not the page.",
+    "PubMed pages (41943502, 32021735) and PMC6979308 (Salve 2019): cookie or reCAPTCHA wall. Salve 2019 was read only through search snippets and a Europe PMC abstract record, so its extract standardisation and funding are unverified.",
+    "Full text and trial lists of the three meta-analyses (Bachour 2025, Akhgarjand 2022, Albalawi 2025): I got abstract-level or page-summary data only. Albalawi 2025 was read through a third-party indexing page.",
+    "Medicine 2026 AshwaSR trial (journals.lww.com, ovid.com): HTTP 402. Not used.",
+    "BfR ashwagandha PDF and the Salve 2019 PDF copy: returned as unreadable binary. The BfR position was read only via a trade press summary.",
+    "ClinicalTrials.gov human pages: only the API records for three studies were readable. Efficacy results of the 1,002-person KSM-66 trial were not found anywhere, and the safety paper says they are deferred.",
+    "JMedLife-19-049.pdf (full West 2026 PDF): verification wall. I used the PMC page summary instead."
+  ],
+  "self_confidence": "medium-low",
+  "confidence_note": "The broad picture is fairly clear: small, short, mostly maker-linked trials lean positive on self-reported stress, one meta-analysis found no PSS effect, and certainty is low. But I could open full text for only some trials, and the three meta-analyses were read at abstract or summary level. I could not check which trials sit inside which review, so I tagged probable overlap and did not add trials on top of review certainty. The product's brand and extraction method are unknown, so the match to KSM-66 is assumed, not shown. The largest relevant trial (1,002 adults, 600 mg/day, 8 weeks) has not reported stress results, and that could change the picture either way. Safety was outside the stress outcome. For context: a 2026 review of 23 RCTs (2,317 people; PMC13209861) found no serious adverse events at 125 to 600 mg/day for up to 180 days. A search summary of NCBI LiverTox gave ashwagandha a likelihood score B for clinically apparent liver injury, but I could not open that page. This is an experimental benchmark and no human has verified it."
+}

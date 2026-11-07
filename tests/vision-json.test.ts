@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { ChatFn, ChatRequest, ChatResult } from "@/lib/analyze/llm";
-import { LABEL_PROMPT_VERSION, readLabel } from "@/lib/analyze/vision";
+import { LABEL_PROMPT_VERSION, readLabel, validateLabel } from "@/lib/analyze/vision";
 
 const VALID_LABEL = {
   ingredient_vocab_id: "creatine",
@@ -59,8 +59,25 @@ describe("label vision JSON contract", () => {
     expect(prompt).toContain("booleans");
     expect(prompt).toContain("are `true` or `false`, never quoted strings");
     expect(label.is_multi_ingredient).toBe(false);
-    expect(label._meta.prompt_version).toBe("label-v1.3");
-    expect(LABEL_PROMPT_VERSION).toBe("label-v1.3");
+    expect(label._meta.prompt_version).toBe("label-v1.5");
+    expect(LABEL_PROMPT_VERSION).toBe("label-v1.5");
+    expect(label.printed_elemental_dose_mg).toBeNull();
+  });
+
+  it("accepts explicit elemental amounts, defaults legacy payloads, and rejects invalid or contradictory basis", () => {
+    const legacy = validateLabel({ ...VALID_LABEL });
+    expect(legacy.printed_elemental_dose_mg).toBeNull();
+    const elemental = validateLabel({ ...VALID_LABEL, compound_dose_mg: null, printed_elemental_dose_mg: 200 });
+    expect(elemental.printed_elemental_dose_mg).toBe(200);
+    expect(() => validateLabel({ ...VALID_LABEL, printed_elemental_dose_mg: -1 })).toThrow("printed_elemental_dose_mg");
+    expect(() => validateLabel({ ...VALID_LABEL, printed_elemental_dose_mg: 200 })).toThrow("contradictory");
+    expect(() => validateLabel({
+      ...VALID_LABEL,
+      ingredient_vocab_id: "magnesium",
+      form_vocab_id: "magnesium_glycinate",
+      compound_dose_mg: 200,
+      actives: [{ name: "Magnesium", compound_dose_mg: 200, printed_elemental_dose_mg: 200 }],
+    })).toThrow("active row cannot declare both compound and elemental doses");
   });
 
   it("still fails closed when the model returns prose instead of an object", async () => {

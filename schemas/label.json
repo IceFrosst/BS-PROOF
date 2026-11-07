@@ -26,6 +26,11 @@
       "type": ["number", "null"],
       "minimum": 0
     },
+    "printed_elemental_dose_mg": {
+      "description": "Explicit elemental amount per serving only when label declares mineral amount (e.g. Magnesium (as bisglycinate) 200 mg). Mutually exclusive with compound_dose_mg; null if basis is unclear. Never infer or convert.",
+      "type": ["number", "null"],
+      "minimum": 0
+    },
     "dose_unit_as_printed": {
       "description": "The unit string as printed ('4400 mg', '5 g', '1 scoop'), so a reader can check the mg conversion.",
       "type": ["string", "null"],
@@ -57,6 +62,7 @@
         "properties": {
           "name": {"type": "string", "maxLength": 120},
           "compound_dose_mg": {"type": ["number", "null"], "minimum": 0},
+          "printed_elemental_dose_mg": {"type": ["number", "null"], "minimum": 0},
           "dose_unit_as_printed": {"type": ["string", "null"], "maxLength": 60},
           "form_text": {"type": ["string", "null"], "maxLength": 120}
         }

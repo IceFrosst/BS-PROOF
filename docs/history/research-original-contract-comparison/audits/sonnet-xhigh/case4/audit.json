@@ -1,0 +1,390 @@
+{
+  "meta": {
+    "run_at": "2026-10-03",
+    "model": "claude-sonnet-5-5",
+    "prompt": "audit-v0.4",
+    "note": "Live web search and fetch. The Cochrane Library, NIH ODS, ScienceDirect and ResearchGate pages were blocked (HTTP 403) and PubMed hit a cookie wall, so abstracts were read through Europe PMC instead. Full texts of Veverka 2009 and Prasad 2007 were not opened. Several fetches passed through a summarising tool, so figures marked snippet are unverified. Not human verified."
+  },
+  "product": "Zinc gluconate, 15 mg elemental zinc per day (supplied test regimen; serving count unknown)",
+  "ingredient": "Zinc",
+  "form": "Zinc gluconate, taken by mouth (a swallowed form is assumed; lozenges and nose sprays are different products)",
+  "daily_dose": "15 mg elemental zinc per day (supplied test regimen)",
+  "dose_note": "This audit reads the supplied 15 mg as elemental zinc. Zinc gluconate is about 14% zinc by weight (my calculation from molar mass), so 15 mg of elemental zinc is about 105 mg of zinc gluconate powder. If the label's 15 mg were the compound weight, the elemental dose would be about 2 mg and none of these verdicts would apply. The serving count is unknown, so the daily total is taken as supplied, 15 mg a day, and not as a per-serving figure. The only trial at this dose (Veverka 2009) states 15 mg a day as zinc gluconate capsules, and its abstract does not say whether that is elemental. Prasad 2007 used 45 mg elemental zinc a day, three times this dose. Zinc gluconate lozenges used to treat colds (45 to 276 mg a day in Cochrane's trials) are a different use and are not evidence for this product. Prevention trials in the Cochrane review followed people for 5 to 18 months, so this verdict assumes daily use over months.",
+  "for_whom": {
+    "reasonable": "The only defensible reason I found is correcting low zinc intake or low blood zinc. That is a nutrition reason, not a cold-prevention one.",
+    "not_shown": "Healthy adults taking 15 mg a day to avoid colds. The one trial at this dose (40 cadets) was mixed, and the largest review found little or no effect (RR 0.93, 95% CI 0.85 to 1.01). Low-zinc adults were not tested.",
+    "source": "Cochrane review CD014914 (Nault 2024): zinc 'may have little or no effect on the prevention of colds' (low-certainty evidence). The NIH ODS zinc fact sheet could not be opened. A search summary described its prevention results as inconsistent, which I did not verify. I found no guideline body that recommends zinc to prevent colds."
+  },
+  "outcomes": [
+    {
+      "name": "Preventing colds",
+      "population": "Healthy adults, any zinc form or dose (reviews)",
+      "sentence": "The biggest review found little or no drop in colds with daily zinc (RR 0.93, 95% CI 0.85 to 1.01). An adult-only review found 32% fewer infections.",
+      "ledger": {
+        "effectPoints": "0",
+        "effect_basis": "Tier 0 means no meaningful effect demonstrated. The most complete review is Cochrane 2024 (PMID 38719213; 34 trials, 15 on prevention). It found RR 0.93 (95% CI 0.85 to 1.01; I2 = 20%, the trials agreed fairly well; 9 studies, 1,449 people; low-certainty evidence). The mean number of colds over 5 to 18 months was MD -0.90 (95% CI -1.93 to 0.12; I2 = 96%, the 2 trials disagreed a lot; 1,284 people; low-certainty). Adults only, Hunter 2021 (PMID 34728441) pooled 4 prevention trials, 2 of oral zinc (15 or 45 mg a day for 7 or 12 months) and 2 of low-dose nose spray. It found IRR 0.68 (95% CI 0.58 to 0.80), or 5 infections prevented per 100 person-months (95% CI 1 to 8; NNT 20). Its authors rated that moderate-certainty but also noted high risk of bias, small samples and differences between trials. Sublingual zinc did not prevent colds after rhinovirus challenge. Wang 2020 (PMID 32342851) found only one oral zinc prevention trial in healthy adults (Veverka 2009, 30 analysed): RR 1.06 (95% CI 0.34 to 3.34). I chose 0 because the larger review's interval includes no effect and the adult positive signal rests on four small trials. The two reviews disagree, so confidence is low. This reads as tested and nothing clear found, not proved to do nothing.",
+        "bodyIsRct": true,
+        "checklist": {
+          "risk_of_bias": "concern",
+          "consistency": "concern",
+          "precision": "concern",
+          "directness": "concern",
+          "publication_bias": "unknown"
+        },
+        "gates": {
+          "rctCount": 4,
+          "largestRctN": 50,
+          "longestRctWeeks": 52,
+          "chronicOutcome": true,
+          "surrogate": false,
+          "allPositiveIndustryOrOneLab": false
+        },
+        "formFit": "2",
+        "doseFit": "2",
+        "effective_daily_range": "No daily dose has been shown to prevent colds in adults. The oral trials in the adult review used 15 mg or 45 mg a day for 7 or 12 months."
+      },
+      "detail": {
+        "effect": {
+          "found": "The largest review (Cochrane 2024) found little or no drop in people catching a cold with daily zinc: RR 0.93 (95% CI 0.85 to 1.01). RR is a risk ratio, where 1.00 means no change. An adult-only review (Hunter 2021) found 32% fewer cold-like infections, IRR 0.68 (95% CI 0.58 to 0.80). IRR is an incidence rate ratio, read the same way.",
+          "missing": "Neither review is a clean test of swallowed zinc gluconate in adults. Cochrane mixes children, adults and many forms. Hunter mixes pills with nose sprays. Neither gave a baseline cold rate I could use to work out an absolute drop.",
+          "move": "A large adult trial of daily oral zinc gluconate that counts colds would show which review is closer."
+        },
+        "evidence": {
+          "found": "Cochrane rated its cold-risk finding low-certainty and said most studies had unclear or high risk of bias. Hunter rated its finding moderate-certainty but noted high risk of bias, small trials and differences between trials. Hunter's adult prevention evidence is four trials, and only two used oral zinc.",
+          "missing": "I could not open Cochrane's full text. So I could not see which of its nine pooled studies were in adults, or how they overlap with Hunter's four. Publication bias was not assessed in anything I could read.",
+          "move": "A large, low-bias adult trial would replace this mix of small studies."
+        },
+        "form": {
+          "found": "Gluconate was tested by mouth in a 7-month cadet trial at 15 mg a day and a 12-month older-adult trial at 45 mg a day. Cochrane's trials also used lozenges, syrups, tablets and nose sprays.",
+          "missing": "I found no prevention trial that compared zinc gluconate with another zinc salt.",
+          "move": "A head-to-head trial of zinc salts at the same elemental dose."
+        },
+        "dose": {
+          "found": "The product gives 15 mg elemental zinc a day, as supplied. The adult review's oral prevention trials used 15 mg or 45 mg a day for 7 or 12 months. It found no significant difference by age, route or dose.",
+          "missing": "No dose has been shown to prevent colds in adults. The serving count is unknown, so the daily total is taken as supplied.",
+          "move": "A trial comparing doses such as 15 mg and 45 mg of elemental zinc."
+        }
+      },
+      "inventory": [
+        {
+          "id": "10.1002/14651858.CD014914.pub2",
+          "year": 2024,
+          "design": "sr_ma",
+          "n": 1449,
+          "direction": "none",
+          "access": "abstract",
+          "funding": "independent",
+          "note": "Cochrane, 34 trials (15 prevention), 8,526 people overall. n is the cold-risk analysis (9 studies). Children and adults pooled. Search result lists NIH NCCIH funding. Trial list not opened."
+        },
+        {
+          "id": "10.1136/bmjopen-2020-047474",
+          "year": 2021,
+          "design": "sr_ma",
+          "n": 5446,
+          "direction": "benefit",
+          "access": "full_text",
+          "funding": "independent",
+          "note": "Adults only, 28 trials overall (n is all trials; the prevention subset was not retrieved). 4 prevention trials. IRR 0.68 (0.58 to 0.80). Read through a summarising tool, so partial. No specific grant declared."
+        },
+        {
+          "id": "10.4269/ajtmh.19-0718",
+          "year": 2020,
+          "design": "sr_ma",
+          "n": 30,
+          "direction": "none",
+          "access": "full_text",
+          "funding": "independent",
+          "note": "Healthy adults. Its only zinc prevention trial is Veverka 2009, so it adds no independent evidence. Funded by a Ministry of Defense grant."
+        },
+        {
+          "id": "19341987",
+          "year": 2009,
+          "design": "rct",
+          "n": 40,
+          "direction": "unclear",
+          "access": "abstract",
+          "funding": "unknown",
+          "pooled_in": "10.1136/bmjopen-2020-047474; 10.4269/ajtmh.19-0718",
+          "note": "Zinc gluconate 15 mg a day, 7 months, cadets. Scored in its own row (young adults, exact dose), not here."
+        },
+        {
+          "id": "17344507",
+          "year": 2007,
+          "design": "rct",
+          "n": 50,
+          "direction": "benefit",
+          "access": "abstract",
+          "funding": "independent",
+          "pooled_in": "10.1136/bmjopen-2020-047474",
+          "note": "Zinc gluconate 45 mg elemental a day, 12 months, older adults. Scored in its own row. NIH grant."
+        }
+      ],
+      "absolute_effect": "Cochrane 2024: RR 0.93 (95% CI 0.85 to 1.01), 9 studies, 1,449 people. Mean number of colds MD -0.90 (95% CI -1.93 to 0.12), 2 studies, 1,284 people. Duration of colds that occur MD -0.63 days (95% CI -1.29 to 0.04), 3 studies, 740 people, moderate-certainty. Hunter 2021 (adults): IRR 0.68 (95% CI 0.58 to 0.80), 5 infections prevented per 100 person-months (95% CI 1 to 8), NNT 20. Harms in prevention trials: non-serious events RR 1.11 (95% CI 0.84 to 1.47), very low-certainty. Serious events RR 1.67 (95% CI 0.78 to 3.57), 3 studies, 1,563 people, low-certainty, so a rise cannot be ruled out.",
+      "clinically_meaningful": "unknown. I found no MCID (the smallest change that matters to people) or responder threshold for cold prevention in the sources I opened. Cochrane's interval includes no effect (upper limit 1.01). Hunter's NNT of 20 would be a modest gain if real, but it rests on small trials with high risk of bias.",
+      "strongest_study": "Cochrane review CD014914 (Nault 2024, PMID 38719213): 34 trials, 8,526 people, 15 on prevention. RR 0.93 (95% CI 0.85 to 1.01), 9 studies, 1,449 people, low-certainty.",
+      "strongest_doubt": "Hunter 2021, an adult-only review, reached a different answer (IRR 0.68, 95% CI 0.58 to 0.80, moderate-certainty). Both reviews pool different forms and routes, and the adult trials are small. A low-certainty result near no effect from mixed trials is not proof that zinc does nothing.",
+      "study_that_would_move_this": "A large, pre-registered, double-blind adult trial of 15 mg elemental zinc as gluconate daily for at least 5 months. It would record colds by diary and lab test, and measure blood zinc at the start.",
+      "why_positive_signal_is_unreliable": "The adult positive signal comes from a few small trials. Prasad 2007 had 50 older adults from one lab. Veverka 2009 had 40 cadets, and Wang 2020 rated it high risk of bias for random sequence generation and allocation concealment. Two other trials used nose spray, not a swallowed product. Hunter's authors also note high risk of bias, small samples and differences between trials.",
+      "studied_in": {
+        "sex": "mixed",
+        "sex_note": "Both sexes pooled. The cadet trial analysed set was about 80% male.",
+        "age_min": null,
+        "age_max": null,
+        "age_note": "Cochrane mixed children and adults; Hunter adults only; ages not reported",
+        "ethnicity": "not reported",
+        "confidence": "inferred"
+      },
+      "subgroup_hypothesis_only": false
+    },
+    {
+      "name": "Preventing colds",
+      "population": "Young adults, 15 mg/day gluconate (exact dose)",
+      "sentence": "One 7-month trial of this dose (40 cadets): more symptom-free episodes by self-report (p=0.01), no change in doctor-diagnosed cases (p=0.99).",
+      "ledger": {
+        "effectPoints": "unclear",
+        "effect_basis": "Only one trial tested this exact form and dose. Veverka 2009 (PMID 19341987) was a 7-month double-blind placebo trial in US Air Force Academy cadets, with 40 randomised. The abstract reports more symptom-free episodes on a weekly self-report survey (p=0.01) and no difference in physician-diagnosed cases (p=0.99). Wang 2020 analysed 30 people (about 80% male, mean age 18.5) and calculated RR 1.06 (95% CI 0.34 to 3.34) for catching a cold, with cold frequency 11% lower in the zinc group. It rated the trial high risk of bias for random sequence generation and allocation concealment. The trial authors wrote that a higher dose may be needed. One small, mixed, high-risk trial cannot answer the question. So I record unclear, not a null and not a benefit. I found no larger trial at this dose.",
+        "bodyIsRct": true,
+        "checklist": {
+          "risk_of_bias": "concern",
+          "consistency": "unknown",
+          "precision": "concern",
+          "directness": "concern",
+          "publication_bias": "unknown"
+        },
+        "gates": {
+          "rctCount": 1,
+          "largestRctN": 40,
+          "longestRctWeeks": 30,
+          "chronicOutcome": true,
+          "surrogate": false,
+          "allPositiveIndustryOrOneLab": true
+        },
+        "formFit": "4",
+        "doseFit": "3",
+        "effective_daily_range": "No effective dose has been shown. The only trial at 15 mg a day as gluconate was inconclusive, and its authors suggested a higher dose might be needed."
+      },
+      "detail": {
+        "effect": {
+          "found": "In the cadet trial, people on zinc reported more symptom-free episodes (p=0.01). Doctor-diagnosed cases did not differ (p=0.99). A later reanalysis gave RR 1.06 (95% CI 0.34 to 3.34) for catching a cold, a very wide range.",
+          "missing": "I could not open the full paper. So I could not see case counts, drop-outs (40 randomised, 30 analysed in Wang 2020) or how a symptom episode was defined.",
+          "move": "A larger replication with lab-confirmed colds would show whether the self-reported gain is real."
+        },
+        "evidence": {
+          "found": "This is one small trial. Wang 2020 rated it high risk of bias for random sequence generation and allocation concealment. No funding source appears in the abstract.",
+          "missing": "There is no second trial at this dose. Cadets in basic training are under heavy stress, so they may not match an ordinary adult.",
+          "move": "An independent replication in ordinary adults would help."
+        },
+        "form": {
+          "found": "The trial gave zinc gluconate capsules, which is the same salt as the product.",
+          "missing": "The abstract does not say whether 15 mg was elemental zinc or the weight of the compound.",
+          "move": "The full paper or the trial authors could settle this."
+        },
+        "dose": {
+          "found": "The trial dose equals the product's 15 mg a day. The authors wrote that a higher dose may be needed under more challenging conditions.",
+          "missing": "Nothing shows that 15 mg a day works. Whether it was elemental is unknown.",
+          "move": "A trial comparing 15 mg with a higher dose would show whether dose matters."
+        }
+      },
+      "inventory": [
+        {
+          "id": "19341987",
+          "year": 2009,
+          "design": "rct",
+          "n": 40,
+          "direction": "unclear",
+          "access": "abstract",
+          "funding": "unknown",
+          "note": "Zinc gluconate 15 mg a day vs corn-starch placebo, 7 months. Self-report: more symptom-free episodes (p=0.01). Doctor-diagnosed: no difference (p=0.99). Also pooled in Hunter 2021 and Wang 2020, but counted once within this row."
+        }
+      ],
+      "absolute_effect": "RR 1.06 (95% CI 0.34 to 3.34) for catching a cold, from Wang 2020's calculation on 30 analysed people. Cold frequency was 11% lower in the zinc group by that review. Case counts were not available to me, so no ARR or NNT can be worked out.",
+      "clinically_meaningful": "unknown. No MCID exists for cold prevention in the sources I opened. The interval 0.34 to 3.34 covers anything from a large benefit to a large harm.",
+      "strongest_study": "Veverka 2009 (PMID 19341987): 40 Air Force Academy cadets, zinc gluconate 15 mg a day or corn-starch placebo for 7 months, double-blind.",
+      "strongest_doubt": "The only win is self-reported symptom-free episodes. The doctor-diagnosed outcome was flat (p=0.99). Wang 2020 rated randomisation and concealment as high risk, and only 30 people were analysed.",
+      "study_that_would_move_this": "A larger double-blind trial in ordinary adults at 15 mg elemental zinc as gluconate for 5 or more months, with lab-confirmed colds and outcomes chosen in advance.",
+      "why_positive_signal_is_unreliable": "The one positive result is a self-reported measure, and the objective doctor-diagnosed measure in the same trial showed nothing. The trial was small and rated high risk of bias for how people were assigned to groups.",
+      "studied_in": {
+        "sex": "mixed",
+        "sex_note": "Both sexes. About 80% male in the analysed set (Wang 2020).",
+        "age_min": null,
+        "age_max": null,
+        "age_note": "Mean age 18.5 in the analysed set. Range not reported.",
+        "ethnicity": "not reported",
+        "confidence": "inferred"
+      },
+      "subgroup_hypothesis_only": false
+    },
+    {
+      "name": "Infections in older adults",
+      "population": "Older adults 55 to 87, 45 mg/day gluconate",
+      "sentence": "One 12-month trial (50 older adults, 45 mg zinc) reported 88 infections on placebo vs 29 on zinc. Small, one lab, not repeated.",
+      "ledger": {
+        "effectPoints": "unclear",
+        "effect_basis": "Prasad 2007 (PMID 17344507, Am J Clin Nutr) was a double-blind placebo trial. 50 healthy people aged 55 to 87 took 45 mg elemental zinc as gluconate a day, or placebo, for 12 months. The abstract says infection incidence was significantly lower with zinc. A search summary reported 88 infections on placebo vs 29 on zinc (67% fewer, p<0.001), and I could not confirm those counts in the abstract I opened. Infections were counted all together, not colds alone. It is one small trial from one lab, I found no repeat of it, and the dose is three times this product's. One small single-lab trial cannot establish a size, so I record unclear.",
+        "bodyIsRct": true,
+        "checklist": {
+          "risk_of_bias": "concern",
+          "consistency": "unknown",
+          "precision": "concern",
+          "directness": "concern",
+          "publication_bias": "unknown"
+        },
+        "gates": {
+          "rctCount": 1,
+          "largestRctN": 50,
+          "longestRctWeeks": 52,
+          "chronicOutcome": true,
+          "surrogate": false,
+          "allPositiveIndustryOrOneLab": true
+        },
+        "formFit": "4",
+        "doseFit": "1",
+        "effective_daily_range": "No effective dose has been shown. This trial used 45 mg elemental zinc a day, three times the product's dose. Secondary sources quote 40 mg a day as the adult upper limit."
+      },
+      "detail": {
+        "effect": {
+          "found": "The abstract says infections were significantly lower with zinc. A search summary gave 88 infections on placebo vs 29 on zinc over 12 months, which I could not confirm.",
+          "missing": "Infections were counted as a group, so the effect on colds alone is unknown. I did not open the full paper.",
+          "move": "A repeat trial that counts colds on their own."
+        },
+        "evidence": {
+          "found": "This is one trial in 50 people from one research group, with no repeat that I could find. It had a public (NIH) grant. A press headline says a drug company acquired access to the data, and I did not open it.",
+          "missing": "Nothing is known here for younger adults. I could not see its risk of bias details.",
+          "move": "An independent repeat in older adults would help."
+        },
+        "form": {
+          "found": "Zinc gluconate, the same salt as the product.",
+          "missing": "—",
+          "move": "Nothing further is needed on form."
+        },
+        "dose": {
+          "found": "The trial used 45 mg elemental zinc a day, three times the product's 15 mg.",
+          "missing": "Nothing shows what 15 mg a day does in older adults.",
+          "move": "A trial at 15 mg a day in older adults."
+        }
+      },
+      "inventory": [
+        {
+          "id": "17344507",
+          "year": 2007,
+          "design": "rct",
+          "n": 50,
+          "direction": "benefit",
+          "access": "snippet",
+          "funding": "independent",
+          "note": "Counts of 88 vs 29 infections come from a search summary. Design, age range and dose were read in the Europe PMC abstract. Also pooled in Hunter 2021, counted once within this row."
+        }
+      ],
+      "absolute_effect": "Reported in a search summary: 88 infections on placebo vs 29 on zinc over 12 months (67% fewer, p<0.001), 50 people. I could not verify these counts. No confidence interval was available, so no ARR or NNT was worked out.",
+      "clinically_meaningful": "unknown. No MCID exists for infection counts in the sources I opened. A drop from 88 to 29 would matter if real, but one small trial cannot establish it.",
+      "strongest_study": "Prasad 2007 (PMID 17344507): 50 healthy adults aged 55 to 87, 45 mg elemental zinc as gluconate or placebo for 12 months, double-blind.",
+      "strongest_doubt": "It is a single small trial from one lab, with no repeat that I found. It used a different dose in an older group, and it counted infections all together. I did not open the full text.",
+      "study_that_would_move_this": "An independent, larger double-blind trial in older adults, ideally at 15 mg elemental zinc, counting colds on their own and measuring zinc status at the start.",
+      "why_positive_signal_is_unreliable": "Small trials from a single centre often overstate effects, and this one has no repeat. The counts I quote came from a search summary, not from the paper.",
+      "studied_in": {
+        "sex": "mixed",
+        "sex_note": "Both sexes, per the abstract.",
+        "age_min": 55,
+        "age_max": 87,
+        "age_note": "Healthy older adults recruited from a senior center.",
+        "ethnicity": "not reported",
+        "confidence": "verified"
+      },
+      "subgroup_hypothesis_only": false
+    },
+    {
+      "name": "Preventing colds",
+      "population": "Adults with low zinc status",
+      "sentence": "Nobody I found has tested zinc for preventing colds in adults chosen for low zinc. This is a gap, not a negative result.",
+      "ledger": {
+        "effectPoints": "unclear",
+        "effect_basis": "I searched for trials of zinc to prevent colds in adults chosen for low zinc and found none. Hunter 2021 said its adult findings applied to people unlikely to be zinc deficient. Trials in children in low-income settings exist but are a different population and were not scored. This is nobody has tested this, not tested and nothing found.",
+        "bodyIsRct": false,
+        "checklist": {
+          "risk_of_bias": "unknown",
+          "consistency": "unknown",
+          "precision": "unknown",
+          "directness": "unknown",
+          "publication_bias": "unknown"
+        },
+        "gates": {
+          "rctCount": 0,
+          "largestRctN": 0,
+          "longestRctWeeks": 0,
+          "chronicOutcome": true,
+          "surrogate": false,
+          "allPositiveIndustryOrOneLab": false
+        },
+        "formFit": "unknown",
+        "doseFit": "unknown",
+        "effective_daily_range": "Unknown. Nobody has tested this."
+      },
+      "detail": {
+        "effect": {
+          "found": "I found no trial in adults selected for low zinc that counted colds.",
+          "missing": "The effect, the dose and the form are all unknown for this group.",
+          "move": "A trial that measures blood zinc first and enrols low-zinc adults."
+        },
+        "evidence": {
+          "found": "No trials were found.",
+          "missing": "Everything. A trial in a narrow setting could exist that my searches missed.",
+          "move": "Any randomised trial in low-zinc adults that counts colds."
+        },
+        "form": {
+          "found": "Nothing is known for this group.",
+          "missing": "Which zinc form works, if any.",
+          "move": "A trial in low-zinc adults using zinc gluconate."
+        },
+        "dose": {
+          "found": "Nothing is known for this group.",
+          "missing": "Whether 15 mg a day is enough, too little or too much.",
+          "move": "A dose-comparison trial in low-zinc adults."
+        }
+      },
+      "inventory": [],
+      "absolute_effect": "Not available. No study was found.",
+      "clinically_meaningful": "unknown. There is no data, and I found no MCID for cold prevention.",
+      "strongest_study": "None found.",
+      "strongest_doubt": "I searched general terms plus zinc deficiency only. A trial in a specific setting could exist that my searches missed.",
+      "study_that_would_move_this": "A double-blind trial that selects adults by low blood zinc, gives 15 mg elemental zinc as gluconate for at least 5 months and counts colds by diary and lab test.",
+      "studied_in": {
+        "sex": "unknown",
+        "sex_note": "No study found.",
+        "age_min": null,
+        "age_max": null,
+        "age_note": "No study found.",
+        "ethnicity": "not reported",
+        "confidence": "unknown"
+      },
+      "subgroup_hypothesis_only": false
+    }
+  ],
+  "searches_run": [
+    "Cochrane review zinc for the common cold prevention incidence Singh Das",
+    "zinc supplementation prevention of common cold adults randomized trial meta-analysis 2024 2025",
+    "zinc gluconate 15 mg daily common cold incidence randomized placebo",
+    "NIH Office of Dietary Supplements zinc fact sheet common cold",
+    "Cochrane 2024 Zinc for the common cold prevention incidence risk ratio low-certainty",
+    "Nault Machingo Shipper 2024 Cochrane zinc common cold prevention 34 trials 8526 participants abstract results",
+    "Prasad 2007 zinc supplementation decreases incidence of infections in the elderly 45 mg zinc gluconate",
+    "Rerksuppaphol chelated zinc bisglycinate prevention common cold Thai school children",
+    "zinc supplementation healthy adults upper respiratory tract infection incidence randomized placebo-controlled trial prevention months (extended)",
+    "Hemila zinc common cold prevention daily supplementation adults reanalysis Cochrane 2024",
+    "zinc gluconate prevention of colds adults experimental rhinovirus prophylaxis",
+    "Veverka 2009 zinc gluconate Air Force Academy cadets upper respiratory infection (several variants)",
+    "zinc supplement common cold prevention randomized trial 2025 adults placebo (extended)",
+    "zinc deficient adults supplementation respiratory infection common cold prevention randomized trial low serum zinc",
+    "zinc acute respiratory tract infection prevention systematic review meta-analysis 2025 adults",
+    "NIH ODS and NCCIH zinc common cold prevention fact sheet (domain-limited)",
+    "Europe PMC abstract retrievals for PMIDs 38719213, 17344507, 19341987, 23775705, 32342851, 34728441"
+  ],
+  "could_not_access": [
+    "Cochrane Library full text and reference list for CD014914 (HTTP 403). I read only the abstract via Europe PMC, so I could not see which prevention trials were in adults or whether Veverka 2009 is among them.",
+    "NIH ODS zinc fact sheets (Health Professional and Consumer), HTTP 403. The ODS position on prevention comes only from a search summary and is unverified. A NCCIH page (Dec 2020) opened and covers treatment lozenges, not prevention.",
+    "Full texts of Veverka 2009 and Prasad 2007 (ScienceDirect and ResearchGate 403, PubMed cookie wall). Veverka details beyond the abstract come from Wang 2020. Prasad's 88 vs 29 infection counts come from a search summary.",
+    "Hunter 2021 was read through a summarising tool. The match of its four prevention trials to Veverka and Prasad is inferred from dose and duration, and the sizes of its two nose-spray trials were not retrieved.",
+    "Children's prevention trials (Cochrane 2013, 2 trials, 394 people, and Rerksuppaphol 2013 with zinc bisglycinate 15 mg for 3 months) were seen only as abstracts or snippets and were not audited, since the supplied population is adults."
+  ],
+  "self_confidence": "medium-low",
+  "confidence_note": "The verdict rests on two reviews that disagree. Cochrane 2024 found little or no effect with low-certainty evidence (RR 0.93, 95% CI 0.85 to 1.01). Hunter 2021, in adults, found fewer infections (IRR 0.68, 95% CI 0.58 to 0.80, moderate-certainty). I read both mainly at abstract level plus partial full text, and I could not open Cochrane's trial list. The one trial at this exact form and dose is tiny and mixed (40 randomised, 30 analysed). I scored the pooled row 0 (no meaningful effect demonstrated) and the single-trial rows unclear, because one small trial cannot show a size. On harms, Cochrane could not tell whether serious adverse events rise in prevention trials: RR 1.67 (95% CI 0.78 to 3.57), 3 studies, 1,563 people, low-certainty. Non-serious events were RR 1.11 (95% CI 0.84 to 1.47), very low-certainty. Zinc lozenges used after a cold starts are a different use and were not scored here. Figures marked snippet were not checked against a primary abstract. A human has not verified this audit."
+}
